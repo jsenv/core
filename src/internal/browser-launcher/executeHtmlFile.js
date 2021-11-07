@@ -6,8 +6,8 @@ import {
 } from "@jsenv/filesystem"
 
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { v8CoverageFromAllV8Coverages } from "@jsenv/core/src/internal/executing/coverage/v8CoverageFromAllV8Coverages.js"
-import { composeIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage/composeIstanbulCoverages.js"
+import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_utils/v8_coverage_from_directory.js"
+import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
 
@@ -23,7 +23,7 @@ export const executeHtmlFile = async (
     // measurePerformance,
     collectPerformance,
     collectCoverage,
-    coverageConfig,
+    coverageIgnorePredicate,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
     transformErrorHook,
@@ -76,7 +76,7 @@ export const executeHtmlFile = async (
         fileRelativeUrl,
         page,
         collectCoverage,
-        coverageConfig,
+        coverageIgnorePredicate,
         transformErrorHook,
       })
     } else {
@@ -149,7 +149,7 @@ const executeSource = async ({
   fileRelativeUrl,
   page,
   collectCoverage,
-  coverageConfig,
+  coverageIgnorePredicate,
   transformErrorHook,
 }) => {
   let transformResult = (result) => result
@@ -175,11 +175,12 @@ const executeSource = async ({
           }
         },
       )
-      const allV8Coverages = [{ result: v8CoveragesWithFsUrls }]
-      const coverage = v8CoverageFromAllV8Coverages(allV8Coverages, {
-        coverageRootUrl: projectDirectoryUrl,
-        coverageConfig,
-      })
+      const coverage = filterV8Coverage(
+        { result: v8CoveragesWithFsUrls },
+        {
+          coverageIgnorePredicate,
+        },
+      )
       return {
         ...result,
         coverage,
@@ -297,15 +298,18 @@ const executeCompiledVersion = async ({
 }
 
 const generateCoverageForPage = (fileExecutionResultMap) => {
-  const istanbulCoverages = []
+  let istanbulCoverageComposed = null
   Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
     const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverage
-    if (istanbulCoverage) {
-      istanbulCoverages.push(istanbulCoverage)
-    }
+    istanbulCoverageComposed = istanbulCoverageComposed
+      ? composeTwoFileByFileIstanbulCoverages(
+          istanbulCoverageComposed,
+          istanbulCoverage,
+        )
+      : istanbulCoverage
   })
-  const istanbulCoverage = composeIstanbulCoverages(istanbulCoverages)
-  return istanbulCoverage
+
+  return istanbulCoverageComposed
 }
 
 const evalException = (

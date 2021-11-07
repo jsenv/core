@@ -5,7 +5,7 @@ import {
   execute,
   chromiumRuntime,
   firefoxRuntime,
-  webkitRuntime,
+  // webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -29,7 +29,7 @@ await launchBrowsers(
     // comment force multiline
     chromiumRuntime,
     firefoxRuntime,
-    webkitRuntime,
+    // webkitRuntime, // flaky on webkit don't know why (sometimes throw with "no registration found for JS")
   ],
   async (browserRuntime) => {
     const { status, namespace, compileServerOrigin, outDirectoryRelativeUrl } =

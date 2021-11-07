@@ -34,7 +34,8 @@ export const executePlan = async (
     coverageConfig,
     coverageIncludeMissing,
     coverageForceIstanbul,
-    coverageV8MergeConflictIsExpected,
+    coverageV8ConflictWarning,
+    coverageTempDirectoryRelativeUrl,
 
     compileServerProtocol,
     compileServerPrivateKey,
@@ -156,7 +157,9 @@ export const executePlan = async (
       coverageConfig,
       coverageIncludeMissing,
       coverageForceIstanbul,
-      coverageV8MergeConflictIsExpected,
+      coverageV8ConflictWarning,
+      coverageTempDirectoryRelativeUrl,
+      runtimeSupport,
     })
 
     return {

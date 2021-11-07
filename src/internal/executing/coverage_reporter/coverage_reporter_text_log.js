@@ -1,8 +1,10 @@
 import { require } from "../../require.js"
-
 import { istanbulCoverageMapFromCoverage } from "./istanbulCoverageMapFromCoverage.js"
 
-export const generateCoverageTextLog = (coverage, { coverageSkipEmpty, coverageSkipFull }) => {
+export const generateCoverageTextLog = (
+  coverage,
+  { coverageSkipEmpty, coverageSkipFull },
+) => {
   const libReport = require("istanbul-lib-report")
   const reports = require("istanbul-reports")
 

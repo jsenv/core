@@ -1,18 +1,9 @@
 import { Script } from "node:vm"
-import cuid from "cuid"
 import { loggerToLogLevel } from "@jsenv/logger"
-import {
-  writeDirectory,
-  resolveUrl,
-  urlToFileSystemPath,
-  removeFileSystemNode,
-  moveDirectoryContent,
-} from "@jsenv/filesystem"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
-import { v8CoverageFromNodeV8Directory } from "./internal/executing/coverage/v8CoverageFromNodeV8Directory.js"
 
 export const nodeRuntime = {
   name: "node",
@@ -30,8 +21,8 @@ nodeRuntime.launch = async ({
   measurePerformance,
   collectPerformance,
   collectCoverage = false,
-  coverageConfig,
   coverageForceIstanbul,
+  coverageConfig,
 
   debugPort,
   debugMode,
@@ -69,59 +60,10 @@ nodeRuntime.launch = async ({
     JSENV: true,
   }
 
-  let finalizeExecutionResult
-
-  if (collectCoverage) {
-    // v8 coverage is written in a directoy and auto propagate to subprocesses
-    // through process.env.NODE_V8_COVERAGE.
-
-    if (coverageForceIstanbul) {
-      // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
-      // into the child_process
-      env.NODE_V8_COVERAGE = ""
-    }
-    // } else if (process.env.NODE_V8_COVERAGE) {
-    //   // The V8_COVERAGE was already set by a parent process or command line.
-    //   // It's the caller that is interested into coverage, it's not anymore this script
-    //   // responsability to set process.env.NODE_V8_COVERAGE nor to read
-    //   // coverage files in the v8 directory.
-    // }
-    // In fact it is so that it's possible to go coverageception:
-    // jsenv collect coverage for tests
-    // which are testing that coverage can be collected for tests
-    // this is possible because we overriding the child process NODE_V8_COVERAGE
-    else {
-      const NODE_V8_COVERAGE = await getNodeV8CoverageDir({
-        projectDirectoryUrl,
-      })
-      env.NODE_V8_COVERAGE = NODE_V8_COVERAGE
-
-      // the v8 coverage directory is available once the child process is disconnected
-      finalizeExecutionResult = async (executionResult) => {
-        if (
-          executionResult.status === "timedout" ||
-          executionResult.status === "aborted"
-        ) {
-          return executionResult
-        }
-
-        const coverage = await ensureV8CoverageDirClean(async () => {
-          // prefer istanbul if available
-          if (executionResult.coverage) {
-            return executionResult.coverage
-          }
-
-          const v8Coverage = await v8CoverageFromNodeV8Directory({
-            projectDirectoryUrl,
-            NODE_V8_COVERAGE,
-            coverageConfig,
-          })
-          return v8Coverage
-        }, NODE_V8_COVERAGE)
-        executionResult.coverage = coverage
-        return executionResult
-      }
-    }
+  if (coverageForceIstanbul) {
+    // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
+    // into the child_process
+    env.NODE_V8_COVERAGE = ""
   }
 
   commandLineOptions = [
@@ -198,37 +140,7 @@ nodeRuntime.launch = async ({
     outputCallbackList,
     stop,
     execute,
-    finalizeExecutionResult,
   }
-}
-
-const ensureV8CoverageDirClean = async (fn, NODE_V8_COVERAGE) => {
-  try {
-    return await fn()
-  } finally {
-    if (process.env.NODE_V8_COVERAGE === NODE_V8_COVERAGE) {
-      // do not try to remove or copy coverage
-    } else if (process.env.NODE_V8_COVERAGE) {
-      await moveDirectoryContent({
-        from: NODE_V8_COVERAGE,
-        to: process.env.NODE_V8_COVERAGE,
-      })
-      await removeFileSystemNode(NODE_V8_COVERAGE, {})
-    } else {
-      await removeFileSystemNode(NODE_V8_COVERAGE, {
-        recursive: true,
-      })
-    }
-  }
-}
-
-const getNodeV8CoverageDir = async ({ projectDirectoryUrl }) => {
-  const v8CoverageDirectory = resolveUrl(
-    `./coverage-v8/${cuid()}`,
-    projectDirectoryUrl,
-  )
-  await writeDirectory(v8CoverageDirectory, { allowUseless: true })
-  return urlToFileSystemPath(v8CoverageDirectory)
 }
 
 const transformExecutionResult = (

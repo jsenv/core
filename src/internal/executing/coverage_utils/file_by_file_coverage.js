@@ -5,22 +5,24 @@ import {
   resolveUrl,
 } from "@jsenv/filesystem"
 
-export const normalizeIstanbulCoverage = (istanbulCoverage, projectDirectoryUrl) => {
-  const istanbulCoverageNormalized = {}
+export const normalizeFileByFileCoveragePaths = (
+  fileByFileCoverage,
+  projectDirectoryUrl,
+) => {
+  const fileByFileNormalized = {}
 
-  Object.keys(istanbulCoverage).forEach((key) => {
-    const fileCoverage = istanbulCoverage[key]
+  Object.keys(fileByFileCoverage).forEach((key) => {
+    const fileCoverage = fileByFileCoverage[key]
     const { path } = fileCoverage
     const url = isFileSystemPath(path)
       ? fileSystemPathToUrl(path)
       : resolveUrl(path, projectDirectoryUrl)
     const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
-
-    istanbulCoverageNormalized[`./${relativeUrl}`] = {
+    fileByFileNormalized[`./${relativeUrl}`] = {
       ...fileCoverage,
       path: `./${relativeUrl}`,
     }
   })
 
-  return istanbulCoverageNormalized
+  return fileByFileNormalized
 }

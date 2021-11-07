@@ -54,7 +54,7 @@ await executeTestPlan({
   coverageConfig: {
     [`${currentDirectoryRelativeUrl}animals.js`]: true,
   },
-  coverageV8MergeConflictIsExpected: true,
+  coverageV8ConflictWarning: false,
   coverageHtmlDirectory: false,
   coverageTextLog: false,
   // here we should also clean jsenv directory to ensure

@@ -1,8 +1,17 @@
 import { stat } from "node:fs"
 import wrapAnsi from "wrap-ansi"
+import cuid from "cuid"
 import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  urlToFileSystemPath,
+  resolveUrl,
+  writeDirectory,
+  ensureEmptyDirectory,
+  normalizeStructuredMetaMap,
+  urlToMeta,
+} from "@jsenv/filesystem"
 import { createLog } from "@jsenv/log"
+import { Abort } from "@jsenv/abort"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
@@ -33,7 +42,9 @@ export const executeConcurrently = async (
     coverageConfig,
     coverageIncludeMissing,
     coverageForceIstanbul,
-    coverageV8MergeConflictIsExpected,
+    coverageV8ConflictWarning,
+    coverageTempDirectoryRelativeUrl,
+    runtimeSupport,
 
     mainFileNotFoundCallback = ({ fileRelativeUrl }) => {
       logger.error(
@@ -54,6 +65,73 @@ export const executeConcurrently = async (
 
   const report = {}
   const executionCount = executionSteps.length
+
+  let transformReturnValue = (value) => value
+
+  const coverageTempDirectoryUrl = resolveUrl(
+    coverageTempDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
+
+  const structuredMetaMapForCover = normalizeStructuredMetaMap(
+    {
+      cover: coverageConfig,
+    },
+    projectDirectoryUrl,
+  )
+  const coverageIgnorePredicate = (url) => {
+    return !urlToMeta({
+      url: resolveUrl(url, projectDirectoryUrl),
+      structuredMetaMap: structuredMetaMapForCover,
+    }).cover
+  }
+
+  if (coverage) {
+    // in case runned multiple times, we don't want to keep writing lot of files in this directory
+    if (!process.env.NODE_V8_COVERAGE) {
+      await ensureEmptyDirectory(coverageTempDirectoryUrl)
+    }
+
+    if (runtimeSupport.node) {
+      // v8 coverage is written in a directoy and auto propagate to subprocesses
+      // through process.env.NODE_V8_COVERAGE.
+      if (!coverageForceIstanbul && !process.env.NODE_V8_COVERAGE) {
+        const v8CoverageDirectory = resolveUrl(
+          `./node_v8/${cuid()}`,
+          coverageTempDirectoryUrl,
+        )
+        await writeDirectory(v8CoverageDirectory, { allowUseless: true })
+        process.env.NODE_V8_COVERAGE = urlToFileSystemPath(v8CoverageDirectory)
+      }
+    }
+
+    transformReturnValue = async (value) => {
+      if (multipleExecutionsOperation.signal.aborted) {
+        // don't try to do the coverage stuff
+        return value
+      }
+
+      try {
+        value.coverage = await reportToCoverage(value.report, {
+          multipleExecutionsOperation,
+          logger,
+          projectDirectoryUrl,
+          babelPluginMap,
+          coverageConfig,
+          coverageIncludeMissing,
+          coverageForceIstanbul,
+          coverageIgnorePredicate,
+          coverageV8ConflictWarning,
+        })
+      } catch (e) {
+        if (Abort.isAbortError(e)) {
+          return value
+        }
+        throw e
+      }
+      return value
+    }
+  }
 
   let previousExecutionResult
   let previousExecutionLog
@@ -116,12 +194,13 @@ export const executeConcurrently = async (
 
         ...executionParams,
         collectCoverage: coverage,
+        coverageTempDirectoryUrl,
         runtimeParams: {
           projectDirectoryUrl,
           compileServerOrigin,
           outDirectoryRelativeUrl,
           collectCoverage: coverage,
-          coverageConfig,
+          coverageIgnorePredicate,
           coverageForceIstanbul,
           ...executionParams.runtimeParams,
         },
@@ -129,7 +208,7 @@ export const executeConcurrently = async (
           fileRelativeUrl,
           ...executionParams.executeParams,
         },
-        coverageV8MergeConflictIsExpected,
+        coverageV8ConflictWarning,
       })
       const afterExecutionInfo = {
         ...beforeExecutionInfo,
@@ -208,31 +287,10 @@ export const executeConcurrently = async (
     logger.info(createSummaryLog(summary))
   }
 
-  if (multipleExecutionsOperation.signal.aborted) {
-    // don't try to do the coverage stuff
-    return {
-      summary,
-      report,
-    }
-  }
-
-  return {
+  return transformReturnValue({
     summary,
     report,
-    ...(coverage
-      ? {
-          coverage: await reportToCoverage(report, {
-            multipleExecutionsOperation,
-            logger,
-            projectDirectoryUrl,
-            babelPluginMap,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageV8MergeConflictIsExpected,
-          }),
-        }
-      : {}),
-  }
+  })
 }
 
 const executeInParallel = async ({
