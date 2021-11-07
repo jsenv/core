@@ -43,8 +43,10 @@ export const v8CoverageToIstanbul = async (v8Coverage) => {
       : istanbulCoverage
   }, Promise.resolve())
 
+  if (!istanbulCoverageComposed) {
+    return {}
+  }
   istanbulCoverageComposed = markAsConvertedFromV8(istanbulCoverageComposed)
-
   return istanbulCoverageComposed
 }
 
