@@ -20,7 +20,7 @@ export const reportToCoverage = async (
     coverageIncludeMissing,
     coverageIgnorePredicate,
     coverageForceIstanbul,
-    coverageV8MergeConflictIsExpected,
+    coverageV8ConflictWarning,
   },
 ) => {
   let currentV8Coverage
@@ -106,7 +106,7 @@ export const reportToCoverage = async (
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
         currentIstanbulCoverage,
-        { coverageV8MergeConflictIsExpected },
+        { coverageV8ConflictWarning },
       )
     } else {
       fileByFileCoverage = v8FileByFileCoverage

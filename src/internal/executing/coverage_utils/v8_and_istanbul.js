@@ -3,7 +3,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 export const composeV8AndIstanbul = (
   v8FileByFileCoverage,
   istanbulFileByFileCoverage,
-  { coverageV8MergeConflictIsExpected },
+  { coverageV8ConflictWarning },
 ) => {
   const fileByFileCoverage = {}
   const v8Files = Object.keys(v8FileByFileCoverage)
@@ -15,21 +15,22 @@ export const composeV8AndIstanbul = (
   istanbulFiles.forEach((key) => {
     const v8Coverage = v8FileByFileCoverage[key]
     if (v8Coverage) {
-      if (!coverageV8MergeConflictIsExpected) {
-        // ideally when coverageV8MergeConflictIsExpected it would be a console.debug
+      if (coverageV8ConflictWarning) {
         console.warn(
           createDetailedMessage(
-            `Cannot merge file coverage from v8 and file coverage from istanbul, the istanbul coverage will be ignored`,
+            `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
             {
-              suggestion:
-                "If this is expected use coverageV8MergeConflictIsExpected to disable this warning",
+              "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
+              "suggestion":
+                "You can disable this warning with coverageV8ConflictWarning: false",
+              "suggestion 2": `You can force usage of istanbul to prevent this conflict with coverageForceIstanbul: true`,
             },
           ),
         )
       }
-      fileByFileCoverage[key] = v8FileByFileCoverage
+      fileByFileCoverage[key] = v8Coverage
     } else {
-      fileByFileCoverage[key] = v8FileByFileCoverage[key]
+      fileByFileCoverage[key] = istanbulFileByFileCoverage[key]
     }
   })
 

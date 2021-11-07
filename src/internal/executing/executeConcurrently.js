@@ -42,7 +42,7 @@ export const executeConcurrently = async (
     coverageConfig,
     coverageIncludeMissing,
     coverageForceIstanbul,
-    coverageV8MergeConflictIsExpected,
+    coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
     runtimeSupport,
 
@@ -119,7 +119,7 @@ export const executeConcurrently = async (
           coverageIncludeMissing,
           coverageForceIstanbul,
           coverageIgnorePredicate,
-          coverageV8MergeConflictIsExpected,
+          coverageV8ConflictWarning,
         })
       } catch (e) {
         if (Abort.isAbortError(e)) {
@@ -206,7 +206,7 @@ export const executeConcurrently = async (
           fileRelativeUrl,
           ...executionParams.executeParams,
         },
-        coverageV8MergeConflictIsExpected,
+        coverageV8ConflictWarning,
       })
       const afterExecutionInfo = {
         ...beforeExecutionInfo,

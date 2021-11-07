@@ -61,7 +61,7 @@ const test = async (options = {}) => {
 // without forcing istanbul
 {
   const actual = await test({
-    coverageV8MergeConflictIsExpected: true,
+    coverageV8ConflictWarning: true,
   })
   const expected = {
     [`./${testDirectoryRelativeUrl}file.js`]: {
