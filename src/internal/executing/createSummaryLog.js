@@ -21,7 +21,9 @@ const createSummaryMessage = ({
     return `no execution`
   }
 
-  return `${executionCount} execution: ${createSummaryDetails({
+  const executionLabel =
+    executionCount === 1 ? `1 execution` : `${executionCount} executions`
+  return `${executionLabel}: ${createSummaryDetails({
     executionCount,
     abortedCount,
     timedoutCount,

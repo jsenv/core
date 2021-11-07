@@ -107,7 +107,7 @@ runtime: firefox/73.0b13
 duration: 2.42 seconds
 
 -------------- summary -----------------
-2 execution: all completed
+2 executions: all completed
 total duration: 3.72 seconds
 ----------------------------------------
 ```
