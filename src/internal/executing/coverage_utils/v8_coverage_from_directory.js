@@ -27,9 +27,14 @@ export const visitNodeV8Directory = async ({
 
     const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl)
     const tryReadJsonFile = async () => {
+      const fileContent = await readFile(dirEntryUrl, { as: "string" })
+      if (fileContent === "") {
+        return null
+      }
+
       try {
-        const fileContent = await readFile(dirEntryUrl, { as: "json" })
-        return fileContent
+        const fileAsJson = JSON.parse(fileContent)
+        return fileAsJson
       } catch (e) {
         console.warn(
           createDetailedMessage(`Error while reading coverage file`, {
