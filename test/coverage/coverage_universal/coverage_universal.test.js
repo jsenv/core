@@ -61,7 +61,10 @@ const test = async (options = {}) => {
 // without forcing istanbul
 {
   const actual = await test({
-    coverageV8ConflictWarning: true,
+    coverageForceIstanbul: false,
+    coverageV8ConflictWarning: false,
+    // coverageHtmlDirectory: true,
+    // coverageJsonFile: true,
   })
   const expected = {
     [`./${testDirectoryRelativeUrl}file.js`]: {
@@ -71,7 +74,7 @@ const test = async (options = {}) => {
         0: 3,
         1: 3,
         2: 1,
-        3: 3,
+        3: 2,
         4: 2,
         5: 2,
         6: 0,
@@ -86,6 +89,9 @@ const test = async (options = {}) => {
 {
   const actual = await test({
     coverageForceIstanbul: true,
+    coverageV8ConflictWarning: true,
+    // coverageHtmlDirectory: true,
+    // coverageJsonFile: true,
   })
   const expected = {
     [`./${testDirectoryRelativeUrl}file.js`]: {

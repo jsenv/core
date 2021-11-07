@@ -1,8 +1,11 @@
 import { readFile } from "@jsenv/filesystem"
 
-import { v8CoverageFromNodeV8Directory } from "../coverage_utils/v8_coverage_from_directory.js"
+import {
+  visitNodeV8Directory,
+  filterV8Coverage,
+} from "../coverage_utils/v8_coverage_from_directory.js"
 import { composeTwoV8Coverages } from "../coverage_utils/v8_coverage_composition.js"
-import { composeTwoIstanbulCoverages } from "../coverage_utils/istanbul_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "../coverage_utils/istanbul_coverage_composition.js"
 import { v8CoverageToIstanbul } from "../coverage_utils/v8_coverage_to_istanbul.js"
 import { composeV8AndIstanbul } from "../coverage_utils/v8_and_istanbul.js"
 import { normalizeFileByFileCoveragePaths } from "../coverage_utils/file_by_file_coverage.js"
@@ -23,20 +26,18 @@ export const reportToCoverage = async (
     coverageV8ConflictWarning,
   },
 ) => {
-  let currentV8Coverage
-  let currentIstanbulCoverage
+  let v8Coverage
+  let fileByFileIstanbulCoverage
 
-  if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
-    currentV8Coverage = await v8CoverageFromNodeV8Directory({
-      NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
-      coverageIgnorePredicate,
-    })
-  }
-
+  // collect v8 and istanbul coverage from executions
   await Object.keys(report).reduce(async (previous, file) => {
+    await previous
+
     const executionResultForFile = report[file]
     await Object.keys(executionResultForFile).reduce(
       async (previous, executionName) => {
+        await previous
+
         const executionResultForFileOnRuntime =
           executionResultForFile[executionName]
         const { status, coverageFileUrl } = executionResultForFileOnRuntime
@@ -58,7 +59,6 @@ export const reportToCoverage = async (
           // in any scenario we are fine because
           // coverDescription will generate empty coverage for files
           // that were suppose to be coverage but were not.
-
           if (status === "completed") {
             logger.debug(
               `No execution.coverageFileUrl from execution named "${executionName}" of ${file}`,
@@ -70,15 +70,14 @@ export const reportToCoverage = async (
         const executionCoverage = await readFile(coverageFileUrl, {
           as: "json",
         })
-
         if (isV8Coverage(executionCoverage)) {
-          currentV8Coverage = currentV8Coverage
-            ? composeTwoV8Coverages(currentV8Coverage, executionCoverage)
+          v8Coverage = v8Coverage
+            ? composeTwoV8Coverages(v8Coverage, executionCoverage)
             : executionCoverage
         } else {
-          currentIstanbulCoverage = currentIstanbulCoverage
-            ? composeTwoIstanbulCoverages(
-                currentIstanbulCoverage,
+          fileByFileIstanbulCoverage = fileByFileIstanbulCoverage
+            ? composeTwoFileByFileIstanbulCoverages(
+                fileByFileIstanbulCoverage,
                 executionCoverage,
               )
             : executionCoverage
@@ -88,24 +87,39 @@ export const reportToCoverage = async (
     )
   }, Promise.resolve())
 
+  if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
+    await visitNodeV8Directory({
+      signal: multipleExecutionsOperation.signal,
+      NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
+      onV8Coverage: (nodeV8Coverage) => {
+        const nodeV8CoverageLight = filterV8Coverage(nodeV8Coverage, {
+          coverageIgnorePredicate,
+        })
+        v8Coverage = v8Coverage
+          ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight)
+          : nodeV8CoverageLight
+      },
+    })
+  }
+
   // try to merge v8 with istanbul, if any
   let fileByFileCoverage
-  if (currentV8Coverage) {
-    let v8FileByFileCoverage = await v8CoverageToIstanbul(currentV8Coverage)
+  if (v8Coverage) {
+    let v8FileByFileCoverage = await v8CoverageToIstanbul(v8Coverage)
 
     v8FileByFileCoverage = normalizeFileByFileCoveragePaths(
       v8FileByFileCoverage,
       projectDirectoryUrl,
     )
 
-    if (currentIstanbulCoverage) {
-      currentIstanbulCoverage = normalizeFileByFileCoveragePaths(
-        currentIstanbulCoverage,
+    if (fileByFileIstanbulCoverage) {
+      fileByFileIstanbulCoverage = normalizeFileByFileCoveragePaths(
+        fileByFileIstanbulCoverage,
         projectDirectoryUrl,
       )
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
-        currentIstanbulCoverage,
+        fileByFileIstanbulCoverage,
         { coverageV8ConflictWarning },
       )
     } else {
@@ -113,9 +127,9 @@ export const reportToCoverage = async (
     }
   }
   // get istanbul only
-  else if (currentIstanbulCoverage) {
+  else if (fileByFileIstanbulCoverage) {
     fileByFileCoverage = normalizeFileByFileCoveragePaths(
-      currentIstanbulCoverage,
+      fileByFileIstanbulCoverage,
       projectDirectoryUrl,
     )
   }

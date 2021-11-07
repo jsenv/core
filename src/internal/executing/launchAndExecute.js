@@ -3,7 +3,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { resolveUrl, writeFile } from "@jsenv/filesystem"
 
-import { composeTwoIstanbulCoverages } from "./coverage_utils/istanbul_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "./coverage_utils/istanbul_coverage_composition.js"
 
 export const launchAndExecute = async ({
   signal = new AbortController().signal,
@@ -134,10 +134,10 @@ export const launchAndExecute = async ({
       (executionResult) => {
         const { coverage } = executionResult
         // propagate coverage from execution to this process
-        global.__coverage__ = composeTwoIstanbulCoverages([
+        global.__coverage__ = composeTwoFileByFileIstanbulCoverages(
           global.__coverage__ || {},
           coverage || {},
-        ])
+        )
 
         if (!collectCoverageSaved) {
           delete executionResult.coverage

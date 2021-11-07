@@ -7,7 +7,7 @@ import {
 
 import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_utils/v8_coverage_from_directory.js"
-import { composeTwoIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
 
@@ -302,7 +302,10 @@ const generateCoverageForPage = (fileExecutionResultMap) => {
   Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
     const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverage
     istanbulCoverageComposed = istanbulCoverageComposed
-      ? composeTwoIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage)
+      ? composeTwoFileByFileIstanbulCoverages(
+          istanbulCoverageComposed,
+          istanbulCoverage,
+        )
       : istanbulCoverage
   })
 

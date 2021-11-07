@@ -2,7 +2,7 @@ import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 
-import { composeTwoIstanbulCoverages } from "./istanbul_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js"
 
 export const v8CoverageToIstanbul = async (v8Coverage) => {
   const v8ToIstanbul = require("v8-to-istanbul")
@@ -36,7 +36,10 @@ export const v8CoverageToIstanbul = async (v8Coverage) => {
     const istanbulCoverage = converter.toIstanbul()
 
     istanbulCoverageComposed = istanbulCoverageComposed
-      ? composeTwoIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage)
+      ? composeTwoFileByFileIstanbulCoverages(
+          istanbulCoverageComposed,
+          istanbulCoverage,
+        )
       : istanbulCoverage
   }, Promise.resolve())
 

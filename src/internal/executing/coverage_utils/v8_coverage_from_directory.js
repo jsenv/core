@@ -6,11 +6,10 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { composeTwoV8Coverages } from "./v8_coverage_composition.js"
-
-export const v8CoverageFromNodeV8Directory = async ({
+export const visitNodeV8Directory = async ({
+  // signal
   NODE_V8_COVERAGE,
-  coverageIgnorePredicate,
+  onV8Coverage,
 }) => {
   const tryReadDirectory = async () => {
     const dirContent = await readDirectory(NODE_V8_COVERAGE)
@@ -23,8 +22,6 @@ export const v8CoverageFromNodeV8Directory = async ({
   const dirContent = await tryReadDirectory()
 
   const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE)
-
-  let v8CoverageComposed = null
   await dirContent.reduce(async (previous, dirEntry) => {
     await previous
 
@@ -46,16 +43,9 @@ export const v8CoverageFromNodeV8Directory = async ({
 
     const fileContent = await tryReadJsonFile()
     if (fileContent) {
-      const v8Coverage = filterV8Coverage(fileContent, {
-        coverageIgnorePredicate,
-      })
-      v8CoverageComposed = v8CoverageComposed
-        ? composeTwoV8Coverages(v8CoverageComposed, v8Coverage)
-        : v8Coverage
+      onV8Coverage(fileContent)
     }
   }, Promise.resolve())
-
-  return v8CoverageComposed
 }
 
 export const filterV8Coverage = (v8Coverage, { coverageIgnorePredicate }) => {
