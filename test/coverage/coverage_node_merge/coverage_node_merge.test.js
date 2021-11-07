@@ -1,7 +1,7 @@
 /*
-https://github.com/bcoe/c8/issues/116#issuecomment-503039423
-https://github.com/SimenB/jest/blob/917efc3398577c205f33c1c2f9a1aeabfaad6f7d/packages/jest-coverage/src/index.ts
-*/
+ * https://github.com/bcoe/c8/issues/116#issuecomment-503039423
+ * https://github.com/SimenB/jest/blob/917efc3398577c205f33c1c2f9a1aeabfaad6f7d/packages/jest-coverage/src/index.ts
+ */
 
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"

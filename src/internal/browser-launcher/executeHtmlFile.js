@@ -23,7 +23,7 @@ export const executeHtmlFile = async (
     // measurePerformance,
     collectPerformance,
     collectCoverage,
-    shouldIgnoreCoverage,
+    coverageIgnorePredicate,
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
     transformErrorHook,
@@ -76,7 +76,7 @@ export const executeHtmlFile = async (
         fileRelativeUrl,
         page,
         collectCoverage,
-        shouldIgnoreCoverage,
+        coverageIgnorePredicate,
         transformErrorHook,
       })
     } else {
@@ -149,7 +149,7 @@ const executeSource = async ({
   fileRelativeUrl,
   page,
   collectCoverage,
-  shouldIgnoreCoverage,
+  coverageIgnorePredicate,
   transformErrorHook,
 }) => {
   let transformResult = (result) => result
@@ -178,7 +178,7 @@ const executeSource = async ({
       const coverage = filterV8Coverage(
         { result: v8CoveragesWithFsUrls },
         {
-          shouldIgnoreCoverage,
+          coverageIgnorePredicate,
         },
       )
       return {

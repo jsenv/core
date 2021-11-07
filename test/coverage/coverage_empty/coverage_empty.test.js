@@ -1,9 +1,7 @@
 /*
-
-The goal here is to test that when there is no test plan,
-coverage is collected and is accurate.
-
-*/
+ * The goal here is to test that when there is no test plan,
+ * coverage is collected and is accurate.
+ */
 
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"

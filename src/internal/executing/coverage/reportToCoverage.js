@@ -60,8 +60,8 @@ export const reportToCoverage = async (
           // that were suppose to be coverage but were not.
 
           if (status === "completed") {
-            logger.warn(
-              `No execution.coverage from execution named "${executionName}" of ${file}`,
+            logger.debug(
+              `No execution.coverageFileUrl from execution named "${executionName}" of ${file}`,
             )
           }
           return
@@ -88,7 +88,7 @@ export const reportToCoverage = async (
     )
   }, Promise.resolve())
 
-  // now let's try to merge v8 with istanbul, if any
+  // try to merge v8 with istanbul, if any
   let fileByFileCoverage
   if (currentV8Coverage) {
     let v8FileByFileCoverage = await v8CoverageToIstanbul(currentV8Coverage)
@@ -111,12 +111,17 @@ export const reportToCoverage = async (
     } else {
       fileByFileCoverage = v8FileByFileCoverage
     }
-  } else {
-    fileByFileCoverage =
-      normalizeFileByFileCoveragePaths(
-        currentIstanbulCoverage,
-        projectDirectoryUrl,
-      ) || {}
+  }
+  // get istanbul only
+  else if (currentIstanbulCoverage) {
+    fileByFileCoverage = normalizeFileByFileCoveragePaths(
+      currentIstanbulCoverage,
+      projectDirectoryUrl,
+    )
+  }
+  // no coverage found in execution (or zero file where executed)
+  else {
+    fileByFileCoverage = {}
   }
 
   // now add coverage for file not covered
@@ -143,7 +148,7 @@ export const reportToCoverage = async (
           babelPluginMap,
         },
       )
-      fileByFileCoverage[relativeUrlMissing] = emptyCoverage
+      fileByFileCoverage[`./${relativeUrlMissing}`] = emptyCoverage
       return emptyCoverage
     }, Promise.resolve())
   }
