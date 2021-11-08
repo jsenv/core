@@ -71,7 +71,10 @@ export const createCompiledFileService = ({
 
   return (request) => {
     const { origin, ressource } = request
-    const requestUrl = `${origin}${ressource}`
+    // we use "ressourceToPathname" to remove eventual query param from the url
+    // Without this a pattern like "**/*.js" would not match "file.js?t=1"
+    // This would result in file not being compiled when they should
+    const requestUrl = `${origin}${ressourceToPathname(ressource)}`
 
     const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
       outDirectoryRelativeUrl,
@@ -275,4 +278,13 @@ const babelPluginMapFromCompileId = (
   })
 
   return babelPluginMapForGroup
+}
+
+const ressourceToPathname = (ressource) => {
+  const searchSeparatorIndex = ressource.indexOf("?")
+  const pathname =
+    searchSeparatorIndex === -1
+      ? ressource
+      : ressource.slice(0, searchSeparatorIndex)
+  return pathname
 }
