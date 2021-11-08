@@ -44,8 +44,7 @@ const expected = {
     erroredCount: 0,
     completedCount: 1,
     cancelledCount: 0,
-    startMs: testPlanSummary.startMs,
-    endMs: testPlanSummary.endMs,
+    duration: testPlanSummary.duration,
   },
   testPlanReport: {
     [fileRelativeUrl]: {
@@ -56,6 +55,7 @@ const expected = {
         },
         runtimeName: "node",
         runtimeVersion: assert.any(String),
+        duration: assert.any(Number),
       },
     },
   },

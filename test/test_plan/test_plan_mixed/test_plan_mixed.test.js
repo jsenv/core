@@ -43,8 +43,7 @@ const expected = {
     erroredCount: 1,
     completedCount: 3,
     cancelledCount: 0,
-    startMs: testPlanSummary.startMs,
-    endMs: testPlanSummary.endMs,
+    duration: testPlanSummary.duration,
   },
 }
 assert({ actual, expected })

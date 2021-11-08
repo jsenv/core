@@ -35,8 +35,6 @@ export const formatExecutionResult = (
     fileRelativeUrl,
     runtimeName,
     runtimeVersion,
-    startMs,
-    endMs,
     executionParams,
     executionResult,
   },
@@ -71,7 +69,7 @@ export const formatExecutionResult = (
     return `${description} ${summary}`
   }
 
-  const { consoleCalls = [], error } = executionResult
+  const { consoleCalls = [], error, duration } = executionResult
   const console = formatConsoleCalls(consoleCalls)
 
   return formatExecution({
@@ -79,7 +77,7 @@ export const formatExecutionResult = (
     details: {
       file: fileRelativeUrl,
       runtime: `${runtimeName}/${runtimeVersion}`,
-      duration: msAsDuration(endMs - startMs),
+      duration: msAsDuration(duration),
       ...(error ? { error: error.stack } : {}),
     },
     console,

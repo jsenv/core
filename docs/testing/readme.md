@@ -268,8 +268,7 @@ const { testPlanReport } = await executeTestPlan({
       "runtimeName": "node",
       "runtimeVersion": "8.9.0",
       "status": "completed",
-      "startMs": 1560355699946,
-      "endMs": 1560355699950,
+      "duration": 12546,
       "consoleCalls": []
     }
   }

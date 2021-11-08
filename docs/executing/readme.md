@@ -99,8 +99,7 @@ To avoid duplication some parameter are linked to a generic documentation.
   error,
   namespace,
   consoleCalls,
-  startMs,
-  endMs,
+  duration,
   runtimeName,
   runtimeVersion,
 }
@@ -182,17 +181,14 @@ An example of `consoleCalls` could be
 </details>
 
 <details>
-  <summary>startMs and endMs</summary>
+  <summary>duration</summary>
 
-`startMs` parameter is a number representing the milliseconds at which execution started.<br />
-`endMs` parameter is a number representing the milliseconds at which execution was done.
-
-startMs + endMs are meant to measure the duration of the execution. They can be converted to date by doing `new Date(startMs)`.
+`duration` is a number representing the duration in milliseconds of the execution
 
 ```js
 import { execute } from "@jsenv/core"
 
-const { startMs, endMs } = await execute({
+const { duration } = await execute({
   projectDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: "./index.js",
 })

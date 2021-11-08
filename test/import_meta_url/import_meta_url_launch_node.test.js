@@ -32,7 +32,11 @@ const test = async ({ babelPluginMap } = {}) => {
 
 // all babel plugin supported
 {
-  const actual = await test()
+  const { status, namespace } = await test()
+  const actual = {
+    status,
+    namespace,
+  }
   const expected = {
     status: "completed",
     namespace: {
@@ -45,13 +49,17 @@ const test = async ({ babelPluginMap } = {}) => {
 
 // with a non-supported babel plugin
 {
-  const actual = await test({
+  const { status, namespace } = await test({
     babelPluginMap: {
       "not-supported": () => {
         return {}
       },
     },
   })
+  const actual = {
+    status,
+    namespace,
+  }
   const expected = {
     status: "completed",
     namespace: {

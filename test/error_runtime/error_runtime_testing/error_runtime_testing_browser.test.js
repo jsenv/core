@@ -42,8 +42,7 @@ const expected = {
     erroredCount: 1,
     completedCount: 0,
     cancelledCount: 0,
-    startMs: testPlanSummary.startMs,
-    endMs: testPlanSummary.endMs,
+    duration: testPlanSummary.duration,
   },
   testPlanReport: {
     [htmlFileRelativeUrl]: {
@@ -54,6 +53,7 @@ const expected = {
         consoleCalls: testPlanReport[htmlFileRelativeUrl].chromium.consoleCalls,
         runtimeName: "chromium",
         runtimeVersion: assert.any(String),
+        duration: assert.any(Number),
       },
     },
   },

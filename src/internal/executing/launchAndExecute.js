@@ -194,9 +194,7 @@ export const launchAndExecute = async ({
   executionResultTransformer = composeTransformer(
     executionResultTransformer,
     (executionResult) => {
-      const endMs = Date.now()
-      executionResult.startMs = startMs
-      executionResult.endMs = endMs
+      executionResult.duration = Date.now() - startMs
       return executionResult
     },
   )

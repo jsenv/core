@@ -58,7 +58,8 @@ export const executeConcurrently = async (
       `Force completedExecutionLogMerging to false because process.stdout.isTTY is false`,
     )
   }
-  const executionSpinner = process.stdout.isTTY
+  const executionLogsEnabled = loggerToLevels(logger).info
+  const executionSpinner = executionLogsEnabled && process.stdout.isTTY
 
   const startMs = Date.now()
 
@@ -172,7 +173,6 @@ export const executeConcurrently = async (
         fileRelativeUrl,
         runtimeName,
         runtimeVersion,
-        startMs: Date.now(),
         executionIndex,
         executionParams,
       }
@@ -248,7 +248,7 @@ export const executeConcurrently = async (
         completedCount++
       }
 
-      if (loggerToLevels(logger).info) {
+      if (executionLogsEnabled) {
         let log = formatExecutionResult(afterExecutionInfo, {
           completedExecutionLogAbbreviation,
           executionCount,
@@ -293,8 +293,7 @@ export const executeConcurrently = async (
       executionsDone.length -
       // we substract abortedCount because they are not pushed into executionsDone
       summaryCounts.abortedCount,
-    startMs,
-    endMs: Date.now(),
+    duration: Date.now() - startMs,
   }
   if (logSummary) {
     logger.info(createSummaryLog(summary))
