@@ -14,11 +14,8 @@ export const launchAndExecute = async ({
   executeParams,
 
   allocatedMs,
-  measureDuration = false,
   mirrorConsole = false,
   captureConsole = false, // rename collectConsole ?
-  collectRuntimeName = false,
-  collectRuntimeVersion = false,
   inheritCoverage = false,
   collectCoverage = false,
   coverageTempDirectoryUrl,
@@ -102,25 +99,14 @@ export const launchAndExecute = async ({
     )
   }
 
-  if (collectRuntimeName) {
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      (executionResult) => {
-        executionResult.runtimeName = runtime.name
-        return executionResult
-      },
-    )
-  }
-
-  if (collectRuntimeVersion) {
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      (executionResult) => {
-        executionResult.runtimeVersion = runtime.version
-        return executionResult
-      },
-    )
-  }
+  executionResultTransformer = composeTransformer(
+    executionResultTransformer,
+    (executionResult) => {
+      executionResult.runtimeName = runtime.name
+      executionResult.runtimeVersion = runtime.version
+      return executionResult
+    },
+  )
 
   if (
     inheritCoverage &&
@@ -204,18 +190,16 @@ export const launchAndExecute = async ({
     )
   }
 
-  if (measureDuration) {
-    const startMs = Date.now()
-    executionResultTransformer = composeTransformer(
-      executionResultTransformer,
-      (executionResult) => {
-        const endMs = Date.now()
-        executionResult.startMs = startMs
-        executionResult.endMs = endMs
-        return executionResult
-      },
-    )
-  }
+  const startMs = Date.now()
+  executionResultTransformer = composeTransformer(
+    executionResultTransformer,
+    (executionResult) => {
+      const endMs = Date.now()
+      executionResult.startMs = startMs
+      executionResult.endMs = endMs
+      return executionResult
+    },
+  )
 
   try {
     const runtimeLabel = `${runtime.name}/${runtime.version}`
