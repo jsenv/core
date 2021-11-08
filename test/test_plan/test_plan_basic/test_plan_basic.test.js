@@ -23,24 +23,20 @@ const testPlan = {
   [htmlFileRelativeUrl]: {
     chromium: {
       runtime: chromiumRuntime,
-      measureDuration: false,
       captureConsole: false,
     },
     firefox: {
       runtime: firefoxRuntime,
-      measureDuration: false,
       captureConsole: false,
     },
     webkit: {
       runtime: webkitRuntime,
-      measureDuration: false,
       captureConsole: false,
     },
   },
   [fileRelativeUrl]: {
     node: {
       runtime: nodeRuntime,
-      measureDuration: false,
       captureConsole: false,
     },
   },
@@ -63,8 +59,7 @@ const expected = {
     erroredCount: 0,
     completedCount: 4,
     cancelledCount: 0,
-    startMs: testPlanSummary.startMs,
-    endMs: testPlanSummary.endMs,
+    duration: assert.any(Number),
   },
   testPlanReport: {
     [htmlFileRelativeUrl]: {
@@ -78,6 +73,7 @@ const expected = {
         },
         runtimeName: "chromium",
         runtimeVersion: assert.any(String),
+        duration: assert.any(Number),
       },
       firefox: {
         status: "completed",
@@ -89,7 +85,9 @@ const expected = {
         },
         runtimeName: "firefox",
         runtimeVersion: assert.any(String),
+        duration: assert.any(Number),
       },
+
       webkit: {
         status: "completed",
         namespace: {
@@ -100,6 +98,7 @@ const expected = {
         },
         runtimeName: "webkit",
         runtimeVersion: assert.any(String),
+        duration: assert.any(Number),
       },
     },
     [fileRelativeUrl]: {
@@ -110,6 +109,7 @@ const expected = {
         },
         runtimeName: "node",
         runtimeVersion: assert.any(String),
+        duration: assert.any(Number),
       },
     },
   },

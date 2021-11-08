@@ -17,7 +17,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `debugger.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const actual = await execute({
+const { status } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: nodeRuntime,
@@ -27,6 +27,9 @@ const actual = await execute({
   fileRelativeUrl,
   mirrorConsole: true,
 })
+const actual = {
+  status,
+}
 const expected = {
   status: "completed",
 }

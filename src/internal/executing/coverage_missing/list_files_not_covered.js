@@ -1,7 +1,7 @@
 import { collectFiles } from "@jsenv/filesystem"
 
 export const listRelativeFileUrlToCover = async ({
-  multipleExecutionsOperation,
+  signal,
   projectDirectoryUrl,
   coverageConfig,
 }) => {
@@ -10,7 +10,7 @@ export const listRelativeFileUrlToCover = async ({
   }
 
   const matchingFileResultArray = await collectFiles({
-    signal: multipleExecutionsOperation.signal,
+    signal,
     directoryUrl: projectDirectoryUrl,
     structuredMetaMap: structuredMetaMapForCoverage,
     predicate: ({ cover }) => cover,

@@ -18,7 +18,7 @@ const filename = `error_runtime_after_timeout.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 let errorCallbackArgValue
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   launchAndExecuteLogLevel: "off",
@@ -32,6 +32,10 @@ const actual = await execute({
   },
   stopAfterExecute: false, // let runtime error occuring after timeout kill the process
 })
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
   namespace: {},

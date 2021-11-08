@@ -5,12 +5,16 @@ import {
   resolveUrl,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
+import { Abort } from "@jsenv/abort"
 
 export const visitNodeV8Directory = async ({
-  // signal
+  signal,
   NODE_V8_COVERAGE,
   onV8Coverage,
 }) => {
+  const operation = Abort.startOperation()
+  operation.addAbortSignal(signal)
+
   const tryReadDirectory = async () => {
     const dirContent = await readDirectory(NODE_V8_COVERAGE)
     if (dirContent.length > 0) {
@@ -19,39 +23,47 @@ export const visitNodeV8Directory = async ({
     console.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`)
     return dirContent
   }
-  const dirContent = await tryReadDirectory()
 
-  const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE)
-  await dirContent.reduce(async (previous, dirEntry) => {
-    await previous
+  try {
+    operation.throwIfAborted()
+    const dirContent = await tryReadDirectory()
 
-    const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl)
-    const tryReadJsonFile = async () => {
-      const fileContent = await readFile(dirEntryUrl, { as: "string" })
-      if (fileContent === "") {
-        console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`)
-        return null
+    const coverageDirectoryUrl =
+      assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE)
+    await dirContent.reduce(async (previous, dirEntry) => {
+      operation.throwIfAborted()
+      await previous
+
+      const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl)
+      const tryReadJsonFile = async () => {
+        const fileContent = await readFile(dirEntryUrl, { as: "string" })
+        if (fileContent === "") {
+          console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`)
+          return null
+        }
+
+        try {
+          const fileAsJson = JSON.parse(fileContent)
+          return fileAsJson
+        } catch (e) {
+          console.warn(
+            createDetailedMessage(`Error while reading coverage file`, {
+              "error stack": e.stack,
+              "file": dirEntryUrl,
+            }),
+          )
+          return null
+        }
       }
 
-      try {
-        const fileAsJson = JSON.parse(fileContent)
-        return fileAsJson
-      } catch (e) {
-        console.warn(
-          createDetailedMessage(`Error while reading coverage file`, {
-            "error stack": e.stack,
-            "file": dirEntryUrl,
-          }),
-        )
-        return null
+      const fileContent = await tryReadJsonFile()
+      if (fileContent) {
+        onV8Coverage(fileContent)
       }
-    }
-
-    const fileContent = await tryReadJsonFile()
-    if (fileContent) {
-      onV8Coverage(fileContent)
-    }
-  }, Promise.resolve())
+    }, Promise.resolve())
+  } finally {
+    await operation.end()
+  }
 }
 
 export const filterV8Coverage = (v8Coverage, { coverageIgnorePredicate }) => {

@@ -46,7 +46,11 @@ const test = async ({ jsonModulesFlag = false } = {}) => {
 
 // with json module flag
 {
-  const actual = await test({ jsonModulesFlag: true })
+  const { status, namespace } = await test({ jsonModulesFlag: true })
+  const actual = {
+    status,
+    namespace,
+  }
   const expected = {
     status: "completed",
     namespace: {

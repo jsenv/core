@@ -5,7 +5,8 @@ import { EXECUTION_COLORS } from "./execution_colors.js"
 
 export const createSummaryLog = (summary) => `
 -------------- summary -----------------
-${createSummaryMessage(summary)}${createTotalDurationMessage(summary)}
+${createSummaryMessage(summary)}
+total duration: ${msAsDuration(summary.duration)}
 ----------------------------------------
 `
 
@@ -113,11 +114,4 @@ const createMixedDetails = ({
   }
 
   return `${parts.join(", ")}`
-}
-
-const createTotalDurationMessage = ({ startMs, endMs }) => {
-  if (!endMs) return ""
-
-  return `
-total duration: ${msAsDuration(endMs - startMs)}`
 }

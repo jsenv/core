@@ -17,7 +17,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `jsx-launch-browser.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: chromiumRuntime,
@@ -26,6 +26,10 @@ const actual = await execute({
   },
   fileRelativeUrl,
 })
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
   namespace: {

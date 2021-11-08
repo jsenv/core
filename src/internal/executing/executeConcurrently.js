@@ -1,7 +1,8 @@
-import { stat } from "node:fs"
+import { existsSync } from "node:fs"
 import wrapAnsi from "wrap-ansi"
 import cuid from "cuid"
-import { loggerToLevels, createDetailedMessage } from "@jsenv/logger"
+import { loggerToLevels } from "@jsenv/logger"
+import { createLog, startSpinner } from "@jsenv/log"
 import {
   urlToFileSystemPath,
   resolveUrl,
@@ -10,12 +11,11 @@ import {
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
-import { createLog } from "@jsenv/log"
 import { Abort } from "@jsenv/abort"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
-import { createExecutionResultLog } from "./executionLogs.js"
+import { formatExecuting, formatExecutionResult } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
 
 export const executeConcurrently = async (
@@ -33,10 +33,10 @@ export const executeConcurrently = async (
     babelPluginMap,
 
     defaultMsAllocatedPerExecution = 30000,
+    cooldownBetweenExecutions = 0,
     maxExecutionsInParallel = 1,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    measureGlobalDuration = true,
 
     coverage,
     coverageConfig,
@@ -46,21 +46,21 @@ export const executeConcurrently = async (
     coverageTempDirectoryRelativeUrl,
     runtimeSupport,
 
-    mainFileNotFoundCallback = ({ fileRelativeUrl }) => {
-      logger.error(
-        new Error(
-          createDetailedMessage(`an execution main file does not exists.`, {
-            ["file relative path"]: fileRelativeUrl,
-          }),
-        ),
-      )
-    },
     beforeExecutionCallback = () => {},
     afterExecutionCallback = () => {},
 
     logSummary,
   },
 ) => {
+  if (completedExecutionLogMerging && !process.stdout.isTTY) {
+    completedExecutionLogMerging = false
+    logger.debug(
+      `Force completedExecutionLogMerging to false because process.stdout.isTTY is false`,
+    )
+  }
+  const executionLogsEnabled = loggerToLevels(logger).info
+  const executionSpinner = executionLogsEnabled && process.stdout.isTTY
+
   const startMs = Date.now()
 
   const report = {}
@@ -113,7 +113,7 @@ export const executeConcurrently = async (
 
       try {
         value.coverage = await reportToCoverage(value.report, {
-          multipleExecutionsOperation,
+          signal: multipleExecutionsOperation.signal,
           logger,
           projectDirectoryUrl,
           babelPluginMap,
@@ -133,8 +133,7 @@ export const executeConcurrently = async (
     }
   }
 
-  let previousExecutionResult
-  let previousExecutionLog
+  let executionLog = createLog({ newLine: "around" })
   let abortedCount = 0
   let timedoutCount = 0
   let erroredCount = 0
@@ -142,18 +141,19 @@ export const executeConcurrently = async (
   const executionsDone = await executeInParallel({
     multipleExecutionsOperation,
     maxExecutionsInParallel,
+    cooldownBetweenExecutions,
     executionSteps,
     start: async (paramsFromStep) => {
       const executionIndex = executionSteps.indexOf(paramsFromStep)
-      const { executionName, fileRelativeUrl } = paramsFromStep
+      const { executionName, fileRelativeUrl, runtime } = paramsFromStep
+      const runtimeName = runtime.name
+      const runtimeVersion = runtime.version
+
       const executionParams = {
         // the params below can be overriden by executionDefaultParams
         measurePerformance: false,
         collectPerformance: false,
-        measureDuration: true,
         captureConsole: true,
-        collectRuntimeName: true,
-        collectRuntimeVersion: true,
         // stopAfterExecute: true to ensure runtime is stopped once executed
         // because we have what we wants: execution is completed and
         // we have associated coverage and capturedConsole
@@ -163,6 +163,7 @@ export const executeConcurrently = async (
         stopAfterExecuteReason: "execution-done",
         allocatedMs: defaultMsAllocatedPerExecution,
         ...paramsFromStep,
+        runtime,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read
         mirrorConsole: false,
@@ -170,48 +171,69 @@ export const executeConcurrently = async (
 
       const beforeExecutionInfo = {
         fileRelativeUrl,
+        runtimeName,
+        runtimeVersion,
         executionIndex,
         executionParams,
       }
 
+      let spinner
+      if (executionSpinner) {
+        spinner = startSpinner({
+          log: executionLog,
+          text: formatExecuting(beforeExecutionInfo, {
+            executionCount,
+            abortedCount,
+            timedoutCount,
+            erroredCount,
+            completedCount,
+          }),
+        })
+      }
+      beforeExecutionCallback(beforeExecutionInfo)
+
       const filePath = urlToFileSystemPath(
         `${projectDirectoryUrl}${fileRelativeUrl}`,
       )
-      const fileExists = await pathLeadsToFile(filePath)
-      if (!fileExists) {
-        mainFileNotFoundCallback(beforeExecutionInfo)
-        return
-      }
+      let executionResult
+      if (existsSync(filePath)) {
+        executionResult = await launchAndExecute({
+          signal: multipleExecutionsOperation.signal,
+          launchAndExecuteLogLevel,
 
-      beforeExecutionCallback(beforeExecutionInfo)
-
-      // launchAndExecute peut retourner un aborted
-      // et c'est bien, on veut le gérer, si tous les suivants sont aborted
-      // on le gere en dehors de cette boucle
-      const executionResult = await launchAndExecute({
-        signal: multipleExecutionsOperation.signal,
-        launchAndExecuteLogLevel,
-
-        ...executionParams,
-        collectCoverage: coverage,
-        coverageTempDirectoryUrl,
-        runtimeParams: {
-          projectDirectoryUrl,
-          compileServerOrigin,
-          outDirectoryRelativeUrl,
+          ...executionParams,
           collectCoverage: coverage,
-          coverageIgnorePredicate,
-          coverageForceIstanbul,
-          ...executionParams.runtimeParams,
-        },
-        executeParams: {
-          fileRelativeUrl,
-          ...executionParams.executeParams,
-        },
-        coverageV8ConflictWarning,
-      })
+          coverageTempDirectoryUrl,
+          runtimeParams: {
+            projectDirectoryUrl,
+            compileServerOrigin,
+            outDirectoryRelativeUrl,
+            collectCoverage: coverage,
+            coverageIgnorePredicate,
+            coverageForceIstanbul,
+            ...executionParams.runtimeParams,
+          },
+          executeParams: {
+            fileRelativeUrl,
+            ...executionParams.executeParams,
+          },
+          coverageV8ConflictWarning,
+        })
+      } else {
+        executionResult = {
+          status: "errored",
+          error: new Error(
+            `No file at ${fileRelativeUrl} for execution "${executionName}"`,
+          ),
+        }
+      }
+      if (fileRelativeUrl in report === false) {
+        report[fileRelativeUrl] = {}
+      }
+      report[fileRelativeUrl][executionName] = executionResult
       const afterExecutionInfo = {
         ...beforeExecutionInfo,
+        endMs: Date.now(),
         executionResult,
       }
       afterExecutionCallback(afterExecutionInfo)
@@ -226,8 +248,8 @@ export const executeConcurrently = async (
         completedCount++
       }
 
-      if (loggerToLevels(logger).info) {
-        let log = createExecutionResultLog(afterExecutionInfo, {
+      if (executionLogsEnabled) {
+        let log = formatExecutionResult(afterExecutionInfo, {
           completedExecutionLogAbbreviation,
           executionCount,
           abortedCount,
@@ -242,31 +264,21 @@ export const executeConcurrently = async (
           wordWrap: false,
         })
 
-        if (
-          previousExecutionLog &&
-          completedExecutionLogMerging &&
-          previousExecutionResult &&
-          previousExecutionResult.status === "completed" &&
-          (previousExecutionResult.consoleCalls
-            ? previousExecutionResult.consoleCalls.length === 0
-            : true) &&
-          executionResult.status === "completed"
-        ) {
-          previousExecutionLog.write(log)
+        // replace spinner with this execution result
+        if (spinner) spinner.stop()
+        executionLog.write(log)
+
+        const canOverwriteLog = canOverwriteLogGetter({
+          completedExecutionLogMerging,
+          executionResult,
+        })
+        if (canOverwriteLog) {
+          // nothing to do, we reuse the current executionLog object
         } else {
-          if (previousExecutionLog) {
-            previousExecutionLog.destroy()
-          }
-          previousExecutionLog = createLog()
-          previousExecutionLog.write(log)
+          executionLog.destroy()
+          executionLog = createLog({ newLine: "around" })
         }
       }
-
-      if (fileRelativeUrl in report === false) {
-        report[fileRelativeUrl] = {}
-      }
-      report[fileRelativeUrl][executionName] = executionResult
-      previousExecutionResult = executionResult
     },
   })
 
@@ -281,7 +293,7 @@ export const executeConcurrently = async (
       executionsDone.length -
       // we substract abortedCount because they are not pushed into executionsDone
       summaryCounts.abortedCount,
-    ...(measureGlobalDuration ? { startMs, endMs: Date.now() } : {}),
+    duration: Date.now() - startMs,
   }
   if (logSummary) {
     logger.info(createSummaryLog(summary))
@@ -293,11 +305,36 @@ export const executeConcurrently = async (
   })
 }
 
+const canOverwriteLogGetter = ({
+  completedExecutionLogMerging,
+  executionResult,
+}) => {
+  if (!completedExecutionLogMerging) {
+    return false
+  }
+
+  if (executionResult.status === "aborted") {
+    return true
+  }
+
+  if (executionResult.status !== "completed") {
+    return false
+  }
+
+  const { consoleCalls = [] } = executionResult
+  if (consoleCalls.length > 0) {
+    return false
+  }
+
+  return true
+}
+
 const executeInParallel = async ({
   multipleExecutionsOperation,
   executionSteps,
   start,
   maxExecutionsInParallel = 1,
+  cooldownBetweenExecutions,
 }) => {
   const executionResults = []
   let progressionIndex = 0
@@ -333,27 +370,16 @@ const executeInParallel = async ({
     if (!multipleExecutionsOperation.signal.aborted) {
       executionResults[index] = output
     }
+    if (cooldownBetweenExecutions) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, cooldownBetweenExecutions),
+      )
+    }
   }
 
   await nextChunk()
 
   return executionResults
-}
-
-const pathLeadsToFile = (path) => {
-  return new Promise((resolve, reject) => {
-    stat(path, (error, stats) => {
-      if (error) {
-        if (error.code === "ENOENT") {
-          resolve(false)
-        } else {
-          reject(error)
-        }
-      } else {
-        resolve(stats.isFile())
-      }
-    })
-  })
 }
 
 const reportToSummary = (report) => {

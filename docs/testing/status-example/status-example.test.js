@@ -13,7 +13,6 @@ const testPlan = {
   [`${testDirectoryRelativeUrl}*.spec.js`]: {
     node: {
       runtime: nodeRuntime,
-      measureDuration: true,
       captureConsole: true,
     },
   },

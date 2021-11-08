@@ -25,7 +25,7 @@ const importerFileRelativeUrl = "intermediate.js"
 const importerFileUrl = resolveUrl(importerFileRelativeUrl, testDirectoryUrl)
 const importedFileUrl = resolveUrl("foo.js", testDirectoryUrl)
 
-const actual = await execute({
+const { status, error } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   launchAndExecuteLogLevel: "off",
@@ -36,6 +36,10 @@ const actual = await execute({
   fileRelativeUrl: mainFileRelativeUrl,
   ignoreError: true,
 })
+const actual = {
+  status,
+  error,
+}
 const expected = {
   status: "errored",
   error: Object.assign(

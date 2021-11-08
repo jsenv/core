@@ -19,8 +19,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}importing_react.html`
-
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   customCompilers: {
@@ -42,6 +41,11 @@ const actual = await execute({
   stopAfterExecute: true,
   fileRelativeUrl: htmlFileRelativeUrl,
 })
+
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
   namespace: {

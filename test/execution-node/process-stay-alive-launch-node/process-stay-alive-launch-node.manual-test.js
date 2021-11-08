@@ -17,7 +17,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `process-stay-alive-launch-node.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   fileRelativeUrl,
@@ -26,6 +26,10 @@ const actual = await execute({
     ...LAUNCH_TEST_PARAMS,
   },
 })
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
 }

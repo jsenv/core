@@ -268,8 +268,7 @@ const { testPlanReport } = await executeTestPlan({
       "runtimeName": "node",
       "runtimeVersion": "8.9.0",
       "status": "completed",
-      "startMs": 1560355699946,
-      "endMs": 1560355699950,
+      "duration": 12546,
       "consoleCalls": []
     }
   }
@@ -379,12 +378,6 @@ executeTestPlan({
   },
 })
 ```
-
-## measureDuration
-
-A boolean controlling if file execution duration is measured and reported back. This param is optional and enabled by default.
-
-When true `startMs`, `endMs` properties are availabe on every execution result inside [testPlanReport](#testPlanReport)
 
 ## captureConsole
 

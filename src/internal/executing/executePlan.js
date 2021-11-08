@@ -25,10 +25,10 @@ export const executePlan = async (
 
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
+    cooldownBetweenExecutions,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
-    measureGlobalDuration,
 
     coverage,
     coverageConfig,
@@ -82,7 +82,6 @@ export const executePlan = async (
           SIGINT: true,
         },
         () => {
-          logger.info("Aborting execution (SIGINT)")
           abort()
         },
       )
@@ -148,10 +147,10 @@ export const executePlan = async (
 
       defaultMsAllocatedPerExecution,
       maxExecutionsInParallel,
+      cooldownBetweenExecutions,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
-      measureGlobalDuration,
 
       coverage,
       coverageConfig,
@@ -163,6 +162,7 @@ export const executePlan = async (
     })
 
     return {
+      aborted: multipleExecutionsOperation.signal.aborted,
       planSummary: result.summary,
       planReport: result.report,
       planCoverage: result.coverage,

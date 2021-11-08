@@ -15,7 +15,6 @@ const testPlan = {
   [testFileRelativeUrl]: {
     node: {
       runtime: nodeRuntime,
-      measureDuration: false,
     },
   },
 }
@@ -25,5 +24,4 @@ await executeTestPlan({
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,
-  measureGlobalDuration: false,
 })

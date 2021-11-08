@@ -254,9 +254,6 @@
       "eslint-plugin-react/*": [
         "./node_modules/eslint-plugin-react/*"
       ],
-      "is-unicode-supported": [
-        "./node_modules/is-unicode-supported/index.js"
-      ],
       "is-valid-identifier/*": [
         "./node_modules/is-valid-identifier/*"
       ],
@@ -443,9 +440,6 @@
       "playwright/cli": [
         "./node_modules/playwright/cli.js"
       ],
-      "supports-color": [
-        "./node_modules/supports-color/index.js"
-      ],
       "systemjs/dist/*": [
         "./node_modules/systemjs/dist/*"
       ],
@@ -517,9 +511,6 @@
       ],
       "rollup/dist/*": [
         "./node_modules/rollup/dist/*"
-      ],
-      "string-width": [
-        "./node_modules/string-width/index.js"
       ],
       "@babel/core": [
         "./node_modules/@babel/core/lib/index.js"
