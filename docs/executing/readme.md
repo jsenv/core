@@ -185,8 +185,7 @@ An example of `consoleCalls` could be
   <summary>startMs and endMs</summary>
 
 `startMs` parameter is a number representing the milliseconds at which execution started.<br />
-`endMs` parameter is a number representing the milliseconds at which execution was done.<br />
-These value are returned only when `measureDuration` is enabled.
+`endMs` parameter is a number representing the milliseconds at which execution was done.
 
 startMs + endMs are meant to measure the duration of the execution. They can be converted to date by doing `new Date(startMs)`.
 
@@ -196,7 +195,6 @@ import { execute } from "@jsenv/core"
 const { startMs, endMs } = await execute({
   projectDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: "./index.js",
-  measureDuration: true, // without this startMs, endMs are undefined
 })
 ```
 
@@ -205,7 +203,7 @@ const { startMs, endMs } = await execute({
 <details>
   <summary>runTimeName</summary>
 
-`runtimeName` is a string describing the runtime used to execute the file. It is returned only when `collectRuntimeName` is enabled. For now the possible runtimeName values are `"chromium"`, `"node"`, `"firefox"`, `"webkit"`.
+`runtimeName` is a string describing the runtime used to execute the file. For now the possible runtimeName values are `"chromium"`, `"node"`, `"firefox"`, `"webkit"`.
 
 ```js
 import { execute } from "@jsenv/core"
@@ -213,7 +211,6 @@ import { execute } from "@jsenv/core"
 const { runtimeName } = await execute({
   projectDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: "./index.js",
-  collectRuntimeName: true, // without this runtimeName is undefined
 })
 ```
 
@@ -222,13 +219,12 @@ const { runtimeName } = await execute({
 <details>
   <summary>runtimeVersion</summary>
 
-`runtimeVersion` is a string describing the runtime version used to execute the file. Use this to know the node version or browser version used to execute the file. It is returned only when `collectRuntimeVersion` is enabled.
+`runtimeVersion` is a string describing the runtime version used to execute the file. Use this to know the node version or browser version used to execute the file.
 
 ```js
 const { runtimeVersion } = await execute({
   projectDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: "./index.js",
-  collectRuntimeVersion: true, // without this runtimeVersion is undefined
 })
 ```
 

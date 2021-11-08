@@ -38,6 +38,8 @@ await executeTestPlan({
       },
     },
   },
+  // completedExecutionLogMerging: false,
+  // completedExecutionLogAbbreviation: false,
   coverage: process.argv.includes("--coverage"),
   coverageConfig: {
     "./index.js": true,

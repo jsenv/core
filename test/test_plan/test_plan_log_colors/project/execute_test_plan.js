@@ -24,5 +24,4 @@ await executeTestPlan({
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,
-  measureGlobalDuration: false,
 })

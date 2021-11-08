@@ -380,12 +380,6 @@ executeTestPlan({
 })
 ```
 
-## measureDuration
-
-A boolean controlling if file execution duration is measured and reported back. This param is optional and enabled by default.
-
-When true `startMs`, `endMs` properties are availabe on every execution result inside [testPlanReport](#testPlanReport)
-
 ## captureConsole
 
 A boolean controlling if console logs are captured during file execution and reported back. This param is optional and enabled by default.

@@ -27,11 +27,8 @@ export const execute = async ({
   runtimeParams,
 
   allocatedMs,
-  measureDuration,
   mirrorConsole = true,
   captureConsole,
-  collectRuntimeName,
-  collectRuntimeVersion,
   inheritCoverage,
   collectCoverage,
   measurePerformance,
@@ -139,11 +136,8 @@ export const execute = async ({
       },
 
       allocatedMs,
-      measureDuration,
       mirrorConsole,
       captureConsole,
-      collectRuntimeName,
-      collectRuntimeVersion,
       inheritCoverage,
       collectCoverage,
       measurePerformance,

@@ -33,13 +33,13 @@ export const executeTestPlan = async ({
 
   testPlan,
   defaultMsAllocatedPerExecution,
+  cooldownBetweenExecutions,
 
   maxExecutionsInParallel,
 
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
-  measureGlobalDuration = true,
   updateProcessExitCode = true,
 
   coverage = process.argv.includes("--cover") ||
@@ -144,10 +144,10 @@ export const executeTestPlan = async ({
 
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
+    cooldownBetweenExecutions,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     logSummary,
-    measureGlobalDuration,
 
     coverage,
     coverageConfig,

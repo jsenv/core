@@ -26,24 +26,20 @@ await executeTestPlan({
     [`${currentDirectoryRelativeUrl}animals.test.html`]: {
       chromium: {
         runtime: chromiumRuntime,
-        measureDuration: false,
         captureConsole: false,
       },
       firefox: {
         runtime: firefoxRuntime,
-        measureDuration: false,
         captureConsole: false,
       },
       webkit: {
         runtime: webkitRuntime,
-        measureDuration: false,
         captureConsole: false,
       },
     },
     [`${currentDirectoryRelativeUrl}animals.test.js`]: {
       node: {
         runtime: nodeRuntime,
-        measureDuration: false,
         captureConsole: false,
       },
     },

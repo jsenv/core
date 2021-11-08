@@ -4,8 +4,42 @@ import { msAsDuration } from "../logs/msAsDuration.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
 import { createSummaryDetails } from "./createSummaryLog.js"
 
-export const createExecutionResultLog = (
-  { executionIndex, fileRelativeUrl, executionParams, executionResult },
+export const formatExecuting = (
+  { executionIndex },
+  { executionCount, abortedCount, timedoutCount, erroredCount, completedCount },
+) => {
+  const executionNumber = executionIndex + 1
+  const description = ANSI.color(
+    `executing ${executionNumber} of ${executionCount}`,
+    EXECUTION_COLORS.executing,
+  )
+  const summary =
+    executionIndex === 0
+      ? ""
+      : `(${createSummaryDetails({
+          executionCount: executionIndex,
+          abortedCount,
+          timedoutCount,
+          erroredCount,
+          completedCount,
+        })})`
+
+  return formatExecution({
+    label: `${description} ${summary}`,
+  })
+}
+
+export const formatExecutionResult = (
+  {
+    executionIndex,
+    fileRelativeUrl,
+    runtimeName,
+    runtimeVersion,
+    startMs,
+    endMs,
+    executionParams,
+    executionResult,
+  },
   {
     completedExecutionLogAbbreviation,
     executionCount,
@@ -24,6 +58,7 @@ export const createExecutionResultLog = (
     executionCount,
     allocatedMs,
   })
+
   const summary = `(${createSummaryDetails({
     executionCount: executionNumber,
     abortedCount,
@@ -33,21 +68,22 @@ export const createExecutionResultLog = (
   })})`
 
   if (completedExecutionLogAbbreviation && status === "completed") {
-    return `
-${description} ${summary}`
+    return `${description} ${summary}`
   }
 
-  const { runtimeName, runtimeVersion, consoleCalls, startMs, endMs, error } =
-    executionResult
+  const { consoleCalls = [], error } = executionResult
+  const console = formatConsoleCalls(consoleCalls)
 
-  const runtime = `${runtimeName}/${runtimeVersion}`
-  return `
-${description} ${summary}
-file: ${fileRelativeUrl}
-runtime: ${runtime}${appendDuration({
-    startMs,
-    endMs,
-  })}${appendConsole(consoleCalls)}${appendError(error)}`
+  return formatExecution({
+    label: `${description} ${summary}`,
+    details: {
+      file: fileRelativeUrl,
+      runtime: `${runtimeName}/${runtimeVersion}`,
+      duration: msAsDuration(endMs - startMs),
+      ...(error ? { error: error.stack } : {}),
+    },
+    console,
+  })
 }
 
 const descriptionFormatters = {
@@ -83,38 +119,33 @@ const descriptionFormatters = {
   },
 }
 
-const appendDuration = ({ endMs, startMs }) => {
-  if (!endMs) return ""
-
-  return `
-duration: ${msAsDuration(endMs - startMs)}`
-}
-
-const appendConsole = (consoleCalls) => {
-  if (!consoleCalls || consoleCalls.length === 0) return ""
-
+const formatConsoleCalls = (consoleCalls) => {
   const consoleOutput = consoleCalls.reduce((previous, { text }) => {
     return `${previous}${text}`
   }, "")
 
   const consoleOutputTrimmed = consoleOutput.trim()
-  if (consoleOutputTrimmed === "") return ""
+  if (consoleOutputTrimmed === "") {
+    return ""
+  }
 
-  return `
-${ANSI.color(`-------- console --------`, ANSI.GREY)}
+  return `${ANSI.color(`-------- console --------`, ANSI.GREY)}
 ${consoleOutputTrimmed}
 ${ANSI.color(`-------------------------`, ANSI.GREY)}`
 }
 
-const appendError = (error) => {
-  if (!error) {
-    return ``
+const formatExecution = ({ label, details = {}, console }) => {
+  let message = ``
+
+  message += label
+  Object.keys(details).forEach((key) => {
+    message += `
+${key}: ${details[key]}`
+  })
+  if (console) {
+    message += `
+${console}`
   }
 
-  return `
-error: ${error.stack}`
+  return message
 }
-
-// export const createShortExecutionResultLog = () => {
-//   return `Execution completed (2/9) - (all completed)`
-// }
