@@ -15,7 +15,6 @@ const testPlan = {
   [`${testDirectoryRelativeUrl}*.spec.js`]: {
     node: {
       runtime: nodeRuntime,
-      measureDuration: true,
       captureConsole: true,
     },
   },
@@ -31,6 +30,7 @@ const { testPlanSummary } = await executeTestPlan({
   testPlan,
   completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: true,
+  cooldownBetweenExecutions: 2000,
 })
 const actual = {
   testPlanSummary,

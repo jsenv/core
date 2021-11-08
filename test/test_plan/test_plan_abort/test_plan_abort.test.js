@@ -16,12 +16,10 @@ const testPlan = {
   [fileRelativeUrl]: {
     node: {
       runtime: nodeRuntime,
-      measureDuration: false,
       captureConsole: false,
     },
     node2: {
       runtime: nodeRuntime,
-      measureDuration: false,
       captureConsole: false,
     },
   },

@@ -17,7 +17,6 @@ const testPlan = {
     node: {
       runtime: nodeRuntime,
       captureConsole: true,
-      measureDuration: false,
     },
   },
 }

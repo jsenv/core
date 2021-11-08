@@ -25,7 +25,6 @@ const { testPlanReport } = await executeTestPlan({
     [fileRelativeUrl]: {
       node: {
         runtime: nodeRuntime,
-        measureDuration: false,
         captureConsole: false,
       },
     },

@@ -15,7 +15,6 @@ const testPlan = {
   [testFileRelativeUrl]: {
     node: {
       runtime: nodeRuntime,
-      measureDuration: false,
     },
   },
 }

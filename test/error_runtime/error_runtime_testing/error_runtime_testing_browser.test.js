@@ -20,7 +20,6 @@ const testPlan = {
         // headless: false
       },
       captureConsole: true,
-      measureDuration: false,
     },
   },
 }
