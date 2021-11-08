@@ -109,8 +109,6 @@ export const reportToCoverage = async (
     fileByFileCoverage = {}
   }
 
-  console.log("before missing", signal.aborted)
-
   // now add coverage for file not covered
   if (coverageIncludeMissing) {
     const missingFileByFileCoverage = await getMissingFileByFileCoverage({

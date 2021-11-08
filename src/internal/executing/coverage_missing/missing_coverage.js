@@ -25,17 +25,11 @@ export const getMissingFileByFileCoverage = async ({
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
 
-  console.log("before generating empty", operation.signal.aborted)
-
   const missingFileByFileCoverage = {}
   await relativeUrlsMissing.reduce(async (previous, relativeUrlMissing) => {
     operation.throwIfAborted()
     await previous
     await operation.withSignal(async (signal) => {
-      console.log(
-        `before generating empty for ${relativeUrlMissing}`,
-        signal.aborted,
-      )
       const emptyCoverage = await relativeUrlToEmptyCoverage(
         relativeUrlMissing,
         {
@@ -47,11 +41,6 @@ export const getMissingFileByFileCoverage = async ({
       missingFileByFileCoverage[`./${relativeUrlMissing}`] = emptyCoverage
     })
   }, Promise.resolve())
-
-  console.log(
-    `after generating empty ${operation.signal.abort}`,
-    signal.aborted,
-  )
 
   return missingFileByFileCoverage
 }
