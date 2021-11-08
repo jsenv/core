@@ -71,6 +71,9 @@ export const createCompiledFileService = ({
 
   return (request) => {
     const { origin, ressource } = request
+    // we use "ressourceToPathname" to remove eventual query param from the url
+    // Without this a pattern like "**/*.js" would not match "file.js?t=1"
+    // This would result in file not being compiled when they should
     const requestUrl = `${origin}${ressourceToPathname(ressource)}`
 
     const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
