@@ -225,6 +225,7 @@ export const executeTestPlan = async ({
   }
 
   return {
+    testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage,

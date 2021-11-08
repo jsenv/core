@@ -162,6 +162,7 @@ export const executePlan = async (
     })
 
     return {
+      aborted: multipleExecutionsOperation.signal.aborted,
       planSummary: result.summary,
       planReport: result.report,
       planCoverage: result.coverage,

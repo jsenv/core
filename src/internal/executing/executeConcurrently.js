@@ -113,7 +113,7 @@ export const executeConcurrently = async (
 
       try {
         value.coverage = await reportToCoverage(value.report, {
-          multipleExecutionsOperation,
+          signal: multipleExecutionsOperation.signal,
           logger,
           projectDirectoryUrl,
           babelPluginMap,
