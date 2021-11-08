@@ -15,7 +15,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}natural_exit.js`
 
 let nodeRuntimeHooks
 {
-  const actual = await execute({
+  const { status, namespace } = await execute({
     ...EXECUTE_TEST_PARAMS,
     // executionLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
@@ -32,6 +32,10 @@ let nodeRuntimeHooks
     mirrorConsole: false,
     fileRelativeUrl,
   })
+  const actual = {
+    status,
+    namespace,
+  }
   const expected = {
     status: "completed",
     namespace: {},

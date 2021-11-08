@@ -17,7 +17,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `tab.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: chromiumTabRuntime,
@@ -28,6 +28,10 @@ const actual = await execute({
   fileRelativeUrl,
   // stopAfterExecute: false,
 })
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
   namespace: {

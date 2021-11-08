@@ -31,7 +31,7 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const actual = await execute({
+    const { status, namespace } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       // compileServerLogLevel: "debug",
@@ -44,6 +44,10 @@ await launchBrowsers(
       captureConsole: true,
       // stopAfterExecute: false,
     })
+    const actual = {
+      status,
+      namespace,
+    }
     const expected = {
       status: "completed",
       namespace: {

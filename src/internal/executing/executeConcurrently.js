@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import wrapAnsi from "wrap-ansi"
 import cuid from "cuid"
+import { loggerToLevels } from "@jsenv/logger"
 import { createLog, startSpinner } from "@jsenv/log"
 import {
   urlToFileSystemPath,
@@ -51,6 +52,14 @@ export const executeConcurrently = async (
     logSummary,
   },
 ) => {
+  if (completedExecutionLogMerging && !process.stdout.isTTY) {
+    completedExecutionLogMerging = false
+    logger.debug(
+      `Force completedExecutionLogMerging to false because process.stdout.isTTY is false`,
+    )
+  }
+  const executionSpinner = process.stdout.isTTY
+
   const startMs = Date.now()
 
   const report = {}
@@ -168,16 +177,19 @@ export const executeConcurrently = async (
         executionParams,
       }
 
-      const spinner = startSpinner({
-        log: executionLog,
-        text: formatExecuting(beforeExecutionInfo, {
-          executionCount,
-          abortedCount,
-          timedoutCount,
-          erroredCount,
-          completedCount,
-        }),
-      })
+      let spinner
+      if (executionSpinner) {
+        spinner = startSpinner({
+          log: executionLog,
+          text: formatExecuting(beforeExecutionInfo, {
+            executionCount,
+            abortedCount,
+            timedoutCount,
+            erroredCount,
+            completedCount,
+          }),
+        })
+      }
       beforeExecutionCallback(beforeExecutionInfo)
 
       const filePath = urlToFileSystemPath(
@@ -235,34 +247,37 @@ export const executeConcurrently = async (
       } else if (executionResult.status === "completed") {
         completedCount++
       }
-      let log = formatExecutionResult(afterExecutionInfo, {
-        completedExecutionLogAbbreviation,
-        executionCount,
-        abortedCount,
-        timedoutCount,
-        erroredCount,
-        completedCount,
-      })
-      const { columns = 80 } = process.stdout
-      log = wrapAnsi(log, columns, {
-        trim: false,
-        hard: true,
-        wordWrap: false,
-      })
 
-      // replace spinner with this execution result
-      spinner.stop()
-      executionLog.write(log)
+      if (loggerToLevels(logger).info) {
+        let log = formatExecutionResult(afterExecutionInfo, {
+          completedExecutionLogAbbreviation,
+          executionCount,
+          abortedCount,
+          timedoutCount,
+          erroredCount,
+          completedCount,
+        })
+        const { columns = 80 } = process.stdout
+        log = wrapAnsi(log, columns, {
+          trim: false,
+          hard: true,
+          wordWrap: false,
+        })
 
-      const canOverwriteLog = canOverwriteLogGetter({
-        completedExecutionLogMerging,
-        executionResult,
-      })
-      if (canOverwriteLog) {
-        // nothing to do, we reuse the current executionLog object
-      } else {
-        executionLog.destroy()
-        executionLog = createLog({ newLine: "around" })
+        // replace spinner with this execution result
+        if (spinner) spinner.stop()
+        executionLog.write(log)
+
+        const canOverwriteLog = canOverwriteLogGetter({
+          completedExecutionLogMerging,
+          executionResult,
+        })
+        if (canOverwriteLog) {
+          // nothing to do, we reuse the current executionLog object
+        } else {
+          executionLog.destroy()
+          executionLog = createLog({ newLine: "around" })
+        }
       }
     },
   })

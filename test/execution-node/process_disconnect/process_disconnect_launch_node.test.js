@@ -19,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `process_disconnect.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const actual = await execute({
+const { status, error, consoleCalls } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: nodeRuntime,
@@ -30,7 +30,11 @@ const actual = await execute({
   ignoreError: true,
   captureConsole: true,
 })
-actual.consoleCalls = removeAnnoyingLogs(actual.consoleCalls)
+const actual = {
+  error,
+  status,
+  consoleCalls: removeAnnoyingLogs(consoleCalls),
+}
 const expected = {
   error: new Error(`runtime stopped during execution`),
   status: "errored",

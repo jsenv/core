@@ -28,7 +28,7 @@ if (process.platform !== "win32") {
       webkitRuntime,
     ],
     async (browserRuntime) => {
-      const actual = await execute({
+      const { status, namespace, performance } = await execute({
         ...EXECUTE_TEST_PARAMS,
         jsenvDirectoryRelativeUrl,
         runtime: browserRuntime,
@@ -42,6 +42,11 @@ if (process.platform !== "win32") {
         // },
         // stopAfterExecute: false,
       })
+      const actual = {
+        status,
+        namespace,
+        performance,
+      }
       const expected = {
         status: "completed",
         namespace: {

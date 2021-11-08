@@ -38,7 +38,7 @@ await executeTestPlan({
       },
     },
   },
-  // completedExecutionLogMerging: false,
+  // completedExecutionLogMerging: true,
   // completedExecutionLogAbbreviation: false,
   coverage: process.argv.includes("--coverage"),
   coverageConfig: {

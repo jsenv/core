@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: nodeRuntime,
@@ -28,6 +28,10 @@ const actual = await execute({
   fileRelativeUrl,
   stopAfterExecute: true,
 })
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
   namespace: {

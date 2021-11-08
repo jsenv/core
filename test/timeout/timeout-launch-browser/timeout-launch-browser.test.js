@@ -17,7 +17,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `timeout-launch-browser.html`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 
-const actual = await execute({
+const { status, consoleCalls } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: chromiumRuntime,
@@ -28,6 +28,10 @@ const actual = await execute({
   allocatedMs: 10000,
   captureConsole: true,
 })
+const actual = {
+  status,
+  consoleCalls,
+}
 const expected = {
   status: "timedout",
   consoleCalls:

@@ -26,7 +26,7 @@ const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 const abortController = new AbortController()
 
 let errorCallbackArg
-const actual = await execute({
+const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   signal: abortController.signal,
   jsenvDirectoryRelativeUrl,
@@ -42,7 +42,10 @@ const actual = await execute({
     abortController.abort() // kill chromium browser to let process end
   },
 })
-
+const actual = {
+  status,
+  namespace,
+}
 const expected = {
   status: "completed",
   namespace: {
