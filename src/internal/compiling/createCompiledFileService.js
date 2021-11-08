@@ -68,7 +68,7 @@ export const createCompiledFileService = ({
     projectDirectoryUrl,
   )
 
-  return (request) => {
+  return (request, { pushResponse }) => {
     const { origin, ressource } = request
     // we use "ressourceToPathname" to remove eventual query param from the url
     // Without this a pattern like "**/*.js" would not match "file.js?t=1"
@@ -155,6 +155,7 @@ export const createCompiledFileService = ({
       compileCacheStrategy,
       projectFileRequestedCallback,
       request,
+      pushResponse,
       compile: ({ code, map }) => {
         return compiler({
           logger,

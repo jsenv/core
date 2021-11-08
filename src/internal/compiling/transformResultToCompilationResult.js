@@ -157,6 +157,8 @@ export const transformResultToCompilationResult = async (
     assetsContent.push(stringifyCoverage(coverage))
   }
 
+  const { dependencies = [] } = metadata
+
   return {
     contentType,
     compiledSource: output,
@@ -165,6 +167,7 @@ export const transformResultToCompilationResult = async (
     sourcesContent,
     assets,
     assetsContent,
+    dependencies,
   }
 }
 

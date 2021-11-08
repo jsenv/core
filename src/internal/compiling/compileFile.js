@@ -18,6 +18,7 @@ export const compileFile = async ({
   fileContentFallback,
   projectFileRequestedCallback = () => {},
   request,
+  pushResponse,
   compile,
   compileCacheStrategy = "etag",
   compileCacheSourcesValidation,
@@ -102,6 +103,13 @@ export const compileFile = async ({
         urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
         request,
       )
+    })
+
+    compileResult.dependencies.forEach((dependency) => {
+      const requestUrl = resolveUrl(request.origin, request.ressource)
+      const dependencyUrl = resolveUrl(dependency, requestUrl)
+      const dependencyRelativeUrl = urlToRelativeUrl(dependencyUrl, requestUrl)
+      pushResponse({ path: `/${dependencyRelativeUrl}` })
     })
 
     // when a compiled version of the source file was just created or updated

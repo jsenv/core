@@ -46,5 +46,6 @@ const expected = {
   sourcesContent: [originalFileContent],
   assets: [sourcemapFileUrl],
   assetsContent: [actual.assetsContent[0]],
+  dependencies: ["./file.js"],
 }
 assert({ actual, expected })
