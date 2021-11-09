@@ -5,6 +5,7 @@ import { projectDirectoryUrl, runtimeSupport } from "../../jsenv.config.mjs"
 await executeTestPlan({
   projectDirectoryUrl,
   runtimeSupport,
+  logLevel: "debug",
   testPlan: {
     "test/**/*.test.js": {
       node: {

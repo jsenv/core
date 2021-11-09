@@ -1,4 +1,5 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
@@ -73,6 +74,12 @@ export const executePlan = async (
     })
   })
 
+  logger.debug(
+    createDetailedMessage(`Prepare executing plan`, {
+      runtimeSupport,
+    }),
+  )
+
   const multipleExecutionsOperation = Abort.startOperation()
   multipleExecutionsOperation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -82,6 +89,7 @@ export const executePlan = async (
           SIGINT: true,
         },
         () => {
+          logger.debug(`SIGINT abort`)
           abort()
         },
       )
@@ -119,6 +127,7 @@ export const executePlan = async (
       await compileServer.stop()
     })
 
+    logger.debug(`Generate executions`)
     const executionSteps = await generateExecutionSteps(
       {
         ...plan,
@@ -129,6 +138,7 @@ export const executePlan = async (
         projectDirectoryUrl,
       },
     )
+    logger.debug(`${executionSteps} executions planned`)
 
     const result = await executeConcurrently(executionSteps, {
       multipleExecutionsOperation,
