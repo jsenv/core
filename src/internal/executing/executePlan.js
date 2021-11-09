@@ -76,7 +76,7 @@ export const executePlan = async (
 
   logger.debug(
     createDetailedMessage(`Prepare executing plan`, {
-      runtimeSupport,
+      runtimeSupport: JSON.stringify(runtimeSupport, null, "  "),
     }),
   )
 
@@ -138,7 +138,7 @@ export const executePlan = async (
         projectDirectoryUrl,
       },
     )
-    logger.debug(`${executionSteps} executions planned`)
+    logger.debug(`${executionSteps.length} executions planned`)
 
     const result = await executeConcurrently(executionSteps, {
       multipleExecutionsOperation,
