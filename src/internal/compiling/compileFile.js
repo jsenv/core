@@ -85,13 +85,7 @@ export const compileFile = async ({
       responseHeaders = {},
     } = compileResult
 
-    if (
-      compileResultStatus !== "cached" &&
-      compileCacheStrategy !== "none" &&
-      // a cutom compiler explicitely disables cache by returning "cache-control": "no-store"
-      // this file must not be cached on the filesystem and always re-generated
-      responseHeaders["cache-control"] !== "no-store"
-    ) {
+    if (compileResultStatus !== "cached" && compileCacheStrategy !== "none") {
       updateMeta({
         logger,
         meta,

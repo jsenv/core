@@ -29,6 +29,9 @@ const { status, namespace } = await execute({
       )
       return {
         compiledSource: htmlWithAnswer,
+        responseHeaders: {
+          "cache-control": "no-store",
+        },
       }
     },
   },
