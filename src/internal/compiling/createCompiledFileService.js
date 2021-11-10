@@ -48,7 +48,6 @@ export const createCompiledFileService = ({
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
-  useFilesystemAsCache,
   compileCacheStrategy,
   sourcemapMethod,
   sourcemapExcludeSources,
@@ -153,8 +152,6 @@ export const createCompiledFileService = ({
       originalFileUrl,
       compiledFileUrl,
 
-      writeOnFilesystem: true, // we always need them
-      useFilesystemAsCache,
       compileCacheStrategy,
       projectFileRequestedCallback,
       request,

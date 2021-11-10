@@ -316,11 +316,11 @@ export const startCompileServer = async ({
       jsenvToolbarInjection,
 
       projectFileRequestedCallback,
-      useFilesystemAsCache: compileServerCanReadFromFilesystem,
-      writeOnFilesystem: compileServerCanWriteOnFilesystem,
       sourcemapMethod,
       sourcemapExcludeSources,
-      compileCacheStrategy,
+      compileCacheStrategy: compileServerCanReadFromFilesystem
+        ? compileCacheStrategy
+        : "none",
     }),
     ...(transformHtmlSourceFiles
       ? {

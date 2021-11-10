@@ -19,47 +19,21 @@ export const compileFile = async ({
   projectFileRequestedCallback = () => {},
   request,
   compile,
-  writeOnFilesystem,
-  useFilesystemAsCache,
   compileCacheStrategy = "etag",
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
 }) => {
   if (
-    writeOnFilesystem &&
     compileCacheStrategy !== "etag" &&
-    compileCacheStrategy !== "mtime"
+    compileCacheStrategy !== "mtime" &&
+    compileCacheStrategy !== "none"
   ) {
     throw new Error(
-      `compileCacheStrategy must be etag or mtime , got ${compileCacheStrategy}`,
+      `compileCacheStrategy must be "etag", "mtime" or "none", got ${compileCacheStrategy}`,
     )
   }
 
-  const { headers = {} } = request
-  const clientCacheDisabled = headers["cache-control"] === "no-cache"
-  const cacheWithETag = writeOnFilesystem && compileCacheStrategy === "etag"
-
-  let ifEtagMatch
-  if (cacheWithETag && "if-none-match" in headers) {
-    ifEtagMatch = headers["if-none-match"]
-  }
-
-  const cacheWithMtime = writeOnFilesystem && compileCacheStrategy === "mtime"
-  let ifModifiedSinceDate
-  if (cacheWithMtime && "if-modified-since" in headers) {
-    const ifModifiedSince = headers["if-modified-since"]
-    try {
-      ifModifiedSinceDate = new Date(ifModifiedSince)
-    } catch (e) {
-      return {
-        status: 400,
-        statusText: "if-modified-since header is not a valid date",
-      }
-    }
-  }
-
-  const clientNeedsEtagHeader = cacheWithETag && !clientCacheDisabled
-  const clientNeedsLastModifiedHeader = cacheWithMtime && !clientCacheDisabled
+  const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
 
   try {
     const { meta, compileResult, compileResultStatus, timing } =
@@ -69,25 +43,21 @@ export const compileFile = async ({
         originalFileUrl,
         compiledFileUrl,
         fileContentFallback,
-        clientNeedsEtagHeader,
-        clientNeedsLastModifiedHeader,
-        ifEtagMatch,
-        ifModifiedSinceDate,
-        useFilesystemAsCache,
+        request,
+        compileCacheStrategy,
         compileCacheSourcesValidation,
         compileCacheAssetsValidation,
         compile,
       })
 
-    if (clientNeedsEtagHeader && !compileResult.compiledEtag) {
+    if (compileCacheStrategy === "etag" && !compileResult.compiledEtag) {
       // happens when file was just compiled so etag was not computed
-
       compileResult.compiledEtag = bufferToEtag(
         Buffer.from(compileResult.compiledSource),
       )
     }
 
-    if (clientNeedsLastModifiedHeader && !compileResult.compiledMtime) {
+    if (compileCacheStrategy === "mtime" && !compileResult.compiledMtime) {
       // happens when file was just compiled so it's not yet written on filesystem
       // Here we know the compiled file will be written on the filesystem
       // We could wait for the file to be written before responding to the client
@@ -111,7 +81,7 @@ export const compileFile = async ({
       compileResultStatus === "created" ||
       compileResultStatus === "updated"
     ) {
-      if (writeOnFilesystem) {
+      if (compileCacheStrategy === "etag" || compileCacheStrategy === "mtime") {
         updateMeta({
           logger,
           meta,
@@ -152,8 +122,11 @@ export const compileFile = async ({
       return response
     }
 
-    if (clientNeedsEtagHeader) {
-      if (ifEtagMatch && compileResultStatus === "cached") {
+    if (!clientCacheDisabled && compileCacheStrategy === "etag") {
+      if (
+        request.headers["if-none-match"] &&
+        compileResultStatus === "cached"
+      ) {
         return {
           status: 304,
           timing,
@@ -165,8 +138,11 @@ export const compileFile = async ({
       })
     }
 
-    if (clientNeedsLastModifiedHeader) {
-      if (ifModifiedSinceDate && compileResultStatus === "cached") {
+    if (!clientCacheDisabled && compileCacheStrategy === "mtime") {
+      if (
+        request.headers["if-modified-since"] &&
+        compileResultStatus === "cached"
+      ) {
         return {
           status: 304,
           timing,
