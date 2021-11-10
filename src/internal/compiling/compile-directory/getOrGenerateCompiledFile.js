@@ -205,6 +205,7 @@ const callCompile = async ({
     sourcesContent = [],
     assets = [],
     assetsContent = [],
+    responseHeaders,
   } = compileReturnValue
   if (typeof contentType !== "string") {
     throw new TypeError(
@@ -224,6 +225,7 @@ const callCompile = async ({
     sourcesContent,
     assets,
     assetsContent,
+    responseHeaders,
   }
 }
 

@@ -77,20 +77,29 @@ export const compileFile = async ({
       compileResult.compiledMtime = Date.now()
     }
 
+    const {
+      contentType,
+      compiledEtag,
+      compiledMtime,
+      compiledSource,
+      responseHeaders = {},
+    } = compileResult
+
     if (
-      compileResultStatus === "created" ||
-      compileResultStatus === "updated"
+      compileResultStatus !== "cached" &&
+      compileCacheStrategy !== "none" &&
+      // a cutom compiler explicitely disables cache by returning "cache-control": "no-store"
+      // this file must not be cached on the filesystem and always re-generated
+      responseHeaders["cache-control"] !== "no-store"
     ) {
-      if (compileCacheStrategy === "etag" || compileCacheStrategy === "mtime") {
-        updateMeta({
-          logger,
-          meta,
-          compileResult,
-          compileResultStatus,
-          compiledFileUrl,
-          // originalFileUrl,
-        })
-      }
+      updateMeta({
+        logger,
+        meta,
+        compileResult,
+        compileResultStatus,
+        compiledFileUrl,
+        // originalFileUrl,
+      })
     }
 
     compileResult.sources.forEach((source) => {
@@ -100,9 +109,6 @@ export const compileFile = async ({
         request,
       )
     })
-
-    const { contentType, compiledEtag, compiledMtime, compiledSource } =
-      compileResult
 
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay
@@ -114,6 +120,7 @@ export const compileFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
+          ...responseHeaders,
         },
         body: compiledSource,
         timing,

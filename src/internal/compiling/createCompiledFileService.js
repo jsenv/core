@@ -223,7 +223,10 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
       code: customResult.compiledSource,
       map: customResult.sourcemap,
     })
-    return jsenvResult
+    return {
+      ...customResult,
+      ...jsenvResult,
+    }
   }
 }
 

@@ -86,10 +86,7 @@ export const getHtmlNodeAttributeByName = (htmlNode, attributeName) => {
 }
 
 export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
-  let attrIndex
-  if (typeof attributeToRemove === "object") {
-    attrIndex = htmlNode.attrs.indexOf(attributeToRemove)
-  }
+  const attrIndex = htmlNode.attrs.indexOf(attributeToRemove)
   if (attrIndex === -1) {
     return false
   }
