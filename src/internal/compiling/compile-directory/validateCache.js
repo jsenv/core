@@ -5,10 +5,7 @@ import { readFileSync, statSync } from "node:fs"
 
 export const validateCache = async ({
   compiledFileUrl,
-  clientNeedsEtagHeader,
-  ifEtagMatch,
-  clientNeedsLastModifiedHeader,
-  ifModifiedSinceDate,
+  compileCacheStrategy,
   compileCacheSourcesValidation = true,
   // When "compileCacheAssetsValidation" is enabled, code ensures that
   // - asset file exists
@@ -19,6 +16,7 @@ export const validateCache = async ({
   // so by default "compileCacheAssetsValidation" is disabled
   // to avoid checking things for nothing
   compileCacheAssetsValidation = false,
+  request,
 }) => {
   const validity = { isValid: true }
 
@@ -31,10 +29,8 @@ export const validateCache = async ({
 
   const compiledFileValidation = await validateCompiledFile({
     compiledFileUrl,
-    clientNeedsEtagHeader,
-    ifEtagMatch,
-    clientNeedsLastModifiedHeader,
-    ifModifiedSinceDate,
+    request,
+    compileCacheStrategy,
   })
   mergeValidity(validity, "compiledFile", compiledFileValidation)
   if (!validity.isValid) {
@@ -111,31 +107,43 @@ const validateMetaFile = async (metaJsonFileUrl) => {
 
 const validateCompiledFile = async ({
   compiledFileUrl,
-  clientNeedsEtagHeader,
-  ifEtagMatch,
-  clientNeedsLastModifiedHeader,
-  ifModifiedSinceDate,
+  compileCacheStrategy,
+  request,
 }) => {
   const validity = { isValid: true, data: {} }
+
+  const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
 
   try {
     const compiledSourceBuffer = readFileSync(fileURLToPath(compiledFileUrl))
     validity.data.compiledSourceBuffer = compiledSourceBuffer
 
-    if (clientNeedsEtagHeader) {
+    if (!clientCacheDisabled && compileCacheStrategy === "etag") {
       const compiledEtag = bufferToEtag(compiledSourceBuffer)
       validity.data.compiledEtag = compiledEtag
-      if (ifEtagMatch && ifEtagMatch !== compiledEtag) {
+      const ifNoneMatch = request.headers["if-none-match"]
+      if (ifNoneMatch && ifNoneMatch !== compiledEtag) {
         validity.isValid = false
         validity.code = "COMPILED_FILE_ETAG_MISMATCH"
         return validity
       }
     }
 
-    if (clientNeedsLastModifiedHeader) {
+    if (!clientCacheDisabled && compileCacheStrategy === "mtime") {
       const stats = statSync(fileURLToPath(compiledFileUrl))
       const compiledMtime = Math.floor(stats.mtimeMs)
       validity.data.compiledMtime = compiledMtime
+
+      const ifModifiedSince = request.headers["if-modified-since"]
+      let ifModifiedSinceDate
+      try {
+        ifModifiedSinceDate = new Date(ifModifiedSince)
+      } catch (e) {
+        ifModifiedSinceDate = null
+        // ideally we should rather respond with
+        // 400 "if-modified-since header is not a valid date"
+      }
+
       if (
         ifModifiedSinceDate &&
         ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)

@@ -48,7 +48,6 @@ export const createCompiledFileService = ({
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
-  useFilesystemAsCache,
   compileCacheStrategy,
   sourcemapMethod,
   sourcemapExcludeSources,
@@ -153,14 +152,11 @@ export const createCompiledFileService = ({
       originalFileUrl,
       compiledFileUrl,
 
-      writeOnFilesystem: true, // we always need them
-      useFilesystemAsCache,
       compileCacheStrategy,
       projectFileRequestedCallback,
       request,
-      compile: ({ signal, code, map }) => {
+      compile: ({ code, map }) => {
         return compiler({
-          signal,
           logger,
 
           code,
@@ -171,6 +167,7 @@ export const createCompiledFileService = ({
           compileServerOrigin: request.origin,
           outDirectoryRelativeUrl,
           compileId,
+          request,
 
           runtimeSupport,
           moduleOutFormat,
@@ -226,7 +223,10 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
       code: customResult.compiledSource,
       map: customResult.sourcemap,
     })
-    return jsenvResult
+    return {
+      ...customResult,
+      ...jsenvResult,
+    }
   }
 }
 

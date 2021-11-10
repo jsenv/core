@@ -14,14 +14,11 @@ export const getOrGenerateCompiledFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
-  useFilesystemAsCache,
+  compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
   fileContentFallback,
-  clientNeedsEtagHeader,
-  ifEtagMatch,
-  clientNeedsLastModifiedHeader,
-  ifModifiedSinceDate,
+  request,
   compile,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -69,13 +66,10 @@ export const getOrGenerateCompiledFile = async ({
           compiledFileUrl,
           compile,
           fileContentFallback,
-          clientNeedsEtagHeader,
-          ifEtagMatch,
-          clientNeedsLastModifiedHeader,
-          ifModifiedSinceDate,
-          useFilesystemAsCache,
+          compileCacheStrategy,
           compileCacheSourcesValidation,
           compileCacheAssetsValidation,
+          request,
           logger,
         })
 
@@ -101,38 +95,32 @@ const computeCompileReport = async ({
   compiledFileUrl,
   compile,
   fileContentFallback,
-  clientNeedsEtagHeader,
-  ifEtagMatch,
-  clientNeedsLastModifiedHeader,
-  ifModifiedSinceDate,
-  useFilesystemAsCache,
+  compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
+  request,
   logger,
 }) => {
   const [readCacheTiming, cacheValidity] = await timeFunction(
     "read cache",
     () => {
-      if (!useFilesystemAsCache) {
-        return {
-          isValid: false,
-          code: "META_FILE_NOT_FOUND",
-          meta: {
-            isValid: false,
-            code: "META_FILE_NOT_FOUND",
-          },
-        }
-      }
+      // if (!useFilesystemAsCache) {
+      //   return {
+      //     isValid: false,
+      //     code: "META_FILE_NOT_FOUND",
+      //     meta: {
+      //       isValid: false,
+      //       code: "META_FILE_NOT_FOUND",
+      //     },
+      //   }
+      // }
       return validateCache({
         logger,
-        useFilesystemAsCache,
         compiledFileUrl,
-        clientNeedsEtagHeader,
-        ifEtagMatch,
-        clientNeedsLastModifiedHeader,
-        ifModifiedSinceDate,
+        compileCacheStrategy,
         compileCacheSourcesValidation,
         compileCacheAssetsValidation,
+        request,
       })
     },
   )
@@ -214,6 +202,7 @@ const callCompile = async ({
     sourcesContent = [],
     assets = [],
     assetsContent = [],
+    responseHeaders,
   } = compileReturnValue
   if (typeof contentType !== "string") {
     throw new TypeError(
@@ -233,6 +222,7 @@ const callCompile = async ({
     sourcesContent,
     assets,
     assetsContent,
+    responseHeaders,
   }
 }
 

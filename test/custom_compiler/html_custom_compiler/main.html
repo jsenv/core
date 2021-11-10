@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <title>Test</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script id="inline">
+      // eslint-disable-next-line no-undef
+      window.__DATA_FROM_SERVER__ = __data_from_server__
+    </script>
+
+    <script type="module" id="test">
+      export default window.__DATA_FROM_SERVER__
+    </script>
+  </body>
+</html>
