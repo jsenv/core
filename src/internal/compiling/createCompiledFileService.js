@@ -155,9 +155,8 @@ export const createCompiledFileService = ({
       compileCacheStrategy,
       projectFileRequestedCallback,
       request,
-      compile: ({ signal, code, map }) => {
+      compile: ({ code, map }) => {
         return compiler({
-          signal,
           logger,
 
           code,
@@ -168,6 +167,7 @@ export const createCompiledFileService = ({
           compileServerOrigin: request.origin,
           outDirectoryRelativeUrl,
           compileId,
+          request,
 
           runtimeSupport,
           moduleOutFormat,

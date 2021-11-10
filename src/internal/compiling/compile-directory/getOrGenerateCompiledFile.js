@@ -137,7 +137,6 @@ const computeCompileReport = async ({
         logger,
         originalFileUrl,
         fileContentFallback,
-        request,
         compile,
       }),
     )
@@ -178,7 +177,6 @@ const callCompile = async ({
   logger,
   originalFileUrl,
   fileContentFallback,
-  request,
   compile,
 }) => {
   logger.debug(`compile ${originalFileUrl}`)
@@ -191,7 +189,6 @@ const callCompile = async ({
   const compileReturnValue = await compile({
     code: codeBeforeCompile,
     map: undefined,
-    request,
   })
   if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
     throw new TypeError(

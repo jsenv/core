@@ -29,7 +29,7 @@ const compileServer = await startCompileServer({
   jsenvDirectoryRelativeUrl,
   runtimeSupport: jsenvRuntimeSupportDuringDev,
   customCompilers: {
-    [`${testDirectoryRelativeUrl}main.html`]: ({ code }) => {
+    [`${testDirectoryRelativeUrl}main.html`]: ({ code, request }) => {
       const htmlWithAnswer = code.replace(
         /__data_from_server__/,
         JSON.stringify({
@@ -41,7 +41,7 @@ const compileServer = await startCompileServer({
         compiledSource: htmlWithAnswer,
         contentType: "text/html",
         responseHeaders: {
-          "x-custom": "toto",
+          "x-request-user-agent": request.headers["user-agent"],
           "cache-control": "no-store",
         },
       }
@@ -54,6 +54,9 @@ const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
 {
   const response = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
+    headers: {
+      "user-agent": "jsenv-test",
+    },
   })
   const responseBodyAsText = await response.text()
   const scriptInline = findHtmlNodeById(responseBodyAsText, "inline")
@@ -65,13 +68,13 @@ const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
   const actual = {
     status: response.status,
     contentType: response.headers.get("content-type"),
-    xCustomHeader: response.headers.get("x-custom"),
+    xRequestUserAgent: response.headers.get("x-request-user-agent"),
     window: global.window,
   }
   const expected = {
     status: 200,
     contentType: "text/html",
-    xCustomHeader: "toto",
+    xRequestUserAgent: "jsenv-test",
     window: {
       __DATA_FROM_SERVER__: { answer: 42 },
     },
