@@ -108,6 +108,15 @@ export const compileFile = async ({
 
     if (request.http2) {
       compileResult.dependencies.forEach((dependency) => {
+        if (
+          compileResult.contentType === "application/javascript" &&
+          !dependency.startsWith("./")
+        ) {
+          // js might use importmap to remap bare specifiers
+          // so ignore thoose deps (ideally we would resolve using importmap)
+          return
+        }
+
         const requestUrl = resolveUrl(request.ressource, request.origin)
         const dependencyUrl = resolveUrl(dependency, requestUrl)
         if (!urlIsInsideOf(dependencyUrl, request.origin)) {
