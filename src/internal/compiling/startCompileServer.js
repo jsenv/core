@@ -289,10 +289,6 @@ export const startCompileServer = async ({
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
     }),
-    "service:browser script": createBrowserScriptService({
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-    }),
     "service:compile server meta": createCompileServerMetaService({
       projectDirectoryUrl,
       outDirectoryUrl,
@@ -873,46 +869,6 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
   }
 }
 
-const createBrowserScriptService = ({
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-}) => {
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMainFileInfo.url,
-    projectDirectoryUrl,
-  )
-  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileInfo.url,
-    projectDirectoryUrl,
-  )
-
-  return (request) => {
-    if (
-      request.method === "GET" &&
-      request.ressource === "/.jsenv/compile-meta.json"
-    ) {
-      const body = JSON.stringify({
-        outDirectoryRelativeUrl,
-        errorStackRemapping: true,
-        sourcemapMainFileRelativeUrl,
-        sourcemapMappingFileRelativeUrl,
-      })
-
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body),
-        },
-        body,
-      }
-    }
-
-    return null
-  }
-}
-
 const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
@@ -980,6 +936,8 @@ const createCompileServerMetaFileInfo = ({
 
     sourcemapMethod,
     sourcemapExcludeSources,
+    sourcemapMainFileInfo,
+    sourcemapMappingFileInfo,
 
     jsenvCorePackageVersion,
     jsenvToolbarInjection,
@@ -1032,18 +990,23 @@ const createCompileServerMetaService = ({
       request.ressource.slice(1),
       projectDirectoryUrl,
     )
-    if (!isCompileServerMetaFile(requestUrl)) {
-      return null
+    if (
+      isCompileServerMetaFile(requestUrl) ||
+      // allow to request it directly from .jsenv
+      request.ressource === "/.jsenv/__compile_server_meta__.json"
+    ) {
+      const body = JSON.stringify(compileServerMetaFileInfo.data, null, "  ")
+      return {
+        status: 200,
+        headers: {
+          "content-type": urlToContentType(requestUrl),
+          "content-length": Buffer.byteLength(body),
+        },
+        body,
+      }
     }
-    const body = JSON.stringify(compileServerMetaFileInfo.data, null, "  ")
-    return {
-      status: 200,
-      headers: {
-        "content-type": urlToContentType(requestUrl),
-        "content-length": Buffer.byteLength(body),
-      },
-      body,
-    }
+
+    return null
   }
 }
 
