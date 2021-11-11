@@ -1,5 +1,0 @@
-html[data-animation-disabled] * {
-  transition: none !important;
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
-}
