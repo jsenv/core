@@ -1,4 +1,3 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
@@ -7,6 +6,7 @@ import {
   readFile,
 } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
+
 import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
@@ -17,8 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
-const filename = `${testDirectoryname}.js`
+const filename = `meta_json_asset.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
@@ -55,6 +54,7 @@ const expected = {
     assetsEtag: [
       bufferToEtag(await readFile(mapCompiledUrl, { as: "buffer" })),
     ],
+    dependencies: [],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },

@@ -3,7 +3,24 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/compiling/babel_plugin_transform_import_specifier.js"
+import { babelPluginImportVisitor } from "@jsenv/core/src/internal/compiling/babel_plugin_import_visitor.js"
+
+const babelPluginTransformImport = (babel, { transformImportSpecifier }) => {
+  return {
+    ...babelPluginImportVisitor(babel, ({ specifierPath }) => {
+      const specifier = specifierPath.node.value
+      const specifierTransformed = transformImportSpecifier({
+        specifier
+      })
+      if (specifierTransformed !== specifier) {
+        specifierPath.replaceWith(
+          babel.types.stringLiteral(specifierTransformed),
+        )
+      }
+    }),
+    name: "transform-import",
+  }
+}
 
 // import assertions
 {
@@ -11,7 +28,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) => {
             const fakeOrigin = "http://jsenv.com"
@@ -44,7 +61,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) =>
             `${specifier}-transformed`,
@@ -63,7 +80,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) =>
             `${specifier}-transformed`,
@@ -82,7 +99,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) =>
             `${specifier}-transformed`,
@@ -101,7 +118,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) =>
             `${specifier}-transformed`,
@@ -120,7 +137,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) =>
             `${specifier}-transformed`,
@@ -139,7 +156,7 @@ import { babelPluginTransformImportSpecifier } from "@jsenv/core/src/internal/co
   const { code } = await transformAsync(input, {
     plugins: [
       [
-        babelPluginTransformImportSpecifier,
+        babelPluginTransformImport,
         {
           transformImportSpecifier: ({ specifier }) =>
             `${specifier}-transformed`,

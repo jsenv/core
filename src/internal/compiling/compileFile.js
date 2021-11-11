@@ -3,6 +3,7 @@ import {
   fileSystemPathToUrl,
   resolveUrl,
   bufferToEtag,
+  urlIsInsideOf,
 } from "@jsenv/filesystem"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
@@ -18,8 +19,9 @@ export const compileFile = async ({
   fileContentFallback,
   projectFileRequestedCallback = () => {},
   request,
+  pushResponse,
   compile,
-  compileCacheStrategy = "etag",
+  compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
 }) => {
@@ -64,7 +66,7 @@ export const compileFile = async ({
       // but it could delay a bit the response.
       // Inside "updateMeta" the file might be written synchronously
       // or batched to be written later for perf reasons.
-      // Fron this side of the code we would like to be agnostic about this to allow
+      // From this side of the code we would like to be agnostic about this to allow
       // eventual perf improvments in that field.
       // For this reason the "mtime" we send to the client is decided here
       // by "compileResult.compiledMtime = Date.now()"
@@ -103,6 +105,25 @@ export const compileFile = async ({
         request,
       )
     })
+
+    if (request.http2) {
+      compileResult.dependencies.forEach((dependency) => {
+        const requestUrl = resolveUrl(request.ressource, request.origin)
+        const dependencyUrl = resolveUrl(dependency, requestUrl)
+        if (!urlIsInsideOf(dependencyUrl, request.origin)) {
+          // ignore external urls
+          return
+        }
+        if (dependencyUrl.startsWith("data:")) {
+          return
+        }
+        const dependencyRelativeUrl = urlToRelativeUrl(
+          dependencyUrl,
+          request.origin,
+        )
+        pushResponse({ path: `/${dependencyRelativeUrl}` })
+      })
+    }
 
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay

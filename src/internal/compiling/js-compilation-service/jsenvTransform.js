@@ -1,4 +1,3 @@
-/* eslint-disable import/max-dependencies */
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
@@ -8,6 +7,7 @@ import {
   babelPluginsFromBabelPluginMap,
   extractSyntaxBabelPluginMap,
 } from "@jsenv/core/src/internal/compiling/babel_plugins.js"
+import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compiling/babel_plugin_import_metadata.js"
 
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
@@ -141,6 +141,7 @@ export const jsenvTransform = async ({
           ],
         }
       : {}),
+    "import-metadata": [babelPluginImportMetadata],
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)

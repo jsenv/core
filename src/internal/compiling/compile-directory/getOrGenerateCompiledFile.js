@@ -153,7 +153,7 @@ const computeCompileReport = async ({
   }
 
   const meta = cacheValidity.meta.data
-  const { contentType, sources, assets } = meta
+  const { contentType, sources, assets, dependencies } = meta
   return {
     meta,
     compileResult: {
@@ -165,6 +165,7 @@ const computeCompileReport = async ({
       contentType,
       sources,
       assets,
+      dependencies,
     },
     compileResultStatus: "cached",
     timing: {
@@ -202,6 +203,7 @@ const callCompile = async ({
     sourcesContent = [],
     assets = [],
     assetsContent = [],
+    dependencies = [],
     responseHeaders,
   } = compileReturnValue
   if (typeof contentType !== "string") {
@@ -222,6 +224,7 @@ const callCompile = async ({
     sourcesContent,
     assets,
     assetsContent,
+    dependencies,
     responseHeaders,
   }
 }

@@ -63,8 +63,8 @@ export const startCompileServer = async ({
   sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
   compileServerCanReadFromFilesystem = true,
   compileServerCanWriteOnFilesystem = true,
-  compileCacheStrategy = "etag",
-  projectFileEtagEnabled = true,
+  compileCacheStrategy = "mtime",
+  projectFileCacheStrategy = "mtime",
 
   // js compile options
   transformTopLevelAwait = true,
@@ -334,14 +334,9 @@ export const startCompileServer = async ({
         }
       : {}),
     "service:source file": createSourceFileService({
-      logger,
       projectDirectoryUrl,
       projectFileRequestedCallback,
-      projectFileEtagEnabled,
-      transformHtmlSourceFiles,
-      inlineImportMapIntoHTML,
-      jsenvScriptInjection,
-      jsenvToolbarInjection,
+      projectFileCacheStrategy,
     }),
   }
 
@@ -476,7 +471,7 @@ const cleanOutDirectoryIfNeeded = async ({
     const source = await readFile(compileServerMetaFileInfo.url)
     previousCompileServerMeta = JSON.parse(source)
   } catch (e) {
-    if (e && e.code === "ENOENT") {
+    if (e.code === "ENOENT") {
       previousCompileServerMeta = null
     } else {
       throw e
@@ -872,7 +867,7 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
 const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
-  projectFileEtagEnabled,
+  projectFileCacheStrategy,
 }) => {
   return async (request) => {
     const { ressource } = request
@@ -883,7 +878,8 @@ const createSourceFileService = ({
       new URL(request.ressource.slice(1), projectDirectoryUrl),
       {
         headers: request.headers,
-        etagEnabled: projectFileEtagEnabled,
+        etagEnabled: projectFileCacheStrategy === "etag",
+        mtimeEnabled: projectFileCacheStrategy === "mtime",
       },
     )
 

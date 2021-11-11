@@ -31,6 +31,7 @@ import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
+  collectHtmlDependenciesFromAst,
   getHtmlNodeAttributeByName,
   replaceHtmlNode,
   stringifyHtmlAst,
@@ -60,7 +61,7 @@ export const createTransformHtmlSourceFileService = ({
    */
   const htmlInlineScriptMap = new Map()
 
-  return async (request) => {
+  return async (request, { pushResponse }) => {
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
@@ -102,6 +103,8 @@ export const createTransformHtmlSourceFileService = ({
       projectDirectoryUrl,
       fileUrl,
       fileContent,
+      request,
+      pushResponse,
       inlineImportMapIntoHTML,
       jsenvScriptInjection,
       jsenvToolbarInjection,
@@ -130,9 +133,10 @@ const transformHTMLSourceFile = async ({
   projectDirectoryUrl,
   fileUrl,
   fileContent,
+  request,
+  pushResponse,
   inlineImportMapIntoHTML,
   jsenvScriptInjection,
-  jsenvToolbarInjection,
   onInlineModuleScript = () => {},
 }) => {
   const htmlAst = parseHtmlString(fileContent)
@@ -155,22 +159,42 @@ const transformHTMLSourceFile = async ({
   )
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(jsenvScriptInjection
+      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url && jsenvScriptInjection
         ? [
             {
               src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(jsenvToolbarInjection && fileUrl !== jsenvToolbarHtmlFileInfo.url
-        ? [
+      ...(fileUrl === jsenvToolbarHtmlFileInfo.url
+        ? []
+        : [
             {
               src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
             },
-          ]
-        : []),
+          ]),
     ],
   })
+
+  if (request.http2) {
+    const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
+    htmlDependencies.forEach(({ specifier }) => {
+      const requestUrl = resolveUrl(request.ressource, request.origin)
+      const dependencyUrl = resolveUrl(specifier, requestUrl)
+      if (!urlIsInsideOf(dependencyUrl, request.origin)) {
+        // ignore external urls
+        return
+      }
+      if (dependencyUrl.startsWith("data:")) {
+        return
+      }
+      const dependencyRelativeUrl = urlToRelativeUrl(
+        dependencyUrl,
+        request.origin,
+      )
+      pushResponse({ path: `/${dependencyRelativeUrl}` })
+    })
+  }
 
   if (jsenvScriptInjection) {
     const { scripts } = parseHtmlAstRessources(htmlAst)

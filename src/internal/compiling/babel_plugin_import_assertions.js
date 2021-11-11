@@ -1,27 +1,27 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { babelPluginTransformImportSpecifier } from "./babel_plugin_transform_import_specifier.js"
+import { babelPluginImportVisitor } from "./babel_plugin_import_visitor.js"
 
 export const babelPluginImportAssertions = (
   babel,
   { transformJson = true, transformCss = true },
 ) => {
   return {
-    ...babelPluginTransformImportSpecifier(babel, {
+    ...babelPluginImportVisitor(
+      babel,
       // During the build we throw when for import call expression where
       // sepcifier or type is dynamic.
       // Here there is no strong need to throw because keeping the source code intact
       // will throw an error when browser will execute the code
-      transformImportSpecifier: ({ specifier, path }) => {
-        const importPath = path.parentPath
+      ({ importPath, specifierPath }) => {
         const importNode = importPath.node
         let assertionsDescriptor
         if (importNode.type === "CallExpression") {
           const args = importNode.arguments
           const secondArg = args[1]
           if (!secondArg) {
-            return specifier
+            return
           }
 
           const { properties } = secondArg
@@ -29,7 +29,7 @@ export const babelPluginImportAssertions = (
             return property.key.name === "assert"
           })
           if (!assertProperty) {
-            return specifier
+            return
           }
 
           const assertProperties = assertProperty.value.properties
@@ -37,12 +37,12 @@ export const babelPluginImportAssertions = (
             return property.key.name === "type"
           })
           if (!typePropertyNode) {
-            return specifier
+            return
           }
 
           const typePropertyValue = typePropertyNode.value
           if (typePropertyValue.type !== "StringLiteral") {
-            return specifier
+            return
           }
 
           assertionsDescriptor = {
@@ -56,17 +56,24 @@ export const babelPluginImportAssertions = (
 
         const { type } = assertionsDescriptor
         if (type === "json" && transformJson) {
-          return forceImportTypeOnSpecifier(specifier, "json")
+          forceImportTypeOnSpecifier({
+            specifierPath,
+            babel,
+            importType: "json",
+          })
+          return
         }
 
         if (type === "css" && transformCss) {
-          return forceImportTypeOnSpecifier(specifier, "css")
+          forceImportTypeOnSpecifier({
+            specifierPath,
+            babel,
+            importType: "css",
+          })
+          return
         }
-
-        return specifier
       },
-    }),
-
+    ),
     name: "transform-import-assertions",
   }
 }
@@ -82,7 +89,8 @@ const getImportAssertionsDescriptor = (importAssertions) => {
   return importAssertionsDescriptor
 }
 
-const forceImportTypeOnSpecifier = (specifier, importType) => {
+const forceImportTypeOnSpecifier = ({ specifierPath, babel, importType }) => {
+  const specifier = specifierPath.node.value
   const fakeOrigin = "http://jsenv.com"
   const url = new URL(specifier, fakeOrigin)
   const urlWithImportType = setUrlSearchParamsDescriptor(url, {
@@ -94,7 +102,20 @@ const forceImportTypeOnSpecifier = (specifier, importType) => {
       urlWithImportType,
       fakeOrigin,
     )
-    return `./${specifierWithImportType}`
+
+    replaceSpecifierUsingBabel(`./${specifierWithImportType}`, {
+      specifierPath,
+      babel,
+    })
+    return
   }
-  return urlWithImportType
+
+  replaceSpecifierUsingBabel(urlWithImportType, {
+    specifierPath,
+    babel,
+  })
+}
+
+const replaceSpecifierUsingBabel = (value, { specifierPath, babel }) => {
+  specifierPath.replaceWith(babel.types.stringLiteral(value))
 }

@@ -1,4 +1,3 @@
-/* eslint-disable import/max-dependencies */
 import { urlIsInsideOf } from "@jsenv/filesystem/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 
