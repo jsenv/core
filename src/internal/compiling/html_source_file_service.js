@@ -97,6 +97,7 @@ export const createTransformHtmlSourceFileService = ({
         htmlInlineScriptMap.delete(inlineScriptUrl)
       }
     })
+    // TODO: we could also parse html dependencies tu push them in http2
     const htmlTransformed = await transformHTMLSourceFile({
       logger,
       projectDirectoryUrl,

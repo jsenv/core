@@ -3,6 +3,7 @@ import {
   fileSystemPathToUrl,
   resolveUrl,
   bufferToEtag,
+  urlIsInsideOf,
 } from "@jsenv/filesystem"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
@@ -108,6 +109,12 @@ export const compileFile = async ({
     compileResult.dependencies.forEach((dependency) => {
       const requestUrl = resolveUrl(request.origin, request.ressource)
       const dependencyUrl = resolveUrl(dependency, requestUrl)
+
+      if (!urlIsInsideOf(dependencyUrl, request.origin)) {
+        // ignore external urls
+        return
+      }
+
       const dependencyRelativeUrl = urlToRelativeUrl(dependencyUrl, requestUrl)
       pushResponse({ path: `/${dependencyRelativeUrl}` })
     })

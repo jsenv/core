@@ -24,6 +24,7 @@ export const updateMeta = async ({
     sourcesContent,
     assets,
     assetsContent,
+    dependencies,
   } = compileResult
 
   const promises = []
@@ -111,6 +112,7 @@ ${sourcesToRemove.join(`\n`)}`)
       assetsEtag: assetsContent.map((assetContent) =>
         bufferToEtag(Buffer.from(assetContent)),
       ),
+      dependencies,
     }
 
     if (isNew) {

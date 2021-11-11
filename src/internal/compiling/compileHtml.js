@@ -221,20 +221,10 @@ export const stringifySrcset = (srcsetParts) => {
   return srcsetString
 }
 
-// let's <img>, <link for favicon>, <link for css>, <styles>
+// <img>, <link for favicon>, <link for css>, <styles>
 // <audio> <video> <picture> supports comes for free by detecting
 // <source src> attribute
-// if srcset is used we should parse it and collect all src referenced in it
-// also <link ref="preload">
 // ideally relative iframe should recursively fetch (not needed so lets ignore)
-// <svg> ideally looks for external ressources inside them
-
-// but right now we will focus on: <link href> and <style> tags
-// on veut vérifier qu'on les récupere bien
-// dans rollup pour chaque css on feras le transformcss + l'ajout des assets reférencés
-// pour le style inline on le parse aussi et on le remettra inline dans le html
-// ensuite qu'on est capable de les mettre a jour
-// ce qui veut dire de mettre a jour link.ref et style.text
 export const parseHtmlAstRessources = (htmlAst) => {
   const links = []
   const styles = []
@@ -290,6 +280,72 @@ export const parseHtmlAstRessources = (htmlAst) => {
     uses,
     sources,
   }
+}
+
+export const collectHtmlDependenciesFromAst = (htmlAst) => {
+  const { links, scripts, imgs, images, uses, sources } =
+    parseHtmlAstRessources(htmlAst)
+
+  const dependencies = []
+  const visitSrcAttribute = (htmlNode) => {
+    const srcAttribute = getHtmlNodeAttributeByName(htmlNode, "src")
+    const src = srcAttribute ? srcAttribute.value : undefined
+    if (src) {
+      dependencies.push({
+        htmlNode,
+        attribute: srcAttribute,
+        specifier: src,
+      })
+    }
+  }
+  const visitHrefAttribute = (htmlNode) => {
+    const hrefAttribute = getHtmlNodeAttributeByName(htmlNode, "href")
+    const href = hrefAttribute ? hrefAttribute.value : undefined
+    if (href && href !== "#") {
+      dependencies.push({
+        htmlNode,
+        attribute: hrefAttribute,
+        specifier: href,
+      })
+    }
+  }
+  const visitSrcSetAttribute = (htmlNode) => {
+    const srcsetAttribute = getHtmlNodeAttributeByName(htmlNode, "srcset")
+    if (srcsetAttribute) {
+      const srcsetParts = parseSrcset(srcsetAttribute.value)
+      srcsetParts.forEeach(({ specifier }) => {
+        dependencies.push({
+          htmlNode,
+          attribute: srcsetAttribute,
+          specifier,
+        })
+      })
+    }
+  }
+
+  links.forEach((link) => {
+    visitHrefAttribute(link)
+  })
+  scripts.forEeach((script) => {
+    visitSrcAttribute(script)
+  })
+  imgs.forEach((img) => {
+    visitSrcAttribute(img)
+    visitSrcSetAttribute(img)
+  })
+  sources.forEach((source) => {
+    visitSrcAttribute(source)
+    visitSrcSetAttribute(source)
+  })
+  // svg <image> tag
+  images.forEach((image) => {
+    visitHrefAttribute(image)
+  })
+  uses.forEach((use) => {
+    visitHrefAttribute(use)
+  })
+
+  return dependencies
 }
 
 export const replaceHtmlNode = (

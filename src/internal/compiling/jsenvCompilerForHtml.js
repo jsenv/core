@@ -14,6 +14,7 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
+  collectHtmlDependenciesFromAst,
   manipulateHtmlAst,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
@@ -226,6 +227,8 @@ export const compileHtml = async ({
     }),
   )
 
+  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
+
   return {
     contentType: "text/html",
     compiledSource: htmlAfterTransformation,
@@ -233,6 +236,9 @@ export const compileHtml = async ({
     sourcesContent: [code],
     assets,
     assetsContent,
+    dependencies: htmlDependencies.map(({ specifier }) => {
+      return specifier
+    }),
   }
 }
 
