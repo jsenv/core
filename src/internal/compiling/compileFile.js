@@ -21,7 +21,7 @@ export const compileFile = async ({
   request,
   pushResponse,
   compile,
-  compileCacheStrategy = "etag",
+  compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
 }) => {
@@ -66,7 +66,7 @@ export const compileFile = async ({
       // but it could delay a bit the response.
       // Inside "updateMeta" the file might be written synchronously
       // or batched to be written later for perf reasons.
-      // Fron this side of the code we would like to be agnostic about this to allow
+      // From this side of the code we would like to be agnostic about this to allow
       // eventual perf improvments in that field.
       // For this reason the "mtime" we send to the client is decided here
       // by "compileResult.compiledMtime = Date.now()"
@@ -107,15 +107,21 @@ export const compileFile = async ({
     })
 
     compileResult.dependencies.forEach((dependency) => {
-      const requestUrl = resolveUrl(request.origin, request.ressource)
+      const requestUrl = resolveUrl(request.ressource, request.origin)
       const dependencyUrl = resolveUrl(dependency, requestUrl)
 
       if (!urlIsInsideOf(dependencyUrl, request.origin)) {
         // ignore external urls
         return
       }
+      if (dependencyUrl.startsWith("data:")) {
+        return
+      }
 
-      const dependencyRelativeUrl = urlToRelativeUrl(dependencyUrl, requestUrl)
+      const dependencyRelativeUrl = urlToRelativeUrl(
+        dependencyUrl,
+        request.origin,
+      )
       pushResponse({ path: `/${dependencyRelativeUrl}` })
     })
 

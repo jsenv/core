@@ -79,6 +79,7 @@ export const compileHtml = async ({
   })
 
   const { scripts } = parseHtmlAstRessources(htmlAst)
+  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
 
   let hasImportmap = false
   const inlineScriptsContentMap = {}
@@ -135,6 +136,10 @@ export const compileHtml = async ({
           specifier,
         )})`,
       )
+      htmlDependencies.push({
+        htmlNode: script,
+        specifier,
+      })
       return
     }
   })
@@ -226,8 +231,6 @@ export const compileHtml = async ({
       }
     }),
   )
-
-  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
 
   return {
     contentType: "text/html",

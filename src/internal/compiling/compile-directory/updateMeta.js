@@ -112,7 +112,9 @@ ${sourcesToRemove.join(`\n`)}`)
       assetsEtag: assetsContent.map((assetContent) =>
         bufferToEtag(Buffer.from(assetContent)),
       ),
-      dependencies,
+      dependencies: dependencies.filter((dep) => {
+        return !dep.startsWith("data:")
+      }),
     }
 
     if (isNew) {

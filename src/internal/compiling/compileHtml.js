@@ -326,7 +326,7 @@ export const collectHtmlDependenciesFromAst = (htmlAst) => {
   links.forEach((link) => {
     visitHrefAttribute(link)
   })
-  scripts.forEeach((script) => {
+  scripts.forEach((script) => {
     visitSrcAttribute(script)
   })
   imgs.forEach((img) => {

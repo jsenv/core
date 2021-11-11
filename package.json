@@ -71,7 +71,7 @@
     "@jsenv/importmap": "1.1.0",
     "@jsenv/log": "1.4.0",
     "@jsenv/logger": "4.0.1",
-    "@jsenv/server": "10.0.4",
+    "@jsenv/server": "10.0.8",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/workers": "1.2.0",
     "@rollup/plugin-commonjs": "21.0.0",
