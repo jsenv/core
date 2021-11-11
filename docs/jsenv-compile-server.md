@@ -108,11 +108,11 @@ If server is requested to compile a file but has no compiler associated, it will
 
   Contains compiled version of project source files.
 
-  `best` represents a compilation profile. Depending on the browser you are using, you will be redirected either to `.jsenv/out/best` or `.jsenv/out/otherwise`.
+  `best` represents a compilation profile. Depending on the browser you are using, you will be redirected either to `.jsenv/dev/best` or `.jsenv/dev/otherwise`.
 
   `otherwise` applies all babel plugin to transform js and make it compatible with old browsers.
 
   `best` applies less transformation.
 
   It's an implementation detail and not really important to be aware of.
-  In practice if you use chrome you will be redirected to `.jsenv/out/best`, but you can still manually enter `otherwise` in the url to see the js that would be served to old browsers.
+  In practice if you use chrome you will be redirected to `.jsenv/dev/best`, but you can still manually enter `otherwise` in the url to see the js that would be served to old browsers.
