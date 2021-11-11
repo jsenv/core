@@ -471,7 +471,7 @@ const cleanOutDirectoryIfNeeded = async ({
     const source = await readFile(compileServerMetaFileInfo.url)
     previousCompileServerMeta = JSON.parse(source)
   } catch (e) {
-    if (e && e.code === "ENOENT") {
+    if (e.code === "ENOENT") {
       previousCompileServerMeta = null
     } else {
       throw e

@@ -301,7 +301,7 @@ export const collectHtmlDependenciesFromAst = (htmlAst) => {
   const visitHrefAttribute = (htmlNode) => {
     const hrefAttribute = getHtmlNodeAttributeByName(htmlNode, "href")
     const href = hrefAttribute ? hrefAttribute.value : undefined
-    if (href && href !== "#") {
+    if (href && href[0] !== "#") {
       dependencies.push({
         htmlNode,
         attribute: hrefAttribute,
