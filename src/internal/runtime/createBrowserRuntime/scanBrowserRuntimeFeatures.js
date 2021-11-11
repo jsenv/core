@@ -7,23 +7,19 @@ export const scanBrowserRuntimeFeatures = async ({
   coverageHandledFromOutside = false,
   failFastOnFeatureDetection = false,
 } = {}) => {
-  const { outDirectoryRelativeUrl } = await fetchJson(
-    "/.jsenv/compile-meta.json",
-  )
-  const groupMapUrl = `/${outDirectoryRelativeUrl}groupMap.json`
-  const envFileUrl = `/${outDirectoryRelativeUrl}env.json`
-  const [groupMap, envJson] = await Promise.all([
-    fetchJson(groupMapUrl),
-    fetchJson(envFileUrl),
-  ])
+  const {
+    outDirectoryRelativeUrl,
+    inlineImportMapIntoHTML,
+    customCompilerPatterns,
+    compileServerGroupMap,
+  } = await fetchJson("/.jsenv/__compile_server_meta__.json")
 
   const browser = detectBrowser()
   const compileId = computeCompileIdFromGroupId({
-    groupId: resolveGroup(browser, groupMap),
-    groupMap,
+    groupId: resolveGroup(browser, compileServerGroupMap),
+    groupMap: compileServerGroupMap,
   })
-  const groupInfo = groupMap[compileId]
-  const { inlineImportMapIntoHTML, customCompilerPatterns } = envJson
+  const groupInfo = compileServerGroupMap[compileId]
 
   const featuresReport = {
     importmap: undefined,

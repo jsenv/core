@@ -10,23 +10,20 @@ export const scanNodeRuntimeFeatures = async ({
   outDirectoryRelativeUrl,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const groupMapServerUrl = String(
-    new URL("groupMap.json", outDirectoryServerUrl),
+  const {
+    importDefaultExtension,
+    customCompilerPatterns,
+    compileServerGroupMap,
+  } = await importJson(
+    new URL("__compile_server_meta__.json", outDirectoryServerUrl),
   )
-  const envFileServerUrl = String(new URL("env.json", outDirectoryServerUrl))
-  const [groupMap, envJson] = await Promise.all([
-    importJson(groupMapServerUrl),
-    importJson(envFileServerUrl),
-  ])
-
-  const { importDefaultExtension, customCompilerPatterns } = envJson
 
   const node = detectNode()
   const compileId = computeCompileIdFromGroupId({
-    groupId: resolveGroup(node, groupMap),
-    groupMap,
+    groupId: resolveGroup(node, compileServerGroupMap),
+    groupMap: compileServerGroupMap,
   })
-  const groupInfo = groupMap[compileId]
+  const groupInfo = compileServerGroupMap[compileId]
 
   const featuresReport = {
     dynamicImport: undefined,

@@ -32,7 +32,7 @@ export const startExploring = async ({
   explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryName = "out-dev",
+  outDirectoryName = "dev",
   jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,

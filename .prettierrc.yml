@@ -9,3 +9,4 @@ quoteProps: "consistent"
 # when adding new parameter it becomes a syntax error you have to manually
 # add parenthesis back, which is painful
 arrowParens: "always"
+endOfLine: "lf"

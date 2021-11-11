@@ -294,8 +294,6 @@ export const launchAndExecute = async ({
     return executionResultTransformer(executionResult)
   } catch (e) {
     if (Abort.isAbortError(e)) {
-      // we should stop runtime too
-
       if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
         const executionResult = createTimedoutExecutionResult()
         return executionResultTransformer(executionResult)
@@ -331,12 +329,20 @@ const callExecute = async ({
         stopped: (cb) => {
           return stoppedCallbackList.add(cb)
         },
-        executed: (cb) => {
-          const executed = execute({
-            signal: launchAndExecuteOperation.signal,
-            ...executeParams,
-          })
-          executed.then(cb, reject)
+        executed: async (cb) => {
+          try {
+            const executionResult = await execute({
+              signal: launchAndExecuteOperation.signal,
+              ...executeParams,
+            })
+            cb(executionResult)
+          } catch (e) {
+            if (Abort.isAbortError(e)) {
+              cb(e)
+              return
+            }
+            reject(e)
+          }
         },
       },
       resolve,
@@ -363,8 +369,10 @@ const callExecute = async ({
   }
 
   const executeResult = winner.data
+  if (Abort.isAbortError(executeResult)) {
+    throw executeResult
+  }
   const { status } = executeResult
-
   if (status === "errored") {
     return createErroredExecutionResult(executeResult)
   }

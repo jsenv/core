@@ -99,7 +99,7 @@ export const execute = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      outDirectoryName: "out-dev",
+      outDirectoryName: "dev",
 
       importDefaultExtension,
 

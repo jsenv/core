@@ -1175,61 +1175,54 @@
         _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
         failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
-    return _await$2(fetchJson("/.jsenv/compile-meta.json"), function (_ref2) {
-      var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl;
-      var groupMapUrl = "/".concat(outDirectoryRelativeUrl, "groupMap.json");
-      var envFileUrl = "/".concat(outDirectoryRelativeUrl, "env.json");
-      return _await$2(Promise.all([fetchJson(groupMapUrl), fetchJson(envFileUrl)]), function (_ref3) {
-        var _ref4 = _slicedToArray(_ref3, 2),
-            groupMap = _ref4[0],
-            envJson = _ref4[1];
-
-        var browser = detectBrowser();
-        var compileId = computeCompileIdFromGroupId({
-          groupId: resolveGroup(browser, groupMap),
-          groupMap: groupMap
-        });
-        var groupInfo = groupMap[compileId];
-        var inlineImportMapIntoHTML = envJson.inlineImportMapIntoHTML,
-            customCompilerPatterns = envJson.customCompilerPatterns;
-        var featuresReport = {
-          importmap: undefined,
-          dynamicImport: undefined,
-          topLevelAwait: undefined,
-          jsonImportAssertions: undefined,
-          cssImportAssertions: undefined,
-          newStylesheet: undefined
-        };
-        return _await$2(detectSupportedFeatures({
+    return _await$2(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
+      var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
+          inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
+          customCompilerPatterns = _ref2.customCompilerPatterns,
+          compileServerGroupMap = _ref2.compileServerGroupMap;
+      var browser = detectBrowser();
+      var compileId = computeCompileIdFromGroupId({
+        groupId: resolveGroup(browser, compileServerGroupMap),
+        groupMap: compileServerGroupMap
+      });
+      var groupInfo = compileServerGroupMap[compileId];
+      var featuresReport = {
+        importmap: undefined,
+        dynamicImport: undefined,
+        topLevelAwait: undefined,
+        jsonImportAssertions: undefined,
+        cssImportAssertions: undefined,
+        newStylesheet: undefined
+      };
+      return _await$2(detectSupportedFeatures({
+        featuresReport: featuresReport,
+        failFastOnFeatureDetection: failFastOnFeatureDetection,
+        inlineImportMapIntoHTML: inlineImportMapIntoHTML
+      }), function () {
+        return _await$2(pluginRequiredNamesFromGroupInfo(groupInfo, {
           featuresReport: featuresReport,
-          failFastOnFeatureDetection: failFastOnFeatureDetection,
-          inlineImportMapIntoHTML: inlineImportMapIntoHTML
-        }), function () {
-          return _await$2(pluginRequiredNamesFromGroupInfo(groupInfo, {
+          coverageHandledFromOutside: coverageHandledFromOutside
+        }), function (pluginRequiredNameArray) {
+          var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
+          return {
+            canAvoidCompilation: canAvoidCompilation,
             featuresReport: featuresReport,
-            coverageHandledFromOutside: coverageHandledFromOutside
-          }), function (pluginRequiredNameArray) {
-            var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
-            return {
-              canAvoidCompilation: canAvoidCompilation,
-              featuresReport: featuresReport,
-              customCompilerPatterns: customCompilerPatterns,
-              pluginRequiredNameArray: pluginRequiredNameArray,
-              inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-              outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-              compileId: compileId,
-              browser: browser
-            };
-          });
+            customCompilerPatterns: customCompilerPatterns,
+            pluginRequiredNameArray: pluginRequiredNameArray,
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            compileId: compileId,
+            browser: browser
+          };
         });
       });
     });
   });
 
-  var detectSupportedFeatures = _async$2(function (_ref5) {
-    var featuresReport = _ref5.featuresReport,
-        failFastOnFeatureDetection = _ref5.failFastOnFeatureDetection,
-        inlineImportMapIntoHTML = _ref5.inlineImportMapIntoHTML;
+  var detectSupportedFeatures = _async$2(function (_ref3) {
+    var featuresReport = _ref3.featuresReport,
+        failFastOnFeatureDetection = _ref3.failFastOnFeatureDetection,
+        inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
     // start testing importmap support first and not in paralell
     // so that there is not module script loaded beore importmap is injected
     // it would log an error in chrome console and return undefined
@@ -1264,9 +1257,9 @@
     });
   });
 
-  var pluginRequiredNamesFromGroupInfo = _async$2(function (groupInfo, _ref6) {
-    var featuresReport = _ref6.featuresReport,
-        coverageHandledFromOutside = _ref6.coverageHandledFromOutside;
+  var pluginRequiredNamesFromGroupInfo = _async$2(function (groupInfo, _ref4) {
+    var featuresReport = _ref4.featuresReport,
+        coverageHandledFromOutside = _ref4.coverageHandledFromOutside;
     var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
     var requiredPluginNames = pluginRequiredNameArray.slice();
 
@@ -1320,9 +1313,9 @@
   };
 
   var supportsImportmap = _async$2(function () {
-    var _ref7 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        _ref7$remote = _ref7.remote,
-        remote = _ref7$remote === void 0 ? true : _ref7$remote;
+    var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+        _ref5$remote = _ref5.remote,
+        remote = _ref5$remote === void 0 ? true : _ref5$remote;
 
     var specifier = asBase64Url("export default false");
     var importMap = {
