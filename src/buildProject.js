@@ -88,7 +88,7 @@ export const buildProject = async ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
 
-  // when true .jsenv/out-build directory is generated
+  // when true .jsenv/build directory is generated
   // with all intermediated files used to produce the final build files.
   // it might improve buildProject speed for subsequent build generation
   // but this is to be proven and not absolutely required
@@ -158,7 +158,7 @@ export const buildProject = async ({
     // than exploring-server. This is because here we compile for rollup
     // that is expecting esmodule format, not systemjs
     // + some more differences like import.meta.dev
-    outDirectoryName: "out-build",
+    outDirectoryName: "build",
     importDefaultExtension,
     moduleOutFormat: "esmodule", // rollup will transform into systemjs
     importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format

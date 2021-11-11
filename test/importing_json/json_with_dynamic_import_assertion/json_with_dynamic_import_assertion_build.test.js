@@ -58,7 +58,7 @@ const { buildMappings } = await buildProject({
     file: "data.js", // "data.json" becomes "data.js"
     sources: [
       // the source url is theoric because data.js file do not really exist
-      "../../.jsenv/out-build/best/test/importing_json/json_with_dynamic_import_assertion/data.json?import_type=json",
+      "../../.jsenv/build/best/test/importing_json/json_with_dynamic_import_assertion/data.json?import_type=json",
     ],
     sourcesContent: [
       // the source content is the fake "data.js" exporting the json

@@ -162,9 +162,9 @@ export const serverUrlToCompileInfo = (
 
   const afterOutDirectory = url.slice(outDirectoryServerUrl.length)
 
-  // serve files inside /.jsenv/out/* directly without compilation
+  // serve files inside /.jsenv/* directly without compilation
   // this is just to allow some files to be written inside outDirectory and read directly
-  // if asked by the client (such as env.json, groupMap.json, meta.json)
+  // if asked by the client (such as __compile_server_meta__.json)
   if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
     return { insideCompileDirectory: true }
   }

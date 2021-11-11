@@ -256,7 +256,7 @@ export const startCompileServer = async ({
     }
   }
 
-  const outJSONFiles = createOutJSONFiles({
+  const compileServerMetaFileInfo = createCompileServerMetaFileInfo({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -271,13 +271,18 @@ export const startCompileServer = async ({
     sourcemapExcludeSources,
   })
   if (compileServerCanWriteOnFilesystem) {
-    await setupOutDirectory({
+    await cleanOutDirectoryIfNeeded({
       logger,
-      outDirectoryMeta: outJSONFiles.meta.data,
       outDirectoryUrl,
       jsenvDirectoryUrl,
       jsenvDirectoryClean,
+      compileServerMetaFileInfo,
     })
+    writeFile(
+      compileServerMetaFileInfo.url,
+      JSON.stringify(compileServerMetaFileInfo.data, null, "  "),
+    )
+    logger.debug(`-> ${compileServerMetaFileInfo.url}`)
   }
 
   const jsenvServices = {
@@ -288,12 +293,10 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
     }),
-    "service:out files": await createOutFilesService({
-      logger,
+    "service:compile server meta": createCompileServerMetaService({
       projectDirectoryUrl,
-      compileServerCanWriteOnFilesystem,
       outDirectoryUrl,
-      outJSONFiles,
+      compileServerMetaFileInfo,
     }),
     "service: compile proxy": createCompileProxyService({
       projectDirectoryUrl,
@@ -458,12 +461,12 @@ const assertArguments = ({
   }
 }
 
-const setupOutDirectory = async ({
+const cleanOutDirectoryIfNeeded = async ({
   logger,
-  outDirectoryMeta,
   outDirectoryUrl,
   jsenvDirectoryClean,
   jsenvDirectoryUrl,
+  compileServerMetaFileInfo,
 }) => {
   if (jsenvDirectoryClean) {
     logger.debug(
@@ -471,24 +474,23 @@ const setupOutDirectory = async ({
     )
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
-  const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
 
-  let previousOutDirectoryMeta
+  let previousCompileServerMeta
   try {
-    const source = await readFile(metaFileUrl)
-    previousOutDirectoryMeta = JSON.parse(source)
+    const source = await readFile(compileServerMetaFileInfo.url)
+    previousCompileServerMeta = JSON.parse(source)
   } catch (e) {
     if (e && e.code === "ENOENT") {
-      previousOutDirectoryMeta = null
+      previousCompileServerMeta = null
     } else {
       throw e
     }
   }
 
-  if (previousOutDirectoryMeta !== null) {
+  if (previousCompileServerMeta !== null) {
     const outDirectoryChanges = getOutDirectoryChanges(
-      previousOutDirectoryMeta,
-      outDirectoryMeta,
+      previousCompileServerMeta,
+      compileServerMetaFileInfo.data,
     )
 
     if (outDirectoryChanges) {
@@ -512,12 +514,15 @@ const setupOutDirectory = async ({
   }
 }
 
-const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
+const getOutDirectoryChanges = (
+  previousCompileServerMeta,
+  compileServerMeta,
+) => {
   const changes = []
 
-  Object.keys(outDirectoryMeta).forEach((key) => {
-    const now = outDirectoryMeta[key]
-    const previous = previousOutDirectoryMeta[key]
+  Object.keys(compileServerMeta).forEach((key) => {
+    const now = compileServerMeta[key]
+    const previous = previousCompileServerMeta[key]
     if (!compareValueJson(now, previous)) {
       changes.push(key)
     }
@@ -528,7 +533,7 @@ const getOutDirectoryChanges = (previousOutDirectoryMeta, outDirectoryMeta) => {
   }
 
   // in case basic comparison from above is not enough
-  if (!compareValueJson(previousOutDirectoryMeta, outDirectoryMeta)) {
+  if (!compareValueJson(previousCompileServerMeta, compileServerMeta)) {
     return { somethingChanged: true }
   }
 
@@ -539,7 +544,6 @@ const compareValueJson = (left, right) => {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
-// eslint-disable-next-line valid-jsdoc
 /**
  * We need to get two things:
  * { projectFileRequestedCallback, trackMainAndDependencies }
@@ -931,7 +935,7 @@ const createSourceFileService = ({
   }
 }
 
-const createOutJSONFiles = ({
+const createCompileServerMetaFileInfo = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
@@ -947,13 +951,14 @@ const createOutJSONFiles = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 }) => {
-  const outJSONFiles = {}
   const outDirectoryUrl = resolveUrl(
     outDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-
-  const metaOutFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
+  const compileServerMetaFileUrl = resolveUrl(
+    "./__compile_server_meta__.json",
+    outDirectoryUrl,
+  )
   const jsenvCorePackageFileUrl = resolveUrl(
     "./package.json",
     jsenvCoreDirectoryUrl,
@@ -961,43 +966,29 @@ const createOutJSONFiles = ({
   const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
   const customCompilerPatterns = Object.keys(customCompilers)
-  const outDirectoryMeta = {
-    jsenvCorePackageVersion,
-    babelPluginMap: babelPluginMapAsData(babelPluginMap),
-    compileServerGroupMap,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    customCompilerPatterns,
-    jsenvToolbarInjection,
-    sourcemapMethod,
-    sourcemapExcludeSources,
-  }
-  outJSONFiles.meta = {
-    url: metaOutFileUrl,
-    data: outDirectoryMeta,
-  }
-
-  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
-  env = {
-    ...env,
+  const compileServerMeta = {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
-    inlineImportMapIntoHTML,
+
+    babelPluginMap: babelPluginMapAsData(babelPluginMap),
+    compileServerGroupMap,
     customCompilerPatterns,
-  }
-  outJSONFiles.env = {
-    url: envOutFileUrl,
-    data: env,
-  }
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
+    inlineImportMapIntoHTML,
 
-  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  outJSONFiles.groupMap = {
-    url: groupMapOutFileUrl,
-    data: compileServerGroupMap,
-  }
+    sourcemapMethod,
+    sourcemapExcludeSources,
 
-  return outJSONFiles
+    jsenvCorePackageVersion,
+    jsenvToolbarInjection,
+    env,
+  }
+  return {
+    url: compileServerMetaFileUrl,
+    data: compileServerMeta,
+  }
 }
 
 const babelPluginMapAsData = (babelPluginMap) => {
@@ -1019,14 +1010,12 @@ const babelPluginMapAsData = (babelPluginMap) => {
   return data
 }
 
-const createOutFilesService = async ({
-  logger,
+const createCompileServerMetaService = ({
   projectDirectoryUrl,
-  compileServerCanWriteOnFilesystem,
   outDirectoryUrl,
-  outJSONFiles,
+  compileServerMetaFileInfo,
 }) => {
-  const isOutRootFile = (url) => {
+  const isCompileServerMetaFile = (url) => {
     if (!urlIsInsideOf(url, outDirectoryUrl)) {
       return false
     }
@@ -1037,56 +1026,16 @@ const createOutFilesService = async ({
     return true
   }
 
-  if (compileServerCanWriteOnFilesystem) {
-    await Promise.all(
-      Object.keys(outJSONFiles).map(async (name) => {
-        const outJSONFile = outJSONFiles[name]
-        await writeFile(
-          outJSONFile.url,
-          JSON.stringify(outJSONFile.data, null, "  "),
-        )
-        logger.debug(`-> ${outJSONFile.url}`)
-      }),
-    )
-
-    return async (request) => {
-      const requestUrl = resolveUrl(
-        request.ressource.slice(1),
-        projectDirectoryUrl,
-      )
-      if (!isOutRootFile(requestUrl)) {
-        return null
-      }
-      return fetchFileSystem(
-        new URL(request.ressource.slice(1), projectDirectoryUrl),
-        {
-          headers: request.headers,
-          etagEnabled: true,
-        },
-      )
-    }
-  }
   // serve from memory
   return (request) => {
     const requestUrl = resolveUrl(
       request.ressource.slice(1),
       projectDirectoryUrl,
     )
-    if (!isOutRootFile(requestUrl)) {
+    if (!isCompileServerMetaFile(requestUrl)) {
       return null
     }
-
-    const outJSONFileKey = Object.keys(outJSONFiles).find((name) => {
-      return outJSONFiles[name].url === requestUrl
-    })
-    if (!outJSONFileKey) {
-      return {
-        status: 404,
-      }
-    }
-
-    const outJSONFile = outJSONFiles[outJSONFileKey]
-    const body = JSON.stringify(outJSONFile.data, null, "  ")
+    const body = JSON.stringify(compileServerMetaFileInfo.data, null, "  ")
     return {
       status: 200,
       headers: {

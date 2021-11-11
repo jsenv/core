@@ -104,7 +104,7 @@ export const executePlan = async (
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      outDirectoryName: "out-dev",
+      outDirectoryName: "dev",
 
       importResolutionMethod,
       importDefaultExtension,
