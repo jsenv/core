@@ -922,6 +922,14 @@ const createCompileServerMetaFileInfo = ({
   const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
   const customCompilerPatterns = Object.keys(customCompilers)
+  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
+    sourcemapMainFileInfo.url,
+    projectDirectoryUrl,
+  )
+  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
+    sourcemapMappingFileInfo.url,
+    projectDirectoryUrl,
+  )
   const compileServerMeta = {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -936,8 +944,9 @@ const createCompileServerMetaFileInfo = ({
 
     sourcemapMethod,
     sourcemapExcludeSources,
-    sourcemapMainFileInfo,
-    sourcemapMappingFileInfo,
+    sourcemapMainFileRelativeUrl,
+    sourcemapMappingFileRelativeUrl,
+    errorStackRemapping: true,
 
     jsenvCorePackageVersion,
     jsenvToolbarInjection,
