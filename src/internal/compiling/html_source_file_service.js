@@ -137,6 +137,7 @@ const transformHTMLSourceFile = async ({
   pushResponse,
   inlineImportMapIntoHTML,
   jsenvScriptInjection,
+  jsenvToolbarInjection,
   onInlineModuleScript = () => {},
 }) => {
   const htmlAst = parseHtmlString(fileContent)
@@ -166,13 +167,13 @@ const transformHTMLSourceFile = async ({
             },
           ]
         : []),
-      ...(fileUrl === jsenvToolbarHtmlFileInfo.url
-        ? []
-        : [
+      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
+        ? [
             {
               src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
             },
-          ]),
+          ]
+        : []),
     ],
   })
 

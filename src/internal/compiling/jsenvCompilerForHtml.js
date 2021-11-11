@@ -45,6 +45,9 @@ export const compileHtml = async ({
   babelPluginMap,
 
   sourcemapMethod,
+
+  jsenvScriptInjection = true,
+  jsenvToolbarInjection,
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
@@ -62,19 +65,24 @@ export const compileHtml = async ({
     await mutateRessourceHints(htmlAst)
   }
 
-  if (url !== jsenvToolbarHtmlFileInfo.url) {
-    manipulateHtmlAst(htmlAst, {
-      scriptInjections: [
-        {
-          src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
-        },
-
-        {
-          src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
-        },
-      ],
-    })
-  }
+  manipulateHtmlAst(htmlAst, {
+    scriptInjections: [
+      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvScriptInjection
+        ? [
+            {
+              src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+            },
+          ]
+        : []),
+      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
+        ? [
+            {
+              src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+            },
+          ]
+        : []),
+    ],
+  })
 
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)

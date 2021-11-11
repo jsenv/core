@@ -17,6 +17,9 @@ const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   runtime: chromiumRuntime,
+  runtimeParams: {
+    // headless: false,
+  },
   stopAfterExecute: true,
   fileRelativeUrl: htmlFileRelativeUrl,
   customCompilers: {
