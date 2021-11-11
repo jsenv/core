@@ -106,24 +106,26 @@ export const compileFile = async ({
       )
     })
 
-    compileResult.dependencies.forEach((dependency) => {
-      const requestUrl = resolveUrl(request.ressource, request.origin)
-      const dependencyUrl = resolveUrl(dependency, requestUrl)
+    if (request.http2) {
+      compileResult.dependencies.forEach((dependency) => {
+        const requestUrl = resolveUrl(request.ressource, request.origin)
+        const dependencyUrl = resolveUrl(dependency, requestUrl)
 
-      if (!urlIsInsideOf(dependencyUrl, request.origin)) {
-        // ignore external urls
-        return
-      }
-      if (dependencyUrl.startsWith("data:")) {
-        return
-      }
+        if (!urlIsInsideOf(dependencyUrl, request.origin)) {
+          // ignore external urls
+          return
+        }
+        if (dependencyUrl.startsWith("data:")) {
+          return
+        }
 
-      const dependencyRelativeUrl = urlToRelativeUrl(
-        dependencyUrl,
-        request.origin,
-      )
-      pushResponse({ path: `/${dependencyRelativeUrl}` })
-    })
+        const dependencyRelativeUrl = urlToRelativeUrl(
+          dependencyUrl,
+          request.origin,
+        )
+        pushResponse({ path: `/${dependencyRelativeUrl}` })
+      })
+    }
 
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay

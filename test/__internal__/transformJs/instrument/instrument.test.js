@@ -54,5 +54,6 @@ const expected = {
   sourcesContent: [originalFileContent],
   assets: [sourcemapFileUrl, `${compiledFileUrl}__asset__coverage.json`],
   assetsContent: [actual.assetsContent[0], actual.assetsContent[1]],
+  dependencies: [],
 }
 assert({ actual, expected })
