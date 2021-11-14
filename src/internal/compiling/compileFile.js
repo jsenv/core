@@ -106,17 +106,15 @@ export const compileFile = async ({
       )
     })
 
-    if (request.http2) {
+    if (
+      request.http2 &&
+      // js resolution is special, we cannot just do resolveUrl of the import specifier
+      // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
+      // And we would push 404 to the browser
+      // Until we implement import map resolution pushing ressource for js imports is disabled
+      compileResult.contentType !== "application/javascript"
+    ) {
       compileResult.dependencies.forEach((dependency) => {
-        if (
-          compileResult.contentType === "application/javascript" &&
-          !dependency.startsWith("./")
-        ) {
-          // js might use importmap to remap bare specifiers
-          // so ignore thoose deps (ideally we would resolve using importmap)
-          return
-        }
-
         const requestUrl = resolveUrl(request.ressource, request.origin)
         const dependencyUrl = resolveUrl(dependency, requestUrl)
         if (!urlIsInsideOf(dependencyUrl, request.origin)) {

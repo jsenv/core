@@ -41,6 +41,8 @@ export const compileJavascript = async ({
       originalFileContent: code,
       originalFileUrl: url,
       compiledFileUrl: compiledUrl,
+      // sourcemap are not inside the asset folder because
+      // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
       sourcemapFileUrl: `${compiledUrl}.map`,
       sourcemapExcludeSources,
       sourcemapMethod,

@@ -22,6 +22,7 @@ import {
   registerDirectoryLifecycle,
   urlIsInsideOf,
   urlToBasename,
+  urlToExtension,
 } from "@jsenv/filesystem"
 import {
   createCallbackList,
@@ -571,11 +572,14 @@ const setupServerSentEventsForLivereload = ({
   const projectFileAdded = createCallbackList()
 
   const projectFileRequestedCallback = (relativeUrl, request) => {
-    // I doubt a compilation asset like .js.map will change
-    // in theory a compilation asset should not change
-    // if the source file did not change
-    // so we can avoid watching compilation asset
-    if (urlIsCompilationAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
+    const url = `${projectDirectoryUrl}${relativeUrl}`
+
+    if (
+      // Do not watch sourcemap files
+      urlToExtension(url) === ".map" ||
+      // Do not watch compilation asset, watching source file is enough
+      urlIsCompilationAsset(url)
+    ) {
       return
     }
 
