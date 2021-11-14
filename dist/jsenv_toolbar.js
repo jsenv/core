@@ -3108,8 +3108,6 @@
     document.querySelector("#overflow-menu").removeAttribute("data-animate");
   };
 
-  /* eslint-disable import/max-dependencies */
-
   function _call(body, then, direct) {
     if (direct) {
       return then ? then(body()) : body();
