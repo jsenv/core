@@ -73,6 +73,7 @@ const executeFileUsingDynamicImport = async (
       const executionResult = {
         status: "completed",
         namespace,
+        coverage: readCoverage(),
       }
       return executionResult
     } catch (e) {
@@ -80,6 +81,7 @@ const executeFileUsingDynamicImport = async (
       const executionResult = {
         status: "errored",
         exceptionSource: unevalException(e),
+        coverage: readCoverage(),
       }
       onExecutionError(executionResult, { currentScript })
       return executionResult
@@ -190,6 +192,8 @@ const getBrowserRuntime = memoize(async () => {
 })
 
 const livereloadingCallbacks = {}
+
+const readCoverage = () => window.__coverage__
 
 window.__jsenv__ = {
   livereloadingCallbacks,

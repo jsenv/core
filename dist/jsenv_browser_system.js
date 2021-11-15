@@ -3766,7 +3766,7 @@
                     return {
                       status: "completed",
                       namespace: namespace,
-                      coverage: readCoverage()
+                      coverage: readCoverage$1()
                     };
                   });
                 }, function (error) {
@@ -3793,7 +3793,7 @@
                     return {
                       status: "errored",
                       exceptionSource: unevalException(transformedError),
-                      coverage: readCoverage()
+                      coverage: readCoverage$1()
                     };
                   });
                 });
@@ -3819,7 +3819,7 @@
     });
   });
 
-  var readCoverage = function readCoverage() {
+  var readCoverage$1 = function readCoverage() {
     return window.__coverage__;
   };
 
@@ -4995,7 +4995,8 @@
           performance.measure("jsenv_file_import", "jsenv_file_import_start");
           var executionResult = {
             status: "completed",
-            namespace: namespace
+            namespace: namespace,
+            coverage: readCoverage()
           };
           return executionResult;
         });
@@ -5003,7 +5004,8 @@
         performance.measure("jsenv_file_import", "jsenv_file_import_start");
         var executionResult = {
           status: "errored",
-          exceptionSource: unevalException(e)
+          exceptionSource: unevalException(e),
+          coverage: readCoverage()
         };
         onExecutionError(executionResult, {
           currentScript: currentScript
@@ -5129,6 +5131,11 @@
     });
   }));
   var livereloadingCallbacks = {};
+
+  var readCoverage = function readCoverage() {
+    return window.__coverage__;
+  };
+
   window.__jsenv__ = {
     livereloadingCallbacks: livereloadingCallbacks,
     executionResultPromise: executionResultPromise,
