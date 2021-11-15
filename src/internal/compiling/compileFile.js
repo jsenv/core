@@ -144,6 +144,7 @@ export const compileFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
+          "cache-control": "no-store",
           ...responseHeaders,
         },
         body: compiledSource,
@@ -160,12 +161,16 @@ export const compileFile = async ({
       ) {
         return {
           status: 304,
+          headers: {
+            "cache-control": "private,max-age=0,must-revalidate",
+          },
           timing,
         }
       }
       return respondUsingRAM((response) => {
         // eslint-disable-next-line dot-notation
         response.headers["etag"] = compiledEtag
+        response.headers["cache-control"] = "private,max-age=0,must-revalidate"
       })
     }
 
@@ -176,6 +181,9 @@ export const compileFile = async ({
       ) {
         return {
           status: 304,
+          headers: {
+            "cache-control": "private,max-age=0,must-revalidate",
+          },
           timing,
         }
       }
@@ -183,6 +191,7 @@ export const compileFile = async ({
         response.headers["last-modified"] = new Date(
           compiledMtime,
         ).toUTCString()
+        response.headers["cache-control"] = "private,max-age=0,must-revalidate"
       })
     }
 
