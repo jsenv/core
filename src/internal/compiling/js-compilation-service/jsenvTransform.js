@@ -206,7 +206,9 @@ export const jsenvTransform = async ({
         ...(moduleOutFormat === "systemjs"
           ? {
               "proposal-dynamic-import": [proposalDynamicImport],
-              "transform-modules-systemjs": [transformModulesSystemJs],
+              ...(moduleOutFormat === "systemjs"
+                ? { "transform-modules-systemjs": [transformModulesSystemJs] }
+                : {}),
             }
           : {}),
       }),

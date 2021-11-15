@@ -1,10 +1,13 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import {
   jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
   jsenvToolbarInjectorFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
 import {
   setJavaScriptSourceMappingUrl,
@@ -26,11 +29,10 @@ import {
   replaceHtmlNode,
 } from "./compileHtml.js"
 import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
-import { composeTwoImportMaps } from "@jsenv/importmap"
 
 export const compileHtml = async ({
   // cancellationToken,
-  // logger,
+  logger,
   // request,
   code,
   url,
@@ -89,6 +91,7 @@ export const compileHtml = async ({
 
   let hasImportmap = false
   const inlineScriptsContentMap = {}
+  const importmapsToInline = []
   scripts.forEach((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
     const srcAttribute = getHtmlNodeAttributeByName(script, "src")
@@ -98,6 +101,15 @@ export const compileHtml = async ({
       if (srcAttribute) {
         hasImportmap = true
         typeAttribute.value = "jsenv-importmap"
+
+        if (moduleOutFormat === "systemjs") {
+          return // no need to inline
+        }
+        // we force inline because browsers supporting importmap supports only when they are inline
+        importmapsToInline.push({
+          script,
+          src: srcAttribute.value,
+        })
         return
       }
       const defaultImportMap = getDefaultImportMap({
@@ -113,18 +125,23 @@ export const compileHtml = async ({
       return
     }
 
+    // remove module script
     if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
       removeHtmlNodeAttribute(script, typeAttribute)
       removeHtmlNodeAttribute(script, srcAttribute)
+      const jsenvMethod =
+        moduleOutFormat === "systemjs"
+          ? "executeFileUsingSystemJs"
+          : "executeFileUsingDynamicImport"
       setHtmlNodeText(
         script,
-        `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(
+        `window.__jsenv__.${jsenvMethod}(${JSON.stringify(
           srcAttribute.value,
         )})`,
       )
       return
     }
-    // inline
+    // inline module script
     const textNode = getHtmlNodeTextNode(script)
     if (typeAttribute && typeAttribute.value === "module" && textNode) {
       const scriptAssetUrl = generateCompiledFileAssetUrl(
@@ -149,6 +166,7 @@ export const compileHtml = async ({
       return
     }
   })
+
   if (hasImportmap === false) {
     const defaultImportMap = getDefaultImportMap({
       importMapFileUrl: compiledUrl,
@@ -167,6 +185,46 @@ export const compileHtml = async ({
       ],
     })
   }
+
+  await Promise.all(
+    importmapsToInline.map(async ({ script, src }) => {
+      const importMapUrl = resolveUrl(src, url)
+      const importMapResponse = await fetchUrl(importMapUrl)
+      if (importMapResponse.status !== 200) {
+        logger.warn(
+          createDetailedMessage(
+            importMapResponse.status === 404
+              ? `Cannot inline importmap script because file cannot be found.`
+              : `Cannot inline importmap script due to unexpected response status (${importMapResponse.status}).`,
+            {
+              "importmap script src": src,
+              "importmap url": importMapUrl,
+              "html url": url,
+            },
+          ),
+        )
+        return
+      }
+
+      const importMapContent = await importMapResponse.json()
+      const importMapInlined = moveImportMap(
+        importMapContent,
+        importMapUrl,
+        url,
+      )
+      replaceHtmlNode(
+        script,
+        `<script type="importmap">${JSON.stringify(
+          importMapInlined,
+          null,
+          "  ",
+        )}</script>`,
+        {
+          attributesToIgnore: ["src"],
+        },
+      )
+    }),
+  )
 
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
 
