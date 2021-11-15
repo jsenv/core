@@ -600,24 +600,33 @@ const setupServerSentEventsForLivereload = ({
     ...livereloadWatchConfig,
     [jsenvDirectoryRelativeUrl]: false,
   }
-  const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-    projectDirectoryUrl,
-    {
-      watchDescription,
-      updated: ({ relativeUrl }) => {
-        projectFileModified.notify(relativeUrl)
+
+  // wait 100ms to actually start watching
+  // otherwise server starting is delayed by the filesystem scan done in
+  // registerDirectoryLifecycle
+  const timeout = setTimeout(() => {
+    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+      projectDirectoryUrl,
+      {
+        watchDescription,
+        updated: ({ relativeUrl }) => {
+          projectFileModified.notify(relativeUrl)
+        },
+        removed: ({ relativeUrl }) => {
+          projectFileRemoved.notify(relativeUrl)
+        },
+        added: ({ relativeUrl }) => {
+          projectFileAdded.notify(relativeUrl)
+        },
+        keepProcessAlive: false,
+        recursive: true,
       },
-      removed: ({ relativeUrl }) => {
-        projectFileRemoved.notify(relativeUrl)
-      },
-      added: ({ relativeUrl }) => {
-        projectFileAdded.notify(relativeUrl)
-      },
-      keepProcessAlive: false,
-      recursive: true,
-    },
-  )
-  serverStopCallbackList.add(unregisterDirectoryLifecyle)
+    )
+    serverStopCallbackList.add(unregisterDirectoryLifecyle)
+  }, 100)
+  serverStopCallbackList.add(() => {
+    clearTimeout(timeout)
+  })
 
   const getDependencySet = (mainRelativeUrl) => {
     if (trackerMap.has(mainRelativeUrl)) {
