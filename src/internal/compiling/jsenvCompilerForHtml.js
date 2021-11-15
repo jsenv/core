@@ -98,13 +98,14 @@ export const compileHtml = async ({
 
     // importmap
     if (typeAttribute && typeAttribute.value === "importmap") {
-      if (srcAttribute) {
-        hasImportmap = true
-        typeAttribute.value = "jsenv-importmap"
+      hasImportmap = true
 
+      if (srcAttribute) {
         if (moduleOutFormat === "systemjs") {
+          typeAttribute.value = "jsenv-importmap"
           return // no need to inline
         }
+
         // we force inline because browsers supporting importmap supports only when they are inline
         importmapsToInline.push({
           script,
@@ -112,6 +113,7 @@ export const compileHtml = async ({
         })
         return
       }
+
       const defaultImportMap = getDefaultImportMap({
         importMapFileUrl: compiledUrl,
         projectDirectoryUrl,
@@ -119,45 +121,51 @@ export const compileHtml = async ({
       })
       const inlineImportMap = JSON.parse(getHtmlNodeTextNode(script).value)
       const mappings = composeTwoImportMaps(defaultImportMap, inlineImportMap)
-      hasImportmap = true
-      typeAttribute.value = "jsenv-importmap"
+      if (moduleOutFormat === "systemjs") {
+        typeAttribute.value = "jsenv-importmap"
+      }
       setHtmlNodeText(script, JSON.stringify(mappings, null, "  "))
       return
     }
 
-    // remove module script
+    // remote module script
     if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
-      removeHtmlNodeAttribute(script, typeAttribute)
+      if (moduleOutFormat === "systemjs") {
+        removeHtmlNodeAttribute(script, typeAttribute)
+      }
       removeHtmlNodeAttribute(script, srcAttribute)
+      const src = srcAttribute.value
       const jsenvMethod =
         moduleOutFormat === "systemjs"
           ? "executeFileUsingSystemJs"
           : "executeFileUsingDynamicImport"
       setHtmlNodeText(
         script,
-        `window.__jsenv__.${jsenvMethod}(${JSON.stringify(
-          srcAttribute.value,
-        )})`,
+        `window.__jsenv__.${jsenvMethod}(${JSON.stringify(src)})`,
       )
       return
     }
+
     // inline module script
     const textNode = getHtmlNodeTextNode(script)
     if (typeAttribute && typeAttribute.value === "module" && textNode) {
+      if (moduleOutFormat === "systemjs") {
+        removeHtmlNodeAttribute(script, typeAttribute)
+      }
+      removeHtmlNodeAttribute(script, srcAttribute)
       const scriptAssetUrl = generateCompiledFileAssetUrl(
         compiledUrl,
         getUniqueNameForInlineHtmlNode(script, scripts, `[id].js`),
       )
       const specifier = `./${urlToRelativeUrl(scriptAssetUrl, compiledUrl)}`
       inlineScriptsContentMap[specifier] = textNode.value
-
-      removeHtmlNodeAttribute(script, typeAttribute)
-      removeHtmlNodeAttribute(script, srcAttribute)
+      const jsenvMethod =
+        moduleOutFormat === "systemjs"
+          ? "executeFileUsingSystemJs"
+          : "executeFileUsingDynamicImport"
       setHtmlNodeText(
         script,
-        `window.__jsenv__.executeFileUsingSystemJs(${JSON.stringify(
-          specifier,
-        )})`,
+        `window.__jsenv__.${jsenvMethod}(${JSON.stringify(specifier)})`,
       )
       htmlDependencies.push({
         htmlNode: script,
@@ -173,11 +181,11 @@ export const compileHtml = async ({
       projectDirectoryUrl,
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
     })
-
     manipulateHtmlAst(htmlAst, {
       scriptInjections: [
         {
-          type: "jsenv-importmap",
+          type:
+            moduleOutFormat === "systemjs" ? "jsenv-importmap" : "importmap",
           // in case there is no importmap, force the presence
           // so that '@jsenv/core/' are still remapped
           text: JSON.stringify(defaultImportMap, null, "  "),
