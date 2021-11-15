@@ -381,7 +381,7 @@
         "./node_modules/@c88/v8-coverage/index.js"
       ],
       "@jsenv/importmap": [
-        "./node_modules/@jsenv/importmap/index.js"
+        "./node_modules/@jsenv/importmap/main.js"
       ],
       "cjs-module-lexer": [
         "./node_modules/cjs-module-lexer/dist/lexer.mjs"
