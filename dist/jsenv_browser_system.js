@@ -1965,21 +1965,33 @@
         importer = _ref.importer,
         importMap = _ref.importMap,
         _ref$defaultExtension = _ref.defaultExtension,
-        defaultExtension = _ref$defaultExtension === void 0 ? true : _ref$defaultExtension,
+        defaultExtension = _ref$defaultExtension === void 0 ? false : _ref$defaultExtension,
         createBareSpecifierError = _ref.createBareSpecifierError,
         _ref$onImportMapping = _ref.onImportMapping,
         onImportMapping = _ref$onImportMapping === void 0 ? function () {} : _ref$onImportMapping;
-    return applyDefaultExtension$1({
-      url: importMap ? applyImportMap({
+    var url;
+
+    if (importMap) {
+      url = applyImportMap({
         importMap: importMap,
         specifier: specifier,
         importer: importer,
         createBareSpecifierError: createBareSpecifierError,
         onImportMapping: onImportMapping
-      }) : resolveUrl(specifier, importer),
-      importer: importer,
-      defaultExtension: defaultExtension
-    });
+      });
+    } else {
+      url = resolveUrl(specifier, importer);
+    }
+
+    if (defaultExtension) {
+      url = applyDefaultExtension$1({
+        url: url,
+        importer: importer,
+        defaultExtension: defaultExtension
+      });
+    }
+
+    return url;
   };
 
   var applyDefaultExtension$1 = function applyDefaultExtension(_ref2) {
@@ -3299,6 +3311,1324 @@
     });
   });
 
+  var makeNamespaceTransferable = function makeNamespaceTransferable(namespace) {
+    var transferableNamespace = {};
+    Object.keys(namespace).forEach(function (key) {
+      var value = namespace[key];
+      transferableNamespace[key] = isTransferable(value) ? value : hideNonTransferableValue(value);
+    });
+    return transferableNamespace;
+  };
+
+  var hideNonTransferableValue = function hideNonTransferableValue(value) {
+    if (typeof value === "function") {
+      return "[[HIDDEN: ".concat(value.name, " function cannot be transfered]]");
+    }
+
+    if (_typeof(value) === "symbol") {
+      return "[[HIDDEN: symbol function cannot be transfered]]";
+    }
+
+    return "[[HIDDEN: ".concat(value.constructor ? value.constructor.name : "object", " cannot be transfered]]");
+  }; // https://stackoverflow.com/a/32673910/2634179
+
+
+  var isTransferable = function isTransferable(value) {
+    var seenArray = [];
+
+    var visit = function visit() {
+      if (typeof value === "function") return false;
+      if (_typeof(value) === "symbol") return false;
+      if (value === null) return false;
+
+      if (_typeof(value) === "object") {
+        var constructorName = value.constructor.namespace;
+
+        if (supportedTypes.includes(constructorName)) {
+          return true;
+        }
+
+        var maybe = maybeTypes.includes(constructorName);
+
+        if (maybe) {
+          var visited = seenArray.includes(value);
+
+          if (visited) {
+            // we don't really know until we are done visiting the object
+            // implementing it properly means waiting for the recursion to be done
+            // let's just
+            return true;
+          }
+
+          seenArray.push(value);
+
+          if (constructorName === "Array" || constructorName === "Object") {
+            return Object.keys(value).every(function (key) {
+              return isTransferable(value[key]);
+            });
+          }
+
+          if (constructorName === "Map") {
+            return _toConsumableArray(value.keys()).every(isTransferable) && _toConsumableArray(value.values()).every(isTransferable);
+          }
+
+          if (constructorName === "Set") {
+            return _toConsumableArray(value.keys()).every(isTransferable);
+          }
+        } // Error, DOM Node and others
+
+
+        return false;
+      }
+
+      return true;
+    };
+
+    return visit(value);
+  };
+
+  var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
+  var maybeTypes = ["Array", "Object", "Map", "Set"];
+
+  function _await$7(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  var memoizedCreateBrowserSystem = memoize(createBrowserSystem);
+
+  function _invoke$4(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
+  function _async$7(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  function _catch$3(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  function _continue$1(value, then) {
+    return value && value.then ? value.then(then) : then(value);
+  }
+
+  var createBrowserRuntime = _async$7(function (_ref) {
+    var compileServerOrigin = _ref.compileServerOrigin,
+        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        compileId = _ref.compileId;
+
+    var fetchSource = function fetchSource(url, _ref2) {
+      var contentTypeExpected = _ref2.contentTypeExpected;
+      return fetchUrl(url, {
+        credentials: "same-origin",
+        contentTypeExpected: contentTypeExpected
+      });
+    };
+
+    var fetchJson = _async$7(function (url) {
+      return _await$7(fetchSource(url, {
+        contentTypeExpected: "application/json"
+      }), function (response) {
+        return _await$7(response.json());
+      });
+    });
+
+    var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
+    var envUrl = String(new URL("env.json", outDirectoryUrl));
+    return _await$7(fetchJson(envUrl), function (_ref3) {
+      var importDefaultExtension = _ref3.importDefaultExtension;
+      var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
+      // systemjs style with systemjs-importmap
+
+      var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
+      var importMap;
+      var importMapUrl;
+      return _invoke$4(function () {
+        if (importmapScript) {
+          var importmapRaw;
+          return _invoke$4(function () {
+            if (importmapScript.src) {
+              importMapUrl = importmapScript.src;
+              return _await$7(fetchSource(importMapUrl, {
+                contentTypeExpected: "application/importmap+json"
+              }), function (importmapFileResponse) {
+                var _temp = importmapFileResponse.status === 404;
+
+                return _await$7(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
+                  importmapRaw = _importmapFileRespons;
+                }, _temp);
+              });
+            } else {
+              importMapUrl = document.location.href;
+              importmapRaw = JSON.parse(importmapScript.textContent) || {};
+            }
+          }, function () {
+            importMap = normalizeImportMap(importmapRaw, importMapUrl);
+          });
+        }
+      }, function () {
+        return _await$7(createImportResolverForImportmap({
+          // projectDirectoryUrl,
+          compileServerOrigin: compileServerOrigin,
+          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+          importMap: importMap,
+          importMapUrl: importMapUrl,
+          importDefaultExtension: importDefaultExtension
+        }), function (importResolver) {
+          var importFile = _async$7(function (specifier) {
+            return _await$7(memoizedCreateBrowserSystem({
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              fetchSource: fetchSource,
+              importResolver: importResolver
+            }), function (browserSystem) {
+              return browserSystem.import(specifier);
+            });
+          });
+
+          var executeFile = _async$7(function (specifier) {
+            var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+                _ref4$transferableNam = _ref4.transferableNamespace,
+                transferableNamespace = _ref4$transferableNam === void 0 ? false : _ref4$transferableNam,
+                _ref4$executionExposu = _ref4.executionExposureOnWindow,
+                executionExposureOnWindow = _ref4$executionExposu === void 0 ? false : _ref4$executionExposu,
+                _ref4$errorTransform = _ref4.errorTransform,
+                errorTransform = _ref4$errorTransform === void 0 ? function (error) {
+              return error;
+            } : _ref4$errorTransform,
+                measurePerformance = _ref4.measurePerformance;
+
+            return _await$7(memoizedCreateBrowserSystem({
+              compileServerOrigin: compileServerOrigin,
+              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+              fetchSource: fetchSource,
+              importResolver: importResolver
+            }), function (browserSystem) {
+              var importUsingSystemJs = _async$7(function () {
+                return _catch$3(function () {
+                  return _await$7(browserSystem.import(specifier), function (namespace) {
+                    if (transferableNamespace) {
+                      namespace = makeNamespaceTransferable(namespace);
+                    }
+
+                    return {
+                      status: "completed",
+                      namespace: namespace,
+                      coverage: readCoverage$1()
+                    };
+                  });
+                }, function (error) {
+                  var transformedError;
+                  return _continue$1(_catch$3(function () {
+                    return _await$7(errorTransform(error), function (_errorTransform) {
+                      transformedError = _errorTransform;
+                    });
+                  }, function () {
+                    transformedError = error;
+                  }), function () {
+                    return {
+                      status: "errored",
+                      error: transformedError,
+                      coverage: readCoverage$1()
+                    };
+                  });
+                });
+              });
+
+              return _await$7(measurePerformance ? measureAsyncFnPerf(importUsingSystemJs, "jsenv_file_import") : importUsingSystemJs(), function (executionResult) {
+                if (executionExposureOnWindow) {
+                  window.__executionResult__ = executionResult;
+                }
+
+                return executionResult;
+              });
+            });
+          });
+
+          return {
+            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
+            importFile: importFile,
+            executeFile: executeFile
+          };
+        });
+      });
+    });
+  });
+
+  var readCoverage$1 = function readCoverage() {
+    return window.__coverage__;
+  };
+
+  var stackToString = function stackToString(stack, _ref) {
+    var error = _ref.error,
+        indent = _ref.indent;
+    var name = error.name || "Error";
+    var message = error.message || "";
+    var stackString = stack.map(function (callSite) {
+      return "\n".concat(indent, "at ").concat(callSite);
+    }).join("");
+    return "".concat(name, ": ").concat(message).concat(stackString);
+  };
+
+  /* eslint-env browser, node */
+  var parseDataUrl = function parseDataUrl(dataUrl) {
+    var afterDataProtocol = dataUrl.slice("data:".length);
+    var commaIndex = afterDataProtocol.indexOf(",");
+    var beforeComma = afterDataProtocol.slice(0, commaIndex);
+    var mediaType;
+    var base64Flag;
+
+    if (beforeComma.endsWith(";base64")) {
+      mediaType = beforeComma.slice(0, -";base64".length);
+      base64Flag = true;
+    } else {
+      mediaType = beforeComma;
+      base64Flag = false;
+    }
+
+    var afterComma = afterDataProtocol.slice(commaIndex + 1);
+    return {
+      mediaType: mediaType === "" ? "text/plain;charset=US-ASCII" : mediaType,
+      base64Flag: base64Flag,
+      data: afterComma
+    };
+  };
+  var dataUrlToRawData = function dataUrlToRawData(_ref2) {
+    var base64Flag = _ref2.base64Flag,
+        data = _ref2.data;
+    return base64Flag ? base64ToString(data) : data;
+  };
+  (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
+    return Buffer.from(data).toString("base64");
+  };
+  var base64ToString = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.btoa : function (base64String) {
+    return Buffer.from(base64String, "base64").toString("utf8");
+  };
+
+  var getJavaScriptSourceMappingUrl = function getJavaScriptSourceMappingUrl(javaScriptSource) {
+    var sourceMappingUrl;
+    replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, function (value) {
+      sourceMappingUrl = value;
+    });
+    return sourceMappingUrl;
+  };
+  var javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
+
+  var replaceSourceMappingUrl = function replaceSourceMappingUrl(source, regexp, callback) {
+    var lastSourceMappingUrl;
+    var matchSourceMappingUrl;
+
+    while (matchSourceMappingUrl = regexp.exec(source)) {
+      lastSourceMappingUrl = matchSourceMappingUrl;
+    }
+
+    if (lastSourceMappingUrl) {
+      var index = lastSourceMappingUrl.index;
+      var before = source.slice(0, index);
+      var after = source.slice(index);
+      var mappedAfter = after.replace(regexp, function (match, firstGroup) {
+        return callback(firstGroup);
+      });
+      return "".concat(before).concat(mappedAfter);
+    }
+
+    return source;
+  };
+
+  var startsWithWindowsDriveLetter = function startsWithWindowsDriveLetter(string) {
+    var firstChar = string[0];
+    if (!/[a-zA-Z]/.test(firstChar)) return false;
+    var secondChar = string[1];
+    if (secondChar !== ":") return false;
+    return true;
+  };
+  var windowsFilePathToUrl = function windowsFilePathToUrl(windowsFilePath) {
+    return "file:///".concat(replaceBackSlashesWithSlashes(windowsFilePath));
+  };
+  var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(string) {
+    return string.replace(/\\/g, "/");
+  };
+
+  function _await$6(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _invoke$3(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
+  function _async$6(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var remapCallSite = _async$6(function (callSite, _ref) {
+    var _exit = false;
+    var urlToSourcemapConsumer = _ref.urlToSourcemapConsumer,
+        resolveFile = _ref.resolveFile,
+        readErrorStack = _ref.readErrorStack,
+        onFailure = _ref.onFailure;
+
+    if (callSite.isNative()) {
+      return callSite;
+    } // Most call sites will return the source file from getFileName(), but code
+    // passed to eval() ending in "//# sourceURL=..." will return the source file
+    // from getScriptNameOrSourceURL() instead
+
+
+    var source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
+    return _invoke$3(function () {
+      if (source) {
+        var line = callSite.getLineNumber();
+        var column = callSite.getColumnNumber() - 1;
+        return _await$6(remapSourcePosition({
+          source: source,
+          line: line,
+          column: column,
+          resolveFile: resolveFile,
+          urlToSourcemapConsumer: urlToSourcemapConsumer,
+          readErrorStack: readErrorStack,
+          onFailure: onFailure
+        }), function (originalPosition) {
+          var callSiteClone = cloneCallSite(callSite);
+
+          callSiteClone.getFunctionName = function () {
+            return originalPosition.name || callSite.getFunctionName();
+          };
+
+          callSiteClone.getFileName = function () {
+            return originalPosition.source;
+          };
+
+          callSiteClone.getLineNumber = function () {
+            return originalPosition.line;
+          };
+
+          callSiteClone.getColumnNumber = function () {
+            return originalPosition.column + 1;
+          };
+
+          callSiteClone.getScriptNameOrSourceURL = function () {
+            return originalPosition.source;
+          };
+
+          _exit = true;
+          return callSiteClone;
+        });
+      }
+    }, function (_result) {
+      var _exit2 = false;
+      if (_exit) return _result;
+      // Code called using eval() needs special handling
+      return _invoke$3(function () {
+        if (callSite.isEval()) {
+          var origin = callSite.getEvalOrigin();
+          return _invoke$3(function () {
+            if (origin) {
+              var callSiteClone = cloneCallSite(callSite);
+              return _await$6(remapEvalOrigin(origin, {
+                resolveFile: resolveFile,
+                urlToSourcemapConsumer: urlToSourcemapConsumer,
+                readErrorStack: readErrorStack,
+                onFailure: onFailure
+              }), function (originalEvalOrigin) {
+                callSiteClone.getEvalOrigin = function () {
+                  return originalEvalOrigin;
+                };
+
+                _exit2 = true;
+                return callSiteClone;
+              });
+            }
+          }, function (_result2) {
+            if (_exit2) return _result2;
+            _exit2 = true;
+            return callSite;
+          });
+        }
+      }, function (_result3) {
+        return _exit2 ? _result3 : callSite;
+      }); // If we get here then we were unable to change the source position
+    });
+  });
+
+  var cloneCallSite = function cloneCallSite(callSite) {
+    var callSiteClone = {};
+    methods.forEach(function (name) {
+      callSiteClone[name] = function () {
+        return callSite[name]();
+      };
+    });
+
+    callSiteClone.toString = function () {
+      return callSiteToFunctionCall(callSiteClone);
+    };
+
+    return callSiteClone;
+  };
+
+  var methods = ["getColumnNumber", "getEvalOrigin", "getFileName", "getFunction", "getFunctionName", "getLineNumber", "getMethodName", "getPosition", "getScriptNameOrSourceURL", "getThis", "getTypeName", "isConstructor", "isEval", "isNative", "isToplevel", "toString"];
+
+  var callSiteToFunctionCall = function callSiteToFunctionCall(callSite) {
+    var fileLocation = callSiteToFileLocation(callSite);
+    var isConstructor = callSite.isConstructor();
+    var isMethodCall = !callSite.isToplevel() && !isConstructor;
+
+    if (isMethodCall) {
+      return "".concat(callSiteToMethodCall(callSite), " (").concat(fileLocation, ")");
+    }
+
+    var functionName = callSite.getFunctionName();
+
+    if (isConstructor) {
+      return "new ".concat(functionName || "<anonymous>", " (").concat(fileLocation, ")");
+    }
+
+    if (functionName) {
+      return "".concat(functionName, " (").concat(fileLocation, ")");
+    }
+
+    return "".concat(fileLocation);
+  };
+
+  var callSiteToMethodCall = function callSiteToMethodCall(callSite) {
+    var functionName = callSite.getFunctionName();
+    var typeName = callSiteToType(callSite);
+
+    if (!functionName) {
+      return "".concat(typeName, ".<anonymous>");
+    }
+
+    var methodName = callSite.getMethodName();
+    var as = generateAs({
+      methodName: methodName,
+      functionName: functionName
+    });
+
+    if (typeName && !functionName.startsWith(typeName)) {
+      return "".concat(typeName, ".").concat(functionName).concat(as);
+    }
+
+    return "".concat(functionName).concat(as);
+  };
+
+  var generateAs = function generateAs(_ref2) {
+    var methodName = _ref2.methodName,
+        functionName = _ref2.functionName;
+    if (!methodName) return "";
+    if (functionName.indexOf(".".concat(methodName)) === functionName.length - methodName.length - 1) return "";
+    return " [as ".concat(methodName, "]");
+  };
+
+  var callSiteToType = function callSiteToType(callSite) {
+    var typeName = callSite.getTypeName(); // Fixes shim to be backward compatible with Node v0 to v4
+
+    if (typeName === "[object Object]") {
+      return "null";
+    }
+
+    return typeName;
+  };
+
+  var callSiteToFileLocation = function callSiteToFileLocation(callSite) {
+    if (callSite.isNative()) return "native";
+    var sourceFile = callSiteToSourceFile(callSite);
+    var lineNumber = callSite.getLineNumber();
+
+    if (lineNumber === null) {
+      return sourceFile;
+    }
+
+    var columnNumber = callSite.getColumnNumber();
+
+    if (!columnNumber) {
+      return "".concat(sourceFile, ":").concat(lineNumber);
+    }
+
+    return "".concat(sourceFile, ":").concat(lineNumber, ":").concat(columnNumber);
+  };
+
+  var callSiteToSourceFile = function callSiteToSourceFile(callSite) {
+    var fileName = callSite.getScriptNameOrSourceURL();
+
+    if (fileName) {
+      return fileName;
+    } // Source code does not originate from a file and is not native, but we
+    // can still get the source position inside the source string, e.g. in
+    // an eval string.
+
+
+    if (callSite.isEval()) {
+      return "".concat(callSite.getEvalOrigin(), ", <anonymous>");
+    }
+
+    return "<anonymous>";
+  }; // Parses code generated by FormatEvalOrigin(), a function inside V8:
+  // https://code.google.com/p/v8/source/browse/trunk/src/messages.js
+
+
+  var remapEvalOrigin = _async$6(function (origin, _ref3) {
+    var _exit3 = false;
+    var resolveFile = _ref3.resolveFile,
+        urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
+        onFailure = _ref3.onFailure;
+    // Most eval() calls are in this format
+    var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
+    return _invoke$3(function () {
+      if (topLevelEvalMatch) {
+        var source = topLevelEvalMatch[2];
+        var line = Number(topLevelEvalMatch[3]);
+        var column = topLevelEvalMatch[4] - 1;
+        return _await$6(remapSourcePosition({
+          source: source,
+          line: line,
+          column: column,
+          resolveFile: resolveFile,
+          urlToSourcemapConsumer: urlToSourcemapConsumer,
+          onFailure: onFailure
+        }), function (originalPosition) {
+          _exit3 = true;
+          return "eval at ".concat(topLevelEvalMatch[1], " (").concat(originalPosition.source, ":").concat(originalPosition.line, ":").concat(originalPosition.column + 1, ")");
+        });
+      }
+    }, function (_result4) {
+      var _exit4 = false;
+      if (_exit3) return _result4;
+      // Parse nested eval() calls using recursion
+      var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
+      return _invoke$3(function () {
+        if (nestedEvalMatch) {
+          return _await$6(remapEvalOrigin(nestedEvalMatch[2], {
+            resolveFile: resolveFile,
+            urlToSourcemapConsumer: urlToSourcemapConsumer,
+            onFailure: onFailure
+          }), function (originalEvalOrigin) {
+            _exit4 = true;
+            return "eval at ".concat(nestedEvalMatch[1], " (").concat(originalEvalOrigin, ")");
+          });
+        }
+      }, function (_result5) {
+        return _exit4 ? _result5 : origin;
+      }); // Make sure we still return useful information if we didn't find anything
+    });
+  });
+
+  var remapSourcePosition = _async$6(function (_ref4) {
+    var source = _ref4.source,
+        line = _ref4.line,
+        column = _ref4.column,
+        resolveFile = _ref4.resolveFile,
+        urlToSourcemapConsumer = _ref4.urlToSourcemapConsumer,
+        readErrorStack = _ref4.readErrorStack,
+        onFailure = _ref4.onFailure;
+    var position = {
+      source: source,
+      line: line,
+      column: column
+    };
+    var url = sourceToUrl(source, {
+      resolveFile: resolveFile
+    });
+    return url ? _await$6(urlToSourcemapConsumer(url), function (sourceMapConsumer) {
+      if (!sourceMapConsumer) return position;
+
+      try {
+        var originalPosition = sourceMapConsumer.originalPositionFor(position); // Only return the original position if a matching line was found. If no
+        // matching line is found then we return position instead, which will cause
+        // the stack trace to print the path and line for the compiled file. It is
+        // better to give a precise location in the compiled file than a vague
+        // location in the original file.
+
+        var originalSource = originalPosition.source;
+        if (originalSource === null) return position;
+        originalPosition.source = resolveFile(originalSource, url, {
+          type: "file-original"
+        });
+        return originalPosition;
+      } catch (e) {
+        var _createDetailedMessag;
+
+        onFailure(createDetailedMessage("error while remapping position.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag, "source", source), _defineProperty(_createDetailedMessag, "line", line), _defineProperty(_createDetailedMessag, "column", column), _createDetailedMessag)));
+        return position;
+      }
+    }) : position;
+  });
+
+  var sourceToUrl = function sourceToUrl(source, _ref5) {
+    var resolveFile = _ref5.resolveFile;
+
+    if (startsWithScheme(source)) {
+      return source;
+    } // linux filesystem path
+
+
+    if (source[0] === "/") {
+      return resolveFile(source);
+    } // be careful, due to babel or something like that we might receive paths like
+    // C:/directory/file.js (without backslashes we would expect on windows)
+    // In that case we consider C: is the signe we are on windows
+    // And I avoid to rely on process.platform === "win32" because this file might be executed in chrome
+
+
+    if (startsWithWindowsDriveLetter(source)) {
+      return windowsFilePathToUrl(source);
+    } // I don't think we will ever encounter relative file in the stack trace
+    // but if it ever happens we are safe :)
+
+
+    if (source.slice(0, 2) === "./" || source.slice(0, 3) === "../") {
+      return resolveFile(source);
+    } // we have received a "bare specifier" for the source
+    // it happens for internal/process/task_queues.js for instance
+    // if we do return resolveFile(source) it will be converted to
+    // file:///C:/project-directory/internal/process/task_queues.js in node
+    // and
+    // http://domain.com/internal/process/task_queues.js
+    // but the file will certainly be a 404
+    // and if not it won't be the right file anyway
+    // for now we assume "bare specifier" in the stack trace
+    // are internal files that are pointless to try to remap
+
+
+    return null;
+  };
+
+  var startsWithScheme = function startsWithScheme(string) {
+    return /^[a-zA-Z]{2,}:/.test(string);
+  };
+
+  function _await$5(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$5(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  function _catch$2(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  function _invoke$2(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
+  function _continue(value, then) {
+    return value && value.then ? value.then(then) : then(value);
+  }
+
+  var getOriginalCallsites = _async$5(function (_ref) {
+    var stack = _ref.stack,
+        resolveFile = _ref.resolveFile,
+        fetchFile = _ref.fetchFile,
+        SourceMapConsumer = _ref.SourceMapConsumer,
+        readErrorStack = _ref.readErrorStack,
+        onFailure = _ref.onFailure;
+    var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$5(function (stackTraceFileUrl) {
+      var _exit = false;
+      return stackTraceFileUrl.startsWith("node:") ? null : _catch$2(function () {
+        var text;
+        return _continue(_catch$2(function () {
+          return _await$5(fetchFile(stackTraceFileUrl), function (fileResponse) {
+            var status = fileResponse.status;
+
+            if (status !== 200) {
+              if (status === 404) {
+                onFailure("stack trace file not found at ".concat(stackTraceFileUrl));
+              } else {
+                var _createDetailedMessag;
+
+                onFailure(createDetailedMessage("unexpected response fetching stack trace file.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "response status", status), _defineProperty(_createDetailedMessag, "response text", fileResponse.body), _defineProperty(_createDetailedMessag, "stack trace file", stackTraceFileUrl), _createDetailedMessag)));
+              }
+
+              _exit = true;
+              return null;
+            }
+
+            return _await$5(fileResponse.text(), function (_fileResponse$text) {
+              text = _fileResponse$text;
+            });
+          });
+        }, function (e) {
+          var _createDetailedMessag2;
+
+          onFailure(createDetailedMessage("error while fetching stack trace file.", (_createDetailedMessag2 = {}, _defineProperty(_createDetailedMessag2, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag2, "stack trace file", stackTraceFileUrl), _createDetailedMessag2)));
+          _exit = true;
+          return null;
+        }), function (_result) {
+          var _exit2 = false;
+          if (_exit) return _result;
+          var jsSourcemapUrl = getJavaScriptSourceMappingUrl(text);
+
+          if (!jsSourcemapUrl) {
+            return null;
+          }
+
+          var sourcemapUrl;
+          var sourcemapString;
+          return _invoke$2(function () {
+            if (jsSourcemapUrl.startsWith("data:")) {
+              sourcemapUrl = stackTraceFileUrl;
+              sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl));
+            } else {
+              sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
+                type: "source-map"
+              });
+              return _catch$2(function () {
+                return _await$5(fetchFile(sourcemapUrl), function (sourcemapResponse) {
+                  var _exit3 = false;
+                  var status = sourcemapResponse.status;
+                  return _invoke$2(function () {
+                    if (status !== 200) {
+                      return _invoke$2(function () {
+                        if (status === 404) {
+                          onFailure("sourcemap file not found at ".concat(sourcemapUrl));
+                        } else {
+                          var _temp2 = "unexpected response for sourcemap file.";
+                          return _await$5(sourcemapResponse.text(), function (_sourcemapResponse$te) {
+                            var _createDetailedMessag3;
+
+                            onFailure(createDetailedMessage(_temp2, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
+                          });
+                        }
+                      }, function () {
+                        _exit2 = true;
+                        return null;
+                      });
+                    }
+                  }, function (_result3) {
+                    return _exit3 ? _result3 : _await$5(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
+                      sourcemapString = _sourcemapResponse$te2;
+                    });
+                  });
+                });
+              }, function (e) {
+                var _createDetailedMessag4;
+
+                onFailure(createDetailedMessage("error while fetching sourcemap.", (_createDetailedMessag4 = {}, _defineProperty(_createDetailedMessag4, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag4, "sourcemap url", sourcemapUrl), _createDetailedMessag4)));
+                _exit2 = true;
+                return null;
+              });
+            }
+          }, function (_result4) {
+            if (_exit2) return _result4;
+            var sourceMap;
+
+            try {
+              sourceMap = JSON.parse(sourcemapString);
+            } catch (e) {
+              var _createDetailedMessag5;
+
+              onFailure(createDetailedMessage("error while parsing sourcemap.", (_createDetailedMessag5 = {}, _defineProperty(_createDetailedMessag5, "parse error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag5, "sourcemap url", sourcemapUrl), _createDetailedMessag5)));
+              return null;
+            }
+
+            var _sourceMap = sourceMap,
+                sourcesContent = _sourceMap.sourcesContent;
+
+            if (!sourcesContent) {
+              sourcesContent = [];
+              sourceMap.sourcesContent = sourcesContent;
+            }
+
+            var firstSourceMapSourceFailure = null;
+            return _await$5(Promise.all(sourceMap.sources.map(_async$5(function (source, index) {
+              if (index in sourcesContent) return;
+              var sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
+                type: "source"
+              });
+              return _catch$2(function () {
+                return _await$5(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
+                  var _exit4 = false;
+                  var status = sourceResponse.status;
+                  return _invoke$2(function () {
+                    if (status !== 200) {
+                      if (firstSourceMapSourceFailure) {
+                        _exit4 = true;
+                        return;
+                      }
+
+                      if (status === 404) {
+                        var _createDetailedMessag6;
+
+                        firstSourceMapSourceFailure = createDetailedMessage("sourcemap source not found.", (_createDetailedMessag6 = {}, _defineProperty(_createDetailedMessag6, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag6, "sourcemap url", sourcemapUrl), _createDetailedMessag6));
+                        _exit4 = true;
+                        return;
+                      }
+
+                      var _temp4 = "unexpected response for sourcemap source.";
+                      return _await$5(sourceResponse.text(), function (_sourceResponse$text) {
+                        var _createDetailedMessag7;
+
+                        firstSourceMapSourceFailure = createDetailedMessage(_temp4, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
+                        _exit4 = true;
+                      });
+                    }
+                  }, function (_result6) {
+                    return _exit4 ? _result6 : _await$5(sourceResponse.text(), function (sourceString) {
+                      sourcesContent[index] = sourceString;
+                    });
+                  });
+                });
+              }, function (e) {
+                var _createDetailedMessag8;
+
+                if (firstSourceMapSourceFailure) return;
+                firstSourceMapSourceFailure = createDetailedMessage("error while fetching sourcemap source.", (_createDetailedMessag8 = {}, _defineProperty(_createDetailedMessag8, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag8, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag8, "sourcemap url", sourcemapUrl), _createDetailedMessag8));
+              });
+            }))), function () {
+              if (firstSourceMapSourceFailure) {
+                onFailure(firstSourceMapSourceFailure);
+                return null;
+              }
+
+              return new SourceMapConsumer(sourceMap);
+            });
+          });
+        });
+      }, function (e) {
+        var _createDetailedMessag9;
+
+        onFailure(createDetailedMessage("error while preparing a sourceMap consumer for a stack trace file.", (_createDetailedMessag9 = {}, _defineProperty(_createDetailedMessag9, "error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag9, "stack trace file", stackTraceFileUrl), _createDetailedMessag9)));
+        return null;
+      });
+    }));
+    return Promise.all(stack.map(function (callSite) {
+      return remapCallSite(callSite, {
+        resolveFile: resolveFile,
+        urlToSourcemapConsumer: urlToSourcemapConsumer,
+        readErrorStack: readErrorStack,
+        onFailure: onFailure
+      });
+    }));
+  });
+
+  var memoizeByFirstArgStringValue = function memoizeByFirstArgStringValue(fn) {
+    var stringValueCache = {};
+    return function (firstArgValue) {
+      if (firstArgValue in stringValueCache) return stringValueCache[firstArgValue];
+      var value = fn(firstArgValue);
+      stringValueCache[firstArgValue] = value;
+      return value;
+    };
+  };
+
+  function _await$4(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _catch$1(body, recover) {
+    try {
+      var result = body();
+    } catch (e) {
+      return recover(e);
+    }
+
+    if (result && result.then) {
+      return result.then(void 0, recover);
+    }
+
+    return result;
+  }
+
+  function _invoke$1(body, then) {
+    var result = body();
+
+    if (result && result.then) {
+      return result.then(then);
+    }
+
+    return then(result);
+  }
+
+  function _async$4(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
+    var fetchFile = _ref.fetchFile,
+        resolveFile = _ref.resolveFile,
+        SourceMapConsumer = _ref.SourceMapConsumer,
+        _ref$indent = _ref.indent,
+        indent = _ref$indent === void 0 ? "  " : _ref$indent;
+
+    if (typeof fetchFile !== "function") {
+      throw new TypeError("fetchFile must be a function, got ".concat(fetchFile));
+    }
+
+    if (typeof SourceMapConsumer !== "function") {
+      throw new TypeError("sourceMapConsumer must be a function, got ".concat(SourceMapConsumer));
+    }
+
+    if (typeof indent !== "string") {
+      throw new TypeError("indent must be a string, got ".concat(indent));
+    }
+
+    var errorRemappingCache = new WeakMap();
+    var errorRemapFailureCallbackMap = new WeakMap();
+    var installed = false;
+    var previousPrepareStackTrace = Error.prepareStackTrace;
+
+    var install = function install() {
+      if (installed) return;
+      installed = true;
+      Error.prepareStackTrace = prepareStackTrace;
+    };
+
+    var uninstall = function uninstall() {
+      if (!installed) return;
+      installed = false;
+      Error.prepareStackTrace = previousPrepareStackTrace;
+    }; // ensure we do not use prepareStackTrace for thoose error
+    // otherwise we would recursively remap error stack
+    // and if the reason causing the failure is still here
+    // it would create an infinite loop
+
+
+    var readErrorStack = function readErrorStack(error) {
+      uninstall();
+      var stack = error.stack;
+      install();
+      return stack;
+    };
+
+    var prepareStackTrace = function prepareStackTrace(error, stack) {
+      var onFailure = function onFailure(failureData) {
+        var failureCallbackArray = errorRemapFailureCallbackMap.get(error);
+
+        if (failureCallbackArray) {
+          failureCallbackArray.forEach(function (callback) {
+            return callback(failureData);
+          });
+        }
+      };
+
+      var stackRemappingPromise = getOriginalCallsites({
+        stack: stack,
+        error: error,
+        resolveFile: resolveFile,
+        fetchFile: memoizeFetch(fetchFile),
+        SourceMapConsumer: SourceMapConsumer,
+        readErrorStack: readErrorStack,
+        indent: indent,
+        onFailure: onFailure
+      });
+      errorRemappingCache.set(error, stackRemappingPromise);
+      return stackToString(stack, {
+        error: error,
+        indent: indent
+      });
+    };
+
+    var getErrorOriginalStackString = _async$4(function (error) {
+      var _exit = false;
+
+      var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+          _ref2$onFailure = _ref2.onFailure,
+          onFailure = _ref2$onFailure === void 0 ? function (message) {
+        console.warn(message);
+      } : _ref2$onFailure;
+
+      if (onFailure) {
+        var remapFailureCallbackArray = errorRemapFailureCallbackMap.get(error);
+
+        if (remapFailureCallbackArray) {
+          errorRemapFailureCallbackMap.set(error, [].concat(_toConsumableArray(remapFailureCallbackArray), [onFailure]));
+        } else {
+          errorRemapFailureCallbackMap.set(error, [onFailure]);
+        }
+      } // ensure Error.prepareStackTrace gets triggered by reading error.stack now
+
+
+      var stack = error.stack;
+      var promise = errorRemappingCache.get(error);
+      return _invoke$1(function () {
+        if (promise) {
+          return _catch$1(function () {
+            return _await$4(promise, function (originalCallsites) {
+              errorRemapFailureCallbackMap.get(error);
+              var firstCall = originalCallsites[0];
+
+              if (firstCall) {
+                Object.assign(error, {
+                  filename: firstCall.getFileName(),
+                  lineno: firstCall.getLineNumber(),
+                  columnno: firstCall.getColumnNumber()
+                });
+              }
+
+              _exit = true;
+              return stackToString(originalCallsites, {
+                error: error,
+                indent: indent
+              });
+            });
+          }, function (e) {
+            var _createDetailedMessag;
+
+            onFailure(createDetailedMessage("error while computing original stack.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "stack from error while computing", readErrorStack(e)), _defineProperty(_createDetailedMessag, "stack from error to remap", stack), _createDetailedMessag)));
+            _exit = true;
+            return stack;
+          });
+        }
+      }, function (_result) {
+        return _exit ? _result : stack;
+      });
+    });
+
+    install();
+    return {
+      getErrorOriginalStackString: getErrorOriginalStackString,
+      uninstall: uninstall
+    };
+  };
+
+  var memoizeFetch = function memoizeFetch(fetchUrl) {
+    var urlCache = {};
+    return _async$4(function (url) {
+      if (url in urlCache) {
+        return urlCache[url];
+      }
+
+      var responsePromise = fetchUrl(url);
+      urlCache[url] = responsePromise;
+      return responsePromise;
+    });
+  };
+
+  function _await$3(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$3(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var installBrowserErrorStackRemapping = function installBrowserErrorStackRemapping() {
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    return installErrorStackRemapping(_objectSpread2({
+      fetchFile: _async$3(function (url) {
+        // browser having Error.captureStackTrace got window.fetch
+        // and this executes only when Error.captureStackTrace exists
+        // so no need for polyfill or whatever here
+        return _await$3(window.fetch(url, {
+          // by default a script tag is in "no-cors"
+          // so we also fetch url with "no-cors"
+          mode: "no-cors"
+        }), function (response) {
+          // we read response test before anything because once memoized fetch
+          // gets annoying preventing you to read
+          // body multiple times, even using response.clone()
+          return _await$3(response.text(), function (_text) {
+            return {
+              status: response.status,
+              url: response.url,
+              statusText: response.statusText,
+              headers: responseToHeaders(response),
+              text: function text() {
+                return _text;
+              },
+              json: response.json.bind(response),
+              blob: response.blob.bind(response),
+              arrayBuffer: response.arrayBuffer.bind(response)
+            };
+          });
+        });
+      }),
+      resolveFile: function resolveFile(specifier) {
+        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
+        // browsers having Error.captureStrackTrace got window.URL
+        // and this executes only when Error.captureStackTrace exists
+        return String(new URL(specifier, importer));
+      }
+    }, options));
+  };
+
+  var responseToHeaders = function responseToHeaders(response) {
+    var headers = {};
+    response.headers.forEach(function (value, name) {
+      headers[name] = value;
+    });
+    return headers;
+  };
+
+  function _await$2(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+
+    return then ? value.then(then) : value;
+  }
+
+  function _async$2(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
+  var fetchAndEvalUsingFetch = _async$2(function (url) {
+    return _await$2(fetchUrl(url), function (response) {
+      return function () {
+        if (response.status >= 200 && response.status <= 299) {
+          return _await$2(response.text(), function (text) {
+            // eslint-disable-next-line no-eval
+            window.eval(appendSourceURL(text, url));
+          });
+        } else {
+          return _await$2(response.text(), function (text) {
+            var _createDetailedMessag;
+
+            throw new Error(createDetailedMessage("Unexpected response for script.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "script url", url), _defineProperty(_createDetailedMessag, "response body", text), _defineProperty(_createDetailedMessag, "response status", response.status), _createDetailedMessag)));
+          });
+        }
+      }();
+    });
+  });
+
+  var appendSourceURL = function appendSourceURL(code, sourceURL) {
+    return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
+  };
+
+  /* eslint-env browser */
   var displayErrorInDocument = function displayErrorInDocument(error) {
     var title = "An error occured";
     var theme;
@@ -3471,1348 +4801,6 @@
     };
   };
 
-  function _await$7(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var _window = window,
-      Notification = _window.Notification;
-
-  function _async$7(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var displayErrorNotificationNotAvailable = function displayErrorNotificationNotAvailable() {};
-
-  var displayErrorNotificationImplementation = _async$7(function (error) {
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        icon = _ref.icon;
-
-    return _await$7(Notification.requestPermission(), function (permission) {
-      if (permission === "granted") {
-        var notification = new Notification("An error occured", {
-          lang: "en",
-          body: error.stack,
-          icon: icon
-        });
-
-        notification.onclick = function () {
-          window.focus();
-        };
-      }
-    });
-  });
-
-  var displayErrorNotification = typeof Notification === "function" ? displayErrorNotificationImplementation : displayErrorNotificationNotAvailable;
-
-  var makeNamespaceTransferable = function makeNamespaceTransferable(namespace) {
-    var transferableNamespace = {};
-    Object.keys(namespace).forEach(function (key) {
-      var value = namespace[key];
-      transferableNamespace[key] = isTransferable(value) ? value : hideNonTransferableValue(value);
-    });
-    return transferableNamespace;
-  };
-
-  var hideNonTransferableValue = function hideNonTransferableValue(value) {
-    if (typeof value === "function") {
-      return "[[HIDDEN: ".concat(value.name, " function cannot be transfered]]");
-    }
-
-    if (_typeof(value) === "symbol") {
-      return "[[HIDDEN: symbol function cannot be transfered]]";
-    }
-
-    return "[[HIDDEN: ".concat(value.constructor ? value.constructor.name : "object", " cannot be transfered]]");
-  }; // https://stackoverflow.com/a/32673910/2634179
-
-
-  var isTransferable = function isTransferable(value) {
-    var seenArray = [];
-
-    var visit = function visit() {
-      if (typeof value === "function") return false;
-      if (_typeof(value) === "symbol") return false;
-      if (value === null) return false;
-
-      if (_typeof(value) === "object") {
-        var constructorName = value.constructor.namespace;
-
-        if (supportedTypes.includes(constructorName)) {
-          return true;
-        }
-
-        var maybe = maybeTypes.includes(constructorName);
-
-        if (maybe) {
-          var visited = seenArray.includes(value);
-
-          if (visited) {
-            // we don't really know until we are done visiting the object
-            // implementing it properly means waiting for the recursion to be done
-            // let's just
-            return true;
-          }
-
-          seenArray.push(value);
-
-          if (constructorName === "Array" || constructorName === "Object") {
-            return Object.keys(value).every(function (key) {
-              return isTransferable(value[key]);
-            });
-          }
-
-          if (constructorName === "Map") {
-            return _toConsumableArray(value.keys()).every(isTransferable) && _toConsumableArray(value.values()).every(isTransferable);
-          }
-
-          if (constructorName === "Set") {
-            return _toConsumableArray(value.keys()).every(isTransferable);
-          }
-        } // Error, DOM Node and others
-
-
-        return false;
-      }
-
-      return true;
-    };
-
-    return visit(value);
-  };
-
-  var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
-  var maybeTypes = ["Array", "Object", "Map", "Set"];
-
-  function _await$6(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  var memoizedCreateBrowserSystem = memoize(createBrowserSystem);
-
-  function _invoke$4(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
-
-  function _async$6(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  function _catch$3(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  function _continue$1(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  var createBrowserRuntime = _async$6(function (_ref) {
-    var compileServerOrigin = _ref.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-        compileId = _ref.compileId;
-
-    var fetchSource = function fetchSource(url, _ref2) {
-      var contentTypeExpected = _ref2.contentTypeExpected;
-      return fetchUrl(url, {
-        credentials: "same-origin",
-        contentTypeExpected: contentTypeExpected
-      });
-    };
-
-    var fetchJson = _async$6(function (url) {
-      return _await$6(fetchSource(url, {
-        contentTypeExpected: "application/json"
-      }), function (response) {
-        return _await$6(response.json());
-      });
-    });
-
-    var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
-    var envUrl = String(new URL("env.json", outDirectoryUrl));
-    return _await$6(fetchJson(envUrl), function (_ref3) {
-      var importDefaultExtension = _ref3.importDefaultExtension;
-      var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
-      // systemjs style with systemjs-importmap
-
-      var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
-      var importMap;
-      var importMapUrl;
-      return _invoke$4(function () {
-        if (importmapScript) {
-          var importmapRaw;
-          return _invoke$4(function () {
-            if (importmapScript.src) {
-              importMapUrl = importmapScript.src;
-              return _await$6(fetchSource(importMapUrl, {
-                contentTypeExpected: "application/importmap+json"
-              }), function (importmapFileResponse) {
-                var _temp = importmapFileResponse.status === 404;
-
-                return _await$6(_temp ? {} : importmapFileResponse.json(), function (_importmapFileRespons) {
-                  importmapRaw = _importmapFileRespons;
-                }, _temp);
-              });
-            } else {
-              importMapUrl = document.location.href;
-              importmapRaw = JSON.parse(importmapScript.textContent) || {};
-            }
-          }, function () {
-            importMap = normalizeImportMap(importmapRaw, importMapUrl);
-          });
-        }
-      }, function () {
-        return _await$6(createImportResolverForImportmap({
-          // projectDirectoryUrl,
-          compileServerOrigin: compileServerOrigin,
-          compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-          importMap: importMap,
-          importMapUrl: importMapUrl,
-          importDefaultExtension: importDefaultExtension
-        }), function (importResolver) {
-          var importFile = _async$6(function (specifier) {
-            return _await$6(memoizedCreateBrowserSystem({
-              compileServerOrigin: compileServerOrigin,
-              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-              fetchSource: fetchSource,
-              importResolver: importResolver
-            }), function (browserSystem) {
-              return browserSystem.import(specifier);
-            });
-          });
-
-          var executeFile = _async$6(function (specifier) {
-            var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-                _ref4$transferableNam = _ref4.transferableNamespace,
-                transferableNamespace = _ref4$transferableNam === void 0 ? false : _ref4$transferableNam,
-                _ref4$errorExposureIn = _ref4.errorExposureInConsole,
-                errorExposureInConsole = _ref4$errorExposureIn === void 0 ? true : _ref4$errorExposureIn,
-                _ref4$errorExposureIn2 = _ref4.errorExposureInNotification,
-                errorExposureInNotification = _ref4$errorExposureIn2 === void 0 ? false : _ref4$errorExposureIn2,
-                _ref4$errorExposureIn3 = _ref4.errorExposureInDocument,
-                errorExposureInDocument = _ref4$errorExposureIn3 === void 0 ? true : _ref4$errorExposureIn3,
-                _ref4$executionExposu = _ref4.executionExposureOnWindow,
-                executionExposureOnWindow = _ref4$executionExposu === void 0 ? false : _ref4$executionExposu,
-                _ref4$errorTransform = _ref4.errorTransform,
-                errorTransform = _ref4$errorTransform === void 0 ? function (error) {
-              return error;
-            } : _ref4$errorTransform,
-                measurePerformance = _ref4.measurePerformance;
-
-            return _await$6(memoizedCreateBrowserSystem({
-              compileServerOrigin: compileServerOrigin,
-              compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-              fetchSource: fetchSource,
-              importResolver: importResolver
-            }), function (browserSystem) {
-              var importUsingSystemJs = _async$6(function () {
-                return _catch$3(function () {
-                  return _await$6(browserSystem.import(specifier), function (namespace) {
-                    if (transferableNamespace) {
-                      namespace = makeNamespaceTransferable(namespace);
-                    }
-
-                    return {
-                      status: "completed",
-                      namespace: namespace,
-                      coverage: readCoverage$1()
-                    };
-                  });
-                }, function (error) {
-                  var transformedError;
-                  return _continue$1(_catch$3(function () {
-                    return _await$6(errorTransform(error), function (_errorTransform) {
-                      transformedError = _errorTransform;
-                    });
-                  }, function () {
-                    transformedError = error;
-                  }), function () {
-                    if (errorExposureInConsole) {
-                      displayErrorInConsole(transformedError);
-                    }
-
-                    if (errorExposureInNotification) {
-                      displayErrorNotification(transformedError);
-                    }
-
-                    if (errorExposureInDocument) {
-                      displayErrorInDocument(transformedError);
-                    }
-
-                    return {
-                      status: "errored",
-                      exceptionSource: unevalException(transformedError),
-                      coverage: readCoverage$1()
-                    };
-                  });
-                });
-              });
-
-              return _await$6(measurePerformance ? measureAsyncFnPerf(importUsingSystemJs, "jsenv_file_import") : importUsingSystemJs(), function (executionResult) {
-                if (executionExposureOnWindow) {
-                  window.__executionResult__ = executionResult;
-                }
-
-                return executionResult;
-              });
-            });
-          });
-
-          return {
-            compileDirectoryRelativeUrl: compileDirectoryRelativeUrl,
-            importFile: importFile,
-            executeFile: executeFile
-          };
-        });
-      });
-    });
-  });
-
-  var readCoverage$1 = function readCoverage() {
-    return window.__coverage__;
-  };
-
-  var displayErrorInConsole = function displayErrorInConsole(error) {
-    console.error(error);
-  };
-
-  var stackToString = function stackToString(stack, _ref) {
-    var error = _ref.error,
-        indent = _ref.indent;
-    var name = error.name || "Error";
-    var message = error.message || "";
-    var stackString = stack.map(function (callSite) {
-      return "\n".concat(indent, "at ").concat(callSite);
-    }).join("");
-    return "".concat(name, ": ").concat(message).concat(stackString);
-  };
-
-  /* eslint-env browser, node */
-  var parseDataUrl = function parseDataUrl(dataUrl) {
-    var afterDataProtocol = dataUrl.slice("data:".length);
-    var commaIndex = afterDataProtocol.indexOf(",");
-    var beforeComma = afterDataProtocol.slice(0, commaIndex);
-    var mediaType;
-    var base64Flag;
-
-    if (beforeComma.endsWith(";base64")) {
-      mediaType = beforeComma.slice(0, -";base64".length);
-      base64Flag = true;
-    } else {
-      mediaType = beforeComma;
-      base64Flag = false;
-    }
-
-    var afterComma = afterDataProtocol.slice(commaIndex + 1);
-    return {
-      mediaType: mediaType === "" ? "text/plain;charset=US-ASCII" : mediaType,
-      base64Flag: base64Flag,
-      data: afterComma
-    };
-  };
-  var dataUrlToRawData = function dataUrlToRawData(_ref2) {
-    var base64Flag = _ref2.base64Flag,
-        data = _ref2.data;
-    return base64Flag ? base64ToString(data) : data;
-  };
-  (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
-    return Buffer.from(data).toString("base64");
-  };
-  var base64ToString = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.btoa : function (base64String) {
-    return Buffer.from(base64String, "base64").toString("utf8");
-  };
-
-  var getJavaScriptSourceMappingUrl = function getJavaScriptSourceMappingUrl(javaScriptSource) {
-    var sourceMappingUrl;
-    replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, function (value) {
-      sourceMappingUrl = value;
-    });
-    return sourceMappingUrl;
-  };
-  var javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
-
-  var replaceSourceMappingUrl = function replaceSourceMappingUrl(source, regexp, callback) {
-    var lastSourceMappingUrl;
-    var matchSourceMappingUrl;
-
-    while (matchSourceMappingUrl = regexp.exec(source)) {
-      lastSourceMappingUrl = matchSourceMappingUrl;
-    }
-
-    if (lastSourceMappingUrl) {
-      var index = lastSourceMappingUrl.index;
-      var before = source.slice(0, index);
-      var after = source.slice(index);
-      var mappedAfter = after.replace(regexp, function (match, firstGroup) {
-        return callback(firstGroup);
-      });
-      return "".concat(before).concat(mappedAfter);
-    }
-
-    return source;
-  };
-
-  var startsWithWindowsDriveLetter = function startsWithWindowsDriveLetter(string) {
-    var firstChar = string[0];
-    if (!/[a-zA-Z]/.test(firstChar)) return false;
-    var secondChar = string[1];
-    if (secondChar !== ":") return false;
-    return true;
-  };
-  var windowsFilePathToUrl = function windowsFilePathToUrl(windowsFilePath) {
-    return "file:///".concat(replaceBackSlashesWithSlashes(windowsFilePath));
-  };
-  var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(string) {
-    return string.replace(/\\/g, "/");
-  };
-
-  function _await$5(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _invoke$3(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
-
-  function _async$5(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var remapCallSite = _async$5(function (callSite, _ref) {
-    var _exit = false;
-    var urlToSourcemapConsumer = _ref.urlToSourcemapConsumer,
-        resolveFile = _ref.resolveFile,
-        readErrorStack = _ref.readErrorStack,
-        onFailure = _ref.onFailure;
-
-    if (callSite.isNative()) {
-      return callSite;
-    } // Most call sites will return the source file from getFileName(), but code
-    // passed to eval() ending in "//# sourceURL=..." will return the source file
-    // from getScriptNameOrSourceURL() instead
-
-
-    var source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-    return _invoke$3(function () {
-      if (source) {
-        var line = callSite.getLineNumber();
-        var column = callSite.getColumnNumber() - 1;
-        return _await$5(remapSourcePosition({
-          source: source,
-          line: line,
-          column: column,
-          resolveFile: resolveFile,
-          urlToSourcemapConsumer: urlToSourcemapConsumer,
-          readErrorStack: readErrorStack,
-          onFailure: onFailure
-        }), function (originalPosition) {
-          var callSiteClone = cloneCallSite(callSite);
-
-          callSiteClone.getFunctionName = function () {
-            return originalPosition.name || callSite.getFunctionName();
-          };
-
-          callSiteClone.getFileName = function () {
-            return originalPosition.source;
-          };
-
-          callSiteClone.getLineNumber = function () {
-            return originalPosition.line;
-          };
-
-          callSiteClone.getColumnNumber = function () {
-            return originalPosition.column + 1;
-          };
-
-          callSiteClone.getScriptNameOrSourceURL = function () {
-            return originalPosition.source;
-          };
-
-          _exit = true;
-          return callSiteClone;
-        });
-      }
-    }, function (_result) {
-      var _exit2 = false;
-      if (_exit) return _result;
-      // Code called using eval() needs special handling
-      return _invoke$3(function () {
-        if (callSite.isEval()) {
-          var origin = callSite.getEvalOrigin();
-          return _invoke$3(function () {
-            if (origin) {
-              var callSiteClone = cloneCallSite(callSite);
-              return _await$5(remapEvalOrigin(origin, {
-                resolveFile: resolveFile,
-                urlToSourcemapConsumer: urlToSourcemapConsumer,
-                readErrorStack: readErrorStack,
-                onFailure: onFailure
-              }), function (originalEvalOrigin) {
-                callSiteClone.getEvalOrigin = function () {
-                  return originalEvalOrigin;
-                };
-
-                _exit2 = true;
-                return callSiteClone;
-              });
-            }
-          }, function (_result2) {
-            if (_exit2) return _result2;
-            _exit2 = true;
-            return callSite;
-          });
-        }
-      }, function (_result3) {
-        return _exit2 ? _result3 : callSite;
-      }); // If we get here then we were unable to change the source position
-    });
-  });
-
-  var cloneCallSite = function cloneCallSite(callSite) {
-    var callSiteClone = {};
-    methods.forEach(function (name) {
-      callSiteClone[name] = function () {
-        return callSite[name]();
-      };
-    });
-
-    callSiteClone.toString = function () {
-      return callSiteToFunctionCall(callSiteClone);
-    };
-
-    return callSiteClone;
-  };
-
-  var methods = ["getColumnNumber", "getEvalOrigin", "getFileName", "getFunction", "getFunctionName", "getLineNumber", "getMethodName", "getPosition", "getScriptNameOrSourceURL", "getThis", "getTypeName", "isConstructor", "isEval", "isNative", "isToplevel", "toString"];
-
-  var callSiteToFunctionCall = function callSiteToFunctionCall(callSite) {
-    var fileLocation = callSiteToFileLocation(callSite);
-    var isConstructor = callSite.isConstructor();
-    var isMethodCall = !callSite.isToplevel() && !isConstructor;
-
-    if (isMethodCall) {
-      return "".concat(callSiteToMethodCall(callSite), " (").concat(fileLocation, ")");
-    }
-
-    var functionName = callSite.getFunctionName();
-
-    if (isConstructor) {
-      return "new ".concat(functionName || "<anonymous>", " (").concat(fileLocation, ")");
-    }
-
-    if (functionName) {
-      return "".concat(functionName, " (").concat(fileLocation, ")");
-    }
-
-    return "".concat(fileLocation);
-  };
-
-  var callSiteToMethodCall = function callSiteToMethodCall(callSite) {
-    var functionName = callSite.getFunctionName();
-    var typeName = callSiteToType(callSite);
-
-    if (!functionName) {
-      return "".concat(typeName, ".<anonymous>");
-    }
-
-    var methodName = callSite.getMethodName();
-    var as = generateAs({
-      methodName: methodName,
-      functionName: functionName
-    });
-
-    if (typeName && !functionName.startsWith(typeName)) {
-      return "".concat(typeName, ".").concat(functionName).concat(as);
-    }
-
-    return "".concat(functionName).concat(as);
-  };
-
-  var generateAs = function generateAs(_ref2) {
-    var methodName = _ref2.methodName,
-        functionName = _ref2.functionName;
-    if (!methodName) return "";
-    if (functionName.indexOf(".".concat(methodName)) === functionName.length - methodName.length - 1) return "";
-    return " [as ".concat(methodName, "]");
-  };
-
-  var callSiteToType = function callSiteToType(callSite) {
-    var typeName = callSite.getTypeName(); // Fixes shim to be backward compatible with Node v0 to v4
-
-    if (typeName === "[object Object]") {
-      return "null";
-    }
-
-    return typeName;
-  };
-
-  var callSiteToFileLocation = function callSiteToFileLocation(callSite) {
-    if (callSite.isNative()) return "native";
-    var sourceFile = callSiteToSourceFile(callSite);
-    var lineNumber = callSite.getLineNumber();
-
-    if (lineNumber === null) {
-      return sourceFile;
-    }
-
-    var columnNumber = callSite.getColumnNumber();
-
-    if (!columnNumber) {
-      return "".concat(sourceFile, ":").concat(lineNumber);
-    }
-
-    return "".concat(sourceFile, ":").concat(lineNumber, ":").concat(columnNumber);
-  };
-
-  var callSiteToSourceFile = function callSiteToSourceFile(callSite) {
-    var fileName = callSite.getScriptNameOrSourceURL();
-
-    if (fileName) {
-      return fileName;
-    } // Source code does not originate from a file and is not native, but we
-    // can still get the source position inside the source string, e.g. in
-    // an eval string.
-
-
-    if (callSite.isEval()) {
-      return "".concat(callSite.getEvalOrigin(), ", <anonymous>");
-    }
-
-    return "<anonymous>";
-  }; // Parses code generated by FormatEvalOrigin(), a function inside V8:
-  // https://code.google.com/p/v8/source/browse/trunk/src/messages.js
-
-
-  var remapEvalOrigin = _async$5(function (origin, _ref3) {
-    var _exit3 = false;
-    var resolveFile = _ref3.resolveFile,
-        urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
-        onFailure = _ref3.onFailure;
-    // Most eval() calls are in this format
-    var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
-    return _invoke$3(function () {
-      if (topLevelEvalMatch) {
-        var source = topLevelEvalMatch[2];
-        var line = Number(topLevelEvalMatch[3]);
-        var column = topLevelEvalMatch[4] - 1;
-        return _await$5(remapSourcePosition({
-          source: source,
-          line: line,
-          column: column,
-          resolveFile: resolveFile,
-          urlToSourcemapConsumer: urlToSourcemapConsumer,
-          onFailure: onFailure
-        }), function (originalPosition) {
-          _exit3 = true;
-          return "eval at ".concat(topLevelEvalMatch[1], " (").concat(originalPosition.source, ":").concat(originalPosition.line, ":").concat(originalPosition.column + 1, ")");
-        });
-      }
-    }, function (_result4) {
-      var _exit4 = false;
-      if (_exit3) return _result4;
-      // Parse nested eval() calls using recursion
-      var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
-      return _invoke$3(function () {
-        if (nestedEvalMatch) {
-          return _await$5(remapEvalOrigin(nestedEvalMatch[2], {
-            resolveFile: resolveFile,
-            urlToSourcemapConsumer: urlToSourcemapConsumer,
-            onFailure: onFailure
-          }), function (originalEvalOrigin) {
-            _exit4 = true;
-            return "eval at ".concat(nestedEvalMatch[1], " (").concat(originalEvalOrigin, ")");
-          });
-        }
-      }, function (_result5) {
-        return _exit4 ? _result5 : origin;
-      }); // Make sure we still return useful information if we didn't find anything
-    });
-  });
-
-  var remapSourcePosition = _async$5(function (_ref4) {
-    var source = _ref4.source,
-        line = _ref4.line,
-        column = _ref4.column,
-        resolveFile = _ref4.resolveFile,
-        urlToSourcemapConsumer = _ref4.urlToSourcemapConsumer,
-        readErrorStack = _ref4.readErrorStack,
-        onFailure = _ref4.onFailure;
-    var position = {
-      source: source,
-      line: line,
-      column: column
-    };
-    var url = sourceToUrl(source, {
-      resolveFile: resolveFile
-    });
-    return url ? _await$5(urlToSourcemapConsumer(url), function (sourceMapConsumer) {
-      if (!sourceMapConsumer) return position;
-
-      try {
-        var originalPosition = sourceMapConsumer.originalPositionFor(position); // Only return the original position if a matching line was found. If no
-        // matching line is found then we return position instead, which will cause
-        // the stack trace to print the path and line for the compiled file. It is
-        // better to give a precise location in the compiled file than a vague
-        // location in the original file.
-
-        var originalSource = originalPosition.source;
-        if (originalSource === null) return position;
-        originalPosition.source = resolveFile(originalSource, url, {
-          type: "file-original"
-        });
-        return originalPosition;
-      } catch (e) {
-        var _createDetailedMessag;
-
-        onFailure(createDetailedMessage("error while remapping position.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag, "source", source), _defineProperty(_createDetailedMessag, "line", line), _defineProperty(_createDetailedMessag, "column", column), _createDetailedMessag)));
-        return position;
-      }
-    }) : position;
-  });
-
-  var sourceToUrl = function sourceToUrl(source, _ref5) {
-    var resolveFile = _ref5.resolveFile;
-
-    if (startsWithScheme(source)) {
-      return source;
-    } // linux filesystem path
-
-
-    if (source[0] === "/") {
-      return resolveFile(source);
-    } // be careful, due to babel or something like that we might receive paths like
-    // C:/directory/file.js (without backslashes we would expect on windows)
-    // In that case we consider C: is the signe we are on windows
-    // And I avoid to rely on process.platform === "win32" because this file might be executed in chrome
-
-
-    if (startsWithWindowsDriveLetter(source)) {
-      return windowsFilePathToUrl(source);
-    } // I don't think we will ever encounter relative file in the stack trace
-    // but if it ever happens we are safe :)
-
-
-    if (source.slice(0, 2) === "./" || source.slice(0, 3) === "../") {
-      return resolveFile(source);
-    } // we have received a "bare specifier" for the source
-    // it happens for internal/process/task_queues.js for instance
-    // if we do return resolveFile(source) it will be converted to
-    // file:///C:/project-directory/internal/process/task_queues.js in node
-    // and
-    // http://domain.com/internal/process/task_queues.js
-    // but the file will certainly be a 404
-    // and if not it won't be the right file anyway
-    // for now we assume "bare specifier" in the stack trace
-    // are internal files that are pointless to try to remap
-
-
-    return null;
-  };
-
-  var startsWithScheme = function startsWithScheme(string) {
-    return /^[a-zA-Z]{2,}:/.test(string);
-  };
-
-  function _await$4(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _async$4(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  function _catch$2(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  function _invoke$2(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
-
-  function _continue(value, then) {
-    return value && value.then ? value.then(then) : then(value);
-  }
-
-  var getOriginalCallsites = _async$4(function (_ref) {
-    var stack = _ref.stack,
-        resolveFile = _ref.resolveFile,
-        fetchFile = _ref.fetchFile,
-        SourceMapConsumer = _ref.SourceMapConsumer,
-        readErrorStack = _ref.readErrorStack,
-        onFailure = _ref.onFailure;
-    var urlToSourcemapConsumer = memoizeByFirstArgStringValue(_async$4(function (stackTraceFileUrl) {
-      var _exit = false;
-      return stackTraceFileUrl.startsWith("node:") ? null : _catch$2(function () {
-        var text;
-        return _continue(_catch$2(function () {
-          return _await$4(fetchFile(stackTraceFileUrl), function (fileResponse) {
-            var status = fileResponse.status;
-
-            if (status !== 200) {
-              if (status === 404) {
-                onFailure("stack trace file not found at ".concat(stackTraceFileUrl));
-              } else {
-                var _createDetailedMessag;
-
-                onFailure(createDetailedMessage("unexpected response fetching stack trace file.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "response status", status), _defineProperty(_createDetailedMessag, "response text", fileResponse.body), _defineProperty(_createDetailedMessag, "stack trace file", stackTraceFileUrl), _createDetailedMessag)));
-              }
-
-              _exit = true;
-              return null;
-            }
-
-            return _await$4(fileResponse.text(), function (_fileResponse$text) {
-              text = _fileResponse$text;
-            });
-          });
-        }, function (e) {
-          var _createDetailedMessag2;
-
-          onFailure(createDetailedMessage("error while fetching stack trace file.", (_createDetailedMessag2 = {}, _defineProperty(_createDetailedMessag2, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag2, "stack trace file", stackTraceFileUrl), _createDetailedMessag2)));
-          _exit = true;
-          return null;
-        }), function (_result) {
-          var _exit2 = false;
-          if (_exit) return _result;
-          var jsSourcemapUrl = getJavaScriptSourceMappingUrl(text);
-
-          if (!jsSourcemapUrl) {
-            return null;
-          }
-
-          var sourcemapUrl;
-          var sourcemapString;
-          return _invoke$2(function () {
-            if (jsSourcemapUrl.startsWith("data:")) {
-              sourcemapUrl = stackTraceFileUrl;
-              sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl));
-            } else {
-              sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
-                type: "source-map"
-              });
-              return _catch$2(function () {
-                return _await$4(fetchFile(sourcemapUrl), function (sourcemapResponse) {
-                  var _exit3 = false;
-                  var status = sourcemapResponse.status;
-                  return _invoke$2(function () {
-                    if (status !== 200) {
-                      return _invoke$2(function () {
-                        if (status === 404) {
-                          onFailure("sourcemap file not found at ".concat(sourcemapUrl));
-                        } else {
-                          var _temp2 = "unexpected response for sourcemap file.";
-                          return _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te) {
-                            var _createDetailedMessag3;
-
-                            onFailure(createDetailedMessage(_temp2, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
-                          });
-                        }
-                      }, function () {
-                        _exit2 = true;
-                        return null;
-                      });
-                    }
-                  }, function (_result3) {
-                    return _exit3 ? _result3 : _await$4(sourcemapResponse.text(), function (_sourcemapResponse$te2) {
-                      sourcemapString = _sourcemapResponse$te2;
-                    });
-                  });
-                });
-              }, function (e) {
-                var _createDetailedMessag4;
-
-                onFailure(createDetailedMessage("error while fetching sourcemap.", (_createDetailedMessag4 = {}, _defineProperty(_createDetailedMessag4, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag4, "sourcemap url", sourcemapUrl), _createDetailedMessag4)));
-                _exit2 = true;
-                return null;
-              });
-            }
-          }, function (_result4) {
-            if (_exit2) return _result4;
-            var sourceMap;
-
-            try {
-              sourceMap = JSON.parse(sourcemapString);
-            } catch (e) {
-              var _createDetailedMessag5;
-
-              onFailure(createDetailedMessage("error while parsing sourcemap.", (_createDetailedMessag5 = {}, _defineProperty(_createDetailedMessag5, "parse error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag5, "sourcemap url", sourcemapUrl), _createDetailedMessag5)));
-              return null;
-            }
-
-            var _sourceMap = sourceMap,
-                sourcesContent = _sourceMap.sourcesContent;
-
-            if (!sourcesContent) {
-              sourcesContent = [];
-              sourceMap.sourcesContent = sourcesContent;
-            }
-
-            var firstSourceMapSourceFailure = null;
-            return _await$4(Promise.all(sourceMap.sources.map(_async$4(function (source, index) {
-              if (index in sourcesContent) return;
-              var sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
-                type: "source"
-              });
-              return _catch$2(function () {
-                return _await$4(fetchFile(sourcemapSourceUrl), function (sourceResponse) {
-                  var _exit4 = false;
-                  var status = sourceResponse.status;
-                  return _invoke$2(function () {
-                    if (status !== 200) {
-                      if (firstSourceMapSourceFailure) {
-                        _exit4 = true;
-                        return;
-                      }
-
-                      if (status === 404) {
-                        var _createDetailedMessag6;
-
-                        firstSourceMapSourceFailure = createDetailedMessage("sourcemap source not found.", (_createDetailedMessag6 = {}, _defineProperty(_createDetailedMessag6, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag6, "sourcemap url", sourcemapUrl), _createDetailedMessag6));
-                        _exit4 = true;
-                        return;
-                      }
-
-                      var _temp4 = "unexpected response for sourcemap source.";
-                      return _await$4(sourceResponse.text(), function (_sourceResponse$text) {
-                        var _createDetailedMessag7;
-
-                        firstSourceMapSourceFailure = createDetailedMessage(_temp4, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
-                        _exit4 = true;
-                      });
-                    }
-                  }, function (_result6) {
-                    return _exit4 ? _result6 : _await$4(sourceResponse.text(), function (sourceString) {
-                      sourcesContent[index] = sourceString;
-                    });
-                  });
-                });
-              }, function (e) {
-                var _createDetailedMessag8;
-
-                if (firstSourceMapSourceFailure) return;
-                firstSourceMapSourceFailure = createDetailedMessage("error while fetching sourcemap source.", (_createDetailedMessag8 = {}, _defineProperty(_createDetailedMessag8, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag8, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag8, "sourcemap url", sourcemapUrl), _createDetailedMessag8));
-              });
-            }))), function () {
-              if (firstSourceMapSourceFailure) {
-                onFailure(firstSourceMapSourceFailure);
-                return null;
-              }
-
-              return new SourceMapConsumer(sourceMap);
-            });
-          });
-        });
-      }, function (e) {
-        var _createDetailedMessag9;
-
-        onFailure(createDetailedMessage("error while preparing a sourceMap consumer for a stack trace file.", (_createDetailedMessag9 = {}, _defineProperty(_createDetailedMessag9, "error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag9, "stack trace file", stackTraceFileUrl), _createDetailedMessag9)));
-        return null;
-      });
-    }));
-    return Promise.all(stack.map(function (callSite) {
-      return remapCallSite(callSite, {
-        resolveFile: resolveFile,
-        urlToSourcemapConsumer: urlToSourcemapConsumer,
-        readErrorStack: readErrorStack,
-        onFailure: onFailure
-      });
-    }));
-  });
-
-  var memoizeByFirstArgStringValue = function memoizeByFirstArgStringValue(fn) {
-    var stringValueCache = {};
-    return function (firstArgValue) {
-      if (firstArgValue in stringValueCache) return stringValueCache[firstArgValue];
-      var value = fn(firstArgValue);
-      stringValueCache[firstArgValue] = value;
-      return value;
-    };
-  };
-
-  function _await$3(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _catch$1(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  function _invoke$1(body, then) {
-    var result = body();
-
-    if (result && result.then) {
-      return result.then(then);
-    }
-
-    return then(result);
-  }
-
-  function _async$3(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
-    var fetchFile = _ref.fetchFile,
-        resolveFile = _ref.resolveFile,
-        SourceMapConsumer = _ref.SourceMapConsumer,
-        _ref$indent = _ref.indent,
-        indent = _ref$indent === void 0 ? "  " : _ref$indent;
-
-    if (typeof fetchFile !== "function") {
-      throw new TypeError("fetchFile must be a function, got ".concat(fetchFile));
-    }
-
-    if (typeof SourceMapConsumer !== "function") {
-      throw new TypeError("sourceMapConsumer must be a function, got ".concat(SourceMapConsumer));
-    }
-
-    if (typeof indent !== "string") {
-      throw new TypeError("indent must be a string, got ".concat(indent));
-    }
-
-    var errorRemappingCache = new WeakMap();
-    var errorRemapFailureCallbackMap = new WeakMap();
-    var installed = false;
-    var previousPrepareStackTrace = Error.prepareStackTrace;
-
-    var install = function install() {
-      if (installed) return;
-      installed = true;
-      Error.prepareStackTrace = prepareStackTrace;
-    };
-
-    var uninstall = function uninstall() {
-      if (!installed) return;
-      installed = false;
-      Error.prepareStackTrace = previousPrepareStackTrace;
-    }; // ensure we do not use prepareStackTrace for thoose error
-    // otherwise we would recursively remap error stack
-    // and if the reason causing the failure is still here
-    // it would create an infinite loop
-
-
-    var readErrorStack = function readErrorStack(error) {
-      uninstall();
-      var stack = error.stack;
-      install();
-      return stack;
-    };
-
-    var prepareStackTrace = function prepareStackTrace(error, stack) {
-      var onFailure = function onFailure(failureData) {
-        var failureCallbackArray = errorRemapFailureCallbackMap.get(error);
-
-        if (failureCallbackArray) {
-          failureCallbackArray.forEach(function (callback) {
-            return callback(failureData);
-          });
-        }
-      };
-
-      var stackRemappingPromise = getOriginalCallsites({
-        stack: stack,
-        error: error,
-        resolveFile: resolveFile,
-        fetchFile: memoizeFetch(fetchFile),
-        SourceMapConsumer: SourceMapConsumer,
-        readErrorStack: readErrorStack,
-        indent: indent,
-        onFailure: onFailure
-      });
-      errorRemappingCache.set(error, stackRemappingPromise);
-      return stackToString(stack, {
-        error: error,
-        indent: indent
-      });
-    };
-
-    var getErrorOriginalStackString = _async$3(function (error) {
-      var _exit = false;
-
-      var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-          _ref2$onFailure = _ref2.onFailure,
-          onFailure = _ref2$onFailure === void 0 ? function (message) {
-        console.warn(message);
-      } : _ref2$onFailure;
-
-      if (onFailure) {
-        var remapFailureCallbackArray = errorRemapFailureCallbackMap.get(error);
-
-        if (remapFailureCallbackArray) {
-          errorRemapFailureCallbackMap.set(error, [].concat(_toConsumableArray(remapFailureCallbackArray), [onFailure]));
-        } else {
-          errorRemapFailureCallbackMap.set(error, [onFailure]);
-        }
-      } // ensure Error.prepareStackTrace gets triggered by reading error.stack now
-
-
-      var stack = error.stack;
-      var promise = errorRemappingCache.get(error);
-      return _invoke$1(function () {
-        if (promise) {
-          return _catch$1(function () {
-            return _await$3(promise, function (originalCallsites) {
-              errorRemapFailureCallbackMap.get(error);
-              var firstCall = originalCallsites[0];
-
-              if (firstCall) {
-                Object.assign(error, {
-                  filename: firstCall.getFileName(),
-                  lineno: firstCall.getLineNumber(),
-                  columnno: firstCall.getColumnNumber()
-                });
-              }
-
-              _exit = true;
-              return stackToString(originalCallsites, {
-                error: error,
-                indent: indent
-              });
-            });
-          }, function (e) {
-            var _createDetailedMessag;
-
-            onFailure(createDetailedMessage("error while computing original stack.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "stack from error while computing", readErrorStack(e)), _defineProperty(_createDetailedMessag, "stack from error to remap", stack), _createDetailedMessag)));
-            _exit = true;
-            return stack;
-          });
-        }
-      }, function (_result) {
-        return _exit ? _result : stack;
-      });
-    });
-
-    install();
-    return {
-      getErrorOriginalStackString: getErrorOriginalStackString,
-      uninstall: uninstall
-    };
-  };
-
-  var memoizeFetch = function memoizeFetch(fetchUrl) {
-    var urlCache = {};
-    return _async$3(function (url) {
-      if (url in urlCache) {
-        return urlCache[url];
-      }
-
-      var responsePromise = fetchUrl(url);
-      urlCache[url] = responsePromise;
-      return responsePromise;
-    });
-  };
-
-  function _await$2(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _async$2(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var installBrowserErrorStackRemapping = function installBrowserErrorStackRemapping() {
-    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    return installErrorStackRemapping(_objectSpread2({
-      fetchFile: _async$2(function (url) {
-        // browser having Error.captureStackTrace got window.fetch
-        // and this executes only when Error.captureStackTrace exists
-        // so no need for polyfill or whatever here
-        return _await$2(window.fetch(url, {
-          // by default a script tag is in "no-cors"
-          // so we also fetch url with "no-cors"
-          mode: "no-cors"
-        }), function (response) {
-          // we read response test before anything because once memoized fetch
-          // gets annoying preventing you to read
-          // body multiple times, even using response.clone()
-          return _await$2(response.text(), function (_text) {
-            return {
-              status: response.status,
-              url: response.url,
-              statusText: response.statusText,
-              headers: responseToHeaders(response),
-              text: function text() {
-                return _text;
-              },
-              json: response.json.bind(response),
-              blob: response.blob.bind(response),
-              arrayBuffer: response.arrayBuffer.bind(response)
-            };
-          });
-        });
-      }),
-      resolveFile: function resolveFile(specifier) {
-        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
-        // browsers having Error.captureStrackTrace got window.URL
-        // and this executes only when Error.captureStackTrace exists
-        return String(new URL(specifier, importer));
-      }
-    }, options));
-  };
-
-  var responseToHeaders = function responseToHeaders(response) {
-    var headers = {};
-    response.headers.forEach(function (value, name) {
-      headers[name] = value;
-    });
-    return headers;
-  };
-
   function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -4824,6 +4812,10 @@
 
     return then ? value.then(then) : value;
   }
+
+  /* eslint-env browser */
+  var _window = window,
+      Notification = _window.Notification;
 
   function _async$1(f) {
     return function () {
@@ -4839,28 +4831,28 @@
     };
   }
 
-  var fetchAndEvalUsingFetch = _async$1(function (url) {
-    return _await$1(fetchUrl(url), function (response) {
-      return function () {
-        if (response.status >= 200 && response.status <= 299) {
-          return _await$1(response.text(), function (text) {
-            // eslint-disable-next-line no-eval
-            window.eval(appendSourceURL(text, url));
-          });
-        } else {
-          return _await$1(response.text(), function (text) {
-            var _createDetailedMessag;
+  var displayErrorNotificationNotAvailable = function displayErrorNotificationNotAvailable() {};
 
-            throw new Error(createDetailedMessage("Unexpected response for script.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "script url", url), _defineProperty(_createDetailedMessag, "response body", text), _defineProperty(_createDetailedMessag, "response status", response.status), _createDetailedMessag)));
-          });
-        }
-      }();
+  var displayErrorNotificationImplementation = _async$1(function (error) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        icon = _ref.icon;
+
+    return _await$1(Notification.requestPermission(), function (permission) {
+      if (permission === "granted") {
+        var notification = new Notification("An error occured", {
+          lang: "en",
+          body: error.stack,
+          icon: icon
+        });
+
+        notification.onclick = function () {
+          window.focus();
+        };
+      }
     });
   });
 
-  var appendSourceURL = function appendSourceURL(code, sourceURL) {
-    return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
-  };
+  var displayErrorNotification = typeof Notification === "function" ? displayErrorNotificationImplementation : displayErrorNotificationNotAvailable;
 
   function _await(value, then, direct) {
     if (direct) {
@@ -5004,7 +4996,7 @@
         performance.measure("jsenv_file_import", "jsenv_file_import_start");
         var executionResult = {
           status: "errored",
-          exceptionSource: unevalException(e),
+          error: e,
           coverage: readCoverage()
         };
         onExecutionError(executionResult, {
@@ -5047,17 +5039,22 @@
   };
 
   var onExecutionError = function onExecutionError(executionResult, _ref) {
-    var currentScript = _ref.currentScript;
-    // eslint-disable-next-line no-eval
-    var originalError = window.eval(executionResult.exceptionSource);
+    var currentScript = _ref.currentScript,
+        _ref$errorExposureInC = _ref.errorExposureInConsole,
+        errorExposureInConsole = _ref$errorExposureInC === void 0 ? true : _ref$errorExposureInC,
+        _ref$errorExposureInN = _ref.errorExposureInNotification,
+        errorExposureInNotification = _ref$errorExposureInN === void 0 ? false : _ref$errorExposureInN,
+        _ref$errorExposureInD = _ref.errorExposureInDocument,
+        errorExposureInDocument = _ref$errorExposureInD === void 0 ? true : _ref$errorExposureInD;
+    var error = executionResult.error;
 
-    if (originalError.code === "NETWORK_FAILURE") {
+    if (error.code === "NETWORK_FAILURE") {
       if (currentScript) {
         var errorEvent = new Event("error");
         currentScript.dispatchEvent(errorEvent);
       }
     } else {
-      var parsingError = originalError.parsingError;
+      var parsingError = error.parsingError;
       var globalErrorEvent = new Event("error");
 
       if (parsingError) {
@@ -5066,14 +5063,29 @@
         globalErrorEvent.message = parsingError.message;
         globalErrorEvent.colno = parsingError.columnNumber;
       } else {
-        globalErrorEvent.filename = originalError.filename;
-        globalErrorEvent.lineno = originalError.lineno;
-        globalErrorEvent.message = originalError.message;
-        globalErrorEvent.colno = originalError.columnno;
+        globalErrorEvent.filename = error.filename;
+        globalErrorEvent.lineno = error.lineno;
+        globalErrorEvent.message = error.message;
+        globalErrorEvent.colno = error.columnno;
       }
 
       window.dispatchEvent(globalErrorEvent);
     }
+
+    if (errorExposureInConsole) {
+      console.error(error);
+    }
+
+    if (errorExposureInNotification) {
+      displayErrorNotification(error);
+    }
+
+    if (errorExposureInDocument) {
+      displayErrorInDocument(error);
+    }
+
+    executionResult.exceptionSource = unevalException(error);
+    delete executionResult.error;
   };
 
   var getBrowserRuntime = memoize(_async(function () {

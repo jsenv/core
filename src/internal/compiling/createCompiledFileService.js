@@ -6,6 +6,9 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
+import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
+import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
+
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 import {
@@ -52,6 +55,15 @@ export const createCompiledFileService = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 }) => {
+  const moduleFormats = {}
+  Object.keys(groupMap).forEach((groupName) => {
+    moduleFormats[groupName] = canAvoidSystemJs({
+      runtimeSupport: groupMap[groupName].minRuntimeVersions,
+    })
+      ? "esmodule"
+      : "systemjs"
+  })
+
   Object.keys(customCompilers).forEach((key) => {
     const value = customCompilers[key]
     if (typeof value !== "function") {
@@ -171,7 +183,10 @@ export const createCompiledFileService = ({
           request,
 
           runtimeSupport,
-          moduleOutFormat,
+          moduleOutFormat:
+            moduleOutFormat === undefined
+              ? moduleFormats[compileId]
+              : moduleOutFormat,
           importMetaFormat,
           transformTopLevelAwait,
           babelPluginMap: babelPluginMapFromCompileId(compileId, {
@@ -187,6 +202,20 @@ export const createCompiledFileService = ({
     })
     return compileResponsePromise
   }
+}
+
+const canAvoidSystemJs = ({ runtimeSupport }) => {
+  const runtimeCompatMap = createRuntimeCompat({
+    runtimeSupport,
+    pluginMap: {
+      module: true,
+      importmap: true,
+      import_assertion_type_json: true,
+      import_assertion_type_css: true,
+    },
+    pluginCompatMap: featuresCompatMap,
+  })
+  return runtimeCompatMap.pluginRequiredNameArray.length === 0
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {

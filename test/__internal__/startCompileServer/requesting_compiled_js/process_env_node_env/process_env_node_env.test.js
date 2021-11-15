@@ -3,9 +3,13 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
 
 import { importUsingChildProcess } from "@jsenv/core"
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
+import {
+  COMPILE_ID_BEST,
+  COMPILE_ID_OTHERWISE,
+} from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { nodeImportSystemJsBuild } from "@jsenv/core/test/nodeImportSystemJsBuild.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -27,14 +31,34 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
       chrome: "94",
     },
   })
-const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`
-const fileServerUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`
-await fetchUrl(fileServerUrl)
 
-const actual = await importUsingChildProcess(
-  `${jsenvCoreDirectoryUrl}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`,
-)
-const expected = {
-  NODE_ENV: "prod",
+{
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`
+  const fileServerUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`
+  await fetchUrl(fileServerUrl)
+  const actual = await importUsingChildProcess(
+    `${jsenvCoreDirectoryUrl}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`,
+  )
+  const expected = {
+    NODE_ENV: "prod",
+  }
+  assert({ actual, expected })
 }
-assert({ actual, expected })
+
+{
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`
+  const fileServerUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${fileRelativeUrl}`
+  await fetchUrl(fileServerUrl)
+  const actual = await nodeImportSystemJsBuild({
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+    mainRelativeUrl: fileRelativeUrl,
+  })
+  const expected = {
+    namespace: {
+      NODE_ENV: "prod",
+    },
+  }
+  assert({ actual, expected })
+}

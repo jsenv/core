@@ -29,12 +29,10 @@ import {
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 
+import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
-import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
-import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
-import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import {
   jsenvCompileProxyFileInfo,
   sourcemapMainFileInfo,
@@ -219,15 +217,6 @@ export const startCompileServer = async ({
       : {}),
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
-  }
-
-  if (moduleOutFormat === undefined) {
-    moduleOutFormat = canAvoidSystemJs({ runtimeSupport })
-      ? "esmodule"
-      : "systemjs"
-  }
-  if (importMetaFormat === undefined) {
-    importMetaFormat = moduleOutFormat
   }
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
@@ -1058,20 +1047,6 @@ const createCompileProxyService = ({ projectDirectoryUrl }) => {
 
     return null
   }
-}
-
-const canAvoidSystemJs = ({ runtimeSupport }) => {
-  const runtimeCompatMap = createRuntimeCompat({
-    runtimeSupport,
-    pluginMap: {
-      module: true,
-      importmap: true,
-      import_assertion_type_json: true,
-      import_assertion_type_css: true,
-    },
-    pluginCompatMap: featuresCompatMap,
-  })
-  return runtimeCompatMap.pluginRequiredNameArray.length === 0
 }
 
 const readPackage = (packagePath) => {

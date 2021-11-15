@@ -24,7 +24,7 @@ export const jsenvTransform = async ({
 
   babelPluginMap,
   moduleOutFormat,
-  importMetaFormat,
+  importMetaFormat = moduleOutFormat,
 
   babelHelpersInjectionAsImport,
   allowTopLevelAwait,
