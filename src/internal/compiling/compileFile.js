@@ -88,7 +88,9 @@ export const compileFile = async ({
     } = compileResult
 
     if (compileResultStatus !== "cached" && compileCacheStrategy !== "none") {
-      updateMeta({
+      // we MUST await updateMeta otherwise we might get 404
+      // when serving sourcemap files
+      await updateMeta({
         logger,
         meta,
         compileResult,
