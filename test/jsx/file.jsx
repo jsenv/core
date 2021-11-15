@@ -6,3 +6,5 @@ const component = ({ text }) => {
 }
 
 export default component({ text: "Hello" })
+
+export const answer = 42

@@ -118,7 +118,13 @@ export const reportToCoverage = async (
       fileByFileCoverage,
       babelPluginMap,
     })
-    Object.assign(fileByFileCoverage, missingFileByFileCoverage)
+    Object.assign(
+      fileByFileCoverage,
+      normalizeFileByFileCoveragePaths(
+        missingFileByFileCoverage,
+        projectDirectoryUrl,
+      ),
+    )
   }
 
   return fileByFileCoverage

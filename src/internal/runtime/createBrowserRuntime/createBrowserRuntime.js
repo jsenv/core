@@ -1,6 +1,5 @@
 import { normalizeImportMap } from "@jsenv/importmap/src/normalizeImportMap.js"
 
-import { unevalException } from "../../unevalException.js"
 // do not use memoize from @jsenv/filesystem to avoid pulling @jsenv/filesystem code into the browser build
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../browser-utils/fetch-browser.js"
@@ -8,8 +7,6 @@ import { createImportResolverForImportmap } from "../../import-resolution/import
 import { measureAsyncFnPerf } from "../../perf_browser.js"
 
 import { createBrowserSystem } from "./createBrowserSystem.js"
-import { displayErrorInDocument } from "./displayErrorInDocument.js"
-import { displayErrorNotification } from "./displayErrorNotification.js"
 import { makeNamespaceTransferable } from "./makeNamespaceTransferable.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
@@ -86,9 +83,6 @@ export const createBrowserRuntime = async ({
     specifier,
     {
       transferableNamespace = false,
-      errorExposureInConsole = true,
-      errorExposureInNotification = false,
-      errorExposureInDocument = true,
       executionExposureOnWindow = false,
       errorTransform = (error) => error,
       measurePerformance,
@@ -122,19 +116,9 @@ export const createBrowserRuntime = async ({
           transformedError = error
         }
 
-        if (errorExposureInConsole) {
-          displayErrorInConsole(transformedError)
-        }
-        if (errorExposureInNotification) {
-          displayErrorNotification(transformedError)
-        }
-        if (errorExposureInDocument) {
-          displayErrorInDocument(transformedError)
-        }
-
         return {
           status: "errored",
-          exceptionSource: unevalException(transformedError),
+          error: transformedError,
           coverage: readCoverage(),
         }
       }
@@ -157,7 +141,3 @@ export const createBrowserRuntime = async ({
 }
 
 const readCoverage = () => window.__coverage__
-
-const displayErrorInConsole = (error) => {
-  console.error(error)
-}

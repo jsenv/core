@@ -33,6 +33,8 @@ import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/gener
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
+import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
+import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import {
   jsenvCompileProxyFileInfo,
   sourcemapMainFileInfo,
@@ -69,8 +71,8 @@ export const startCompileServer = async ({
 
   // js compile options
   transformTopLevelAwait = true,
-  moduleOutFormat = "systemjs",
-  importMetaFormat = moduleOutFormat,
+  moduleOutFormat,
+  importMetaFormat,
   env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -217,6 +219,15 @@ export const startCompileServer = async ({
       : {}),
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
+  }
+
+  if (moduleOutFormat === undefined) {
+    moduleOutFormat = canAvoidSystemJs({ runtimeSupport })
+      ? "esmodule"
+      : "systemjs"
+  }
+  if (importMetaFormat === undefined) {
+    importMetaFormat = moduleOutFormat
   }
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
@@ -589,24 +600,33 @@ const setupServerSentEventsForLivereload = ({
     ...livereloadWatchConfig,
     [jsenvDirectoryRelativeUrl]: false,
   }
-  const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-    projectDirectoryUrl,
-    {
-      watchDescription,
-      updated: ({ relativeUrl }) => {
-        projectFileModified.notify(relativeUrl)
+
+  // wait 100ms to actually start watching
+  // otherwise server starting is delayed by the filesystem scan done in
+  // registerDirectoryLifecycle
+  const timeout = setTimeout(() => {
+    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+      projectDirectoryUrl,
+      {
+        watchDescription,
+        updated: ({ relativeUrl }) => {
+          projectFileModified.notify(relativeUrl)
+        },
+        removed: ({ relativeUrl }) => {
+          projectFileRemoved.notify(relativeUrl)
+        },
+        added: ({ relativeUrl }) => {
+          projectFileAdded.notify(relativeUrl)
+        },
+        keepProcessAlive: false,
+        recursive: true,
       },
-      removed: ({ relativeUrl }) => {
-        projectFileRemoved.notify(relativeUrl)
-      },
-      added: ({ relativeUrl }) => {
-        projectFileAdded.notify(relativeUrl)
-      },
-      keepProcessAlive: false,
-      recursive: true,
-    },
-  )
-  serverStopCallbackList.add(unregisterDirectoryLifecyle)
+    )
+    serverStopCallbackList.add(unregisterDirectoryLifecyle)
+  }, 100)
+  serverStopCallbackList.add(() => {
+    clearTimeout(timeout)
+  })
 
   const getDependencySet = (mainRelativeUrl) => {
     if (trackerMap.has(mainRelativeUrl)) {
@@ -1038,6 +1058,20 @@ const createCompileProxyService = ({ projectDirectoryUrl }) => {
 
     return null
   }
+}
+
+const canAvoidSystemJs = ({ runtimeSupport }) => {
+  const runtimeCompatMap = createRuntimeCompat({
+    runtimeSupport,
+    pluginMap: {
+      module: true,
+      importmap: true,
+      import_assertion_type_json: true,
+      import_assertion_type_css: true,
+    },
+    pluginCompatMap: featuresCompatMap,
+  })
+  return runtimeCompatMap.pluginRequiredNameArray.length === 0
 }
 
 const readPackage = (packagePath) => {

@@ -186,6 +186,14 @@ const executeSource = async ({
         coverage,
       }
     })
+  } else {
+    transformResult = composeTransformer(transformResult, (result) => {
+      const { namespace: fileExecutionResultMap } = result
+      Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
+        delete fileExecutionResultMap[fileRelativeUrl].coverage
+      })
+      return result
+    })
   }
 
   const fileClientUrl = resolveUrl(fileRelativeUrl, `${compileServerOrigin}/`)

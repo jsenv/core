@@ -7,6 +7,9 @@ import { fetchUrl } from "../browser-utils/fetch-browser.js"
 import { fetchAndEvalUsingFetch } from "../browser-utils/fetchAndEvalUsingFetch.js"
 import { memoize } from "../memoize.js"
 
+import { displayErrorInDocument } from "./displayErrorInDocument.js"
+import { displayErrorNotification } from "./displayErrorNotification.js"
+
 const getNavigationStartTime = () => {
   try {
     return window.performance.timing.navigationStart
@@ -73,13 +76,15 @@ const executeFileUsingDynamicImport = async (
       const executionResult = {
         status: "completed",
         namespace,
+        coverage: readCoverage(),
       }
       return executionResult
     } catch (e) {
       performance.measure(`jsenv_file_import`, `jsenv_file_import_start`)
       const executionResult = {
         status: "errored",
-        exceptionSource: unevalException(e),
+        error: e,
+        coverage: readCoverage(),
       }
       onExecutionError(executionResult, { currentScript })
       return executionResult
@@ -112,16 +117,23 @@ const executeFileUsingSystemJs = (specifier) => {
   return fileExecutionResultPromise
 }
 
-const onExecutionError = (executionResult, { currentScript }) => {
-  // eslint-disable-next-line no-eval
-  const originalError = window.eval(executionResult.exceptionSource)
-  if (originalError.code === "NETWORK_FAILURE") {
+const onExecutionError = (
+  executionResult,
+  {
+    currentScript,
+    errorExposureInConsole = true,
+    errorExposureInNotification = false,
+    errorExposureInDocument = true,
+  },
+) => {
+  const error = executionResult.error
+  if (error.code === "NETWORK_FAILURE") {
     if (currentScript) {
       const errorEvent = new Event("error")
       currentScript.dispatchEvent(errorEvent)
     }
   } else {
-    const { parsingError } = originalError
+    const { parsingError } = error
     const globalErrorEvent = new Event("error")
     if (parsingError) {
       globalErrorEvent.filename = parsingError.filename
@@ -129,13 +141,26 @@ const onExecutionError = (executionResult, { currentScript }) => {
       globalErrorEvent.message = parsingError.message
       globalErrorEvent.colno = parsingError.columnNumber
     } else {
-      globalErrorEvent.filename = originalError.filename
-      globalErrorEvent.lineno = originalError.lineno
-      globalErrorEvent.message = originalError.message
-      globalErrorEvent.colno = originalError.columnno
+      globalErrorEvent.filename = error.filename
+      globalErrorEvent.lineno = error.lineno
+      globalErrorEvent.message = error.message
+      globalErrorEvent.colno = error.columnno
     }
     window.dispatchEvent(globalErrorEvent)
   }
+
+  if (errorExposureInConsole) {
+    console.error(error)
+  }
+  if (errorExposureInNotification) {
+    displayErrorNotification(error)
+  }
+  if (errorExposureInDocument) {
+    displayErrorInDocument(error)
+  }
+
+  executionResult.exceptionSource = unevalException(error)
+  delete executionResult.error
 }
 
 const getBrowserRuntime = memoize(async () => {
@@ -190,6 +215,8 @@ const getBrowserRuntime = memoize(async () => {
 })
 
 const livereloadingCallbacks = {}
+
+const readCoverage = () => window.__coverage__
 
 window.__jsenv__ = {
   livereloadingCallbacks,

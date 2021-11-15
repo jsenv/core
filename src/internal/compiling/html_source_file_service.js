@@ -279,7 +279,6 @@ const inlineImportmapScripts = async ({ logger, htmlAst, htmlFileUrl }) => {
             },
           ),
         )
-
         return
       }
 

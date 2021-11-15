@@ -443,14 +443,7 @@ jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
   node: "12",
 }
 
-// jsenvBabelPluginCompatMap["transform-import-assertion-json"] = {
-//   chrome: "91",
-//   edge: "91",
-// }
-// jsenvBabelPluginCompatMap["transform-import-assertion-css"] = {
-//   chrome: "93",
-//   edge: "93",
-// }
+// needs support for both json and css
 jsenvBabelPluginCompatMap["transform-import-assertions"] = {
   chrome: "93",
   edge: "93",

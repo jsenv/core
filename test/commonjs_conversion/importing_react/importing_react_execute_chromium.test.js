@@ -52,7 +52,6 @@ const expected = {
     "./importing_react.jsx": {
       status: "completed",
       namespace: {
-        ready: 42,
         reactExportNames: [
           "Children",
           "Component",
@@ -85,6 +84,7 @@ const expected = {
           "useState",
           "version",
         ],
+        ready: 42,
       },
     },
   },
