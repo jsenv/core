@@ -18,4 +18,5 @@ dist/
 
 /test-manual/**/coverage/
 /**/*.es5.js
+/**/*.jsx
 !.eslintrc.js
