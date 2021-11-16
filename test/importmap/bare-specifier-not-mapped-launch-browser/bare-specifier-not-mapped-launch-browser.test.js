@@ -47,7 +47,7 @@ foo
 --- importer ---
 ${importerRelativeUrl}
 --- how to fix ---
-Add a mapping for "foo" into the importmap file at "${importMapFileRelativeUrl}""`,
+Add a mapping for "foo" into the importmap file at "${importMapFileRelativeUrl}"`,
   }
   assert({ actual, expected })
 }

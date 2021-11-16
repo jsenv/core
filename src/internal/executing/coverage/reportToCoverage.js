@@ -48,8 +48,12 @@ export const reportToCoverage = async (
       // in any scenario we are fine because
       // coverDescription will generate empty coverage for files
       // that were suppose to be coverage but were not.
-      if (executionResult.status === "completed") {
-        logger.debug(
+      if (
+        executionResult.status === "completed" &&
+        executionResult.runtimeName !== "node" &&
+        !process.env.NODE_V8_COVERAGE
+      ) {
+        logger.warn(
           `No execution.coverageFileUrl from execution named "${executionName}" of ${file}`,
         )
       }
