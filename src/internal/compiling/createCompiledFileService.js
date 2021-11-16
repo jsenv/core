@@ -1,4 +1,4 @@
-import { nextService, fetchFileSystem } from "@jsenv/server"
+import { redirectRequest, fetchFileSystem } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
@@ -149,9 +149,8 @@ export const createCompiledFileService = ({
     // we don't redirect otherwise it complexify ressource tracking
     // and url resolution
     if (!compiler) {
-      return nextService({
-        ...request,
-        ressource: `/${originalFileRelativeUrl}`,
+      return redirectRequest({
+        pathname: `/${originalFileRelativeUrl}`,
       })
     }
 
