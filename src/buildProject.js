@@ -34,7 +34,7 @@ export const buildProject = async ({
   systemJsUrl,
   globalName,
   globals = {},
-  babelPluginMap,
+  babelPluginMap = {},
   customCompilers,
   runtimeSupport = format === "global" ||
   format === "systemjs" ||
@@ -70,7 +70,7 @@ export const buildProject = async ({
 
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
-  minifyHtmlOptions = { collapseWhitespace: true },
+  minifyHtmlOptions = { collapseWhitespace: true, removeComments: true },
   // https://github.com/terser/terser#minify-options
   minifyJsOptions,
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default

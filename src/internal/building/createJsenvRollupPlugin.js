@@ -361,6 +361,7 @@ export const createJsenvRollupPlugin = async ({
               importMapInfoFromHtml.src,
               asCompiledServerUrl(importMapInfoFromHtml.htmlUrl),
             )
+            importMapUrl = applyUrlMappings(importMapUrl)
 
             if (!urlIsInsideOf(importMapUrl, compileDirectoryRemoteUrl)) {
               logger.warn(

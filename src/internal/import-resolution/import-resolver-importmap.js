@@ -52,7 +52,7 @@ const createBareSpecifierError = ({ specifier, importer, importMapUrl }) => {
     importer,
     ...(importMapUrl
       ? {
-          "how to fix": `Add a mapping for "${specifier}" into the importmap file at ${importMapUrl}`,
+          "how to fix": `Add a mapping for "${specifier}" into the importmap file at "${importMapUrl}"`,
         }
       : {
           "how to fix": `Add an importmap with a mapping for "${specifier}"`,
