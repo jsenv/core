@@ -13,7 +13,6 @@ import {
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
-import { createWorkersForJavaScriptModules } from "@jsenv/workers"
 import { UNICODE } from "@jsenv/log"
 
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
@@ -220,15 +219,17 @@ export const createJsenvRollupPlugin = async ({
   const jsenvRollupPlugin = {}
 
   if (minify) {
-    const { methodHooks, workers } = createWorkersForJavaScriptModules({
-      minifyJs: `${new URL("./js/minifyJs.js", import.meta.url)}#minifyJs`,
-      minifyHtml: `${new URL(
-        "./html/minifyHtml.js",
-        import.meta.url,
-      )}#minifyHtml`,
-    })
+    const methodHooks = {
+      minifyJs: async (...args) => {
+        const { minifyJs } = await import("./js/minifyJs.js")
+        return minifyJs(...args)
+      },
+      minifyHtml: async (...args) => {
+        const { minifyHtml } = await import("./html/minifyHtml.js")
+        return minifyHtml(...args)
+      },
+    }
 
-    // inspired from https://github.com/vitejs/vite/blob/06d86e4a2e90ca916a43d450bca1e6c28bc4bfe2/packages/vite/src/node/plugins/terser.ts#L23
     minifyJs = async ({ url, code, map, ...rest }) => {
       const result = await methodHooks.minifyJs({
         url,
@@ -264,10 +265,6 @@ export const createJsenvRollupPlugin = async ({
         code,
         map,
       }
-    }
-
-    onBundleEnd = () => {
-      workers.destroy()
     }
   }
 
