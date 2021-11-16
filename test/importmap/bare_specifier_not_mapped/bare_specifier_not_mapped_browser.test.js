@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToBasename,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { chromiumRuntime, firefoxRuntime, execute } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -14,12 +10,11 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `${testDirectoryname}.html`
-const importerRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const htmlFilename = `bare_specifier_not_mapped.html`
+const importerRelativeUrl = `${testDirectoryRelativeUrl}bare_specifier_not_mapped.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const importMapFileRelativeUrl = `${testDirectoryRelativeUrl}import-map.importmap`
+const importMapFileRelativeUrl = `${testDirectoryRelativeUrl}test.importmap`
 
 const test = async (params) => {
   const executionResult = await execute({
