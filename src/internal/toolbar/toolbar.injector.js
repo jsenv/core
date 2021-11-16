@@ -185,6 +185,7 @@ const injectToolbar = async () => {
       height: 40px;
       width: 40px;
       padding: 0;
+      margin: 0;
       border-radius: 5px 5px 0 0;
       border: 1px solid rgba(0, 0, 0, 0.33);
       border-bottom: none;

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "23.8.13",
+  "version": "23.8.14",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -71,7 +71,7 @@
     "@jsenv/importmap": "1.2.0",
     "@jsenv/log": "1.4.0",
     "@jsenv/logger": "4.0.1",
-    "@jsenv/server": "10.1.1",
+    "@jsenv/server": "10.1.2",
     "@jsenv/uneval": "1.6.0",
     "@rollup/plugin-commonjs": "21.0.0",
     "@rollup/plugin-json": "4.1.0",
