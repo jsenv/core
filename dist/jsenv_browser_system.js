@@ -2277,7 +2277,7 @@
       specifier: specifier,
       importer: importer
     }, importMapUrl ? {
-      "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at ").concat(importMapUrl)
+      "how to fix": "Add a mapping for \"".concat(specifier, "\" into the importmap file at \"").concat(importMapUrl, "\"")
     } : {
       "how to fix": "Add an importmap with a mapping for \"".concat(specifier, "\""),
       "suggestion": "Generate importmap using https://github.com/jsenv/importmap-node-module"
