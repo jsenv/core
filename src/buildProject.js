@@ -160,8 +160,8 @@ export const buildProject = async ({
     // + some more differences like import.meta.dev
     outDirectoryName: "build",
     importDefaultExtension,
-    moduleOutFormat: "esmodule", // rollup will transform into systemjs
-    importMetaFormat: format, // but ensure import.meta are correctly transformed into the right format
+    moduleOutFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
+    importMetaFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
 
     compileServerProtocol,
     compileServerPrivateKey,
