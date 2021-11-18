@@ -279,7 +279,7 @@ export const startCompileServer = async ({
       jsenvDirectoryClean,
       compileServerMetaFileInfo,
     })
-    writeFile(
+    await writeFile(
       compileServerMetaFileInfo.url,
       JSON.stringify(compileServerMetaFileInfo.data, null, "  "),
     )
@@ -470,10 +470,20 @@ const cleanOutDirectoryIfNeeded = async ({
   let previousCompileServerMeta
   try {
     const source = await readFile(compileServerMetaFileInfo.url)
-    previousCompileServerMeta = JSON.parse(source)
+    if (source === "") {
+      previousCompileServerMeta = null
+      logger.debug(
+        `compiler server meta file is empty ${compileServerMetaFileInfo.url}`,
+      )
+    } else {
+      previousCompileServerMeta = JSON.parse(source)
+    }
   } catch (e) {
     if (e.code === "ENOENT") {
       previousCompileServerMeta = null
+    } else if (e.name === "SyntaxError") {
+      previousCompileServerMeta = null
+      logger.warn(`Syntax error while parsing ${compileServerMetaFileInfo.url}`)
     } else {
       throw e
     }
