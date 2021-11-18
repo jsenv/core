@@ -67,6 +67,7 @@ export const buildProject = async ({
   // in that case the returned buildImportMap must be injected into an html file
   useImportMapToMaximizeCacheReuse,
   preserveEntrySignatures,
+  treeshake,
 
   minify = process.env.NODE_ENV === "production",
   // https://github.com/kangax/html-minifier#options-quick-reference
@@ -222,6 +223,7 @@ export const buildProject = async ({
       lineBreakNormalization,
       useImportMapToMaximizeCacheReuse,
       preserveEntrySignatures,
+      treeshake,
       jsConcatenation,
 
       minify,

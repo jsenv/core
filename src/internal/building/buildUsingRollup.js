@@ -54,6 +54,7 @@ export const buildUsingRollup = async ({
   jsConcatenation,
   useImportMapToMaximizeCacheReuse,
   preserveEntrySignatures,
+  treeshake,
 
   minify,
   minifyJsOptions,
@@ -141,6 +142,7 @@ export const buildUsingRollup = async ({
       globalName,
       sourcemapExcludeSources,
       preserveEntrySignatures,
+      treeshake,
       // jsConcatenation,
       buildDirectoryUrl,
       buildDirectoryClean,
@@ -259,6 +261,7 @@ const useRollup = async ({
   globalName,
   sourcemapExcludeSources,
   preserveEntrySignatures,
+  treeshake,
   // jsConcatenation,
   buildDirectoryUrl,
   asOriginalUrl,
@@ -316,6 +319,7 @@ const useRollup = async ({
     // on fait cela car sinon rollup est pénible si on passe un entry point map de type html
     input: [],
     preserveEntrySignatures,
+    treeshake,
     plugins: [jsenvRollupPlugin],
     acornInjectPlugins: [importAssertions],
   }
