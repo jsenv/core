@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
-import { fetchUrl } from "@jsenv/server"
+import { fetchUrl, pluginRessourceAliases } from "@jsenv/server"
 
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -21,10 +21,10 @@ const { origin: compileServerOrigin } = await startCompileServer({
   jsenvDirectoryRelativeUrl,
   compileCacheStrategy: "etag",
   runtimeSupport: jsenvRuntimeSupportDuringDev,
-  serverAdvancedParams: {
-    ressourceAliases: {
-      [`${compileDirectoryRelativeUrl}dir/file.js`]: `${compileDirectoryRelativeUrl}dir/*.js`,
-    },
+  serverPlugins: {
+    ...pluginRessourceAliases({
+      [`/${compileDirectoryRelativeUrl}dir/file.js`]: `/${compileDirectoryRelativeUrl}dir/*.js`,
+    }),
   },
   customCompilers: {
     "**/dir/file.js": async ({ code, request }) => {
@@ -48,6 +48,6 @@ const actual = {
 const expected = {
   status: 200,
   contentType: "application/javascript",
-  ressourceBeforeAlias: `${compileDirectoryRelativeUrl}dir/34556.js`,
+  ressourceBeforeAlias: `/${compileDirectoryRelativeUrl}dir/34556.js`,
 }
 assert({ actual, expected })

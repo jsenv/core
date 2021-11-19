@@ -51,7 +51,7 @@ export const startExploring = async ({
   sourcemapMethod,
   customServices,
   customCompilers,
-  serverAdvancedParams,
+  serverPlugins,
   livereloadWatchConfig,
   jsenvDirectoryClean,
 }) => {
@@ -95,7 +95,7 @@ export const startExploring = async ({
       "service:explorables": (request) => serveExplorableListAsJson(request),
     },
     customCompilers,
-    serverAdvancedParams,
+    serverPlugins,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
     inlineImportMapIntoHTML,

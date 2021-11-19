@@ -89,7 +89,6 @@ export const startCompileServer = async ({
   compileServerCertificate,
   compileServerIp = "0.0.0.0",
   compileServerPort = 0,
-  serverAdvancedParams = {},
   keepProcessAlive = false,
   onStop = () => {},
 
@@ -104,6 +103,7 @@ export const startCompileServer = async ({
   },
   livereloadLogLevel = "info",
   customServices = {},
+  serverPlugins,
   livereloadSSE = false,
   transformHtmlSourceFiles = true,
   jsenvToolbarInjection = false,
@@ -359,6 +359,7 @@ export const startCompileServer = async ({
     ip: compileServerIp,
     port: compileServerPort,
     plugins: {
+      ...serverPlugins,
       ...pluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
@@ -374,7 +375,6 @@ export const startCompileServer = async ({
         requestWaitingMs: 60 * 1000,
       }),
     },
-    ...serverAdvancedParams,
     requestToResponse: composeServicesWithTiming({
       ...customServices,
       ...jsenvServices,
