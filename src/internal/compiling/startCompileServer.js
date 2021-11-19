@@ -89,6 +89,7 @@ export const startCompileServer = async ({
   compileServerCertificate,
   compileServerIp = "0.0.0.0",
   compileServerPort = 0,
+  serverAdvancedParams = {},
   keepProcessAlive = false,
   onStop = () => {},
 
@@ -373,6 +374,7 @@ export const startCompileServer = async ({
         requestWaitingMs: 60 * 1000,
       }),
     },
+    ...serverAdvancedParams,
     requestToResponse: composeServicesWithTiming({
       ...customServices,
       ...jsenvServices,

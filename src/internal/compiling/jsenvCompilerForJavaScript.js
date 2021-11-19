@@ -3,6 +3,7 @@ import { transformResultToCompilationResult } from "./transformResultToCompilati
 
 export const compileJavascript = async ({
   code,
+  map,
   url,
   compiledUrl,
   projectDirectoryUrl,
@@ -17,6 +18,7 @@ export const compileJavascript = async ({
 }) => {
   const transformResult = await transformJs({
     code,
+    map,
     url,
     compiledUrl,
     projectDirectoryUrl,
