@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
 
@@ -173,7 +173,9 @@ const computeCompileReport = async ({
 const callCompile = async ({ logger, originalFileUrl, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
 
-  const compileReturnValue = await compile()
+  const compileReturnValue = await compile({
+    code: await readFile(originalFileUrl),
+  })
   if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
     throw new TypeError(
       `compile must return an object, got ${compileReturnValue}`,

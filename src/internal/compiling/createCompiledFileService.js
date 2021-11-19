@@ -167,10 +167,11 @@ export const createCompiledFileService = ({
       projectFileRequestedCallback,
       request,
       pushResponse,
-      compile: () => {
+      compile: ({ code }) => {
         return compiler({
           logger,
 
+          code,
           url: originalFileUrl,
           compiledUrl: compiledFileUrl,
           projectDirectoryUrl,
