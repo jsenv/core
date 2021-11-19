@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { readFile, resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
@@ -34,7 +34,6 @@ export const compileHtml = async ({
   // cancellationToken,
   logger,
   // request,
-  code,
   url,
   compiledUrl,
   projectDirectoryUrl,
@@ -51,6 +50,7 @@ export const compileHtml = async ({
   jsenvScriptInjection = true,
   jsenvToolbarInjection,
 }) => {
+  const code = await readFile(url)
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,

@@ -1,9 +1,9 @@
+import { readFile } from "@jsenv/filesystem"
+
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
 
 export const compileJavascript = async ({
-  code,
-  map,
   url,
   compiledUrl,
   projectDirectoryUrl,
@@ -16,9 +16,9 @@ export const compileJavascript = async ({
   sourcemapExcludeSources,
   sourcemapMethod,
 }) => {
+  const code = await readFile(url)
   const transformResult = await transformJs({
     code,
-    map,
     url,
     compiledUrl,
     projectDirectoryUrl,

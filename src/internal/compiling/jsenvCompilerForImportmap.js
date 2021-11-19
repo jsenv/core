@@ -6,12 +6,13 @@
  *
  */
 
-import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
+import { urlToRelativeUrl, urlIsInsideOf, readFile } from "@jsenv/filesystem"
 import { composeTwoImportMaps } from "@jsenv/importmap"
 
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
-export const compileImportmap = async ({ code, url }) => {
+export const compileImportmap = async ({ url }) => {
+  const code = await readFile(url)
   const importMapForProject = JSON.parse(code)
 
   const topLevelRemappingForJsenvCore = {
