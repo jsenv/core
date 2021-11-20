@@ -1,7 +1,7 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 import { timeStart, timeFunction } from "@jsenv/server"
-import { readFileContent } from "./fs-optimized-for-cache.js"
+
 import { validateCache } from "./validateCache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { createLockRegistry } from "./createLockRegistry.js"
@@ -17,7 +17,6 @@ export const getOrGenerateCompiledFile = async ({
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
-  fileContentFallback,
   request,
   compile,
 }) => {
@@ -65,7 +64,6 @@ export const getOrGenerateCompiledFile = async ({
           originalFileUrl,
           compiledFileUrl,
           compile,
-          fileContentFallback,
           compileCacheStrategy,
           compileCacheSourcesValidation,
           compileCacheAssetsValidation,
@@ -94,7 +92,6 @@ const computeCompileReport = async ({
   originalFileUrl,
   compiledFileUrl,
   compile,
-  fileContentFallback,
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
@@ -136,7 +133,6 @@ const computeCompileReport = async ({
       callCompile({
         logger,
         originalFileUrl,
-        fileContentFallback,
         compile,
       }),
     )
@@ -174,22 +170,11 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({
-  logger,
-  originalFileUrl,
-  fileContentFallback,
-  compile,
-}) => {
+const callCompile = async ({ logger, originalFileUrl, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
 
-  const codeBeforeCompile =
-    compile.length === 0
-      ? ""
-      : await getCodeToCompile({ originalFileUrl, fileContentFallback })
-
   const compileReturnValue = await compile({
-    code: codeBeforeCompile,
-    map: undefined,
+    code: await readFile(originalFileUrl),
   })
   if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
     throw new TypeError(
@@ -227,24 +212,6 @@ const callCompile = async ({
     dependencies,
     responseHeaders,
   }
-}
-
-const getCodeToCompile = async ({ originalFileUrl, fileContentFallback }) => {
-  let fileContent
-  if (fileContentFallback) {
-    try {
-      fileContent = await readFileContent(originalFileUrl)
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        fileContent = await fileContentFallback()
-      } else {
-        throw e
-      }
-    }
-  } else {
-    fileContent = await readFileContent(originalFileUrl)
-  }
-  return fileContent
 }
 
 const startAsap = async (fn, { logger, compiledFileUrl }) => {

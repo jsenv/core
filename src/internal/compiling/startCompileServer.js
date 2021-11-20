@@ -103,6 +103,7 @@ export const startCompileServer = async ({
   },
   livereloadLogLevel = "info",
   customServices = {},
+  serverPlugins,
   livereloadSSE = false,
   transformHtmlSourceFiles = true,
   jsenvToolbarInjection = false,
@@ -358,6 +359,7 @@ export const startCompileServer = async ({
     ip: compileServerIp,
     port: compileServerPort,
     plugins: {
+      ...serverPlugins,
       ...pluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,

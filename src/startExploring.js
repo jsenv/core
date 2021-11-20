@@ -49,7 +49,9 @@ export const startExploring = async ({
   compileServerCertificate,
   compileServerPrivateKey,
   sourcemapMethod,
+  customServices,
   customCompilers,
+  serverPlugins,
   livereloadWatchConfig,
   jsenvDirectoryClean,
 }) => {
@@ -87,11 +89,13 @@ export const startExploring = async ({
     livereloadSSE: livereloading,
     jsenvToolbarInjection: jsenvToolbar,
     customServices: {
+      ...customServices,
       "service:exploring-redirect": (request) => redirectFiles(request),
       "service:exploring-data": (request) => serveExploringData(request),
       "service:explorables": (request) => serveExplorableListAsJson(request),
     },
     customCompilers,
+    serverPlugins,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
     inlineImportMapIntoHTML,

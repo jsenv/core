@@ -1,4 +1,4 @@
-import { redirectRequest, fetchFileSystem } from "@jsenv/server"
+import { fetchFileSystem } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
@@ -80,7 +80,7 @@ export const createCompiledFileService = ({
     projectDirectoryUrl,
   )
 
-  return (request, { pushResponse }) => {
+  return (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
     // we use "ressourceToPathname" to remove eventual query param from the url
     // Without this a pattern like "**/*.js" would not match "file.js?t=1"
@@ -167,12 +167,11 @@ export const createCompiledFileService = ({
       projectFileRequestedCallback,
       request,
       pushResponse,
-      compile: ({ code, map }) => {
+      compile: ({ code }) => {
         return compiler({
           logger,
 
           code,
-          map,
           url: originalFileUrl,
           compiledUrl: compiledFileUrl,
           projectDirectoryUrl,
