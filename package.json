@@ -33,7 +33,7 @@
     "build": "node ./script/build/build.js",
     "dist": "npm run build",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
-    "start-exploring": "node ./script/start-exploring/start-exploring.js",
+    "dev": "node ./script/dev/start_dev_server.js",
     "test-with-coverage": "npm run test -- --coverage",
     "test-js-transform": "node ./script/test/test-js-transform.js",
     "test-compile-server": "node ./script/test/test-compile-server.js",
