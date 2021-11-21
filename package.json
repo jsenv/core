@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
-    "generate-importmap": "node ./script/importmap/generate_importmap.js",
+    "importmap-generate": "node ./script/importmap/generate_importmap.js",
     "build": "node ./script/build/build.js",
     "dist": "npm run build",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
@@ -42,16 +42,15 @@
     "test-launch-browser": "node ./script/test/test-launch-browser.js",
     "test-launch-node": "node ./script/test/test-launch-node.js",
     "measure-performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
-    "prettier-format": "node ./script/prettier/prettier_format.mjs",
-    "prettier-format-stage": "npm run prettier-format -- --staged",
-    "prettier-check": "npm run prettier-format -- --dry-run",
+    "prettier-check": "prettier --check .",
+    "prettier-write": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "packages-install": "node ./script/packages/packages_install.js",
     "postinstall": "npm run generate-importmap && npm run playwright-install && npm run packages-install",
     "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
     "postpublish": "node ./script/publish/restore_postinstall.mjs"
   },
-  "peerDependencies": {
+  "optionalDependencies": {
     "playwright": "1.x"
   },
   "dependencies": {
@@ -127,7 +126,6 @@
     "@jsenv/importmap-node-module": "2.7.1",
     "@jsenv/package-publish": "1.6.2",
     "@jsenv/performance-impact": "2.2.1",
-    "@jsenv/prettier-check-project": "5.6.1",
     "@jsenv/pwa": "4.0.0",
     "babel-plugin-transform-async-to-promises": "0.8.15",
     "eslint": "7.32.0",
@@ -135,6 +133,7 @@
     "eslint-plugin-import": "2.25.2",
     "eslint-plugin-react": "7.26.1",
     "node-notifier": "10.0.0",
+    "playwright": "1.16.3",
     "preact": "10.5.15",
     "prettier": "2.4.1",
     "react": "17.0.2",

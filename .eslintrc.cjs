@@ -11,6 +11,7 @@ const eslintConfig = composeEslintConfig(
   eslintConfigBase,
 
   // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
+  // + to support import assertions in some files
   {
     parser: "@babel/eslint-parser",
     parserOptions: {
