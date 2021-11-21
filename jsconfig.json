@@ -101,9 +101,6 @@
       "@jsenv/importmap-node-module/*": [
         "./node_modules/@jsenv/importmap-node-module/*"
       ],
-      "@jsenv/prettier-check-project": [
-        "./node_modules/@jsenv/prettier-check-project/index.js"
-      ],
       "@babel/helper-module-imports": [
         "./node_modules/@babel/helper-module-imports/lib/index.js"
       ],
@@ -178,6 +175,9 @@
       ],
       "istanbul-lib-instrument": [
         "./node_modules/istanbul-lib-instrument/src/index.js"
+      ],
+      "playwright/package.json": [
+        "./node_modules/playwright/package.json"
       ],
       "postcss/lib/declaration": [
         "./node_modules/postcss/lib/declaration.js"
@@ -428,6 +428,9 @@
       "node-notifier/*": [
         "./node_modules/node-notifier/*"
       ],
+      "playwright/cli": [
+        "./node_modules/playwright/cli.js"
+      ],
       "systemjs/dist/*": [
         "./node_modules/systemjs/dist/*"
       ],
@@ -520,6 +523,9 @@
       ],
       "@jsenv/pwa": [
         "./node_modules/@jsenv/pwa/main.js"
+      ],
+      "playwright": [
+        "./node_modules/playwright/index.mjs"
       ],
       "react-dom/*": [
         "./node_modules/react-dom/*"

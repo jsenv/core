@@ -59,7 +59,7 @@ chromiumRuntime.launch = async ({
       })
     : chromiumSharing.getUniqueSharingToken()
   if (!sharingToken.isUsed()) {
-    const { chromium } = await import("playwright")
+    const { chromium } = await importPlaywright({ browserName: "chromium" })
     const launchOperation = launchBrowser("chromium", {
       browserClass: chromium,
       launchBrowserOperation,
@@ -165,7 +165,7 @@ firefoxRuntime.launch = async ({
     ? firefoxSharing.getSharingToken({ firefoxExecutablePath, headless })
     : firefoxSharing.getUniqueSharingToken()
   if (!sharingToken.isUsed()) {
-    const { firefox } = await import("playwright")
+    const { firefox } = await importPlaywright({ browserName: "firefox" })
     const launchOperation = launchBrowser("firefox", {
       browserClass: firefox,
 
@@ -244,7 +244,7 @@ webkitRuntime.launch = async ({
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    const { webkit } = await import("playwright")
+    const { webkit } = await await importPlaywright({ browserName: "webkit" })
     const launchOperation = launchBrowser("webkit", {
       browserClass: webkit,
       launchBrowserOperation,
@@ -346,6 +346,26 @@ const launchBrowser = async (
     throw e
   } finally {
     await launchBrowserOperation.end()
+  }
+}
+
+const importPlaywright = async ({ browserName }) => {
+  try {
+    const namespace = await import("playwright")
+    return namespace
+  } catch (e) {
+    if (e.code === "ERR_MODULE_NOT_FOUND") {
+      throw new Error(
+        createDetailedMessage(
+          `"playwright" not found. You need playwright in your dependencies when using "${browserName}Runtime"`,
+          {
+            suggestion: `npm install --save-dev playwright`,
+          },
+        ),
+        { cause: e },
+      )
+    }
+    throw e
   }
 }
 
