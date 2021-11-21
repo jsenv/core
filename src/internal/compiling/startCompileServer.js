@@ -4,7 +4,7 @@ import {
   startServer,
   fetchFileSystem,
   createSSERoom,
-  composeServicesWithTiming,
+  composeServices,
   urlToContentType,
   pluginServerTiming,
   pluginRequestWaitingCheck,
@@ -370,12 +370,12 @@ export const startCompileServer = async ({
         ],
         accessControlAllowCredentials: true,
       }),
-      ...pluginServerTiming,
+      ...pluginServerTiming(),
       ...pluginRequestWaitingCheck({
         requestWaitingMs: 60 * 1000,
       }),
     },
-    requestToResponse: composeServicesWithTiming({
+    requestToResponse: composeServices({
       ...customServices,
       ...jsenvServices,
     }),
