@@ -46,7 +46,7 @@
     "prettier-write": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "packages-install": "node ./script/packages/packages_install.js",
-    "postinstall": "npm run generate-importmap && npm run playwright-install && npm run packages-install",
+    "postinstall": "npm run importmap-generate && npm run playwright-install && npm run packages-install",
     "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
     "postpublish": "node ./script/publish/restore_postinstall.mjs"
   },
