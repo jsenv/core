@@ -14,7 +14,7 @@ const testDirectoryRelativePath = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `timeout-launch-browser.html`
+const filename = `timeout_browser.html`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 
 const { status, consoleCalls } = await execute({
