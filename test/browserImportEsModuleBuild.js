@@ -90,10 +90,11 @@ const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "http",
-    requestToResponse: composeServices((request) =>
-      fetchFileSystem(new URL(request.ressource.slice(1), testDirectoryUrl), {
-        headers: request.headers,
-      }),
-    ),
+    requestToResponse: composeServices({
+      static: (request) =>
+        fetchFileSystem(new URL(request.ressource.slice(1), testDirectoryUrl), {
+          headers: request.headers,
+        }),
+    }),
   })
 }

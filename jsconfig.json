@@ -101,9 +101,6 @@
       "@jsenv/importmap-node-module/*": [
         "./node_modules/@jsenv/importmap-node-module/*"
       ],
-      "@jsenv/prettier-check-project": [
-        "./node_modules/@jsenv/prettier-check-project/index.js"
-      ],
       "@babel/helper-module-imports": [
         "./node_modules/@babel/helper-module-imports/lib/index.js"
       ],

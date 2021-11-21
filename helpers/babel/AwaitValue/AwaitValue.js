@@ -1,3 +1,3 @@
-export default function (value) {
+export default function _AwaitValue (value) {
   this.wrapped = value
 }

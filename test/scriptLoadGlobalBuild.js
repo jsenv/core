@@ -52,10 +52,11 @@ const startTestServer = ({ buildDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "http",
-    requestToResponse: composeServices(
-      (request) => serveIndexPage({ request }),
-      (request) => serveBuildDirectory({ buildDirectoryUrl, request }),
-    ),
+    requestToResponse: composeServices({
+      index: (request) => serveIndexPage({ request }),
+      build_static: (request) =>
+        serveBuildDirectory({ buildDirectoryUrl, request }),
+    }),
   })
 }
 

@@ -11,8 +11,8 @@ const directoryUrl = resolveUrl("./app/dist/", import.meta.url)
 startServer({
   protocol: "http",
   port: 3689,
-  requestToResponse: composeServices(
-    async (request) => {
+  requestToResponse: composeServices({
+    update_manifest: async (request) => {
       if (request.ressource !== "/actions/update-manifest") return null
 
       const serviceWorkerFileUrl = resolveUrl("./sw.js", directoryUrl)
@@ -27,7 +27,7 @@ startServer({
         status: 200,
       }
     },
-    async (request) => {
+    update_file: async (request) => {
       if (request.ressource !== "/actions/update-file") return null
 
       const fileContent = await readRequestBody(request.body)
@@ -36,7 +36,7 @@ startServer({
 
       return { status: 200 }
     },
-    (request) => {
+    static: (request) => {
       let { ressource } = request
       if (ressource === "/") {
         ressource = "/main.html"
@@ -49,5 +49,5 @@ startServer({
         },
       )
     },
-  ),
+  }),
 })

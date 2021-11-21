@@ -76,10 +76,10 @@ const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "error",
     protocol: "http",
-    requestToResponse: composeServices(
-      (request) => serveSystemJS({ request }),
-      (request) => serveTestDirectory({ testDirectoryUrl, request }),
-    ),
+    requestToResponse: composeServices({
+      systemjs: (request) => serveSystemJS({ request }),
+      static: (request) => serveTestDirectory({ testDirectoryUrl, request }),
+    }),
   })
 }
 
