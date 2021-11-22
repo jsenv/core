@@ -240,13 +240,14 @@ export const startCompileServer = async ({
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
     customServices = {
-      "service:sse": serveSSEForLivereload,
       ...customServices,
+      "service:sse": serveSSEForLivereload,
     }
   } else {
     const roomWhenLivereloadIsDisabled = createSSERoom()
     roomWhenLivereloadIsDisabled.open()
     customServices = {
+      ...customServices,
       "service:sse": (request) => {
         const { accept } = request.headers
         if (!accept || !accept.includes("text/event-stream")) {
@@ -254,7 +255,6 @@ export const startCompileServer = async ({
         }
         return roomWhenLivereloadIsDisabled.join(request)
       },
-      ...customServices,
     }
   }
 
