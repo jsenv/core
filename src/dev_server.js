@@ -147,19 +147,6 @@ const createRedirectFilesService = ({
     projectDirectoryUrl,
   )
 
-  // unfortunately browser resolves sourcemap to url before redirection (not after).
-  // It means browser tries to load source map from "/.jsenv/jsenv-toolbar.js.map"
-  // we could also inline sourcemap but it's not yet possible
-  // inside buildProject
-  const jsenvExploringIndexSourcemapInfo = {
-    pathForBrowser: `/.jsenv/jsenv_exploring_index.js.map`,
-    pathForServer: `/${jsenvExploringJsBuildRelativeUrlForProject}.map`,
-  }
-  const jsenvToolbarSourcemapInfo = {
-    pathForBrowser: `/.jsenv/jsenv_toolbar.js.map`,
-    pathForServer: `/${jsenvToolbarJsBuildRelativeUrlForProject}.map`,
-  }
-
   return setupRoutes({
     "/": (request) => {
       const redirectTarget = mainFileRelativeUrl
@@ -199,14 +186,6 @@ const createRedirectFilesService = ({
         },
       }
     },
-    [jsenvExploringIndexSourcemapInfo.pathForBrowser]: (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}${jsenvExploringIndexSourcemapInfo.pathForServer}`,
-        },
-      }
-    },
     "/.jsenv/toolbar.main.js": (request) => {
       const jsenvToolbarJsBuildServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`
       return {
@@ -216,11 +195,23 @@ const createRedirectFilesService = ({
         },
       }
     },
-    [jsenvToolbarSourcemapInfo.pathForBrowser]: (request) => {
+    // unfortunately browser resolves sourcemap to url before redirection (not after).
+    // It means browser tries to load source map from "/.jsenv/jsenv-toolbar.js.map"
+    // we could also inline sourcemap but it's not yet possible
+    // inside buildProject
+    "/.jsenv/jsenv_exploring_index.js.map": (request) => {
       return {
         status: 307,
         headers: {
-          location: `${request.origin}${jsenvToolbarSourcemapInfo.pathForServer}`,
+          location: `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}.map`,
+        },
+      }
+    },
+    "/.jsenv/jsenv_toolbar.js.map": (request) => {
+      return {
+        status: 307,
+        headers: {
+          location: `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`,
         },
       }
     },
