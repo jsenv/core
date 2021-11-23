@@ -1,13 +1,13 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
 import { projectDirectoryUrl } from "../../jsenv.config.mjs"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost()
 
-startExploring({
+startDevServer({
   projectDirectoryUrl,
   babelPluginMap: {},
   compileServerProtocol: "https",

@@ -1,6 +1,6 @@
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
-startExploring({
+startDevServer({
   projectDirectoryUrl: new URL("./", import.meta.url),
   explorableConfig: {
     source: {

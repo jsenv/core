@@ -1,4 +1,4 @@
-# Use exploring server to debug file within vscode
+# Use dev server to debug file within vscode
 
 What if you could debug inside chrome the file currently opened in vscode?<br />
 
@@ -32,10 +32,10 @@ Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.
 }
 ```
 
-3. Start exploring server
+3. Start dev server
 
 ```shell
-node ./start-exploring-server.js
+node ./start-dev-server.js
 ```
 
 4. Start a debugging session using `jsenv chrome`

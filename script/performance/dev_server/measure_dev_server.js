@@ -21,8 +21,8 @@ const jsenvDirectoryUrl = resolveUrl(
 await ensureEmptyDirectory(jsenvDirectoryUrl)
 
 const serverStartMeasures = startMeasures()
-const { startExploring } = await import("@jsenv/core")
-const devServer = await startExploring({
+const { startDevServer } = await import("@jsenv/core")
+const devServer = await startDevServer({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   compileServerLogLevel: "warn",

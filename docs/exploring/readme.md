@@ -2,7 +2,7 @@
 
 This is an in-depth documentation about jsenv dev server. For a quick overview go to [dev server overview](../../readme.md#Dev-server-overview).
 
-This documentation list [key features](#key-features) and gives the [definition of a dev server for jsenv](#Definition-of-a-dev-server-for-jsenv) to get an idea of how things where designed. Then it documents [startExploring](#startExploring) function, its parameters and return value. Finally you can find:
+This documentation list [key features](#key-features) and gives the [definition of a dev server for jsenv](#Definition-of-a-dev-server-for-jsenv) to get an idea of how things where designed. Then it documents [startDevServer](#startDevServer) function, its parameters and return value. Finally you can find:
 
 # Key features
 
@@ -19,14 +19,14 @@ Frontend projects often comes with a local server running on your machine.
 
 These type of servers focuses on development. During development files change often and developper want a fast feedback to see effects of thoose changes.
 
-# startExploring
+# startDevServer
 
-`startExploring` is an async function starting a development server. This development server consider that more than one html file in your project can be an entry point. You can use it to debug a file in isolation, create a storybook and so on.
+`startDevServer` is an async function starting a development server. This development server consider that more than one html file in your project can be an entry point. You can use it to debug a file in isolation, create a storybook and so on.
 
 ```js
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
-startExploring({
+startDevServer({
   projectDirectoryUrl: "file:///Users/you/project/",
   explorableConfig: {
     source: {
@@ -37,7 +37,7 @@ startExploring({
 })
 ```
 
-— source code at [src/startExploring.js](../../src/startExploring.js).
+— source code at [src/startDevServer.js](../../src/startDevServer.js).
 
 ## explorableConfig
 
@@ -81,9 +81,9 @@ For more details check [jsenv toolbar](#jsenv-toolbar) section.
 
 ## Server parameters
 
-Exploring server parameters are configured to let you use exploring right away. You might want to configure some of them to use a specific port or your own https certificate.
+Server parameters are configured to let you use start a server right away. You might want to configure some of them to use a specific port or your own https certificate.
 
-The following parameter controls the exploring server:
+The following parameter controls the server:
 
 - [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
 - [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
@@ -102,20 +102,20 @@ There is more parameters listed here. Their documentation is regrouped in an oth
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 
-# startExploring return value
+# startDevServer return value
 
-Using the return value is an advanced use case, in theory you should not need this. `startExploring` returns a _server object_ created by `@jsenv/server`. You can read [@jsenv/server documentation](https://github.com/jsenv/server/blob/main/docs/all_the_rest.md#startserver-return-value) to know more about the _server object_ composition.
+Using the return value is an advanced use case, in theory you should not need this. `startDevServer` returns a _server object_ created by `@jsenv/server`. You can read [@jsenv/server documentation](https://github.com/jsenv/server/blob/main/docs/all_the_rest.md#startserver-return-value) to know more about the _server object_ composition.
 
 Code below shows how you might use return value.
 
 ```js
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
-const exploringServer = await startExploring({
+const server = await startDevServer({
   projectDirectoryUrl: new URL("./", import.meta.url),
 })
 
-exploringServer.stop()
+server.stop()
 ```
 
 # jsenv toolbar
@@ -146,16 +146,16 @@ This component is an icon representing the html file execution state. The icon c
 
 ## Server connection indicator
 
-This component is an icon representing the exploring server connection state. The icon can be clicked to get more information and can be in the following states.
+This component is an icon representing the dev server connection state. The icon can be clicked to get more information and can be in the following states.
 
-| State                             | Screenshot                                                                                  | Description                                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| connecting                        | ![connecting screenshot](./server-connecting.png)                                           | Jsenv toolbar is connecting to the exploring server                                                                          |
-| disconnected                      | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button in previous state                                                                      |
-| failed                            | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to exploring server. You should check the terminal where exploring server was started           |
-| connected with livereloading      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to exploring server and will autoreload on save                                                   |
-| connected without livereloading   | ![connected without livereloading screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to exploring server but won't autoreload on save. Happens if your disable livereload in settings. |
-| connected without livereloading 2 | ![connected without livereloading second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                         |
+| State                             | Screenshot                                                                                  | Description                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| connecting                        | ![connecting screenshot](./server-connecting.png)                                           | Jsenv toolbar is connecting to the server server                                                                       |
+| disconnected                      | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button in previous state                                                                |
+| failed                            | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to the server. You should check the terminal where server was started                     |
+| connected with livereloading      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to the server and will autoreload on save                                                   |
+| connected without livereloading   | ![connected without livereloading screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to the server but won't autoreload on save. Happens if your disable livereload in settings. |
+| connected without livereloading 2 | ![connected without livereloading second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                   |
 
 ## Settings button
 
@@ -185,7 +185,7 @@ Toogle between dark theme and light theme. Use this to keep a good contrast betw
 
 ## Browser support
 
-When browser support is good enough and if he code you write is standard js, html and css, jsenv exploring server will serve the source files **without compilation step**. The browser support section informs you if that is possible or not. You can click "Read more" to get more information in an alert dialog.
+When browser support is good enough and if he code you write is standard js, html and css, jsenv dev server will serve the source files **without compilation step**. The browser support section informs you if that is possible or not. You can click "Read more" to get more information in an alert dialog.
 
 | State     | Screenshot                                                               | Description                                                                | Alert screenshot                                                                        |
 | --------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -194,7 +194,7 @@ When browser support is good enough and if he code you write is standard js, htm
 
 ## Files compilation
 
-As explained in [Browser support](#Browser-support) jsenv exploring server might use source files directly. The files compilation section informs you if files are compiled and allows you to switch between source files and compiled files.
+As explained in [Browser support](#Browser-support) jsenv dev server might use source files directly. The files compilation section informs you if files are compiled and allows you to switch between source files and compiled files.
 
 | Compiled? | Screenshot                                                         |
 | --------- | ------------------------------------------------------------------ |

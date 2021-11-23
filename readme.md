@@ -140,9 +140,9 @@ npm install --save-dev @jsenv/core
 2 - Create `start_dev_server.mjs`
 
 ```js
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
-startExploring({
+startDevServer({
   projectDirectoryUrl: new URL("./", import.meta.url),
   explorableConfig: {
     source: {
@@ -173,7 +173,7 @@ Browser navigates to `main.html` and execute the file. Hello world is displayed 
 
 ![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
 
-To read more about jsenv dev server, also called exploring server, check [jsenv dev server documentation](./docs/exploring/readme.md#jsenv-dev-server).
+To read more about jsenv dev server, check [jsenv dev server documentation](./docs/dev_server/readme.md#jsenv-dev-server).
 
 # Build overview
 

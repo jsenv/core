@@ -7,7 +7,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   openBrowserPage,
@@ -28,14 +28,14 @@ const filePath = urlToFileSystemPath(
   resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
 )
 
-const exploringServer = await startExploring({
+const devServer = await startDevServer({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   livereloading: true,
 })
 const { browser, page, pageLogs, pageErrors, executionResult } =
   await openBrowserPage(
-    `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+    `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
     {
       // headless: false,
     },
@@ -92,5 +92,5 @@ const { browser, page, pageLogs, pageErrors, executionResult } =
   }
   assert({ actual, expected })
 }
-exploringServer.stop()
+devServer.stop()
 browser.close()

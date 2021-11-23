@@ -72,14 +72,14 @@ const customCompilers = {
 `babelPluginMap` parameter is an object that can be used to override the babel plugins declared in your [babel config file](https://babeljs.io/docs/en/config-files).
 
 ```js
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { createRequire } from "node:module"
 
 const require = createRequire(import.meta.url)
 
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
-await startExploring({
+await startDevServer({
   babelPluginMap: {
     "transform-react-jsx": [transformReactJSX, { pragma: "dom" }],
   },

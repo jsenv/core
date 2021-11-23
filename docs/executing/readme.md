@@ -11,7 +11,7 @@
 
 Normally you don't need this because:
 
-- If your file is written for a browser, [exploring server](../exploring/readme.md) is better in every aspect.
+- If your file is written for a browser, you can use the [dev server](../dev_server/readme.md).
 - If your file is written for Node.js, you can execute the file directly with the `node` command.
 
 That being said, execute can still be useful, for instance to execute typescript files with Node.js without having to compile them beforehand.

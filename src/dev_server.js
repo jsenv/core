@@ -25,7 +25,7 @@ import {
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
-export const startExploring = async ({
+export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
 

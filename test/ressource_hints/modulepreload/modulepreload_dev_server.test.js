@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
@@ -14,12 +14,12 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `modulepreload.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const exploringServer = await startExploring({
+const devServer = await startDevServer({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
 const { browser, pageLogs, pageErrors } = await openBrowserPage(
-  `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+  `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
   {
     // debug: true,
   },
