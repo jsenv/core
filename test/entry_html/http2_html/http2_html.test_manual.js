@@ -5,7 +5,7 @@ import {
 } from "@jsenv/filesystem"
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost()
@@ -22,16 +22,16 @@ const jsenvDirectoryUrl = resolveUrl(
 )
 await ensureEmptyDirectory(jsenvDirectoryUrl)
 
-await startExploring({
+await startDevServer({
   jsenvDirectoryClean: true,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   logLevel: "info",
-  compileServerProtocol: "https",
-  compileServerHttp2: true,
-  compileServerCertificate: serverCertificate,
-  compileServerPrivateKey: serverCertificatePrivateKey,
-  compileServerPort: 6789,
+  protocol: "https",
+  http2: true,
+  certificate: serverCertificate,
+  privateKey: serverCertificatePrivateKey,
+  port: 6789,
   sendServerTiming: true,
   jsenvToolbar: false,
 })

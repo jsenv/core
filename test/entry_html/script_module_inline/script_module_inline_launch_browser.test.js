@@ -34,7 +34,7 @@ await launchBrowsers(
     const { status, namespace, consoleCalls } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
-      // compileServerLogLevel: "debug",
+      // logLevel: "debug",
       runtime: browserRuntime,
       runtimeParams: {
         ...LAUNCH_TEST_PARAMS,

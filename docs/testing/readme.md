@@ -206,12 +206,12 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [customCompilers](../shared-parameters.md#customCompilers)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
-- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
-- [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
-- [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
-- [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
-- [compileServerIp](../shared-parameters.md#compileServerIp)
-- [compileServerPort](../shared-parameters.md#compileServerPort)
+- [logLevel](../shared-parameters.md#logLevel)
+- [protocol](../shared-parameters.md#protocol)
+- [privateKey](../shared-parameters.md#privateKey)
+- [certificate](../shared-parameters.md#certificate)
+- [ip](../shared-parameters.md#ip)
+- [port](../shared-parameters.md#port)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 
 # executeTestPlan return value

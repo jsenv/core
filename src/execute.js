@@ -39,11 +39,11 @@ export const execute = async ({
   gracefulStopAllocatedMs,
   ignoreError = false,
 
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
+  protocol,
+  privateKey,
+  certificate,
+  ip,
+  port,
   babelPluginMap,
   customCompilers,
   compileServerCanReadFromFilesystem,
@@ -94,7 +94,7 @@ export const execute = async ({
       stop,
     } = await startCompileServer({
       signal: executeOperation.signal,
-      compileServerLogLevel,
+      logLevel: compileServerLogLevel,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
@@ -103,11 +103,11 @@ export const execute = async ({
 
       importDefaultExtension,
 
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      port,
       babelPluginMap,
       customCompilers,
       runtimeSupport: normalizeRuntimeSupport({

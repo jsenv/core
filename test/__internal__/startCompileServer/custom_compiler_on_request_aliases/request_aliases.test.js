@@ -21,7 +21,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   jsenvDirectoryRelativeUrl,
   compileCacheStrategy: "etag",
   runtimeSupport: jsenvRuntimeSupportDuringDev,
-  serverPlugins: {
+  plugins: {
     ...pluginRessourceAliases({
       [`/${compileDirectoryRelativeUrl}dir/file.js`]: `/${compileDirectoryRelativeUrl}dir/*.js`,
     }),

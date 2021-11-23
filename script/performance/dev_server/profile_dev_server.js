@@ -17,7 +17,7 @@ import {
   ensureEmptyDirectory,
 } from "@jsenv/filesystem"
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost()
@@ -34,15 +34,15 @@ const jsenvDirectoryUrl = resolveUrl(
 )
 await ensureEmptyDirectory(jsenvDirectoryUrl)
 
-await startExploring({
+await startDevServer({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  compileServerLogLevel: "info",
-  compileServerProtocol: "https",
-  // compileServerHttp2: false,
-  compileServerCertificate: serverCertificate,
-  compileServerPrivateKey: serverCertificatePrivateKey,
-  compileServerPort: 6789,
+  logLevel: "info",
+  protocol: "https",
+  // http2: false,
+  certificate: serverCertificate,
+  privateKey: serverCertificatePrivateKey,
+  port: 6789,
   livereloading: true,
   jsenvToolbar: false,
 })

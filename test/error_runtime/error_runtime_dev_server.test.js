@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -16,11 +16,11 @@ const filename = `error_runtime.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const compileId = "best"
 
-const exploringServer = await startExploring({
-  ...START_EXPLORING_TEST_PARAMS,
+const devServer = await startDevServer({
+  ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const compiledFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+const compiledFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
 const { browser, pageLogs, pageErrors, executionResult } =
   await openBrowserPage(compiledFileUrl, {
@@ -61,8 +61,8 @@ browser.close()
 {
   const stack = executionResult.error.stack
   const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
-  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
+  at triggerError (${devServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
+  at Object.triggerError (${devServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }
@@ -70,8 +70,8 @@ browser.close()
 {
   const stack = pageLogs[0].text
   const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-  at triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
-  at Object.triggerError (${exploringServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
+  at triggerError (${devServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
+  at Object.triggerError (${devServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
   const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }

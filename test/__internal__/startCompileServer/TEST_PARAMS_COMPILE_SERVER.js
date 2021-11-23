@@ -4,7 +4,7 @@ import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSuppor
 
 export const COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  compileServerLogLevel: "warn",
+  logLevel: "warn",
   babelPluginMap: testBabelPluginMap,
   jsenvDirectoryClean: true,
   runtimeSupport: jsenvRuntimeSupportDuringDev,

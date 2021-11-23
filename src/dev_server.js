@@ -3,6 +3,7 @@ import {
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
+import { setupRoutes } from "@jsenv/server"
 
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -25,12 +26,24 @@ import {
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
-export const startExploring = async ({
+export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
+  port,
+  ip,
+  protocol,
+  http2,
+  certificate,
+  privateKey,
+  plugins,
+  customServices,
 
-  explorableConfig = jsenvExplorableConfig,
   projectDirectoryUrl,
+  explorableConfig = jsenvExplorableConfig,
+  mainFileRelativeUrl = urlToRelativeUrl(
+    jsenvExploringIndexHtmlFileInfo.url,
+    projectDirectoryUrl,
+  ),
   jsenvDirectoryRelativeUrl,
   outDirectoryName = "dev",
   jsenvToolbar = true,
@@ -40,18 +53,11 @@ export const startExploring = async ({
 
   babelPluginMap,
   runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
-  compileServerLogLevel,
+  logLevel,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
-  compileServerPort,
-  compileServerProtocol,
-  compileServerHttp2,
-  compileServerCertificate,
-  compileServerPrivateKey,
   sourcemapMethod,
-  customServices,
   customCompilers,
-  serverPlugins,
   livereloadWatchConfig,
   jsenvDirectoryClean,
 }) => {
@@ -67,6 +73,7 @@ export const startExploring = async ({
   const redirectFiles = createRedirectFilesService({
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
+    mainFileRelativeUrl,
   })
   const serveExploringData = createExploringDataService({
     projectDirectoryUrl,
@@ -84,30 +91,31 @@ export const startExploring = async ({
     signal,
     handleSIGINT,
     keepProcessAlive,
+    logLevel,
+    port,
+    ip,
+    protocol,
+    http2,
+    certificate,
+    privateKey,
+    plugins,
+    customServices: {
+      ...customServices,
+      "jsenv:redirector": redirectFiles,
+      "jsenv:exploring-data": serveExploringData,
+      "jsenv:explorables": serveExplorableListAsJson,
+    },
 
     projectDirectoryUrl,
     livereloadSSE: livereloading,
     jsenvToolbarInjection: jsenvToolbar,
-    customServices: {
-      ...customServices,
-      "service:exploring-redirect": (request) => redirectFiles(request),
-      "service:exploring-data": (request) => serveExploringData(request),
-      "service:explorables": (request) => serveExplorableListAsJson(request),
-    },
-    customCompilers,
-    serverPlugins,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
     inlineImportMapIntoHTML,
 
-    compileServerLogLevel,
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
-    compileServerPort,
-    compileServerProtocol,
-    compileServerHttp2,
-    compileServerCertificate,
-    compileServerPrivateKey,
+    customCompilers,
     sourcemapMethod,
     babelPluginMap,
     runtimeSupport: runtimeSupportDuringDev,
@@ -118,7 +126,10 @@ export const startExploring = async ({
   return compileServer
 }
 
-const createRedirectFilesService = ({ projectDirectoryUrl }) => {
+const createRedirectFilesService = ({
+  projectDirectoryUrl,
+  mainFileRelativeUrl,
+}) => {
   const jsenvExploringRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
     jsenvExploringRedirectorHtmlFileInfo.url,
     projectDirectoryUrl,
@@ -149,18 +160,28 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
     pathForServer: `/${jsenvToolbarJsBuildRelativeUrlForProject}.map`,
   }
 
-  return (request) => {
-    // exploring redirection
-    if (request.ressource === "/") {
-      const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}`
+  return setupRoutes({
+    "/": (request) => {
+      const redirectTarget = mainFileRelativeUrl
+      const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`
       return {
         status: 307,
         headers: {
           location: jsenvExploringRedirectorHtmlServerUrl,
         },
       }
-    }
-    if (request.ressource === "/.jsenv/exploring.redirector.js") {
+    },
+    "/.jsenv/redirect/:rest*": (request) => {
+      const redirectTarget = request.ressource.slice("/.jsenv/redirect/".length)
+      const jsenvExploringRedirectorHtmlServerUrl = `${request.origin}/${jsenvExploringRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`
+      return {
+        status: 307,
+        headers: {
+          location: jsenvExploringRedirectorHtmlServerUrl,
+        },
+      }
+    },
+    "/.jsenv/exploring.redirector.js": (request) => {
       const jsenvExploringRedirectorBuildServerUrl = `${request.origin}/${jsenvExploringRedirectorJsBuildRelativeUrlForProject}`
       return {
         status: 307,
@@ -168,10 +189,8 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
           location: jsenvExploringRedirectorBuildServerUrl,
         },
       }
-    }
-
-    // exploring index
-    if (request.ressource === "/.jsenv/exploring.index.js") {
+    },
+    "/.jsenv/exploring.index.js": (request) => {
       const jsenvExploringJsBuildServerUrl = `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}`
       return {
         status: 307,
@@ -179,18 +198,16 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
           location: jsenvExploringJsBuildServerUrl,
         },
       }
-    }
-    if (request.ressource === jsenvExploringIndexSourcemapInfo.pathForBrowser) {
+    },
+    [jsenvExploringIndexSourcemapInfo.pathForBrowser]: (request) => {
       return {
         status: 307,
         headers: {
           location: `${request.origin}${jsenvExploringIndexSourcemapInfo.pathForServer}`,
         },
       }
-    }
-
-    // toolbar
-    if (request.ressource === "/.jsenv/toolbar.main.js") {
+    },
+    "/.jsenv/toolbar.main.js": (request) => {
       const jsenvToolbarJsBuildServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`
       return {
         status: 307,
@@ -198,18 +215,16 @@ const createRedirectFilesService = ({ projectDirectoryUrl }) => {
           location: jsenvToolbarJsBuildServerUrl,
         },
       }
-    }
-    if (request.ressource === jsenvToolbarSourcemapInfo.pathForBrowser) {
+    },
+    [jsenvToolbarSourcemapInfo.pathForBrowser]: (request) => {
       return {
         status: 307,
         headers: {
           location: `${request.origin}${jsenvToolbarSourcemapInfo.pathForServer}`,
         },
       }
-    }
-
-    return null
-  }
+    },
+  })
 }
 
 const createExploringDataService = ({

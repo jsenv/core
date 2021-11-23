@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -11,16 +11,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.html`
+const filename = `preload_style.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const exploringServer = await startExploring({
-  ...START_EXPLORING_TEST_PARAMS,
+const devServer = await startDevServer({
+  ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
 const { browser, pageLogs, pageErrors } = await openBrowserPage(
-  `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+  `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
   {
     // debug: true,
   },

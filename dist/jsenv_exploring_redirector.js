@@ -1,80 +1,6 @@
 (function () {
   'use strict';
 
-  // eslint-disable-next-line consistent-return
-  var arrayWithHoles = (function (arr) {
-    if (Array.isArray(arr)) return arr;
-  });
-
-  function _iterableToArrayLimit(arr, i) {
-    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
-    // iterators etc. variable names have been minimised to reduce the size of this massive
-    // helper. sometimes spec compliance is annoying :(
-    //
-    // _n = _iteratorNormalCompletion
-    // _d = _didIteratorError
-    // _e = _iteratorError
-    // _i = _iterator
-    // _s = _step
-    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
-
-    if (_i == null) return;
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-
-    var _s, _e;
-
-    try {
-      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"] != null) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  /* eslint-disable no-eq-null, eqeqeq */
-  function arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-    var arr2 = new Array(len);
-
-    for (var i = 0; i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  /* eslint-disable consistent-return */
-  function unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
-  }
-
-  var nonIterableRest = (function () {
-    throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  });
-
-  var _slicedToArray = (function (arr, i) {
-    return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
-  });
-
   var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
@@ -189,7 +115,7 @@
     return string;
   };
 
-  function _await$5(value, then, direct) {
+  function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -201,7 +127,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$5(f) {
+  function _async$4(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -228,7 +154,7 @@
     }
   }
 
-  var fetchUsingXHR = _async$5(function (url) {
+  var fetchUsingXHR = _async$4(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
         signal = _ref.signal,
         _ref$method = _ref.method,
@@ -312,7 +238,7 @@
     }
 
     xhr.send(body);
-    return _await$5(headersPromise, function () {
+    return _await$4(headersPromise, function () {
       // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
       var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
       var responseStatus = xhr.status;
@@ -320,7 +246,7 @@
       var responseHeaders = getHeadersFromXHR(xhr);
 
       var readBody = function readBody() {
-        return _await$5(bodyPromise, function () {
+        return _await$4(bodyPromise, function () {
           var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
           if (status === 0) {
@@ -356,7 +282,7 @@
         return _call$1(text, JSON.parse);
       };
 
-      var blob = _async$5(function () {
+      var blob = _async$4(function () {
         if (!hasBlob) {
           throw new Error("blob not supported");
         }
@@ -393,7 +319,7 @@
         });
       };
 
-      var formData = _async$5(function () {
+      var formData = _async$4(function () {
         if (!hasFormData) {
           throw new Error("formData not supported");
         }
@@ -574,7 +500,7 @@
     return form;
   };
 
-  var blobToArrayBuffer = _async$5(function (blob) {
+  var blobToArrayBuffer = _async$4(function (blob) {
     var reader = new FileReader();
     var promise = fileReaderReady(reader);
     reader.readAsArrayBuffer(blob);
@@ -625,7 +551,7 @@
 
   var _excluded = ["mode"];
 
-  function _await$4(value, then, direct) {
+  function _await$3(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -637,14 +563,14 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchNative = _async$4(function (url) {
+  var fetchNative = _async$3(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     var _ref$mode = _ref.mode,
         mode = _ref$mode === void 0 ? "cors" : _ref$mode,
         options = _objectWithoutProperties(_ref, _excluded);
 
-    return _await$4(window.fetch(url, _objectSpread2({
+    return _await$3(window.fetch(url, _objectSpread2({
       mode: mode
     }, options)), function (response) {
       return {
@@ -671,7 +597,7 @@
     });
   });
 
-  function _async$4(f) {
+  function _async$3(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -695,7 +621,7 @@
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-  function _await$3(value, then, direct) {
+  function _await$2(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -707,7 +633,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$3(f) {
+  function _async$2(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -721,10 +647,10 @@
     };
   }
 
-  var fetchJson = _async$3(function (url) {
+  var fetchJson = _async$2(function (url) {
     var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    return _await$3(fetchUrl(url, options), function (response) {
-      return _await$3(response.json());
+    return _await$2(fetchUrl(url, options), function (response) {
+      return _await$2(response.json());
     });
   });
 
@@ -1105,7 +1031,7 @@
     });
   };
 
-  function _await$2(value, then, direct) {
+  function _await$1(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
@@ -1117,7 +1043,7 @@
     return then ? value.then(then) : value;
   }
 
-  function _async$2(f) {
+  function _async$1(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
@@ -1154,7 +1080,7 @@
     return then(result);
   }
 
-  function _catch$1(body, recover) {
+  function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
@@ -1168,14 +1094,14 @@
     return result;
   }
 
-  var scanBrowserRuntimeFeatures = _async$2(function () {
+  var scanBrowserRuntimeFeatures = _async$1(function () {
     var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         _ref$coverageHandledF = _ref.coverageHandledFromOutside,
         coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
         _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
         failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
-    return _await$2(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
+    return _await$1(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
       var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
           inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
           customCompilerPatterns = _ref2.customCompilerPatterns,
@@ -1194,12 +1120,12 @@
         cssImportAssertions: undefined,
         newStylesheet: undefined
       };
-      return _await$2(detectSupportedFeatures({
+      return _await$1(detectSupportedFeatures({
         featuresReport: featuresReport,
         failFastOnFeatureDetection: failFastOnFeatureDetection,
         inlineImportMapIntoHTML: inlineImportMapIntoHTML
       }), function () {
-        return _await$2(pluginRequiredNamesFromGroupInfo(groupInfo, {
+        return _await$1(pluginRequiredNamesFromGroupInfo(groupInfo, {
           featuresReport: featuresReport,
           coverageHandledFromOutside: coverageHandledFromOutside
         }), function (pluginRequiredNameArray) {
@@ -1219,14 +1145,14 @@
     });
   });
 
-  var detectSupportedFeatures = _async$2(function (_ref3) {
+  var detectSupportedFeatures = _async$1(function (_ref3) {
     var featuresReport = _ref3.featuresReport,
         failFastOnFeatureDetection = _ref3.failFastOnFeatureDetection,
         inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
     // start testing importmap support first and not in paralell
     // so that there is not module script loaded beore importmap is injected
     // it would log an error in chrome console and return undefined
-    return _await$2(supportsImportmap({
+    return _await$1(supportsImportmap({
       // chrome supports inline but not remote importmap
       // https://github.com/WICG/import-maps/issues/235
       // at this stage we won't know if the html file will use
@@ -1257,7 +1183,7 @@
     });
   });
 
-  var pluginRequiredNamesFromGroupInfo = _async$2(function (groupInfo, _ref4) {
+  var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref4) {
     var featuresReport = _ref4.featuresReport,
         coverageHandledFromOutside = _ref4.coverageHandledFromOutside;
     var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
@@ -1312,7 +1238,7 @@
     }
   };
 
-  var supportsImportmap = _async$2(function () {
+  var supportsImportmap = _async$1(function () {
     var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
         _ref5$remote = _ref5.remote,
         remote = _ref5$remote === void 0 ? true : _ref5$remote;
@@ -1354,10 +1280,10 @@
     });
   });
 
-  var supportsDynamicImport = _async$2(function () {
+  var supportsDynamicImport = _async$1(function () {
     var moduleSource = asBase64Url("export default 42");
-    return _catch$1(function () {
-      return _await$2(import(moduleSource), function (namespace) {
+    return _catch(function () {
+      return _await$1(import(moduleSource), function (namespace) {
         return namespace.default === 42;
       });
     }, function () {
@@ -1365,10 +1291,10 @@
     });
   });
 
-  var supportsTopLevelAwait = _async$2(function () {
+  var supportsTopLevelAwait = _async$1(function () {
     var moduleSource = asBase64Url("export default await Promise.resolve(42)");
-    return _catch$1(function () {
-      return _await$2(import(moduleSource), function (namespace) {
+    return _catch(function () {
+      return _await$1(import(moduleSource), function (namespace) {
         return namespace.default === 42;
       });
     }, function () {
@@ -1376,11 +1302,11 @@
     });
   });
 
-  var supportsJsonImportAssertions = _async$2(function () {
+  var supportsJsonImportAssertions = _async$1(function () {
     var jsonBase64Url = asBase64Url("42", "application/json");
     var moduleSource = asBase64Url("export { default } from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }"));
-    return _catch$1(function () {
-      return _await$2(import(moduleSource), function (namespace) {
+    return _catch(function () {
+      return _await$1(import(moduleSource), function (namespace) {
         return namespace.default === 42;
       });
     }, function () {
@@ -1388,11 +1314,11 @@
     });
   });
 
-  var supportsCssImportAssertions = _async$2(function () {
+  var supportsCssImportAssertions = _async$1(function () {
     var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
     var moduleSource = asBase64Url("export { default } from \"".concat(cssBase64Url, "\" assert { type: \"css\" }"));
-    return _catch$1(function () {
-      return _await$2(import(moduleSource), function (namespace) {
+    return _catch(function () {
+      return _await$1(import(moduleSource), function (namespace) {
         return namespace.default instanceof CSSStyleSheet;
       });
     }, function () {
@@ -1404,63 +1330,6 @@
     var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
     return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
   };
-
-  function _await$1(value, then, direct) {
-    if (direct) {
-      return then ? then(value) : value;
-    }
-
-    if (!value || !value.then) {
-      value = Promise.resolve(value);
-    }
-
-    return then ? value.then(then) : value;
-  }
-
-  function _catch(body, recover) {
-    try {
-      var result = body();
-    } catch (e) {
-      return recover(e);
-    }
-
-    if (result && result.then) {
-      return result.then(void 0, recover);
-    }
-
-    return result;
-  }
-
-  function _async$1(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  var fetchExploringJson = _async$1(function () {
-    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-        signal = _ref.signal;
-
-    return _catch(function () {
-      return _await$1(fetchJson("/.jsenv/exploring.json", {
-        signal: signal
-      }));
-    }, function (e) {
-      if (signal && signal.aborted && e.name === "AbortError") {
-        throw e;
-      }
-
-      throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
-    });
-  });
 
   function _await(value, then, direct) {
     if (direct) {
@@ -1475,21 +1344,12 @@
   }
 
   var redirect = _async(function () {
-    return _await(Promise.all([scanBrowserRuntimeFeatures({
+    var redirectTarget = new URLSearchParams(window.location.search).get("redirect");
+    return _await(scanBrowserRuntimeFeatures({
       failFastOnFeatureDetection: true
-    }), fetchExploringJson()]), function (_ref) {
-      var _ref2 = _slicedToArray(_ref, 2),
-          browserRuntimeFeaturesReport = _ref2[0],
-          exploringHtmlFileRelativeUrl = _ref2[1].exploringHtmlFileRelativeUrl;
-
-      if (browserRuntimeFeaturesReport.canAvoidCompilation) {
-        window.location.href = "/".concat(exploringHtmlFileRelativeUrl);
-        return;
-      }
-
-      var outDirectoryRelativeUrl = browserRuntimeFeaturesReport.outDirectoryRelativeUrl,
-          compileId = browserRuntimeFeaturesReport.compileId;
-      window.location.href = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(exploringHtmlFileRelativeUrl);
+    }), function (browserRuntimeFeaturesReport) {
+      var href = "".concat(getDirectoryUrl(browserRuntimeFeaturesReport)).concat(redirectTarget);
+      window.location.href = href;
     });
   });
 
@@ -1506,6 +1366,18 @@
       }
     };
   }
+
+  var getDirectoryUrl = function getDirectoryUrl(_ref) {
+    var canAvoidCompilation = _ref.canAvoidCompilation,
+        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        compileId = _ref.compileId;
+
+    if (canAvoidCompilation) {
+      return "/";
+    }
+
+    return "/".concat(outDirectoryRelativeUrl).concat(compileId, "/");
+  };
 
   redirect();
 

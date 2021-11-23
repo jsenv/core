@@ -1,22 +1,28 @@
 import { scanBrowserRuntimeFeatures } from "../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
-import { fetchExploringJson } from "./fetchExploringJson.js"
 
 const redirect = async () => {
-  const [browserRuntimeFeaturesReport, { exploringHtmlFileRelativeUrl }] =
-    await Promise.all([
-      scanBrowserRuntimeFeatures({
-        failFastOnFeatureDetection: true,
-      }),
-      fetchExploringJson(),
-    ])
+  const redirectTarget = new URLSearchParams(window.location.search).get(
+    "redirect",
+  )
+  const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures({
+    failFastOnFeatureDetection: true,
+  })
 
-  if (browserRuntimeFeaturesReport.canAvoidCompilation) {
-    window.location.href = `/${exploringHtmlFileRelativeUrl}`
-    return
+  const href = `${getDirectoryUrl(
+    browserRuntimeFeaturesReport,
+  )}${redirectTarget}`
+  window.location.href = href
+}
+
+const getDirectoryUrl = ({
+  canAvoidCompilation,
+  outDirectoryRelativeUrl,
+  compileId,
+}) => {
+  if (canAvoidCompilation) {
+    return `/`
   }
-
-  const { outDirectoryRelativeUrl, compileId } = browserRuntimeFeaturesReport
-  window.location.href = `/${outDirectoryRelativeUrl}${compileId}/${exploringHtmlFileRelativeUrl}`
+  return `/${outDirectoryRelativeUrl}${compileId}/`
 }
 
 redirect()

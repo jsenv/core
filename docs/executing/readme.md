@@ -11,7 +11,7 @@
 
 Normally you don't need this because:
 
-- If your file is written for a browser, [exploring server](../exploring/readme.md) is better in every aspect.
+- If your file is written for a browser, you can use the [dev server](../dev_server/readme.md).
 - If your file is written for Node.js, you can execute the file directly with the `node` command.
 
 That being said, execute can still be useful, for instance to execute typescript files with Node.js without having to compile them beforehand.
@@ -79,12 +79,12 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [customCompilers](../shared-parameters.md#customCompilers)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
-- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
-- [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
-- [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
-- [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
-- [compileServerIp](../shared-parameters.md#compileServerIp)
-- [compileServerPort](../shared-parameters.md#compileServerPort)
+- [logLevel](../shared-parameters.md#logLevel)
+- [protocol](../shared-parameters.md#protocol)
+- [privateKey](../shared-parameters.md#privateKey)
+- [certificate](../shared-parameters.md#certificate)
+- [ip](../shared-parameters.md#ip)
+- [port](../shared-parameters.md#port)
 - [jsenvDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 
 </details>

@@ -5,9 +5,9 @@ import {
   resolveUrl,
 } from "@jsenv/filesystem"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
 import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -26,12 +26,12 @@ const importedFileUrl = resolveUrl(
 const importedFilePath = urlToFileSystemPath(importedFileUrl)
 const compileId = `best`
 
-const exploringServer = await startExploring({
-  ...START_EXPLORING_TEST_PARAMS,
+const devServer = await startDevServer({
+  ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const compiledHtmlFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
-const compiledImportedFileUrl = `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
+const compiledHtmlFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
+const compiledImportedFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 
 const { browser, pageLogs, pageErrors, executionResult } =
   await openBrowserPage(compiledHtmlFileUrl, {

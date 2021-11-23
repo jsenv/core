@@ -6,7 +6,7 @@ import { coverageIsEnabled } from "./coverageIsEnabled.js"
 export const START_COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
-  compileServerLogLevel: "warn",
+  logLevel: "warn",
   babelPluginMap: testBabelPluginMap,
   runtimeSupport: jsenvRuntimeSupportDuringDev,
 }
@@ -14,7 +14,7 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
 export const EXECUTE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
-  compileServerLogLevel: "warn",
+  logLevel: "warn",
   babelPluginMap: testBabelPluginMap,
 
   executionLogLevel: "warn",

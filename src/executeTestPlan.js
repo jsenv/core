@@ -62,11 +62,11 @@ export const executeTestPlan = async ({
   // skip full means file with 100% coverage won't appear in coverage reports (log and html)
   coverageSkipFull = false,
 
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
+  protocol,
+  privateKey,
+  certificate,
+  ip,
+  port,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
   babelPluginMap,
@@ -133,6 +133,7 @@ export const executeTestPlan = async ({
     handleSIGINT,
 
     logger,
+    logLevel,
     compileServerLogLevel,
     launchAndExecuteLogLevel,
 
@@ -157,11 +158,11 @@ export const executeTestPlan = async ({
     coverageTempDirectoryRelativeUrl,
 
     jsenvDirectoryClean,
-    compileServerProtocol,
-    compileServerPrivateKey,
-    compileServerCertificate,
-    compileServerIp,
-    compileServerPort,
+    protocol,
+    privateKey,
+    certificate,
+    ip,
+    port,
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
     babelPluginMap,

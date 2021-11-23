@@ -1,12 +1,12 @@
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
-startExploring({
+startDevServer({
   projectDirectoryUrl: new URL("./", import.meta.url),
   explorableConfig: {
     source: {
       "./*.html": true,
     },
   },
-  compileServerPort: 3456,
+  port: 3456,
   livereloading: true,
 })

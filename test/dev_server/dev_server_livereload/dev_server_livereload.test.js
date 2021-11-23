@@ -7,13 +7,13 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
   openBrowserPage,
   getHtmlExecutionResult,
 } from "@jsenv/core/test/openBrowserPage.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -28,14 +28,14 @@ const filePath = urlToFileSystemPath(
   resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
 )
 
-const exploringServer = await startExploring({
-  ...START_EXPLORING_TEST_PARAMS,
+const devServer = await startDevServer({
+  ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   livereloading: true,
 })
 const { browser, page, pageLogs, pageErrors, executionResult } =
   await openBrowserPage(
-    `${exploringServer.origin}/${exploringServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
+    `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
     {
       // headless: false,
     },
@@ -92,5 +92,5 @@ const { browser, page, pageLogs, pageErrors, executionResult } =
   }
   assert({ actual, expected })
 }
-exploringServer.stop()
+devServer.stop()
 browser.close()

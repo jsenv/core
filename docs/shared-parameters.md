@@ -4,12 +4,12 @@
 - [importDefaultExtension](#importDefaultExtension)
 - [customCompilers](#customCompilers)
 - [babelPluginMap](#babelPluginMap)
-- [compileServerLogLevel](#compileServerLogLevel)
-- [compileServerProtocol](#compileServerProtocol)
-- [compileServerPrivateKey](#compileServerPrivateKey)
-- [compileServerCertificate](#compileServerCertificate)
-- [compileServerIp](#compileServerIp)
-- [compileServerPort](#compileServerPort)
+- [logLevel](#logLevel)
+- [protocol](#protocol)
+- [privateKey](#privateKey)
+- [certificate](#certificate)
+- [ip](#ip)
+- [port](#port)
 - [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
 
 # projectDirectoryUrl
@@ -72,43 +72,43 @@ const customCompilers = {
 `babelPluginMap` parameter is an object that can be used to override the babel plugins declared in your [babel config file](https://babeljs.io/docs/en/config-files).
 
 ```js
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { createRequire } from "node:module"
 
 const require = createRequire(import.meta.url)
 
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
-await startExploring({
+await startDevServer({
   babelPluginMap: {
     "transform-react-jsx": [transformReactJSX, { pragma: "dom" }],
   },
 })
 ```
 
-# compileServerLogLevel
+# logLevel
 
-`compileServerLogLevel` parameter is a string controlling verbosity of the compile server. This parameter is optional with a default value of `"info"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#loglevel.
+`logLevel` parameter is a string controlling verbosity of the server. This parameter is optional with a default value of `"info"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#loglevel.
 
-# compileServerProtocol
+# protocol
 
-`compileServerProtocol` parameter is a string controlling the protocol used by jsenv compile server. This parameters is optional with a default value of `"https"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#protocol.
+`protocol` parameter is a string controlling the protocol used by jsenv compile server. This parameters is optional with a default value of `"https"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#protocol.
 
-# compileServerPrivateKey
+# privateKey
 
-`compileServerPrivateKey` parameter is a string containing a privateKey that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#privatekey.
+`privateKey` parameter is a string containing a privateKey that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#privatekey.
 
-# compileServerCertificate
+# certificate
 
-`compileServerCertificate` parameter is a string containing a certificate that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#certificate.
+`certificate` parameter is a string containing a certificate that will be used for https encryption. This parameter is optional. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#certificate.
 
-# compileServerIp
+# ip
 
-`compileServerIp` parameter is a string controlling the ip jsenv compile server will listen to. This parameter is optional with a default value of `"0.0.0.0"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#ip.
+`ip` parameter is a string controlling the ip jsenv compile server will listen to. This parameter is optional with a default value of `"0.0.0.0"`. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#ip.
 
-# compileServerPort
+# port
 
-`compileServerPort` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#port.
+`port` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/tree/362b3aded656525569c9a3dbb50d8c43647d7a1b#port.
 
 # jsenvDirectoryRelativeUrl
 

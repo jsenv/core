@@ -36,7 +36,7 @@ const generate = () =>
   buildProject({
     ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
     // logLevel: "debug",
-    // compileServerLogLevel: "debug",
+    // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap: {
