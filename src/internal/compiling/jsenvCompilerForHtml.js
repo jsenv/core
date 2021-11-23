@@ -2,6 +2,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 import {
   jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
@@ -58,7 +59,7 @@ export const compileHtml = async ({
     projectDirectoryUrl,
   )
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvToolbarInjectorFileInfo.buildUrl,
+    eventSourceClientFileInfo.buildUrl,
     projectDirectoryUrl,
   )
   const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(

@@ -48,6 +48,7 @@ export const createCompiledFileService = ({
   groupMap,
   customCompilers,
 
+  jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
@@ -197,6 +198,7 @@ export const createCompiledFileService = ({
 
           sourcemapMethod,
           sourcemapExcludeSources,
+          jsenvEventSourceClientInjection,
           jsenvToolbarInjection,
           onHtmlImportmapInfo: ({ htmlUrl, importmapInfo }) => {
             importmapInfos[htmlUrl] = importmapInfo

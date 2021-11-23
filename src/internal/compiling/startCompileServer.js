@@ -313,6 +313,7 @@ export const startCompileServer = async ({
       customCompilers,
       moduleOutFormat,
       importMetaFormat,
+      jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 
       projectFileRequestedCallback,
