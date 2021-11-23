@@ -14,7 +14,7 @@ export const executePlan = async (
     handleSIGINT,
 
     logger,
-    compileServerLogLevel,
+    logLevel,
     launchAndExecuteLogLevel,
 
     projectDirectoryUrl,
@@ -38,11 +38,11 @@ export const executePlan = async (
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    compileServerProtocol,
-    compileServerPrivateKey,
-    compileServerCertificate,
-    compileServerIp,
-    compileServerPort,
+    protocol,
+    privateKey,
+    certificate,
+    ip,
+    port,
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
@@ -99,7 +99,7 @@ export const executePlan = async (
   try {
     const compileServer = await startCompileServer({
       signal: multipleExecutionsOperation.signal,
-      compileServerLogLevel,
+      logLevel,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
@@ -109,11 +109,11 @@ export const executePlan = async (
       importResolutionMethod,
       importDefaultExtension,
 
-      compileServerProtocol,
-      compileServerPrivateKey,
-      compileServerCertificate,
-      compileServerIp,
-      compileServerPort,
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      port,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
       keepProcessAlive: true, // to be sure it stays alive

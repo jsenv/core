@@ -45,7 +45,7 @@ await executeTestPlan({
     },
   },
   logLevel: "warn",
-  compileServerProtocol: "http",
+  protocol: "http",
   coverage: true,
   coverageConfig: {
     [`${currentDirectoryRelativeUrl}animals.js`]: true,

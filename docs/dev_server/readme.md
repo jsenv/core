@@ -85,12 +85,12 @@ Server parameters are configured to let you use start a server right away. You m
 
 The following parameter controls the server:
 
-- [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
-- [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
-- [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
-- [compileServerIp](../shared-parameters.md#compileServerIp)
-- [compileServerPort](../shared-parameters.md#compileServerPort)
-- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
+- [protocol](../shared-parameters.md#protocol)
+- [privateKey](../shared-parameters.md#privateKey)
+- [certificate](../shared-parameters.md#certificate)
+- [ip](../shared-parameters.md#ip)
+- [port](../shared-parameters.md#port)
+- [logLevel](../shared-parameters.md#logLevel)
 
 ## Shared parameters
 

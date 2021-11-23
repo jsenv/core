@@ -40,7 +40,7 @@ await startServer({
   logLevel: "info",
   protocol: "https",
   http2: true,
-  // compileServerHttp2: false,
+  // http2: false,
   serverCertificate,
   serverCertificatePrivateKey,
   port: 6789,

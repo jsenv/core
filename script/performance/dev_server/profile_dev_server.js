@@ -37,12 +37,12 @@ await ensureEmptyDirectory(jsenvDirectoryUrl)
 await startDevServer({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  compileServerLogLevel: "info",
-  compileServerProtocol: "https",
-  // compileServerHttp2: false,
-  compileServerCertificate: serverCertificate,
-  compileServerPrivateKey: serverCertificatePrivateKey,
-  compileServerPort: 6789,
+  logLevel: "info",
+  protocol: "https",
+  // http2: false,
+  certificate: serverCertificate,
+  privateKey: serverCertificatePrivateKey,
+  port: 6789,
   livereloading: true,
   jsenvToolbar: false,
 })

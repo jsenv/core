@@ -50,7 +50,15 @@ import { createTransformHtmlSourceFileService } from "./html_source_file_service
 export const startCompileServer = async ({
   signal = new AbortController().signal,
   handleSIGINT,
-  compileServerLogLevel,
+  logLevel,
+  protocol = "http",
+  http2 = protocol === "https",
+  privateKey,
+  certificate,
+  ip = "0.0.0.0",
+  port = 0,
+  keepProcessAlive = false,
+  onStop = () => {},
 
   projectDirectoryUrl,
 
@@ -82,16 +90,6 @@ export const startCompileServer = async ({
   babelConfigFileUrl,
   customCompilers = {},
 
-  // options related to the server itself
-  compileServerProtocol = "http",
-  compileServerHttp2 = compileServerProtocol === "https",
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp = "0.0.0.0",
-  compileServerPort = 0,
-  keepProcessAlive = false,
-  onStop = () => {},
-
   // remaining options
   runtimeSupport,
 
@@ -103,7 +101,7 @@ export const startCompileServer = async ({
   },
   livereloadLogLevel = "info",
   customServices = {},
-  serverPlugins,
+  plugins,
   livereloadSSE = false,
   transformHtmlSourceFiles = true,
   jsenvToolbarInjection = false,
@@ -134,7 +132,7 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
   )
 
-  const logger = createLogger({ logLevel: compileServerLogLevel })
+  const logger = createLogger({ logLevel })
 
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
@@ -350,16 +348,16 @@ export const startCompileServer = async ({
     sendServerInternalErrorDetails: true,
     keepProcessAlive,
 
-    logLevel: compileServerLogLevel,
+    logLevel,
 
-    protocol: compileServerProtocol,
-    http2: compileServerHttp2,
-    serverCertificate: compileServerCertificate,
-    serverCertificatePrivateKey: compileServerPrivateKey,
-    ip: compileServerIp,
-    port: compileServerPort,
+    protocol,
+    http2,
+    serverCertificate: certificate,
+    serverCertificatePrivateKey: privateKey,
+    ip,
+    port,
     plugins: {
-      ...serverPlugins,
+      ...plugins,
       ...pluginCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,

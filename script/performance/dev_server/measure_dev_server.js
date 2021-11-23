@@ -25,8 +25,8 @@ const { startDevServer } = await import("@jsenv/core")
 const devServer = await startDevServer({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  compileServerLogLevel: "warn",
-  compileServerProtocol: "http",
+  logLevel: "warn",
+  protocol: "http",
   keepProcessAlive: false,
 })
 const { duration } = serverStartMeasures.stop()

@@ -22,7 +22,7 @@ node --inspect test-manual/exploring/start-exploring.js
 */
 
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
-import { startExploring } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { compileScss } from "../src/compileScss.js"
 
@@ -33,7 +33,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
-startExploring({
+startDevServer({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   explorableConfig: {
     source: {
@@ -44,8 +44,8 @@ startExploring({
     "**/*.scss": compileScss,
   },
   jsenvDirectoryRelativeUrl,
-  compileServerProtocol: "http",
-  compileServerPort: 3456,
+  protocol: "http",
+  port: 3456,
   keepProcessAlive: true,
   jsenvDirectoryClean: true,
   stopOnPackageVersionChange: false,

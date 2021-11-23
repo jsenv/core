@@ -42,7 +42,7 @@ const customCompilers = {
 }
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  // compileServerLogLevel: "debug",
+  // logLevel: "debug",
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   // filesystemCache: true,

@@ -18,7 +18,7 @@ export const buildProject = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  compileServerLogLevel = "warn",
+  logLevel = "warn",
   logger,
 
   projectDirectoryUrl,
@@ -81,11 +81,11 @@ export const buildProject = async ({
   serviceWorkerFinalizer,
 
   env = {},
-  compileServerProtocol,
-  compileServerPrivateKey,
-  compileServerCertificate,
-  compileServerIp,
-  compileServerPort,
+  protocol,
+  privateKey,
+  certificate,
+  ip,
+  port,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
 
@@ -150,7 +150,7 @@ export const buildProject = async ({
 
   const compileServer = await startCompileServer({
     signal: buildOperation.signal,
-    compileServerLogLevel,
+    logLevel,
 
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -164,18 +164,18 @@ export const buildProject = async ({
     moduleOutFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
     importMetaFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
 
-    compileServerProtocol,
-    compileServerPrivateKey,
-    compileServerCertificate,
-    compileServerIp,
-    compileServerPort,
+    protocol,
+    privateKey,
+    certificate,
+    ip,
+    port,
     env,
     babelPluginMap,
     transformTopLevelAwait,
     customCompilers,
     runtimeSupport,
 
-    compileServerCanReadFromFileSystem: filesystemCache,
+    compileServerCanReadFromFilesystem: filesystemCache,
     compileServerCanWriteOnFilesystem: filesystemCache,
     // keep source html untouched
     // here we don't need to inline importmap

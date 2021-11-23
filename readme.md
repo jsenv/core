@@ -149,7 +149,7 @@ startDevServer({
       "**/*.html": true,
     },
   },
-  compileServerPort: 3456,
+  port: 3456,
 })
 ```
 

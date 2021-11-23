@@ -8,7 +8,7 @@ export const GENERATE_COMMONJS_BUILD_TEST_PARAMS = {
   buildDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   logLevel: "warn",
-  compileServerLogLevel: "warn",
+  logLevel: "warn",
 }
 
 export const REQUIRE_COMMONJS_BUILD_TEST_PARAMS = {
