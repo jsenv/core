@@ -5,7 +5,6 @@ import {
   bufferToEtag,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
-import { normalizeImportMap, resolveImport } from "@jsenv/importmap"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
@@ -109,15 +108,10 @@ export const compileFile = async ({
     })
 
     if (request.http2) {
-      // js resolution is special, we cannot just do resolveUrl of the import specifier
-      // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
-      // And we would push 404 to the browser
-      // Until we implement import map resolution pushing ressource for js imports is disabled
       const dependencyResolver = getDependencyResolver({
         compileResult,
         importmapInfos,
         request,
-        projectDirectoryUrl,
       })
       if (dependencyResolver) {
         compileResult.dependencies.forEach((dependency) => {
@@ -236,61 +230,30 @@ export const compileFile = async ({
   }
 }
 
-const getDependencyResolver = ({
-  compileResult,
-  importmapInfos,
-  request,
-  projectDirectoryUrl,
-}) => {
+const getDependencyResolver = ({ compileResult, importmapInfos, request }) => {
   const importmapKeys = Object.keys(importmapInfos)
   const requestUrl = resolveUrl(request.ressource, request.origin)
 
   if (
-    compileResult.contentType !== "application/javascript" ||
-    importmapKeys.length === 0
+    compileResult.contentType === "application/javascript" &&
+    // we cannot trust importmapKeys because when html is restored from cache
+    // it would be empty
+    importmapKeys.length > 0
   ) {
-    return {
-      type: "url_resolution",
-      resolve: (dependency) => {
-        const dependencyUrl = resolveUrl(dependency, requestUrl)
-        return dependencyUrl
-      },
-    }
-  }
-
-  const firstImportmapInfo = importmapInfos[importmapKeys[0]]
-  if (!firstImportmapInfo.text) {
+    // js resolution is special, we cannot just do resolveUrl of the import specifier
+    // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
+    // And we would push 404 to the browser
+    // BUT I tried to push everything to the browser and it was a big fail:
+    // server is trying to push streams but browser rejects most push streams
+    // either because main file is already fetched or an other file request the same ressource
     return null
   }
 
-  if (
-    // we are aware only of 1 importmap
-    importmapKeys.length === 1 ||
-    // all importmaps are the same
-    importmapKeys.slice(1).every(({ url }) => url === firstImportmapInfo.url)
-  ) {
-    const importMapBaseUrl = resolveUrl(
-      urlToRelativeUrl(firstImportmapInfo.url, projectDirectoryUrl),
-      `${request.origin}/`,
-    )
-    const importMap = normalizeImportMap(
-      JSON.parse(firstImportmapInfo.text),
-      importMapBaseUrl,
-    )
-    return {
-      type: "importmap_resolution",
-      resolve: (dependency) => {
-        const dependencyUrl = resolveImport({
-          specifier: dependency,
-          importer: requestUrl,
-          importMap,
-        })
-        return dependencyUrl
-      },
-    }
+  return {
+    type: "url_resolution",
+    resolve: (dependency) => {
+      const dependencyUrl = resolveUrl(dependency, requestUrl)
+      return dependencyUrl
+    },
   }
-
-  // there is more than 2 importmaps, we cannot know which one to pick
-  // (not supposed ot happen because during dev you usually use a single importmap)
-  return null
 }
