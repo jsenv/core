@@ -90,7 +90,7 @@ export const compileHtml = async ({
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
-        : {}),
+        : []),
       ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
         ? [
             {
