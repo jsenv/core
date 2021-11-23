@@ -48,24 +48,24 @@ export const sourcemapMappingFileInfo = {
   url: fileSystemPathToUrl(require.resolve("source-map/lib/mappings.wasm")),
 }
 
-// Exploring redirection
+// redirection
 // (auto redirection to a compile group depending on browser capabilities)
-export const jsenvExploringRedirectorHtmlFileInfo = {
+export const jsenvRedirectorHtmlFileInfo = {
   url: resolveUrl(
-    "./src/internal/exploring/exploring.redirector.html",
+    "./src/internal/redirector/redirector.html",
     jsenvCoreDirectoryUrl,
   ),
 }
 
-export const jsenvExploringRedirectorJsFileInfo = {
-  jsenvRelativeUrl: "./src/internal/exploring/exploring.redirector.js",
-  jsenvBuildRelativeUrl: "./jsenv_exploring_redirector.js",
+export const jsenvRedirectorJsFileInfo = {
+  jsenvRelativeUrl: "./src/internal/redirector/redirector.js",
+  jsenvBuildRelativeUrl: "./jsenv_redirector.js",
   url: resolveUrl(
-    "./src/internal/exploring/exploring.redirector.js",
+    "./src/internal/redirector/redirector.js",
     jsenvCoreDirectoryUrl,
   ),
   jsenvBuildUrl: resolveUrl(
-    "./dist/jsenv_exploring_redirector.js",
+    "./dist/jsenv_redirector.js",
     jsenvCoreDirectoryUrl,
   ),
 }
