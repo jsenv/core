@@ -17,19 +17,19 @@ const eventsourceConnection = createEventSourceConnection(
   {
     "file-added": ({ data }) => {
       addFileChange({
-        file: data.file,
+        file: data,
         eventType: "added",
       })
     },
     "file-modified": ({ data }) => {
       addFileChange({
-        file: data.file,
+        file: data,
         eventType: "modified",
       })
     },
     "file-removed": ({ data }) => {
       addFileChange({
-        file: data.file,
+        file: data,
         eventType: "removed",
       })
     },
@@ -46,6 +46,8 @@ const {
   setConnectionStatusChangeCallback,
   getConnectionStatus,
 } = eventsourceConnection
+
+connect()
 
 window.__jsenv_event_source_client__ = {
   connect,

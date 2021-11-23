@@ -228,6 +228,7 @@
   var reloadIfNeeded = function reloadIfNeeded() {
     var customReloads = [];
     var cssReloads = [];
+    var fullReloads = [];
     Object.keys(fileChanges).forEach(function (key) {
       var livereloadCallback = window.__jsenv__.livereloadingCallbacks[key];
 
@@ -242,8 +243,15 @@
         cssReloads.push(function () {
           delete fileChanges[key];
         });
-      } else ;
+      } else {
+        fullReloads.push(key);
+      }
     });
+
+    if (fullReloads.length > 0) {
+      reloadPage();
+      return;
+    }
 
     customReloads.forEach(function (customReload) {
       customReload();
@@ -279,21 +287,21 @@
     "file-added": function fileAdded(_ref) {
       var data = _ref.data;
       addFileChange({
-        file: data.file,
+        file: data,
         eventType: "added"
       });
     },
     "file-modified": function fileModified(_ref2) {
       var data = _ref2.data;
       addFileChange({
-        file: data.file,
+        file: data,
         eventType: "modified"
       });
     },
     "file-removed": function fileRemoved(_ref3) {
       var data = _ref3.data;
       addFileChange({
-        file: data.file,
+        file: data,
         eventType: "removed"
       });
     }
@@ -305,6 +313,7 @@
       disconnect = eventsourceConnection.disconnect,
       setConnectionStatusChangeCallback = eventsourceConnection.setConnectionStatusChangeCallback,
       getConnectionStatus = eventsourceConnection.getConnectionStatus;
+  connect();
   window.__jsenv_event_source_client__ = {
     connect: connect,
     disconnect: disconnect,

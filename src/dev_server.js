@@ -62,6 +62,7 @@ export const startDevServer = async ({
   sourcemapMethod,
   customCompilers,
   livereloadWatchConfig,
+  livereloadLogLevel,
   jsenvDirectoryClean,
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -115,6 +116,7 @@ export const startDevServer = async ({
 
     projectDirectoryUrl,
     livereloadSSE: livereloading,
+    jsenvEventSourceClientInjection: true,
     jsenvToolbarInjection: jsenvToolbar,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
@@ -127,6 +129,7 @@ export const startDevServer = async ({
     babelPluginMap,
     runtimeSupport: runtimeSupportDuringDev,
     livereloadWatchConfig,
+    livereloadLogLevel,
     jsenvDirectoryClean,
   })
 
@@ -142,37 +145,33 @@ const createRedirectorService = ({
     projectDirectoryUrl,
   )
   const jsenvRedirectorJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    redirectorJsFileInfo.jsenvBuildUrl,
+    redirectorJsFileInfo.buildUrl,
     projectDirectoryUrl,
   )
-
   return setupRoutes({
     "/": (request) => {
       const redirectTarget = mainFileRelativeUrl
-      const jsenvRedirectorHtmlServerUrl = `${request.origin}/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`
       return {
         status: 307,
         headers: {
-          location: jsenvRedirectorHtmlServerUrl,
+          location: `${request.origin}/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`,
         },
       }
     },
     "/.jsenv/redirect/:rest*": (request) => {
       const redirectTarget = request.ressource.slice("/.jsenv/redirect/".length)
-      const jsenvRedirectorHtmlServerUrl = `${request.origin}/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`
       return {
         status: 307,
         headers: {
-          location: jsenvRedirectorHtmlServerUrl,
+          location: `${request.origin}/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`,
         },
       }
     },
     "/.jsenv/redirector.js": (request) => {
-      const jsenvRedirectorBuildServerUrl = `${request.origin}/${jsenvRedirectorJsBuildRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: jsenvRedirectorBuildServerUrl,
+          location: `${request.origin}/${jsenvRedirectorJsBuildRelativeUrlForProject}`,
         },
       }
     },

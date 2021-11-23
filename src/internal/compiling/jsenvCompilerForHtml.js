@@ -2,7 +2,6 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { redirectorHtmlFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
 import {
   jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
@@ -50,7 +49,7 @@ export const compileHtml = async ({
   sourcemapMethod,
 
   jsenvScriptInjection = true,
-  jsenvEventSourceClientInjection = true,
+  jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
   onHtmlImportmapInfo,
 }) => {
@@ -76,9 +75,7 @@ export const compileHtml = async ({
 
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(url !== jsenvToolbarHtmlFileInfo.url &&
-      url !== redirectorHtmlFileInfo.sourceUrl &&
-      jsenvScriptInjection
+      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvScriptInjection
         ? [
             {
               src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
@@ -86,7 +83,6 @@ export const compileHtml = async ({
           ]
         : []),
       ...(url !== jsenvToolbarHtmlFileInfo.url &&
-      url !== redirectorHtmlFileInfo.sourceUrl &&
       jsenvEventSourceClientInjection
         ? [
             {
@@ -94,9 +90,7 @@ export const compileHtml = async ({
             },
           ]
         : {}),
-      ...(url !== jsenvToolbarHtmlFileInfo.url &&
-      url !== redirectorHtmlFileInfo.sourceUrl &&
-      jsenvToolbarInjection
+      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
         ? [
             {
               src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,

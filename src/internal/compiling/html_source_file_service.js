@@ -22,6 +22,8 @@ import { moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { redirectorHtmlFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
+import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 import {
   jsenvToolbarHtmlFileInfo,
   jsenvBrowserSystemFileInfo,
@@ -45,8 +47,10 @@ import {
 export const createTransformHtmlSourceFileService = ({
   logger,
   projectDirectoryUrl,
+  projectFileRequestedCallback,
   inlineImportMapIntoHTML,
   jsenvScriptInjection,
+  jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
 }) => {
   /**
@@ -93,6 +97,7 @@ export const createTransformHtmlSourceFileService = ({
       }
       throw e
     }
+    projectFileRequestedCallback(relativeUrl, request)
     htmlInlineScriptMap.forEach((inlineScript, inlineScriptUrl) => {
       if (inlineScript.htmlFileUrl === fileUrl) {
         htmlInlineScriptMap.delete(inlineScriptUrl)
@@ -107,6 +112,7 @@ export const createTransformHtmlSourceFileService = ({
       pushResponse,
       inlineImportMapIntoHTML,
       jsenvScriptInjection,
+      jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
       onInlineModuleScript: ({ scriptContent, scriptIdentifier }) => {
         const inlineScriptUrl = resolveUrl(scriptIdentifier, fileUrl)
@@ -138,8 +144,11 @@ const transformHTMLSourceFile = async ({
   inlineImportMapIntoHTML,
   jsenvScriptInjection,
   jsenvToolbarInjection,
+  jsenvEventSourceClientInjection,
   onInlineModuleScript = () => {},
 }) => {
+  fileUrl = urlWithoutSearch(fileUrl)
+
   const htmlAst = parseHtmlString(fileContent)
   if (inlineImportMapIntoHTML) {
     await inlineImportmapScripts({
@@ -154,23 +163,42 @@ const transformHTMLSourceFile = async ({
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
+  const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
+    eventSourceClientFileInfo.buildUrl,
+    projectDirectoryUrl,
+  )
   const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
     jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url && jsenvScriptInjection
+      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url &&
+      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
+      jsenvScriptInjection
         ? [
             {
               src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
+      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url &&
+      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
+      jsenvEventSourceClientInjection
+        ? [
+            {
+              src: `/${eventSourceClientBuildRelativeUrlForProject}`,
+            },
+          ]
+        : []),
+      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url &&
+      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
+      jsenvToolbarInjection
         ? [
             {
               src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+              defer: "",
+              async: "",
             },
           ]
         : []),
@@ -400,4 +428,10 @@ const getJsenvForceInlineAttribute = (htmlNode) => {
     "data-jsenv-force-inline",
   )
   return jsenvForceInlineAttribute
+}
+
+const urlWithoutSearch = (url) => {
+  const urlObject = new URL(url)
+  urlObject.search = ""
+  return urlObject.href
 }

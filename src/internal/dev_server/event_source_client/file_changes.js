@@ -47,7 +47,7 @@ export const reloadIfNeeded = () => {
     }
   })
 
-  if (fullReloads.lenght) {
+  if (fullReloads.length > 0) {
     reloadPage()
     return
   }
