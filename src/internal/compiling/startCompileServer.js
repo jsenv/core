@@ -652,7 +652,8 @@ const setupServerSentEventsForLivereload = ({
     }
   }
   const isDependencyOf = (file, rootFile) => {
-    return trackerMap.get(rootFile).set.has(file)
+    const depInfo = trackerMap.get(rootFile)
+    return depInfo && depInfo.set.has(file)
   }
   const markAsDependencyOf = (file, rootFile) => {
     trackerMap.get(rootFile).set.add(file)
