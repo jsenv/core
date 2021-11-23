@@ -23,7 +23,7 @@ export const executeTestPlan = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  logLevel = "warn",
+  compileServerLogLevel = "warn",
   launchAndExecuteLogLevel = "warn",
 
   projectDirectoryUrl,
@@ -134,6 +134,7 @@ export const executeTestPlan = async ({
 
     logger,
     logLevel,
+    compileServerLogLevel,
     launchAndExecuteLogLevel,
 
     projectDirectoryUrl,

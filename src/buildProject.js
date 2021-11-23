@@ -18,7 +18,7 @@ export const buildProject = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  logLevel = "warn",
+  compileServerLogLevel = "warn",
   logger,
 
   projectDirectoryUrl,
@@ -150,7 +150,7 @@ export const buildProject = async ({
 
   const compileServer = await startCompileServer({
     signal: buildOperation.signal,
-    logLevel,
+    logLevel: compileServerLogLevel,
 
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,

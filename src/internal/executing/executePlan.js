@@ -14,7 +14,7 @@ export const executePlan = async (
     handleSIGINT,
 
     logger,
-    logLevel,
+    compileServerLogLevel,
     launchAndExecuteLogLevel,
 
     projectDirectoryUrl,
@@ -99,7 +99,7 @@ export const executePlan = async (
   try {
     const compileServer = await startCompileServer({
       signal: multipleExecutionsOperation.signal,
-      logLevel,
+      logLevel: compileServerLogLevel,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,

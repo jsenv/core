@@ -13,7 +13,7 @@ export const execute = async ({
   handleSIGINT = true,
 
   logLevel = "warn",
-  logLevel = logLevel,
+  compileServerLogLevel = logLevel,
   launchAndExecuteLogLevel = logLevel,
 
   projectDirectoryUrl,
@@ -94,7 +94,7 @@ export const execute = async ({
       stop,
     } = await startCompileServer({
       signal: executeOperation.signal,
-      logLevel,
+      logLevel: compileServerLogLevel,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
