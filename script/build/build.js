@@ -2,10 +2,10 @@
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { redirectorJsFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
+import { exploringIndexJsFileInfo } from "@jsenv/core/src/internal/dev_server/exploring/exploring_file_info.js"
 import {
   jsenvBrowserSystemFileInfo,
   jsenvCompileProxyFileInfo,
-  jsenvExploringIndexJsFileInfo,
   jsenvToolbarInjectorFileInfo,
   jsenvToolbarJsFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
@@ -53,8 +53,8 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringIndexJsFileInfo.jsenvRelativeUrl]:
-        jsenvExploringIndexJsFileInfo.jsenvBuildRelativeUrl,
+      [exploringIndexJsFileInfo.relativeUrl]:
+        exploringIndexJsFileInfo.buildRelativeUrl,
     },
   },
   {

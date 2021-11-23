@@ -1,4 +1,4 @@
-import { fetchExploringJson } from "@jsenv/core/src/internal/exploring/fetchExploringJson.js"
+import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
 
 const injectToolbar = async () => {

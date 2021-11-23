@@ -48,21 +48,6 @@ export const sourcemapMappingFileInfo = {
   url: fileSystemPathToUrl(require.resolve("source-map/lib/mappings.wasm")),
 }
 
-// Exploring index and toolbar
-export const jsenvExploringIndexJsFileInfo = {
-  jsenvRelativeUrl: "./src/internal/exploring/exploring.js",
-  jsenvBuildRelativeUrl: "./jsenv_exploring_index.js",
-  jsenvBuildUrl: resolveUrl(
-    "./dist/jsenv_exploring_index.js",
-    jsenvCoreDirectoryUrl,
-  ),
-}
-export const jsenvExploringIndexHtmlFileInfo = {
-  url: resolveUrl(
-    "./src/internal/exploring/exploring.html",
-    jsenvCoreDirectoryUrl,
-  ),
-}
 export const jsenvToolbarHtmlFileInfo = {
   url: resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl),
 }

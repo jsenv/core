@@ -1,7 +1,7 @@
 import { urlIsInsideOf } from "@jsenv/filesystem/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 
-import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
+import { fetchExploringJson } from "../dev_server/exploring/fetchExploringJson.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import "./focus/toolbar.focus.js"
 import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"

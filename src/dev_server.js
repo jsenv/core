@@ -20,10 +20,12 @@ import {
   redirectorJsFileInfo,
 } from "./internal/dev_server/redirector/redirector_file_info.js"
 import {
+  exploringIndexHtmlFileInfo,
+  exploringIndexJsFileInfo,
+} from "@jsenv/core/src/internal/dev_server/exploring/exploring_file_info.js"
+import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-  jsenvExploringIndexHtmlFileInfo,
-  jsenvExploringIndexJsFileInfo,
   jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
@@ -44,7 +46,7 @@ export const startDevServer = async ({
   projectDirectoryUrl,
   explorableConfig = jsenvExplorableConfig,
   mainFileRelativeUrl = urlToRelativeUrl(
-    jsenvExploringIndexHtmlFileInfo.url,
+    exploringIndexHtmlFileInfo.sourceUrl,
     projectDirectoryUrl,
   ),
   jsenvDirectoryRelativeUrl,
@@ -209,7 +211,7 @@ const createEventSourceClientService = ({ projectDirectoryUrl }) => {
 
 const createExploringIndexService = ({ projectDirectoryUrl }) => {
   const jsenvExploringJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvExploringIndexJsFileInfo.jsenvBuildUrl,
+    exploringIndexJsFileInfo.buildUrl,
     projectDirectoryUrl,
   )
   return setupRoutes({
@@ -282,7 +284,7 @@ const createExploringJsonService = ({
           projectDirectoryUrl,
         ),
         exploringHtmlFileRelativeUrl: urlToRelativeUrl(
-          jsenvExploringIndexHtmlFileInfo.url,
+          exploringIndexHtmlFileInfo.sourceUrl,
           projectDirectoryUrl,
         ),
         sourcemapMainFileRelativeUrl: urlToRelativeUrl(
