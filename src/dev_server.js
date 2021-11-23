@@ -16,15 +16,18 @@ import {
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 import {
+  redirectorHtmlFileInfo,
+  redirectorJsFileInfo,
+} from "./internal/dev_server/redirector/redirector_file_info.js"
+import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-  jsenvRedirectorHtmlFileInfo,
-  jsenvRedirectorJsFileInfo,
   jsenvExploringIndexHtmlFileInfo,
   jsenvExploringIndexJsFileInfo,
   jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
+import { eventSourceClientFileInfo } from "./internal/dev_server/event_source_client/event_source_client_file_info.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -88,6 +91,9 @@ export const startDevServer = async ({
         projectDirectoryUrl,
         mainFileRelativeUrl,
       }),
+      "jsenv:event_source_client": createEventSourceClientService({
+        projectDirectoryUrl,
+      }),
       "jsenv:exploring_index": createExploringIndexService({
         projectDirectoryUrl,
       }),
@@ -132,11 +138,11 @@ const createRedirectorService = ({
   mainFileRelativeUrl,
 }) => {
   const jsenvRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
-    jsenvRedirectorHtmlFileInfo.url,
+    redirectorHtmlFileInfo.sourceUrl,
     projectDirectoryUrl,
   )
   const jsenvRedirectorJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvRedirectorJsFileInfo.jsenvBuildUrl,
+    redirectorJsFileInfo.jsenvBuildUrl,
     projectDirectoryUrl,
   )
 
@@ -173,6 +179,35 @@ const createRedirectorService = ({
   })
 }
 
+const createEventSourceClientService = ({ projectDirectoryUrl }) => {
+  const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
+    eventSourceClientFileInfo.buildUrl,
+    projectDirectoryUrl,
+  )
+  return setupRoutes({
+    "/.jsenv/event_source_client.js": (request) => {
+      return {
+        status: 307,
+        headers: {
+          location: `${request.origin}/${eventSourceClientBuildRelativeUrlForProject}`,
+        },
+      }
+    },
+    // unfortunately browser resolves sourcemap to url before redirection (not after).
+    // It means browser tries to load source map from "/.jsenv/jsenv-toolbar.js.map"
+    // we could also inline sourcemap but it's not yet possible
+    // inside buildProject
+    "/.jsenv/event_source_client.js.map": (request) => {
+      return {
+        status: 307,
+        headers: {
+          location: `${request.origin}/${eventSourceClientBuildRelativeUrlForProject}.map`,
+        },
+      }
+    },
+  })
+}
+
 const createExploringIndexService = ({ projectDirectoryUrl }) => {
   const jsenvExploringJsBuildRelativeUrlForProject = urlToRelativeUrl(
     jsenvExploringIndexJsFileInfo.jsenvBuildUrl,
@@ -180,11 +215,10 @@ const createExploringIndexService = ({ projectDirectoryUrl }) => {
   )
   return setupRoutes({
     "/.jsenv/exploring.index.js": (request) => {
-      const jsenvExploringJsBuildServerUrl = `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
-          location: jsenvExploringJsBuildServerUrl,
+          location: `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}`,
         },
       }
     },

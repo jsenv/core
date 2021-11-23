@@ -287,8 +287,8 @@
         _ref$body = _ref.body,
         body = _ref$body === void 0 ? null : _ref$body;
 
-    var headersPromise = createPromiseAndHooks$1();
-    var bodyPromise = createPromiseAndHooks$1();
+    var headersPromise = createPromiseAndHooks();
+    var bodyPromise = createPromiseAndHooks();
     var xhr = new XMLHttpRequest();
 
     var failure = function failure(error) {
@@ -485,7 +485,7 @@
     return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
   };
 
-  var createPromiseAndHooks$1 = function createPromiseAndHooks() {
+  var createPromiseAndHooks = function createPromiseAndHooks() {
     var resolve;
     var reject;
     var promise = new Promise(function (res, rej) {
@@ -2470,518 +2470,40 @@
     return "\n- ".concat(parts.join("\n- "));
   };
 
-  var createPromiseAndHooks = function createPromiseAndHooks() {
-    var resolve;
-    var reject;
-    var promise = new Promise(function (res, rej) {
-      resolve = res;
-      reject = rej;
-    });
-    promise.resolve = resolve;
-    promise.reject = reject;
-    return promise;
-  };
-
-  var connectEventSource$1 = function connectEventSource(eventSourceUrl) {
-    var events = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
-        _ref$connecting = _ref.connecting,
-        connecting = _ref$connecting === void 0 ? function () {} : _ref$connecting,
-        _ref$connected = _ref.connected,
-        connected = _ref$connected === void 0 ? function () {} : _ref$connected,
-        _ref$cancelled = _ref.cancelled,
-        cancelled = _ref$cancelled === void 0 ? function () {} : _ref$cancelled,
-        _ref$failed = _ref.failed,
-        failed = _ref$failed === void 0 ? function () {} : _ref$failed,
-        _ref$retryMaxAttempt = _ref.retryMaxAttempt,
-        retryMaxAttempt = _ref$retryMaxAttempt === void 0 ? Infinity : _ref$retryMaxAttempt,
-        _ref$retryAllocatedMs = _ref.retryAllocatedMs,
-        retryAllocatedMs = _ref$retryAllocatedMs === void 0 ? Infinity : _ref$retryAllocatedMs,
-        lastEventId = _ref.lastEventId;
-
-    var _window = window,
-        EventSource = _window.EventSource;
-
-    if (typeof EventSource !== "function") {
-      return function () {};
-    }
-
-    var eventSourceOrigin = new URL(eventSourceUrl).origin; // will be either abort, disconnect or a third function calling cancelled
-    // depending on connectionStatus
-
-    var cancelCurrentConnection = function cancelCurrentConnection() {};
-
-    var reconnect = function reconnect() {
-      attemptConnection(lastEventId ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId) : eventSourceUrl);
-    };
-
-    var attemptConnection = function attemptConnection(url) {
-      var eventSource = new EventSource(url, {
-        withCredentials: true
-      });
-      var connectionStatus = "connecting";
-
-      var abort = function abort() {
-        if (connectionStatus !== "connecting") {
-          console.warn("abort ignored because connection is ".concat(connectionStatus));
-          return;
-        }
-
-        connectionStatus = "aborted";
-        eventSource.onerror = undefined;
-        eventSource.close();
-        cancelled({
-          connect: reconnect
-        });
-      };
-
-      cancelCurrentConnection = abort;
-      connecting({
-        cancel: abort
-      });
-
-      eventSource.onopen = function () {
-        connectionStatus = "connected";
-
-        var disconnect = function disconnect() {
-          if (connectionStatus !== "connected") {
-            console.warn("disconnect ignored because connection is ".concat(connectionStatus));
-            return;
-          }
-
-          connectionStatus = "disconnected";
-          eventSource.onerror = undefined;
-          eventSource.close();
-          cancelled({
-            connect: reconnect
-          });
-        };
-
-        cancelCurrentConnection = disconnect;
-        connected({
-          cancel: disconnect
-        });
-      };
-
-      var retryCount = 0;
-      var firstRetryMs = Date.now();
-
-      eventSource.onerror = function (errorEvent) {
-        var considerFailed = function considerFailed() {
-          connectionStatus = "disconnected";
-          failed({
-            cancel: function cancel() {
-              if (connectionStatus !== "failed") {
-                console.warn("disable ignored because connection is ".concat(connectionStatus));
-                return;
-              }
-
-              connectionStatus = "disabled";
-              cancelled({
-                connect: reconnect
-              });
-            },
-            connect: reconnect
-          });
-        };
-
-        if (errorEvent.target.readyState === EventSource.CONNECTING) {
-          if (retryCount > retryMaxAttempt) {
-            console.info("could not connect after ".concat(retryMaxAttempt, " attempt"));
-            eventSource.onerror = undefined;
-            eventSource.close();
-            considerFailed();
-            return;
-          }
-
-          if (retryCount === 0) {
-            firstRetryMs = Date.now();
-          } else {
-            var allRetryDuration = Date.now() - firstRetryMs;
-
-            if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
-              console.info("could not connect in less than ".concat(retryAllocatedMs, " ms"));
-              eventSource.onerror = undefined;
-              eventSource.close();
-              considerFailed();
-              return;
-            }
-          }
-
-          connectionStatus = "connecting";
-          retryCount++;
-          connecting({
-            cancel: abort
-          });
-          return;
-        }
-
-        if (errorEvent.target.readyState === EventSource.CLOSED) {
-          considerFailed();
-          return;
-        }
-      };
-
-      Object.keys(events).forEach(function (eventName) {
-        eventSource.addEventListener(eventName, function (e) {
-          if (e.origin === eventSourceOrigin) {
-            if (e.lastEventId) {
-              lastEventId = e.lastEventId;
-            }
-
-            events[eventName](e);
-          }
-        });
-      });
-
-      if (!events.hasOwnProperty("welcome")) {
-        eventSource.addEventListener("welcome", function (e) {
-          if (e.origin === eventSourceOrigin && e.lastEventId) {
-            lastEventId = e.lastEventId;
-          }
-        });
-      }
-    };
-
-    attemptConnection(eventSourceUrl);
-
-    var disconnect = function disconnect() {
-      cancelCurrentConnection();
-    };
-
-    var removePageUnloadListener = listenPageUnload(function () {
-      disconnect();
-    });
-    return function () {
-      removePageUnloadListener();
-      disconnect();
-    };
-  };
-
-  var addLastEventIdIntoUrlSearchParams = function addLastEventIdIntoUrlSearchParams(url, lastEventId) {
-    if (url.indexOf("?") === -1) {
-      url += "?";
-    } else {
-      url += "&";
-    }
-
-    return "".concat(url, "last-event-id=").concat(encodeURIComponent(lastEventId));
-  }; // const listenPageMightFreeze = (callback) => {
-  //   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
-  //     if (pageHideEvent.persisted === true) {
-  //       callback(pageHideEvent)
-  //     }
-  //   })
-  //   return removePageHideListener
-  // }
-  // const listenPageFreeze = (callback) => {
-  //   const removeFreezeListener = listenEvent(document, "freeze", (freezeEvent) => {
-  //     callback(freezeEvent)
-  //   })
-  //   return removeFreezeListener
-  // }
-  // const listenPageIsRestored = (callback) => {
-  //   const removeResumeListener = listenEvent(document, "resume", (resumeEvent) => {
-  //     removePageshowListener()
-  //     callback(resumeEvent)
-  //   })
-  //   const removePageshowListener = listenEvent(window, "pageshow", (pageshowEvent) => {
-  //     if (pageshowEvent.persisted === true) {
-  //       removePageshowListener()
-  //       removeResumeListener()
-  //       callback(pageshowEvent)
-  //     }
-  //   })
-  //   return () => {
-  //     removeResumeListener()
-  //     removePageshowListener()
-  //   }
-  // }
-
-
-  var listenPageUnload = function listenPageUnload(callback) {
-    var removePageHideListener = listenEvent(window, "pagehide", function (pageHideEvent) {
-      if (pageHideEvent.persisted !== true) {
-        callback(pageHideEvent);
-      }
-    });
-    return removePageHideListener;
-  };
-
-  var listenEvent = function listenEvent(emitter, event, callback) {
-    emitter.addEventListener(event, callback);
-    return function () {
-      emitter.removeEventListener(event, callback);
-    };
-  };
-
-  var connectCompileServerEventSource = function connectCompileServerEventSource(fileRelativeUrl, _ref) {
-    var onFileModified = _ref.onFileModified,
-        onFileRemoved = _ref.onFileRemoved,
-        onConnecting = _ref.onConnecting,
-        onConnectionCancelled = _ref.onConnectionCancelled,
-        onConnectionFailed = _ref.onConnectionFailed,
-        onConnected = _ref.onConnected,
-        lastEventId = _ref.lastEventId;
-    var eventSourceUrl = "".concat(window.origin, "/").concat(fileRelativeUrl);
-
-    var cancel = function cancel() {};
-
-    var connect = function connect() {
-      return new Promise(function (resolve) {
-        cancel = connectEventSource$1(eventSourceUrl, {
-          "file-modified": function fileModified(_ref2) {
-            var data = _ref2.data;
-            onFileModified(data);
-          },
-          "file-removed": function fileRemoved(_ref3) {
-            var data = _ref3.data;
-            onFileRemoved(data);
-          }
-        }, {
-          connecting: function connecting(_ref4) {
-            var _cancel = _ref4.cancel;
-            onConnecting({
-              cancel: function cancel() {
-                _cancel();
-              }
-            });
-          },
-          connected: function connected(_ref5) {
-            var _cancel2 = _ref5.cancel;
-            resolve(true);
-            onConnected({
-              cancel: function cancel() {
-                _cancel2();
-              }
-            });
-          },
-          cancelled: function cancelled(_ref6) {
-            var connect = _ref6.connect;
-            resolve(false);
-            onConnectionCancelled({
-              connect: connect
-            });
-          },
-          failed: function failed(_ref7) {
-            var connect = _ref7.connect;
-            resolve(false);
-            onConnectionFailed({
-              connect: connect
-            });
-          },
-          retryMaxAttempt: Infinity,
-          retryAllocatedMs: 20 * 1000,
-          lastEventId: lastEventId
-        });
-      });
-    };
-
-    return {
-      connect: connect,
-      disconnect: function disconnect() {
-        return cancel();
-      }
-    };
-  };
-
-  var livereloadingPreference = createPreference("livereloading");
-  var eventSourceState = "default";
   var livereloadingAvailableOnServer = false;
+  var parentEventSourceClient = window.parent.__jsenv_event_source_client__;
   var initToolbarEventSource = function initToolbarEventSource(_ref) {
-    var executedFileRelativeUrl = _ref.executedFileRelativeUrl,
-        livereloading = _ref.livereloading;
-
-    var getLivereloadCallback = function getLivereloadCallback(originalFileProjectRelativeUrl) {
-      var callbacks = window.parent.__jsenv__.livereloadingCallbacks;
-      return callbacks[originalFileProjectRelativeUrl];
-    };
-
+    var livereloading = _ref.livereloading;
     removeForceHideElement(document.querySelector("#eventsource-indicator"));
-    connectEventSource({
-      executedFileRelativeUrl: executedFileRelativeUrl,
-      getLivereloadCallback: getLivereloadCallback
-    });
     livereloadingAvailableOnServer = livereloading;
 
     if (!livereloadingAvailableOnServer) {
       disableLivereloadSetting();
     }
 
+    parentEventSourceClient.setConnectionStatusChangeCallback = function () {
+      updateEventSourceIndicator();
+    };
+
     var livereloadCheckbox = document.querySelector("#toggle-livereload");
-    livereloadCheckbox.checked = shouldLivereload();
+    livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled();
 
     livereloadCheckbox.onchange = function () {
-      livereloadingPreference.set(livereloadCheckbox.checked);
+      parentEventSourceClient.setLivereloadPreference(livereloadCheckbox.checked);
       updateEventSourceIndicator();
     };
 
     updateEventSourceIndicator();
   };
 
-  var shouldLivereload = function shouldLivereload() {
-    return livereloadingAvailableOnServer && getLivereloadingPreference();
-  };
-
-  var disableLivereloadSetting = function disableLivereloadSetting() {
-    document.querySelector(".settings-livereload").setAttribute("data-disabled", "true");
-    document.querySelector(".settings-livereload").setAttribute("title", "Livereload not available: disabled by server");
-    document.querySelector("#toggle-livereload").disabled = true;
-  };
-
-  var parentEventSource = window.parent.__jsenv_eventsource__();
-
-  var latestChangeMap = parentEventSource.latestChangeMap;
-  var eventSourceHooks = {};
-  var eventSourceConnection;
-  var connectionReadyPromise;
-
-  var handleFileChange = function handleFileChange(_ref2) {
-    var file = _ref2.file,
-        eventType = _ref2.eventType,
-        livereloadCallback = _ref2.livereloadCallback;
-    latestChangeMap[file] = eventType;
-    updateEventSourceIndicator();
-
-    if (shouldLivereload()) {
-      if (livereloadCallback) {
-        livereloadCallback({
-          file: file,
-          latestChangeMap: latestChangeMap,
-          reloadPage: reloadPage
-        });
-      } else if (file.endsWith(".css") || file.endsWith(".scss") || file.endsWith(".sass")) {
-        reloadAllCss();
-        delete latestChangeMap[file];
-        updateEventSourceIndicator();
-      } else {
-        reloadPage();
-      }
-    }
-  };
-
-  var reloadAllCss = function reloadAllCss() {
-    var links = Array.from(window.parent.document.getElementsByTagName("link"));
-    links.forEach(function (link) {
-      if (link.rel === "stylesheet") {
-        var url = new URL(link.href);
-        url.searchParams.set("t", Date.now());
-        link.href = String(url);
-      }
-    });
-  };
-
-  var reloadPage = function reloadPage() {
-    window.parent.location.reload(true);
-  };
-
-  var reloadChanges = function reloadChanges() {
-    var fullReloadRequired = Object.keys(latestChangeMap).some(function (key) {
-      return !key.endsWith(".css");
-    });
-
-    if (fullReloadRequired) {
-      reloadPage();
-      return;
-    }
-
-    var cssReloadRequired = Object.keys(latestChangeMap).some(function (key) {
-      return key.endsWith(".css");
-    });
-
-    if (cssReloadRequired) {
-      reloadAllCss();
-      Object.keys(latestChangeMap).forEach(function (key) {
-        if (key.endsWith(".css")) {
-          delete latestChangeMap[key];
-        }
-
-        updateEventSourceIndicator();
-      });
-    }
-  };
-
-  var connectEventSource = function connectEventSource(_ref3) {
-    var executedFileRelativeUrl = _ref3.executedFileRelativeUrl,
-        getLivereloadCallback = _ref3.getLivereloadCallback;
-    updateEventSourceIndicator();
-    connectionReadyPromise = createPromiseAndHooks();
-    eventSourceConnection = connectCompileServerEventSource(executedFileRelativeUrl, {
-      onFileModified: function onFileModified(file) {
-        handleFileChange({
-          file: file,
-          eventType: "modified",
-          livereloadCallback: getLivereloadCallback(file)
-        });
-      },
-      onFileRemoved: function onFileRemoved(file) {
-        handleFileChange({
-          file: file,
-          eventType: "removed",
-          livereloadCallback: getLivereloadCallback(file)
-        });
-      },
-      onFileAdded: function onFileAdded(file) {
-        handleFileChange({
-          file: file,
-          eventType: "added",
-          livereloadCallback: getLivereloadCallback(file)
-        });
-      },
-      onConnecting: function onConnecting(_ref4) {
-        var cancel = _ref4.cancel;
-        eventSourceState = "connecting";
-        eventSourceHooks = {
-          abort: cancel
-        };
-        updateEventSourceIndicator();
-      },
-      onConnectionCancelled: function onConnectionCancelled(_ref5) {
-        var connect = _ref5.connect;
-        eventSourceState = "disabled";
-        eventSourceHooks = {
-          connect: connect
-        };
-        updateEventSourceIndicator();
-      },
-      onConnectionFailed: function onConnectionFailed(_ref6) {
-        var connect = _ref6.connect;
-        eventSourceState = "failed";
-        eventSourceHooks = {
-          reconnect: connect
-        };
-        updateEventSourceIndicator();
-      },
-      onConnected: function onConnected(_ref7) {
-        var cancel = _ref7.cancel;
-        eventSourceState = "connected";
-        eventSourceHooks = {
-          disconnect: cancel
-        };
-        updateEventSourceIndicator();
-        connectionReadyPromise.resolve();
-        parentEventSource.disconnect();
-      },
-      lastEventId: parentEventSource.lastEventId
-    });
-    eventSourceConnection.connect();
-  };
-
-  var getLivereloadingPreference = function getLivereloadingPreference() {
-    return livereloadingPreference.has() ? livereloadingPreference.get() : true;
-  };
-
   var updateEventSourceIndicator = function updateEventSourceIndicator() {
-    var _eventSourceHooks = eventSourceHooks,
-        connect = _eventSourceHooks.connect,
-        abort = _eventSourceHooks.abort,
-        reconnect = _eventSourceHooks.reconnect;
     var eventSourceIndicator = document.querySelector("#eventsource-indicator");
-    var changeCount = Object.keys(latestChangeMap).length;
+    var fileChanges = parentEventSourceClient.getFileChanges();
+    var changeCount = Object.keys(fileChanges).length;
+    var eventSourceConnectionState = parentEventSourceClient.getConnectionStatus();
     enableVariant(eventSourceIndicator, {
-      eventsource: eventSourceState,
-      livereload: shouldLivereload() ? "on" : "off",
+      eventsource: eventSourceConnectionState,
+      livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
       changes: changeCount > 0 ? "yes" : "no"
     });
     var variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
@@ -2990,11 +2512,11 @@
       toggleTooltip(eventSourceIndicator);
     };
 
-    if (eventSourceState === "disabled") {
-      variantNode.querySelector("a").onclick = connect;
-    } else if (eventSourceState === "connecting") {
-      variantNode.querySelector("a").onclick = abort;
-    } else if (eventSourceState === "connected") {
+    if (eventSourceConnectionState === "connecting") {
+      variantNode.querySelector("a").onclick = function () {
+        parentEventSourceClient.disconnect();
+      };
+    } else if (eventSourceConnectionState === "connected") {
       removeAutoShowTooltip(eventSourceIndicator);
 
       if (changeCount) {
@@ -3002,17 +2524,28 @@
         changeLink.innerHTML = changeCount;
 
         changeLink.onclick = function () {
-          console.log(JSON.stringify(latestChangeMap, null, "  "), latestChangeMap); // eslint-disable-next-line no-alert
+          console.log(JSON.stringify(fileChanges, null, "  "), fileChanges); // eslint-disable-next-line no-alert
 
-          window.parent.alert(JSON.stringify(latestChangeMap, null, "  "));
+          window.parent.alert(JSON.stringify(fileChanges, null, "  "));
         };
 
-        variantNode.querySelector(".eventsource-reload-link").onclick = reloadChanges;
+        variantNode.querySelector(".eventsource-reload-link").onclick = function () {
+          parentEventSourceClient.reloadIfNeeded();
+        };
       }
-    } else if (eventSourceState === "failed") {
+    } else if (eventSourceConnectionState === "disconnected") {
       autoShowTooltip(eventSourceIndicator);
-      variantNode.querySelector("a").onclick = reconnect;
+
+      variantNode.querySelector("a").onclick = function () {
+        parentEventSourceClient.connect();
+      };
     }
+  };
+
+  var disableLivereloadSetting = function disableLivereloadSetting() {
+    document.querySelector(".settings-livereload").setAttribute("data-disabled", "true");
+    document.querySelector(".settings-livereload").setAttribute("title", "Livereload not available: disabled by server");
+    document.querySelector("#toggle-livereload").disabled = true;
   };
 
   var WINDOW_SMALL_WIDTH = 420;

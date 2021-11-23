@@ -2,6 +2,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { redirectorHtmlFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
 import {
   jsenvBrowserSystemFileInfo,
   jsenvToolbarHtmlFileInfo,
@@ -49,11 +50,16 @@ export const compileHtml = async ({
   sourcemapMethod,
 
   jsenvScriptInjection = true,
+  jsenvEventSourceClientInjection = true,
   jsenvToolbarInjection,
   onHtmlImportmapInfo,
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+    projectDirectoryUrl,
+  )
+  const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
+    jsenvToolbarInjectorFileInfo.buildUrl,
     projectDirectoryUrl,
   )
   const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
@@ -70,17 +76,32 @@ export const compileHtml = async ({
 
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvScriptInjection
+      ...(url !== jsenvToolbarHtmlFileInfo.url &&
+      url !== redirectorHtmlFileInfo.sourceUrl &&
+      jsenvScriptInjection
         ? [
             {
               src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
+      ...(url !== jsenvToolbarHtmlFileInfo.url &&
+      url !== redirectorHtmlFileInfo.sourceUrl &&
+      jsenvEventSourceClientInjection
+        ? [
+            {
+              src: `/${eventSourceClientBuildRelativeUrlForProject}`,
+            },
+          ]
+        : {}),
+      ...(url !== jsenvToolbarHtmlFileInfo.url &&
+      url !== redirectorHtmlFileInfo.sourceUrl &&
+      jsenvToolbarInjection
         ? [
             {
               src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+              defer: "",
+              async: "",
             },
           ]
         : []),

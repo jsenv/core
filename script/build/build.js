@@ -1,14 +1,15 @@
 // import { resolveUrl } from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { redirectorJsFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
 import {
   jsenvBrowserSystemFileInfo,
   jsenvCompileProxyFileInfo,
-  jsenvRedirectorJsFileInfo,
   jsenvExploringIndexJsFileInfo,
   jsenvToolbarInjectorFileInfo,
   jsenvToolbarJsFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 
 const commonParams = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -37,8 +38,15 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvRedirectorJsFileInfo.jsenvRelativeUrl]:
-        jsenvRedirectorJsFileInfo.jsenvBuildRelativeUrl,
+      [redirectorJsFileInfo.relativeUrl]: redirectorJsFileInfo.buildRelativeUrl,
+    },
+  },
+  {
+    ...commonParams,
+    format: "global",
+    entryPointMap: {
+      [eventSourceClientFileInfo.relativeUrl]:
+        eventSourceClientFileInfo.buildRelativeUrl,
     },
   },
   {

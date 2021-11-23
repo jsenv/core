@@ -743,16 +743,6 @@
     });
   };
 
-  /*
-  We must connect to livereload server asap so that if a file is modified
-  while page is loading we are notified of it.
-
-  Otherwise it's possible that a file is loaded and used by browser then its modified before
-  livereload connection is established.
-
-  When toolbar is loaded it will open an other connection to server sent events and close this one.
-  */
-
   function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -765,118 +755,6 @@
     return then ? value.then(then) : value;
   }
 
-  var connectLivereload = function connectLivereload() {
-    var _window = window,
-        EventSource = _window.EventSource;
-
-    if (typeof EventSource !== "function") {
-      return function () {};
-    }
-
-    var getLivereloadPreference = function getLivereloadPreference() {
-      return localStorage.hasOwnProperty("livereload") ? JSON.parse(localStorage.getItem("livereload")) : true;
-    };
-
-    var url = document.location.href;
-    var isOpen = false;
-    var lastEventId;
-    var latestChangeMap = {};
-    var events = {
-      "file-modified": function fileModified(_ref) {
-        var data = _ref.data;
-        latestChangeMap[data] = "modified";
-
-        if (getLivereloadPreference()) {
-          window.location.reload(true);
-        }
-      },
-      "file-removed": function fileRemoved(_ref2) {
-        var data = _ref2.data;
-        latestChangeMap[data] = "removed";
-
-        if (getLivereloadPreference()) {
-          window.location.reload(true);
-        }
-      },
-      "file-added": function fileAdded(_ref3) {
-        var data = _ref3.data;
-        latestChangeMap[data] = "added";
-
-        if (getLivereloadPreference()) {
-          window.location.reload(true);
-        }
-      }
-    };
-    var eventSourceOrigin = new URL(url).origin;
-    var eventSource = new EventSource(url, {
-      withCredentials: true
-    });
-
-    var disconnect = function disconnect() {
-      eventSource.close();
-    };
-
-    eventSource.onopen = function () {
-      isOpen = true;
-    };
-
-    eventSource.onerror = function (errorEvent) {
-      if (errorEvent.target.readyState === EventSource.CLOSED) {
-        isOpen = false;
-      }
-    };
-
-    Object.keys(events).forEach(function (eventName) {
-      eventSource.addEventListener(eventName, function (e) {
-        if (e.origin === eventSourceOrigin) {
-          if (e.lastEventId) {
-            lastEventId = e.lastEventId;
-          }
-
-          events[eventName](e);
-        }
-      });
-    });
-    return function () {
-      return {
-        isOpen: isOpen,
-        latestChangeMap: latestChangeMap,
-        lastEventId: lastEventId,
-        disconnect: disconnect
-      };
-    };
-  }; // eslint-disable-next-line camelcase
-
-
-  function _call(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
-
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  function _async(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
-
-  window.__jsenv_eventsource__ = connectLivereload();
-
   var injectToolbar = _async(function () {
     return _await(new Promise(function (resolve) {
       if (window.requestIdleCallback) {
@@ -885,8 +763,8 @@
         window.requestAnimationFrame(resolve);
       }
     }), function () {
-      return _call(fetchExploringJson, function (_ref4) {
-        var jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl;
+      return _call(fetchExploringJson, function (_ref) {
+        var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl;
         var jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin);
         var placeholder = getToolbarPlaceholder();
         var iframe = document.createElement("iframe");
@@ -994,6 +872,19 @@
     });
   });
 
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
   var getToolbarPlaceholder = function getToolbarPlaceholder() {
     var placeholder = queryPlaceholder();
 
@@ -1009,6 +900,20 @@
 
     return createTooolbarPlaceholder();
   };
+
+  function _async(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
 
   var queryPlaceholder = function queryPlaceholder() {
     return document.querySelector("[data-jsenv-toolbar-placeholder]");
