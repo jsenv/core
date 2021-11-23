@@ -19,6 +19,7 @@ export const compileFile = async ({
   projectFileRequestedCallback = () => {},
   request,
   pushResponse,
+  importmapInfos,
   compile,
   compileCacheStrategy,
   compileCacheSourcesValidation,
@@ -106,30 +107,29 @@ export const compileFile = async ({
       )
     })
 
-    if (
-      request.http2 &&
-      // js resolution is special, we cannot just do resolveUrl of the import specifier
-      // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
-      // And we would push 404 to the browser
-      // Until we implement import map resolution pushing ressource for js imports is disabled
-      compileResult.contentType !== "application/javascript"
-    ) {
-      compileResult.dependencies.forEach((dependency) => {
-        const requestUrl = resolveUrl(request.ressource, request.origin)
-        const dependencyUrl = resolveUrl(dependency, requestUrl)
-        if (!urlIsInsideOf(dependencyUrl, request.origin)) {
-          // ignore external urls
-          return
-        }
-        if (dependencyUrl.startsWith("data:")) {
-          return
-        }
-        const dependencyRelativeUrl = urlToRelativeUrl(
-          dependencyUrl,
-          request.origin,
-        )
-        pushResponse({ path: `/${dependencyRelativeUrl}` })
+    if (request.http2) {
+      const dependencyResolver = getDependencyResolver({
+        compileResult,
+        importmapInfos,
+        request,
       })
+      if (dependencyResolver) {
+        compileResult.dependencies.forEach((dependency) => {
+          const dependencyUrl = dependencyResolver.resolve(dependency)
+          if (!urlIsInsideOf(dependencyUrl, request.origin)) {
+            // ignore external urls
+            return
+          }
+          if (dependencyUrl.startsWith("data:")) {
+            return
+          }
+          const dependencyRelativeUrl = urlToRelativeUrl(
+            dependencyUrl,
+            request.origin,
+          )
+          pushResponse({ path: `/${dependencyRelativeUrl}` })
+        })
+      }
     }
 
     // when a compiled version of the source file was just created or updated
@@ -227,5 +227,33 @@ export const compileFile = async ({
     }
 
     return convertFileSystemErrorToResponseProperties(error)
+  }
+}
+
+const getDependencyResolver = ({ compileResult, importmapInfos, request }) => {
+  const importmapKeys = Object.keys(importmapInfos)
+  const requestUrl = resolveUrl(request.ressource, request.origin)
+
+  if (
+    compileResult.contentType === "application/javascript" &&
+    // we cannot trust importmapKeys because when html is restored from cache
+    // it would be empty
+    importmapKeys.length > 0
+  ) {
+    // js resolution is special, we cannot just do resolveUrl of the import specifier
+    // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
+    // And we would push 404 to the browser
+    // BUT I tried to push everything to the browser and it was a big fail:
+    // server is trying to push streams but browser rejects most push streams
+    // either because main file is already fetched or an other file request the same ressource
+    return null
+  }
+
+  return {
+    type: "url_resolution",
+    resolve: (dependency) => {
+      const dependencyUrl = resolveUrl(dependency, requestUrl)
+      return dependencyUrl
+    },
   }
 }

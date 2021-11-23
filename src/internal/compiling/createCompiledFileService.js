@@ -80,6 +80,8 @@ export const createCompiledFileService = ({
     projectDirectoryUrl,
   )
 
+  const importmapInfos = {}
+
   return (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
     // we use "ressourceToPathname" to remove eventual query param from the url
@@ -167,6 +169,7 @@ export const createCompiledFileService = ({
       projectFileRequestedCallback,
       request,
       pushResponse,
+      importmapInfos,
       compile: ({ code }) => {
         return compiler({
           logger,
@@ -195,6 +198,9 @@ export const createCompiledFileService = ({
           sourcemapMethod,
           sourcemapExcludeSources,
           jsenvToolbarInjection,
+          onHtmlImportmapInfo: ({ htmlUrl, importmapInfo }) => {
+            importmapInfos[htmlUrl] = importmapInfo
+          },
         })
       },
     })
