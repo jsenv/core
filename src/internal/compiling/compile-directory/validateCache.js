@@ -20,6 +20,11 @@ export const validateCache = async ({
 }) => {
   const validity = { isValid: true }
 
+  // disable cahce for html files so that we always parse the importmap file
+  if (compiledFileUrl.endsWith(".html")) {
+    return { isValid: false }
+  }
+
   const metaJsonFileUrl = `${compiledFileUrl}__asset__meta.json`
   const metaValidity = await validateMetaFile(metaJsonFileUrl)
   mergeValidity(validity, "meta", metaValidity)

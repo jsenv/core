@@ -8,7 +8,7 @@ const { serverCertificate, serverCertificatePrivateKey } =
 
 startDevServer({
   projectDirectoryUrl,
-  babelPluginMap: {},
+  // babelPluginMap: {},
   protocol: "https",
   http2: true,
   certificate: serverCertificate,

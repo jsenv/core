@@ -127,8 +127,7 @@ const computeCompileReport = async ({
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
 
-    const metaIsValid = cacheValidity.meta.isValid
-
+    const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
     const [compileTiming, compileResult] = await timeFunction("compile", () =>
       callCompile({
         logger,

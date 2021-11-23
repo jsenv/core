@@ -5,6 +5,7 @@ import {
   bufferToEtag,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
+import { normalizeImportMap, resolveImport } from "@jsenv/importmap"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
@@ -19,6 +20,7 @@ export const compileFile = async ({
   projectFileRequestedCallback = () => {},
   request,
   pushResponse,
+  importmapInfos,
   compile,
   compileCacheStrategy,
   compileCacheSourcesValidation,
@@ -106,30 +108,34 @@ export const compileFile = async ({
       )
     })
 
-    if (
-      request.http2 &&
+    if (request.http2) {
       // js resolution is special, we cannot just do resolveUrl of the import specifier
       // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
       // And we would push 404 to the browser
       // Until we implement import map resolution pushing ressource for js imports is disabled
-      compileResult.contentType !== "application/javascript"
-    ) {
-      compileResult.dependencies.forEach((dependency) => {
-        const requestUrl = resolveUrl(request.ressource, request.origin)
-        const dependencyUrl = resolveUrl(dependency, requestUrl)
-        if (!urlIsInsideOf(dependencyUrl, request.origin)) {
-          // ignore external urls
-          return
-        }
-        if (dependencyUrl.startsWith("data:")) {
-          return
-        }
-        const dependencyRelativeUrl = urlToRelativeUrl(
-          dependencyUrl,
-          request.origin,
-        )
-        pushResponse({ path: `/${dependencyRelativeUrl}` })
+      const dependencyResolver = getDependencyResolver({
+        compileResult,
+        importmapInfos,
+        request,
+        projectDirectoryUrl,
       })
+      if (dependencyResolver) {
+        compileResult.dependencies.forEach((dependency) => {
+          const dependencyUrl = dependencyResolver.resolve(dependency)
+          if (!urlIsInsideOf(dependencyUrl, request.origin)) {
+            // ignore external urls
+            return
+          }
+          if (dependencyUrl.startsWith("data:")) {
+            return
+          }
+          const dependencyRelativeUrl = urlToRelativeUrl(
+            dependencyUrl,
+            request.origin,
+          )
+          pushResponse({ path: `/${dependencyRelativeUrl}` })
+        })
+      }
     }
 
     // when a compiled version of the source file was just created or updated
@@ -228,4 +234,63 @@ export const compileFile = async ({
 
     return convertFileSystemErrorToResponseProperties(error)
   }
+}
+
+const getDependencyResolver = ({
+  compileResult,
+  importmapInfos,
+  request,
+  projectDirectoryUrl,
+}) => {
+  const importmapKeys = Object.keys(importmapInfos)
+  const requestUrl = resolveUrl(request.ressource, request.origin)
+
+  if (
+    compileResult.contentType !== "application/javascript" ||
+    importmapKeys.length === 0
+  ) {
+    return {
+      type: "url_resolution",
+      resolve: (dependency) => {
+        const dependencyUrl = resolveUrl(dependency, requestUrl)
+        return dependencyUrl
+      },
+    }
+  }
+
+  const firstImportmapInfo = importmapInfos[importmapKeys[0]]
+  if (!firstImportmapInfo.text) {
+    return null
+  }
+
+  if (
+    // we are aware only of 1 importmap
+    importmapKeys.length === 1 ||
+    // all importmaps are the same
+    importmapKeys.slice(1).every(({ url }) => url === firstImportmapInfo.url)
+  ) {
+    const importMapBaseUrl = resolveUrl(
+      urlToRelativeUrl(firstImportmapInfo.url, projectDirectoryUrl),
+      `${request.origin}/`,
+    )
+    const importMap = normalizeImportMap(
+      JSON.parse(firstImportmapInfo.text),
+      importMapBaseUrl,
+    )
+    return {
+      type: "importmap_resolution",
+      resolve: (dependency) => {
+        const dependencyUrl = resolveImport({
+          specifier: dependency,
+          importer: requestUrl,
+          importMap,
+        })
+        return dependencyUrl
+      },
+    }
+  }
+
+  // there is more than 2 importmaps, we cannot know which one to pick
+  // (not supposed ot happen because during dev you usually use a single importmap)
+  return null
 }

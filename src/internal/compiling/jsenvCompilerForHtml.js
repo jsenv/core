@@ -50,6 +50,7 @@ export const compileHtml = async ({
 
   jsenvScriptInjection = true,
   jsenvToolbarInjection,
+  onHtmlImportmapInfo,
 }) => {
   const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
     jsenvBrowserSystemFileInfo.jsenvBuildUrl,
@@ -86,55 +87,129 @@ export const compileHtml = async ({
     ],
   })
 
+  let sources = []
+  let sourcesContent = []
   const { scripts } = parseHtmlAstRessources(htmlAst)
-  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
+  let importmapInfo = null
+  scripts.forEach((script) => {
+    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+    if (typeAttribute && typeAttribute.value === "importmap") {
+      if (importmapInfo) {
+        console.error("HTML file must contain max 1 importmap")
+      } else {
+        const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+        const src = srcAttribute ? srcAttribute.value : ""
+        if (src) {
+          importmapInfo = {
+            script,
+            url: resolveUrl(src, url),
+            loadAsText: async () => {
+              const importMapResponse = await fetchUrl(importmapInfo.url)
+              if (importMapResponse.status !== 200) {
+                logger.warn(
+                  createDetailedMessage(
+                    importMapResponse.status === 404
+                      ? `importmap script file cannot be found.`
+                      : `importmap script file unexpected response status (${importMapResponse.status}).`,
+                    {
+                      "importmap url": importmapInfo.url,
+                      "html url": url,
+                    },
+                  ),
+                )
+                return ""
+              }
+              const importMapContent = await importMapResponse.json()
+              const importMapInlined = moveImportMap(
+                importMapContent,
+                importmapInfo.url,
+                url,
+              )
+              const importmapAsText = JSON.stringify(
+                importMapInlined,
+                null,
+                "  ",
+              )
+              sources.push(importmapInfo.url)
+              sourcesContent.push(importmapAsText)
+              return importmapAsText
+            },
+          }
+        } else {
+          importmapInfo = {
+            script,
+            url,
+            loadAsText: () => getHtmlNodeTextNode(script).value,
+          }
+        }
+      }
+    }
+  })
+  if (importmapInfo) {
+    const htmlImportMapAsText = await importmapInfo.loadAsText()
+    const importMapFromJsenv = getDefaultImportMap({
+      importMapFileUrl: compiledUrl,
+      projectDirectoryUrl,
+      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+    })
+    const mappings = composeTwoImportMaps(
+      importMapFromJsenv,
+      htmlImportMapAsText ? JSON.parse(htmlImportMapAsText) : {},
+    )
+    const importmapAsText = JSON.stringify(mappings, null, "  ")
+    replaceHtmlNode(
+      importmapInfo.script,
+      `<script type="${
+        moduleOutFormat === "systemjs" ? "jsenv-importmap" : "importmap"
+      }">${importmapAsText}</script>`,
+      {
+        attributesToIgnore: ["src"],
+      },
+    )
+    importmapInfo.inlinedFrom = importmapInfo.url
+    importmapInfo.url = url
+    importmapInfo.text = importmapAsText
+  } else {
+    // inject a default importmap
+    const defaultImportMap = getDefaultImportMap({
+      importMapFileUrl: compiledUrl,
+      projectDirectoryUrl,
+      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+    })
+    const importmapAsText = JSON.stringify(defaultImportMap, null, "  ")
+    manipulateHtmlAst(htmlAst, {
+      scriptInjections: [
+        {
+          type:
+            moduleOutFormat === "systemjs" ? "jsenv-importmap" : "importmap",
+          // in case there is no importmap, force the presence
+          // so that '@jsenv/core/' are still remapped
+          text: importmapAsText,
+        },
+      ],
+    })
+    importmapInfo = {
+      url,
+      text: importmapAsText,
+    }
+  }
+  onHtmlImportmapInfo({
+    htmlUrl: url,
+    importmapInfo,
+  })
 
-  let hasImportmap = false
+  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
   const inlineScriptsContentMap = {}
-  const importmapsToInline = []
   scripts.forEach((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
     const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-
-    // importmap
-    if (typeAttribute && typeAttribute.value === "importmap") {
-      hasImportmap = true
-
-      if (srcAttribute) {
-        if (moduleOutFormat === "systemjs") {
-          typeAttribute.value = "jsenv-importmap"
-          return // no need to inline
-        }
-
-        // we force inline because browsers supporting importmap supports only when they are inline
-        importmapsToInline.push({
-          script,
-          src: srcAttribute.value,
-        })
-        return
-      }
-
-      const defaultImportMap = getDefaultImportMap({
-        importMapFileUrl: compiledUrl,
-        projectDirectoryUrl,
-        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
-      })
-      const inlineImportMap = JSON.parse(getHtmlNodeTextNode(script).value)
-      const mappings = composeTwoImportMaps(defaultImportMap, inlineImportMap)
-      if (moduleOutFormat === "systemjs") {
-        typeAttribute.value = "jsenv-importmap"
-      }
-      setHtmlNodeText(script, JSON.stringify(mappings, null, "  "))
-      return
-    }
-
+    const src = srcAttribute ? srcAttribute.value : ""
     // remote module script
-    if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
+    if (typeAttribute && typeAttribute.value === "module" && src) {
       if (moduleOutFormat === "systemjs") {
         removeHtmlNodeAttribute(script, typeAttribute)
       }
       removeHtmlNodeAttribute(script, srcAttribute)
-      const src = srcAttribute.value
       const jsenvMethod =
         moduleOutFormat === "systemjs"
           ? "executeFileUsingSystemJs"
@@ -174,66 +249,6 @@ export const compileHtml = async ({
       return
     }
   })
-
-  if (hasImportmap === false) {
-    const defaultImportMap = getDefaultImportMap({
-      importMapFileUrl: compiledUrl,
-      projectDirectoryUrl,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
-    })
-    manipulateHtmlAst(htmlAst, {
-      scriptInjections: [
-        {
-          type:
-            moduleOutFormat === "systemjs" ? "jsenv-importmap" : "importmap",
-          // in case there is no importmap, force the presence
-          // so that '@jsenv/core/' are still remapped
-          text: JSON.stringify(defaultImportMap, null, "  "),
-        },
-      ],
-    })
-  }
-
-  await Promise.all(
-    importmapsToInline.map(async ({ script, src }) => {
-      const importMapUrl = resolveUrl(src, url)
-      const importMapResponse = await fetchUrl(importMapUrl)
-      if (importMapResponse.status !== 200) {
-        logger.warn(
-          createDetailedMessage(
-            importMapResponse.status === 404
-              ? `Cannot inline importmap script because file cannot be found.`
-              : `Cannot inline importmap script due to unexpected response status (${importMapResponse.status}).`,
-            {
-              "importmap script src": src,
-              "importmap url": importMapUrl,
-              "html url": url,
-            },
-          ),
-        )
-        return
-      }
-
-      const importMapContent = await importMapResponse.json()
-      const importMapInlined = moveImportMap(
-        importMapContent,
-        importMapUrl,
-        url,
-      )
-      replaceHtmlNode(
-        script,
-        `<script type="importmap">${JSON.stringify(
-          importMapInlined,
-          null,
-          "  ",
-        )}</script>`,
-        {
-          attributesToIgnore: ["src"],
-        },
-      )
-    }),
-  )
-
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
 
   let assets = []
@@ -303,12 +318,14 @@ export const compileHtml = async ({
       }
     }),
   )
+  sources.push(url)
+  sourcesContent.push(code)
 
   return {
     contentType: "text/html",
     compiledSource: htmlAfterTransformation,
-    sources: [url],
-    sourcesContent: [code],
+    sources,
+    sourcesContent,
     assets,
     assetsContent,
     dependencies: htmlDependencies.map(({ specifier }) => {
