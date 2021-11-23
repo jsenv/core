@@ -48,27 +48,6 @@ export const sourcemapMappingFileInfo = {
   url: fileSystemPathToUrl(require.resolve("source-map/lib/mappings.wasm")),
 }
 
-export const jsenvToolbarHtmlFileInfo = {
-  url: resolveUrl("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl),
-}
-export const jsenvToolbarInjectorFileInfo = {
-  jsenvRelativeUrl: "./src/internal/toolbar/toolbar.injector.js",
-  jsenvBuildRelativeUrl: "./jsenv_toolbar_injector.js",
-  jsenvBuildUrl: resolveUrl(
-    "./dist/jsenv_toolbar_injector.js",
-    jsenvCoreDirectoryUrl,
-  ),
-}
-export const jsenvToolbarJsFileInfo = {
-  jsenvRelativeUrl: "./src/internal/toolbar/toolbar.main.js",
-  jsenvBuildRelativeUrl: "./jsenv_toolbar.js",
-  url: resolveUrl(
-    "./src/internal/toolbar/toolbar.main.js",
-    jsenvCoreDirectoryUrl,
-  ),
-  jsenvBuildUrl: resolveUrl("./dist/jsenv_toolbar.js", jsenvCoreDirectoryUrl),
-}
-
 export const jsenvSystemJsFileInfo = {
   url: resolveUrl("./src/internal/runtime/s.js", jsenvCoreDirectoryUrl),
   jsenvRelativeUrl: "./src/internal/runtime/s.js",

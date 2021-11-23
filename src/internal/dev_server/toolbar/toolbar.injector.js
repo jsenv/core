@@ -40,7 +40,7 @@ const injectToolbar = async () => {
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
   const jsenvToolbarHtmlServerUrl = resolveUrl(
-    "./src/internal/toolbar/toolbar.html",
+    "./src/internal/dev_server/toolbar/toolbar.html",
     jsenvDirectoryServerUrl,
   )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
@@ -76,7 +76,7 @@ const injectToolbar = async () => {
 
   const div = document.createElement("div")
   const jsenvLogoUrl = resolveUrl(
-    "./src/internal/toolbar/jsenv-logo.svg",
+    "./src/internal/dev_server/toolbar/jsenv-logo.svg",
     jsenvDirectoryServerUrl,
   )
   const jsenvLogoSvgSrc = jsenvLogoUrl

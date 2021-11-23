@@ -8,14 +8,14 @@ export const exploringIndexHtmlFileInfo = {
   sourceUrl: htmlSourceUrl,
 }
 
-const jsRelativeUrl = "./src/internal/dev_server/exploring/exploring.js"
+const jsSourceRelativeUrl = "./src/internal/dev_server/exploring/exploring.js"
 const jsBuildRelativeUrl = "./jsenv_exploring_index.js"
 const jsBuildUrl = new URL(
   "./dist/jsenv_exploring_index.js",
   jsenvCoreDirectoryUrl,
 ).href
 export const exploringIndexJsFileInfo = {
-  relativeUrl: jsRelativeUrl,
+  sourceRelativeUrl: jsSourceRelativeUrl,
   buildRelativeUrl: jsBuildRelativeUrl,
   buildUrl: jsBuildUrl,
 }

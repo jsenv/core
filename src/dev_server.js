@@ -23,10 +23,10 @@ import {
   exploringIndexHtmlFileInfo,
   exploringIndexJsFileInfo,
 } from "@jsenv/core/src/internal/dev_server/exploring/exploring_file_info.js"
+import { toolbarJsFileInfo } from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-  jsenvToolbarJsFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 import { eventSourceClientFileInfo } from "./internal/dev_server/event_source_client/event_source_client_file_info.js"
@@ -239,14 +239,14 @@ const createExploringIndexService = ({ projectDirectoryUrl }) => {
 }
 
 const createToolbarService = ({ projectDirectoryUrl }) => {
-  const jsenvToolbarJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvToolbarJsFileInfo.jsenvBuildUrl,
+  const toolbarJsBuildRelativeUrlForProject = urlToRelativeUrl(
+    toolbarJsFileInfo.buildUrl,
     projectDirectoryUrl,
   )
 
   return setupRoutes({
     "/.jsenv/toolbar.main.js": (request) => {
-      const jsenvToolbarJsBuildServerUrl = `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}`
+      const jsenvToolbarJsBuildServerUrl = `${request.origin}/${toolbarJsBuildRelativeUrlForProject}`
       return {
         status: 307,
         headers: {
@@ -258,7 +258,7 @@ const createToolbarService = ({ projectDirectoryUrl }) => {
       return {
         status: 307,
         headers: {
-          location: `${request.origin}/${jsenvToolbarJsBuildRelativeUrlForProject}.map`,
+          location: `${request.origin}/${toolbarJsBuildRelativeUrlForProject}.map`,
         },
       }
     },

@@ -12,12 +12,12 @@ export const redirectorHtmlFileInfo = {
   sourceUrl: htmlSourceUrl,
 }
 
-const jsRelativeUrl = "./src/internal/dev_server/redirector/redirector.js"
+const jsSourceRelativeUrl = "./src/internal/dev_server/redirector/redirector.js"
 const jsBuildRelativeUrl = "./jsenv_redirector.js"
-const jsSourceUrl = new URL(jsRelativeUrl, jsenvCoreDirectoryUrl).href
+const jsSourceUrl = new URL(jsSourceRelativeUrl, jsenvCoreDirectoryUrl).href
 const jsBuildUrl = new URL("./dist/jsenv_redirector.js", jsenvCoreDirectoryUrl)
 export const redirectorJsFileInfo = {
-  relativeUrl: jsRelativeUrl,
+  sourceRelativeUrl: jsSourceRelativeUrl,
   buildRelativeUrl: jsBuildRelativeUrl,
   sourceUrl: jsSourceUrl,
   buildUrl: jsBuildUrl,

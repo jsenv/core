@@ -4,10 +4,12 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { redirectorJsFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
 import { exploringIndexJsFileInfo } from "@jsenv/core/src/internal/dev_server/exploring/exploring_file_info.js"
 import {
+  toolbarInjectorFileInfo,
+  toolbarJsFileInfo,
+} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
+import {
   jsenvBrowserSystemFileInfo,
   jsenvCompileProxyFileInfo,
-  jsenvToolbarInjectorFileInfo,
-  jsenvToolbarJsFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 
@@ -38,14 +40,15 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [redirectorJsFileInfo.relativeUrl]: redirectorJsFileInfo.buildRelativeUrl,
+      [redirectorJsFileInfo.sourceRelativeUrl]:
+        redirectorJsFileInfo.buildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [eventSourceClientFileInfo.relativeUrl]:
+      [eventSourceClientFileInfo.sourceRelativeUrl]:
         eventSourceClientFileInfo.buildRelativeUrl,
     },
   },
@@ -53,7 +56,7 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [exploringIndexJsFileInfo.relativeUrl]:
+      [exploringIndexJsFileInfo.sourceRelativeUrl]:
         exploringIndexJsFileInfo.buildRelativeUrl,
     },
   },
@@ -61,16 +64,15 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarInjectorFileInfo.jsenvRelativeUrl]:
-        jsenvToolbarInjectorFileInfo.jsenvBuildRelativeUrl,
+      [toolbarInjectorFileInfo.sourceRelativeUrl]:
+        toolbarInjectorFileInfo.buildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]:
-        jsenvToolbarJsFileInfo.jsenvBuildRelativeUrl,
+      [toolbarJsFileInfo.sourceRelativeUrl]: toolbarJsFileInfo.buildRelativeUrl,
     },
   },
 ]

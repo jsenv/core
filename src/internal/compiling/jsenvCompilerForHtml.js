@@ -2,12 +2,12 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { jsenvBrowserSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 import {
-  jsenvBrowserSystemFileInfo,
-  jsenvToolbarHtmlFileInfo,
-  jsenvToolbarInjectorFileInfo,
-} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+  toolbarInjectorFileInfo,
+  toolbarHtmlFileInfo,
+} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
 import {
@@ -62,8 +62,8 @@ export const compileHtml = async ({
     eventSourceClientFileInfo.buildUrl,
     projectDirectoryUrl,
   )
-  const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
+  const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
+    toolbarInjectorFileInfo.buildUrl,
     projectDirectoryUrl,
   )
 
@@ -74,16 +74,18 @@ export const compileHtml = async ({
     await mutateRessourceHints(htmlAst)
   }
 
+  const urlNoSearch = urlWithoutSearch(url)
+
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvScriptInjection
+      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl && jsenvScriptInjection
         ? [
             {
               src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(url !== jsenvToolbarHtmlFileInfo.url &&
+      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl &&
       jsenvEventSourceClientInjection
         ? [
             {
@@ -91,10 +93,10 @@ export const compileHtml = async ({
             },
           ]
         : []),
-      ...(url !== jsenvToolbarHtmlFileInfo.url && jsenvToolbarInjection
+      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl && jsenvToolbarInjection
         ? [
             {
-              src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+              src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
               defer: "",
               async: "",
             },
@@ -402,4 +404,10 @@ const mutateRessourceHints = async (htmlAst) => {
     }),
   )
   mutations.forEach((mutation) => mutation())
+}
+
+const urlWithoutSearch = (url) => {
+  const urlObject = new URL(url)
+  urlObject.search = ""
+  return urlObject.href
 }

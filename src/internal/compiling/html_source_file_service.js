@@ -22,13 +22,13 @@ import { moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { jsenvBrowserSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { redirectorHtmlFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
 import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 import {
-  jsenvToolbarHtmlFileInfo,
-  jsenvBrowserSystemFileInfo,
-  jsenvToolbarInjectorFileInfo,
-} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+  toolbarInjectorFileInfo,
+  toolbarHtmlFileInfo,
+} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   parseHtmlString,
@@ -167,13 +167,13 @@ const transformHTMLSourceFile = async ({
     eventSourceClientFileInfo.buildUrl,
     projectDirectoryUrl,
   )
-  const jsenvToolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    jsenvToolbarInjectorFileInfo.jsenvBuildUrl,
+  const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
+    toolbarInjectorFileInfo.buildUrl,
     projectDirectoryUrl,
   )
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url &&
+      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
       fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
       jsenvScriptInjection
         ? [
@@ -182,7 +182,7 @@ const transformHTMLSourceFile = async ({
             },
           ]
         : []),
-      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url &&
+      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
       fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
       jsenvEventSourceClientInjection
         ? [
@@ -191,12 +191,12 @@ const transformHTMLSourceFile = async ({
             },
           ]
         : []),
-      ...(fileUrl !== jsenvToolbarHtmlFileInfo.url &&
+      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
       fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
       jsenvToolbarInjection
         ? [
             {
-              src: `/${jsenvToolbarInjectorBuildRelativeUrlForProject}`,
+              src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
               defer: "",
               async: "",
             },
