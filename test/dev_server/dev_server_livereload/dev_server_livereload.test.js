@@ -13,7 +13,7 @@ import {
   openBrowserPage,
   getHtmlExecutionResult,
 } from "@jsenv/core/test/openBrowserPage.js"
-import { START_EXPLORING_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXPLORING.js"
+import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -29,7 +29,7 @@ const filePath = urlToFileSystemPath(
 )
 
 const devServer = await startDevServer({
-  ...START_EXPLORING_TEST_PARAMS,
+  ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   livereloading: true,
 })

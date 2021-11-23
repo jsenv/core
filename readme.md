@@ -72,8 +72,8 @@ npm install --save-dev @jsenv/core
 ```js
 import {
   executeTestPlan,
-  chromiumRuntimeTab,
-  firefoxRuntimeTab,
+  chromiumTabRuntime,
+  firefoxTabRuntime,
 } from "@jsenv/core"
 
 executeTestPlan({
@@ -81,10 +81,10 @@ executeTestPlan({
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        runtime: chromiumRuntimeTab,
+        runtime: chromiumTabRuntime,
       },
       firefox: {
-        runtime: firefoxRuntimeTab,
+        runtime: firefoxTabRuntime,
       },
     },
   },
