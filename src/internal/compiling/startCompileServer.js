@@ -352,8 +352,8 @@ export const startCompileServer = async ({
 
     protocol,
     http2,
-    serverCertificate: certificate,
-    serverCertificatePrivateKey: privateKey,
+    certificate,
+    privateKey,
     ip,
     port,
     plugins: {

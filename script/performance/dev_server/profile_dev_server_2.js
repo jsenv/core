@@ -41,8 +41,8 @@ await startServer({
   protocol: "https",
   http2: true,
   // http2: false,
-  serverCertificate,
-  serverCertificatePrivateKey,
+  certificate: serverCertificate,
+  privateKey: serverCertificatePrivateKey,
   port: 6789,
   sendServerTiming: true,
   requestToResponse: (request) => {
