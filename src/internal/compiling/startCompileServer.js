@@ -239,14 +239,14 @@ export const startCompileServer = async ({
     })
     customServices = {
       ...customServices,
-      "service:sse": serveSSEForLivereload,
+      "jsenv:sse": serveSSEForLivereload,
     }
   } else {
     const roomWhenLivereloadIsDisabled = createSSERoom()
     roomWhenLivereloadIsDisabled.open()
     customServices = {
       ...customServices,
-      "service:sse": (request) => {
+      "jsenv:sse": (request) => {
         const { accept } = request.headers
         if (!accept || !accept.includes("text/event-stream")) {
           return null
@@ -389,6 +389,7 @@ export const startCompileServer = async ({
     ...compileServer,
     compileServerGroupMap,
     babelPluginMap,
+    projectFileRequestedCallback,
   }
 }
 
@@ -627,62 +628,79 @@ const setupServerSentEventsForLivereload = ({
     clearTimeout(timeout)
   })
 
-  const getDependencySet = (mainRelativeUrl) => {
-    if (trackerMap.has(mainRelativeUrl)) {
-      return trackerMap.get(mainRelativeUrl)
+  const startTrackingRoot = (rootFile) => {
+    stopTrackingRoot(rootFile)
+    const set = new Set()
+    set.add(rootFile)
+    const depInfo = {
+      set,
+      cleanup: [],
     }
-    const dependencySet = new Set()
-    dependencySet.add(mainRelativeUrl)
-    trackerMap.set(mainRelativeUrl, dependencySet)
-    return dependencySet
+    trackerMap.set(rootFile, depInfo)
+    return depInfo
+  }
+  const addStopTrackingCalback = (rootFile, callback) => {
+    trackerMap.get(rootFile).cleanup.push(callback)
+  }
+  const stopTrackingRoot = (rootFile) => {
+    const depInfo = trackerMap.get(rootFile)
+    if (depInfo) {
+      depInfo.cleanup.forEach((cb) => {
+        cb()
+      })
+      trackerMap.delete(rootFile)
+    }
+  }
+  const isDependencyOf = (file, rootFile) => {
+    return trackerMap.get(rootFile).set.has(file)
+  }
+  const markAsDependencyOf = (file, rootFile) => {
+    trackerMap.get(rootFile).set.add(file)
   }
 
   // each time a file is requested for the first time its dependencySet is computed
-  projectFileRequested.add(({ relativeUrl: mainRelativeUrl }) => {
+  projectFileRequested.add((requestInfo) => {
+    const rootRelativeUrl = requestInfo.relativeUrl
     // for now no use case of livereloading on node.js
     // and for browsers only html file can be main files
     // this avoid collecting dependencies of non html files that will never be used
-    if (!mainRelativeUrl.endsWith(".html")) {
+    if (!rootRelativeUrl.endsWith(".html")) {
       return
     }
 
     // when a file is requested, always rebuild its dependency in case it has changed
     // since the last time it was requested
-    const dependencySet = new Set()
-    dependencySet.add(mainRelativeUrl)
-    trackerMap.set(mainRelativeUrl, dependencySet)
+    startTrackingRoot(rootRelativeUrl)
 
     const removeDependencyRequestedCallback = projectFileRequested.add(
       ({ relativeUrl, request }) => {
-        if (dependencySet.has(relativeUrl)) {
+        if (isDependencyOf(relativeUrl, rootRelativeUrl)) {
           return
         }
-
         const dependencyReport = reportDependency(
           relativeUrl,
-          mainRelativeUrl,
+          rootRelativeUrl,
           request,
         )
         if (dependencyReport.dependency === false) {
           livereloadLogger.debug(
-            `${relativeUrl} not a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+            `${relativeUrl} not a dependency of ${rootRelativeUrl} because ${dependencyReport.reason}`,
           )
           return
         }
-
         livereloadLogger.debug(
-          `${relativeUrl} is a dependency of ${mainRelativeUrl} because ${dependencyReport.reason}`,
+          `${relativeUrl} is a dependency of ${rootRelativeUrl} because ${dependencyReport.reason}`,
         )
-        dependencySet.add(relativeUrl)
+        markAsDependencyOf(relativeUrl, rootRelativeUrl)
       },
     )
-    const removeMainRemovedCallback = projectFileRemoved.add((relativeUrl) => {
-      if (relativeUrl === mainRelativeUrl) {
-        removeDependencyRequestedCallback()
-        removeMainRemovedCallback()
-        trackerMap.delete(mainRelativeUrl)
+    addStopTrackingCalback(rootRelativeUrl, removeDependencyRequestedCallback)
+    const removeRootRemovedCallback = projectFileRemoved.add((relativeUrl) => {
+      if (relativeUrl === rootRelativeUrl) {
+        stopTrackingRoot(rootRelativeUrl)
       }
     })
+    addStopTrackingCalback(rootRelativeUrl, removeRootRemovedCallback)
   })
 
   const trackMainAndDependencies = (
@@ -692,20 +710,17 @@ const setupServerSentEventsForLivereload = ({
     livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
 
     const removeModifiedCallback = projectFileModified.add((relativeUrl) => {
-      const dependencySet = getDependencySet(mainRelativeUrl)
-      if (dependencySet.has(relativeUrl)) {
+      if (isDependencyOf(relativeUrl, mainRelativeUrl)) {
         modified(relativeUrl)
       }
     })
     const removeRemovedCallback = projectFileRemoved.add((relativeUrl) => {
-      const dependencySet = getDependencySet(mainRelativeUrl)
-      if (dependencySet.has(relativeUrl)) {
+      if (isDependencyOf(relativeUrl, mainRelativeUrl)) {
         removed(relativeUrl)
       }
     })
     const removeAddedCallback = projectFileAdded.add((relativeUrl) => {
-      const dependencySet = getDependencySet(mainRelativeUrl)
-      if (dependencySet.has(relativeUrl)) {
+      if (isDependencyOf(relativeUrl, mainRelativeUrl)) {
         added(relativeUrl)
       }
     })
@@ -744,14 +759,6 @@ const setupServerSentEventsForLivereload = ({
 
     const { referer } = request.headers
     if (referer) {
-      const { origin } = request
-      // referer is likely the dev server
-      if (referer !== origin && !urlIsInsideOf(referer, origin)) {
-        return {
-          dependency: false,
-          reason: "referer is an other origin",
-        }
-      }
       // here we know the referer is inside compileServer
       const refererRelativeUrl = urlToOriginalRelativeUrl(
         referer,
@@ -764,7 +771,7 @@ const setupServerSentEventsForLivereload = ({
         for (const tracker of trackerMap) {
           if (
             tracker[0] === mainRelativeUrl &&
-            tracker[1].has(refererRelativeUrl)
+            tracker[1].set.has(refererRelativeUrl)
           ) {
             return {
               dependency: true,
@@ -893,8 +900,7 @@ const createSourceFileService = ({
   projectFileCacheStrategy,
 }) => {
   return async (request) => {
-    const { ressource } = request
-    const relativeUrl = ressource.slice(1)
+    const relativeUrl = request.pathname.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
 
     const responsePromise = fetchFileSystem(
