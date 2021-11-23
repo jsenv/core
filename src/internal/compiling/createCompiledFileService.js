@@ -234,36 +234,40 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
   // there is a custom compiler and potentially a jsenv compiler
   return async (params) => {
     // do custom compilation first
-    const customResult = await customCompiler(params)
+    const customCompilerReturnValue = await customCompiler(params)
     // then check if jsenv compiler should apply
     // to the new result contentType
     const jsenvCompilerAfterCustomCompilation =
       getJsenvCompilerAfterCustomCompilation({
         url: originalFileUrl,
-        contentType: customResult.contentType,
         compileMeta,
+        customCompilerReturnValue,
       })
     if (!jsenvCompilerAfterCustomCompilation) {
-      return customResult
+      return customCompilerReturnValue
     }
-    const jsenvResult = await jsenvCompilerAfterCustomCompilation({
+    const jsenvCompilerReturnValue = await jsenvCompilerAfterCustomCompilation({
       ...params,
-      code: customResult.compiledSource,
-      map: customResult.sourcemap,
+      code: customCompilerReturnValue.compiledSource,
+      map: customCompilerReturnValue.sourcemap,
     })
     return {
-      ...customResult,
-      ...jsenvResult,
+      ...customCompilerReturnValue,
+      ...jsenvCompilerReturnValue,
     }
   }
 }
 
 const getJsenvCompilerAfterCustomCompilation = ({
   url,
-  contentType,
   compileMeta,
+  customCompilerReturnValue,
 }) => {
-  const extensionToForce = contentTypeExtensions[contentType]
+  if (customCompilerReturnValue.isBuild) {
+    return null
+  }
+  const extensionToForce =
+    contentTypeExtensions[customCompilerReturnValue.contentType]
   const urlForcingExtension = extensionToForce
     ? setUrlExtension(url, extensionToForce)
     : url
