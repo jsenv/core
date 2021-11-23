@@ -14,7 +14,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFilename = `bare_specifier_not_mapped.html`
 const importerRelativeUrl = `${testDirectoryRelativeUrl}bare_specifier_not_mapped.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const importMapFileRelativeUrl = `${testDirectoryRelativeUrl}test.importmap`
+// const importMapFileRelativeUrl = `${testDirectoryRelativeUrl}test.importmap`
 
 const test = async (params) => {
   const executionResult = await execute({
@@ -42,7 +42,7 @@ foo
 --- importer ---
 ${importerRelativeUrl}
 --- how to fix ---
-Add a mapping for "foo" into the importmap file at "${importMapFileRelativeUrl}"`,
+Add a mapping for "foo" into the importmap file at "${fileRelativeUrl}"`,
   }
   assert({ actual, expected })
 }
