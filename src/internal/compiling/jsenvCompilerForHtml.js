@@ -117,28 +117,29 @@ export const compileHtml = async ({
                     },
                   ),
                 )
-                return ""
+                return "{}"
               }
-              const importMapContent = await importMapResponse.json()
-              const importMapInlined = moveImportMap(
-                importMapContent,
+              const importmapAsText = await importMapResponse.text()
+              sources.push(importmapInfo.url)
+              sourcesContent.push(importmapAsText)
+
+              const importMapMoved = moveImportMap(
+                JSON.parse(importmapAsText),
                 importmapInfo.url,
                 url,
               )
-              const importmapAsText = JSON.stringify(
-                importMapInlined,
+              const compiledImportmapAsText = JSON.stringify(
+                importMapMoved,
                 null,
                 "  ",
               )
-              sources.push(importmapInfo.url)
-              sourcesContent.push(importmapAsText)
-              return importmapAsText
+              return compiledImportmapAsText
             },
           }
         } else {
           importmapInfo = {
             script,
-            url,
+            url: compiledUrl,
             loadAsText: () => getHtmlNodeTextNode(script).value,
           }
         }
@@ -146,16 +147,13 @@ export const compileHtml = async ({
     }
   })
   if (importmapInfo) {
-    const htmlImportMapAsText = await importmapInfo.loadAsText()
+    const htmlImportMap = JSON.parse(await importmapInfo.loadAsText())
     const importMapFromJsenv = getDefaultImportMap({
       importMapFileUrl: compiledUrl,
       projectDirectoryUrl,
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
     })
-    const mappings = composeTwoImportMaps(
-      importMapFromJsenv,
-      htmlImportMapAsText ? JSON.parse(htmlImportMapAsText) : {},
-    )
+    const mappings = composeTwoImportMaps(importMapFromJsenv, htmlImportMap)
     const importmapAsText = JSON.stringify(mappings, null, "  ")
     replaceHtmlNode(
       importmapInfo.script,
@@ -167,7 +165,7 @@ export const compileHtml = async ({
       },
     )
     importmapInfo.inlinedFrom = importmapInfo.url
-    importmapInfo.url = url
+    importmapInfo.url = compiledUrl
     importmapInfo.text = importmapAsText
   } else {
     // inject a default importmap
@@ -189,7 +187,7 @@ export const compileHtml = async ({
       ],
     })
     importmapInfo = {
-      url,
+      url: compiledUrl,
       text: importmapAsText,
     }
   }
