@@ -583,6 +583,9 @@ const setupServerSentEventsForLivereload = ({
   const projectFileAdded = createCallbackList()
 
   const projectFileRequestedCallback = (relativeUrl, request) => {
+    if (relativeUrl[0] === "/") {
+      relativeUrl = relativeUrl.slice(1)
+    }
     const url = `${projectDirectoryUrl}${relativeUrl}`
 
     if (
@@ -669,6 +672,7 @@ const setupServerSentEventsForLivereload = ({
       return
     }
 
+    livereloadLogger.debug(`${rootRelativeUrl} requested -> start tracking it`)
     // when a file is requested, always rebuild its dependency in case it has changed
     // since the last time it was requested
     startTrackingRoot(rootRelativeUrl)
@@ -699,6 +703,7 @@ const setupServerSentEventsForLivereload = ({
     const removeRootRemovedCallback = projectFileRemoved.add((relativeUrl) => {
       if (relativeUrl === rootRelativeUrl) {
         stopTrackingRoot(rootRelativeUrl)
+        livereloadLogger.debug(`${rootRelativeUrl} removed -> stop tracking it`)
       }
     })
     addStopTrackingCalback(rootRelativeUrl, removeRootRemovedCallback)
