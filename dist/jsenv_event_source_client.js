@@ -197,10 +197,16 @@
 
   /* eslint-env browser */
   var isLivereloadEnabled = function isLivereloadEnabled() {
-    return window.localStorage.hasOwnProperty("livereload");
+    var value = window.localStorage.hasOwnProperty("livereload");
+
+    if (value === "0") {
+      return false;
+    }
+
+    return true;
   };
   var setLivereloadPreference = function setLivereloadPreference(value) {
-    window.localStorage.setItem("livereload", JSON.stringify(value));
+    window.localStorage.setItem("livereload", value ? "1" : "0");
   };
 
   /* eslint-env browser */
