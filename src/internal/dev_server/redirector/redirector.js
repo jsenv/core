@@ -1,4 +1,4 @@
-import { scanBrowserRuntimeFeatures } from "../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
+import { scanBrowserRuntimeFeatures } from "../../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
 
 const redirect = async () => {
   const redirectTarget = new URLSearchParams(window.location.search).get(

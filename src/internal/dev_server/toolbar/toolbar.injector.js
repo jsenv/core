@@ -1,94 +1,5 @@
-import { fetchExploringJson } from "@jsenv/core/src/internal/exploring/fetchExploringJson.js"
+import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
-
-/*
-We must connect to livereload server asap so that if a file is modified
-while page is loading we are notified of it.
-
-Otherwise it's possible that a file is loaded and used by browser then its modified before
-livereload connection is established.
-
-When toolbar is loaded it will open an other connection to server sent events and close this one.
-*/
-const connectLivereload = () => {
-  const { EventSource } = window
-  if (typeof EventSource !== "function") {
-    return () => {}
-  }
-
-  const getLivereloadPreference = () => {
-    return localStorage.hasOwnProperty("livereload")
-      ? JSON.parse(localStorage.getItem("livereload"))
-      : true
-  }
-
-  const url = document.location.href
-  let isOpen = false
-  let lastEventId
-  const latestChangeMap = {}
-
-  const events = {
-    "file-modified": ({ data }) => {
-      latestChangeMap[data] = "modified"
-      if (getLivereloadPreference()) {
-        window.location.reload(true)
-      }
-    },
-    "file-removed": ({ data }) => {
-      latestChangeMap[data] = "removed"
-      if (getLivereloadPreference()) {
-        window.location.reload(true)
-      }
-    },
-    "file-added": ({ data }) => {
-      latestChangeMap[data] = "added"
-      if (getLivereloadPreference()) {
-        window.location.reload(true)
-      }
-    },
-  }
-
-  const eventSourceOrigin = new URL(url).origin
-  const eventSource = new EventSource(url, {
-    withCredentials: true,
-  })
-
-  const disconnect = () => {
-    eventSource.close()
-  }
-
-  eventSource.onopen = () => {
-    isOpen = true
-  }
-
-  eventSource.onerror = (errorEvent) => {
-    if (errorEvent.target.readyState === EventSource.CLOSED) {
-      isOpen = false
-    }
-  }
-
-  Object.keys(events).forEach((eventName) => {
-    eventSource.addEventListener(eventName, (e) => {
-      if (e.origin === eventSourceOrigin) {
-        if (e.lastEventId) {
-          lastEventId = e.lastEventId
-        }
-        events[eventName](e)
-      }
-    })
-  })
-
-  return () => {
-    return {
-      isOpen,
-      latestChangeMap,
-      lastEventId,
-      disconnect,
-    }
-  }
-}
-// eslint-disable-next-line camelcase
-window.__jsenv_eventsource__ = connectLivereload()
 
 const injectToolbar = async () => {
   await new Promise((resolve) => {
@@ -129,7 +40,7 @@ const injectToolbar = async () => {
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
   const jsenvToolbarHtmlServerUrl = resolveUrl(
-    "./src/internal/toolbar/toolbar.html",
+    "./src/internal/dev_server/toolbar/toolbar.html",
     jsenvDirectoryServerUrl,
   )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
@@ -165,7 +76,7 @@ const injectToolbar = async () => {
 
   const div = document.createElement("div")
   const jsenvLogoUrl = resolveUrl(
-    "./src/internal/toolbar/jsenv-logo.svg",
+    "./src/internal/dev_server/toolbar/jsenv-logo.svg",
     jsenvDirectoryServerUrl,
   )
   const jsenvLogoSvgSrc = jsenvLogoUrl

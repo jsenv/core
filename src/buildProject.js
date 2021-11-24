@@ -181,6 +181,8 @@ export const buildProject = async ({
     // here we don't need to inline importmap
     // nor to inject jsenv script
     transformHtmlSourceFiles: false,
+    jsenvScriptInjection: false,
+    jsenvEventSourceClientInjection: false,
   })
 
   buildOperation.addEndCallback(async () => {

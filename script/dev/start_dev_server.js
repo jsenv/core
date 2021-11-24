@@ -13,6 +13,8 @@ startDevServer({
   http2: true,
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
+  // livereloadLogLevel: "debug",
+  // jsenvToolbar: false,
   port: 3456,
   explorableConfig: {
     source: {

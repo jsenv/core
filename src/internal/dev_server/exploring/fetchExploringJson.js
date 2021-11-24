@@ -1,6 +1,6 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { fetchJson } from "../browser-utils/fetchJson.js"
+import { fetchJson } from "../../browser-utils/fetchJson.js"
 
 export const fetchExploringJson = async ({ signal } = {}) => {
   try {

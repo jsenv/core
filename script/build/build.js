@@ -1,14 +1,17 @@
 // import { resolveUrl } from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { redirectorJsFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
+import { exploringIndexJsFileInfo } from "@jsenv/core/src/internal/dev_server/exploring/exploring_file_info.js"
+import {
+  toolbarInjectorFileInfo,
+  toolbarJsFileInfo,
+} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
 import {
   jsenvBrowserSystemFileInfo,
   jsenvCompileProxyFileInfo,
-  jsenvExploringRedirectorJsFileInfo,
-  jsenvExploringIndexJsFileInfo,
-  jsenvToolbarInjectorFileInfo,
-  jsenvToolbarJsFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 
 const commonParams = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -37,32 +40,39 @@ const buildsToGenerate = [
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringRedirectorJsFileInfo.jsenvRelativeUrl]:
-        jsenvExploringRedirectorJsFileInfo.jsenvBuildRelativeUrl,
+      [redirectorJsFileInfo.sourceRelativeUrl]:
+        redirectorJsFileInfo.buildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvExploringIndexJsFileInfo.jsenvRelativeUrl]:
-        jsenvExploringIndexJsFileInfo.jsenvBuildRelativeUrl,
+      [eventSourceClientFileInfo.sourceRelativeUrl]:
+        eventSourceClientFileInfo.buildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarInjectorFileInfo.jsenvRelativeUrl]:
-        jsenvToolbarInjectorFileInfo.jsenvBuildRelativeUrl,
+      [exploringIndexJsFileInfo.sourceRelativeUrl]:
+        exploringIndexJsFileInfo.buildRelativeUrl,
     },
   },
   {
     ...commonParams,
     format: "global",
     entryPointMap: {
-      [jsenvToolbarJsFileInfo.jsenvRelativeUrl]:
-        jsenvToolbarJsFileInfo.jsenvBuildRelativeUrl,
+      [toolbarInjectorFileInfo.sourceRelativeUrl]:
+        toolbarInjectorFileInfo.buildRelativeUrl,
+    },
+  },
+  {
+    ...commonParams,
+    format: "global",
+    entryPointMap: {
+      [toolbarJsFileInfo.sourceRelativeUrl]: toolbarJsFileInfo.buildRelativeUrl,
     },
   },
 ]

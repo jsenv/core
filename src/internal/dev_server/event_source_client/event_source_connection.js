@@ -1,15 +1,9 @@
-export const connectEventSource = (
+/* eslint-env browser */
+
+export const createEventSourceConnection = (
   eventSourceUrl,
   events = {},
-  {
-    connecting = () => {},
-    connected = () => {},
-    cancelled = () => {},
-    failed = () => {},
-    retryMaxAttempt = Infinity,
-    retryAllocatedMs = Infinity,
-    lastEventId,
-  } = {},
+  { retryMaxAttempt = Infinity, retryAllocatedMs = Infinity, lastEventId } = {},
 ) => {
   const { EventSource } = window
   if (typeof EventSource !== "function") {
@@ -18,82 +12,40 @@ export const connectEventSource = (
 
   const eventSourceOrigin = new URL(eventSourceUrl).origin
 
-  // will be either abort, disconnect or a third function calling cancelled
-  // depending on connectionStatus
-  let cancelCurrentConnection = () => {}
+  let connectionStatus = "default"
+  let connectionStatusChangeCallback = () => {}
+  let disconnect = () => {}
 
-  const reconnect = () => {
-    attemptConnection(
-      lastEventId
-        ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
-        : eventSourceUrl,
-    )
+  const goToStatus = (newStatus) => {
+    connectionStatus = newStatus
+    connectionStatusChangeCallback()
   }
 
   const attemptConnection = (url) => {
     const eventSource = new EventSource(url, {
       withCredentials: true,
     })
-
-    let connectionStatus = "connecting"
-    const abort = () => {
-      if (connectionStatus !== "connecting") {
-        console.warn(`abort ignored because connection is ${connectionStatus}`)
+    disconnect = () => {
+      if (
+        connectionStatus !== "connecting" &&
+        connectionStatus !== "connected"
+      ) {
+        console.warn(
+          `disconnect() ignored because connection is ${connectionStatus}`,
+        )
         return
       }
-      connectionStatus = "aborted"
       eventSource.onerror = undefined
       eventSource.close()
-      cancelled({ connect: reconnect })
+      goToStatus("disconnected")
     }
-    cancelCurrentConnection = abort
-    connecting({ cancel: abort })
-
-    eventSource.onopen = () => {
-      connectionStatus = "connected"
-      const disconnect = () => {
-        if (connectionStatus !== "connected") {
-          console.warn(
-            `disconnect ignored because connection is ${connectionStatus}`,
-          )
-          return
-        }
-        connectionStatus = "disconnected"
-        eventSource.onerror = undefined
-        eventSource.close()
-        cancelled({ connect: reconnect })
-      }
-      cancelCurrentConnection = disconnect
-      connected({ cancel: disconnect })
-    }
-
     let retryCount = 0
     let firstRetryMs = Date.now()
-
     eventSource.onerror = (errorEvent) => {
-      const considerFailed = () => {
-        connectionStatus = "disconnected"
-        failed({
-          cancel: () => {
-            if (connectionStatus !== "failed") {
-              console.warn(
-                `disable ignored because connection is ${connectionStatus}`,
-              )
-              return
-            }
-            connectionStatus = "disabled"
-            cancelled({ connect: reconnect })
-          },
-          connect: reconnect,
-        })
-      }
-
       if (errorEvent.target.readyState === EventSource.CONNECTING) {
         if (retryCount > retryMaxAttempt) {
           console.info(`could not connect after ${retryMaxAttempt} attempt`)
-          eventSource.onerror = undefined
-          eventSource.close()
-          considerFailed()
+          disconnect()
           return
         }
 
@@ -105,23 +57,23 @@ export const connectEventSource = (
             console.info(
               `could not connect in less than ${retryAllocatedMs} ms`,
             )
-            eventSource.onerror = undefined
-            eventSource.close()
-            considerFailed()
+            disconnect()
             return
           }
         }
 
-        connectionStatus = "connecting"
         retryCount++
-        connecting({ cancel: abort })
+        goToStatus("connecting")
         return
       }
 
       if (errorEvent.target.readyState === EventSource.CLOSED) {
-        considerFailed()
+        disconnect()
         return
       }
+    }
+    eventSource.onopen = () => {
+      goToStatus("connected")
     }
     Object.keys(events).forEach((eventName) => {
       eventSource.addEventListener(eventName, (e) => {
@@ -140,20 +92,37 @@ export const connectEventSource = (
         }
       })
     }
+    goToStatus("connecting")
   }
 
-  attemptConnection(eventSourceUrl)
-  const disconnect = () => {
-    cancelCurrentConnection()
+  let connect = () => {
+    attemptConnection(eventSourceUrl)
+    connect = () => {
+      attemptConnection(
+        lastEventId
+          ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
+          : eventSourceUrl,
+      )
+    }
   }
 
   const removePageUnloadListener = listenPageUnload(() => {
     disconnect()
   })
 
-  return () => {
+  const destroy = () => {
     removePageUnloadListener()
     disconnect()
+  }
+
+  return {
+    getConnectionStatus: () => connectionStatus,
+    setConnectionStatusCallback: (callback) => {
+      connectionStatusChangeCallback = callback
+    },
+    connect,
+    disconnect,
+    destroy,
   }
 }
 

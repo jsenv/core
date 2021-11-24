@@ -104,8 +104,9 @@ export const startCompileServer = async ({
   plugins,
   livereloadSSE = false,
   transformHtmlSourceFiles = true,
-  jsenvToolbarInjection = false,
   jsenvScriptInjection = true,
+  jsenvEventSourceClientInjection = false,
+  jsenvToolbarInjection = false,
   inlineImportMapIntoHTML = true,
 }) => {
   assertArguments({
@@ -312,6 +313,7 @@ export const startCompileServer = async ({
       customCompilers,
       moduleOutFormat,
       importMetaFormat,
+      jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 
       projectFileRequestedCallback,
@@ -327,8 +329,10 @@ export const startCompileServer = async ({
             createTransformHtmlSourceFileService({
               logger,
               projectDirectoryUrl,
+              projectFileRequestedCallback,
               inlineImportMapIntoHTML,
               jsenvScriptInjection,
+              jsenvEventSourceClientInjection,
               jsenvToolbarInjection,
             }),
         }

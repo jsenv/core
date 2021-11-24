@@ -4,7 +4,6 @@ import {
   urlToFileSystemPath,
   resolveUrl,
   writeFileSystemNodeModificationTime,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { startDevServer } from "@jsenv/core"
@@ -20,9 +19,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `${testDirectoryname}.html`
+const filename = `dev_server_livereload.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFileSystemPath(
   resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
