@@ -165,7 +165,11 @@ const createRedirectorService = ({
       return {
         status: 307,
         headers: {
-          location: `${request.origin}/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`,
+          location: `${
+            request.origin
+          }/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${encodeURIComponent(
+            redirectTarget,
+          )}`,
         },
       }
     },
