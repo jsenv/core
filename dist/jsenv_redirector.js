@@ -1348,8 +1348,10 @@
     return _await(scanBrowserRuntimeFeatures({
       failFastOnFeatureDetection: true
     }), function (browserRuntimeFeaturesReport) {
-      var href = "".concat(getDirectoryUrl(browserRuntimeFeaturesReport)).concat(redirectTarget);
-      window.location.href = href;
+      var href = "".concat(getDirectoryUrl(browserRuntimeFeaturesReport)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
+      // otherwise it would break the back button
+
+      window.location.replace(href);
     });
   });
 

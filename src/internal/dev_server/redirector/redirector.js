@@ -11,7 +11,9 @@ const redirect = async () => {
   const href = `${getDirectoryUrl(
     browserRuntimeFeaturesReport,
   )}${redirectTarget}`
-  window.location.href = href
+  // It's IMPORTANT to use location.replace and NOT location.href = url
+  // otherwise it would break the back button
+  window.location.replace(href)
 }
 
 const getDirectoryUrl = ({
