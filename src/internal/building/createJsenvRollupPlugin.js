@@ -613,6 +613,7 @@ export const createJsenvRollupPlugin = async ({
               entryUrl,
               entryBuffer,
               entryBuildRelativeUrl,
+              urlVersionningForEntryPoints
             })
           },
         ),

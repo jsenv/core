@@ -1,175 +1,15 @@
 (function () {
   'use strict';
 
-  var memoize = function memoize(compute) {
-    var memoized = false;
-    var memoizedValue;
-
-    var fnWithMemoization = function fnWithMemoization() {
-      if (memoized) {
-        return memoizedValue;
-      } // if compute is recursive wait for it to be fully done before storing the lockValue
-      // so set locked later
-
-
-      memoizedValue = compute.apply(void 0, arguments);
-      memoized = true;
-      return memoizedValue;
-    };
-
-    fnWithMemoization.forget = function () {
-      var value = memoizedValue;
-      memoized = false;
-      memoizedValue = undefined;
-      return value;
-    };
-
-    return fnWithMemoization;
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return typeof obj;
   };
 
-  function _call$2(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
-
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
-
-  var fetchPolyfill = function fetchPolyfill() {
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return _call$2(loadPolyfill, function (_ref) {
-      var fetchUsingXHR = _ref.fetchUsingXHR;
-      return fetchUsingXHR.apply(void 0, args);
-    });
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
   };
 
-  var loadPolyfill = memoize(function () {
-    return Promise.resolve().then(function () { return fetchUsingXHR$1; });
-  });
-  var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? window.fetch : fetchPolyfill;
-
-  var createPreference = function createPreference(name) {
-    return {
-      has: function has() {
-        return localStorage.hasOwnProperty(name);
-      },
-      get: function get() {
-        return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
-      },
-      set: function set(value) {
-        return localStorage.setItem(name, JSON.stringify(value));
-      }
-    };
-  };
-
-  var objectWithoutPropertiesLoose = (function (source, excluded) {
-    if (source === null) return {};
-    var target = {};
-    var sourceKeys = Object.keys(source);
-    var key;
-    var i;
-
-    for (i = 0; i < sourceKeys.length; i++) {
-      key = sourceKeys[i];
-      if (excluded.indexOf(key) >= 0) continue;
-      target[key] = source[key];
-    }
-
-    return target;
-  });
-
-  var _objectWithoutProperties = (function (source, excluded) {
-    if (source === null) return {};
-    var target = objectWithoutPropertiesLoose(source, excluded);
-    var key;
-    var i;
-
-    if (Object.getOwnPropertySymbols) {
-      var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
-
-      for (i = 0; i < sourceSymbolKeys.length; i++) {
-        key = sourceSymbolKeys[i];
-        if (excluded.indexOf(key) >= 0) continue;
-        if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
-        target[key] = source[key];
-      }
-    }
-
-    return target;
-  });
-
-  var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
-    var _ref6$duration = _ref6.duration,
-        duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
-        _ref6$timingFunction = _ref6.timingFunction,
-        timingFunction = _ref6$timingFunction === void 0 ? function (t) {
-      return t;
-    } : _ref6$timingFunction,
-        _ref6$onProgress = _ref6.onProgress,
-        onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
-        _ref6$onCancel = _ref6.onCancel,
-        onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
-        _ref6$onComplete = _ref6.onComplete,
-        onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
-
-    if (isNaN(duration)) {
-      // console.warn(`duration must be a number, received ${duration}`)
-      return function () {};
-    }
-
-    duration = parseInt(duration, 10);
-    var startMs = performance.now();
-    var currentRequestAnimationFrameId;
-    var done = false;
-    var rawProgress = 0;
-    var progress = 0;
-
-    var handler = function handler() {
-      currentRequestAnimationFrameId = null;
-      var nowMs = performance.now();
-      rawProgress = Math.min((nowMs - startMs) / duration, 1);
-      progress = timingFunction(rawProgress);
-      done = rawProgress === 1;
-      onProgress({
-        done: done,
-        rawProgress: rawProgress,
-        progress: progress
-      });
-
-      if (done) {
-        onComplete();
-      } else {
-        currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
-      }
-    };
-
-    handler();
-
-    var stop = function stop() {
-      if (currentRequestAnimationFrameId) {
-        window.cancelAnimationFrame(currentRequestAnimationFrameId);
-        currentRequestAnimationFrameId = null;
-      }
-
-      if (!done) {
-        done = true;
-        onCancel({
-          rawProgress: rawProgress,
-          progress: progress
-        });
-      }
-    };
-
-    return stop;
-  };
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
@@ -239,15 +79,41 @@
     return target;
   }
 
-  var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
-  };
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
+    if (source === null) return {};
+    var target = {};
+    var sourceKeys = Object.keys(source);
+    var key;
+    var i;
 
-  var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-  };
+    for (i = 0; i < sourceKeys.length; i++) {
+      key = sourceKeys[i];
+      if (excluded.indexOf(key) >= 0) continue;
+      target[key] = source[key];
+    }
 
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+    return target;
+  });
+
+  var _objectWithoutProperties = (function (source, excluded) {
+    if (source === null) return {};
+    var target = objectWithoutPropertiesLoose(source, excluded);
+    var key;
+    var i;
+
+    if (Object.getOwnPropertySymbols) {
+      var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+      for (i = 0; i < sourceSymbolKeys.length; i++) {
+        key = sourceSymbolKeys[i];
+        if (excluded.indexOf(key) >= 0) continue;
+        if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+        target[key] = source[key];
+      }
+    }
+
+    return target;
+  });
 
   function _await$4(value, then, direct) {
     if (direct) {
@@ -683,11 +549,6 @@
     return view.buffer;
   };
 
-  var fetchUsingXHR$1 = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    fetchUsingXHR: fetchUsingXHR
-  });
-
   var _excluded = ["mode"];
 
   function _await$3(value, then, direct) {
@@ -850,6 +711,38 @@
     });
   });
 
+  var setStyles = function setStyles(element, styles) {
+    var elementStyle = element.style;
+    var restoreStyles = Object.keys(styles).map(function (styleName) {
+      var restore;
+
+      if (styleName in elementStyle) {
+        var currentStyle = elementStyle[styleName];
+
+        restore = function restore() {
+          elementStyle[styleName] = currentStyle;
+        };
+      } else {
+        restore = function restore() {
+          delete elementStyle[styleName];
+        };
+      }
+
+      elementStyle[styleName] = styles[styleName];
+      return restore;
+    });
+    return function () {
+      restoreStyles.forEach(function (restore) {
+        return restore();
+      });
+    };
+  };
+  var setAttributes = function setAttributes(element, attributes) {
+    Object.keys(attributes).forEach(function (name) {
+      element.setAttribute(name, attributes[name]);
+    });
+  };
+
   function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -862,11 +755,151 @@
     return then ? value.then(then) : value;
   }
 
-  var fetchJSON = _async(function (url, options) {
-    return _await(fetchUrl$1(url, options), function (response) {
-      return _await(response.json());
+  var injectToolbar = _async(function () {
+    return _await(new Promise(function (resolve) {
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(resolve);
+      } else {
+        window.requestAnimationFrame(resolve);
+      }
+    }), function () {
+      return _call(fetchExploringJson, function (_ref) {
+        var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl;
+        var jsenvDirectoryServerUrl = resolveUrl(jsenvDirectoryRelativeUrl, document.location.origin);
+        var placeholder = getToolbarPlaceholder();
+        var iframe = document.createElement("iframe");
+        setAttributes(iframe, {
+          tabindex: -1,
+          // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+          // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+          allowtransparency: true
+        });
+        setStyles(iframe, {
+          "position": "fixed",
+          "zIndex": 1000,
+          "bottom": 0,
+          "left": 0,
+          "width": "100%",
+          "height": 0,
+
+          /* ensure toolbar children are not focusable when hidden */
+          "visibility": "hidden",
+          "transition-duration": "300ms",
+          "transition-property": "height, visibility",
+          "border": "none"
+        });
+        var iframeLoadedPromise = iframeToLoadedPromise(iframe);
+        var jsenvToolbarHtmlServerUrl = resolveUrl("./src/internal/dev_server/toolbar/toolbar.html", jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
+
+        iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
+        placeholder.parentNode.replaceChild(iframe, placeholder);
+        return _await(iframeLoadedPromise, function () {
+          iframe.removeAttribute("tabindex");
+
+          var listenToolbarIframeEvent = function listenToolbarIframeEvent(event, fn) {
+            window.addEventListener("message", function (messageEvent) {
+              var data = messageEvent.data;
+              if (_typeof(data) !== "object") return;
+              var jsenv = data.jsenv;
+              if (!jsenv) return;
+              var type = data.type;
+              if (type !== event) return;
+              fn(data.value);
+            }, false);
+          };
+
+          listenToolbarIframeEvent("toolbar-visibility-change", function (visible) {
+            if (visible) {
+              hideToolbarTrigger();
+            } else {
+              showToolbarTrigger();
+            }
+          });
+          var div = document.createElement("div");
+          var jsenvLogoUrl = resolveUrl("./src/internal/dev_server/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl);
+          var jsenvLogoSvgSrc = jsenvLogoUrl;
+          div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgSrc, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+          var toolbarTrigger = div.firstElementChild;
+          iframe.parentNode.appendChild(toolbarTrigger);
+          var timer;
+
+          toolbarTrigger.onmouseenter = function () {
+            toolbarTrigger.setAttribute("data-animate", "");
+            timer = setTimeout(expandToolbarTrigger, 500);
+          };
+
+          toolbarTrigger.onmouseleave = function () {
+            clearTimeout(timer);
+            collapseToolbarTrigger();
+          };
+
+          toolbarTrigger.onfocus = function () {
+            toolbarTrigger.removeAttribute("data-animate");
+            expandToolbarTrigger();
+          };
+
+          toolbarTrigger.onblur = function () {
+            toolbarTrigger.removeAttribute("data-animate");
+            clearTimeout(timer);
+            collapseToolbarTrigger();
+          };
+
+          toolbarTrigger.onclick = function () {
+            window.__jsenv__.toolbar.show();
+          };
+
+          var showToolbarTrigger = function showToolbarTrigger() {
+            toolbarTrigger.style.display = "block";
+          };
+
+          var hideToolbarTrigger = function hideToolbarTrigger() {
+            toolbarTrigger.style.display = "none";
+          };
+
+          var expandToolbarTrigger = function expandToolbarTrigger() {
+            toolbarTrigger.setAttribute("data-expanded", "");
+          };
+
+          var collapseToolbarTrigger = function collapseToolbarTrigger() {
+            toolbarTrigger.removeAttribute("data-expanded", "");
+          };
+
+          hideToolbarTrigger();
+          iframe.contentWindow.renderToolbar();
+          return iframe;
+        });
+      });
     });
   });
+
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  var getToolbarPlaceholder = function getToolbarPlaceholder() {
+    var placeholder = queryPlaceholder();
+
+    if (placeholder) {
+      if (document.body.contains(placeholder)) {
+        return placeholder;
+      } // otherwise iframe would not be visible because in <head>
+
+
+      console.warn("element with [data-jsenv-toolbar-placeholder] must be inside document.body");
+      return createTooolbarPlaceholder();
+    }
+
+    return createTooolbarPlaceholder();
+  };
 
   function _async(f) {
     return function () {
@@ -882,211 +915,37 @@
     };
   }
 
-  var groupPreference = createPreference("group");
+  var queryPlaceholder = function queryPlaceholder() {
+    return document.querySelector("[data-jsenv-toolbar-placeholder]");
+  };
 
-  function _call(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
+  var createTooolbarPlaceholder = function createTooolbarPlaceholder() {
+    var placeholder = document.createElement("span");
+    document.body.appendChild(placeholder);
+    return placeholder;
+  };
 
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  }
+  var iframeToLoadedPromise = function iframeToLoadedPromise(iframe) {
+    return new Promise(function (resolve) {
+      var onload = function onload() {
+        iframe.removeEventListener("load", onload, true);
+        resolve();
+      };
 
-  var run = function run() {
-    return _call(fetchExploringJson, function (_ref) {
-      var projectDirectoryUrl = _ref.projectDirectoryUrl,
-          explorableConfig = _ref.explorableConfig,
-          outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
-      return _await(fetchJSON("/.jsenv/explorables.json", {
-        method: "GET"
-      }), function (files) {
-        var compileServerOrigin = document.location.origin;
-        var outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
-        var documentUrl = document.location.href;
-        var compileId;
-        var outDirectoryIndex = documentUrl.indexOf(outDirectoryUrl);
-
-        if (outDirectoryIndex === 0) {
-          var afterOutDirectory = documentUrl.slice(outDirectoryUrl.length);
-          compileId = afterOutDirectory.split("/")[0];
-        } else {
-          compileId = null;
-        }
-
-        var renderHtml = function renderHtml() {
-          // const mainHtmlFileRelativeUrl = "index.html"
-          // const mainFileLink = document.querySelector("#main_file_link")
-          // const mainFileUrl = urlToVisitFromRelativeUrl(mainHtmlFileRelativeUrl)
-          // mainFileLink.href = mainFileUrl
-          // mainFileLink.textContent = `${mainHtmlFileRelativeUrl}`
-          // const mainFileIframe = document.querySelector(`#main_file_iframe`)
-          // mainFileIframe.src = mainFileUrl
-          var fileListElement = document.querySelector("[data-page=\"file-list\"]").cloneNode(true);
-          var directoryName = directoryUrlToDirectoryName(projectDirectoryUrl);
-          var span = fileListElement.querySelector("#directory_relative_url");
-          span.title = projectDirectoryUrl;
-          span.textContent = directoryName;
-          var h4 = fileListElement.querySelector("h4");
-          var ul = fileListElement.querySelector("ul");
-          ul.innerHTML = files.map(function (file) {
-            return "<li>\n          <a\n            class=\"execution-link\"\n            data-relative-url=".concat(file.relativeUrl, "\n            href=").concat(urlToVisitFromRelativeUrl(file.relativeUrl), "\n          >\n            ").concat(file.relativeUrl, "\n          </a>\n        </li>");
-          }).join("");
-          var groupFieldset = fileListElement.querySelector("#filter-group-set");
-          var groupNames = Object.keys(explorableConfig);
-          groupFieldset.innerHTML = groupNames.map(function (key) {
-            return "<label data-contains-hidden-input class=\"item\">\n  <input type=\"radio\" name=\"filter-group\" value=\"".concat(key, "\"/>\n  <span>").concat(key, "</span>\n</label>");
-          }).join("");
-          var currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0];
-          Array.from(groupFieldset.querySelectorAll("input")).forEach(function (inputRadio) {
-            inputRadio.checked = inputRadio.value === currentGroup;
-
-            inputRadio.onchange = function () {
-              if (inputRadio.checked) {
-                groupPreference.set(inputRadio.value);
-                enableGroup(inputRadio.value);
-              }
-            };
-          });
-
-          var enableGroup = function enableGroup(groupName) {
-            var arrayOfElementToShow = [];
-            var arrayOfElementToHide = [];
-            files.forEach(function (file) {
-              var fileLink = fileListElement.querySelector("a[data-relative-url=\"".concat(file.relativeUrl, "\"]"));
-              var fileLi = fileLink.parentNode;
-
-              if (file.meta[groupName]) {
-                arrayOfElementToShow.push(fileLi);
-              } else {
-                arrayOfElementToHide.push(fileLi);
-              }
-            });
-            arrayOfElementToShow.forEach(function (element) {
-              element.removeAttribute("data-force-hide");
-            });
-            arrayOfElementToHide.forEach(function (element) {
-              element.setAttribute("data-force-hide", "");
-            });
-            h4.innerHTML = arrayOfElementToShow.length === 0 ? "No file found.\n              Config for this section: <pre>".concat(JSON.stringify(explorableConfig[groupName], null, "  "), "</pre>") : "".concat(arrayOfElementToShow.length, " files found. Click on the one you want to execute");
-          };
-
-          enableGroup(currentGroup);
-          document.querySelector("main").appendChild(fileListElement);
-          makeMenuScrollable();
-        };
-
-        var urlToVisitFromRelativeUrl = function urlToVisitFromRelativeUrl(relativeUrl) {
-          if (compileId) {
-            return "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(relativeUrl);
-          }
-
-          return "".concat(compileServerOrigin, "/").concat(relativeUrl);
-        };
-
-        var makeMenuScrollable = function makeMenuScrollable() {
-          var getMenuWrapperSize = function getMenuWrapperSize() {
-            return document.querySelector(".menu-wrapper").getBoundingClientRect().width;
-          };
-
-          var menuWrapperSize = getMenuWrapperSize();
-
-          var getMenuSize = function getMenuSize() {
-            return document.querySelector(".menu").getBoundingClientRect().width;
-          };
-
-          var menuSize = getMenuSize();
-          var menuVisibleSize = menuWrapperSize;
-          var menuInvisibleSize = menuSize - menuVisibleSize;
-
-          var getMenuPosition = function getMenuPosition() {
-            return document.querySelector(".menu-wrapper").scrollLeft;
-          };
-
-          var scrollDuration = 300;
-          var leftPaddle = document.querySelector(".left-paddle");
-          var rightPaddle = document.querySelector(".right-paddle");
-
-          var handleMenuScroll = function handleMenuScroll() {
-            menuInvisibleSize = menuSize - menuWrapperSize;
-            var menuPosition = getMenuPosition();
-            var menuEndOffset = menuInvisibleSize; // show & hide the paddles, depending on scroll position
-
-            if (menuPosition <= 0 && menuEndOffset <= 0) {
-              // hide both paddles if the window is large enough to display all tabs
-              leftPaddle.classList.add("hidden");
-              rightPaddle.classList.add("hidden");
-            } else if (menuPosition <= 0) {
-              leftPaddle.classList.add("hidden");
-              rightPaddle.classList.remove("hidden");
-            } else if (menuPosition < Math.floor(menuEndOffset)) {
-              // show both paddles in the middle
-              leftPaddle.classList.remove("hidden");
-              rightPaddle.classList.remove("hidden");
-            } else if (menuPosition >= Math.floor(menuEndOffset)) {
-              leftPaddle.classList.remove("hidden");
-              rightPaddle.classList.add("hidden");
-            }
-          };
-
-          handleMenuScroll();
-
-          window.onresize = function () {
-            menuWrapperSize = getMenuWrapperSize();
-            menuSize = getMenuSize();
-            handleMenuScroll();
-          }; // finally, what happens when we are actually scrolling the menu
-
-
-          document.querySelector(".menu-wrapper").onscroll = function () {
-            handleMenuScroll();
-          }; // scroll to left
-
-
-          rightPaddle.onclick = function () {
-            var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
-            var scrollEnd = scrollStart + menuWrapperSize;
-            startJavaScriptAnimation({
-              duration: scrollDuration,
-              onProgress: function onProgress(_ref2) {
-                var progress = _ref2.progress;
-                document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
-              }
-            });
-          }; // scroll to right
-
-
-          leftPaddle.onclick = function () {
-            var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
-            var scrollEnd = scrollStart - menuWrapperSize;
-            startJavaScriptAnimation({
-              duration: scrollDuration,
-              onProgress: function onProgress(_ref3) {
-                var progress = _ref3.progress;
-                document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
-              }
-            });
-          };
-        };
-
-        var directoryUrlToDirectoryName = function directoryUrlToDirectoryName(directoryUrl) {
-          var slashLastIndex = directoryUrl.lastIndexOf("/", // ignore last slash
-          directoryUrl.length - 2);
-          if (slashLastIndex === -1) return "";
-          return directoryUrl.slice(slashLastIndex + 1);
-        };
-
-        renderHtml();
-      });
+      iframe.addEventListener("load", onload, true);
     });
   };
 
-  run();
+  var resolveUrl = function resolveUrl(url, baseUrl) {
+    return String(new URL(url, baseUrl));
+  };
+
+  if (document.readyState === "complete") {
+    injectToolbar();
+  } else {
+    window.addEventListener("load", injectToolbar);
+  }
 
 })();
 
-//# sourceMappingURL=jsenv_exploring_index-7ee9e917.js.map
+//# sourceMappingURL=toolbar_injector-2363cefa.js.map

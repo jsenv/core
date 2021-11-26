@@ -34,7 +34,6 @@ import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/gener
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import {
-  jsenvCompileProxyFileInfo,
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "../jsenvInternalFiles.js"
@@ -294,9 +293,6 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       outDirectoryUrl,
       compileServerMetaFileInfo,
-    }),
-    "service: compile proxy": createCompileProxyService({
-      projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
@@ -913,14 +909,23 @@ const createSourceFileService = ({
     const relativeUrl = request.pathname.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
 
-    const responsePromise = fetchFileSystem(
-      new URL(request.ressource.slice(1), projectDirectoryUrl),
-      {
-        headers: request.headers,
-        etagEnabled: projectFileCacheStrategy === "etag",
-        mtimeEnabled: projectFileCacheStrategy === "mtime",
-      },
+    const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
+      .href
+    const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
+      fileUrl,
+      new URL("./dist/", jsenvCoreDirectoryUrl),
     )
+
+    const responsePromise = fetchFileSystem(fileUrl, {
+      headers: request.headers,
+      etagEnabled: projectFileCacheStrategy === "etag",
+      mtimeEnabled: projectFileCacheStrategy === "mtime",
+      ...(fileIsInsideJsenvDistDirectory
+        ? {
+            cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
+          }
+        : {}),
+    })
 
     return responsePromise
   }
@@ -1047,27 +1052,6 @@ const createCompileServerMetaService = ({
           "content-length": Buffer.byteLength(body),
         },
         body,
-      }
-    }
-
-    return null
-  }
-}
-
-const createCompileProxyService = ({ projectDirectoryUrl }) => {
-  const jsenvCompileProxyRelativeUrlForProject = urlToRelativeUrl(
-    jsenvCompileProxyFileInfo.jsenvBuildUrl,
-    projectDirectoryUrl,
-  )
-
-  return (request) => {
-    if (request.ressource === "/.jsenv/jsenv_compile_proxy.js") {
-      const jsenvCompileProxyBuildServerUrl = `${request.origin}/${jsenvCompileProxyRelativeUrlForProject}`
-      return {
-        status: 307,
-        headers: {
-          location: jsenvCompileProxyBuildServerUrl,
-        },
       }
     }
 

@@ -2,14 +2,9 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { jsenvBrowserSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
-import {
-  toolbarInjectorFileInfo,
-  toolbarHtmlFileInfo,
-} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
+import { getJsenvBuildUrl } from "../jsenv_builds.js"
 import {
   setJavaScriptSourceMappingUrl,
   sourcemapToBase64Url,
@@ -54,17 +49,32 @@ export const compileHtml = async ({
   jsenvToolbarInjection,
   onHtmlImportmapInfo,
 }) => {
-  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+  const browserSystemBuildUrl = await getJsenvBuildUrl(
+    "./dist/browser_system/jsenv_browser_system.js",
+  )
+  const browserSystemBuildUrlRelativeToProject = urlToRelativeUrl(
+    browserSystemBuildUrl,
     projectDirectoryUrl,
+  )
+
+  const eventSourceClientBuildUrl = await getJsenvBuildUrl(
+    "./dist/event_source_client/jsenv_event_source_client.js",
   )
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientFileInfo.buildUrl,
+    eventSourceClientBuildUrl,
     projectDirectoryUrl,
   )
+
+  const toolbarInjectorBuildUrl = await getJsenvBuildUrl(
+    "./dist/toolbar_injector/jsenv_toolbar_injector.js",
+  )
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarInjectorFileInfo.buildUrl,
+    toolbarInjectorBuildUrl,
     projectDirectoryUrl,
+  )
+
+  const toolbarBuildUrl = await getJsenvBuildUrl(
+    "./dist/toolbar/jsenv_toolbar.html",
   )
 
   // ideally we should try/catch html syntax error
@@ -78,22 +88,21 @@ export const compileHtml = async ({
 
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl && jsenvScriptInjection
+      ...(urlNoSearch !== toolbarBuildUrl && jsenvScriptInjection
         ? [
             {
-              src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+              src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl &&
-      jsenvEventSourceClientInjection
+      ...(urlNoSearch !== toolbarBuildUrl && jsenvEventSourceClientInjection
         ? [
             {
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
         : []),
-      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl && jsenvToolbarInjection
+      ...(urlNoSearch !== toolbarBuildUrl && jsenvToolbarInjection
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,

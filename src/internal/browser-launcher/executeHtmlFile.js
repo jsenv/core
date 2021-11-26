@@ -5,11 +5,11 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
-import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_utils/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
+import { getJsenvBuildUrl } from "../jsenv_builds.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -38,8 +38,11 @@ export const executeHtmlFile = async (
 
   await assertFilePresence(fileUrl)
 
+  const compileProxyBuildUrl = await getJsenvBuildUrl(
+    `./dist/compile_proxy/compile_proxy.js`,
+  )
   const compileProxyProjectRelativeUrl = urlToRelativeUrl(
-    jsenvCompileProxyHtmlFileInfo.url,
+    compileProxyBuildUrl,
     projectDirectoryUrl,
   )
   const compileProxyClientUrl = resolveUrl(

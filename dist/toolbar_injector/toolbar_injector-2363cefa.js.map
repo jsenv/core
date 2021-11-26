@@ -1,19 +1,19 @@
 {
   "version": 3,
-  "file": "jsenv_toolbar_injector-4256ddee.js",
+  "file": "toolbar_injector-2363cefa.js",
   "sources": [
-    "../helpers/babel/typeof/typeof.js",
-    "../helpers/babel/defineProperty/defineProperty.js",
-    "../node_modules/@jsenv/logger/src/createDetailedMessage.js",
-    "../helpers/babel/objectSpread2/objectSpread2.js",
-    "../helpers/babel/objectWithoutPropertiesLoose/objectWithoutPropertiesLoose.js",
-    "../helpers/babel/objectWithoutProperties/objectWithoutProperties.js",
-    "../src/internal/browser-utils/fetchUsingXHR.js",
-    "../src/internal/browser-utils/fetch-browser.js",
-    "../src/internal/browser-utils/fetchJson.js",
-    "../src/internal/dev_server/exploring/fetchExploringJson.js",
-    "../src/internal/dev_server/toolbar/util/dom.js",
-    "../src/internal/dev_server/toolbar/toolbar.injector.js"
+    "../../helpers/babel/typeof/typeof.js",
+    "../../helpers/babel/defineProperty/defineProperty.js",
+    "../../node_modules/@jsenv/logger/src/createDetailedMessage.js",
+    "../../helpers/babel/objectSpread2/objectSpread2.js",
+    "../../helpers/babel/objectWithoutPropertiesLoose/objectWithoutPropertiesLoose.js",
+    "../../helpers/babel/objectWithoutProperties/objectWithoutProperties.js",
+    "../../src/internal/browser-utils/fetchUsingXHR.js",
+    "../../src/internal/browser-utils/fetch-browser.js",
+    "../../src/internal/browser-utils/fetchJson.js",
+    "../../src/internal/dev_server/exploring/fetchExploringJson.js",
+    "../../src/internal/dev_server/toolbar/util/dom.js",
+    "../../src/internal/dev_server/toolbar/toolbar.injector.js"
   ],
   "sourcesContent": [
     "const nativeTypeOf = (obj) => typeof obj\n\nconst customTypeOf = (obj) => {\n  return obj &&\n    typeof Symbol === \"function\" &&\n    obj.constructor === Symbol &&\n    obj !== Symbol.prototype\n    ? \"symbol\"\n    : typeof obj\n}\n\nexport default typeof Symbol === \"function\" && typeof Symbol.iterator === \"symbol\"\n  ? nativeTypeOf\n  : customTypeOf\n",

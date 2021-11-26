@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
+    <!--
+    commented until we found why it fails the build
     <link rel="stylesheet" type="text/css" href="./toolbar.main.css" />
+    -->
   </head>
   <body>
     <div id="toolbar-overlay"></div>
@@ -551,6 +554,15 @@
     module approach wil be faster because
     no compilation will be necessary
     -->
-    <script src="/.jsenv/toolbar.main.js"></script>
+    <script
+      type="importmap"
+      src="../../../../node_resolution.importmap"
+    ></script>
+    <script>
+      // here we should create something like window.toolbar = {}
+      // and a promise the toolbar injector can listen to act on the toolbar
+      // or we could just consider all communication should pass by postmessage
+    </script>
+    <script type="module" src="./toolbar.main.js"></script>
   </body>
 </html>

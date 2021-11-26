@@ -8,6 +8,14 @@
   </head>
 
   <body>
-    <script src="/.jsenv/jsenv_compile_proxy.js"></script>
+    <script
+      type="importmap"
+      src="../../../../node_resolution.importmap"
+    ></script>
+    <script type="module">
+      import { scanBrowserRuntimeFeatures } from "../../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
+
+      window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures
+    </script>
   </body>
 </html>

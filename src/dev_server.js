@@ -15,21 +15,13 @@ import {
   computeOutDirectoryRelativeUrl,
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
-import {
-  redirectorHtmlFileInfo,
-  redirectorJsFileInfo,
-} from "./internal/dev_server/redirector/redirector_file_info.js"
-import {
-  exploringIndexHtmlFileInfo,
-  exploringIndexJsFileInfo,
-} from "@jsenv/core/src/internal/dev_server/exploring/exploring_file_info.js"
-import { toolbarJsFileInfo } from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
+import { getJsenvBuildUrl } from "./internal/jsenv_builds.js"
+
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
-import { eventSourceClientFileInfo } from "./internal/dev_server/event_source_client/event_source_client_file_info.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -45,10 +37,7 @@ export const startDevServer = async ({
 
   projectDirectoryUrl,
   explorableConfig = jsenvExplorableConfig,
-  mainFileRelativeUrl = urlToRelativeUrl(
-    exploringIndexHtmlFileInfo.sourceUrl,
-    projectDirectoryUrl,
-  ),
+  mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryName = "dev",
   jsenvToolbar = true,
@@ -70,6 +59,16 @@ export const startDevServer = async ({
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
+  if (mainFileRelativeUrl === undefined) {
+    const exploringIndexBuildUrl = await getJsenvBuildUrl(
+      "./dist/exploring_index/exploring_index.html",
+    )
+    mainFileRelativeUrl = urlToRelativeUrl(
+      exploringIndexBuildUrl,
+      projectDirectoryUrl,
+    )
+  }
+
   const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -90,19 +89,14 @@ export const startDevServer = async ({
     plugins,
     customServices: {
       ...customServices,
-      "jsenv:redirector": createRedirectorService({
+      "jsenv:redirector": await createRedirectorService({
         projectDirectoryUrl,
         mainFileRelativeUrl,
-      }),
-      "jsenv:event_source_client": createEventSourceClientService({
-        projectDirectoryUrl,
-      }),
-      "jsenv:exploring_index": createExploringIndexService({
-        projectDirectoryUrl,
       }),
       "jsenv:exploring_json": createExploringJsonService({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
+        mainFileRelativeUrl,
         explorableConfig,
         livereloading,
       }),
@@ -110,9 +104,6 @@ export const startDevServer = async ({
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         explorableConfig,
-      }),
-      "jsenv:toolbar": createToolbarService({
-        projectDirectoryUrl,
       }),
     },
 
@@ -138,16 +129,15 @@ export const startDevServer = async ({
   return compileServer
 }
 
-const createRedirectorService = ({
+const createRedirectorService = async ({
   projectDirectoryUrl,
   mainFileRelativeUrl,
 }) => {
-  const jsenvRedirectorHtmlRelativeUrlForProject = urlToRelativeUrl(
-    redirectorHtmlFileInfo.sourceUrl,
-    projectDirectoryUrl,
+  const redirectorBuildUrl = await getJsenvBuildUrl(
+    "./dist/redirector/redirector.html",
   )
-  const jsenvRedirectorJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    redirectorJsFileInfo.buildUrl,
+  const redirectorRelativeUrlForProject = urlToRelativeUrl(
+    redirectorBuildUrl,
     projectDirectoryUrl,
   )
   return setupRoutes({
@@ -156,7 +146,7 @@ const createRedirectorService = ({
       return {
         status: 307,
         headers: {
-          location: `${request.origin}/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${redirectTarget}`,
+          location: `${request.origin}/${redirectorRelativeUrlForProject}?redirect=${redirectTarget}`,
         },
       }
     },
@@ -167,102 +157,9 @@ const createRedirectorService = ({
         headers: {
           location: `${
             request.origin
-          }/${jsenvRedirectorHtmlRelativeUrlForProject}?redirect=${encodeURIComponent(
+          }/${redirectorRelativeUrlForProject}?redirect=${encodeURIComponent(
             redirectTarget,
           )}`,
-        },
-      }
-    },
-    "/.jsenv/redirector.js": (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}/${jsenvRedirectorJsBuildRelativeUrlForProject}`,
-        },
-      }
-    },
-  })
-}
-
-const createEventSourceClientService = ({ projectDirectoryUrl }) => {
-  const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientFileInfo.buildUrl,
-    projectDirectoryUrl,
-  )
-  return setupRoutes({
-    "/.jsenv/event_source_client.js": (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}/${eventSourceClientBuildRelativeUrlForProject}`,
-        },
-      }
-    },
-    // unfortunately browser resolves sourcemap to url before redirection (not after).
-    // It means browser tries to load source map from "/.jsenv/jsenv-toolbar.js.map"
-    // we could also inline sourcemap but it's not yet possible
-    // inside buildProject
-    "/.jsenv/event_source_client.js.map": (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}/${eventSourceClientBuildRelativeUrlForProject}.map`,
-        },
-      }
-    },
-  })
-}
-
-const createExploringIndexService = ({ projectDirectoryUrl }) => {
-  const jsenvExploringJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    exploringIndexJsFileInfo.buildUrl,
-    projectDirectoryUrl,
-  )
-  return setupRoutes({
-    "/.jsenv/exploring.index.js": (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}`,
-        },
-      }
-    },
-    // unfortunately browser resolves sourcemap to url before redirection (not after).
-    // It means browser tries to load source map from "/.jsenv/jsenv-toolbar.js.map"
-    // we could also inline sourcemap but it's not yet possible
-    // inside buildProject
-    "/.jsenv/jsenv_exploring_index.js.map": (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}/${jsenvExploringJsBuildRelativeUrlForProject}.map`,
-        },
-      }
-    },
-  })
-}
-
-const createToolbarService = ({ projectDirectoryUrl }) => {
-  const toolbarJsBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarJsFileInfo.buildUrl,
-    projectDirectoryUrl,
-  )
-
-  return setupRoutes({
-    "/.jsenv/toolbar.main.js": (request) => {
-      const jsenvToolbarJsBuildServerUrl = `${request.origin}/${toolbarJsBuildRelativeUrlForProject}`
-      return {
-        status: 307,
-        headers: {
-          location: jsenvToolbarJsBuildServerUrl,
-        },
-      }
-    },
-    "/.jsenv/jsenv_toolbar.js.map": (request) => {
-      return {
-        status: 307,
-        headers: {
-          location: `${request.origin}/${toolbarJsBuildRelativeUrlForProject}.map`,
         },
       }
     },
@@ -274,6 +171,7 @@ const createExploringJsonService = ({
   outDirectoryRelativeUrl,
   explorableConfig,
   livereloading,
+  mainFileRelativeUrl,
 }) => {
   return (request) => {
     if (
@@ -287,10 +185,7 @@ const createExploringJsonService = ({
           jsenvCoreDirectoryUrl,
           projectDirectoryUrl,
         ),
-        exploringHtmlFileRelativeUrl: urlToRelativeUrl(
-          exploringIndexHtmlFileInfo.sourceUrl,
-          projectDirectoryUrl,
-        ),
+        exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
         sourcemapMainFileRelativeUrl: urlToRelativeUrl(
           sourcemapMainFileInfo.url,
           jsenvCoreDirectoryUrl,

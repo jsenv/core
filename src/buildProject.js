@@ -24,7 +24,7 @@ export const buildProject = async ({
   projectDirectoryUrl,
   entryPointMap,
   buildDirectoryRelativeUrl,
-  buildDirectoryClean = false,
+  buildDirectoryClean = true,
   assetManifestFile = false,
   assetManifestFileRelativeUrl = "asset-manifest.json",
   sourcemapExcludeSources = false,

@@ -49,6 +49,7 @@ export const createRessourceBuilder = (
     entryUrl,
     entryBuffer,
     entryBuildRelativeUrl,
+    urlVersionningForEntryPoints,
   }) => {
     // The entry point is conceptually referenced by code passing "entryPointMap"
     // to buildProject. So we analyse stack trace to put this function caller
@@ -68,8 +69,12 @@ export const createRessourceBuilder = (
       isEntryPoint: true,
 
       // don't hash asset entry points
-      urlVersioningDisabled: true,
-      fileNamePattern: entryBuildRelativeUrl,
+      ...(urlVersionningForEntryPoints
+        ? {}
+        : {
+            urlVersioningDisabled: true,
+            fileNamePattern: entryBuildRelativeUrl,
+          }),
     })
     entryReference.isProgrammatic = true
 

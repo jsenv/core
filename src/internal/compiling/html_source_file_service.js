@@ -22,13 +22,7 @@ import { moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { jsenvBrowserSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { redirectorHtmlFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
-import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
-import {
-  toolbarInjectorFileInfo,
-  toolbarHtmlFileInfo,
-} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
+import { getJsenvBuildUrl } from "../jsenv_builds.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   parseHtmlString,
@@ -159,31 +153,48 @@ const transformHTMLSourceFile = async ({
     })
   }
 
-  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+  const browserSystemBuildUrl = await getJsenvBuildUrl(
+    "./dist/browser_system/jsenv_browser_system.js",
+  )
+  const browserSystemBuildUrlRelativeToProject = urlToRelativeUrl(
+    browserSystemBuildUrl,
     projectDirectoryUrl,
+  )
+
+  const eventSourceClientBuildUrl = await getJsenvBuildUrl(
+    "./dist/event_source_client/jsenv_event_source_client.js",
   )
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientFileInfo.buildUrl,
+    eventSourceClientBuildUrl,
     projectDirectoryUrl,
+  )
+
+  const toolbarInjectorBuildUrl = await getJsenvBuildUrl(
+    "./dist/toolbar_injector/jsenv_toolbar_injector.js",
   )
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarInjectorFileInfo.buildUrl,
+    toolbarInjectorBuildUrl,
     projectDirectoryUrl,
   )
+
+  const toolbarBuildUrl = await getJsenvBuildUrl("./dist/toolbar/toolbar.html")
+  const redirectorBuildUrl = await getJsenvBuildUrl(
+    "./dist/redirector/redirector.html",
+  )
+
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
-      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
+      ...(fileUrl !== toolbarBuildUrl &&
+      fileUrl !== redirectorBuildUrl &&
       jsenvScriptInjection
         ? [
             {
-              src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+              src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
-      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
+      ...(fileUrl !== toolbarBuildUrl &&
+      fileUrl !== redirectorBuildUrl &&
       jsenvEventSourceClientInjection
         ? [
             {
@@ -191,8 +202,8 @@ const transformHTMLSourceFile = async ({
             },
           ]
         : []),
-      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
-      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
+      ...(fileUrl !== toolbarBuildUrl &&
+      fileUrl !== redirectorBuildUrl &&
       jsenvToolbarInjection
         ? [
             {
