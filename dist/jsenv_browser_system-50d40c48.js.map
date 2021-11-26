@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "jsenv_browser_system.js",
+  "file": "jsenv_browser_system-50d40c48.js",
   "sources": [
     "../helpers/babel/defineProperty/defineProperty.js",
     "../helpers/babel/objectSpread2/objectSpread2.js",

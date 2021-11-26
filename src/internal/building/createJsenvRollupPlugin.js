@@ -12,6 +12,7 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
+  urlToBasename,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
@@ -72,6 +73,7 @@ export const createJsenvRollupPlugin = async ({
   importAssertionsSupport,
 
   urlVersioning,
+  urlVersionningForEntryPoints,
   lineBreakNormalization,
   jsConcatenation,
   useImportMapToMaximizeCacheReuse,
@@ -586,9 +588,10 @@ export const createJsenvRollupPlugin = async ({
               atleastOneChunkEmitted = true
               emitChunk({
                 id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
-                name: entryBuildRelativeUrl,
-                // don't hash js entry points
-                fileName: entryBuildRelativeUrl,
+                name: urlToBasename(`file:///${entryBuildRelativeUrl}`),
+                ...(urlVersionningForEntryPoints
+                  ? {}
+                  : { fileName: entryBuildRelativeUrl }),
               })
               return
             }
@@ -1015,6 +1018,9 @@ export const createJsenvRollupPlugin = async ({
         return id
       }
       outputOptions.entryFileNames = () => {
+        if (urlVersionningForEntryPoints) {
+          return `[name]-[hash]${outputExtension}`
+        }
         return `[name]${outputExtension}`
       }
       outputOptions.chunkFileNames = () => {
@@ -1097,7 +1103,9 @@ export const createJsenvRollupPlugin = async ({
         const file = jsChunks[fileName]
         let buildRelativeUrl
         const canBeVersioned =
-          asRollupUrl(file.url) in jsModulesFromEntry || !file.isEntry
+          asRollupUrl(file.url) in jsModulesFromEntry ||
+          urlVersionningForEntryPoints ||
+          !file.isEntry
 
         if (urlVersioning) {
           if (canBeVersioned && useImportMapToMaximizeCacheReuse) {
@@ -1133,7 +1141,6 @@ export const createJsenvRollupPlugin = async ({
           buildInlineFileContents[buildRelativeUrl] = file.code
         } else {
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
-          buildManifest[fileName] = buildRelativeUrl
           buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
         }
       })

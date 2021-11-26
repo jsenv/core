@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "jsenv_toolbar.js",
+  "file": "jsenv_toolbar-5d993f74.js",
   "sources": [
     "../node_modules/@jsenv/filesystem/src/urlIsInsideOf.js",
     "../node_modules/@jsenv/filesystem/src/internal/getCommonPathname.js",

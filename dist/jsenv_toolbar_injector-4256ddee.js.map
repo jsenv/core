@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "jsenv_toolbar_injector.js",
+  "file": "jsenv_toolbar_injector-4256ddee.js",
   "sources": [
     "../helpers/babel/typeof/typeof.js",
     "../helpers/babel/defineProperty/defineProperty.js",

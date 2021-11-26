@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "jsenv_event_source_client.js",
+  "file": "jsenv_event_source_client-23ad268d.js",
   "sources": [
     "../src/internal/dev_server/event_source_client/event_source_connection.js",
     "../src/internal/dev_server/event_source_client/livereload_preference.js",
