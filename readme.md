@@ -61,13 +61,7 @@ export const countDogs = (animals) => {
 </html>
 ```
 
-2 - Add `"@jsenv/core"` to your _devDependencies_
-
-```console
-npm install --save-dev @jsenv/core
-```
-
-3 - Create `execute_test_plan.mjs`
+2 - Create `execute_test_plan.mjs`
 
 ```js
 import {
@@ -89,6 +83,15 @@ executeTestPlan({
     },
   },
 })
+```
+
+3 - Add `"@jsenv/core"` and `playwright`
+
+```console
+npm install --save-dev @jsenv/core
+npm install --save-dev playwright
+npx playwright install-deps
+npx playwright install
 ```
 
 4 - Run `execute_test_plan.mjs` with Node.js
