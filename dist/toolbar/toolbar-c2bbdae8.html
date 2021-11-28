@@ -3,7 +3,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
-    <!-- <link rel="stylesheet" type="text/css" href="./toolbar.main.css" /> -->
+    <!--
+    commented until we found why it fails the build
+    <link rel="stylesheet" type="text/css" href="./toolbar.main.css" />
+    -->
   <script id="jsenv_inject_systemjs" src="assets/s-d2dc0ae5.js"></script>
       </head>
   <body>
@@ -12,7 +15,7 @@
     <div id="toolbar">
       <div id="toolbar-wrapper">
         <section id="file-list-link" data-responsive-toolbar-element="">
-          <a class="toolbar-icon-wrapper" href="">
+          <a class="toolbar-icon-wrapper" href="/">
             <svg id="fileIconSvg" class="iconToolbar" viewBox="0 0 24 24" width="35" height="35">
               <path d="M0 0h24v24H0V0z" fill="none"></path>
               <path d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
@@ -350,7 +353,7 @@
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-62f489ed.js"
+    "./toolbar.main.js": "./toolbar.main-6417da98.js"
   }
 }</script>
     <script>
@@ -358,7 +361,7 @@
       // and a promise the toolbar injector can listen to act on the toolbar
       // or we could just consider all communication should pass by postmessage
     </script>
-    <script src="./toolbar.main-62f489ed.js"></script>
+    <script src="./toolbar.main-6417da98.js"></script>
   
 
 </body></html>

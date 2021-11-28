@@ -2,9 +2,14 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import {
+  BROWSER_SYSTEM_BUILD_URL,
+  EVENT_SOURCE_CLIENT_BUILD_URL,
+  TOOLBAR_INJECTOR_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
-import { getJsenvBuildUrl } from "../jsenv_builds.js"
+
 import {
   setJavaScriptSourceMappingUrl,
   sourcemapToBase64Url,
@@ -49,32 +54,19 @@ export const compileHtml = async ({
   jsenvToolbarInjection,
   onHtmlImportmapInfo,
 }) => {
-  const browserSystemBuildUrl = await getJsenvBuildUrl(
-    "./dist/browser_system/jsenv_browser_system.js",
-  )
   const browserSystemBuildUrlRelativeToProject = urlToRelativeUrl(
-    browserSystemBuildUrl,
+    BROWSER_SYSTEM_BUILD_URL,
     projectDirectoryUrl,
   )
 
-  const eventSourceClientBuildUrl = await getJsenvBuildUrl(
-    "./dist/event_source_client/jsenv_event_source_client.js",
-  )
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientBuildUrl,
+    EVENT_SOURCE_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
 
-  const toolbarInjectorBuildUrl = await getJsenvBuildUrl(
-    "./dist/toolbar_injector/jsenv_toolbar_injector.js",
-  )
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarInjectorBuildUrl,
+    TOOLBAR_INJECTOR_BUILD_URL,
     projectDirectoryUrl,
-  )
-
-  const toolbarBuildUrl = await getJsenvBuildUrl(
-    "./dist/toolbar/jsenv_toolbar.html",
   )
 
   // ideally we should try/catch html syntax error
@@ -84,25 +76,23 @@ export const compileHtml = async ({
     await mutateRessourceHints(htmlAst)
   }
 
-  const urlNoSearch = urlWithoutSearch(url)
-
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(urlNoSearch !== toolbarBuildUrl && jsenvScriptInjection
+      ...(jsenvScriptInjection
         ? [
             {
               src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(urlNoSearch !== toolbarBuildUrl && jsenvEventSourceClientInjection
+      ...(jsenvEventSourceClientInjection
         ? [
             {
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
         : []),
-      ...(urlNoSearch !== toolbarBuildUrl && jsenvToolbarInjection
+      ...(jsenvToolbarInjection
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
@@ -413,10 +403,4 @@ const mutateRessourceHints = async (htmlAst) => {
     }),
   )
   mutations.forEach((mutation) => mutation())
-}
-
-const urlWithoutSearch = (url) => {
-  const urlObject = new URL(url)
-  urlObject.search = ""
-  return urlObject.href
 }

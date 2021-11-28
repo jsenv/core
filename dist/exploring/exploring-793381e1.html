@@ -1,0 +1,2097 @@
+<!DOCTYPE html><html><head>
+    <title>Exploring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <link rel="icon" href="data:image/png;base64,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">
+    <style>@import "focus-09288b9d.css";
+
+/* reset stuff */
+* {
+  box-sizing: border-box;
+}
+
+[data-force-hide] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+html {
+  font-family: arial, sans;
+  height: 100%;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+main > * {
+  min-width: 100%;
+  flex: 1;
+}
+
+hr {
+  color: black;
+  background-color: black;
+  border-color: black;
+  margin: 15px 0;
+}
+
+article[data-page="file-list"] {
+  background-color: #204143;
+  color: #97a0a0;
+}
+
+nav,
+#explorables-message {
+  background: #1f262c;
+}
+
+#explorables nav {
+  /* overflow hidden to ensure it wraps li which have margins
+  otherwise the background color is not the one from <nav> */
+  overflow: hidden;
+}
+
+#explorables-message {
+  overflow: auto; /* propagate background to margins cause by h4 inside */
+}
+
+article h2 {
+  margin: 0;
+  display: flex;
+}
+
+article h2 svg {
+  margin-right: 15px;
+}
+
+#main_html_file {
+  padding: 25px;
+  padding-bottom: 0;
+}
+
+#main_file_link {
+  /* background-color: #204143;
+  padding: 0.5em 0.7em;
+  border-radius: 0.1em; */
+  color: #e7f2f3;
+}
+
+/* article > section {
+} */
+
+h2 {
+  margin: 20px 0;
+  color: #24b1b0;
+  display: inline-block;
+}
+
+h4 {
+  font-weight: normal;
+  font-size: 15px;
+  color: #97a0a0;
+  padding: 0 25px;
+}
+
+#explorables {
+  word-break: break-word;
+}
+
+#explorables-header {
+  /* padding-bottom: 10px; */
+  width: 100%;
+  position: sticky;
+  top: 0;
+}
+
+#explorables_header_and_menu {
+  padding-left: 25px;
+  padding-right: 25px;
+  padding-top: 25px;
+  background-color: #204143;
+}
+
+#explorables_header_bottom_spacing {
+  height: 20px;
+  background: #1f262c;
+}
+
+#directory_relative_url {
+  color: orange;
+}
+
+#explorables ul {
+  padding: 0px 25px 25px 25px;
+  margin: 0;
+}
+
+#explorables li {
+  list-style-type: none;
+  margin: 10px 0;
+}
+
+#explorables li:first-child {
+  margin-top: 0;
+}
+
+#explorables li .execution-link {
+  width: 100%;
+  word-break: break-all;
+}
+
+.execution-link {
+  background: #204143;
+  padding: 6px 12px;
+  font-size: 14px;
+  display: inline-block;
+  color: #e7f2f3;
+  font-family: monospace;
+  text-decoration: unset;
+}
+
+/* icons */
+#main_file_icon {
+  fill: #24b1b0;
+}
+
+#fileIconSvgConfig {
+  width: 25px;
+  height: 25px;
+  stroke: none;
+  fill: #24b1b0;
+}
+
+#explorables fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+#explorables fieldset label {
+  display: inline-block;
+  padding: 0;
+}
+
+#explorables fieldset input {
+  opacity: 0;
+  position: absolute;
+}
+
+#explorables fieldset label input + * {
+  display: block;
+  padding: 0.7em 1em;
+  background-color: #204143;
+  border-radius: 0.1em;
+  min-width: 8em;
+  text-align: center;
+}
+
+#explorables fieldset input:checked + * {
+  color: orange;
+  background: #1f262c;
+}
+
+/* scrolable menu */
+.menu-wrapper {
+  position: relative;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  transition: 300ms;
+  margin-top: 25px;
+}
+.menu {
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.menu .item {
+  display: inline-block;
+  height: 100%;
+  padding: 1em;
+  box-sizing: border-box;
+}
+.paddle {
+  position: absolute;
+  height: 36px;
+  bottom: 0;
+  border: none;
+  background: #24b1b0;
+  color: #1f262c;
+}
+.left-paddle {
+  left: 0;
+}
+.right-paddle {
+  right: 0;
+}
+.hidden {
+  display: none;
+}
+
+/*# sourceMappingURL=assets/exploring.css-0b3537f5.map */</style>
+  <script id="jsenv_inject_systemjs">/*
+* SJS 6.11.0
+* Minimal SystemJS Build
+*/
+(function () {
+  function errMsg(errCode, msg) {
+    return (msg || "") + " (SystemJS https://git.io/JvFET#" + errCode + ")";
+  }
+
+  var hasSymbol = typeof Symbol !== 'undefined';
+  var hasSelf = typeof self !== 'undefined';
+  var hasDocument = typeof document !== 'undefined';
+  var envGlobal = hasSelf ? self : global;
+  var baseUrl;
+
+  if (hasDocument) {
+    var baseEl = document.querySelector('base[href]');
+    if (baseEl) baseUrl = baseEl.href;
+  }
+
+  if (!baseUrl && typeof location !== 'undefined') {
+    baseUrl = location.href.split('#')[0].split('?')[0];
+    var lastSepIndex = baseUrl.lastIndexOf('/');
+    if (lastSepIndex !== -1) baseUrl = baseUrl.slice(0, lastSepIndex + 1);
+  }
+
+  var backslashRegEx = /\\/g;
+
+  function resolveIfNotPlainOrUrl(relUrl, parentUrl) {
+    if (relUrl.indexOf('\\') !== -1) relUrl = relUrl.replace(backslashRegEx, '/'); // protocol-relative
+
+    if (relUrl[0] === '/' && relUrl[1] === '/') {
+      return parentUrl.slice(0, parentUrl.indexOf(':') + 1) + relUrl;
+    } // relative-url
+    else if (relUrl[0] === '.' && (relUrl[1] === '/' || relUrl[1] === '.' && (relUrl[2] === '/' || relUrl.length === 2 && (relUrl += '/')) || relUrl.length === 1 && (relUrl += '/')) || relUrl[0] === '/') {
+      var parentProtocol = parentUrl.slice(0, parentUrl.indexOf(':') + 1); // Disabled, but these cases will give inconsistent results for deep backtracking
+      //if (parentUrl[parentProtocol.length] !== '/')
+      //  throw Error('Cannot resolve');
+      // read pathname from parent URL
+      // pathname taken to be part after leading "/"
+
+      var pathname;
+
+      if (parentUrl[parentProtocol.length + 1] === '/') {
+        // resolving to a :// so we need to read out the auth and host
+        if (parentProtocol !== 'file:') {
+          pathname = parentUrl.slice(parentProtocol.length + 2);
+          pathname = pathname.slice(pathname.indexOf('/') + 1);
+        } else {
+          pathname = parentUrl.slice(8);
+        }
+      } else {
+        // resolving to :/ so pathname is the /... part
+        pathname = parentUrl.slice(parentProtocol.length + (parentUrl[parentProtocol.length] === '/'));
+      }
+
+      if (relUrl[0] === '/') return parentUrl.slice(0, parentUrl.length - pathname.length - 1) + relUrl; // join together and split for removal of .. and . segments
+      // looping the string instead of anything fancy for perf reasons
+      // '../../../../../z' resolved to 'x/y' is just 'z'
+
+      var segmented = pathname.slice(0, pathname.lastIndexOf('/') + 1) + relUrl;
+      var output = [];
+      var segmentIndex = -1;
+
+      for (var i = 0; i < segmented.length; i++) {
+        // busy reading a segment - only terminate on '/'
+        if (segmentIndex !== -1) {
+          if (segmented[i] === '/') {
+            output.push(segmented.slice(segmentIndex, i + 1));
+            segmentIndex = -1;
+          }
+        } // new segment - check if it is relative
+        else if (segmented[i] === '.') {
+          // ../ segment
+          if (segmented[i + 1] === '.' && (segmented[i + 2] === '/' || i + 2 === segmented.length)) {
+            output.pop();
+            i += 2;
+          } // ./ segment
+          else if (segmented[i + 1] === '/' || i + 1 === segmented.length) {
+            i += 1;
+          } else {
+            // the start of a new segment as below
+            segmentIndex = i;
+          }
+        } // it is the start of a new segment
+        else {
+          segmentIndex = i;
+        }
+      } // finish reading out the last segment
+
+
+      if (segmentIndex !== -1) output.push(segmented.slice(segmentIndex));
+      return parentUrl.slice(0, parentUrl.length - pathname.length) + output.join('');
+    }
+  }
+  /*
+   * Import maps implementation
+   *
+   * To make lookups fast we pre-resolve the entire import map
+   * and then match based on backtracked hash lookups
+   *
+   */
+
+
+  function resolveUrl(relUrl, parentUrl) {
+    return resolveIfNotPlainOrUrl(relUrl, parentUrl) || (relUrl.indexOf(':') !== -1 ? relUrl : resolveIfNotPlainOrUrl('./' + relUrl, parentUrl));
+  }
+
+  function resolveAndComposePackages(packages, outPackages, baseUrl, parentMap, parentUrl) {
+    for (var p in packages) {
+      var resolvedLhs = resolveIfNotPlainOrUrl(p, baseUrl) || p;
+      var rhs = packages[p]; // package fallbacks not currently supported
+
+      if (typeof rhs !== 'string') continue;
+      var mapped = resolveImportMap(parentMap, resolveIfNotPlainOrUrl(rhs, baseUrl) || rhs, parentUrl);
+
+      if (!mapped) {
+        targetWarning('W1', p, rhs);
+      } else outPackages[resolvedLhs] = mapped;
+    }
+  }
+
+  function resolveAndComposeImportMap(json, baseUrl, outMap) {
+    if (json.imports) resolveAndComposePackages(json.imports, outMap.imports, baseUrl, outMap, null);
+    var u;
+
+    for (u in json.scopes || {}) {
+      var resolvedScope = resolveUrl(u, baseUrl);
+      resolveAndComposePackages(json.scopes[u], outMap.scopes[resolvedScope] || (outMap.scopes[resolvedScope] = {}), baseUrl, outMap, resolvedScope);
+    }
+
+    for (u in json.depcache || {}) outMap.depcache[resolveUrl(u, baseUrl)] = json.depcache[u];
+
+    for (u in json.integrity || {}) outMap.integrity[resolveUrl(u, baseUrl)] = json.integrity[u];
+  }
+
+  function getMatch(path, matchObj) {
+    if (matchObj[path]) return path;
+    var sepIndex = path.length;
+
+    do {
+      var segment = path.slice(0, sepIndex + 1);
+      if (segment in matchObj) return segment;
+    } while ((sepIndex = path.lastIndexOf('/', sepIndex - 1)) !== -1);
+  }
+
+  function applyPackages(id, packages) {
+    var pkgName = getMatch(id, packages);
+
+    if (pkgName) {
+      var pkg = packages[pkgName];
+      if (pkg === null) return;
+
+      if (id.length > pkgName.length && pkg[pkg.length - 1] !== '/') {
+        targetWarning('W2', pkgName, pkg);
+      } else return pkg + id.slice(pkgName.length);
+    }
+  }
+
+  function targetWarning(code, match, target, msg) {
+    console.warn(errMsg(code, [target, match].join(', ')));
+  }
+
+  function resolveImportMap(importMap, resolvedOrPlain, parentUrl) {
+    var scopes = importMap.scopes;
+    var scopeUrl = parentUrl && getMatch(parentUrl, scopes);
+
+    while (scopeUrl) {
+      var packageResolution = applyPackages(resolvedOrPlain, scopes[scopeUrl]);
+      if (packageResolution) return packageResolution;
+      scopeUrl = getMatch(scopeUrl.slice(0, scopeUrl.lastIndexOf('/')), scopes);
+    }
+
+    return applyPackages(resolvedOrPlain, importMap.imports) || resolvedOrPlain.indexOf(':') !== -1 && resolvedOrPlain;
+  }
+  /*
+   * SystemJS Core
+   *
+   * Provides
+   * - System.import
+   * - System.register support for
+   *     live bindings, function hoisting through circular references,
+   *     reexports, dynamic import, import.meta.url, top-level await
+   * - System.getRegister to get the registration
+   * - Symbol.toStringTag support in Module objects
+   * - Hookable System.createContext to customize import.meta
+   * - System.onload(err, id, deps) handler for tracing / hot-reloading
+   *
+   * Core comes with no System.prototype.resolve or
+   * System.prototype.instantiate implementations
+   */
+
+
+  var toStringTag = hasSymbol && Symbol.toStringTag;
+  var REGISTRY = hasSymbol ? Symbol() : '@';
+
+  function SystemJS() {
+    this[REGISTRY] = {};
+  }
+
+  var systemJSPrototype = SystemJS.prototype;
+
+  systemJSPrototype.import = function (id, parentUrl) {
+    var loader = this;
+    return Promise.resolve(loader.prepareImport()).then(function () {
+      return loader.resolve(id, parentUrl);
+    }).then(function (id) {
+      var load = getOrCreateLoad(loader, id);
+      return load.C || topLevelLoad(loader, load);
+    });
+  }; // Hookable createContext function -> allowing eg custom import meta
+
+
+  systemJSPrototype.createContext = function (parentId) {
+    var loader = this;
+    return {
+      url: parentId,
+      resolve: function (id, parentUrl) {
+        return Promise.resolve(loader.resolve(id, parentUrl || parentId));
+      }
+    };
+  };
+
+  function loadToId(load) {
+    return load.id;
+  }
+
+  function triggerOnload(loader, load, err, isErrSource) {
+    loader.onload(err, load.id, load.d && load.d.map(loadToId), !!isErrSource);
+    if (err) throw err;
+  }
+
+  var lastRegister;
+
+  systemJSPrototype.register = function (deps, declare) {
+    lastRegister = [deps, declare];
+  };
+  /*
+   * getRegister provides the last anonymous System.register call
+   */
+
+
+  systemJSPrototype.getRegister = function () {
+    var _lastRegister = lastRegister;
+    lastRegister = undefined;
+    return _lastRegister;
+  };
+
+  function getOrCreateLoad(loader, id, firstParentUrl) {
+    var load = loader[REGISTRY][id];
+    if (load) return load;
+    var importerSetters = [];
+    var ns = Object.create(null);
+    if (toStringTag) Object.defineProperty(ns, toStringTag, {
+      value: 'Module'
+    });
+    var instantiatePromise = Promise.resolve().then(function () {
+      return loader.instantiate(id, firstParentUrl);
+    }).then(function (registration) {
+      if (!registration) throw Error(errMsg(2, id));
+
+      function _export(name, value) {
+        // note if we have hoisted exports (including reexports)
+        load.h = true;
+        var changed = false;
+
+        if (typeof name === 'string') {
+          if (!(name in ns) || ns[name] !== value) {
+            ns[name] = value;
+            changed = true;
+          }
+        } else {
+          for (var p in name) {
+            var value = name[p];
+
+            if (!(p in ns) || ns[p] !== value) {
+              ns[p] = value;
+              changed = true;
+            }
+          }
+
+          if (name && name.__esModule) {
+            ns.__esModule = name.__esModule;
+          }
+        }
+
+        if (changed) for (var i = 0; i < importerSetters.length; i++) {
+          var setter = importerSetters[i];
+          if (setter) setter(ns);
+        }
+        return value;
+      }
+
+      var declared = registration[1](_export, registration[1].length === 2 ? {
+        import: function (importId) {
+          return loader.import(importId, id);
+        },
+        meta: loader.createContext(id)
+      } : undefined);
+
+      load.e = declared.execute || function () {};
+
+      return [registration[0], declared.setters || []];
+    }, function (err) {
+      load.e = null;
+      load.er = err;
+      throw err;
+    });
+    var linkPromise = instantiatePromise.then(function (instantiation) {
+      return Promise.all(instantiation[0].map(function (dep, i) {
+        var setter = instantiation[1][i];
+        return Promise.resolve(loader.resolve(dep, id)).then(function (depId) {
+          var depLoad = getOrCreateLoad(loader, depId, id); // depLoad.I may be undefined for already-evaluated
+
+          return Promise.resolve(depLoad.I).then(function () {
+            if (setter) {
+              depLoad.i.push(setter); // only run early setters when there are hoisted exports of that module
+              // the timing works here as pending hoisted export calls will trigger through importerSetters
+
+              if (depLoad.h || !depLoad.I) setter(depLoad.n);
+            }
+
+            return depLoad;
+          });
+        });
+      })).then(function (depLoads) {
+        load.d = depLoads;
+      });
+    }); // Capital letter = a promise function
+
+    return load = loader[REGISTRY][id] = {
+      id: id,
+      // importerSetters, the setters functions registered to this dependency
+      // we retain this to add more later
+      i: importerSetters,
+      // module namespace object
+      n: ns,
+      // instantiate
+      I: instantiatePromise,
+      // link
+      L: linkPromise,
+      // whether it has hoisted exports
+      h: false,
+      // On instantiate completion we have populated:
+      // dependency load records
+      d: undefined,
+      // execution function
+      e: undefined,
+      // On execution we have populated:
+      // the execution error if any
+      er: undefined,
+      // in the case of TLA, the execution promise
+      E: undefined,
+      // On execution, L, I, E cleared
+      // Promise for top-level completion
+      C: undefined,
+      // parent instantiator / executor
+      p: undefined
+    };
+  }
+
+  function instantiateAll(loader, load, parent, loaded) {
+    if (!loaded[load.id]) {
+      loaded[load.id] = true; // load.L may be undefined for already-instantiated
+
+      return Promise.resolve(load.L).then(function () {
+        if (!load.p || load.p.e === null) load.p = parent;
+        return Promise.all(load.d.map(function (dep) {
+          return instantiateAll(loader, dep, parent, loaded);
+        }));
+      }).catch(function (err) {
+        if (load.er) throw err;
+        load.e = null;
+        throw err;
+      });
+    }
+  }
+
+  function topLevelLoad(loader, load) {
+    return load.C = instantiateAll(loader, load, load, {}).then(function () {
+      return postOrderExec(loader, load, {});
+    }).then(function () {
+      return load.n;
+    });
+  } // the closest we can get to call(undefined)
+
+
+  var nullContext = Object.freeze(Object.create(null)); // returns a promise if and only if a top-level await subgraph
+  // throws on sync errors
+
+  function postOrderExec(loader, load, seen) {
+    if (seen[load.id]) return;
+    seen[load.id] = true;
+
+    if (!load.e) {
+      if (load.er) throw load.er;
+      if (load.E) return load.E;
+      return;
+    } // deps execute first, unless circular
+
+
+    var depLoadPromises;
+    load.d.forEach(function (depLoad) {
+      try {
+        var depLoadPromise = postOrderExec(loader, depLoad, seen);
+        if (depLoadPromise) (depLoadPromises = depLoadPromises || []).push(depLoadPromise);
+      } catch (err) {
+        load.e = null;
+        load.er = err;
+        throw err;
+      }
+    });
+    if (depLoadPromises) return Promise.all(depLoadPromises).then(doExec);
+    return doExec();
+
+    function doExec() {
+      try {
+        var execPromise = load.e.call(nullContext);
+
+        if (execPromise) {
+          execPromise = execPromise.then(function () {
+            load.C = load.n;
+            load.E = null; // indicates completion
+
+            if (!true) ;
+          }, function (err) {
+            load.er = err;
+            load.E = null;
+            if (!true) ;
+            throw err;
+          });
+          return load.E = execPromise;
+        } // (should be a promise, but a minify optimization to leave out Promise.resolve)
+
+
+        load.C = load.n;
+        load.L = load.I = undefined;
+      } catch (err) {
+        load.er = err;
+        throw err;
+      } finally {
+        load.e = null;
+      }
+    }
+  }
+
+  envGlobal.System = new SystemJS();
+  /*
+   * SystemJS browser attachments for script and import map processing
+   */
+
+  var importMapPromise = Promise.resolve();
+  var importMap = {
+    imports: {},
+    scopes: {},
+    depcache: {},
+    integrity: {}
+  }; // Scripts are processed immediately, on the first System.import, and on DOMReady.
+  // Import map scripts are processed only once (by being marked) and in order for each phase.
+  // This is to avoid using DOM mutation observers in core, although that would be an alternative.
+
+  var processFirst = hasDocument;
+
+  systemJSPrototype.prepareImport = function (doProcessScripts) {
+    if (processFirst || doProcessScripts) {
+      processScripts();
+      processFirst = false;
+    }
+
+    return importMapPromise;
+  };
+
+  if (hasDocument) {
+    processScripts();
+    window.addEventListener('DOMContentLoaded', processScripts);
+  }
+
+  function processScripts() {
+    [].forEach.call(document.querySelectorAll('script'), function (script) {
+      if (script.sp) // sp marker = systemjs processed
+        return; // TODO: deprecate systemjs-module in next major now that we have auto import
+
+      if (script.type === 'systemjs-module') {
+        script.sp = true;
+        if (!script.src) return;
+        System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl)).catch(function (e) {
+          // if there is a script load error, dispatch an "error" event
+          // on the script tag.
+          if (e.message.indexOf('https://git.io/JvFET#3') > -1) {
+            var event = document.createEvent('Event');
+            event.initEvent('error', false, false);
+            script.dispatchEvent(event);
+          }
+
+          return Promise.reject(e);
+        });
+      } else if (script.type === 'systemjs-importmap') {
+        script.sp = true;
+        var fetchPromise = script.src ? fetch(script.src, {
+          integrity: script.integrity
+        }).then(function (res) {
+          if (!res.ok) throw Error(res.status);
+          return res.text();
+        }).catch(function (err) {
+          err.message = errMsg('W4', script.src) + '\n' + err.message;
+          console.warn(err);
+
+          if (typeof script.onerror === 'function') {
+            script.onerror();
+          }
+
+          return '{}';
+        }) : script.innerHTML;
+        importMapPromise = importMapPromise.then(function () {
+          return fetchPromise;
+        }).then(function (text) {
+          extendImportMap(importMap, text, script.src || baseUrl);
+        });
+      }
+    });
+  }
+
+  function extendImportMap(importMap, newMapText, newMapUrl) {
+    var newMap = {};
+
+    try {
+      newMap = JSON.parse(newMapText);
+    } catch (err) {
+      console.warn(Error(errMsg('W5')));
+    }
+
+    resolveAndComposeImportMap(newMap, newMapUrl, importMap);
+  }
+  /*
+   * Script instantiation loading
+   */
+
+
+  if (hasDocument) {
+    window.addEventListener('error', function (evt) {
+      lastWindowErrorUrl = evt.filename;
+      lastWindowError = evt.error;
+    });
+    var baseOrigin = location.origin;
+  }
+
+  systemJSPrototype.createScript = function (url) {
+    var script = document.createElement('script');
+    script.async = true; // Only add cross origin for actual cross origin
+    // this is because Safari triggers for all
+    // - https://bugs.webkit.org/show_bug.cgi?id=171566
+
+    if (url.indexOf(baseOrigin + '/')) script.crossOrigin = 'anonymous';
+    var integrity = importMap.integrity[url];
+    if (integrity) script.integrity = integrity;
+    script.src = url;
+    return script;
+  }; // Auto imports -> script tags can be inlined directly for load phase
+
+
+  var lastAutoImportDeps, lastAutoImportTimeout;
+  var autoImportCandidates = {};
+  var systemRegister = systemJSPrototype.register;
+  var inlineScriptCount = 0;
+
+  systemJSPrototype.register = function (deps, declare) {
+    if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
+      var scripts = document.querySelectorAll('script[src]');
+      var lastScript = scripts[scripts.length - 1];
+      var lastAutoImportUrl;
+      lastAutoImportDeps = deps;
+
+      if (lastScript) {
+        lastAutoImportUrl = lastScript.src;
+      } else {
+        inlineScriptCount++;
+        lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
+      } // if this is already a System load, then the instantiate has already begun
+      // so this re-import has no consequence
+
+
+      var loader = this;
+      lastAutoImportTimeout = setTimeout(function () {
+        autoImportCandidates[lastAutoImportUrl] = [deps, declare];
+        loader.import(lastAutoImportUrl);
+      });
+    } else {
+      lastAutoImportDeps = undefined;
+    }
+
+    return systemRegister.call(this, deps, declare);
+  };
+
+  var lastWindowErrorUrl, lastWindowError;
+
+  systemJSPrototype.instantiate = function (url, firstParentUrl) {
+    var autoImportRegistration = autoImportCandidates[url];
+
+    if (autoImportRegistration) {
+      delete autoImportCandidates[url];
+      return autoImportRegistration;
+    }
+
+    var loader = this;
+    return Promise.resolve(systemJSPrototype.createScript(url)).then(function (script) {
+      return new Promise(function (resolve, reject) {
+        script.addEventListener('error', function () {
+          reject(Error(errMsg(3, [url, firstParentUrl].join(', '))));
+        });
+        script.addEventListener('load', function () {
+          document.head.removeChild(script); // Note that if an error occurs that isn't caught by this if statement,
+          // that getRegister will return null and a "did not instantiate" error will be thrown.
+
+          if (lastWindowErrorUrl === url) {
+            reject(lastWindowError);
+          } else {
+            var register = loader.getRegister(url); // Clear any auto import registration for dynamic import scripts during load
+
+            if (register && register[0] === lastAutoImportDeps) clearTimeout(lastAutoImportTimeout);
+            resolve(register);
+          }
+        });
+        document.head.appendChild(script);
+      });
+    });
+  };
+  /*
+   * Fetch loader, sets up shouldFetch and fetch hooks
+   */
+
+
+  systemJSPrototype.shouldFetch = function () {
+    return false;
+  };
+
+  if (typeof fetch !== 'undefined') systemJSPrototype.fetch = fetch;
+  var instantiate = systemJSPrototype.instantiate;
+  var jsContentTypeRegEx = /^(text|application)\/(x-)?javascript(;|$)/;
+
+  systemJSPrototype.instantiate = function (url, parent) {
+    var loader = this;
+    if (!this.shouldFetch(url)) return instantiate.apply(this, arguments);
+    return this.fetch(url, {
+      credentials: 'same-origin',
+      integrity: importMap.integrity[url]
+    }).then(function (res) {
+      if (!res.ok) throw Error(errMsg(7, [res.status, res.statusText, url, parent].join(', ')));
+      var contentType = res.headers.get('content-type');
+      if (!contentType || !jsContentTypeRegEx.test(contentType)) throw Error(errMsg(4, contentType));
+      return res.text().then(function (source) {
+        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+        (0, eval)(source);
+        return loader.getRegister(url);
+      });
+    });
+  };
+
+  systemJSPrototype.resolve = function (id, parentUrl) {
+    parentUrl = parentUrl || !true || baseUrl;
+    return resolveImportMap(importMap, resolveIfNotPlainOrUrl(id, parentUrl) || id, parentUrl) || throwUnresolved(id, parentUrl);
+  };
+
+  function throwUnresolved(id, parentUrl) {
+    throw Error(errMsg(8, [id, parentUrl].join(', ')));
+  }
+
+  var systemInstantiate = systemJSPrototype.instantiate;
+
+  systemJSPrototype.instantiate = function (url, firstParentUrl) {
+    var preloads = importMap.depcache[url];
+
+    if (preloads) {
+      for (var i = 0; i < preloads.length; i++) getOrCreateLoad(this, this.resolve(preloads[i], url), url);
+    }
+
+    return systemInstantiate.call(this, url, firstParentUrl);
+  };
+  /*
+   * Supports loading System.register in workers
+   */
+
+
+  if (hasSelf && typeof importScripts === 'function') systemJSPrototype.instantiate = function (url) {
+    var loader = this;
+    return Promise.resolve().then(function () {
+      importScripts(url);
+      return loader.getRegister(url);
+    });
+  };
+})();
+//# sourceMappingURL=assets/s.js-749702e8.map</script>
+      </head>
+
+  <body>
+    <main></main>
+    <div style="display: none">
+      <article data-page="file-list">
+        <!--
+        <section id="main_html_file">
+          <h2>
+            <svg id="main_file_icon" viewBox="0 0 16 16" width="25px" height="25px">
+              <path
+                d="M15.45,7L14,5.551V2c0-0.55-0.45-1-1-1h-1c-0.55,0-1,0.45-1,1v0.553L9,0.555C8.727,0.297,8.477,0,8,0S7.273,0.297,7,0.555  L0.55,7C0.238,7.325,0,7.562,0,8c0,0.563,0.432,1,1,1h1v6c0,0.55,0.45,1,1,1h3v-5c0-0.55,0.45-1,1-1h2c0.55,0,1,0.45,1,1v5h3  c0.55,0,1-0.45,1-1V9h1c0.568,0,1-0.437,1-1C16,7.562,15.762,7.325,15.45,7z"
+              />
+            </svg>
+            <span
+              >Main html file:
+              <a id="main_file_link" href="javascript:void(0)">${mainFileRelativeUrl}</a></span
+            >
+          </h2>
+          <div>
+            <iframe id="main_file_iframe" src="about:blank"></iframe>
+          </div>
+        </section>
+        <hr />
+        !-->
+        <section id="explorables">
+          <div id="explorables-header">
+            <div id="explorables_header_and_menu">
+              <h2 style="white-space: nowrap">
+                <svg id="fileIconSvgConfig" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0V0z" fill="none"></path>
+                  <path d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
+                </svg>
+                <span>File(s) to explore in
+                  <span id="directory_relative_url" title="${directoryUrl}">${directoryName}</span></span>
+              </h2>
+              <div class="menu-wrapper">
+                <fieldset id="filter-group-set" class="menu"></fieldset>
+              </div>
+              <div class="paddles">
+                <button class="left-paddle paddle hidden">&lt;</button>
+                <button class="right-paddle paddle">&gt;</button>
+              </div>
+            </div>
+            <div id="explorables_header_bottom_spacing"></div>
+          </div>
+          <div>
+            <div id="explorables-message">
+              <h4 style="margin-top: 0">${message}</h4>
+            </div>
+            <nav>
+              <ul></ul>
+            </nav>
+          </div>
+        </section>
+      </article>
+    </div>
+    <script type="systemjs-importmap">
+{
+  "imports": {
+    "./exploring.js": "./exploring-65c1d81f.js"
+  }
+}</script>
+    <script>System.register([], (function () {
+  'use strict';
+  return {
+    execute: (function () {
+
+      var memoize = function memoize(compute) {
+        var memoized = false;
+        var memoizedValue;
+
+        var fnWithMemoization = function fnWithMemoization() {
+          if (memoized) {
+            return memoizedValue;
+          } // if compute is recursive wait for it to be fully done before storing the lockValue
+          // so set locked later
+
+
+          memoizedValue = compute.apply(void 0, arguments);
+          memoized = true;
+          return memoizedValue;
+        };
+
+        fnWithMemoization.forget = function () {
+          var value = memoizedValue;
+          memoized = false;
+          memoizedValue = undefined;
+          return value;
+        };
+
+        return fnWithMemoization;
+      };
+
+      function _call$2(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var fetchPolyfill = function fetchPolyfill() {
+        for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+          args[_key] = arguments[_key];
+        }
+
+        return _call$2(loadPolyfill, function (_ref) {
+          var fetchUsingXHR = _ref.fetchUsingXHR;
+          return fetchUsingXHR.apply(void 0, args);
+        });
+      };
+
+      var loadPolyfill = memoize(function () {
+        return Promise.resolve().then(function () { return fetchUsingXHR$1; });
+      });
+      var fetchUrl$1 = typeof window.fetch === "function" && typeof window.AbortController === "function" ? window.fetch : fetchPolyfill;
+
+      var createPreference = function createPreference(name) {
+        return {
+          has: function has() {
+            return localStorage.hasOwnProperty(name);
+          },
+          get: function get() {
+            return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
+          },
+          set: function set(value) {
+            return localStorage.setItem(name, JSON.stringify(value));
+          }
+        };
+      };
+
+      var objectWithoutPropertiesLoose = (function (source, excluded) {
+        if (source === null) return {};
+        var target = {};
+        var sourceKeys = Object.keys(source);
+        var key;
+        var i;
+
+        for (i = 0; i < sourceKeys.length; i++) {
+          key = sourceKeys[i];
+          if (excluded.indexOf(key) >= 0) continue;
+          target[key] = source[key];
+        }
+
+        return target;
+      });
+
+      var _objectWithoutProperties = (function (source, excluded) {
+        if (source === null) return {};
+        var target = objectWithoutPropertiesLoose(source, excluded);
+        var key;
+        var i;
+
+        if (Object.getOwnPropertySymbols) {
+          var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+          for (i = 0; i < sourceSymbolKeys.length; i++) {
+            key = sourceSymbolKeys[i];
+            if (excluded.indexOf(key) >= 0) continue;
+            if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+            target[key] = source[key];
+          }
+        }
+
+        return target;
+      });
+
+      var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
+        var _ref6$duration = _ref6.duration,
+            duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
+            _ref6$timingFunction = _ref6.timingFunction,
+            timingFunction = _ref6$timingFunction === void 0 ? function (t) {
+          return t;
+        } : _ref6$timingFunction,
+            _ref6$onProgress = _ref6.onProgress,
+            onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
+            _ref6$onCancel = _ref6.onCancel,
+            onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
+            _ref6$onComplete = _ref6.onComplete,
+            onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
+
+        if (isNaN(duration)) {
+          // console.warn(`duration must be a number, received ${duration}`)
+          return function () {};
+        }
+
+        duration = parseInt(duration, 10);
+        var startMs = performance.now();
+        var currentRequestAnimationFrameId;
+        var done = false;
+        var rawProgress = 0;
+        var progress = 0;
+
+        var handler = function handler() {
+          currentRequestAnimationFrameId = null;
+          var nowMs = performance.now();
+          rawProgress = Math.min((nowMs - startMs) / duration, 1);
+          progress = timingFunction(rawProgress);
+          done = rawProgress === 1;
+          onProgress({
+            done: done,
+            rawProgress: rawProgress,
+            progress: progress
+          });
+
+          if (done) {
+            onComplete();
+          } else {
+            currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
+          }
+        };
+
+        handler();
+
+        var stop = function stop() {
+          if (currentRequestAnimationFrameId) {
+            window.cancelAnimationFrame(currentRequestAnimationFrameId);
+            currentRequestAnimationFrameId = null;
+          }
+
+          if (!done) {
+            done = true;
+            onCancel({
+              rawProgress: rawProgress,
+              progress: progress
+            });
+          }
+        };
+
+        return stop;
+      };
+
+      var _defineProperty = (function (obj, key, value) {
+        // Shortcircuit the slow defineProperty path when possible.
+        // We are trying to avoid issues where setters defined on the
+        // prototype cause side effects under the fast path of simple
+        // assignment. By checking for existence of the property with
+        // the in operator, we can optimize most of this overhead away.
+        if (key in obj) {
+          Object.defineProperty(obj, key, {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        } else {
+          obj[key] = value;
+        }
+
+        return obj;
+      });
+
+      var createDetailedMessage = function createDetailedMessage(message) {
+        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var string = "".concat(message);
+        Object.keys(details).forEach(function (key) {
+          var value = details[key];
+          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+        });
+        return string;
+      };
+
+      function ownKeys(object, enumerableOnly) {
+        var keys = Object.keys(object);
+
+        if (Object.getOwnPropertySymbols) {
+          var symbols = Object.getOwnPropertySymbols(object);
+
+          if (enumerableOnly) {
+            symbols = symbols.filter(function (sym) {
+              return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+            });
+          }
+
+          keys.push.apply(keys, symbols);
+        }
+
+        return keys;
+      }
+
+      function _objectSpread2(target) {
+        for (var i = 1; i < arguments.length; i++) {
+          var source = arguments[i] != null ? arguments[i] : {};
+
+          if (i % 2) {
+            ownKeys(Object(source), true).forEach(function (key) {
+              _defineProperty(target, key, source[key]);
+            });
+          } else if (Object.getOwnPropertyDescriptors) {
+            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+          } else {
+            ownKeys(Object(source)).forEach(function (key) {
+              Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+            });
+          }
+        }
+
+        return target;
+      }
+
+      var nativeTypeOf = function nativeTypeOf(obj) {
+        return typeof obj;
+      };
+
+      var customTypeOf = function customTypeOf(obj) {
+        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+      };
+
+      var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
+      function _await$4(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$4(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _call$1(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var fetchUsingXHR = _async$4(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            signal = _ref.signal,
+            _ref$method = _ref.method,
+            method = _ref$method === void 0 ? "GET" : _ref$method,
+            _ref$credentials = _ref.credentials,
+            credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
+            _ref$headers = _ref.headers,
+            headers = _ref$headers === void 0 ? {} : _ref$headers,
+            _ref$body = _ref.body,
+            body = _ref$body === void 0 ? null : _ref$body;
+
+        var headersPromise = createPromiseAndHooks();
+        var bodyPromise = createPromiseAndHooks();
+        var xhr = new XMLHttpRequest();
+
+        var failure = function failure(error) {
+          // if it was already resolved, we must reject the body promise
+          if (headersPromise.settled) {
+            bodyPromise.reject(error);
+          } else {
+            headersPromise.reject(error);
+          }
+        };
+
+        var cleanup = function cleanup() {
+          xhr.ontimeout = null;
+          xhr.onerror = null;
+          xhr.onload = null;
+          xhr.onreadystatechange = null;
+        };
+
+        xhr.ontimeout = function () {
+          cleanup();
+          failure(new Error("xhr request timeout on ".concat(url, ".")));
+        };
+
+        xhr.onerror = function (error) {
+          cleanup(); // unfortunately with have no clue why it fails
+          // might be cors for instance
+
+          failure(createRequestError(error, {
+            url: url
+          }));
+        };
+
+        xhr.onload = function () {
+          cleanup();
+          bodyPromise.resolve();
+        };
+
+        signal.addEventListener("abort", function () {
+          xhr.abort();
+          var abortError = new Error("aborted");
+          abortError.name = "AbortError";
+          failure(abortError);
+        });
+
+        xhr.onreadystatechange = function () {
+          // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
+          var readyState = xhr.readyState;
+
+          if (readyState === 2) {
+            headersPromise.resolve();
+          } else if (readyState === 4) {
+            cleanup();
+            bodyPromise.resolve();
+          }
+        };
+
+        xhr.open(method, url, true);
+        Object.keys(headers).forEach(function (key) {
+          xhr.setRequestHeader(key, headers[key]);
+        });
+        xhr.withCredentials = computeWithCredentials({
+          credentials: credentials,
+          url: url
+        });
+
+        if ("responseType" in xhr && hasBlob) {
+          xhr.responseType = "blob";
+        }
+
+        xhr.send(body);
+        return _await$4(headersPromise, function () {
+          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+          var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+          var responseStatus = xhr.status;
+          var responseStatusText = xhr.statusText;
+          var responseHeaders = getHeadersFromXHR(xhr);
+
+          var readBody = function readBody() {
+            return _await$4(bodyPromise, function () {
+              var status = xhr.status; // in Chrome on file:/// URLs, status is 0
+
+              if (status === 0) {
+                responseStatus = 200;
+              }
+
+              var body = "response" in xhr ? xhr.response : xhr.responseText;
+              return {
+                responseBody: body,
+                responseBodyType: detectBodyType(body)
+              };
+            });
+          };
+
+          var text = function text() {
+            return _call$1(readBody, function (_ref2) {
+              var responseBody = _ref2.responseBody,
+                  responseBodyType = _ref2.responseBodyType;
+
+              if (responseBodyType === "blob") {
+                return blobToText(responseBody);
+              }
+
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as text");
+              }
+
+              return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
+            });
+          };
+
+          var json = function json() {
+            return _call$1(text, JSON.parse);
+          };
+
+          var blob = _async$4(function () {
+            if (!hasBlob) {
+              throw new Error("blob not supported");
+            }
+
+            return _call$1(readBody, function (_ref3) {
+              var responseBody = _ref3.responseBody,
+                  responseBodyType = _ref3.responseBodyType;
+
+              if (responseBodyType === "blob") {
+                return responseBody;
+              }
+
+              if (responseBodyType === "dataView") {
+                return new Blob([cloneBuffer(responseBody.buffer)]);
+              }
+
+              if (responseBodyType === "arrayBuffer") {
+                return new Blob([cloneBuffer(responseBody)]);
+              }
+
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as blob");
+              }
+
+              return new Blob([String(responseBody)]);
+            });
+          });
+
+          var arrayBuffer = function arrayBuffer() {
+            return _call$1(readBody, function (_ref4) {
+              var responseBody = _ref4.responseBody,
+                  responseBodyType = _ref4.responseBodyType;
+              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
+            });
+          };
+
+          var formData = _async$4(function () {
+            if (!hasFormData) {
+              throw new Error("formData not supported");
+            }
+
+            return _call$1(text, textToFormData);
+          });
+
+          return {
+            url: responseUrl,
+            status: responseStatus,
+            statusText: responseStatusText,
+            headers: responseHeaders,
+            text: text,
+            json: json,
+            blob: blob,
+            arrayBuffer: arrayBuffer,
+            formData: formData
+          };
+        });
+      });
+
+      var canUseBlob = function canUseBlob() {
+        if (typeof window.FileReader !== "function") return false;
+        if (typeof window.Blob !== "function") return false;
+
+        try {
+          // eslint-disable-next-line no-new
+          new Blob();
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+
+      var hasBlob = canUseBlob();
+      var hasFormData = typeof window.FormData === "function";
+      var hasArrayBuffer = typeof window.ArrayBuffer === "function";
+      var hasSearchParams = typeof window.URLSearchParams === "function";
+
+      var createRequestError = function createRequestError(error, _ref5) {
+        var url = _ref5.url;
+        return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
+      };
+
+      var createPromiseAndHooks = function createPromiseAndHooks() {
+        var resolve;
+        var reject;
+        var promise = new Promise(function (res, rej) {
+          resolve = function resolve(value) {
+            promise.settled = true;
+            res(value);
+          };
+
+          reject = function reject(value) {
+            promise.settled = true;
+            rej(value);
+          };
+        });
+        promise.resolve = resolve;
+        promise.reject = reject;
+        return promise;
+      }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+
+
+      var computeWithCredentials = function computeWithCredentials(_ref6) {
+        var credentials = _ref6.credentials,
+            url = _ref6.url;
+
+        if (credentials === "same-origin") {
+          return originSameAsGlobalOrigin(url);
+        }
+
+        return credentials === "include";
+      };
+
+      var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
+        // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
+        if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
+        if (_typeof(window.location) !== "object") return true;
+        var globalOrigin = window.location.origin;
+        if (globalOrigin === "null") return true;
+        return hrefToOrigin(url) === globalOrigin;
+      };
+
+      var detectBodyType = function detectBodyType(body) {
+        if (!body) {
+          return "";
+        }
+
+        if (typeof body === "string") {
+          return "text";
+        }
+
+        if (hasBlob && Blob.prototype.isPrototypeOf(body)) {
+          return "blob";
+        }
+
+        if (hasFormData && FormData.prototype.isPrototypeOf(body)) {
+          return "formData";
+        }
+
+        if (hasArrayBuffer) {
+          if (hasBlob && isDataView(body)) {
+            return "dataView";
+          }
+
+          if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
+            return "arrayBuffer";
+          }
+        }
+
+        if (hasSearchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+          return "searchParams";
+        }
+
+        return "";
+      }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
+
+
+      var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
+        var headerMap = {};
+        var headersString = xhr.getAllResponseHeaders();
+        if (headersString === "") return headerMap;
+        var lines = headersString.trim().split(/[\r\n]+/);
+        lines.forEach(function (line) {
+          var parts = line.split(": ");
+          var name = parts.shift();
+          var value = parts.join(": ");
+          headerMap[name.toLowerCase()] = value;
+        });
+        return headerMap;
+      };
+
+      var hrefToOrigin = function hrefToOrigin(href) {
+        var scheme = hrefToScheme(href);
+
+        if (scheme === "file") {
+          return "file://";
+        }
+
+        if (scheme === "http" || scheme === "https") {
+          var secondProtocolSlashIndex = scheme.length + "://".length;
+          var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+          if (pathnameSlashIndex === -1) return href;
+          return href.slice(0, pathnameSlashIndex);
+        }
+
+        return href.slice(0, scheme.length + 1);
+      };
+
+      var hrefToScheme = function hrefToScheme(href) {
+        var colonIndex = href.indexOf(":");
+        if (colonIndex === -1) return "";
+        return href.slice(0, colonIndex);
+      };
+
+      var isDataView = function isDataView(obj) {
+        return obj && DataView.prototype.isPrototypeOf(obj);
+      };
+
+      var isArrayBufferView = ArrayBuffer.isView || function () {
+        var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+        return function (value) {
+          return value && viewClasses.includes(Object.prototype.toString.call(value));
+        };
+      }();
+
+      var textToFormData = function textToFormData(text) {
+        var form = new FormData();
+        text.trim().split("&").forEach(function (bytes) {
+          if (bytes) {
+            var split = bytes.split("=");
+            var name = split.shift().replace(/\+/g, " ");
+            var value = split.join("=").replace(/\+/g, " ");
+            form.append(decodeURIComponent(name), decodeURIComponent(value));
+          }
+        });
+        return form;
+      };
+
+      var blobToArrayBuffer = _async$4(function (blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
+        reader.readAsArrayBuffer(blob);
+        return promise;
+      });
+
+      var blobToText = function blobToText(blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
+        reader.readAsText(blob);
+        return promise;
+      };
+
+      var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
+        var view = new Uint8Array(arrayBuffer);
+        var chars = new Array(view.length);
+        var i = 0;
+
+        while (i < view.length) {
+          chars[i] = String.fromCharCode(view[i]);
+          i++;
+        }
+
+        return chars.join("");
+      };
+
+      var fileReaderReady = function fileReaderReady(reader) {
+        return new Promise(function (resolve, reject) {
+          reader.onload = function () {
+            resolve(reader.result);
+          };
+
+          reader.onerror = function () {
+            reject(reader.error);
+          };
+        });
+      };
+
+      var cloneBuffer = function cloneBuffer(buffer) {
+        if (buffer.slice) {
+          return buffer.slice(0);
+        }
+
+        var view = new Uint8Array(buffer.byteLength);
+        view.set(new Uint8Array(buffer));
+        return view.buffer;
+      };
+
+      var fetchUsingXHR$1 = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        fetchUsingXHR: fetchUsingXHR
+      });
+
+      var _excluded = ["mode"];
+
+      function _await$3(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      var fetchNative = _async$3(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+        var _ref$mode = _ref.mode,
+            mode = _ref$mode === void 0 ? "cors" : _ref$mode,
+            options = _objectWithoutProperties(_ref, _excluded);
+
+        return _await$3(window.fetch(url, _objectSpread2({
+          mode: mode
+        }, options)), function (response) {
+          return {
+            url: response.url,
+            status: response.status,
+            statusText: "",
+            headers: responseToHeaders(response),
+            text: function text() {
+              return response.text();
+            },
+            json: function json() {
+              return response.json();
+            },
+            blob: function blob() {
+              return response.blob();
+            },
+            arrayBuffer: function arrayBuffer() {
+              return response.arrayBuffer();
+            },
+            formData: function formData() {
+              return response.formData();
+            }
+          };
+        });
+      });
+
+      function _async$3(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var responseToHeaders = function responseToHeaders(response) {
+        var headers = {};
+        response.headers.forEach(function (value, name) {
+          headers[name] = value;
+        });
+        return headers;
+      };
+
+      var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+      function _await$2(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$2(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchJson = _async$2(function (url) {
+        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        return _await$2(fetchUrl(url, options), function (response) {
+          return _await$2(response.json());
+        });
+      });
+
+      function _await$1(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch(body, recover) {
+        try {
+          var result = body();
+        } catch (e) {
+          return recover(e);
+        }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$1(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchExploringJson = _async$1(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            signal = _ref.signal;
+
+        return _catch(function () {
+          return _await$1(fetchJson("/.jsenv/exploring.json", {
+            signal: signal
+          }));
+        }, function (e) {
+          if (signal && signal.aborted && e.name === "AbortError") {
+            throw e;
+          }
+
+          throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
+        });
+      });
+
+      function _await(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      var fetchJSON = _async(function (url, options) {
+        return _await(fetchUrl$1(url, options), function (response) {
+          return _await(response.json());
+        });
+      });
+
+      function _async(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var groupPreference = createPreference("group");
+
+      function _call(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var run = function run() {
+        return _call(fetchExploringJson, function (_ref) {
+          var projectDirectoryUrl = _ref.projectDirectoryUrl,
+              explorableConfig = _ref.explorableConfig,
+              outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl;
+          return _await(fetchJSON("/.jsenv/explorables.json", {
+            method: "GET"
+          }), function (files) {
+            var compileServerOrigin = document.location.origin;
+            var outDirectoryUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
+            var documentUrl = document.location.href;
+            var compileId;
+            var outDirectoryIndex = documentUrl.indexOf(outDirectoryUrl);
+
+            if (outDirectoryIndex === 0) {
+              var afterOutDirectory = documentUrl.slice(outDirectoryUrl.length);
+              compileId = afterOutDirectory.split("/")[0];
+            } else {
+              compileId = null;
+            }
+
+            var renderHtml = function renderHtml() {
+              // const mainHtmlFileRelativeUrl = "index.html"
+              // const mainFileLink = document.querySelector("#main_file_link")
+              // const mainFileUrl = urlToVisitFromRelativeUrl(mainHtmlFileRelativeUrl)
+              // mainFileLink.href = mainFileUrl
+              // mainFileLink.textContent = `${mainHtmlFileRelativeUrl}`
+              // const mainFileIframe = document.querySelector(`#main_file_iframe`)
+              // mainFileIframe.src = mainFileUrl
+              var fileListElement = document.querySelector("[data-page=\"file-list\"]").cloneNode(true);
+              var directoryName = directoryUrlToDirectoryName(projectDirectoryUrl);
+              var span = fileListElement.querySelector("#directory_relative_url");
+              span.title = projectDirectoryUrl;
+              span.textContent = directoryName;
+              var h4 = fileListElement.querySelector("h4");
+              var ul = fileListElement.querySelector("ul");
+              ul.innerHTML = files.map(function (file) {
+                return "<li>\n          <a\n            class=\"execution-link\"\n            data-relative-url=".concat(file.relativeUrl, "\n            href=").concat(urlToVisitFromRelativeUrl(file.relativeUrl), "\n          >\n            ").concat(file.relativeUrl, "\n          </a>\n        </li>");
+              }).join("");
+              var groupFieldset = fileListElement.querySelector("#filter-group-set");
+              var groupNames = Object.keys(explorableConfig);
+              groupFieldset.innerHTML = groupNames.map(function (key) {
+                return "<label data-contains-hidden-input class=\"item\">\n  <input type=\"radio\" name=\"filter-group\" value=\"".concat(key, "\"/>\n  <span>").concat(key, "</span>\n</label>");
+              }).join("");
+              var currentGroup = groupPreference.has() ? groupPreference.get() : groupNames[0];
+              Array.from(groupFieldset.querySelectorAll("input")).forEach(function (inputRadio) {
+                inputRadio.checked = inputRadio.value === currentGroup;
+
+                inputRadio.onchange = function () {
+                  if (inputRadio.checked) {
+                    groupPreference.set(inputRadio.value);
+                    enableGroup(inputRadio.value);
+                  }
+                };
+              });
+
+              var enableGroup = function enableGroup(groupName) {
+                var arrayOfElementToShow = [];
+                var arrayOfElementToHide = [];
+                files.forEach(function (file) {
+                  var fileLink = fileListElement.querySelector("a[data-relative-url=\"".concat(file.relativeUrl, "\"]"));
+                  var fileLi = fileLink.parentNode;
+
+                  if (file.meta[groupName]) {
+                    arrayOfElementToShow.push(fileLi);
+                  } else {
+                    arrayOfElementToHide.push(fileLi);
+                  }
+                });
+                arrayOfElementToShow.forEach(function (element) {
+                  element.removeAttribute("data-force-hide");
+                });
+                arrayOfElementToHide.forEach(function (element) {
+                  element.setAttribute("data-force-hide", "");
+                });
+                h4.innerHTML = arrayOfElementToShow.length === 0 ? "No file found.\n              Config for this section: <pre>".concat(JSON.stringify(explorableConfig[groupName], null, "  "), "</pre>") : "".concat(arrayOfElementToShow.length, " files found. Click on the one you want to execute");
+              };
+
+              enableGroup(currentGroup);
+              document.querySelector("main").appendChild(fileListElement);
+              makeMenuScrollable();
+            };
+
+            var urlToVisitFromRelativeUrl = function urlToVisitFromRelativeUrl(relativeUrl) {
+              if (compileId) {
+                return "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(relativeUrl);
+              }
+
+              return "".concat(compileServerOrigin, "/").concat(relativeUrl);
+            };
+
+            var makeMenuScrollable = function makeMenuScrollable() {
+              var getMenuWrapperSize = function getMenuWrapperSize() {
+                return document.querySelector(".menu-wrapper").getBoundingClientRect().width;
+              };
+
+              var menuWrapperSize = getMenuWrapperSize();
+
+              var getMenuSize = function getMenuSize() {
+                return document.querySelector(".menu").getBoundingClientRect().width;
+              };
+
+              var menuSize = getMenuSize();
+              var menuVisibleSize = menuWrapperSize;
+              var menuInvisibleSize = menuSize - menuVisibleSize;
+
+              var getMenuPosition = function getMenuPosition() {
+                return document.querySelector(".menu-wrapper").scrollLeft;
+              };
+
+              var scrollDuration = 300;
+              var leftPaddle = document.querySelector(".left-paddle");
+              var rightPaddle = document.querySelector(".right-paddle");
+
+              var handleMenuScroll = function handleMenuScroll() {
+                menuInvisibleSize = menuSize - menuWrapperSize;
+                var menuPosition = getMenuPosition();
+                var menuEndOffset = menuInvisibleSize; // show & hide the paddles, depending on scroll position
+
+                if (menuPosition <= 0 && menuEndOffset <= 0) {
+                  // hide both paddles if the window is large enough to display all tabs
+                  leftPaddle.classList.add("hidden");
+                  rightPaddle.classList.add("hidden");
+                } else if (menuPosition <= 0) {
+                  leftPaddle.classList.add("hidden");
+                  rightPaddle.classList.remove("hidden");
+                } else if (menuPosition < Math.floor(menuEndOffset)) {
+                  // show both paddles in the middle
+                  leftPaddle.classList.remove("hidden");
+                  rightPaddle.classList.remove("hidden");
+                } else if (menuPosition >= Math.floor(menuEndOffset)) {
+                  leftPaddle.classList.remove("hidden");
+                  rightPaddle.classList.add("hidden");
+                }
+              };
+
+              handleMenuScroll();
+
+              window.onresize = function () {
+                menuWrapperSize = getMenuWrapperSize();
+                menuSize = getMenuSize();
+                handleMenuScroll();
+              }; // finally, what happens when we are actually scrolling the menu
+
+
+              document.querySelector(".menu-wrapper").onscroll = function () {
+                handleMenuScroll();
+              }; // scroll to left
+
+
+              rightPaddle.onclick = function () {
+                var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+                var scrollEnd = scrollStart + menuWrapperSize;
+                startJavaScriptAnimation({
+                  duration: scrollDuration,
+                  onProgress: function onProgress(_ref2) {
+                    var progress = _ref2.progress;
+                    document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
+                  }
+                });
+              }; // scroll to right
+
+
+              leftPaddle.onclick = function () {
+                var scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+                var scrollEnd = scrollStart - menuWrapperSize;
+                startJavaScriptAnimation({
+                  duration: scrollDuration,
+                  onProgress: function onProgress(_ref3) {
+                    var progress = _ref3.progress;
+                    document.querySelector(".menu-wrapper").scrollLeft = scrollStart + (scrollEnd - scrollStart) * progress;
+                  }
+                });
+              };
+            };
+
+            var directoryUrlToDirectoryName = function directoryUrlToDirectoryName(directoryUrl) {
+              var slashLastIndex = directoryUrl.lastIndexOf("/", // ignore last slash
+              directoryUrl.length - 2);
+              if (slashLastIndex === -1) return "";
+              return directoryUrl.slice(slashLastIndex + 1);
+            };
+
+            renderHtml();
+          });
+        });
+      };
+
+      run();
+
+    })
+  };
+}));
+
+//# sourceMappingURL=exploring-65c1d81f.js.map</script>
+  
+
+</body></html>

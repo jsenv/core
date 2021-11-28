@@ -4,7 +4,6 @@ import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import "./focus/toolbar.focus.js"
-import { renderBackToListInToolbar } from "./backtolist/toolbar.backtolist.js"
 import {
   getToolbarIframe,
   deactivateToolbarSection,
@@ -64,11 +63,6 @@ const renderToolbar = async () => {
   } else {
     hideToolbar({ animate: false })
   }
-
-  renderBackToListInToolbar({
-    outDirectoryRelativeUrl,
-    exploringHtmlFileRelativeUrl: exploringConfig.exploringHtmlFileRelativeUrl,
-  })
 
   renderToolbarNotification()
   makeToolbarResponsive()

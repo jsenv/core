@@ -4,8 +4,13 @@
     <title>Exploring</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
-    <link rel="icon" href="../../jsenv.png" />
-    <link rel="stylesheet" type="text/css" href="./exploring.css" />
+    <link rel="icon" href="../../jsenv.png" data-jsenv-force-inline />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="./exploring.css"
+      data-jsenv-force-inline
+    />
   </head>
 
   <body>
@@ -69,6 +74,10 @@
         </section>
       </article>
     </div>
-    <script src="/.jsenv/exploring.index.js"></script>
+    <script
+      type="importmap"
+      src="../../../../node_resolution.importmap"
+    ></script>
+    <script type="module" src="./exploring.js" data-jsenv-force-inline></script>
   </body>
 </html>

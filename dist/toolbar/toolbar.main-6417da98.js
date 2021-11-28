@@ -1020,42 +1020,6 @@ System.register([], (function (exports, module) {
         document.documentElement.setAttribute("data-last-interaction", "keyboard");
       });
 
-      var renderBackToListInToolbar = function renderBackToListInToolbar(_ref) {
-        var outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-            exploringHtmlFileRelativeUrl = _ref.exploringHtmlFileRelativeUrl;
-        var exploringHtmlFileUrl = "/".concat(outDirectoryRelativeUrl, "otherwise/").concat(exploringHtmlFileRelativeUrl);
-        document.querySelector("#file-list-link a").href = exploringHtmlFileUrl;
-
-        document.querySelector("#file-list-link a").onclick = function (clickEvent) {
-          if (clickEvent.defaultPrevented) {
-            return;
-          }
-
-          if (isClickToOpenTab(clickEvent)) {
-            return;
-          }
-
-          window.parent.location.href = exploringHtmlFileUrl;
-        };
-      };
-
-      var isClickToOpenTab = function isClickToOpenTab(clickEvent) {
-        if (clickEvent.button !== 0) {
-          // Chrome < 55 fires a click event when the middle mouse button is pressed
-          return true;
-        }
-
-        if (clickEvent.metaKey) {
-          return true;
-        }
-
-        if (clickEvent.ctrlKey) {
-          return true;
-        }
-
-        return false;
-      };
-
       var createPreference = function createPreference(name) {
         return {
           has: function has() {
@@ -2715,10 +2679,6 @@ System.register([], (function (exports, module) {
             });
           }
 
-          renderBackToListInToolbar({
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-            exploringHtmlFileRelativeUrl: exploringConfig.exploringHtmlFileRelativeUrl
-          });
           renderToolbarNotification();
           makeToolbarResponsive();
           renderToolbarSettings();
@@ -2881,4 +2841,4 @@ System.register([], (function (exports, module) {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-62f489ed.js.map
+//# sourceMappingURL=toolbar.main-6417da98.js.map

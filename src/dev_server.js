@@ -5,6 +5,10 @@ import {
 } from "@jsenv/filesystem"
 import { setupRoutes } from "@jsenv/server"
 
+import {
+  EXPLORING_BUILD_URL,
+  REDIRECTOR_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
@@ -15,7 +19,6 @@ import {
   computeOutDirectoryRelativeUrl,
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
-import { getJsenvBuildUrl } from "./internal/jsenv_builds.js"
 
 import {
   sourcemapMainFileInfo,
@@ -60,11 +63,8 @@ export const startDevServer = async ({
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   if (mainFileRelativeUrl === undefined) {
-    const exploringIndexBuildUrl = await getJsenvBuildUrl(
-      "./dist/exploring_index/exploring_index.html",
-    )
     mainFileRelativeUrl = urlToRelativeUrl(
-      exploringIndexBuildUrl,
+      EXPLORING_BUILD_URL,
       projectDirectoryUrl,
     )
   }
@@ -133,11 +133,8 @@ const createRedirectorService = async ({
   projectDirectoryUrl,
   mainFileRelativeUrl,
 }) => {
-  const redirectorBuildUrl = await getJsenvBuildUrl(
-    "./dist/redirector/redirector.html",
-  )
   const redirectorRelativeUrlForProject = urlToRelativeUrl(
-    redirectorBuildUrl,
+    REDIRECTOR_BUILD_URL,
     projectDirectoryUrl,
   )
   return setupRoutes({

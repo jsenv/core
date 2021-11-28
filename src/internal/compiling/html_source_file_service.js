@@ -21,8 +21,12 @@ import {
 import { moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import {
+  BROWSER_SYSTEM_BUILD_URL,
+  EVENT_SOURCE_CLIENT_BUILD_URL,
+  TOOLBAR_INJECTOR_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { getJsenvBuildUrl } from "../jsenv_builds.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   parseHtmlString,
@@ -37,6 +41,9 @@ import {
   setHtmlNodeText,
   getUniqueNameForInlineHtmlNode,
 } from "./compileHtml.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+
+const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
 
 export const createTransformHtmlSourceFileService = ({
   logger,
@@ -63,6 +70,10 @@ export const createTransformHtmlSourceFileService = ({
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+
+    if (urlIsInsideOf(fileUrl, jsenvDistDirectoryUrl)) {
+      return null
+    }
 
     const inlineScript = htmlInlineScriptMap.get(fileUrl)
     if (inlineScript) {
@@ -153,57 +164,37 @@ const transformHTMLSourceFile = async ({
     })
   }
 
-  const browserSystemBuildUrl = await getJsenvBuildUrl(
-    "./dist/browser_system/jsenv_browser_system.js",
-  )
   const browserSystemBuildUrlRelativeToProject = urlToRelativeUrl(
-    browserSystemBuildUrl,
+    BROWSER_SYSTEM_BUILD_URL,
     projectDirectoryUrl,
   )
 
-  const eventSourceClientBuildUrl = await getJsenvBuildUrl(
-    "./dist/event_source_client/jsenv_event_source_client.js",
-  )
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientBuildUrl,
+    EVENT_SOURCE_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
 
-  const toolbarInjectorBuildUrl = await getJsenvBuildUrl(
-    "./dist/toolbar_injector/jsenv_toolbar_injector.js",
-  )
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarInjectorBuildUrl,
+    TOOLBAR_INJECTOR_BUILD_URL,
     projectDirectoryUrl,
-  )
-
-  const toolbarBuildUrl = await getJsenvBuildUrl("./dist/toolbar/toolbar.html")
-  const redirectorBuildUrl = await getJsenvBuildUrl(
-    "./dist/redirector/redirector.html",
   )
 
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(fileUrl !== toolbarBuildUrl &&
-      fileUrl !== redirectorBuildUrl &&
       jsenvScriptInjection
         ? [
             {
               src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
-        : []),
-      ...(fileUrl !== toolbarBuildUrl &&
-      fileUrl !== redirectorBuildUrl &&
+        : [],
       jsenvEventSourceClientInjection
         ? [
             {
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
-        : []),
-      ...(fileUrl !== toolbarBuildUrl &&
-      fileUrl !== redirectorBuildUrl &&
+        : [],
       jsenvToolbarInjection
         ? [
             {
@@ -212,7 +203,7 @@ const transformHTMLSourceFile = async ({
               async: "",
             },
           ]
-        : []),
+        : [],
     ],
   })
 
