@@ -100,6 +100,7 @@ await buildInternalFile({
   entryPointMap: {
     "./src/internal/dev_server/toolbar/toolbar.html": "./toolbar.html",
   },
+  cssConcatenation: true,
 })
 addExport("TOOLBAR_BUILD_URL", `toolbar/${buildManifest["toolbar.html"]}`)
 
@@ -109,6 +110,7 @@ await buildInternalFile({
   entryPointMap: {
     "./src/internal/dev_server/exploring/exploring.html": "./exploring.html",
   },
+  cssConcatenation: true,
 })
 addExport("EXPLORING_BUILD_URL", `exploring/${buildManifest["exploring.html"]}`)
 

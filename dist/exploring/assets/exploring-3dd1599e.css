@@ -1,0 +1,310 @@
+button:focus,
+a:focus,
+input:focus,
+*[data-contains-hidden-input] input:focus + * {
+  outline-style: none;
+  outline-offset: -2px;
+}
+
+*[data-contains-hidden-input] input:focus + * {
+  outline-width: 4px;
+  outline-offset: -2px;
+}
+
+html[data-last-interaction="keyboard"] button:focus,
+html[data-last-interaction="keyboard"] a:focus,
+html[data-last-interaction="keyboard"] input:focus,
+html[data-last-interaction="keyboard"]
+  *[data-contains-hidden-input]
+  input:focus
+  + * {
+  outline-style: auto;
+}
+
+html[data-last-interaction="keyboard"]
+  *[data-contains-hidden-input]
+  input:focus
+  + * {
+  outline-color: rgb(0, 150, 255);
+}
+
+/*
+Don't try to replace @-moz-document url-prefix() this by
+
+-moz-outline or -moz-outline-color
+Because firefox would take into account outline instead of -moz-outline
+
+:moz-focus-ring
+Because for some element we set the focus outline on a div which would not match :focusring
+*/
+
+@-moz-document url-prefix() {
+  html[data-last-interaction="keyboard"] button:focus,
+  html[data-last-interaction="keyboard"] a:focus,
+  html[data-last-interaction="keyboard"] input:focus,
+  html[data-last-interaction="keyboard"]
+    *[data-input-customized]
+    input:focus
+    + * {
+    outline-width: 2px;
+    outline-offset: 0;
+    outline-style: solid;
+    /*
+    force a blue color for firefox otherwise
+    it uses outline-color: inherit
+    making it unpredictible and sometimes hard to see
+    */
+    outline-color: rgb(0, 150, 255);
+  }
+}
+
+::-moz-focus-inner {
+  border: 0;
+}
+
+/* reset stuff */
+
+* {
+  box-sizing: border-box;
+}
+
+[data-force-hide] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+html {
+  font-family: arial, sans;
+  height: 100%;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+main > * {
+  min-width: 100%;
+  flex: 1;
+}
+
+hr {
+  color: black;
+  background-color: black;
+  border-color: black;
+  margin: 15px 0;
+}
+
+article[data-page="file-list"] {
+  background-color: #204143;
+  color: #97a0a0;
+}
+
+nav,
+#explorables-message {
+  background: #1f262c;
+}
+
+#explorables nav {
+  /* overflow hidden to ensure it wraps li which have margins
+  otherwise the background color is not the one from <nav> */
+  overflow: hidden;
+}
+
+#explorables-message {
+  overflow: auto; /* propagate background to margins cause by h4 inside */
+}
+
+article h2 {
+  margin: 0;
+  display: flex;
+}
+
+article h2 svg {
+  margin-right: 15px;
+}
+
+#main_html_file {
+  padding: 25px;
+  padding-bottom: 0;
+}
+
+#main_file_link {
+  /* background-color: #204143;
+  padding: 0.5em 0.7em;
+  border-radius: 0.1em; */
+  color: #e7f2f3;
+}
+
+/* article > section {
+} */
+
+h2 {
+  margin: 20px 0;
+  color: #24b1b0;
+  display: inline-block;
+}
+
+h4 {
+  font-weight: normal;
+  font-size: 15px;
+  color: #97a0a0;
+  padding: 0 25px;
+}
+
+#explorables {
+  word-break: break-word;
+}
+
+#explorables-header {
+  /* padding-bottom: 10px; */
+  width: 100%;
+  position: sticky;
+  top: 0;
+}
+
+#explorables_header_and_menu {
+  padding-left: 25px;
+  padding-right: 25px;
+  padding-top: 25px;
+  background-color: #204143;
+}
+
+#explorables_header_bottom_spacing {
+  height: 20px;
+  background: #1f262c;
+}
+
+#directory_relative_url {
+  color: orange;
+}
+
+#explorables ul {
+  padding: 0px 25px 25px 25px;
+  margin: 0;
+}
+
+#explorables li {
+  list-style-type: none;
+  margin: 10px 0;
+}
+
+#explorables li:first-child {
+  margin-top: 0;
+}
+
+#explorables li .execution-link {
+  width: 100%;
+  word-break: break-all;
+}
+
+.execution-link {
+  background: #204143;
+  padding: 6px 12px;
+  font-size: 14px;
+  display: inline-block;
+  color: #e7f2f3;
+  font-family: monospace;
+  text-decoration: unset;
+}
+
+/* icons */
+
+#main_file_icon {
+  fill: #24b1b0;
+}
+
+#fileIconSvgConfig {
+  width: 25px;
+  height: 25px;
+  stroke: none;
+  fill: #24b1b0;
+}
+
+#explorables fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+#explorables fieldset label {
+  display: inline-block;
+  padding: 0;
+}
+
+#explorables fieldset input {
+  opacity: 0;
+  position: absolute;
+}
+
+#explorables fieldset label input + * {
+  display: block;
+  padding: 0.7em 1em;
+  background-color: #204143;
+  border-radius: 0.1em;
+  min-width: 8em;
+  text-align: center;
+}
+
+#explorables fieldset input:checked + * {
+  color: orange;
+  background: #1f262c;
+}
+
+/* scrolable menu */
+
+.menu-wrapper {
+  position: relative;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  transition: 300ms;
+  margin-top: 25px;
+}
+
+.menu {
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.menu .item {
+  display: inline-block;
+  height: 100%;
+  padding: 1em;
+  box-sizing: border-box;
+}
+
+.paddle {
+  position: absolute;
+  height: 36px;
+  bottom: 0;
+  border: none;
+  background: #24b1b0;
+  color: #1f262c;
+}
+
+.left-paddle {
+  left: 0;
+}
+
+.right-paddle {
+  right: 0;
+}
+
+.hidden {
+  display: none;
+}
+
+/*# sourceMappingURL=exploring.css-ec945023.map */

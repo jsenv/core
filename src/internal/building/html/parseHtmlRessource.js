@@ -51,6 +51,7 @@ import {
 import { collectNodesMutations } from "../parsing.utils.js"
 
 import { collectSvgMutations } from "../svg/parseSvgRessource.js"
+import { moveCssUrls } from "../css/moveCssUrls.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,
@@ -507,7 +508,11 @@ const linkStylesheetHrefVisitor = (
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
   })
-  return ({ getUrlRelativeToImporter }) => {
+  return async ({
+    getUrlRelativeToImporter,
+    precomputeBuildRelativeUrl,
+    buildDirectoryUrl,
+  }) => {
     const { ressource } = cssReference
 
     if (ressource.isExternal) {
@@ -516,18 +521,30 @@ const linkStylesheetHrefVisitor = (
 
     if (shouldInline({ ressource, htmlNode: link })) {
       const { bufferAfterBuild } = ressource
-      let cssString = String(bufferAfterBuild)
-      const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
+      let code = String(bufferAfterBuild)
+      const { buildRelativeUrl } = ressource
+      const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
+      const htmlUrl = resolveUrl(
+        precomputeBuildRelativeUrl(htmlRessource),
+        buildDirectoryUrl,
+      )
+
+      const moveResult = await moveCssUrls({
+        code,
+        from: cssBuildUrl,
+        to: htmlUrl,
+      })
+      code = moveResult.code
+
+      const sourcemapRelativeUrl = getCssSourceMappingUrl(code)
       if (sourcemapRelativeUrl) {
-        const { buildRelativeUrl } = ressource
-        const cssBuildUrl = resolveUrl(buildRelativeUrl, "file:///")
+        const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
-        const htmlUrl = resolveUrl(htmlRessource.fileNamePattern, "file:///")
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
-        cssString = setCssSourceMappingUrl(cssString, sourcemapInlineUrl)
+        code = setCssSourceMappingUrl(code, sourcemapInlineUrl)
       }
 
-      replaceHtmlNode(link, `<style>${cssString}</style>`, {
+      replaceHtmlNode(link, `<style>${code}</style>`, {
         attributesToIgnore: ["href", "rel", "as", "crossorigin", "type"],
       })
       cssReference.inlinedCallback()

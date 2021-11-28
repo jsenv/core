@@ -11,4 +11,4 @@ export const TOOLBAR_INJECTOR_BUILD_URL = new URL("toolbar_injector/toolbar_inje
 
 export const TOOLBAR_BUILD_URL = new URL("toolbar/toolbar-c2bbdae8.html", import.meta.url).href
 
-export const EXPLORING_BUILD_URL = new URL("exploring/exploring-793381e1.html", import.meta.url).href
+export const EXPLORING_BUILD_URL = new URL("exploring/exploring-fec1e30d.html", import.meta.url).href
