@@ -755,6 +755,21 @@
     return then ? value.then(then) : value;
   }
 
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-76ea1253.html";
+
+  function _call(body, then, direct) {
+    if (direct) {
+      return then ? then(body()) : body();
+    }
+
+    try {
+      var result = Promise.resolve(body());
+      return then ? result.then(then) : result;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
   var injectToolbar = _async(function () {
     return _await(new Promise(function (resolve) {
       if (window.requestIdleCallback) {
@@ -789,7 +804,7 @@
           "border": "none"
         });
         var iframeLoadedPromise = iframeToLoadedPromise(iframe);
-        var jsenvToolbarHtmlServerUrl = resolveUrl("./src/internal/dev_server/toolbar/toolbar.html", jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
+        var jsenvToolbarHtmlServerUrl = resolveUrl(TOOLBAR_BUILD_RELATIVE_URL, jsenvDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
 
         iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
         placeholder.parentNode.replaceChild(iframe, placeholder);
@@ -872,17 +887,18 @@
     });
   });
 
-  function _call(body, then, direct) {
-    if (direct) {
-      return then ? then(body()) : body();
-    }
+  function _async(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
 
-    try {
-      var result = Promise.resolve(body());
-      return then ? result.then(then) : result;
-    } catch (e) {
-      return Promise.reject(e);
-    }
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
   }
 
   var getToolbarPlaceholder = function getToolbarPlaceholder() {
@@ -900,20 +916,6 @@
 
     return createTooolbarPlaceholder();
   };
-
-  function _async(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
 
   var queryPlaceholder = function queryPlaceholder() {
     return document.querySelector("[data-jsenv-toolbar-placeholder]");
@@ -948,4 +950,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-2363cefa.js.map
+//# sourceMappingURL=toolbar_injector-c0b33fe3.js.map

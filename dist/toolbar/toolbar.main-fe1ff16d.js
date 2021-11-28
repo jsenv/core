@@ -1,4 +1,4 @@
-System.register([], (function (exports, module) {
+System.register([], (function () {
   'use strict';
   return {
     execute: (function () {
@@ -2110,47 +2110,9 @@ System.register([], (function (exports, module) {
         });
       });
 
-      var detectSupportedFeatures = _async$1(function (_ref3) {
+      var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref3) {
         var featuresReport = _ref3.featuresReport,
-            failFastOnFeatureDetection = _ref3.failFastOnFeatureDetection,
-            inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
-        // start testing importmap support first and not in paralell
-        // so that there is not module script loaded beore importmap is injected
-        // it would log an error in chrome console and return undefined
-        return _await(supportsImportmap({
-          // chrome supports inline but not remote importmap
-          // https://github.com/WICG/import-maps/issues/235
-          // at this stage we won't know if the html file will use
-          // an importmap or not and if that importmap is inline or specified with an src
-          // so we should test if browser support local and remote importmap.
-          // But there exploring server can inline importmap by transforming html
-          // and in that case we can test only the local importmap support
-          // so we test importmap support and the remote one
-          remote: !inlineImportMapIntoHTML
-        }), function (importmap) {
-          featuresReport.importmap = importmap;
-
-          if (!importmap && failFastOnFeatureDetection) {
-            return;
-          }
-
-          return _call$1(supportsDynamicImport, function (dynamicImport) {
-            featuresReport.dynamicImport = dynamicImport;
-
-            if (!dynamicImport && failFastOnFeatureDetection) {
-              return;
-            }
-
-            return _call$1(supportsTopLevelAwait, function (topLevelAwait) {
-              featuresReport.topLevelAwait = topLevelAwait;
-            });
-          });
-        });
-      });
-
-      var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref4) {
-        var featuresReport = _ref4.featuresReport,
-            coverageHandledFromOutside = _ref4.coverageHandledFromOutside;
+            coverageHandledFromOutside = _ref3.coverageHandledFromOutside;
         var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
         var requiredPluginNames = pluginRequiredNameArray.slice();
 
@@ -2193,15 +2155,43 @@ System.register([], (function (exports, module) {
         });
       });
 
-      var supportsNewStylesheet = function supportsNewStylesheet() {
-        try {
-          // eslint-disable-next-line no-new
-          new CSSStyleSheet();
-          return true;
-        } catch (e) {
-          return false;
-        }
-      };
+      var detectSupportedFeatures = _async$1(function (_ref4) {
+        var featuresReport = _ref4.featuresReport,
+            failFastOnFeatureDetection = _ref4.failFastOnFeatureDetection,
+            inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
+        // start testing importmap support first and not in paralell
+        // so that there is not module script loaded beore importmap is injected
+        // it would log an error in chrome console and return undefined
+        return _await(supportsImportmap({
+          // chrome supports inline but not remote importmap
+          // https://github.com/WICG/import-maps/issues/235
+          // at this stage we won't know if the html file will use
+          // an importmap or not and if that importmap is inline or specified with an src
+          // so we should test if browser support local and remote importmap.
+          // But there exploring server can inline importmap by transforming html
+          // and in that case we can test only the local importmap support
+          // so we test importmap support and the remote one
+          remote: !inlineImportMapIntoHTML
+        }), function (importmap) {
+          featuresReport.importmap = importmap;
+
+          if (!importmap && failFastOnFeatureDetection) {
+            return;
+          }
+
+          return _call$1(supportsDynamicImport, function (dynamicImport) {
+            featuresReport.dynamicImport = dynamicImport;
+
+            if (!dynamicImport && failFastOnFeatureDetection) {
+              return;
+            }
+
+            return _call$1(supportsTopLevelAwait, function (topLevelAwait) {
+              featuresReport.topLevelAwait = topLevelAwait;
+            });
+          });
+        });
+      });
 
       var supportsImportmap = _async$1(function () {
         var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
@@ -2223,44 +2213,24 @@ System.register([], (function (exports, module) {
         }
 
         document.body.appendChild(importmapScript);
-        var scriptModule = document.createElement("script");
-        scriptModule.type = "module";
-        scriptModule.src = asBase64Url("import supported from \"".concat(specifier, "\"; window.__importmap_supported = supported"));
-        return new Promise(function (resolve, reject) {
-          scriptModule.onload = function () {
-            var supported = window.__importmap_supported;
-            delete window.__importmap_supported;
-            document.body.removeChild(scriptModule);
+        return _catch(function () {
+          return _await(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
             document.body.removeChild(importmapScript);
-            resolve(supported);
-          };
-
-          scriptModule.onerror = function () {
-            document.body.removeChild(scriptModule);
-            document.body.removeChild(importmapScript);
-            reject();
-          };
-
-          document.body.appendChild(scriptModule);
+            return window.__jsenv_runtime_test_importmap__;
+          });
+        }, function () {
+          document.body.removeChild(importmapScript);
+          return false;
         });
       });
 
       var supportsDynamicImport = _async$1(function () {
         var moduleSource = asBase64Url("export default 42");
         return _catch(function () {
-          return _await(module.import(moduleSource), function (namespace) {
-            return namespace.default === 42;
-          });
-        }, function () {
-          return false;
-        });
-      });
-
-      var supportsTopLevelAwait = _async$1(function () {
-        var moduleSource = asBase64Url("export default await Promise.resolve(42)");
-        return _catch(function () {
-          return _await(module.import(moduleSource), function (namespace) {
-            return namespace.default === 42;
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+              return namespace.default === 42;
+            });
           });
         }, function () {
           return false;
@@ -2271,30 +2241,79 @@ System.register([], (function (exports, module) {
         var jsonBase64Url = asBase64Url("42", "application/json");
         var moduleSource = asBase64Url("export { default } from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }"));
         return _catch(function () {
-          return _await(module.import(moduleSource), function (namespace) {
-            return namespace.default === 42;
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = await import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+              return namespace.default === 42;
+            });
           });
         }, function () {
           return false;
         });
       });
+
+      var supportsNewStylesheet = function supportsNewStylesheet() {
+        try {
+          // eslint-disable-next-line no-new
+          new CSSStyleSheet();
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+
+      var supportsTopLevelAwait = function supportsTopLevelAwait() {
+        return _await(_catch(function () {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+            return window.__jsenv_runtime_test_top_level_await__ === 42;
+          });
+        }, function () {
+          return false;
+        }));
+      }; // to execute in a browser devtools
+      // const featuresReport = {}
+      // await detectSupportedFeatures({ featuresReport, inlineImportMapIntoHTML: true })
+      // console.log(featuresReport)
+
 
       var supportsCssImportAssertions = _async$1(function () {
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
         var moduleSource = asBase64Url("export { default } from \"".concat(cssBase64Url, "\" assert { type: \"css\" }"));
         return _catch(function () {
-          return _await(module.import(moduleSource), function (namespace) {
-            return namespace.default instanceof CSSStyleSheet;
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = await import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+              return namespace.default instanceof CSSStyleSheet;
+            });
           });
         }, function () {
           return false;
         });
       });
 
+      var executeWithScriptModuleInjection = function executeWithScriptModuleInjection(code) {
+        var scriptModule = document.createElement("script");
+        scriptModule.type = "module";
+        var loadPromise = new Promise(function (resolve, reject) {
+          scriptModule.onload = function () {
+            document.body.removeChild(scriptModule);
+            resolve();
+          };
+
+          scriptModule.onerror = function () {
+            document.body.removeChild(scriptModule);
+            reject();
+          };
+
+          document.body.appendChild(scriptModule);
+        });
+        scriptModule.src = asBase64Url(code);
+        return loadPromise;
+      };
+
       var asBase64Url = function asBase64Url(text) {
         var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
         return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
-      };
+      }; // const cssImportAssertions = await supportsCssImportAssertions()
+      // console.log({ cssImportAssertions })
 
       var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
         var compileGroup = _ref.compileGroup;
@@ -2841,4 +2860,4 @@ System.register([], (function (exports, module) {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-6417da98.js.map
+//# sourceMappingURL=toolbar.main-fe1ff16d.js.map

@@ -3,10 +3,793 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
-    <!--
-    commented until we found why it fails the build
-    <link rel="stylesheet" type="text/css" href="./toolbar.main.css" />
-    -->
+    <style>/* Loader icon */
+#loader-icon {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  transform: scaleX(-1);
+  color: #cecece;
+}
+#loader-icon[data-animate] {
+  opacity: 0;
+  transform-origin: center;
+  animation: rotateLoader 1s linear infinite !important;
+}
+@keyframes rotateLoader {
+  0% {
+    transform: scaleX(-1) rotate(360deg);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(-1) rotate(0deg);
+    opacity: 1;
+  }
+}
+/* Check icon */
+#check-icon {
+  width: 25px;
+  height: 25px;
+  margin: 7px;
+  opacity: 0;
+  stroke-width: 5;
+}
+#check-icon[data-animate] {
+  opacity: 1;
+}
+#check-icon[data-animate] path {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+  stroke: green;
+}
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+/* Cross icon */
+#cross-icon {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  opacity: 0;
+  stroke-width: 5;
+}
+#cross-icon rect {
+  width: 33px;
+  height: 0;
+  fill: #d74640;
+}
+#cross-icon[data-animate] {
+  opacity: 1;
+}
+#cross-icon[data-animate] #cross_p1 {
+  animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+#cross-icon[data-animate] #cross_p2 {
+  animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.2s;
+}
+@keyframes draw {
+  100% {
+    height: 376.964px;
+    width: 45px;
+  }
+}
+#file_info_svg {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  color: #cecece;
+}
+#file_info ul {
+  margin: 0;
+  margin-bottom: 0.7em;
+  padding-left: 1em;
+}
+#file_info ul li {
+  text-align: left;
+}
+.browser_support_text[data-warning],
+.files_compilation_text[data-warning] {
+  background: orange;
+  color: black;
+}
+button:focus,
+a:focus,
+input:focus,
+*[data-contains-hidden-input] input:focus + * {
+  outline-style: none;
+  outline-offset: -2px;
+}
+*[data-contains-hidden-input] input:focus + * {
+  outline-width: 4px;
+  outline-offset: -2px;
+}
+html[data-last-interaction="keyboard"] button:focus,
+html[data-last-interaction="keyboard"] a:focus,
+html[data-last-interaction="keyboard"] input:focus,
+html[data-last-interaction="keyboard"]
+  *[data-contains-hidden-input]
+  input:focus
+  + * {
+  outline-style: auto;
+}
+html[data-last-interaction="keyboard"]
+  *[data-contains-hidden-input]
+  input:focus
+  + * {
+  outline-color: rgb(0, 150, 255);
+}
+/*
+Don't try to replace @-moz-document url-prefix() this by
+
+-moz-outline or -moz-outline-color
+Because firefox would take into account outline instead of -moz-outline
+
+:moz-focus-ring
+Because for some element we set the focus outline on a div which would not match :focusring
+*/
+@-moz-document url-prefix() {
+  html[data-last-interaction="keyboard"] button:focus,
+  html[data-last-interaction="keyboard"] a:focus,
+  html[data-last-interaction="keyboard"] input:focus,
+  html[data-last-interaction="keyboard"]
+    *[data-input-customized]
+    input:focus
+    + * {
+    outline-width: 2px;
+    outline-offset: 0;
+    outline-style: solid;
+    /*
+    force a blue color for firefox otherwise
+    it uses outline-color: inherit
+    making it unpredictible and sometimes hard to see
+    */
+    outline-color: rgb(0, 150, 255);
+  }
+}
+::-moz-focus-inner {
+  border: 0;
+}
+#eventsource-indicator button {
+  position: relative;
+}
+#eventsource-indicator button svg {
+  width: 40px;
+  height: 40px;
+}
+#eventsource-indicator .event-source-livereload {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  left: 0;
+  top: 0;
+}
+.event-source-livereload[data-variant="enabled"] {
+  color: green;
+}
+#eventsource-indicator .event-source-icon {
+  width: 40px;
+  height: 40px;
+}
+.eventsource-circle {
+  stroke: black;
+  stroke-width: 0;
+}
+.eventsource-circle[data-variant="off"] {
+  fill: #cecece;
+}
+.eventsource-circle[data-variant="connecting"] {
+  fill: #cecece;
+  animation: wink 1.2s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes wink {
+  0% {
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.eventsource-ring {
+  stroke: rgba(206, 206, 206, 0.46);
+  stroke-width: 4;
+  fill: transparent;
+  animation: pulse 1.2s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+.eventsource-circle[data-variant="connected"] {
+  fill: green;
+}
+.eventsource-circle[data-variant="failed"] {
+  fill: #cc0000;
+}
+#overflow-menu-button {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  background: #404040;
+}
+#dotsIconSvg {
+  width: 25px;
+}
+#overflow-menu {
+  visibility: hidden; /* disable keyboard navigation */
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: #404040;
+  opacity: 0;
+}
+#overflow-menu[data-animate] {
+  transition-property: left, opacity;
+  transition-duration: 0.3s;
+}
+#overflow-menu > * {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+#toolbar[data-overflow-menu-enabled] #overflow-menu-button {
+  display: block;
+}
+#toolbar[data-overflow-menu-visible] #overflow-menu-button {
+  background: #030713;
+}
+#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible]
+  #toolbar-wrapper {
+  visibility: hidden; /* disable keyboard navigation */
+}
+#toolbar[data-overflow-menu-visible] #overflow-menu {
+  visibility: visible; /* restore keyboard navigation */
+  display: block;
+  opacity: 1;
+  left: 0;
+  margin-left: -40px;
+}
+#toolbar[data-overflow-menu-enabled] #settings-box {
+  right: -40px;
+}
+#settings-button {
+  position: relative;
+}
+#settings-button[data-warning] svg {
+  fill: orange;
+  stroke: darkorange;
+}
+#settings-button[data-warning] svg:hover {
+  fill: darkorange !important;
+}
+#settings-box {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  text-align: center;
+  padding: 17px;
+  font-size: 14px;
+  color: #fff;
+  background-color: #030713;
+  border-radius: 5px 5px 0 0;
+  min-width: 250px;
+  min-height: 150px;
+  z-index: -1;
+}
+[data-active] #settings-box {
+  display: block;
+  animation: comeUp ease 0.3s;
+}
+@keyframes comeUp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 90px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+#settings-box-body {
+  text-align: left;
+  padding: 18px 0;
+  max-height: 80vh;
+  overflow: auto;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+}
+.settings-box-items-wrapper {
+  max-width: 700px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.settings-box-item {
+  padding: 15px;
+  background: #0c111b;
+  width: 250px;
+  margin: 9px 18px;
+}
+#settings-box-header .settings-icon {
+  fill: none;
+  stroke: #24b1b0;
+  stroke-width: 2;
+  margin-right: 10px;
+  width: 22px;
+  height: 22px;
+  position: relative;
+  top: 4px;
+}
+#settings-box h3 {
+  display: inline-block;
+  font-size: 20px;
+  margin: 10px 0;
+  color: #24b1b0;
+}
+#button-close-settings {
+  float: right;
+  fill: #24b1b0;
+}
+#button-close-settings:hover {
+  opacity: 0.6;
+}
+label {
+  color: #a9a8a8;
+  font-size: 14px;
+  padding-bottom: 3px;
+  display: block;
+}
+#settings-box .category-title {
+  color: #24b1b0;
+  font-size: 16px;
+  display: inline-block;
+  margin-bottom: 15px;
+  margin-top: 4px;
+}
+#settings-box .category-title svg {
+  fill: currentColor;
+  vertical-align: top;
+  margin-right: 5px;
+  width: 18px;
+  height: 18px;
+}
+#settings-box .category-subtitle {
+  color: #a9a8a8;
+  font-size: 14px;
+  max-width: 220px;
+}
+/* checkbox switch */
+.switch {
+  position: relative;
+  float: right;
+  width: 3.5em;
+  height: 2em;
+  padding: 0;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  vertical-align: middle;
+  height: 0.3em;
+  left: 0.5em;
+  right: 0.5em;
+  top: 50%;
+  margin-top: -0.15em;
+  background-color: #4c4c4c;
+  transition: 0.4s;
+  border-radius: 0.15em;
+}
+.switch .square {
+  position: absolute;
+  content: "";
+  height: 1em;
+  width: 1em;
+  left: 0.5em;
+  top: 50%;
+  margin-top: -0.5em;
+  background-color: #4c4c4c;
+  color: #030713;
+  transition: 0.4s;
+  border-radius: 0.15em;
+}
+.switch input + * {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  /* It's important to have a border (event transparent)
+To be able to apply an outline to this element later*/
+  border-width: 1px;
+  border-color: transparent;
+  border-style: solid;
+}
+.switch input:checked + * .slider {
+  background-color: #24b1b0;
+}
+.switch input:checked + * .square {
+  transform: translateX(1.6em);
+  background-color: #24b1b0;
+}
+.settings-box-item[data-disabled] {
+  background-color: rgba(12, 17, 27, 0.4);
+  cursor: default;
+}
+.settings-box-item[data-disabled] .category-title,
+.settings-box-item[data-disabled] .switch,
+.settings-box-item[data-disabled] .category-subtitle {
+  opacity: 0.4;
+}
+.settings-box-item[data-disabled] .category-title span {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .category-subtitle {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .switch {
+  cursor: default;
+}
+/* general */
+html[data-theme="light"] #toolbar {
+  background: #e8eff3;
+}
+/* icons */
+html[data-theme="light"] .iconToolbar {
+  fill: #404040;
+}
+html[data-theme="light"] .iconToolbar:hover {
+  fill: #757575 !important;
+}
+/* loaders */
+html[data-theme="light"] #loader-icon {
+  color: #404040;
+}
+html[data-theme="light"] .livereload-circle[data-variant="off"] {
+  fill: #757575;
+}
+html[data-theme="light"] .livereload-circle[data-variant="connecting"] {
+  fill: #717171;
+}
+html[data-theme="light"] .livereload-ring {
+  stroke: rgba(138, 136, 136, 0.46);
+}
+/* settings */
+html[data-theme="light"] #settings-box,
+html[data-theme="light"] #settings[data-active] button {
+  background: #87acd3;
+}
+html[data-theme="light"] .settings-box-item {
+  background: #97b9da;
+}
+html[data-theme="light"] #settings-box-header .settings-icon {
+  stroke: #076570;
+}
+html[data-theme="light"] #button-close-settings {
+  fill: #076570;
+}
+html[data-theme="light"] #settings-box h3,
+html[data-theme="light"] #settings-box .category-title {
+  color: #076570;
+}
+html[data-theme="light"] #settings-box .category-title svg {
+  fill: #076570;
+}
+html[data-theme="light"] #settings-box .category-subtitle {
+  color: #5d5d5d;
+}
+html[data-theme="light"] label {
+  color: #002e33;
+}
+html[data-theme="light"] .switch input + * .slider,
+html[data-theme="light"] .switch input + * .square {
+  background-color: grey;
+}
+html[data-theme="light"] .switch input:checked + * .slider,
+html[data-theme="light"] .switch input:checked + * .square {
+  background-color: #076570;
+}
+/* file input */
+html[data-theme="light"] #file[data-active] {
+  background: rgba(129, 177, 214, 0.34);
+}
+html[data-theme="light"] #file-input {
+  color: #076570;
+}
+/* tooltips */
+html[data-theme="light"] .tooltip {
+  background-color: rgb(138, 145, 154);
+  color: #fff;
+}
+html[data-theme="light"] .tooltipAction {
+  border-color: #fff;
+}
+html[data-theme="light"] .tooltip::after {
+  border-color: rgb(138, 145, 154) transparent transparent transparent;
+}
+/* overflow menu */
+html[data-theme="light"] #overflow-menu-button {
+  background: #e8eff3;
+}
+html[data-theme="light"]
+  #toolbar[data-overflow-menu-visible]
+  #overflow-menu-button {
+  background: #a5a9ad;
+}
+html[data-theme="light"] #overflow-menu {
+  background: #dfe4e7;
+}
+/*  page file list */
+html[data-theme="light"] h2,
+html[data-theme="light"] h4 {
+  color: #076570;
+}
+html[data-theme="light"] #fileIconSvgConfig {
+  fill: #076570;
+}
+html[data-theme="light"] #explorables h2 span {
+  color: #ff8d00;
+}
+html[data-theme="light"] article[data-page="file-list"],
+html[data-theme="light"] #file-list-link[data-active] a {
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables fieldset input:checked + * {
+  color: #ff8d00;
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables #explorables-header,
+html[data-theme="light"] #explorables fieldset label input + * {
+  background: #ddf0ff;
+}
+html[data-theme="light"] .execution-link {
+  background: #ddf0ff;
+  color: #076570;
+}
+.tooltip {
+  display: none;
+  background-color: rgb(94, 94, 94);
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  position: absolute;
+  bottom: 120%;
+  padding: 10px;
+  font-size: 14px;
+  margin-left: -40px;
+  max-width: 160px;
+  cursor: default;
+}
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 60px;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgb(94, 94, 94) transparent transparent transparent;
+}
+[data-tooltip-visible] .tooltip,
+[data-tooltip-auto-visible] .tooltip {
+  display: block;
+  animation: fadeIn ease 0.4s;
+}
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.tooltipAction {
+  display: inline-block;
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
+  padding: 3px 7px;
+  margin-top: 6px;
+}
+.tooltipAction a {
+  vertical-align: middle;
+  color: white;
+  text-decoration: none;
+}
+.tooltipIcon {
+  fill: white;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+}
+html[data-animation-disabled] * {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+[data-when] {
+  display: none !important;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+html {
+  font-family: arial, sans;
+}
+/* global utils */
+[data-force-hide] {
+  display: none !important;
+}
+#toolbar-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  filter: url(#better-blur);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+#toolbar {
+  position: fixed;
+  bottom: 0;
+  height: 40px;
+  width: 100%;
+  background: #404040;
+}
+#toolbar-wrapper {
+  display: table;
+  width: 100%;
+  height: 100%;
+}
+#toolbar-wrapper > * {
+  display: table-cell;
+  vertical-align: middle;
+}
+#toolbar button {
+  background: none;
+  border: none;
+  height: 100%;
+  padding: 0;
+}
+#toolbar button:hover {
+  cursor: pointer;
+}
+#toolbar a:hover {
+  cursor: pointer;
+}
+/* file name input & indicators */
+#file {
+  max-width: 40%;
+  padding: 0 1.2em;
+}
+#file-input {
+  width: 100%;
+  padding: 0px;
+  font-family: monospace;
+  font-size: 15px;
+  color: #cecece;
+  background: transparent;
+  border: transparent;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#file-input:focus {
+  border-bottom: 1px solid grey;
+}
+/* file and settings icons */
+#fileIconSvg,
+.settings-icon {
+  width: 20px;
+}
+.iconToolbar {
+  height: 40px;
+  fill: #cecece;
+  color: #cecece;
+}
+.iconToolbar:hover {
+  fill: #909090 !important;
+}
+.toolbar-icon-wrapper {
+  height: 100%;
+  text-align: center;
+  width: 40px;
+  display: inline-block;
+}
+#file-list-link[data-active] a {
+  background: #1f262c;
+}
+#file[data-active] {
+  background: rgba(31, 38, 44, 0.72);
+}
+#settings[data-active] button {
+  background: #030713;
+}
+/* close icon */
+#crossIconSvg {
+  width: 18px;
+}
+/* re-open toolbar-trigger */
+#toolbar-trigger {
+  display: block;
+  overflow: hidden;
+  position: absolute;
+  bottom: -32px;
+  right: 20px;
+  height: 40px;
+  width: 40px;
+  padding: 0;
+  border-radius: 5px 5px 0 0;
+  border: 1px solid rgba(0, 0, 0, 0.33);
+  border-bottom: none;
+  box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+  background: transparent;
+}
+#toolbar-trigger[data-animate] {
+  transition: 600ms;
+}
+#toolbar-trigger #jsenvLogoSvg {
+  width: 35px;
+  height: 35px;
+  opacity: 0;
+  transition: 600ms;
+}
+html[data-toolbar-visible] #toolbar-trigger {
+  display: none;
+}
+#toolbar-trigger:hover {
+  cursor: pointer;
+}
+#toolbar-trigger[data-expanded] {
+  bottom: 0;
+}
+#toolbar-trigger[data-expanded] #jsenvLogoSvg {
+  opacity: 1;
+}
+/* #jsenvLogo {
+  transition: 600ms;
+} */
+#toolbar a {
+  color: inherit;
+}
+/*# sourceMappingURL=assets/toolbar.main-be90ae92.css.map */</style>
   <script id="jsenv_inject_systemjs" src="assets/s-d2dc0ae5.js"></script>
       </head>
   <body>
@@ -353,7 +1136,7 @@
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-6417da98.js"
+    "./toolbar.main.js": "./toolbar.main-fe1ff16d.js"
   }
 }</script>
     <script>
@@ -361,7 +1144,7 @@
       // and a promise the toolbar injector can listen to act on the toolbar
       // or we could just consider all communication should pass by postmessage
     </script>
-    <script src="./toolbar.main-6417da98.js"></script>
+    <script src="./toolbar.main-fe1ff16d.js"></script>
   
 
 </body></html>
