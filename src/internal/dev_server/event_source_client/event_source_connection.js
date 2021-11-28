@@ -11,21 +11,34 @@ export const createEventSourceConnection = (
   }
 
   const eventSourceOrigin = new URL(eventSourceUrl).origin
+  Object.keys(events).forEach((eventName) => {
+    const eventCallback = events[eventName]
+    events[eventName] = (e) => {
+      if (e.origin === eventSourceOrigin) {
+        if (e.lastEventId) {
+          lastEventId = e.lastEventId
+        }
+        eventCallback(e)
+      }
+    }
+  })
 
   let connectionStatus = "default"
   let connectionStatusChangeCallback = () => {}
-  let disconnect = () => {}
+  let _disconnect = () => {}
 
   const goToStatus = (newStatus) => {
-    connectionStatus = newStatus
-    connectionStatusChangeCallback()
+    if (newStatus !== connectionStatus) {
+      connectionStatus = newStatus
+      connectionStatusChangeCallback()
+    }
   }
 
   const attemptConnection = (url) => {
     const eventSource = new EventSource(url, {
       withCredentials: true,
     })
-    disconnect = () => {
+    _disconnect = () => {
       if (
         connectionStatus !== "connecting" &&
         connectionStatus !== "connected"
@@ -37,6 +50,9 @@ export const createEventSourceConnection = (
       }
       eventSource.onerror = undefined
       eventSource.close()
+      Object.keys(events).forEach((eventName) => {
+        eventSource.removeEventListener(eventName, events[eventName])
+      })
       goToStatus("disconnected")
     }
     let retryCount = 0
@@ -45,7 +61,7 @@ export const createEventSourceConnection = (
       if (errorEvent.target.readyState === EventSource.CONNECTING) {
         if (retryCount > retryMaxAttempt) {
           console.info(`could not connect after ${retryMaxAttempt} attempt`)
-          disconnect()
+          _disconnect()
           return
         }
 
@@ -57,7 +73,7 @@ export const createEventSourceConnection = (
             console.info(
               `could not connect in less than ${retryAllocatedMs} ms`,
             )
-            disconnect()
+            _disconnect()
             return
           }
         }
@@ -68,7 +84,7 @@ export const createEventSourceConnection = (
       }
 
       if (errorEvent.target.readyState === EventSource.CLOSED) {
-        disconnect()
+        _disconnect()
         return
       }
     }
@@ -76,14 +92,7 @@ export const createEventSourceConnection = (
       goToStatus("connected")
     }
     Object.keys(events).forEach((eventName) => {
-      eventSource.addEventListener(eventName, (e) => {
-        if (e.origin === eventSourceOrigin) {
-          if (e.lastEventId) {
-            lastEventId = e.lastEventId
-          }
-          events[eventName](e)
-        }
-      })
+      eventSource.addEventListener(eventName, events[eventName])
     })
     if (!events.hasOwnProperty("welcome")) {
       eventSource.addEventListener("welcome", (e) => {
@@ -107,21 +116,21 @@ export const createEventSourceConnection = (
   }
 
   const removePageUnloadListener = listenPageUnload(() => {
-    disconnect()
+    _disconnect()
   })
 
   const destroy = () => {
     removePageUnloadListener()
-    disconnect()
+    _disconnect()
   }
 
   return {
     getConnectionStatus: () => connectionStatus,
-    setConnectionStatusCallback: (callback) => {
+    setConnectionStatusChangeCallback: (callback) => {
       connectionStatusChangeCallback = callback
     },
     connect,
-    disconnect,
+    disconnect: () => _disconnect(),
     destroy,
   }
 }
