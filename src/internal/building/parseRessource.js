@@ -125,6 +125,7 @@ export const parseRessource = (
 
   if (contentType === "text/css") {
     return parseCssRessource(ressource, notifiers, {
+      asProjectUrl,
       asOriginalUrl,
       asOriginalServerUrl,
       minify,

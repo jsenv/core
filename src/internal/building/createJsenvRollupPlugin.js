@@ -606,10 +606,10 @@ export const createJsenvRollupPlugin = async ({
                 `Unusual content type for entry point, got "${entryContentType}" for ${entryProjectRelativeUrl}`,
               )
             }
-            const entryUrl = resolveUrl(
-              entryProjectRelativeUrl,
-              compileServerOrigin,
-            )
+            const entryUrl =
+              entryContentType === "text/html"
+                ? resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
+                : resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl)
             await ressourceBuilder.createReferenceForEntryPoint({
               entryContentType,
               entryUrl,

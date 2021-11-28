@@ -1,10 +1,11 @@
 import { assert } from "@jsenv/assert"
+import { existsSync } from "fs"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   readFile,
   resolveUrl,
-  assertFilePresence,
+  urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -34,23 +35,24 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 
-// ensure:
-// 1. css files are concatened
-// 2. filter with # is untouched
-// 3. url to jsenv.png is correct and hashed
-
-const cssBuildUrl = resolveUrl("style_build.css", buildDirectoryUrl)
+const cssBuildUrl = resolveUrl("main_build.css", buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
-// ensure font urls properly updated in css file
 const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
-const fontSpecifier = cssUrls.urlDeclarations[0].specifier
-const fontBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}roboto_thin.ttf`]
-const fontBuildUrl = resolveUrl(fontBuildRelativeUrl, buildDirectoryUrl)
+const imgSpecifier = cssUrls.urlDeclarations[0].specifier
+const filterSpecifier = cssUrls.urlDeclarations[1].specifier
+const imgBuildRelativeUrl =
+  buildMappings[`${testDirectoryRelativeUrl}jsenv.png`]
+const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
-const actual = fontSpecifier
-const expected = urlToRelativeUrl(fontBuildUrl, cssBuildUrl)
+const actual = {
+  imgSpecifier,
+  filterSpecifier,
+  imgFileExists: existsSync(urlToFileSystemPath(imgBuildUrl)),
+}
+const expected = {
+  imgSpecifier: urlToRelativeUrl(imgBuildUrl, cssBuildUrl),
+  filterSpecifier: "#better-blur",
+  imgFileExists: true,
+}
 assert({ actual, expected })
-
-await assertFilePresence(fontBuildUrl)

@@ -1,4 +1,9 @@
-import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
+import {
+  urlToFilename,
+  urlToRelativeUrl,
+  resolveUrl,
+  fileSystemPathToUrl,
+} from "@jsenv/filesystem"
 
 import {
   getCssSourceMappingUrl,
@@ -7,6 +12,7 @@ import {
 import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
 import { parseCssUrls } from "./parseCssUrls.js"
 import { replaceCssUrls } from "./replaceCssUrls.js"
+import { moveCssUrls } from "./moveCssUrls.js"
 
 export const parseCssRessource = async (
   cssRessource,
@@ -15,6 +21,9 @@ export const parseCssRessource = async (
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
+  const url = cssRessource.url
+  let code = cssString
+  let map
   let sourcemapReference
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
@@ -26,6 +35,8 @@ export const parseCssRessource = async (
       referenceColumn: 0,
       isSourcemap: true,
     })
+    await sourcemapReference.ressource.getBufferAvailablePromise()
+    map = JSON.parse(String(sourcemapReference.ressource.bufferBeforeBuild))
   } else {
     sourcemapReference = notifyReferenceFound({
       contentType: "application/octet-stream",
@@ -36,21 +47,19 @@ export const parseCssRessource = async (
   }
 
   const { atImports, urlDeclarations } = await parseCssUrls({
-    code: cssString,
-    url: cssRessource.url,
+    code,
+    url,
   })
-
   const urlNodeReferenceMapping = new Map()
-  // if concat, @import will be inlined
-  if (!cssConcatenation) {
-    atImports.forEach((atImport) => {
-      const importReference = notifyReferenceFound({
-        ressourceSpecifier: atImport.specifier,
-        ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
-      })
-      urlNodeReferenceMapping.set(atImport.urlNode, importReference)
+  const atImportReferences = []
+  atImports.forEach((atImport) => {
+    const importReference = notifyReferenceFound({
+      ressourceSpecifier: atImport.specifier,
+      ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
     })
-  }
+    urlNodeReferenceMapping.set(atImport.urlNode, importReference)
+    atImportReferences.push(importReference)
+  })
   urlDeclarations.forEach((urlDeclaration) => {
     if (urlDeclaration.specifier[0] === "#") {
       return
@@ -63,22 +72,20 @@ export const parseCssRessource = async (
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)
   })
 
-  return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
+  return async ({
+    getUrlRelativeToImporter,
+    precomputeBuildRelativeUrl,
+    buildDirectoryUrl,
+  }) => {
     const sourcemapRessource = sourcemapReference.ressource
-
-    let code = cssString
-    let map = sourcemapRessource.isPlaceholder
-      ? undefined
-      : JSON.parse(String(sourcemapRessource.bufferBeforeBuild))
-
     const cssCompiledUrl = cssRessource.url
     const cssOriginalUrl = asOriginalUrl(cssCompiledUrl)
 
     const replaceCssResult = await replaceCssUrls({
-      url: map ? asProjectUrl(cssCompiledUrl) : cssOriginalUrl,
-      code: cssString,
+      url: asProjectUrl(cssCompiledUrl),
+      code,
       map,
-      getUrlReplacementValue: ({ urlNode }) => {
+      urlVisitor: ({ urlNode }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
@@ -103,6 +110,33 @@ export const parseCssRessource = async (
         return getUrlRelativeToImporter(cssUrlRessource)
       },
       cssConcatenation,
+      loadCssImport: async (path) => {
+        // const cssFileUrl = asProjectUrl(url)
+        const importedCssFileUrl = fileSystemPathToUrl(path)
+        const atImportReference = atImportReferences.find(
+          (atImportReference) => {
+            return (
+              asProjectUrl(atImportReference.ressource.url) ===
+              importedCssFileUrl
+            )
+          },
+        )
+        atImportReference.inlinedCallback()
+        let code = String(atImportReference.ressource.bufferAfterBuild)
+        const moveResult = await moveCssUrls({
+          code,
+          from: resolveUrl(
+            atImportReference.ressource.buildRelativeUrl,
+            buildDirectoryUrl,
+          ),
+          to: resolveUrl(
+            precomputeBuildRelativeUrl(cssRessource),
+            buildDirectoryUrl,
+          ),
+        })
+        code = moveResult.code
+        return code
+      },
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
     })

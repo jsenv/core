@@ -572,6 +572,10 @@ export const createRessourceBuilder = (
       )
       await transform({
         buildDirectoryUrl,
+        precomputeBuildRelativeUrl: (ressource) =>
+          precomputeBuildRelativeUrlForRessource(ressource, {
+            lineBreakNormalization,
+          }),
         getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
 

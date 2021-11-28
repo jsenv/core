@@ -14,18 +14,14 @@ hence sourcemap cannot point the original source location
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
-export const postCssPluginUrlVisitor = () => {
+export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
   const parseCssValue = require("postcss-value-parser")
   const stringifyCssNodes = parseCssValue.stringify
 
   return {
     postcssPlugin: "url_visitor",
     prepare: (result) => {
-      const {
-        from,
-        collectUrls = false,
-        getUrlReplacementValue = () => undefined,
-      } = result.opts
+      const { from } = result.opts
       const fromUrl = fileSystemPathToUrl(from)
       const mutations = []
       return {
@@ -109,9 +105,12 @@ export const postCssPluginUrlVisitor = () => {
               atImportNode,
               urlNode,
             }
-            const urlNewValue = getUrlReplacementValue(urlReference)
-            if (urlNewValue && urlNewValue !== urlNode.value) {
-              urlNode.value = urlNewValue
+            const urlVisitorReturnValue = urlVisitor(urlReference)
+            if (
+              urlVisitorReturnValue &&
+              urlVisitorReturnValue !== urlNode.value
+            ) {
+              urlNode.value = urlVisitorReturnValue
               const newParams = parsed.toString()
               const newAtImportRule = new AtRule({
                 name: "import",
@@ -119,10 +118,6 @@ export const postCssPluginUrlVisitor = () => {
                 source: atImportNode.source,
               })
               atImportNode.replaceWith(newAtImportRule)
-            }
-
-            if (collectUrls) {
-              result.messages.push(urlReference)
             }
           },
         },
@@ -158,14 +153,10 @@ export const postCssPluginUrlVisitor = () => {
                 urlNode,
               }
 
-              if (collectUrls) {
-                result.messages.push(urlReference)
-              }
-
-              const urlNewValue = getUrlReplacementValue(urlReference)
-              if (urlNewValue) {
+              const urlVisitorReturnValue = urlVisitor(urlReference)
+              if (urlVisitorReturnValue) {
                 urlMutations.push(() => {
-                  urlNode.value = urlNewValue
+                  urlNode.value = urlVisitorReturnValue
                 })
               }
             },
