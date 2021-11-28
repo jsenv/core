@@ -133,6 +133,14 @@ export const parseCssRessource = async (
             precomputeBuildRelativeUrl(cssRessource),
             buildDirectoryUrl,
           ),
+          // moveCssUrls will change the css source code
+          // Ideally we should update the sourcemap referenced by css
+          // to target the one after css urls are moved.
+          // It means we should force sourcemap ressource to the new one
+          // until it's supported we prevent postcss from updating the
+          // sourcemap comment, othwise css would reference a sourcemap
+          // that won't by in the build directory
+          sourcemapMethod: null,
         })
         code = moveResult.code
         return code

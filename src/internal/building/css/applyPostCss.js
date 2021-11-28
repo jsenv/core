@@ -4,6 +4,7 @@ export const applyPostCss = async ({
   code,
   url,
   map,
+  sourcemapMethod = "comment",
   plugins,
   // https://github.com/postcss/postcss#options
   options = {},
@@ -17,7 +18,8 @@ export const applyPostCss = async ({
       from: urlToFileSystemPath(cssFileUrl),
       to: urlToFileSystemPath(cssFileUrl),
       map: {
-        inline: false,
+        annotation: sourcemapMethod === "comment",
+        inline: sourcemapMethod === "inline",
         // https://postcss.org/api/#sourcemapoptions
         ...(map ? { prev: JSON.stringify(map) } : {}),
       },
