@@ -1026,7 +1026,7 @@ const isEmitChunkNeeded = ({ ressource, reference }) => {
  *
  * see also:
  * - https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
- * -https://github.com/rollup/rollup/issues/2872
+ * - https://github.com/rollup/rollup/issues/2872
  */
 const referenceShouldBeIgnoredWarning = ({
   isJsModule,

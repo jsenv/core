@@ -7,10 +7,12 @@ export const replaceCssUrls = async ({
   code,
   map,
   getUrlReplacementValue,
+  cssConcatenation = false,
   cssMinification = false,
   cssMinificationOptions,
 } = {}) => {
   const postcssPlugins = [
+    ...(cssConcatenation ? [await getCssConcatenationPlugin()] : []),
     postCssPluginUrlVisitor,
     ...(cssMinification
       ? [await getCssMinificationPlugin(cssMinificationOptions)]
@@ -45,4 +47,9 @@ const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {
       // },
     }),
   })
+}
+
+const getCssConcatenationPlugin = async () => {
+  const postcssImport = require("postcss-import")
+  return postcssImport()
 }

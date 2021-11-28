@@ -39,6 +39,7 @@ export const parseRessource = (
     minifyJs,
     minifyHtml,
     minifyCssOptions,
+    cssConcatenation,
   },
 ) => {
   const { contentType } = ressource
@@ -128,6 +129,7 @@ export const parseRessource = (
       asOriginalServerUrl,
       minify,
       minifyCssOptions,
+      cssConcatenation,
     })
   }
 

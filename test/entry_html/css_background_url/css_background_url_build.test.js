@@ -41,7 +41,10 @@ const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
 // ensure background image url is properly updated
 const styleCssString = await readFile(styleBuildUrl)
-const styleUrls = await parseCssUrls(styleCssString, styleBuildUrl)
+const styleUrls = await parseCssUrls({
+  code: styleCssString,
+  url: styleBuildUrl,
+})
 
 const actual = styleUrls.urlDeclarations[0].specifier
 const expected = urlToRelativeUrl(imgBuildUrl, styleBuildUrl)

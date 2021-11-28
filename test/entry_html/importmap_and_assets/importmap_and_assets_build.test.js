@@ -73,7 +73,7 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
-  const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
+  const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
 
   const actual = cssUrls.urlDeclarations[0].specifier
   const expected = urlToRelativeUrl(imgBuildUrl, cssBuildUrl)

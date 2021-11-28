@@ -62,7 +62,10 @@ const depCssBuildUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
 // ensure dep is properly updated in @import
 {
   const mainCssString = await readFile(mainCssBuildUrl)
-  const mainCssUrls = await parseCssUrls(mainCssString, mainCssBuildUrl)
+  const mainCssUrls = await parseCssUrls({
+    code: mainCssString,
+    url: mainCssBuildUrl,
+  })
   const actual = mainCssUrls.atImports[0].specifier
   const expected = urlToRelativeUrl(depCssBuildUrl, mainCssBuildUrl)
   assert({ actual, expected })

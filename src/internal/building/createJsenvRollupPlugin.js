@@ -76,6 +76,7 @@ export const createJsenvRollupPlugin = async ({
   urlVersionningForEntryPoints,
   lineBreakNormalization,
   jsConcatenation,
+  cssConcatenation,
   useImportMapToMaximizeCacheReuse,
 
   minify,
@@ -470,6 +471,7 @@ export const createJsenvRollupPlugin = async ({
               minifyJs,
               minifyHtml,
               minifyCssOptions,
+              cssConcatenation,
             })
           },
         },
@@ -613,7 +615,7 @@ export const createJsenvRollupPlugin = async ({
               entryUrl,
               entryBuffer,
               entryBuildRelativeUrl,
-              urlVersionningForEntryPoints
+              urlVersionningForEntryPoints,
             })
           },
         ),

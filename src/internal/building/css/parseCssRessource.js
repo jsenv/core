@@ -11,7 +11,7 @@ import { replaceCssUrls } from "./replaceCssUrls.js"
 export const parseCssRessource = async (
   cssRessource,
   { notifyReferenceFound },
-  { asProjectUrl, asOriginalUrl, minify, minifyCssOptions },
+  { asProjectUrl, asOriginalUrl, minify, minifyCssOptions, cssConcatenation },
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
@@ -35,20 +35,27 @@ export const parseCssRessource = async (
     })
   }
 
-  const { atImports, urlDeclarations } = await parseCssUrls(
-    cssString,
-    cssRessource.url,
-  )
+  const { atImports, urlDeclarations } = await parseCssUrls({
+    code: cssString,
+    url: cssRessource.url,
+  })
 
   const urlNodeReferenceMapping = new Map()
-  atImports.forEach((atImport) => {
-    const importReference = notifyReferenceFound({
-      ressourceSpecifier: atImport.specifier,
-      ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
+  // if concat, @import will be inlined
+  if (!cssConcatenation) {
+    atImports.forEach((atImport) => {
+      const importReference = notifyReferenceFound({
+        ressourceSpecifier: atImport.specifier,
+        ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
+      })
+      urlNodeReferenceMapping.set(atImport.urlNode, importReference)
     })
-    urlNodeReferenceMapping.set(atImport.urlNode, importReference)
-  })
+  }
   urlDeclarations.forEach((urlDeclaration) => {
+    if (urlDeclaration.specifier[0] === "#") {
+      return
+    }
+
     const urlReference = notifyReferenceFound({
       ressourceSpecifier: urlDeclaration.specifier,
       ...cssNodeToReferenceLocation(urlDeclaration.urlDeclarationNode),
@@ -95,6 +102,7 @@ export const parseCssRessource = async (
         }
         return getUrlRelativeToImporter(cssUrlRessource)
       },
+      cssConcatenation,
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
     })
