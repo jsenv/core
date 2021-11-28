@@ -1,4 +1,1841 @@
-System.register([], (function () {
+<!DOCTYPE html><html><head>
+    <title>Jsenv toolbar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <style>/* Loader icon */
+#loader-icon {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  transform: scaleX(-1);
+  color: #cecece;
+}
+#loader-icon[data-animate] {
+  opacity: 0;
+  transform-origin: center;
+  animation: rotateLoader 1s linear infinite !important;
+}
+@keyframes rotateLoader {
+  0% {
+    transform: scaleX(-1) rotate(360deg);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(-1) rotate(0deg);
+    opacity: 1;
+  }
+}
+/* Check icon */
+#check-icon {
+  width: 25px;
+  height: 25px;
+  margin: 7px;
+  opacity: 0;
+  stroke-width: 5;
+}
+#check-icon[data-animate] {
+  opacity: 1;
+}
+#check-icon[data-animate] path {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+  stroke: green;
+}
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+/* Cross icon */
+#cross-icon {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  opacity: 0;
+  stroke-width: 5;
+}
+#cross-icon rect {
+  width: 33px;
+  height: 0;
+  fill: #d74640;
+}
+#cross-icon[data-animate] {
+  opacity: 1;
+}
+#cross-icon[data-animate] #cross_p1 {
+  animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+#cross-icon[data-animate] #cross_p2 {
+  animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.2s;
+}
+@keyframes draw {
+  100% {
+    height: 376.964px;
+    width: 45px;
+  }
+}
+#file_info_svg {
+  width: 20px;
+  height: 20px;
+  margin: 10px;
+  color: #cecece;
+}
+#file_info ul {
+  margin: 0;
+  margin-bottom: 0.7em;
+  padding-left: 1em;
+}
+#file_info ul li {
+  text-align: left;
+}
+.browser_support_text[data-warning],
+.files_compilation_text[data-warning] {
+  background: orange;
+  color: black;
+}
+button:focus,
+a:focus,
+input:focus,
+*[data-contains-hidden-input] input:focus + * {
+  outline-style: none;
+  outline-offset: -2px;
+}
+*[data-contains-hidden-input] input:focus + * {
+  outline-width: 4px;
+  outline-offset: -2px;
+}
+html[data-last-interaction="keyboard"] button:focus,
+html[data-last-interaction="keyboard"] a:focus,
+html[data-last-interaction="keyboard"] input:focus,
+html[data-last-interaction="keyboard"]
+  *[data-contains-hidden-input]
+  input:focus
+  + * {
+  outline-style: auto;
+}
+html[data-last-interaction="keyboard"]
+  *[data-contains-hidden-input]
+  input:focus
+  + * {
+  outline-color: rgb(0, 150, 255);
+}
+/*
+Don't try to replace @-moz-document url-prefix() this by
+
+-moz-outline or -moz-outline-color
+Because firefox would take into account outline instead of -moz-outline
+
+:moz-focus-ring
+Because for some element we set the focus outline on a div which would not match :focusring
+*/
+@-moz-document url-prefix() {
+  html[data-last-interaction="keyboard"] button:focus,
+  html[data-last-interaction="keyboard"] a:focus,
+  html[data-last-interaction="keyboard"] input:focus,
+  html[data-last-interaction="keyboard"]
+    *[data-input-customized]
+    input:focus
+    + * {
+    outline-width: 2px;
+    outline-offset: 0;
+    outline-style: solid;
+    /*
+    force a blue color for firefox otherwise
+    it uses outline-color: inherit
+    making it unpredictible and sometimes hard to see
+    */
+    outline-color: rgb(0, 150, 255);
+  }
+}
+::-moz-focus-inner {
+  border: 0;
+}
+#eventsource-indicator button {
+  position: relative;
+}
+#eventsource-indicator button svg {
+  width: 40px;
+  height: 40px;
+}
+#eventsource-indicator .event-source-livereload {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  left: 0;
+  top: 0;
+}
+.event-source-livereload[data-variant="enabled"] {
+  color: green;
+}
+#eventsource-indicator .event-source-icon {
+  width: 40px;
+  height: 40px;
+}
+.eventsource-circle {
+  stroke: black;
+  stroke-width: 0;
+}
+.eventsource-circle[data-variant="off"] {
+  fill: #cecece;
+}
+.eventsource-circle[data-variant="connecting"] {
+  fill: #cecece;
+  animation: wink 1.2s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes wink {
+  0% {
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.eventsource-ring {
+  stroke: rgba(206, 206, 206, 0.46);
+  stroke-width: 4;
+  fill: transparent;
+  animation: pulse 1.2s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+.eventsource-circle[data-variant="connected"] {
+  fill: green;
+}
+.eventsource-circle[data-variant="failed"] {
+  fill: #cc0000;
+}
+#overflow-menu-button {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  background: #404040;
+}
+#dotsIconSvg {
+  width: 25px;
+}
+#overflow-menu {
+  visibility: hidden; /* disable keyboard navigation */
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: #404040;
+  opacity: 0;
+}
+#overflow-menu[data-animate] {
+  transition-property: left, opacity;
+  transition-duration: 0.3s;
+}
+#overflow-menu > * {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+#toolbar[data-overflow-menu-enabled] #overflow-menu-button {
+  display: block;
+}
+#toolbar[data-overflow-menu-visible] #overflow-menu-button {
+  background: #030713;
+}
+#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible]
+  #toolbar-wrapper {
+  visibility: hidden; /* disable keyboard navigation */
+}
+#toolbar[data-overflow-menu-visible] #overflow-menu {
+  visibility: visible; /* restore keyboard navigation */
+  display: block;
+  opacity: 1;
+  left: 0;
+  margin-left: -40px;
+}
+#toolbar[data-overflow-menu-enabled] #settings-box {
+  right: -40px;
+}
+#settings-button {
+  position: relative;
+}
+#settings-button[data-warning] svg {
+  fill: orange;
+  stroke: darkorange;
+}
+#settings-button[data-warning] svg:hover {
+  fill: darkorange !important;
+}
+#settings-box {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+  text-align: center;
+  padding: 17px;
+  font-size: 14px;
+  color: #fff;
+  background-color: #030713;
+  border-radius: 5px 5px 0 0;
+  min-width: 250px;
+  min-height: 150px;
+  z-index: -1;
+}
+[data-active] #settings-box {
+  display: block;
+  animation: comeUp ease 0.3s;
+}
+@keyframes comeUp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 90px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+#settings-box-body {
+  text-align: left;
+  padding: 18px 0;
+  max-height: 80vh;
+  overflow: auto;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+}
+.settings-box-items-wrapper {
+  max-width: 700px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.settings-box-item {
+  padding: 15px;
+  background: #0c111b;
+  width: 250px;
+  margin: 9px 18px;
+}
+#settings-box-header .settings-icon {
+  fill: none;
+  stroke: #24b1b0;
+  stroke-width: 2;
+  margin-right: 10px;
+  width: 22px;
+  height: 22px;
+  position: relative;
+  top: 4px;
+}
+#settings-box h3 {
+  display: inline-block;
+  font-size: 20px;
+  margin: 10px 0;
+  color: #24b1b0;
+}
+#button-close-settings {
+  float: right;
+  fill: #24b1b0;
+}
+#button-close-settings:hover {
+  opacity: 0.6;
+}
+label {
+  color: #a9a8a8;
+  font-size: 14px;
+  padding-bottom: 3px;
+  display: block;
+}
+#settings-box .category-title {
+  color: #24b1b0;
+  font-size: 16px;
+  display: inline-block;
+  margin-bottom: 15px;
+  margin-top: 4px;
+}
+#settings-box .category-title svg {
+  fill: currentColor;
+  vertical-align: top;
+  margin-right: 5px;
+  width: 18px;
+  height: 18px;
+}
+#settings-box .category-subtitle {
+  color: #a9a8a8;
+  font-size: 14px;
+  max-width: 220px;
+}
+/* checkbox switch */
+.switch {
+  position: relative;
+  float: right;
+  width: 3.5em;
+  height: 2em;
+  padding: 0;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  vertical-align: middle;
+  height: 0.3em;
+  left: 0.5em;
+  right: 0.5em;
+  top: 50%;
+  margin-top: -0.15em;
+  background-color: #4c4c4c;
+  transition: 0.4s;
+  border-radius: 0.15em;
+}
+.switch .square {
+  position: absolute;
+  content: "";
+  height: 1em;
+  width: 1em;
+  left: 0.5em;
+  top: 50%;
+  margin-top: -0.5em;
+  background-color: #4c4c4c;
+  color: #030713;
+  transition: 0.4s;
+  border-radius: 0.15em;
+}
+.switch input + * {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  /* It's important to have a border (event transparent)
+To be able to apply an outline to this element later*/
+  border-width: 1px;
+  border-color: transparent;
+  border-style: solid;
+}
+.switch input:checked + * .slider {
+  background-color: #24b1b0;
+}
+.switch input:checked + * .square {
+  transform: translateX(1.6em);
+  background-color: #24b1b0;
+}
+.settings-box-item[data-disabled] {
+  background-color: rgba(12, 17, 27, 0.4);
+  cursor: default;
+}
+.settings-box-item[data-disabled] .category-title,
+.settings-box-item[data-disabled] .switch,
+.settings-box-item[data-disabled] .category-subtitle {
+  opacity: 0.4;
+}
+.settings-box-item[data-disabled] .category-title span {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .category-subtitle {
+  text-decoration: line-through;
+}
+.settings-box-item[data-disabled] .switch {
+  cursor: default;
+}
+/* general */
+html[data-theme="light"] #toolbar {
+  background: #e8eff3;
+}
+/* icons */
+html[data-theme="light"] .iconToolbar {
+  fill: #404040;
+}
+html[data-theme="light"] .iconToolbar:hover {
+  fill: #757575 !important;
+}
+/* loaders */
+html[data-theme="light"] #loader-icon {
+  color: #404040;
+}
+html[data-theme="light"] .livereload-circle[data-variant="off"] {
+  fill: #757575;
+}
+html[data-theme="light"] .livereload-circle[data-variant="connecting"] {
+  fill: #717171;
+}
+html[data-theme="light"] .livereload-ring {
+  stroke: rgba(138, 136, 136, 0.46);
+}
+/* settings */
+html[data-theme="light"] #settings-box,
+html[data-theme="light"] #settings[data-active] button {
+  background: #87acd3;
+}
+html[data-theme="light"] .settings-box-item {
+  background: #97b9da;
+}
+html[data-theme="light"] #settings-box-header .settings-icon {
+  stroke: #076570;
+}
+html[data-theme="light"] #button-close-settings {
+  fill: #076570;
+}
+html[data-theme="light"] #settings-box h3,
+html[data-theme="light"] #settings-box .category-title {
+  color: #076570;
+}
+html[data-theme="light"] #settings-box .category-title svg {
+  fill: #076570;
+}
+html[data-theme="light"] #settings-box .category-subtitle {
+  color: #5d5d5d;
+}
+html[data-theme="light"] label {
+  color: #002e33;
+}
+html[data-theme="light"] .switch input + * .slider,
+html[data-theme="light"] .switch input + * .square {
+  background-color: grey;
+}
+html[data-theme="light"] .switch input:checked + * .slider,
+html[data-theme="light"] .switch input:checked + * .square {
+  background-color: #076570;
+}
+/* file input */
+html[data-theme="light"] #file[data-active] {
+  background: rgba(129, 177, 214, 0.34);
+}
+html[data-theme="light"] #file-input {
+  color: #076570;
+}
+/* tooltips */
+html[data-theme="light"] .tooltip {
+  background-color: rgb(138, 145, 154);
+  color: #fff;
+}
+html[data-theme="light"] .tooltipAction {
+  border-color: #fff;
+}
+html[data-theme="light"] .tooltip::after {
+  border-color: rgb(138, 145, 154) transparent transparent transparent;
+}
+/* overflow menu */
+html[data-theme="light"] #overflow-menu-button {
+  background: #e8eff3;
+}
+html[data-theme="light"]
+  #toolbar[data-overflow-menu-visible]
+  #overflow-menu-button {
+  background: #a5a9ad;
+}
+html[data-theme="light"] #overflow-menu {
+  background: #dfe4e7;
+}
+/*  page file list */
+html[data-theme="light"] h2,
+html[data-theme="light"] h4 {
+  color: #076570;
+}
+html[data-theme="light"] #fileIconSvgConfig {
+  fill: #076570;
+}
+html[data-theme="light"] #explorables h2 span {
+  color: #ff8d00;
+}
+html[data-theme="light"] article[data-page="file-list"],
+html[data-theme="light"] #file-list-link[data-active] a {
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables fieldset input:checked + * {
+  color: #ff8d00;
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables #explorables-header,
+html[data-theme="light"] #explorables fieldset label input + * {
+  background: #ddf0ff;
+}
+html[data-theme="light"] .execution-link {
+  background: #ddf0ff;
+  color: #076570;
+}
+.tooltip {
+  display: none;
+  background-color: rgb(94, 94, 94);
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  position: absolute;
+  bottom: 120%;
+  padding: 10px;
+  font-size: 14px;
+  margin-left: -40px;
+  max-width: 160px;
+  cursor: default;
+}
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 60px;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgb(94, 94, 94) transparent transparent transparent;
+}
+[data-tooltip-visible] .tooltip,
+[data-tooltip-auto-visible] .tooltip {
+  display: block;
+  animation: fadeIn ease 0.4s;
+}
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.tooltipAction {
+  display: inline-block;
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
+  padding: 3px 7px;
+  margin-top: 6px;
+}
+.tooltipAction a {
+  vertical-align: middle;
+  color: white;
+  text-decoration: none;
+}
+.tooltipIcon {
+  fill: white;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+}
+html[data-animation-disabled] * {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+[data-when] {
+  display: none !important;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+html {
+  font-family: arial, sans;
+}
+/* global utils */
+[data-force-hide] {
+  display: none !important;
+}
+#toolbar-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  filter: url(#better-blur);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+#toolbar {
+  position: fixed;
+  bottom: 0;
+  height: 40px;
+  width: 100%;
+  background: #404040;
+}
+#toolbar-wrapper {
+  display: table;
+  width: 100%;
+  height: 100%;
+}
+#toolbar-wrapper > * {
+  display: table-cell;
+  vertical-align: middle;
+}
+#toolbar button {
+  background: none;
+  border: none;
+  height: 100%;
+  padding: 0;
+}
+#toolbar button:hover {
+  cursor: pointer;
+}
+#toolbar a:hover {
+  cursor: pointer;
+}
+/* file name input & indicators */
+#file {
+  max-width: 40%;
+  padding: 0 1.2em;
+}
+#file-input {
+  width: 100%;
+  padding: 0px;
+  font-family: monospace;
+  font-size: 15px;
+  color: #cecece;
+  background: transparent;
+  border: transparent;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#file-input:focus {
+  border-bottom: 1px solid grey;
+}
+/* file and settings icons */
+#fileIconSvg,
+.settings-icon {
+  width: 20px;
+}
+.iconToolbar {
+  height: 40px;
+  fill: #cecece;
+  color: #cecece;
+}
+.iconToolbar:hover {
+  fill: #909090 !important;
+}
+.toolbar-icon-wrapper {
+  height: 100%;
+  text-align: center;
+  width: 40px;
+  display: inline-block;
+}
+#file-list-link[data-active] a {
+  background: #1f262c;
+}
+#file[data-active] {
+  background: rgba(31, 38, 44, 0.72);
+}
+#settings[data-active] button {
+  background: #030713;
+}
+/* close icon */
+#crossIconSvg {
+  width: 18px;
+}
+/* re-open toolbar-trigger */
+#toolbar-trigger {
+  display: block;
+  overflow: hidden;
+  position: absolute;
+  bottom: -32px;
+  right: 20px;
+  height: 40px;
+  width: 40px;
+  padding: 0;
+  border-radius: 5px 5px 0 0;
+  border: 1px solid rgba(0, 0, 0, 0.33);
+  border-bottom: none;
+  box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+  background: transparent;
+}
+#toolbar-trigger[data-animate] {
+  transition: 600ms;
+}
+#toolbar-trigger #jsenvLogoSvg {
+  width: 35px;
+  height: 35px;
+  opacity: 0;
+  transition: 600ms;
+}
+html[data-toolbar-visible] #toolbar-trigger {
+  display: none;
+}
+#toolbar-trigger:hover {
+  cursor: pointer;
+}
+#toolbar-trigger[data-expanded] {
+  bottom: 0;
+}
+#toolbar-trigger[data-expanded] #jsenvLogoSvg {
+  opacity: 1;
+}
+/* #jsenvLogo {
+  transition: 600ms;
+} */
+#toolbar a {
+  color: inherit;
+}
+
+/*# sourceMappingURL=assets/toolbar.main.css-846920e9.map */</style>
+  <script id="jsenv_inject_systemjs">/*
+* SJS 6.11.0
+* Minimal SystemJS Build
+*/
+(function () {
+  function errMsg(errCode, msg) {
+    return (msg || "") + " (SystemJS https://git.io/JvFET#" + errCode + ")";
+  }
+
+  var hasSymbol = typeof Symbol !== 'undefined';
+  var hasSelf = typeof self !== 'undefined';
+  var hasDocument = typeof document !== 'undefined';
+  var envGlobal = hasSelf ? self : global;
+  var baseUrl;
+
+  if (hasDocument) {
+    var baseEl = document.querySelector('base[href]');
+    if (baseEl) baseUrl = baseEl.href;
+  }
+
+  if (!baseUrl && typeof location !== 'undefined') {
+    baseUrl = location.href.split('#')[0].split('?')[0];
+    var lastSepIndex = baseUrl.lastIndexOf('/');
+    if (lastSepIndex !== -1) baseUrl = baseUrl.slice(0, lastSepIndex + 1);
+  }
+
+  var backslashRegEx = /\\/g;
+
+  function resolveIfNotPlainOrUrl(relUrl, parentUrl) {
+    if (relUrl.indexOf('\\') !== -1) relUrl = relUrl.replace(backslashRegEx, '/'); // protocol-relative
+
+    if (relUrl[0] === '/' && relUrl[1] === '/') {
+      return parentUrl.slice(0, parentUrl.indexOf(':') + 1) + relUrl;
+    } // relative-url
+    else if (relUrl[0] === '.' && (relUrl[1] === '/' || relUrl[1] === '.' && (relUrl[2] === '/' || relUrl.length === 2 && (relUrl += '/')) || relUrl.length === 1 && (relUrl += '/')) || relUrl[0] === '/') {
+      var parentProtocol = parentUrl.slice(0, parentUrl.indexOf(':') + 1); // Disabled, but these cases will give inconsistent results for deep backtracking
+      //if (parentUrl[parentProtocol.length] !== '/')
+      //  throw Error('Cannot resolve');
+      // read pathname from parent URL
+      // pathname taken to be part after leading "/"
+
+      var pathname;
+
+      if (parentUrl[parentProtocol.length + 1] === '/') {
+        // resolving to a :// so we need to read out the auth and host
+        if (parentProtocol !== 'file:') {
+          pathname = parentUrl.slice(parentProtocol.length + 2);
+          pathname = pathname.slice(pathname.indexOf('/') + 1);
+        } else {
+          pathname = parentUrl.slice(8);
+        }
+      } else {
+        // resolving to :/ so pathname is the /... part
+        pathname = parentUrl.slice(parentProtocol.length + (parentUrl[parentProtocol.length] === '/'));
+      }
+
+      if (relUrl[0] === '/') return parentUrl.slice(0, parentUrl.length - pathname.length - 1) + relUrl; // join together and split for removal of .. and . segments
+      // looping the string instead of anything fancy for perf reasons
+      // '../../../../../z' resolved to 'x/y' is just 'z'
+
+      var segmented = pathname.slice(0, pathname.lastIndexOf('/') + 1) + relUrl;
+      var output = [];
+      var segmentIndex = -1;
+
+      for (var i = 0; i < segmented.length; i++) {
+        // busy reading a segment - only terminate on '/'
+        if (segmentIndex !== -1) {
+          if (segmented[i] === '/') {
+            output.push(segmented.slice(segmentIndex, i + 1));
+            segmentIndex = -1;
+          }
+        } // new segment - check if it is relative
+        else if (segmented[i] === '.') {
+          // ../ segment
+          if (segmented[i + 1] === '.' && (segmented[i + 2] === '/' || i + 2 === segmented.length)) {
+            output.pop();
+            i += 2;
+          } // ./ segment
+          else if (segmented[i + 1] === '/' || i + 1 === segmented.length) {
+            i += 1;
+          } else {
+            // the start of a new segment as below
+            segmentIndex = i;
+          }
+        } // it is the start of a new segment
+        else {
+          segmentIndex = i;
+        }
+      } // finish reading out the last segment
+
+
+      if (segmentIndex !== -1) output.push(segmented.slice(segmentIndex));
+      return parentUrl.slice(0, parentUrl.length - pathname.length) + output.join('');
+    }
+  }
+  /*
+   * Import maps implementation
+   *
+   * To make lookups fast we pre-resolve the entire import map
+   * and then match based on backtracked hash lookups
+   *
+   */
+
+
+  function resolveUrl(relUrl, parentUrl) {
+    return resolveIfNotPlainOrUrl(relUrl, parentUrl) || (relUrl.indexOf(':') !== -1 ? relUrl : resolveIfNotPlainOrUrl('./' + relUrl, parentUrl));
+  }
+
+  function resolveAndComposePackages(packages, outPackages, baseUrl, parentMap, parentUrl) {
+    for (var p in packages) {
+      var resolvedLhs = resolveIfNotPlainOrUrl(p, baseUrl) || p;
+      var rhs = packages[p]; // package fallbacks not currently supported
+
+      if (typeof rhs !== 'string') continue;
+      var mapped = resolveImportMap(parentMap, resolveIfNotPlainOrUrl(rhs, baseUrl) || rhs, parentUrl);
+
+      if (!mapped) {
+        targetWarning('W1', p, rhs);
+      } else outPackages[resolvedLhs] = mapped;
+    }
+  }
+
+  function resolveAndComposeImportMap(json, baseUrl, outMap) {
+    if (json.imports) resolveAndComposePackages(json.imports, outMap.imports, baseUrl, outMap, null);
+    var u;
+
+    for (u in json.scopes || {}) {
+      var resolvedScope = resolveUrl(u, baseUrl);
+      resolveAndComposePackages(json.scopes[u], outMap.scopes[resolvedScope] || (outMap.scopes[resolvedScope] = {}), baseUrl, outMap, resolvedScope);
+    }
+
+    for (u in json.depcache || {}) outMap.depcache[resolveUrl(u, baseUrl)] = json.depcache[u];
+
+    for (u in json.integrity || {}) outMap.integrity[resolveUrl(u, baseUrl)] = json.integrity[u];
+  }
+
+  function getMatch(path, matchObj) {
+    if (matchObj[path]) return path;
+    var sepIndex = path.length;
+
+    do {
+      var segment = path.slice(0, sepIndex + 1);
+      if (segment in matchObj) return segment;
+    } while ((sepIndex = path.lastIndexOf('/', sepIndex - 1)) !== -1);
+  }
+
+  function applyPackages(id, packages) {
+    var pkgName = getMatch(id, packages);
+
+    if (pkgName) {
+      var pkg = packages[pkgName];
+      if (pkg === null) return;
+
+      if (id.length > pkgName.length && pkg[pkg.length - 1] !== '/') {
+        targetWarning('W2', pkgName, pkg);
+      } else return pkg + id.slice(pkgName.length);
+    }
+  }
+
+  function targetWarning(code, match, target, msg) {
+    console.warn(errMsg(code, [target, match].join(', ')));
+  }
+
+  function resolveImportMap(importMap, resolvedOrPlain, parentUrl) {
+    var scopes = importMap.scopes;
+    var scopeUrl = parentUrl && getMatch(parentUrl, scopes);
+
+    while (scopeUrl) {
+      var packageResolution = applyPackages(resolvedOrPlain, scopes[scopeUrl]);
+      if (packageResolution) return packageResolution;
+      scopeUrl = getMatch(scopeUrl.slice(0, scopeUrl.lastIndexOf('/')), scopes);
+    }
+
+    return applyPackages(resolvedOrPlain, importMap.imports) || resolvedOrPlain.indexOf(':') !== -1 && resolvedOrPlain;
+  }
+  /*
+   * SystemJS Core
+   *
+   * Provides
+   * - System.import
+   * - System.register support for
+   *     live bindings, function hoisting through circular references,
+   *     reexports, dynamic import, import.meta.url, top-level await
+   * - System.getRegister to get the registration
+   * - Symbol.toStringTag support in Module objects
+   * - Hookable System.createContext to customize import.meta
+   * - System.onload(err, id, deps) handler for tracing / hot-reloading
+   *
+   * Core comes with no System.prototype.resolve or
+   * System.prototype.instantiate implementations
+   */
+
+
+  var toStringTag = hasSymbol && Symbol.toStringTag;
+  var REGISTRY = hasSymbol ? Symbol() : '@';
+
+  function SystemJS() {
+    this[REGISTRY] = {};
+  }
+
+  var systemJSPrototype = SystemJS.prototype;
+
+  systemJSPrototype.import = function (id, parentUrl) {
+    var loader = this;
+    return Promise.resolve(loader.prepareImport()).then(function () {
+      return loader.resolve(id, parentUrl);
+    }).then(function (id) {
+      var load = getOrCreateLoad(loader, id);
+      return load.C || topLevelLoad(loader, load);
+    });
+  }; // Hookable createContext function -> allowing eg custom import meta
+
+
+  systemJSPrototype.createContext = function (parentId) {
+    var loader = this;
+    return {
+      url: parentId,
+      resolve: function (id, parentUrl) {
+        return Promise.resolve(loader.resolve(id, parentUrl || parentId));
+      }
+    };
+  };
+
+  function loadToId(load) {
+    return load.id;
+  }
+
+  function triggerOnload(loader, load, err, isErrSource) {
+    loader.onload(err, load.id, load.d && load.d.map(loadToId), !!isErrSource);
+    if (err) throw err;
+  }
+
+  var lastRegister;
+
+  systemJSPrototype.register = function (deps, declare) {
+    lastRegister = [deps, declare];
+  };
+  /*
+   * getRegister provides the last anonymous System.register call
+   */
+
+
+  systemJSPrototype.getRegister = function () {
+    var _lastRegister = lastRegister;
+    lastRegister = undefined;
+    return _lastRegister;
+  };
+
+  function getOrCreateLoad(loader, id, firstParentUrl) {
+    var load = loader[REGISTRY][id];
+    if (load) return load;
+    var importerSetters = [];
+    var ns = Object.create(null);
+    if (toStringTag) Object.defineProperty(ns, toStringTag, {
+      value: 'Module'
+    });
+    var instantiatePromise = Promise.resolve().then(function () {
+      return loader.instantiate(id, firstParentUrl);
+    }).then(function (registration) {
+      if (!registration) throw Error(errMsg(2, id));
+
+      function _export(name, value) {
+        // note if we have hoisted exports (including reexports)
+        load.h = true;
+        var changed = false;
+
+        if (typeof name === 'string') {
+          if (!(name in ns) || ns[name] !== value) {
+            ns[name] = value;
+            changed = true;
+          }
+        } else {
+          for (var p in name) {
+            var value = name[p];
+
+            if (!(p in ns) || ns[p] !== value) {
+              ns[p] = value;
+              changed = true;
+            }
+          }
+
+          if (name && name.__esModule) {
+            ns.__esModule = name.__esModule;
+          }
+        }
+
+        if (changed) for (var i = 0; i < importerSetters.length; i++) {
+          var setter = importerSetters[i];
+          if (setter) setter(ns);
+        }
+        return value;
+      }
+
+      var declared = registration[1](_export, registration[1].length === 2 ? {
+        import: function (importId) {
+          return loader.import(importId, id);
+        },
+        meta: loader.createContext(id)
+      } : undefined);
+
+      load.e = declared.execute || function () {};
+
+      return [registration[0], declared.setters || []];
+    }, function (err) {
+      load.e = null;
+      load.er = err;
+      throw err;
+    });
+    var linkPromise = instantiatePromise.then(function (instantiation) {
+      return Promise.all(instantiation[0].map(function (dep, i) {
+        var setter = instantiation[1][i];
+        return Promise.resolve(loader.resolve(dep, id)).then(function (depId) {
+          var depLoad = getOrCreateLoad(loader, depId, id); // depLoad.I may be undefined for already-evaluated
+
+          return Promise.resolve(depLoad.I).then(function () {
+            if (setter) {
+              depLoad.i.push(setter); // only run early setters when there are hoisted exports of that module
+              // the timing works here as pending hoisted export calls will trigger through importerSetters
+
+              if (depLoad.h || !depLoad.I) setter(depLoad.n);
+            }
+
+            return depLoad;
+          });
+        });
+      })).then(function (depLoads) {
+        load.d = depLoads;
+      });
+    }); // Capital letter = a promise function
+
+    return load = loader[REGISTRY][id] = {
+      id: id,
+      // importerSetters, the setters functions registered to this dependency
+      // we retain this to add more later
+      i: importerSetters,
+      // module namespace object
+      n: ns,
+      // instantiate
+      I: instantiatePromise,
+      // link
+      L: linkPromise,
+      // whether it has hoisted exports
+      h: false,
+      // On instantiate completion we have populated:
+      // dependency load records
+      d: undefined,
+      // execution function
+      e: undefined,
+      // On execution we have populated:
+      // the execution error if any
+      er: undefined,
+      // in the case of TLA, the execution promise
+      E: undefined,
+      // On execution, L, I, E cleared
+      // Promise for top-level completion
+      C: undefined,
+      // parent instantiator / executor
+      p: undefined
+    };
+  }
+
+  function instantiateAll(loader, load, parent, loaded) {
+    if (!loaded[load.id]) {
+      loaded[load.id] = true; // load.L may be undefined for already-instantiated
+
+      return Promise.resolve(load.L).then(function () {
+        if (!load.p || load.p.e === null) load.p = parent;
+        return Promise.all(load.d.map(function (dep) {
+          return instantiateAll(loader, dep, parent, loaded);
+        }));
+      }).catch(function (err) {
+        if (load.er) throw err;
+        load.e = null;
+        throw err;
+      });
+    }
+  }
+
+  function topLevelLoad(loader, load) {
+    return load.C = instantiateAll(loader, load, load, {}).then(function () {
+      return postOrderExec(loader, load, {});
+    }).then(function () {
+      return load.n;
+    });
+  } // the closest we can get to call(undefined)
+
+
+  var nullContext = Object.freeze(Object.create(null)); // returns a promise if and only if a top-level await subgraph
+  // throws on sync errors
+
+  function postOrderExec(loader, load, seen) {
+    if (seen[load.id]) return;
+    seen[load.id] = true;
+
+    if (!load.e) {
+      if (load.er) throw load.er;
+      if (load.E) return load.E;
+      return;
+    } // deps execute first, unless circular
+
+
+    var depLoadPromises;
+    load.d.forEach(function (depLoad) {
+      try {
+        var depLoadPromise = postOrderExec(loader, depLoad, seen);
+        if (depLoadPromise) (depLoadPromises = depLoadPromises || []).push(depLoadPromise);
+      } catch (err) {
+        load.e = null;
+        load.er = err;
+        throw err;
+      }
+    });
+    if (depLoadPromises) return Promise.all(depLoadPromises).then(doExec);
+    return doExec();
+
+    function doExec() {
+      try {
+        var execPromise = load.e.call(nullContext);
+
+        if (execPromise) {
+          execPromise = execPromise.then(function () {
+            load.C = load.n;
+            load.E = null; // indicates completion
+
+            if (!true) ;
+          }, function (err) {
+            load.er = err;
+            load.E = null;
+            if (!true) ;
+            throw err;
+          });
+          return load.E = execPromise;
+        } // (should be a promise, but a minify optimization to leave out Promise.resolve)
+
+
+        load.C = load.n;
+        load.L = load.I = undefined;
+      } catch (err) {
+        load.er = err;
+        throw err;
+      } finally {
+        load.e = null;
+      }
+    }
+  }
+
+  envGlobal.System = new SystemJS();
+  /*
+   * SystemJS browser attachments for script and import map processing
+   */
+
+  var importMapPromise = Promise.resolve();
+  var importMap = {
+    imports: {},
+    scopes: {},
+    depcache: {},
+    integrity: {}
+  }; // Scripts are processed immediately, on the first System.import, and on DOMReady.
+  // Import map scripts are processed only once (by being marked) and in order for each phase.
+  // This is to avoid using DOM mutation observers in core, although that would be an alternative.
+
+  var processFirst = hasDocument;
+
+  systemJSPrototype.prepareImport = function (doProcessScripts) {
+    if (processFirst || doProcessScripts) {
+      processScripts();
+      processFirst = false;
+    }
+
+    return importMapPromise;
+  };
+
+  if (hasDocument) {
+    processScripts();
+    window.addEventListener('DOMContentLoaded', processScripts);
+  }
+
+  function processScripts() {
+    [].forEach.call(document.querySelectorAll('script'), function (script) {
+      if (script.sp) // sp marker = systemjs processed
+        return; // TODO: deprecate systemjs-module in next major now that we have auto import
+
+      if (script.type === 'systemjs-module') {
+        script.sp = true;
+        if (!script.src) return;
+        System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl)).catch(function (e) {
+          // if there is a script load error, dispatch an "error" event
+          // on the script tag.
+          if (e.message.indexOf('https://git.io/JvFET#3') > -1) {
+            var event = document.createEvent('Event');
+            event.initEvent('error', false, false);
+            script.dispatchEvent(event);
+          }
+
+          return Promise.reject(e);
+        });
+      } else if (script.type === 'systemjs-importmap') {
+        script.sp = true;
+        var fetchPromise = script.src ? fetch(script.src, {
+          integrity: script.integrity
+        }).then(function (res) {
+          if (!res.ok) throw Error(res.status);
+          return res.text();
+        }).catch(function (err) {
+          err.message = errMsg('W4', script.src) + '\n' + err.message;
+          console.warn(err);
+
+          if (typeof script.onerror === 'function') {
+            script.onerror();
+          }
+
+          return '{}';
+        }) : script.innerHTML;
+        importMapPromise = importMapPromise.then(function () {
+          return fetchPromise;
+        }).then(function (text) {
+          extendImportMap(importMap, text, script.src || baseUrl);
+        });
+      }
+    });
+  }
+
+  function extendImportMap(importMap, newMapText, newMapUrl) {
+    var newMap = {};
+
+    try {
+      newMap = JSON.parse(newMapText);
+    } catch (err) {
+      console.warn(Error(errMsg('W5')));
+    }
+
+    resolveAndComposeImportMap(newMap, newMapUrl, importMap);
+  }
+  /*
+   * Script instantiation loading
+   */
+
+
+  if (hasDocument) {
+    window.addEventListener('error', function (evt) {
+      lastWindowErrorUrl = evt.filename;
+      lastWindowError = evt.error;
+    });
+    var baseOrigin = location.origin;
+  }
+
+  systemJSPrototype.createScript = function (url) {
+    var script = document.createElement('script');
+    script.async = true; // Only add cross origin for actual cross origin
+    // this is because Safari triggers for all
+    // - https://bugs.webkit.org/show_bug.cgi?id=171566
+
+    if (url.indexOf(baseOrigin + '/')) script.crossOrigin = 'anonymous';
+    var integrity = importMap.integrity[url];
+    if (integrity) script.integrity = integrity;
+    script.src = url;
+    return script;
+  }; // Auto imports -> script tags can be inlined directly for load phase
+
+
+  var lastAutoImportDeps, lastAutoImportTimeout;
+  var autoImportCandidates = {};
+  var systemRegister = systemJSPrototype.register;
+  var inlineScriptCount = 0;
+
+  systemJSPrototype.register = function (deps, declare) {
+    if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
+      var scripts = document.querySelectorAll('script[src]');
+      var lastScript = scripts[scripts.length - 1];
+      var lastAutoImportUrl;
+      lastAutoImportDeps = deps;
+
+      if (lastScript) {
+        lastAutoImportUrl = lastScript.src;
+      } else {
+        inlineScriptCount++;
+        lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
+      } // if this is already a System load, then the instantiate has already begun
+      // so this re-import has no consequence
+
+
+      var loader = this;
+      lastAutoImportTimeout = setTimeout(function () {
+        autoImportCandidates[lastAutoImportUrl] = [deps, declare];
+        loader.import(lastAutoImportUrl);
+      });
+    } else {
+      lastAutoImportDeps = undefined;
+    }
+
+    return systemRegister.call(this, deps, declare);
+  };
+
+  var lastWindowErrorUrl, lastWindowError;
+
+  systemJSPrototype.instantiate = function (url, firstParentUrl) {
+    var autoImportRegistration = autoImportCandidates[url];
+
+    if (autoImportRegistration) {
+      delete autoImportCandidates[url];
+      return autoImportRegistration;
+    }
+
+    var loader = this;
+    return Promise.resolve(systemJSPrototype.createScript(url)).then(function (script) {
+      return new Promise(function (resolve, reject) {
+        script.addEventListener('error', function () {
+          reject(Error(errMsg(3, [url, firstParentUrl].join(', '))));
+        });
+        script.addEventListener('load', function () {
+          document.head.removeChild(script); // Note that if an error occurs that isn't caught by this if statement,
+          // that getRegister will return null and a "did not instantiate" error will be thrown.
+
+          if (lastWindowErrorUrl === url) {
+            reject(lastWindowError);
+          } else {
+            var register = loader.getRegister(url); // Clear any auto import registration for dynamic import scripts during load
+
+            if (register && register[0] === lastAutoImportDeps) clearTimeout(lastAutoImportTimeout);
+            resolve(register);
+          }
+        });
+        document.head.appendChild(script);
+      });
+    });
+  };
+  /*
+   * Fetch loader, sets up shouldFetch and fetch hooks
+   */
+
+
+  systemJSPrototype.shouldFetch = function () {
+    return false;
+  };
+
+  if (typeof fetch !== 'undefined') systemJSPrototype.fetch = fetch;
+  var instantiate = systemJSPrototype.instantiate;
+  var jsContentTypeRegEx = /^(text|application)\/(x-)?javascript(;|$)/;
+
+  systemJSPrototype.instantiate = function (url, parent) {
+    var loader = this;
+    if (!this.shouldFetch(url)) return instantiate.apply(this, arguments);
+    return this.fetch(url, {
+      credentials: 'same-origin',
+      integrity: importMap.integrity[url]
+    }).then(function (res) {
+      if (!res.ok) throw Error(errMsg(7, [res.status, res.statusText, url, parent].join(', ')));
+      var contentType = res.headers.get('content-type');
+      if (!contentType || !jsContentTypeRegEx.test(contentType)) throw Error(errMsg(4, contentType));
+      return res.text().then(function (source) {
+        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+        (0, eval)(source);
+        return loader.getRegister(url);
+      });
+    });
+  };
+
+  systemJSPrototype.resolve = function (id, parentUrl) {
+    parentUrl = parentUrl || !true || baseUrl;
+    return resolveImportMap(importMap, resolveIfNotPlainOrUrl(id, parentUrl) || id, parentUrl) || throwUnresolved(id, parentUrl);
+  };
+
+  function throwUnresolved(id, parentUrl) {
+    throw Error(errMsg(8, [id, parentUrl].join(', ')));
+  }
+
+  var systemInstantiate = systemJSPrototype.instantiate;
+
+  systemJSPrototype.instantiate = function (url, firstParentUrl) {
+    var preloads = importMap.depcache[url];
+
+    if (preloads) {
+      for (var i = 0; i < preloads.length; i++) getOrCreateLoad(this, this.resolve(preloads[i], url), url);
+    }
+
+    return systemInstantiate.call(this, url, firstParentUrl);
+  };
+  /*
+   * Supports loading System.register in workers
+   */
+
+
+  if (hasSelf && typeof importScripts === 'function') systemJSPrototype.instantiate = function (url) {
+    var loader = this;
+    return Promise.resolve().then(function () {
+      importScripts(url);
+      return loader.getRegister(url);
+    });
+  };
+})();
+//# sourceMappingURL=assets/s.js-749702e8.map</script>
+      </head>
+  <body>
+    <div id="toolbar-overlay"></div>
+    <!-- toolbar -->
+    <div id="toolbar">
+      <div id="toolbar-wrapper">
+        <section id="file-list-link" data-responsive-toolbar-element="">
+          <a class="toolbar-icon-wrapper" href="/">
+            <svg id="fileIconSvg" class="iconToolbar" viewBox="0 0 24 24" width="35" height="35">
+              <path d="M0 0h24v24H0V0z" fill="none"></path>
+              <path d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
+            </svg>
+          </a>
+        </section>
+
+        <section id="file">
+          <input type="text" id="file-input" value="" dir="rtl" tabindex="-1" readonly="">
+        </section>
+
+        <section id="execution-indicator">
+          <div data-when="execution:default">
+            <div class="tooltip">Unknown state</div>
+          </div>
+          <div data-when="execution:running">
+            <div class="tooltip">Executing...</div>
+            <button>
+              <svg id="loader-icon" data-animate="">
+                <use xlink:href="#loading_svg"></use>
+              </svg>
+            </button>
+          </div>
+          <div data-when="execution:completed">
+            <div class="tooltip">Execution completed in X ms</div>
+            <button>
+              <svg id="check-icon" data-animate="" viewBox="0 0 52 52">
+                <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"></path>
+              </svg>
+            </button>
+          </div>
+          <div data-when="execution:errored">
+            <div class="tooltip">Execution failed in X ms</div>
+            <button>
+              <svg id="cross-icon" data-animate="" viewBox="0 0 512 512">
+                <rect id="cross_p1" x="239.397" y="67.518" rx="17" ry="17" transform="matrix(0.7071 0.7071 -0.7071 0.7071 255.9995 -106.0389)"></rect>
+                <rect id="cross_p2" x="239.397" y="67.519" rx="17" ry="17" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -106.039 256.0001)"></rect>
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <div style="width: 100%"></div>
+
+        <section id="eventsource-indicator" data-responsive-toolbar-element="">
+          <div data-when="eventsource:default">
+            <div class="tooltip">Unknown state</div>
+            <button>
+              <svg>
+                <circle class="eventsource-circle" cx="20" cy="20" r="5"></circle>
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:connecting">
+            <div class="tooltip">
+              Connecting to server...
+              <br>
+              <div class="tooltipAction">
+                <a href="javascript:void(0);">
+                  <svg xmlns="http://www.w3.org/2000/svg" id="powerOffIconSvg" class="tooltipIcon" viewBox="0 0 24 24">
+                    <path d="M0 0h24v24H0V0z" fill="none"></path>
+                    <path d="M10 3H8v1.88l2 2zm6 6v3.88l1.8 1.8.2-.2V9c0-1.1-.9-2-2-2V3h-2v4h-3.88l2 2H16zM4.12 3.84L2.71 5.25 6 8.54v5.96L9.5 18v3h5v-3l.48-.48 4.47 4.47 1.41-1.41L4.12 3.84zm8.38 13.33V19h-1v-1.83L8 13.65v-3.11l5.57 5.57-1.07 1.06z"></path>
+                  </svg>
+                  cancel
+                </a>
+              </div>
+            </div>
+            <button>
+              <svg>
+                <circle class="eventsource-circle" data-variant="connecting" cx="20" cy="20" r="5"></circle>
+                <circle class="eventsource-ring" cx="20" cy="20" r="13"></circle>
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:disconnected">
+            <div class="tooltip">
+              Disconnected from server
+              <br>
+              <div class="tooltipAction">
+                <a href="javascript:void(0);">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" id="powerIconSvg" class="tooltipIcon">
+                    <path d="M0 0h24v24H0V0z" fill="none"></path>
+                    <path d="M16 9v4.66l-3.5 3.51V19h-1v-1.83L8 13.65V9h8m0-6h-2v4h-4V3H8v4h-.01C6.9 6.99 6 7.89 6 8.98v5.52L9.5 18v3h5v-3l3.5-3.51V9c0-1.1-.9-2-2-2V3z"></path>
+                  </svg>
+                  connect
+                </a>
+              </div>
+            </div>
+            <button>
+              <svg>
+                <circle class="eventsource-circle" data-variant="off" cx="20" cy="20" r="5"></circle>
+              </svg>
+            </button>
+          </div>
+          <div data-when="eventsource:connected">
+            <div class="tooltip">
+              Connected to server
+              <br>
+              Livereload:
+              <span data-when="livereload:on" style="color: green">ON</span><span data-when="livereload:off" style="color: grey">OFF</span>
+              <br>
+              Changes:
+              <span data-when="changes:yes"><a class="eventsource-changes-link" style="color: inherit" href="javascript:void(0);">X</a></span><span data-when="changes:no">none</span>
+              <div data-when="changes:yes">
+                <br>
+                <a class="eventsource-reload-link" style="color: inherit" href="javascript:void(0);">reload</a>
+              </div>
+            </div>
+            <button>
+              <div data-when="livereload:on">
+                <svg class="event-source-livereload iconToolbar" data-variant="enabled">
+                  <use xlink:href="#loading_svg"></use>
+                </svg>
+              </div>
+              <div data-when="changes:yes">
+                <svg class="event-source-livereload iconToolbar" data-variant="disabled">
+                  <use xlink:href="#loading_svg"></use>
+                </svg>
+              </div>
+              <svg class="event-source-icon">
+                <circle class="eventsource-circle" data-variant="connected" cx="20" cy="20" r="5"></circle>
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <section id="settings" data-responsive-toolbar-element="">
+          <div id="settings-box">
+            <div id="settings-box-header">
+              <button id="button-close-settings">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18px" height="18px">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+                  <path d="M0 0h24v24H0z" fill="none"></path>
+                </svg>
+              </button>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35px" height="35px" class="settings-icon">
+                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"></path>
+              </svg>
+              <h3>Settings</h3>
+            </div>
+            <div id="settings-box-body">
+              <div class="settings-box-items-wrapper">
+                <div class="settings-box-item">
+                  <div class="category-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px">
+                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"></path>
+                    </svg>
+                    Notifications
+                  </div>
+                  <label class="switch" data-contains-hidden-input="">
+                    <input id="toggle-notifs" type="checkbox">
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Send system notification when execution fails or is fixed.
+                  </div>
+                </div>
+                <div class="settings-box-item settings-livereload">
+                  <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="#loading_svg"></use>
+                    </svg>
+                    <span>Livereload</span>
+                  </div>
+                  <label class="switch" data-contains-hidden-input="">
+                    <input id="toggle-livereload" type="checkbox">
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Reload page when a file is modified, deleted or created.
+                  </div>
+                </div>
+                <div class="settings-box-item">
+                  <div class="category-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px">
+                      <path d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-2zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"></path>
+                      <path d="M0 0h24v24H0z" fill="none"></path>
+                    </svg>
+                    Animations
+                  </div>
+                  <label class="switch" data-contains-hidden-input="">
+                    <input id="toggle-anims" type="checkbox">
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Play toolbar animations and transitions.
+                  </div>
+                </div>
+                <div class="settings-box-item">
+                  <div class="category-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" id="paletteIconSvg">
+                      <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"></path>
+                      <path d="M0 0h24v24H0z" fill="none"></path>
+                    </svg>
+                    Dark mode
+                  </div>
+                  <label class="switch" data-contains-hidden-input="">
+                    <input id="checkbox-dark-theme" type="checkbox">
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Choose between light and dark theme for jsenv toolbar.
+                  </div>
+                </div>
+                <div class="settings-box-item" id="browser_support">
+                  <div class="category-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20px" height="20px" style="enable-background: new 0 0 512 512" id="browser_support_svg">
+                      <path d="M497.938,430.063l-126.914-126.91C389.287,272.988,400,237.762,400,200C400,89.719,310.281,0,200,0
+		C89.719,0,0,89.719,0,200c0,110.281,89.719,200,200,200c37.762,0,72.984-10.711,103.148-28.973l126.914,126.91
+		C439.438,507.313,451.719,512,464,512c12.281,0,24.563-4.688,33.938-14.063C516.688,479.195,516.688,448.805,497.938,430.063z
+		 M64,200c0-74.992,61.016-136,136-136s136,61.008,136,136s-61.016,136-136,136S64,274.992,64,200z"></path>
+                    </svg>
+                    Browser support
+                  </div>
+                  <div class="category-subtitle">
+                    <div>
+                      <span class="browser_support_text" data-when="browserSupport:no">No browser support</span>
+                      <span class="browser_support_text" data-when="browserSupport:partial">Excellent browser support
+                        <span class="emoji">❤️</span></span>
+                      <span class="browser_support_text" data-when="browserSupport:full">Perfect browser support
+                        <span class="emoji">❤️</span></span>
+                    </div>
+                    <a class="browser_support_read_more_link" href="javascript:void(0);">Read more</a>
+                  </div>
+                </div>
+                <div class="settings-box-item" id="files_compilation">
+                  <div class="category-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-74 0 512 512" width="20px" height="20px" id="browser_support_svg">
+                      <path d="m361.414062 443.589844-108.269531-263.902344c-6.003906-14.640625-9.050781-30.085938-9.050781-45.910156v-69.757813c0-7.511719 2.925781-14.574219 8.238281-19.886719 6.476563-6.476562 10.046875-15.089843 10.046875-24.25v-9.882812c0-5.523438-4.480468-10-10-10h-139.621094c-5.523437 0-10 4.476562-10 10v9.882812c0 9.160157 3.566407 17.773438 10.042969 24.25 5.3125 5.3125 8.238281 12.375 8.238281 19.890626v69.753906c0 15.824218-3.042968 31.269531-9.050781 45.910156l-29.75 72.515625c-.011719.027344-.023437.054687-.035156.082031l-78.484375 191.304688c-6.285156 15.324218-4.53125 32.6875 4.695312 46.441406 9.226563 13.757812 24.621094 21.96875 41.183594 21.96875h265.9375c16.5625 0 31.960938-8.210938 41.1875-21.96875 9.222656-13.757812 10.976563-31.117188 4.691406-46.441406zm-230.921874-256.3125c7-17.058594 10.546874-35.058594 10.546874-53.5v-69.757813c0-12.851562-5.003906-24.9375-14.09375-34.027343-2.671874-2.671876-4.15625-6.21875-4.1875-9.992188h119.621094c-.03125 3.773438-1.515625 7.316406-4.191406 9.992188-9.085938 9.089843-14.09375 21.171874-14.09375 34.027343v69.753907c0 18.441406 3.550781 36.441406 10.546875 53.5l24.144531 58.851562h-152.4375zm209.617187 291.613281c-5.585937 8.332031-14.542969 13.109375-24.574219 13.109375h-265.9375c-10.027344 0-18.984375-4.777344-24.574218-13.109375-4.214844-6.285156-5.824219-13.574219-4.730469-20.761719h16.476562c5.519531 0 10-4.480468 10-10 0-5.523437-4.480469-10-10-10h-9.1875l11.484375-28h16.867188c5.523437 0 10-4.480468 10-10 0-5.523437-4.476563-10-10-10h-8.660156l11.484374-28h17.34375c5.523438 0 10-4.480468 10-10 0-5.523437-4.476562-10-10-10h-9.136718l11.488281-28h17.8125c5.523437 0 10-4.480468 10-10 0-5.523437-4.476563-10-10-10h-9.609375l11.488281-28h168.84375l75.921875 185.054688c3.804688 9.277344 2.785156 19.378906-2.800781 27.707031zm0 0"></path>
+                      <path d="m312.03125 444.214844c-2.09375-5.113282-7.929688-7.558594-13.042969-5.46875-5.109375 2.09375-7.558593 7.929687-5.46875 13.042968l.054688.125c1.585937 3.871094 5.316406 6.214844 9.257812 6.214844 1.261719 0 2.542969-.238281 3.785157-.746094 5.109374-2.09375 7.558593-7.933593 5.464843-13.042968zm0 0"></path>
+                      <path d="m297.898438 409.761719-35.8125-87.289063c-2.09375-5.109375-7.933594-7.554687-13.046876-5.457031-5.109374 2.09375-7.550781 7.9375-5.457031 13.046875l35.8125 87.289062c1.585938 3.871094 5.316407 6.207032 9.257813 6.207032 1.261718 0 2.546875-.238282 3.789062-.75 5.109375-2.09375 7.554688-7.9375 5.457032-13.046875zm0 0"></path>
+                    </svg>
+                    Files compilation
+                  </div>
+                  <div class="category-subtitle">
+                    <div class="files_compilation_text">
+                      <span data-when="filesCompilation:no">Files shown are source files</span>
+                      <span data-when="filesCompilation:html_only">Files shown are source files, except html</span>
+                      <span data-when="filesCompilation:yes">Files shown are compiled</span>
+                    </div>
+                    <a data-when="compiled:yes" class="go_to_source_link" href="javascript:void(0);">Switch to source files</a>
+                    <a data-when="compiled:no" class="go_to_compiled_link" href="javascript:void(0);">Switch to compiled files</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button id="settings-button" class="toolbar-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24px" height="24px" class="iconToolbar">
+              <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"></path>
+            </svg>
+          </button>
+        </section>
+
+        <section id="close" data-responsive-toolbar-element="">
+          <button id="button-close-toolbar">
+            <div class="toolbar-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" id="crossIconSvg" class="iconToolbar" width="35px" height="35px">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+                <path d="M0 0h24v24H0z" fill="none"></path>
+              </svg>
+            </div>
+          </button>
+        </section>
+      </div>
+
+      <div id="overflow-menu">
+        <div style="width: 100%"></div>
+      </div>
+
+      <div id="overflow-menu-button">
+        <button class="toolbar-icon-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="35px" height="35px" id="dotsIconSvg" class="iconToolbar">
+            <path d="M0 0h24v24H0V0z" fill="none"></path>
+            <path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- svg filter
+    must not be hidden or won't show in firefox)
+    see also:
+      https://codepen.io/tigt/post/fixing-the-white-glow-in-the-css-blur-filter
+      https://stackoverflow.com/questions/46906819/edge-detection-in-svg-filter
+      https://github.com/msurguy/background-blur/issues/5
+      https://tympanus.net/codrops/2019/01/22/svg-filter-effects-outline-text-with-femorphology/
+    -->
+    <svg width="0" height="0">
+      <defs>
+        <filter id="better-blur" x="0" y="0" width="1" height="1">
+          <feGaussianBlur stdDeviation="5" result="blurred"></feGaussianBlur>
+
+          <feMerge>
+            <feMergeNode in="SourceGraphic"></feMergeNode>
+            <feMergeNode in="blurred"></feMergeNode>
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
+
+    <!--
+     Reusable svg(s)
+    -->
+    <div style="display: none">
+      <svg id="loading_svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 430">
+        <path fill="currentColor" d="m32.118 204.979.302 5.179c.124 3.4.638 8.29 1.434 14.48l.786 4.882.421 2.617c.154.89.376 1.789.558 2.712l1.197 5.75c.444 1.981 1.027 4.008 1.56 6.112 2.274 8.378 5.328 17.708 9.758 27.396a180.713 180.713 0 0 0 17.062 29.673 178.57 178.57 0 0 0 25.102 28.499c9.702 8.888 20.652 17.025 32.581 23.85a180.596 180.596 0 0 0 38.159 16.203c13.357 3.824 27.155 5.896 40.737 6.35l2.541.113 2.542-.017c1.689-.012 3.376-.142 5.059-.152l1.259-.126h.157c-.466 0-.034.113-.096.111l.329.039.657-.012 2.625-.138c1.748-.094 3.492-.181 5.229-.274l2.599-.14 2.399-.292c1.596-.203 3.188-.354 4.772-.526 3.147-.236 6.372-.888 9.541-1.397a213.826 213.826 0 0 0 35.916-9.232 622.925 622.925 0 0 1 8.182-3.142c2.655-1.114 5.222-2.329 7.782-3.459 2.6-1.056 4.984-2.43 7.407-3.636l3.584-1.832c1.189-.598 2.295-1.31 3.432-1.949 2.248-1.316 4.477-2.577 6.623-3.866l6.146-4.011c2.042-1.258 3.901-2.66 5.735-3.997 1.822-1.352 3.646-2.613 5.355-3.907l4.843-3.918c1.569-1.258 3.121-2.439 4.471-3.723l4.031-3.563c1.288-1.139 2.548-2.204 3.621-3.327 2.193-2.203 4.225-4.131 5.979-5.831 1.697-1.744 3.063-3.304 4.243-4.516l3.588-3.767.026-.028a.855.855 0 0 1 1.37.997s-.868 1.598-2.574 4.574c-.854 1.488-1.885 3.349-3.214 5.459-1.387 2.064-2.967 4.465-4.816 7.108-.887 1.355-1.955 2.669-3.051 4.075l-3.46 4.412c-1.185 1.56-2.571 3.036-3.979 4.607a11889.58 11889.58 0 0 1-4.424 4.853c-1.572 1.628-3.282 3.218-5.018 4.893-1.745 1.662-3.502 3.432-5.49 5.023l-6.021 5.047c-2.111 1.653-4.363 3.226-6.623 4.899-9.169 6.472-19.718 12.805-31.671 17.869-11.917 5.107-25.137 9.123-39.146 11.367-3.516.507-7.004 1.114-10.719 1.336-1.834.148-3.674.319-5.521.438l-2.773.192-2.611.027-5.237.045-2.63.012-1.585-.006-1.378-.074-5.521-.302-2.766-.157-2.764-.29a202.304 202.304 0 0 1-43.748-9.26 193.358 193.358 0 0 1-40.221-18.991c-12.467-7.743-23.632-16.999-33.41-26.861-9.758-9.893-18.135-20.455-24.833-31.222a187.62 187.62 0 0 1-15.97-31.794c-4.006-10.258-6.601-20.021-8.441-28.721-1.917-8.698-2.688-16.429-3.245-22.764-.396-6.374-.584-11.386-.485-14.752l.04-5.188a.85.85 0 0 1 .857-.844.86.86 0 0 1 .844.805zM393.625 225.021l-.297-4.979-.162-2.716-.093-1.565-.182-1.679c-.269-2.323-.534-4.99-.906-7.966l-.763-4.693-.408-2.516a34.227 34.227 0 0 0-.487-2.616c-.778-3.54-1.458-7.393-2.614-11.413l-.812-3.075a41.978 41.978 0 0 0-.908-3.147l-2.071-6.509c-1.604-4.392-3.258-9.013-5.353-13.684a178.146 178.146 0 0 0-15.844-28.827c-6.541-9.647-14.329-19.197-23.385-28.038l-1.683-1.677-1.766-1.605c-1.182-1.068-2.366-2.142-3.557-3.218-1.163-1.104-2.449-2.08-3.686-3.116l-3.75-3.083c-1.3-.972-2.604-1.946-3.91-2.924-1.324-.953-2.58-2.003-3.953-2.902l-4.075-2.768-2.042-1.389-2.112-1.291a179.101 179.101 0 0 0-35.961-17.193c-12.643-4.307-25.78-6.991-38.788-8.151-1.628-.128-3.24-.356-4.867-.403l-4.858-.205c-3.224-.204-6.444-.09-9.634-.125l-2.151-.002-2.495.128c-1.66.095-3.316.141-4.966.211l-2.47.097c-.809.042-1.532.143-2.3.21l-4.522.438c-2.979.166-6.046.719-9.053 1.084-3.023.336-5.975.917-8.906 1.449-1.462.28-2.93.501-4.374.794l-4.282.989-4.245.947c-1.396.353-2.766.767-4.137 1.143-2.735.781-5.465 1.47-8.073 2.398l-3.917 1.296c-1.3.42-2.588.844-3.827 1.363l-7.408 2.85a564.405 564.405 0 0 1-7.01 3.092c-1.163.477-2.267 1.042-3.361 1.598l-3.263 1.627-3.206 1.579a4807.3 4807.3 0 0 1-3.039 1.706c-1.992 1.14-4.003 2.158-5.868 3.29a478.807 478.807 0 0 1-5.419 3.344c-1.792 1.037-3.405 2.208-5.008 3.287l-4.64 3.135-7.955 5.898c-2.294 1.916-4.409 3.579-6.239 5.05-.934.718-1.729 1.45-2.471 2.111l-2.044 1.782-3.793 3.262-.025.022a.857.857 0 0 1-1.27-1.123s.969-1.457 2.861-4.161c.957-1.342 2.071-3.069 3.577-4.928 1.497-1.867 3.207-4.042 5.195-6.425a711.243 711.243 0 0 1 6.954-7.583l4.222-4.055c1.466-1.404 2.982-2.873 4.665-4.248a492.728 492.728 0 0 1 5.158-4.347c1.799-1.46 3.737-2.85 5.699-4.323l3.003-2.214 3.188-2.104a4521.47 4521.47 0 0 0 3.282-2.14c1.107-.723 2.227-1.456 3.411-2.104 9.235-5.625 19.942-10.626 31.724-14.697 1.475-.504 2.951-1.046 4.456-1.527a9356.8 9356.8 0 0 0 4.587-1.314l4.658-1.299c1.57-.402 3.17-.716 4.772-1.065l4.839-1.029a26.288 26.288 0 0 1 2.454-.433l2.478-.368c3.322-.481 6.616-1.035 10.133-1.254l5.236-.383c.866-.054 1.775-.143 2.61-.166l2.472-.042c1.65-.022 3.307-.069 4.97-.067l2.497-.011c-.163.003.397-.005.4-.001l.164.008.327.015.655.031 1.311.062c3.497.194 7.019.236 10.533.702l5.285.567c1.767.169 3.518.523 5.28.778a200.938 200.938 0 0 1 41.516 11.19 191.734 191.734 0 0 1 37.788 20.016l2.192 1.471 2.117 1.569 4.215 3.127c2.768 2.124 5.406 4.386 8.06 6.582l3.813 3.468c1.254 1.164 2.556 2.267 3.731 3.496l3.587 3.591 1.775 1.789 1.689 1.859c9.061 9.819 16.775 20.217 23.014 30.685a185.353 185.353 0 0 1 14.763 30.855c1.899 4.94 3.31 9.814 4.67 14.425l1.712 6.814c.297 1.098.526 2.196.731 3.282l.636 3.2c.923 4.179 1.378 8.165 1.943 11.813.151.911.247 1.811.318 2.695l.24 2.587.445 4.814c.173 3.065.257 5.808.365 8.183l.066 1.714-.015 1.567-.024 2.721-.045 4.987a.85.85 0 0 1-.857.843.852.852 0 0 1-.837-.8z"></path>
+        <circle fill="currentColor" cx="70.536" cy="110.694" r="36.011"></circle>
+        <circle fill="currentColor" cx="362.721" cy="309.694" r="36.012"></circle>
+      </svg>
+    </div>
+
+    <!--
+    <script type="module" src="./toolbar.main.js"></script>
+    The script type module approach works too but
+    is slower than having a prebuilt file.
+    Because this will impact every page using jsenv let's
+    use the fatest solution for now.
+    The day browser support import maps the script
+    module approach wil be faster because
+    no compilation will be necessary
+    -->
+    <script type="systemjs-importmap">
+{
+  "imports": {
+    "./toolbar.main.js": "./toolbar.main-e44dd5fe.js"
+  }
+}</script>
+    <script>
+      // here we should create something like window.toolbar = {}
+      // and a promise the toolbar injector can listen to act on the toolbar
+      // or we could just consider all communication should pass by postmessage
+    </script>
+    <script>System.register([], (function () {
   'use strict';
   return {
     execute: (function () {
@@ -2466,10 +4303,9 @@ System.register([], (function () {
           disableLivereloadSetting();
         }
 
-        parentEventSourceClient.setConnectionStatusChangeCallback = function () {
+        parentEventSourceClient.setConnectionStatusChangeCallback(function () {
           updateEventSourceIndicator();
-        };
-
+        });
         var livereloadCheckbox = document.querySelector("#toggle-livereload");
         livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled();
 
@@ -2860,4 +4696,7 @@ System.register([], (function () {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-fe1ff16d.js.map
+//# sourceMappingURL=toolbar.main-e44dd5fe.js.map</script>
+  
+
+</body></html>

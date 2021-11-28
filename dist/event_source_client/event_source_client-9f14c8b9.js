@@ -20,15 +20,30 @@
     }
 
     var eventSourceOrigin = new URL(eventSourceUrl).origin;
+    Object.keys(events).forEach(function (eventName) {
+      var eventCallback = events[eventName];
+
+      events[eventName] = function (e) {
+        if (e.origin === eventSourceOrigin) {
+          if (e.lastEventId) {
+            lastEventId = e.lastEventId;
+          }
+
+          eventCallback(e);
+        }
+      };
+    });
     var connectionStatus = "default";
 
     var connectionStatusChangeCallback = function connectionStatusChangeCallback() {};
 
-    var disconnect = function disconnect() {};
+    var _disconnect = function _disconnect() {};
 
     var goToStatus = function goToStatus(newStatus) {
-      connectionStatus = newStatus;
-      connectionStatusChangeCallback();
+      if (newStatus !== connectionStatus) {
+        connectionStatus = newStatus;
+        connectionStatusChangeCallback();
+      }
     };
 
     var attemptConnection = function attemptConnection(url) {
@@ -36,7 +51,7 @@
         withCredentials: true
       });
 
-      disconnect = function disconnect() {
+      _disconnect = function _disconnect() {
         if (connectionStatus !== "connecting" && connectionStatus !== "connected") {
           console.warn("disconnect() ignored because connection is ".concat(connectionStatus));
           return;
@@ -44,6 +59,9 @@
 
         eventSource.onerror = undefined;
         eventSource.close();
+        Object.keys(events).forEach(function (eventName) {
+          eventSource.removeEventListener(eventName, events[eventName]);
+        });
         goToStatus("disconnected");
       };
 
@@ -54,7 +72,9 @@
         if (errorEvent.target.readyState === EventSource.CONNECTING) {
           if (retryCount > retryMaxAttempt) {
             console.info("could not connect after ".concat(retryMaxAttempt, " attempt"));
-            disconnect();
+
+            _disconnect();
+
             return;
           }
 
@@ -65,7 +85,9 @@
 
             if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
               console.info("could not connect in less than ".concat(retryAllocatedMs, " ms"));
-              disconnect();
+
+              _disconnect();
+
               return;
             }
           }
@@ -76,7 +98,8 @@
         }
 
         if (errorEvent.target.readyState === EventSource.CLOSED) {
-          disconnect();
+          _disconnect();
+
           return;
         }
       };
@@ -86,15 +109,7 @@
       };
 
       Object.keys(events).forEach(function (eventName) {
-        eventSource.addEventListener(eventName, function (e) {
-          if (e.origin === eventSourceOrigin) {
-            if (e.lastEventId) {
-              lastEventId = e.lastEventId;
-            }
-
-            events[eventName](e);
-          }
-        });
+        eventSource.addEventListener(eventName, events[eventName]);
       });
 
       if (!events.hasOwnProperty("welcome")) {
@@ -117,23 +132,26 @@
     };
 
     var removePageUnloadListener = listenPageUnload(function () {
-      disconnect();
+      _disconnect();
     });
 
     var destroy = function destroy() {
       removePageUnloadListener();
-      disconnect();
+
+      _disconnect();
     };
 
     return {
       getConnectionStatus: function getConnectionStatus() {
         return connectionStatus;
       },
-      setConnectionStatusCallback: function setConnectionStatusCallback(callback) {
+      setConnectionStatusChangeCallback: function setConnectionStatusChangeCallback(callback) {
         connectionStatusChangeCallback = callback;
       },
       connect: _connect,
-      disconnect: disconnect,
+      disconnect: function disconnect() {
+        return _disconnect();
+      },
       destroy: destroy
     };
   };
@@ -335,4 +353,4 @@
 
 })();
 
-//# sourceMappingURL=event_source_client-d29d7141.js.map
+//# sourceMappingURL=event_source_client-9f14c8b9.js.map
