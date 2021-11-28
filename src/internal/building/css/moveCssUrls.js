@@ -17,6 +17,9 @@ export const moveCssUrls = async ({ code, from, to, map } = {}) => {
     plugins: [
       postCssPluginUrlVisitor({
         urlVisitor: ({ specifier }) => {
+          if (specifier[0] === "#") {
+            return null
+          }
           const url = new URL(specifier, fromDirectoryUrl).href
           const relativeUrl = urlToRelativeUrl(url, toDirectoryUrl)
           return relativeUrl

@@ -81,20 +81,6 @@ addExport(
 )
 
 await buildInternalFile({
-  format: "global",
-  buildDirectoryRelativeUrl: "./dist/toolbar_injector/",
-  importMapFileRelativeUrl: "./node_resolution.importmap",
-  entryPointMap: {
-    "./src/internal/dev_server/toolbar/toolbar.injector.js":
-      "./toolbar_injector.js",
-  },
-})
-addExport(
-  "TOOLBAR_INJECTOR_BUILD_URL",
-  `toolbar_injector/${buildManifest["toolbar_injector.js"]}`,
-)
-
-await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/toolbar/",
   entryPointMap: {
@@ -103,6 +89,35 @@ await buildInternalFile({
   cssConcatenation: true,
 })
 addExport("TOOLBAR_BUILD_URL", `toolbar/${buildManifest["toolbar.html"]}`)
+
+await buildInternalFile({
+  format: "global",
+  buildDirectoryRelativeUrl: "./dist/toolbar_injector/",
+  importMapFileRelativeUrl: "./node_resolution.importmap",
+  entryPointMap: {
+    "./src/internal/dev_server/toolbar/toolbar.injector.js":
+      "./toolbar_injector.js",
+  },
+  customCompilers: {
+    "./src/internal/dev_server/toolbar/toolbar.injector.js": ({ code }) => {
+      const compiledSource = code.replace(
+        "__TOOLBAR_BUILD_RELATIVE_URL_",
+        JSON.stringify(`dist/toolbar/${buildManifest["toolbar.html"]}`),
+      )
+
+      return {
+        compiledSource,
+        responseHeaders: {
+          "cache-control": "no-store",
+        },
+      }
+    },
+  },
+})
+addExport(
+  "TOOLBAR_INJECTOR_BUILD_URL",
+  `toolbar_injector/${buildManifest["toolbar_injector.js"]}`,
+)
 
 await buildInternalFile({
   format: "systemjs",

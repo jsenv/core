@@ -145,11 +145,12 @@ export const parseHtmlRessource = async (
   ]
 
   return async (params) => {
-    htmlMutations.forEach((mutationCallback) => {
-      mutationCallback({
+    await htmlMutations.reduce(async (previous, mutationCallback) => {
+      await previous
+      await mutationCallback({
         ...params,
       })
-    })
+    }, Promise.resolve())
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const html = minify
