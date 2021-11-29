@@ -181,21 +181,21 @@ const transformHTMLSourceFile = async ({
 
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      jsenvScriptInjection
+      ...(jsenvScriptInjection
         ? [
             {
               src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
-        : [],
-      jsenvEventSourceClientInjection
+        : []),
+      ...(jsenvEventSourceClientInjection
         ? [
             {
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
-        : [],
-      jsenvToolbarInjection
+        : []),
+      ...(jsenvToolbarInjection
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
@@ -203,7 +203,7 @@ const transformHTMLSourceFile = async ({
               async: "",
             },
           ]
-        : [],
+        : []),
     ],
   })
 
