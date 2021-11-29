@@ -20,11 +20,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `top_level_await.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...START_COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
+const {
+  origin: compileServerOrigin,
+  outDirectoryRelativeUrl,
+  id,
+} = await startCompileServer({
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+})
 
 await launchBrowsers(
   [
@@ -41,6 +44,7 @@ await launchBrowsers(
         ...LAUNCH_TEST_PARAMS,
         outDirectoryRelativeUrl,
         compileServerOrigin,
+        compileServerId: id,
       },
       executeParams: {
         fileRelativeUrl,

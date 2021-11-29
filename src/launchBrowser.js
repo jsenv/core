@@ -32,6 +32,7 @@ chromiumRuntime.launch = async ({
 
   projectDirectoryUrl,
   compileServerOrigin,
+  compileServerId,
   outDirectoryRelativeUrl,
 
   collectPerformance,
@@ -106,10 +107,12 @@ chromiumRuntime.launch = async ({
   }
 
   const browserHooks = browserToRuntimeHooks(browser, {
+    runtime: chromiumRuntime,
     browserServerLogLevel,
 
     projectDirectoryUrl,
     compileServerOrigin,
+    compileServerId,
     outDirectoryRelativeUrl,
 
     collectPerformance,
@@ -184,6 +187,7 @@ firefoxRuntime.launch = async ({
   const browser = await browserPromise
 
   const browserHooks = browserToRuntimeHooks(browser, {
+    runtime: firefoxRuntime,
     launchBrowserOperation,
     browserServerLogLevel,
 
@@ -262,6 +266,7 @@ webkitRuntime.launch = async ({
   const browser = await browserPromise
 
   const browserHooks = browserToRuntimeHooks(browser, {
+    runtime: webkitRuntime,
     launchBrowserOperation,
     browserServerLogLevel,
 
@@ -391,8 +396,10 @@ const stopBrowser = async (browser) => {
 const browserToRuntimeHooks = (
   browser,
   {
+    runtime,
     projectDirectoryUrl,
     compileServerOrigin,
+    compileServerId,
     outDirectoryRelativeUrl,
 
     collectPerformance,
@@ -461,10 +468,12 @@ const browserToRuntimeHooks = (
     stoppedCallbackList.add(stopTrackingToNotify)
 
     const result = await executeHtmlFile(fileRelativeUrl, {
+      runtime,
       executeOperation,
 
       projectDirectoryUrl,
       compileServerOrigin,
+      compileServerId,
       outDirectoryRelativeUrl,
 
       page,

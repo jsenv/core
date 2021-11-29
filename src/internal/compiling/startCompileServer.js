@@ -51,6 +51,8 @@ import { createCompiledFileService } from "./createCompiledFileService.js"
 import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
+let compileServerId = 0
+
 export const startCompileServer = async ({
   signal = new AbortController().signal,
   handleSIGINT,
@@ -389,6 +391,7 @@ export const startCompileServer = async ({
   })
 
   return {
+    id: compileServerId++,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     ...compileServer,

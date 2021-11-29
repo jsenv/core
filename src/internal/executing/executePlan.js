@@ -146,8 +146,7 @@ export const executePlan = async (
       launchAndExecuteLogLevel,
 
       projectDirectoryUrl,
-      compileServerOrigin: compileServer.origin,
-      outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+      compileServer,
 
       // not sure we actually have to pass import params to executeConcurrently
       importResolutionMethod,

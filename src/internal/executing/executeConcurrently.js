@@ -27,8 +27,7 @@ export const executeConcurrently = async (
     launchAndExecuteLogLevel,
 
     projectDirectoryUrl,
-    compileServerOrigin,
-    outDirectoryRelativeUrl,
+    compileServer,
 
     babelPluginMap,
 
@@ -206,8 +205,10 @@ export const executeConcurrently = async (
           coverageTempDirectoryUrl,
           runtimeParams: {
             projectDirectoryUrl,
-            compileServerOrigin,
-            outDirectoryRelativeUrl,
+            compileServerOrigin: compileServer.origin,
+            compileServerId: compileServer.id,
+            outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+
             collectCoverage: coverage,
             coverageIgnorePredicate,
             coverageForceIstanbul,
