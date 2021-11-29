@@ -1,6 +1,10 @@
 import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
 
+// eslint-disable-next-line no-undef
+const TOOLBAR_BUILD_RELATIVE_URL = __TOOLBAR_BUILD_RELATIVE_URL_
+const jsenvLogoSvgUrl = new URL("./jsenv-logo.svg", import.meta.url)
+
 const injectToolbar = async () => {
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
@@ -40,7 +44,7 @@ const injectToolbar = async () => {
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
   const jsenvToolbarHtmlServerUrl = resolveUrl(
-    "./src/internal/dev_server/toolbar/toolbar.html",
+    TOOLBAR_BUILD_RELATIVE_URL,
     jsenvDirectoryServerUrl,
   )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
@@ -50,40 +54,11 @@ const injectToolbar = async () => {
   await iframeLoadedPromise
   iframe.removeAttribute("tabindex")
 
-  const listenToolbarIframeEvent = (event, fn) => {
-    window.addEventListener(
-      "message",
-      (messageEvent) => {
-        const { data } = messageEvent
-        if (typeof data !== "object") return
-        const { jsenv } = data
-        if (!jsenv) return
-        const { type } = data
-        if (type !== event) return
-        fn(data.value)
-      },
-      false,
-    )
-  }
-
-  listenToolbarIframeEvent("toolbar-visibility-change", (visible) => {
-    if (visible) {
-      hideToolbarTrigger()
-    } else {
-      showToolbarTrigger()
-    }
-  })
-
   const div = document.createElement("div")
-  const jsenvLogoUrl = resolveUrl(
-    "./src/internal/dev_server/toolbar/jsenv-logo.svg",
-    jsenvDirectoryServerUrl,
-  )
-  const jsenvLogoSvgSrc = jsenvLogoUrl
   div.innerHTML = `
 <div id="jsenv-toolbar-trigger">
   <svg id="jsenv-toolbar-trigger-icon">
-    <use xlink:href="${jsenvLogoSvgSrc}#jsenv-logo"></use>
+    <use xlink:href="${jsenvLogoSvgUrl}#jsenv-logo"></use>
   </svg>
   <style>
     #jsenv-toolbar-trigger {
@@ -148,7 +123,7 @@ const injectToolbar = async () => {
     collapseToolbarTrigger()
   }
   toolbarTrigger.onclick = () => {
-    window.__jsenv__.toolbar.show()
+    sendCommandToToolbar(iframe, "showToolbar")
   }
 
   const showToolbarTrigger = () => {
@@ -166,11 +141,52 @@ const injectToolbar = async () => {
   const collapseToolbarTrigger = () => {
     toolbarTrigger.removeAttribute("data-expanded", "")
   }
-  hideToolbarTrigger()
 
-  iframe.contentWindow.renderToolbar()
+  hideToolbarTrigger()
+  addToolbarEventCallback(iframe, "toolbar-visibility-change", (visible) => {
+    if (visible) {
+      hideToolbarTrigger()
+    } else {
+      showToolbarTrigger()
+    }
+  })
+  sendCommandToToolbar(iframe, "renderToolbar")
 
   return iframe
+}
+
+const addToolbarEventCallback = (iframe, eventName, callback) => {
+  const messageEventCallback = (messageEvent) => {
+    const { data } = messageEvent
+    if (typeof data !== "object") {
+      return
+    }
+    const { __jsenv__ } = data
+    if (!__jsenv__) {
+      return
+    }
+    if (__jsenv__.event !== eventName) {
+      return
+    }
+    callback(__jsenv__.data)
+  }
+
+  window.addEventListener("message", messageEventCallback, false)
+  return () => {
+    window.removeEventListener("message", messageEventCallback, false)
+  }
+}
+
+const sendCommandToToolbar = (iframe, command, ...args) => {
+  iframe.contentWindow.postMessage(
+    {
+      __jsenv__: {
+        command,
+        args,
+      },
+    },
+    window.origin,
+  )
 }
 
 const getToolbarPlaceholder = () => {
@@ -188,8 +204,9 @@ const getToolbarPlaceholder = () => {
   return createTooolbarPlaceholder()
 }
 
-const queryPlaceholder = () =>
-  document.querySelector("[data-jsenv-toolbar-placeholder]")
+const queryPlaceholder = () => {
+  return document.querySelector("[data-jsenv-toolbar-placeholder]")
+}
 
 const createTooolbarPlaceholder = () => {
   const placeholder = document.createElement("span")

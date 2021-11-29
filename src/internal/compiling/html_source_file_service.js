@@ -21,14 +21,12 @@ import {
 import { moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { jsenvBrowserSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { redirectorHtmlFileInfo } from "@jsenv/core/src/internal/dev_server/redirector/redirector_file_info.js"
-import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 import {
-  toolbarInjectorFileInfo,
-  toolbarHtmlFileInfo,
-} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
+  BROWSER_SYSTEM_BUILD_URL,
+  EVENT_SOURCE_CLIENT_BUILD_URL,
+  TOOLBAR_INJECTOR_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import {
   parseHtmlString,
@@ -43,6 +41,9 @@ import {
   setHtmlNodeText,
   getUniqueNameForInlineHtmlNode,
 } from "./compileHtml.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+
+const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
 
 export const createTransformHtmlSourceFileService = ({
   logger,
@@ -69,6 +70,10 @@ export const createTransformHtmlSourceFileService = ({
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
+
+    if (urlIsInsideOf(fileUrl, jsenvDistDirectoryUrl)) {
+      return null
+    }
 
     const inlineScript = htmlInlineScriptMap.get(fileUrl)
     if (inlineScript) {
@@ -159,41 +164,38 @@ const transformHTMLSourceFile = async ({
     })
   }
 
-  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+  const browserSystemBuildUrlRelativeToProject = urlToRelativeUrl(
+    BROWSER_SYSTEM_BUILD_URL,
     projectDirectoryUrl,
   )
+
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientFileInfo.buildUrl,
+    EVENT_SOURCE_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
+
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarInjectorFileInfo.buildUrl,
+    TOOLBAR_INJECTOR_BUILD_URL,
     projectDirectoryUrl,
   )
+
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
-      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
-      jsenvScriptInjection
+      ...(jsenvScriptInjection
         ? [
             {
-              src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+              src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
-      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
-      jsenvEventSourceClientInjection
+      ...(jsenvEventSourceClientInjection
         ? [
             {
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
         : []),
-      ...(fileUrl !== toolbarHtmlFileInfo.sourceUrl &&
-      fileUrl !== redirectorHtmlFileInfo.sourceUrl &&
-      jsenvToolbarInjection
+      ...(jsenvToolbarInjection
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,

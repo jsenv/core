@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/internal/dev_server/toolbar/compilation/compilation.css"
+  ],
+  "names": [],
+  "mappings": "AAAA;EACE,WAAW;EACX,YAAY;EACZ,YAAY;EACZ,cAAc;AAChB;;AAEA;EACE,SAAS;EACT,oBAAoB;EACpB,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;AAClB;;AAEA;;EAEE,kBAAkB;EAClB,YAAY;AACd",
+  "file": "compilation-906adf10.css",
+  "sourcesContent": [
+    "#file_info_svg {\n  width: 20px;\n  height: 20px;\n  margin: 10px;\n  color: #cecece;\n}\n\n#file_info ul {\n  margin: 0;\n  margin-bottom: 0.7em;\n  padding-left: 1em;\n}\n\n#file_info ul li {\n  text-align: left;\n}\n\n.browser_support_text[data-warning],\n.files_compilation_text[data-warning] {\n  background: orange;\n  color: black;\n}\n"
+  ]
+}

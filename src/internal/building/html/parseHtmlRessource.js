@@ -51,6 +51,7 @@ import {
 import { collectNodesMutations } from "../parsing.utils.js"
 
 import { collectSvgMutations } from "../svg/parseSvgRessource.js"
+import { moveCssUrls } from "../css/moveCssUrls.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,
@@ -144,11 +145,12 @@ export const parseHtmlRessource = async (
   ]
 
   return async (params) => {
-    htmlMutations.forEach((mutationCallback) => {
-      mutationCallback({
+    await htmlMutations.reduce(async (previous, mutationCallback) => {
+      await previous
+      await mutationCallback({
         ...params,
       })
-    })
+    }, Promise.resolve())
 
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const html = minify
@@ -507,7 +509,11 @@ const linkStylesheetHrefVisitor = (
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
   })
-  return ({ getUrlRelativeToImporter }) => {
+  return async ({
+    getUrlRelativeToImporter,
+    precomputeBuildRelativeUrl,
+    buildDirectoryUrl,
+  }) => {
     const { ressource } = cssReference
 
     if (ressource.isExternal) {
@@ -516,18 +522,38 @@ const linkStylesheetHrefVisitor = (
 
     if (shouldInline({ ressource, htmlNode: link })) {
       const { bufferAfterBuild } = ressource
-      let cssString = String(bufferAfterBuild)
-      const sourcemapRelativeUrl = getCssSourceMappingUrl(cssString)
+      let code = String(bufferAfterBuild)
+      const { buildRelativeUrl } = ressource
+      const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
+      const htmlUrl = resolveUrl(
+        precomputeBuildRelativeUrl(htmlRessource),
+        buildDirectoryUrl,
+      )
+
+      const moveResult = await moveCssUrls({
+        code,
+        from: cssBuildUrl,
+        to: htmlUrl,
+        // moveCssUrls will change the css source code
+        // Ideally we should update the sourcemap referenced by css
+        // to target the one after css urls are moved.
+        // It means we should force sourcemap ressource to the new one
+        // until it's supported we prevent postcss from updating the
+        // sourcemap comment, othwise css would reference a sourcemap
+        // that won't by in the build directory
+        sourcemapMethod: null,
+      })
+      code = moveResult.code
+
+      const sourcemapRelativeUrl = getCssSourceMappingUrl(code)
       if (sourcemapRelativeUrl) {
-        const { buildRelativeUrl } = ressource
-        const cssBuildUrl = resolveUrl(buildRelativeUrl, "file:///")
+        const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
-        const htmlUrl = resolveUrl(htmlRessource.fileNamePattern, "file:///")
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
-        cssString = setCssSourceMappingUrl(cssString, sourcemapInlineUrl)
+        code = setCssSourceMappingUrl(code, sourcemapInlineUrl)
       }
 
-      replaceHtmlNode(link, `<style>${cssString}</style>`, {
+      replaceHtmlNode(link, `<style>${code}</style>`, {
         attributesToIgnore: ["href", "rel", "as", "crossorigin", "type"],
       })
       cssReference.inlinedCallback()

@@ -1,3 +1,8 @@
+import {
+  assertAndNormalizeDirectoryUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
+
 import { require } from "@jsenv/core/src/internal/require.js"
 import { applyPostCss } from "./applyPostCss.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
@@ -6,30 +11,44 @@ export const replaceCssUrls = async ({
   url,
   code,
   map,
-  getUrlReplacementValue,
+  urlVisitor,
+  cssConcatenation = false,
+  loadCssImport,
   cssMinification = false,
   cssMinificationOptions,
 } = {}) => {
-  const postcssPlugins = [
-    postCssPluginUrlVisitor,
-    ...(cssMinification
-      ? [await getCssMinificationPlugin(cssMinificationOptions)]
-      : []),
-  ]
-  const postcssOptions = {
-    getUrlReplacementValue,
-    map: {
-      inline: false,
-      // https://postcss.org/api/#sourcemapoptions
-      ...(map ? { prev: JSON.stringify(map) } : {}),
-    },
-  }
-  const result = await applyPostCss(code, url, postcssPlugins, postcssOptions)
-
+  const result = await applyPostCss({
+    code,
+    url,
+    plugins: [
+      postCssPluginUrlVisitor({ urlVisitor }),
+      ...(cssConcatenation
+        ? [await getCssConcatenationPlugin({ url, loadCssImport })]
+        : []),
+      ...(cssMinification
+        ? [await getCssMinificationPlugin(cssMinificationOptions)]
+        : []),
+    ],
+  })
+  code = result.code
+  map = result.map
   return {
-    code: result.css,
-    map: result.map.toJSON(),
+    code,
+    map,
   }
+}
+
+const getCssConcatenationPlugin = async ({ loadCssImport }) => {
+  const postcssImport = require("postcss-import")
+  return postcssImport({
+    resolve: (id, basedir) => {
+      const url = new URL(id, assertAndNormalizeDirectoryUrl(basedir)).href
+      return urlToFileSystemPath(url)
+    },
+    load: (id) => {
+      return loadCssImport(id)
+    },
+  })
 }
 
 const getCssMinificationPlugin = async (cssMinificationOptions = {}) => {

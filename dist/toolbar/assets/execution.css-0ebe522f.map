@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/internal/dev_server/toolbar/execution/execution.css"
+  ],
+  "names": [],
+  "mappings": "AAAA,gBAAgB;AAChB;EACE,WAAW;EACX,YAAY;EACZ,YAAY;EACZ,qBAAqB;EACrB,cAAc;AAChB;AACA;EACE,UAAU;EACV,wBAAwB;EACxB,qDAAqD;AACvD;AACA;EACE;IACE,oCAAoC;IACpC,UAAU;EACZ;EACA;IACE,UAAU;EACZ;EACA;IACE,kCAAkC;IAClC,UAAU;EACZ;AACF;AAEA,eAAe;AACf;EACE,WAAW;EACX,YAAY;EACZ,WAAW;EACX,UAAU;EACV,eAAe;AACjB;AACA;EACE,UAAU;AACZ;AACA;EACE,yBAAyB;EACzB,oBAAoB;EACpB,qBAAqB;EACrB,8DAA8D;EAC9D,aAAa;AACf;AACA;EACE;IACE,oBAAoB;EACtB;AACF;AAEA,eAAe;AACf;EACE,WAAW;EACX,YAAY;EACZ,YAAY;EACZ,UAAU;EACV,eAAe;AACjB;AACA;EACE,WAAW;EACX,SAAS;EACT,aAAa;AACf;AACA;EACE,UAAU;AACZ;AACA;EACE,4DAA4D;AAC9D;AACA;EACE,iEAAiE;AACnE;AACA;EACE;IACE,iBAAiB;IACjB,WAAW;EACb;AACF",
+  "file": "execution-2b53e173.css",
+  "sourcesContent": [
+    "/* Loader icon */\n#loader-icon {\n  width: 20px;\n  height: 20px;\n  margin: 10px;\n  transform: scaleX(-1);\n  color: #cecece;\n}\n#loader-icon[data-animate] {\n  opacity: 0;\n  transform-origin: center;\n  animation: rotateLoader 1s linear infinite !important;\n}\n@keyframes rotateLoader {\n  0% {\n    transform: scaleX(-1) rotate(360deg);\n    opacity: 1;\n  }\n  50% {\n    opacity: 0;\n  }\n  100% {\n    transform: scaleX(-1) rotate(0deg);\n    opacity: 1;\n  }\n}\n\n/* Check icon */\n#check-icon {\n  width: 25px;\n  height: 25px;\n  margin: 7px;\n  opacity: 0;\n  stroke-width: 5;\n}\n#check-icon[data-animate] {\n  opacity: 1;\n}\n#check-icon[data-animate] path {\n  transform-origin: 50% 50%;\n  stroke-dasharray: 48;\n  stroke-dashoffset: 48;\n  animation: stroke 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;\n  stroke: green;\n}\n@keyframes stroke {\n  100% {\n    stroke-dashoffset: 0;\n  }\n}\n\n/* Cross icon */\n#cross-icon {\n  width: 20px;\n  height: 20px;\n  margin: 10px;\n  opacity: 0;\n  stroke-width: 5;\n}\n#cross-icon rect {\n  width: 33px;\n  height: 0;\n  fill: #d74640;\n}\n#cross-icon[data-animate] {\n  opacity: 1;\n}\n#cross-icon[data-animate] #cross_p1 {\n  animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;\n}\n#cross-icon[data-animate] #cross_p2 {\n  animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.2s;\n}\n@keyframes draw {\n  100% {\n    height: 376.964px;\n    width: 45px;\n  }\n}\n"
+  ]
+}

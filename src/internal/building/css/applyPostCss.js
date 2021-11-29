@@ -1,23 +1,35 @@
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
-export const applyPostCss = async (
-  cssString,
-  cssUrl,
+export const applyPostCss = async ({
+  code,
+  url,
+  map,
+  sourcemapMethod = "comment",
   plugins,
   // https://github.com/postcss/postcss#options
   options = {},
-) => {
+}) => {
   const { default: postcss } = await import("postcss")
 
-  let result
   try {
-    const cssFileUrl = urlToFileUrl(cssUrl)
-    result = await postcss(plugins).process(cssString, {
+    const cssFileUrl = urlToFileUrl(url)
+    const result = await postcss(plugins).process(code, {
       collectUrls: true,
       from: urlToFileSystemPath(cssFileUrl),
       to: urlToFileSystemPath(cssFileUrl),
+      map: {
+        annotation: sourcemapMethod === "comment",
+        inline: sourcemapMethod === "inline",
+        // https://postcss.org/api/#sourcemapoptions
+        ...(map ? { prev: JSON.stringify(map) } : {}),
+      },
       ...options,
     })
+    return {
+      code: result.css,
+      map: result.map.toJSON(),
+      postCssMessages: result.messages,
+    }
   } catch (error) {
     if (error.name === "CssSyntaxError") {
       console.error(String(error))
@@ -25,7 +37,6 @@ export const applyPostCss = async (
     }
     throw error
   }
-  return result
 }
 
 // the goal of this function is to take an url that is likely an http url

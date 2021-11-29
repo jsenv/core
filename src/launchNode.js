@@ -4,6 +4,7 @@ import { loggerToLogLevel } from "@jsenv/logger"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
+import { scanNodeRuntimeFeatures } from "./internal/node-launcher/node_runtime_features.js"
 
 export const nodeRuntime = {
   name: "node",
@@ -34,7 +35,7 @@ nodeRuntime.launch = async ({
   stdout,
   stderr,
   stopAfterExecute,
-  canUseNativeModuleSystem,
+  forceSystemJs,
 
   remap = true,
 }) => {
@@ -103,7 +104,6 @@ nodeRuntime.launch = async ({
 
       fileRelativeUrl,
       executionId,
-      canUseNativeModuleSystem,
       exitAfterAction: stopAfterExecute,
 
       measurePerformance,
@@ -114,11 +114,37 @@ nodeRuntime.launch = async ({
       remap,
     }
 
-    let executionResult = await requestActionOnChildProcess({
-      signal,
-      actionType: "execute-using-dynamic-import-fallback-on-systemjs",
-      actionParams: executeParams,
+    // the computation of runtime features can be cached
+    const nodeFeatures = await scanNodeRuntimeFeatures({
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
+      // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
+      // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
+      // "transform-instrument" becomes non mandatory
+      coverageHandledFromOutside:
+        !coverageForceIstanbul && process.env.NODE_V8_COVERAGE,
     })
+    const { canAvoidCompilation, compileId, importDefaultExtension } =
+      nodeFeatures
+
+    let executionResult
+    if (canAvoidCompilation && !forceSystemJs) {
+      executionResult = await requestActionOnChildProcess({
+        signal,
+        actionType: "execute-using-dynamic-import",
+        actionParams: executeParams,
+      })
+    } else {
+      executionResult = await requestActionOnChildProcess({
+        signal,
+        actionType: "execute-using-systemjs",
+        actionParams: {
+          compileId,
+          importDefaultExtension,
+          ...executeParams,
+        },
+      })
+    }
 
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,

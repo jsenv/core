@@ -24,7 +24,7 @@ export const buildProject = async ({
   projectDirectoryUrl,
   entryPointMap,
   buildDirectoryRelativeUrl,
-  buildDirectoryClean = false,
+  buildDirectoryClean = true,
   assetManifestFile = false,
   assetManifestFileRelativeUrl = "asset-manifest.json",
   sourcemapExcludeSources = false,
@@ -58,10 +58,12 @@ export const buildProject = async ({
   urlVersioning = format === "systemjs" ||
     format === "esmodule" ||
     format === "global",
+  urlVersionningForEntryPoints = false,
   lineBreakNormalization = process.platform === "win32",
   // when jsConcatenation is disabled rollup becomes almost useless
   // except it can still do tree shaking
   jsConcatenation = true,
+  cssConcatenation = false,
   // useImportMapToMaximizeCacheReuse is enabled by default when entry point is an HTML file
   // otherwise it's disabled. It can still be explicitely enabled for non HTML entry file
   // in that case the returned buildImportMap must be injected into an html file
@@ -217,16 +219,18 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap,
+      babelPluginMap: compileServer.babelPluginMap,
       transformTopLevelAwait,
       runtimeSupport,
 
       urlVersioning,
+      urlVersionningForEntryPoints,
       lineBreakNormalization,
       useImportMapToMaximizeCacheReuse,
       preserveEntrySignatures,
       treeshake,
       jsConcatenation,
+      cssConcatenation,
 
       minify,
       minifyHtmlOptions,

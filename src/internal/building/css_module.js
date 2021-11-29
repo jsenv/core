@@ -1,6 +1,6 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { replaceCssUrls } from "@jsenv/core/src/internal/building/css/replaceCssUrls.js"
+import { moveCssUrls } from "@jsenv/core/src/internal/building/css/moveCssUrls.js"
 import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
 import {
   getCssSourceMappingUrl,
@@ -16,18 +16,14 @@ export const convertCssTextToJavascriptModule = async ({
   const directoryUrl = resolveUrl("./", cssUrl)
   const jsDirectoryUrl = resolveUrl("./", jsUrl)
   if (directoryUrl !== jsDirectoryUrl) {
-    const cssUrlReplaceResult = await replaceCssUrls({
-      url: cssUrl,
+    const moveUrlResult = await moveCssUrls({
+      from: cssUrl,
+      to: jsUrl,
       code,
       map,
-      getUrlReplacementValue: ({ specifier }) => {
-        const urlForCss = resolveUrl(specifier, cssUrl)
-        const urlForJs = urlToRelativeUrl(urlForCss, jsUrl)
-        return urlForJs
-      },
     })
-    code = cssUrlReplaceResult.code
-    map = cssUrlReplaceResult.map
+    code = moveUrlResult.code
+    map = moveUrlResult.map
     const sourcemapUrlSpecifier = getCssSourceMappingUrl(code)
     const sourcemapUrlForCss = resolveUrl(sourcemapUrlSpecifier, cssUrl)
     const sourcemapUrlForJs = urlToRelativeUrl(sourcemapUrlForCss, jsUrl)

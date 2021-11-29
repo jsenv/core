@@ -39,7 +39,7 @@ const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
 // ensure font urls properly updated in css file
-const cssUrls = await parseCssUrls(cssString, cssBuildUrl)
+const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
 const fontSpecifier = cssUrls.atImports[0].specifier
 
 const actual = fontSpecifier

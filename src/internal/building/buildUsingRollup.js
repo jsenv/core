@@ -50,8 +50,10 @@ export const buildUsingRollup = async ({
   importPaths,
 
   urlVersioning,
+  urlVersionningForEntryPoints,
   lineBreakNormalization,
   jsConcatenation,
+  cssConcatenation,
   useImportMapToMaximizeCacheReuse,
   preserveEntrySignatures,
   treeshake,
@@ -121,8 +123,10 @@ export const buildUsingRollup = async ({
     importPaths,
 
     urlVersioning,
+    urlVersionningForEntryPoints,
     lineBreakNormalization,
     jsConcatenation,
+    cssConcatenation,
     useImportMapToMaximizeCacheReuse,
 
     minify,

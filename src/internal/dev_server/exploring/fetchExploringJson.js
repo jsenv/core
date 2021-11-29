@@ -1,5 +1,3 @@
-import { createDetailedMessage } from "@jsenv/logger"
-
 import { fetchJson } from "../../browser-utils/fetchJson.js"
 
 export const fetchExploringJson = async ({ signal } = {}) => {
@@ -13,12 +11,9 @@ export const fetchExploringJson = async ({ signal } = {}) => {
       throw e
     }
     throw new Error(
-      createDetailedMessage(
-        `Cannot communicate with exploring server due to a network error`,
-        {
-          ["error stack"]: e.stack,
-        },
-      ),
+      `Cannot communicate with exploring server due to a network error
+--- error stack ---
+${e.stack}`,
     )
   }
 }

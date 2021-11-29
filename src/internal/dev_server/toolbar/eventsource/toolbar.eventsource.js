@@ -15,9 +15,9 @@ export const initToolbarEventSource = ({ livereloading }) => {
   if (!livereloadingAvailableOnServer) {
     disableLivereloadSetting()
   }
-  parentEventSourceClient.setConnectionStatusChangeCallback = () => {
+  parentEventSourceClient.setConnectionStatusChangeCallback(() => {
     updateEventSourceIndicator()
-  }
+  })
   const livereloadCheckbox = document.querySelector("#toggle-livereload")
   livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled()
   livereloadCheckbox.onchange = () => {

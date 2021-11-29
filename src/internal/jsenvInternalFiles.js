@@ -14,32 +14,6 @@ export const jsenvNodeSystemFileInfo = {
   ),
 }
 
-export const jsenvBrowserSystemFileInfo = {
-  jsenvRelativeUrl: "./src/internal/browser-launcher/jsenv-browser-system.js",
-  jsenvBuildRelativeUrl: "./jsenv_browser_system.js",
-  jsenvBuildUrl: resolveUrl(
-    "./dist/jsenv_browser_system.js",
-    jsenvCoreDirectoryUrl,
-  ),
-}
-
-export const jsenvCompileProxyHtmlFileInfo = {
-  jsenvRelativeUrl: "./src/internal/browser-launcher/jsenv_compile_proxy.html",
-  url: resolveUrl(
-    "./src/internal/browser-launcher/jsenv_compile_proxy.html",
-    jsenvCoreDirectoryUrl,
-  ),
-}
-
-export const jsenvCompileProxyFileInfo = {
-  jsenvRelativeUrl: "./src/internal/browser-launcher/jsenv_compile_proxy.js",
-  jsenvBuildRelativeUrl: "./jsenv_compile_proxy.js",
-  jsenvBuildUrl: resolveUrl(
-    "./dist/jsenv_compile_proxy.js",
-    jsenvCoreDirectoryUrl,
-  ),
-}
-
 export const sourcemapMainFileInfo = {
   url: fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js")),
 }

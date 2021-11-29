@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/internal/dev_server/toolbar/eventsource/eventsource.css"
+  ],
+  "names": [],
+  "mappings": "AAAA;EACE,kBAAkB;AACpB;;AAEA;EACE,WAAW;EACX,YAAY;AACd;;AAEA;EACE,kBAAkB;EAClB,WAAW;EACX,YAAY;EACZ,WAAW;EACX,OAAO;EACP,MAAM;AACR;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,WAAW;EACX,YAAY;AACd;;AAEA;EACE,aAAa;EACb,eAAe;AACjB;;AAEA;EACE,aAAa;AACf;;AAEA;EACE,aAAa;EACb,sCAAsC;EACtC,wBAAwB;AAC1B;;AAEA;EACE;IACE,UAAU;EACZ;EACA;IACE,UAAU;EACZ;EACA;IACE,UAAU;EACZ;AACF;;AAEA;EACE,iCAAiC;EACjC,eAAe;EACf,iBAAiB;EACjB,uCAAuC;EACvC,wBAAwB;AAC1B;;AAEA;EACE;IACE,mBAAmB;IACnB,UAAU;EACZ;EACA;IACE,UAAU;EACZ;EACA;IACE,mBAAmB;IACnB,UAAU;EACZ;AACF;;AAEA;EACE,WAAW;AACb;;AAEA;EACE,aAAa;AACf",
+  "file": "eventsource-5deb40f8.css",
+  "sourcesContent": [
+    "#eventsource-indicator button {\n  position: relative;\n}\n\n#eventsource-indicator button svg {\n  width: 40px;\n  height: 40px;\n}\n\n#eventsource-indicator .event-source-livereload {\n  position: absolute;\n  width: 32px;\n  height: 32px;\n  margin: 4px;\n  left: 0;\n  top: 0;\n}\n\n.event-source-livereload[data-variant=\"enabled\"] {\n  color: green;\n}\n\n#eventsource-indicator .event-source-icon {\n  width: 40px;\n  height: 40px;\n}\n\n.eventsource-circle {\n  stroke: black;\n  stroke-width: 0;\n}\n\n.eventsource-circle[data-variant=\"off\"] {\n  fill: #cecece;\n}\n\n.eventsource-circle[data-variant=\"connecting\"] {\n  fill: #cecece;\n  animation: wink 1.2s ease-out infinite;\n  transform-origin: center;\n}\n\n@keyframes wink {\n  0% {\n    opacity: 0;\n  }\n  80% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n  }\n}\n\n.eventsource-ring {\n  stroke: rgba(206, 206, 206, 0.46);\n  stroke-width: 4;\n  fill: transparent;\n  animation: pulse 1.2s ease-out infinite;\n  transform-origin: center;\n}\n\n@keyframes pulse {\n  0% {\n    transform: scale(0);\n    opacity: 0;\n  }\n  50% {\n    opacity: 1;\n  }\n  100% {\n    transform: scale(1);\n    opacity: 0;\n  }\n}\n\n.eventsource-circle[data-variant=\"connected\"] {\n  fill: green;\n}\n\n.eventsource-circle[data-variant=\"failed\"] {\n  fill: #cc0000;\n}\n"
+  ]
+}

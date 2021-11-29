@@ -1,13 +1,48 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Exploring redirector</title>
+    <title>Jsenv redirector</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
   </head>
 
   <body>
-    <script src="/.jsenv/redirector.js"></script>
+    <script
+      type="importmap"
+      src="../../../../node_resolution.importmap"
+    ></script>
+    <script type="module">
+      import { scanBrowserRuntimeFeatures } from "../../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
+
+      const redirect = async () => {
+        const redirectTarget = new URLSearchParams(window.location.search).get(
+          "redirect",
+        )
+        const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures({
+          failFastOnFeatureDetection: true,
+        })
+
+        const href = `${getDirectoryUrl(
+          browserRuntimeFeaturesReport,
+        )}${redirectTarget}`
+        // It's IMPORTANT to use location.replace and NOT location.href = url
+        // otherwise it would break the back button
+        window.location.replace(href)
+      }
+
+      const getDirectoryUrl = ({
+        canAvoidCompilation,
+        outDirectoryRelativeUrl,
+        compileId,
+      }) => {
+        if (canAvoidCompilation) {
+          return `/`
+        }
+        return `/${outDirectoryRelativeUrl}${compileId}/`
+      }
+
+      redirect()
+    </script>
   </body>
 </html>

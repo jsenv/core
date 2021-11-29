@@ -39,6 +39,7 @@ await launchBrowsers(
         ...LAUNCH_TEST_PARAMS,
         // headless: false,
       },
+      // stopAfterExecute: false,
       fileRelativeUrl,
       captureConsole: true,
     })

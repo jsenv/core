@@ -24,7 +24,7 @@ const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
 const compileId = "best"
 
-const test = async ({ canUseNativeModuleSystem } = {}) => {
+const test = async ({ forceSystemJs } = {}) => {
   const result = await execute({
     ...EXECUTE_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
@@ -32,7 +32,7 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
     runtime: nodeRuntime,
     runtimeParams: {
       ...LAUNCH_TEST_PARAMS,
-      canUseNativeModuleSystem,
+      forceSystemJs,
     },
     fileRelativeUrl,
     collectCompileServerInfo: true,
@@ -44,15 +44,19 @@ const test = async ({ canUseNativeModuleSystem } = {}) => {
 // with node
 {
   const result = await test()
-  const actual = result
-  const expected = actual
+  const actual = {
+    error: result.error,
+  }
+  const expected = {
+    error: new SyntaxError(`Unexpected end of input`),
+  }
   assert({ actual, expected })
 }
 
 // with systemjs
 {
   const { status, error, outDirectoryRelativeUrl } = await test({
-    canUseNativeModuleSystem: false,
+    forceSystemJs: true,
   })
   const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 

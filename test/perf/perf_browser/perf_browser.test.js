@@ -1,0 +1,74 @@
+import { assert } from "@jsenv/assert"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+
+import {
+  execute,
+  chromiumRuntime,
+  firefoxRuntime,
+  webkitRuntime,
+} from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
+import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
+
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}perf.html`
+
+if (process.platform !== "win32") {
+  await launchBrowsers(
+    [
+      // comment to ensure multiline
+      chromiumRuntime,
+      firefoxRuntime,
+      webkitRuntime,
+    ],
+    async (browserRuntime) => {
+      const { status, namespace, performance } = await execute({
+        ...EXECUTE_TEST_PARAMS,
+        jsenvDirectoryRelativeUrl,
+        runtime: browserRuntime,
+        fileRelativeUrl,
+        stopAfterExecute: true,
+        mirrorConsole: false,
+        measurePerformance: true,
+        collectPerformance: true,
+        // runtimeParams: {
+        //   headless: false,
+        // },
+        // stopAfterExecute: false,
+      })
+      const actual = {
+        status,
+        namespace,
+        performance,
+      }
+      const expected = {
+        status: "completed",
+        namespace: {
+          [`./perf.js`]: {
+            status: "completed",
+            namespace: {},
+          },
+        },
+        performance: {
+          timeOrigin: assert.any(Number),
+          timing: actual.performance.timing,
+          navigation: {
+            type: 0,
+            redirectCount: 0,
+          },
+          measures: {
+            "jsenv_file_import": assert.any(Number),
+            "a to b": assert.any(Number),
+          },
+        },
+      }
+      assert({ actual, expected })
+    },
+  )
+}

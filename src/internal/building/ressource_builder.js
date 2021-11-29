@@ -49,6 +49,7 @@ export const createRessourceBuilder = (
     entryUrl,
     entryBuffer,
     entryBuildRelativeUrl,
+    urlVersionningForEntryPoints,
   }) => {
     // The entry point is conceptually referenced by code passing "entryPointMap"
     // to buildProject. So we analyse stack trace to put this function caller
@@ -68,8 +69,12 @@ export const createRessourceBuilder = (
       isEntryPoint: true,
 
       // don't hash asset entry points
-      urlVersioningDisabled: true,
-      fileNamePattern: entryBuildRelativeUrl,
+      ...(urlVersionningForEntryPoints
+        ? {}
+        : {
+            urlVersioningDisabled: true,
+            fileNamePattern: entryBuildRelativeUrl,
+          }),
     })
     entryReference.isProgrammatic = true
 
@@ -567,6 +572,10 @@ export const createRessourceBuilder = (
       )
       await transform({
         buildDirectoryUrl,
+        precomputeBuildRelativeUrl: (ressource) =>
+          precomputeBuildRelativeUrlForRessource(ressource, {
+            lineBreakNormalization,
+          }),
         getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
 
@@ -1021,7 +1030,7 @@ const isEmitChunkNeeded = ({ ressource, reference }) => {
  *
  * see also:
  * - https://rollupjs.org/guide/en/#thisemitfileemittedfile-emittedchunk--emittedasset--string
- * -https://github.com/rollup/rollup/issues/2872
+ * - https://github.com/rollup/rollup/issues/2872
  */
 const referenceShouldBeIgnoredWarning = ({
   isJsModule,

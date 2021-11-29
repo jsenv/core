@@ -39,6 +39,7 @@ export const parseRessource = (
     minifyJs,
     minifyHtml,
     minifyCssOptions,
+    cssConcatenation,
   },
 ) => {
   const { contentType } = ressource
@@ -124,10 +125,12 @@ export const parseRessource = (
 
   if (contentType === "text/css") {
     return parseCssRessource(ressource, notifiers, {
+      asProjectUrl,
       asOriginalUrl,
       asOriginalServerUrl,
       minify,
       minifyCssOptions,
+      cssConcatenation,
     })
   }
 

@@ -1,5 +1,3 @@
-import { createDetailedMessage } from "@jsenv/logger"
-
 export const fetchUsingXHR = async (
   url,
   {
@@ -206,9 +204,9 @@ const hasSearchParams = typeof window.URLSearchParams === "function"
 
 const createRequestError = (error, { url }) => {
   return new Error(
-    createDetailedMessage(`error during xhr request on ${url}.`, {
-      ["error stack"]: error.stack,
-    }),
+    `error during xhr request on ${url}.
+--- error stack ---
+${error.stack}`,
   )
 }
 

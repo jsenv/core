@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" type="text/css" href="./toolbar.main.css" />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="./toolbar.main.css"
+      data-jsenv-force-inline
+    />
   </head>
   <body>
     <div id="toolbar-overlay"></div>
@@ -13,7 +18,7 @@
     <div id="toolbar">
       <div id="toolbar-wrapper">
         <section id="file-list-link" data-responsive-toolbar-element>
-          <a class="toolbar-icon-wrapper" href="">
+          <a class="toolbar-icon-wrapper" href="/">
             <svg
               id="fileIconSvg"
               class="iconToolbar"
@@ -251,7 +256,7 @@
             </div>
             <div id="settings-box-body">
               <div class="settings-box-items-wrapper">
-                <div class="settings-box-item">
+                <div class="settings-box-item settings-notification">
                   <div class="category-title">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -274,6 +279,14 @@
                   </label>
                   <div class="category-subtitle">
                     Send system notification when execution fails or is fixed.
+                    <div class="notification-text">
+                      <a
+                        data-when="notif_permission:no"
+                        class="request_notification_permission"
+                        href="javascript:void(0);"
+                        >Enable notification</a
+                      >
+                    </div>
                   </div>
                 </div>
                 <div class="settings-box-item settings-livereload">
@@ -526,7 +539,7 @@
     <!--
      Reusable svg(s)
     -->
-    <div style="display: none">
+    <div style="display: none; position: absolute">
       <svg
         id="loading_svg"
         xmlns="http://www.w3.org/2000/svg"
@@ -551,6 +564,19 @@
     module approach wil be faster because
     no compilation will be necessary
     -->
-    <script src="/.jsenv/toolbar.main.js"></script>
+    <script
+      type="importmap"
+      src="../../../../node_resolution.importmap"
+    ></script>
+    <script>
+      // here we should create something like window.toolbar = {}
+      // and a promise the toolbar injector can listen to act on the toolbar
+      // or we could just consider all communication should pass by postmessage
+    </script>
+    <script
+      type="module"
+      src="./toolbar.main.js"
+      data-jsenv-force-inline
+    ></script>
   </body>
 </html>

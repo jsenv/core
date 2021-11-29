@@ -2,14 +2,14 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { jsenvBrowserSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { eventSourceClientFileInfo } from "@jsenv/core/src/internal/dev_server/event_source_client/event_source_client_file_info.js"
 import {
-  toolbarInjectorFileInfo,
-  toolbarHtmlFileInfo,
-} from "@jsenv/core/src/internal/dev_server/toolbar/toolbar_file_info.js"
+  BROWSER_SYSTEM_BUILD_URL,
+  EVENT_SOURCE_CLIENT_BUILD_URL,
+  TOOLBAR_INJECTOR_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
+
 import {
   setJavaScriptSourceMappingUrl,
   sourcemapToBase64Url,
@@ -54,16 +54,18 @@ export const compileHtml = async ({
   jsenvToolbarInjection,
   onHtmlImportmapInfo,
 }) => {
-  const jsenvBrowserBuildUrlRelativeToProject = urlToRelativeUrl(
-    jsenvBrowserSystemFileInfo.jsenvBuildUrl,
+  const browserSystemBuildUrlRelativeToProject = urlToRelativeUrl(
+    BROWSER_SYSTEM_BUILD_URL,
     projectDirectoryUrl,
   )
+
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    eventSourceClientFileInfo.buildUrl,
+    EVENT_SOURCE_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
+
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    toolbarInjectorFileInfo.buildUrl,
+    TOOLBAR_INJECTOR_BUILD_URL,
     projectDirectoryUrl,
   )
 
@@ -74,26 +76,23 @@ export const compileHtml = async ({
     await mutateRessourceHints(htmlAst)
   }
 
-  const urlNoSearch = urlWithoutSearch(url)
-
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
-      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl && jsenvScriptInjection
+      ...(jsenvScriptInjection
         ? [
             {
-              src: `/${jsenvBrowserBuildUrlRelativeToProject}`,
+              src: `/${browserSystemBuildUrlRelativeToProject}`,
             },
           ]
         : []),
-      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl &&
-      jsenvEventSourceClientInjection
+      ...(jsenvEventSourceClientInjection
         ? [
             {
               src: `/${eventSourceClientBuildRelativeUrlForProject}`,
             },
           ]
         : []),
-      ...(urlNoSearch !== toolbarHtmlFileInfo.sourceUrl && jsenvToolbarInjection
+      ...(jsenvToolbarInjection
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
@@ -404,10 +403,4 @@ const mutateRessourceHints = async (htmlAst) => {
     }),
   )
   mutations.forEach((mutation) => mutation())
-}
-
-const urlWithoutSearch = (url) => {
-  const urlObject = new URL(url)
-  urlObject.search = ""
-  return urlObject.href
 }

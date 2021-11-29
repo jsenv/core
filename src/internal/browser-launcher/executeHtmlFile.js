@@ -5,7 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
-import { jsenvCompileProxyHtmlFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { COMPILE_PROXY_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_utils/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
@@ -39,7 +39,7 @@ export const executeHtmlFile = async (
   await assertFilePresence(fileUrl)
 
   const compileProxyProjectRelativeUrl = urlToRelativeUrl(
-    jsenvCompileProxyHtmlFileInfo.url,
+    COMPILE_PROXY_BUILD_URL,
     projectDirectoryUrl,
   )
   const compileProxyClientUrl = resolveUrl(
@@ -55,7 +55,10 @@ export const executeHtmlFile = async (
   executeOperation.throwIfAborted()
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
-    ({ coverageHandledFromOutside }) => {
+    async ({ coverageHandledFromOutside }) => {
+      // eslint-disable-next-line no-undef
+      await window.readyPromise
+
       // eslint-disable-next-line no-undef
       return window.scanBrowserRuntimeFeatures({
         coverageHandledFromOutside,

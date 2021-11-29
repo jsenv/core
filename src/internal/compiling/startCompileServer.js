@@ -29,12 +29,16 @@ import {
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 
+import {
+  TOOLBAR_INJECTOR_BUILD_URL,
+  EVENT_SOURCE_CLIENT_BUILD_URL,
+  BROWSER_SYSTEM_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import {
-  jsenvCompileProxyFileInfo,
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "../jsenvInternalFiles.js"
@@ -294,9 +298,6 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       outDirectoryUrl,
       compileServerMetaFileInfo,
-    }),
-    "service: compile proxy": createCompileProxyService({
-      projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
@@ -913,14 +914,23 @@ const createSourceFileService = ({
     const relativeUrl = request.pathname.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
 
-    const responsePromise = fetchFileSystem(
-      new URL(request.ressource.slice(1), projectDirectoryUrl),
-      {
-        headers: request.headers,
-        etagEnabled: projectFileCacheStrategy === "etag",
-        mtimeEnabled: projectFileCacheStrategy === "mtime",
-      },
+    const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
+      .href
+    const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
+      fileUrl,
+      new URL("./dist/", jsenvCoreDirectoryUrl),
     )
+
+    const responsePromise = fetchFileSystem(fileUrl, {
+      headers: request.headers,
+      etagEnabled: projectFileCacheStrategy === "etag",
+      mtimeEnabled: projectFileCacheStrategy === "mtime",
+      ...(fileIsInsideJsenvDistDirectory
+        ? {
+            cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
+          }
+        : {}),
+    })
 
     return responsePromise
   }
@@ -965,6 +975,12 @@ const createCompileServerMetaFileInfo = ({
     sourcemapMappingFileInfo.url,
     projectDirectoryUrl,
   )
+  // The object below must list everything that can influence how the
+  // compiled files are generated. So that the cahce for those generated files is
+  // not reused when it should not
+  // In some cases the parameters influences only a subset of files and ideally
+  // this parameter should somehow invalidate a subset of the cache
+  // To keep things simple these parameters currently invalidates the whole cache
   const compileServerMeta = {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -983,8 +999,15 @@ const createCompileServerMetaFileInfo = ({
     sourcemapMappingFileRelativeUrl,
     errorStackRemapping: true,
 
+    // used to consider the logic generating files may have changed
     jsenvCorePackageVersion,
+
+    // impact only HTML files
     jsenvToolbarInjection,
+    TOOLBAR_INJECTOR_BUILD_URL,
+    EVENT_SOURCE_CLIENT_BUILD_URL,
+    BROWSER_SYSTEM_BUILD_URL,
+
     env,
   }
   return {
@@ -1047,27 +1070,6 @@ const createCompileServerMetaService = ({
           "content-length": Buffer.byteLength(body),
         },
         body,
-      }
-    }
-
-    return null
-  }
-}
-
-const createCompileProxyService = ({ projectDirectoryUrl }) => {
-  const jsenvCompileProxyRelativeUrlForProject = urlToRelativeUrl(
-    jsenvCompileProxyFileInfo.jsenvBuildUrl,
-    projectDirectoryUrl,
-  )
-
-  return (request) => {
-    if (request.ressource === "/.jsenv/jsenv_compile_proxy.js") {
-      const jsenvCompileProxyBuildServerUrl = `${request.origin}/${jsenvCompileProxyRelativeUrlForProject}`
-      return {
-        status: 307,
-        headers: {
-          location: jsenvCompileProxyBuildServerUrl,
-        },
       }
     }
 
