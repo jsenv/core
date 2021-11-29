@@ -1,11 +1,7 @@
 import { fork } from "node:child_process"
 import { uneval } from "@jsenv/uneval"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import {
-  urlToFileSystemPath,
-  resolveUrl,
-  assertFilePresence,
-} from "@jsenv/filesystem"
+import { urlToFileSystemPath, assertFilePresence } from "@jsenv/filesystem"
 import {
   Abort,
   raceCallbacks,
@@ -13,8 +9,7 @@ import {
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 
-import { nodeSupportsDynamicImport } from "../runtime/node-feature-detect/nodeSupportsDynamicImport.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { nodeSupportsDynamicImport } from "../node_feature_detection/nodeSupportsDynamicImport.js"
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
 import {
   processOptionsFromExecArgv,
@@ -22,10 +17,10 @@ import {
 } from "./processOptions.js"
 import { killProcessTree } from "./kill_process_tree.js"
 
-const nodeControllableFileUrl = resolveUrl(
-  "./src/internal/node-launcher/nodeControllableFile.mjs",
-  jsenvCoreDirectoryUrl,
-)
+const NODE_CONTROLLABLE_FILE_URL = new URL(
+  "../node_runtime/nodeControllableFile.mjs",
+  import.meta.url,
+).href
 
 // https://nodejs.org/api/process.html#process_signal_events
 const SIGINT_SIGNAL_NUMBER = 2
@@ -79,12 +74,12 @@ export const createControllableNodeProcess = async ({
     throw new TypeError(`env must be an object, got ${env}`)
   }
 
-  await assertFilePresence(nodeControllableFileUrl)
+  await assertFilePresence(NODE_CONTROLLABLE_FILE_URL)
   const envForChildProcess = {
     ...(inheritProcessEnv ? process.env : {}),
     ...env,
   }
-  const childProcess = fork(urlToFileSystemPath(nodeControllableFileUrl), {
+  const childProcess = fork(urlToFileSystemPath(NODE_CONTROLLABLE_FILE_URL), {
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -111,7 +106,7 @@ export const createControllableNodeProcess = async ({
   if (logProcessCommand) {
     console.log(
       `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(
-        nodeControllableFileUrl,
+        NODE_CONTROLLABLE_FILE_URL,
       )}`,
     )
   }

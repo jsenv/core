@@ -5,8 +5,8 @@ import {
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
 
-import { createChildProcessOptions } from "@jsenv/core/src/internal/node-launcher/createChildProcessOptions.js"
-import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node-launcher/processOptions.js"
+import { createChildProcessOptions } from "@jsenv/core/src/internal/node_launcher/createChildProcessOptions.js"
+import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node_launcher/processOptions.js"
 
 const CONTROLLABLE_FILE_URL = resolveUrl(
   "./controllable-file.js",

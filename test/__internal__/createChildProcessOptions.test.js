@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 
-import { createChildProcessOptions } from "@jsenv/core/src/internal/node-launcher/createChildProcessOptions.js"
-import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node-launcher/processOptions.js"
+import { createChildProcessOptions } from "@jsenv/core/src/internal/node_launcher/createChildProcessOptions.js"
+import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node_launcher/processOptions.js"
 
 const test = async (params) => {
   const options = await createChildProcessOptions(params)

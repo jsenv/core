@@ -11,9 +11,9 @@ import { memoize } from "@jsenv/filesystem"
 
 import { fetchUrl } from "./internal/fetchUrl.js"
 import { validateResponse } from "./internal/response_validation.js"
-import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
-import { createSharing } from "./internal/browser-launcher/createSharing.js"
-import { executeHtmlFile } from "./internal/browser-launcher/executeHtmlFile.js"
+import { trackPageToNotify } from "./internal/browser_launcher/trackPageToNotify.js"
+import { createSharing } from "./internal/browser_launcher/createSharing.js"
+import { executeHtmlFile } from "./internal/browser_launcher/executeHtmlFile.js"
 import {
   PLAYWRIGHT_CHROMIUM_VERSION,
   PLAYWRIGHT_FIREFOX_VERSION,

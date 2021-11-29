@@ -5,8 +5,8 @@ import { startObservingPerformances } from "./node_execution_performance.js"
 import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
 
 import { installNodeErrorStackRemapping } from "@jsenv/core/src/internal/error-stack-remapping/installNodeErrorStackRemapping.js"
-import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/fetchSource.js"
-import { createNodeSystem } from "@jsenv/core/src/internal/runtime/createNodeRuntime/createNodeSystem.js"
+import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
+import { createNodeSystem } from "@jsenv/core/src/internal/node_runtime/node_system.js"
 
 export const execute = async ({
   projectDirectoryUrl,

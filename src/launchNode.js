@@ -3,8 +3,8 @@ import { loggerToLogLevel } from "@jsenv/logger"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
-import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
-import { scanNodeRuntimeFeatures } from "./internal/node-launcher/node_runtime_features.js"
+import { createControllableNodeProcess } from "./internal/node_launcher/createControllableNodeProcess.js"
+import { scanNodeRuntimeFeatures } from "./internal/node_feature_detection/node_feature_detection.js"
 
 export const nodeRuntime = {
   name: "node",

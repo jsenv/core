@@ -6,7 +6,7 @@ const fetchPolyfill = async (...args) => {
 }
 
 const loadPolyfill = memoize(() =>
-  import("../../../browser-utils/fetchUsingXHR.js"),
+  import("../../../browser_utils/fetchUsingXHR.js"),
 )
 
 export const fetchUrl =

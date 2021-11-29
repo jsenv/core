@@ -1,6 +1,7 @@
-import { getJavaScriptModuleResponseError } from "../module-registration.js"
+/* eslint-env browser */
 
-import "../s.js"
+import { getJavaScriptModuleResponseError } from "../runtime/module-registration.js"
+import "../runtime/s.js"
 
 export const createBrowserSystem = ({
   compileServerOrigin,

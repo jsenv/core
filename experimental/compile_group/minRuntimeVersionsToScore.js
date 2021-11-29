@@ -1,7 +1,7 @@
 import {
   versionCompare,
   findHighestVersion,
-} from "@jsenv/core/src/internal/semantic-versioning/index.js"
+} from "@jsenv/core/src/internal/semantic_versioning/index.js"
 
 export const minRuntimeVersionsToScore = (
   minRuntimeVersions,

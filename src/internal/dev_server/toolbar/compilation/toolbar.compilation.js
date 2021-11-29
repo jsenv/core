@@ -1,4 +1,4 @@
-import { scanBrowserRuntimeFeatures } from "../../../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
+import { scanBrowserRuntimeFeatures } from "../../../browser_feature_detection/browser_feature_detection.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant/variant.js"
 

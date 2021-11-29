@@ -1,4 +1,4 @@
-import { findHighestVersion } from "../semantic-versioning/index.js"
+import { findHighestVersion } from "../semantic_versioning/index.js"
 
 export const createOneRuntimeCompat = ({
   runtimeName,

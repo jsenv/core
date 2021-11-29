@@ -1,4 +1,4 @@
-import { findHighestVersion } from "../semantic-versioning/index.js"
+import { findHighestVersion } from "../semantic_versioning/index.js"
 
 export const resolveGroup = ({ name, version }, groupMap) => {
   return Object.keys(groupMap).find((compileIdCandidate) => {

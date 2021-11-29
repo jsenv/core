@@ -15,10 +15,10 @@
     </script>
     <script
       type="importmap"
-      src="../../../../node_resolution.importmap"
+      src="../../../node_resolution.importmap"
     ></script>
     <script type="module">
-      import { scanBrowserRuntimeFeatures } from "../../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
+      import { scanBrowserRuntimeFeatures } from "./browser_feature_detection.js"
 
       window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures
       window.resolveReadyPromise()

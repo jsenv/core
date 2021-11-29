@@ -1,7 +1,9 @@
-import { fetchJson } from "../../browser-utils/fetchJson.js"
-import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { detectBrowser } from "../detectBrowser/detectBrowser.js"
-import { resolveGroup } from "../resolveGroup.js"
+/* eslint-env browser */
+
+import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
+import { resolveGroup } from "../runtime/resolveGroup.js"
+import { fetchJson } from "../browser_utils/fetchJson.js"
+import { detectBrowser } from "../browser_detection/browser_detection.js"
 
 export const scanBrowserRuntimeFeatures = async ({
   coverageHandledFromOutside = false,

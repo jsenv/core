@@ -1,4 +1,7 @@
+/* eslint-env browser */
+
 import { createDetailedMessage } from "@jsenv/logger"
+
 import { fetchUrl } from "./fetch-browser.js"
 
 export const fetchAndEvalUsingFetch = async (url) => {

@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 export const fetchAndEvalUsingScript = async (src) => {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script")

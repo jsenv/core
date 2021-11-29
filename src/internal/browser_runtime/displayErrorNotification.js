@@ -3,10 +3,8 @@ const { Notification } = window
 
 const displayErrorNotificationNotAvailable = () => {}
 
-const displayErrorNotificationImplementation = async (error, { icon } = {}) => {
-  const permission = await Notification.requestPermission()
-
-  if (permission === "granted") {
+const displayErrorNotificationImplementation = (error, { icon } = {}) => {
+  if (Notification.permission === "granted") {
     const notification = new Notification("An error occured", {
       lang: "en",
       body: error.stack,

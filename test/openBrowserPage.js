@@ -1,6 +1,6 @@
 import { require } from "@jsenv/core/src/internal/require.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
-import { evalSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/evalSource.js"
+import { evalSource } from "@jsenv/core/src/internal/node_runtime/evalSource.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
 const { chromium } = require("playwright")

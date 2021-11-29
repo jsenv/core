@@ -1,4 +1,4 @@
-import { fetchUrl } from "../../fetchUrl.js"
+import { fetchUrl } from "../fetchUrl.js"
 
 export const fetchSource = (url, { executionId } = {}) => {
   return fetchUrl(url, {

@@ -1,3 +1,5 @@
+/* eslint-env browser */
+
 export const fetchUsingXHR = async (
   url,
   {

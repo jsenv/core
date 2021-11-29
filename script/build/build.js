@@ -42,23 +42,22 @@ addExport(
 
 await buildInternalFile({
   format: "global",
-  buildDirectoryRelativeUrl: "./dist/browser_system/",
+  buildDirectoryRelativeUrl: "./dist/browser_runtime/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPointMap: {
-    "./src/internal/browser-launcher/browser_system/browser_system.js":
-      "./browser_system.js",
+    "./src/internal/browser_runtime/browser_runtime.js": "./browser_runtime.js",
   },
 })
 addExport(
-  "BROWSER_SYSTEM_BUILD_URL",
-  `browser_system/${buildManifest["browser_system.js"]}`,
+  "BROWSER_RUNTIME_BUILD_URL",
+  `browser_runtime/${buildManifest["browser_runtime.js"]}`,
 )
 
 await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/compile_proxy/",
   entryPointMap: {
-    "./src/internal/browser-launcher/compile_proxy/compile_proxy.html":
+    "./src/internal/browser_feature_detection/compile_proxy.html":
       "./compile_proxy.html",
   },
 })

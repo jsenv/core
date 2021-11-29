@@ -1,14 +1,14 @@
 /* eslint-env browser */
 
-import { unevalException } from "../../unevalException.js"
-import { createBrowserRuntime } from "../../runtime/createBrowserRuntime/createBrowserRuntime.js"
-import { installBrowserErrorStackRemapping } from "../../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchUrl } from "../../browser-utils/fetch-browser.js"
-import { fetchAndEvalUsingFetch } from "../../browser-utils/fetchAndEvalUsingFetch.js"
-import { memoize } from "../../memoize.js"
+import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
+import { fetchUrl } from "../browser_utils/fetch-browser.js"
+import { fetchAndEvalUsingFetch } from "../browser_utils/fetchAndEvalUsingFetch.js"
+import { unevalException } from "../unevalException.js"
+import { memoize } from "../memoize.js"
 
-import { displayErrorInDocument } from "../displayErrorInDocument.js"
-import { displayErrorNotification } from "../displayErrorNotification.js"
+import { displayErrorInDocument } from "./displayErrorInDocument.js"
+import { displayErrorNotification } from "./displayErrorNotification.js"
+import { createBrowserRuntime } from "./createBrowserRuntime.js"
 
 const getNavigationStartTime = () => {
   try {
