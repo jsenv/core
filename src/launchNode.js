@@ -4,7 +4,7 @@ import { loggerToLogLevel } from "@jsenv/logger"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node_launcher/createControllableNodeProcess.js"
-import { scanNodeRuntimeFeatures } from "./internal/node_feature_detection/node_feature_detection.js"
+import { getNodeRuntimeReport } from "./internal/node_launcher/node_runtime_report.js"
 
 export const nodeRuntime = {
   name: "node",
@@ -16,6 +16,7 @@ nodeRuntime.launch = async ({
   logProcessCommand,
 
   projectDirectoryUrl,
+  compileServerId,
   compileServerOrigin,
   outDirectoryRelativeUrl,
 
@@ -115,7 +116,9 @@ nodeRuntime.launch = async ({
     }
 
     // the computation of runtime features can be cached
-    const nodeFeatures = await scanNodeRuntimeFeatures({
+    const nodeFeatures = await getNodeRuntimeReport({
+      runtime: nodeRuntime,
+      compileServerId,
       compileServerOrigin,
       outDirectoryRelativeUrl,
       // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
