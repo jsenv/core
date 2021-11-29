@@ -29,6 +29,11 @@ import {
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 
+import {
+  TOOLBAR_INJECTOR_BUILD_URL,
+  EVENT_SOURCE_CLIENT_BUILD_URL,
+  BROWSER_SYSTEM_BUILD_URL,
+} from "@jsenv/core/dist/build_manifest.js"
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
@@ -970,6 +975,12 @@ const createCompileServerMetaFileInfo = ({
     sourcemapMappingFileInfo.url,
     projectDirectoryUrl,
   )
+  // The object below must list everything that can influence how the
+  // compiled files are generated. So that the cahce for those generated files is
+  // not reused when it should not
+  // In some cases the parameters influences only a subset of files and ideally
+  // this parameter should somehow invalidate a subset of the cache
+  // To keep things simple these parameters currently invalidates the whole cache
   const compileServerMeta = {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -988,8 +999,15 @@ const createCompileServerMetaFileInfo = ({
     sourcemapMappingFileRelativeUrl,
     errorStackRemapping: true,
 
+    // used to consider the logic generating files may have changed
     jsenvCorePackageVersion,
+
+    // impact only HTML files
     jsenvToolbarInjection,
+    TOOLBAR_INJECTOR_BUILD_URL,
+    EVENT_SOURCE_CLIENT_BUILD_URL,
+    BROWSER_SYSTEM_BUILD_URL,
+
     env,
   }
   return {
