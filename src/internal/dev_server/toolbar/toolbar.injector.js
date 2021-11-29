@@ -150,7 +150,9 @@ const injectToolbar = async () => {
       showToolbarTrigger()
     }
   })
-  sendCommandToToolbar(iframe, "renderToolbar")
+  addToolbarEventCallback(iframe, "toolbar_ready", () => {
+    sendCommandToToolbar(iframe, "renderToolbar")
+  })
 
   return iframe
 }

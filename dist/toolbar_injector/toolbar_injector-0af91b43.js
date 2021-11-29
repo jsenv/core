@@ -746,7 +746,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-d3d98c2e.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-29e91dcd.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -872,7 +872,9 @@
               showToolbarTrigger();
             }
           });
-          sendCommandToToolbar(iframe, "renderToolbar");
+          addToolbarEventCallback(iframe, "toolbar_ready", function () {
+            sendCommandToToolbar(iframe, "renderToolbar");
+          });
           return iframe;
         });
       });
@@ -968,4 +970,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-01f71ce3.js.map
+//# sourceMappingURL=toolbar_injector-0af91b43.js.map

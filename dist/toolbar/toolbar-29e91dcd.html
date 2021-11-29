@@ -1830,7 +1830,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-cab36c15.js"
+    "./toolbar.main.js": "./toolbar.main-53e1ab2b.js"
   }
 }</script>
     <script>
@@ -4751,6 +4751,13 @@ html[data-toolbar-visible] #toolbar-trigger {
         }, "*");
       };
 
+      window.toolbar = {
+        render: renderToolbar,
+        show: showToolbar,
+        hide: function hide() {
+          return hideToolbar();
+        }
+      };
       addExternalCommandCallback("renderToolbar", function () {
         renderToolbar();
       });
@@ -4760,19 +4767,13 @@ html[data-toolbar-visible] #toolbar-trigger {
       addExternalCommandCallback("hideToolbar", function () {
         hideToolbar();
       });
-      window.toolbar = {
-        render: renderToolbar,
-        show: showToolbar,
-        hide: function hide() {
-          return hideToolbar();
-        }
-      };
+      sendEventToParent("toolbar_ready");
 
     })
   };
 }));
 
-//# sourceMappingURL=toolbar.main-cab36c15.js.map</script>
+//# sourceMappingURL=toolbar.main-53e1ab2b.js.map</script>
   
 
 </body></html>
