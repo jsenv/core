@@ -1,9 +1,9 @@
-import { detectNode } from "../detectNode/detectNode.js"
-import { resolveGroup } from "../resolveGroup.js"
-import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
-import { nodeSupportsDynamicImport } from "../node-feature-detect/nodeSupportsDynamicImport.js"
-import { nodeSupportsTopLevelAwait } from "../node-feature-detect/nodeSupportsTopLevelAwait.js"
-import { fetchSource } from "./fetchSource.js"
+import { detectNode } from "@jsenv/core/src/internal/runtime/detectNode/detectNode.js"
+import { resolveGroup } from "@jsenv/core/src/internal/runtime/resolveGroup.js"
+import { computeCompileIdFromGroupId } from "@jsenv/core/src/internal/runtime/computeCompileIdFromGroupId.js"
+import { nodeSupportsDynamicImport } from "@jsenv/core/src/internal/runtime/node-feature-detect/nodeSupportsDynamicImport.js"
+import { nodeSupportsTopLevelAwait } from "@jsenv/core/src/internal/runtime/node-feature-detect/nodeSupportsTopLevelAwait.js"
+import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/fetchSource.js"
 
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,

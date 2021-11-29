@@ -4,6 +4,7 @@ import { loggerToLogLevel } from "@jsenv/logger"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createControllableNodeProcess } from "./internal/node-launcher/createControllableNodeProcess.js"
+import { scanNodeRuntimeFeatures } from "./internal/node-launcher/node_runtime_features.js"
 
 export const nodeRuntime = {
   name: "node",
@@ -114,11 +115,32 @@ nodeRuntime.launch = async ({
       remap,
     }
 
-    let executionResult = await requestActionOnChildProcess({
-      signal,
-      actionType: "execute-using-dynamic-import-fallback-on-systemjs",
-      actionParams: executeParams,
+    // the computation of runtime features can be cached
+    const nodeFeatures = await scanNodeRuntimeFeatures({
+      compileServerOrigin,
+      outDirectoryRelativeUrl,
     })
+    const { canAvoidCompilation, compileId, importDefaultExtension } =
+      nodeFeatures
+
+    let executionResult
+    if (canAvoidCompilation) {
+      executionResult = await requestActionOnChildProcess({
+        signal,
+        actionType: "execute-using-dynamic-import",
+        actionParams: executeParams,
+      })
+    } else {
+      executionResult = await requestActionOnChildProcess({
+        signal,
+        actionType: "execute-using-systemjs",
+        actionParams: {
+          compileId,
+          importDefaultExtension,
+          ...executeParams,
+        },
+      })
+    }
 
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,

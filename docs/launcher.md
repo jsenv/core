@@ -66,4 +66,4 @@ execute({
 - [firefoxRuntimeTab](../src/launchBrowser.js)
 - [wekbitRuntime](../src/launchBrowser.js)
 - [wekbitRuntimeTab](../src/launchBrowser.js)
-- [nodeRuntime](../src/nodeRuntime.js)
+- [nodeRuntime](../src/launchNode.js)

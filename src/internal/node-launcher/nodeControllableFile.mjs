@@ -1,19 +1,26 @@
 import v8 from "node:v8"
 import { uneval } from "@jsenv/uneval"
 
-import { jsenvNodeSystemFileInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+const NODE_EXECUTION_DYNAMIC_IMPORT_URL = new URL(
+  "./node_execution_dynamic_import.js",
+  import.meta.url,
+).href
+const NODE_EXECUTION_SYSTEMJS_URL = new URL(
+  "./node_execution_systemjs.js",
+  import.meta.url,
+).href
 
 const ACTIONS_AVAILABLE = {
-  "execute-using-dynamic-import-fallback-on-systemjs": async (
-    executeParams,
-  ) => {
-    const { execute } = await import(jsenvNodeSystemFileInfo.url)
-
+  "execute-using-dynamic-import": async (executeParams) => {
+    const { execute } = await import(NODE_EXECUTION_DYNAMIC_IMPORT_URL)
+    return execute(executeParams)
+  },
+  "execute-using-systemjs": async (executeParams) => {
+    const { execute } = await import(NODE_EXECUTION_SYSTEMJS_URL)
     return execute(executeParams)
   },
   "execute-using-import": async ({ fileUrl }) => {
     const namespace = await import(fileUrl)
-
     const namespaceResolved = {}
     await Promise.all([
       ...Object.keys(namespace).map(async (key) => {
@@ -21,19 +28,15 @@ const ACTIONS_AVAILABLE = {
         namespaceResolved[key] = value
       }),
     ])
-
     return namespaceResolved
   },
   "execute-using-require": async ({ fileUrl }) => {
     const { createRequire } = await import("module")
     const { fileURLToPath } = await import("url")
-
     const filePath = fileURLToPath(fileUrl)
     const require = createRequire(fileUrl)
-
     // eslint-disable-next-line import/no-dynamic-require
     const namespace = require(filePath)
-
     const namespaceResolved = {}
     await Promise.all([
       ...Object.keys(namespace).map(async (key) => {

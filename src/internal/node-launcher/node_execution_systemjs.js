@@ -1,37 +1,47 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
+import { startObservingPerformances } from "./node_execution_performance.js"
 import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
-import { memoize } from "../../memoize.js"
-import { installNodeErrorStackRemapping } from "../../error-stack-remapping/installNodeErrorStackRemapping.js"
-import { fetchSource } from "./fetchSource.js"
-import { createNodeSystem } from "./createNodeSystem.js"
 
-const memoizedCreateNodeSystem = memoize(createNodeSystem)
+import { installNodeErrorStackRemapping } from "@jsenv/core/src/internal/error-stack-remapping/installNodeErrorStackRemapping.js"
+import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/fetchSource.js"
+import { createNodeSystem } from "@jsenv/core/src/internal/runtime/createNodeRuntime/createNodeSystem.js"
 
-export const createNodeExecutionWithSystemJs = ({
+export const execute = async ({
   projectDirectoryUrl,
   compileServerOrigin,
+  fileRelativeUrl,
   outDirectoryRelativeUrl,
   compileId,
   importDefaultExtension,
+  // do not log in the console
+  // because error handling becomes responsability
+  // of node code launching node process
+  // it avoids seeing error in runtime logs during testing
+  errorExposureInConsole = false,
+  collectCoverage,
+  measurePerformance,
+  collectPerformance,
 }) => {
+  let finalizeExecutionResult = (result) => result
+
+  if (collectPerformance) {
+    const getPerformance = startObservingPerformances()
+    finalizeExecutionResult = async (executionResult) => {
+      const performance = await getPerformance()
+      return {
+        ...executionResult,
+        performance,
+      }
+    }
+  }
+
   const { getErrorOriginalStackString } = installNodeErrorStackRemapping({
     projectDirectoryUrl,
   })
 
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
-
-  const importFile = async (specifier) => {
-    const nodeSystem = await memoizedCreateNodeSystem({
-      projectDirectoryUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-      fetchSource,
-      importDefaultExtension,
-    })
-    return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
-  }
 
   const errorTransformer = async (error) => {
     // code can throw something else than an error
@@ -52,7 +62,7 @@ export const createNodeExecutionWithSystemJs = ({
       `${compileServerOrigin}/${compileDirectoryRelativeUrl}`,
     )
 
-    const nodeSystem = await memoizedCreateNodeSystem({
+    const nodeSystem = await createNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
       compileDirectoryRelativeUrl,
@@ -88,18 +98,22 @@ export const createNodeExecutionWithSystemJs = ({
         }
       }
     }
-
     if (measurePerformance) {
       return measureAsyncFnPerf(importWithSystemJs, "jsenv_file_import")
     }
     return importWithSystemJs()
   }
 
-  return {
-    compileDirectoryRelativeUrl,
-    importFile,
-    executeFile,
-  }
+  const executionResult = await executeFile(fileRelativeUrl, {
+    errorExposureInConsole,
+    measurePerformance,
+    collectCoverage,
+  })
+
+  return finalizeExecutionResult({
+    ...executionResult,
+    indirectCoverage: global.__indirectCoverage__,
+  })
 }
 
 const makePromiseKeepNodeProcessAlive = async (promise) => {
