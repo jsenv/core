@@ -32,7 +32,7 @@ import {
 import {
   TOOLBAR_INJECTOR_BUILD_URL,
   EVENT_SOURCE_CLIENT_BUILD_URL,
-  BROWSER_SYSTEM_BUILD_URL,
+  BROWSER_RUNTIME_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
@@ -1006,7 +1006,7 @@ const createCompileServerMetaFileInfo = ({
     jsenvToolbarInjection,
     TOOLBAR_INJECTOR_BUILD_URL,
     EVENT_SOURCE_CLIENT_BUILD_URL,
-    BROWSER_SYSTEM_BUILD_URL,
+    BROWSER_RUNTIME_BUILD_URL,
 
     env,
   }
