@@ -11,7 +11,7 @@ import {
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
-import { Abort } from "@jsenv/abort"
+import { Abort, createCallbackListNotifiedOnce } from "@jsenv/abort"
 
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
@@ -34,6 +34,7 @@ export const executeConcurrently = async (
     defaultMsAllocatedPerExecution = 30000,
     cooldownBetweenExecutions = 0,
     maxExecutionsInParallel = 1,
+    stopAfterExecute,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
 
@@ -137,6 +138,8 @@ export const executeConcurrently = async (
   let timedoutCount = 0
   let erroredCount = 0
   let completedCount = 0
+  const stopAfterAllExecutionCallbackList = createCallbackListNotifiedOnce()
+
   const executionsDone = await executeInParallel({
     multipleExecutionsOperation,
     maxExecutionsInParallel,
@@ -153,12 +156,7 @@ export const executeConcurrently = async (
         measurePerformance: false,
         collectPerformance: false,
         captureConsole: true,
-        // stopAfterExecute: true to ensure runtime is stopped once executed
-        // because we have what we wants: execution is completed and
-        // we have associated coverage and capturedConsole
-        // passsing false means all node process and browsers launched stays opened
-        // (can eventually be used for debug)
-        stopAfterExecute: true,
+        stopAfterExecute,
         stopAfterExecuteReason: "execution-done",
         allocatedMs: defaultMsAllocatedPerExecution,
         ...paramsFromStep,
@@ -212,6 +210,7 @@ export const executeConcurrently = async (
             collectCoverage: coverage,
             coverageIgnorePredicate,
             coverageForceIstanbul,
+            stopAfterAllExecutionCallbackList,
             ...executionParams.runtimeParams,
           },
           executeParams: {
@@ -282,6 +281,10 @@ export const executeConcurrently = async (
       }
     },
   })
+
+  if (stopAfterExecute) {
+    stopAfterAllExecutionCallbackList.notify()
+  }
 
   const summaryCounts = reportToSummary(report)
 

@@ -26,6 +26,7 @@ export const executePlan = async (
 
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
+    stopAfterExecute,
     cooldownBetweenExecutions,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
@@ -156,6 +157,7 @@ export const executePlan = async (
 
       defaultMsAllocatedPerExecution,
       maxExecutionsInParallel,
+      stopAfterExecute,
       cooldownBetweenExecutions,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,

@@ -1,4 +1,4 @@
-export const createSharing = ({ argsToId = argsToIdFallback } = {}) => {
+export const createSharedValue = ({ argsToId = argsToIdFallback } = {}) => {
   const tokenMap = {}
 
   const getSharingToken = (...args) => {
