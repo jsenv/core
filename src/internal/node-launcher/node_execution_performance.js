@@ -1,6 +1,6 @@
 import { PerformanceObserver, performance } from "node:perf_hooks"
 
-export const startObservingPerformances = async () => {
+export const startObservingPerformances = () => {
   const measureEntries = []
   // https://nodejs.org/dist/latest-v16.x/docs/api/perf_hooks.html
   const perfObserver = new PerformanceObserver(

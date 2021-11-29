@@ -2,7 +2,6 @@ import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
   urlToRelativeUrl,
-  urlToBasename,
   readFileSystemNodeStat,
   removeFileSystemNode,
 } from "@jsenv/filesystem"
@@ -17,8 +16,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}perf.js`
 const executeParams = {
   ...EXECUTE_TEST_PARAMS,
   launchLogLevel: "info",

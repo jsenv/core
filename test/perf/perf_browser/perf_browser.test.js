@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}perf-browser-basic.html`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}perf.html`
 
 if (process.platform !== "win32") {
   await launchBrowsers(
@@ -50,7 +50,7 @@ if (process.platform !== "win32") {
       const expected = {
         status: "completed",
         namespace: {
-          [`./perf-browser-basic.js`]: {
+          [`./perf.js`]: {
             status: "completed",
             namespace: {},
           },
