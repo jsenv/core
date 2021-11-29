@@ -55,7 +55,10 @@ export const executeHtmlFile = async (
   executeOperation.throwIfAborted()
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* istanbul ignore next */
-    ({ coverageHandledFromOutside }) => {
+    async ({ coverageHandledFromOutside }) => {
+      // eslint-disable-next-line no-undef
+      await window.readyPromise
+
       // eslint-disable-next-line no-undef
       return window.scanBrowserRuntimeFeatures({
         coverageHandledFromOutside,

@@ -8,6 +8,11 @@
   </head>
 
   <body>
+    <script>
+      window.readyPromise = new Promise((resolve) => {
+        window.resolveReadyPromise = resolve
+      })
+    </script>
     <script
       type="importmap"
       src="../../../../node_resolution.importmap"
@@ -16,6 +21,7 @@
       import { scanBrowserRuntimeFeatures } from "../../runtime/createBrowserRuntime/scanBrowserRuntimeFeatures.js"
 
       window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures
+      window.resolveReadyPromise()
     </script>
   </body>
 </html>
