@@ -1310,16 +1310,6 @@
     return target;
   });
 
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
-
   function _await$c(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -1566,7 +1556,7 @@
 
   var createRequestError = function createRequestError(error, _ref5) {
     var url = _ref5.url;
-    return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
+    return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -1825,6 +1815,16 @@
   };
 
   var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+  var createDetailedMessage = function createDetailedMessage(message) {
+    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var string = "".concat(message);
+    Object.keys(details).forEach(function (key) {
+      var value = details[key];
+      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    });
+    return string;
+  };
 
   var pathnameToExtension$1 = function pathnameToExtension(pathname) {
     var slashLastIndex = pathname.lastIndexOf("/");
@@ -5157,4 +5157,4 @@
 
 })();
 
-//# sourceMappingURL=browser_system-81ea82b1.js.map
+//# sourceMappingURL=browser_system-29eda202.js.map

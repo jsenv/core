@@ -1827,7 +1827,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-e44dd5fe.js"
+    "./toolbar.main.js": "./toolbar.main-bc081aec.js"
   }
 }</script>
     <script>
@@ -1980,16 +1980,6 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         return obj;
       });
-
-      var createDetailedMessage = function createDetailedMessage(message) {
-        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        var string = "".concat(message);
-        Object.keys(details).forEach(function (key) {
-          var value = details[key];
-          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-        });
-        return string;
-      };
 
       function ownKeys(object, enumerableOnly) {
         var keys = Object.keys(object);
@@ -2321,7 +2311,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 
       var createRequestError = function createRequestError(error, _ref5) {
         var url = _ref5.url;
-        return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
+        return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
       };
 
       var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -2667,7 +2657,7 @@ html[data-toolbar-visible] #toolbar-trigger {
             throw e;
           }
 
-          throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
+          throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
         });
       });
 
@@ -3454,6 +3444,16 @@ html[data-toolbar-visible] #toolbar-trigger {
         } else {
           input.style.width = "".concat(input.value.length, "ch");
         }
+      };
+
+      var createDetailedMessage = function createDetailedMessage(message) {
+        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var string = "".concat(message);
+        Object.keys(details).forEach(function (key) {
+          var value = details[key];
+          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+        });
+        return string;
       };
 
       var COMPILE_ID_OTHERWISE = "otherwise";
@@ -4696,7 +4696,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-e44dd5fe.js.map</script>
+//# sourceMappingURL=toolbar.main-bc081aec.js.map</script>
   
 
 </body></html>

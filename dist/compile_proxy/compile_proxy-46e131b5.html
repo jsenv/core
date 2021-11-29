@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head>
-    <title>Jsenv redirector</title>
+    <title>Compile proxy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
@@ -810,16 +810,6 @@
 
       var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
-      var createDetailedMessage = function createDetailedMessage(message) {
-        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        var string = "".concat(message);
-        Object.keys(details).forEach(function (key) {
-          var value = details[key];
-          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-        });
-        return string;
-      };
-
       function _await$3(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
@@ -1066,7 +1056,7 @@
 
       var createRequestError = function createRequestError(error, _ref5) {
         var url = _ref5.url;
-        return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
+        return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
       };
 
       var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -1358,6 +1348,16 @@
           return _await$1(response.json());
         });
       });
+
+      var createDetailedMessage = function createDetailedMessage(message) {
+        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var string = "".concat(message);
+        Object.keys(details).forEach(function (key) {
+          var value = details[key];
+          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+        });
+        return string;
+      };
 
       var COMPILE_ID_OTHERWISE = "otherwise";
 
@@ -2055,36 +2055,13 @@
       }; // const cssImportAssertions = await supportsCssImportAssertions()
       // console.log({ cssImportAssertions })
 
-      const redirect = async () => {
-        const redirectTarget = new URLSearchParams(window.location.search).get("redirect");
-        const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures({
-          failFastOnFeatureDetection: true
-        });
-        const href = `${getDirectoryUrl(browserRuntimeFeaturesReport)}${redirectTarget}`; // It's IMPORTANT to use location.replace and NOT location.href = url
-        // otherwise it would break the back button
-
-        window.location.replace(href);
-      };
-
-      const getDirectoryUrl = ({
-        canAvoidCompilation,
-        outDirectoryRelativeUrl,
-        compileId
-      }) => {
-        if (canAvoidCompilation) {
-          return `/`;
-        }
-
-        return `/${outDirectoryRelativeUrl}${compileId}/`;
-      };
-
-      redirect();
+      window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
 
     })
   };
 }));
 
-//# sourceMappingURL=redirector.html__inline__15-ea596245.js.map</script>
+//# sourceMappingURL=compile_proxy.html__inline__15-ddf3d448.js.map</script>
   
 
 </body></html>

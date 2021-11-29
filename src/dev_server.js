@@ -5,10 +5,7 @@ import {
 } from "@jsenv/filesystem"
 import { setupRoutes } from "@jsenv/server"
 
-import {
-  EXPLORING_BUILD_URL,
-  REDIRECTOR_BUILD_URL,
-} from "@jsenv/core/dist/build_manifest.js"
+import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
@@ -64,7 +61,10 @@ export const startDevServer = async ({
 
   if (mainFileRelativeUrl === undefined) {
     mainFileRelativeUrl = urlToRelativeUrl(
-      EXPLORING_BUILD_URL,
+      new URL(
+        "./src/internal/dev_server/exploring/exploring.html",
+        jsenvCoreDirectoryUrl,
+      ).href,
       projectDirectoryUrl,
     )
   }

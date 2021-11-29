@@ -11,7 +11,7 @@
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
-  var _defineProperty = (function (obj, key, value) {
+  var defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -30,16 +30,6 @@
 
     return obj;
   });
-
-  var createDetailedMessage = function createDetailedMessage(message) {
-    var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    var string = "".concat(message);
-    Object.keys(details).forEach(function (key) {
-      var value = details[key];
-      string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-    });
-    return string;
-  };
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -65,7 +55,7 @@
 
       if (i % 2) {
         ownKeys(Object(source), true).forEach(function (key) {
-          _defineProperty(target, key, source[key]);
+          defineProperty(target, key, source[key]);
         });
       } else if (Object.getOwnPropertyDescriptors) {
         Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
@@ -361,7 +351,7 @@
 
   var createRequestError = function createRequestError(error, _ref5) {
     var url = _ref5.url;
-    return new Error(createDetailedMessage("error during xhr request on ".concat(url, "."), _defineProperty({}, "error stack", error.stack)));
+    return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
   };
 
   var createPromiseAndHooks = function createPromiseAndHooks() {
@@ -707,7 +697,7 @@
         throw e;
       }
 
-      throw new Error(createDetailedMessage("Cannot communicate with exploring server due to a network error", _defineProperty({}, "error stack", e.stack)));
+      throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
     });
   });
 
@@ -755,7 +745,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-edc9de68.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-15017adf.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -950,4 +940,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-9411d94f.js.map
+//# sourceMappingURL=toolbar_injector-5a913ee7.js.map

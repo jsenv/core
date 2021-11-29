@@ -119,16 +119,6 @@ addExport(
   `toolbar_injector/${buildManifest["toolbar_injector.js"]}`,
 )
 
-await buildInternalFile({
-  format: "systemjs",
-  buildDirectoryRelativeUrl: "./dist/exploring/",
-  entryPointMap: {
-    "./src/internal/dev_server/exploring/exploring.html": "./exploring.html",
-  },
-  cssConcatenation: true,
-})
-addExport("EXPLORING_BUILD_URL", `exploring/${buildManifest["exploring.html"]}`)
-
 await writeFile(
   new URL("./dist/build_manifest.js", jsenvCoreDirectoryUrl),
   buildManifestCode,
