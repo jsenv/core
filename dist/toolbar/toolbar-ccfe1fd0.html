@@ -1827,7 +1827,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-bc081aec.js"
+    "./toolbar.main.js": "./toolbar.main-73b390fd.js"
   }
 }</script>
     <script>
@@ -4074,20 +4074,6 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      var supportsJsonImportAssertions = _async$1(function () {
-        var jsonBase64Url = asBase64Url("42", "application/json");
-        var moduleSource = asBase64Url("export { default } from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }"));
-        return _catch(function () {
-          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = await import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
-              return namespace.default === 42;
-            });
-          });
-        }, function () {
-          return false;
-        });
-      });
-
       var supportsNewStylesheet = function supportsNewStylesheet() {
         try {
           // eslint-disable-next-line no-new
@@ -4112,11 +4098,25 @@ html[data-toolbar-visible] #toolbar-trigger {
       // console.log(featuresReport)
 
 
+      var supportsJsonImportAssertions = _async$1(function () {
+        var jsonBase64Url = asBase64Url("42", "application/json");
+        var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\nexport default data"));
+        return _catch(function () {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+              return namespace.default === 42;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
       var supportsCssImportAssertions = _async$1(function () {
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
-        var moduleSource = asBase64Url("export { default } from \"".concat(cssBase64Url, "\" assert { type: \"css\" }"));
+        var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\nexport default css"));
         return _catch(function () {
-          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = await import(".concat(JSON.stringify(moduleSource), ")")), function () {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
             return _await(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
               return namespace.default instanceof CSSStyleSheet;
             });
@@ -4696,7 +4696,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-bc081aec.js.map</script>
+//# sourceMappingURL=toolbar.main-73b390fd.js.map</script>
   
 
 </body></html>

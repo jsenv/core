@@ -186,24 +186,6 @@ const supportsDynamicImport = async () => {
   }
 }
 
-const supportsJsonImportAssertions = async () => {
-  const jsonBase64Url = asBase64Url("42", "application/json")
-  const moduleSource = asBase64Url(
-    `export { default } from "${jsonBase64Url}" assert { type: "json" }`,
-  )
-  try {
-    await executeWithScriptModuleInjection(
-      `window.__jsenv_runtime_test_json_import_assertion__ = await import(${JSON.stringify(
-        moduleSource,
-      )})`,
-    )
-    const namespace = await window.__jsenv_runtime_test_json_import_assertion__
-    return namespace.default === 42
-  } catch (e) {
-    return false
-  }
-}
-
 const supportsNewStylesheet = () => {
   try {
     // eslint-disable-next-line no-new
@@ -230,14 +212,34 @@ const supportsTopLevelAwait = async () => {
 // await detectSupportedFeatures({ featuresReport, inlineImportMapIntoHTML: true })
 // console.log(featuresReport)
 
-const supportsCssImportAssertions = async () => {
-  const cssBase64Url = asBase64Url("p { color: red; }", "text/css")
+const supportsJsonImportAssertions = async () => {
+  const jsonBase64Url = asBase64Url("42", "application/json")
   const moduleSource = asBase64Url(
-    `export { default } from "${cssBase64Url}" assert { type: "css" }`,
+    `import data from "${jsonBase64Url}" assert { type: "json" }
+export default data`,
   )
   try {
     await executeWithScriptModuleInjection(
-      `window.__jsenv_runtime_test_css_import_assertion__ = await import(${JSON.stringify(
+      `window.__jsenv_runtime_test_json_import_assertion__ = import(${JSON.stringify(
+        moduleSource,
+      )})`,
+    )
+    const namespace = await window.__jsenv_runtime_test_json_import_assertion__
+    return namespace.default === 42
+  } catch (e) {
+    return false
+  }
+}
+
+const supportsCssImportAssertions = async () => {
+  const cssBase64Url = asBase64Url("p { color: red; }", "text/css")
+  const moduleSource = asBase64Url(
+    `import css from "${cssBase64Url}" assert { type: "css" }
+export default css`,
+  )
+  try {
+    await executeWithScriptModuleInjection(
+      `window.__jsenv_runtime_test_css_import_assertion__ = import(${JSON.stringify(
         moduleSource,
       )})`,
     )
