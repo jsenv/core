@@ -219,7 +219,7 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap,
+      babelPluginMap: compileServer.babelPluginMap,
       transformTopLevelAwait,
       runtimeSupport,
 
