@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head>
-    <title>Jsenv redirector</title>
+    <title>Compile proxy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
@@ -697,6 +697,11 @@
       </head>
 
   <body>
+    <script>
+      window.readyPromise = new Promise((resolve) => {
+        window.resolveReadyPromise = resolve
+      })
+    </script>
     <script type="systemjs-importmap">
 {
   "imports": {}
@@ -725,6 +730,172 @@
 
         return obj;
       });
+
+      var createDetailedMessage = function createDetailedMessage(message) {
+        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var string = "".concat(message);
+        Object.keys(details).forEach(function (key) {
+          var value = details[key];
+          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+        });
+        return string;
+      };
+
+      var COMPILE_ID_OTHERWISE = "otherwise";
+
+      var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
+        var groupId = _ref.groupId,
+            groupMap = _ref.groupMap;
+
+        if (typeof groupId === "undefined") {
+          if (COMPILE_ID_OTHERWISE in groupMap) {
+            return COMPILE_ID_OTHERWISE;
+          }
+
+          var keys = Object.keys(groupMap);
+
+          if (keys.length === 1) {
+            return keys[0];
+          }
+
+          throw new Error(createUnexpectedGroupIdMessage({
+            groupMap: groupMap
+          }));
+        }
+
+        if (groupId in groupMap === false) {
+          throw new Error(createUnexpectedGroupIdMessage({
+            groupId: groupId,
+            groupMap: groupMap
+          }));
+        }
+
+        return groupId;
+      };
+
+      var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
+        var _createDetailedMessag;
+
+        var compileId = _ref2.compileId,
+            groupMap = _ref2.groupMap;
+        return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
+      };
+
+      var valueToVersion = function valueToVersion(value) {
+        if (typeof value === "number") {
+          return numberToVersion(value);
+        }
+
+        if (typeof value === "string") {
+          return stringToVersion(value);
+        }
+
+        throw new TypeError("version must be a number or a string, got ".concat(value));
+      };
+
+      var numberToVersion = function numberToVersion(number) {
+        return {
+          major: number,
+          minor: 0,
+          patch: 0
+        };
+      };
+
+      var stringToVersion = function stringToVersion(string) {
+        if (string.indexOf(".") > -1) {
+          var parts = string.split(".");
+          return {
+            major: Number(parts[0]),
+            minor: parts[1] ? Number(parts[1]) : 0,
+            patch: parts[2] ? Number(parts[2]) : 0
+          };
+        }
+
+        if (isNaN(string)) {
+          return {
+            major: 0,
+            minor: 0,
+            patch: 0
+          };
+        }
+
+        return {
+          major: Number(string),
+          minor: 0,
+          patch: 0
+        };
+      };
+
+      var versionCompare = function versionCompare(versionA, versionB) {
+        var semanticVersionA = valueToVersion(versionA);
+        var semanticVersionB = valueToVersion(versionB);
+        var majorDiff = semanticVersionA.major - semanticVersionB.major;
+
+        if (majorDiff > 0) {
+          return majorDiff;
+        }
+
+        if (majorDiff < 0) {
+          return majorDiff;
+        }
+
+        var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+
+        if (minorDiff > 0) {
+          return minorDiff;
+        }
+
+        if (minorDiff < 0) {
+          return minorDiff;
+        }
+
+        var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+
+        if (patchDiff > 0) {
+          return patchDiff;
+        }
+
+        if (patchDiff < 0) {
+          return patchDiff;
+        }
+
+        return 0;
+      };
+
+      var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
+        return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
+      };
+
+      var findHighestVersion = function findHighestVersion() {
+        for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
+          values[_key] = arguments[_key];
+        }
+
+        if (values.length === 0) throw new Error("missing argument");
+        return values.reduce(function (highestVersion, value) {
+          if (versionIsBelow(highestVersion, value)) {
+            return value;
+          }
+
+          return highestVersion;
+        });
+      };
+
+      var resolveGroup = function resolveGroup(_ref, groupMap) {
+        var name = _ref.name,
+            version = _ref.version;
+        return Object.keys(groupMap).find(function (compileIdCandidate) {
+          var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
+          var versionForGroup = minRuntimeVersions[name];
+
+          if (!versionForGroup) {
+            return false;
+          }
+
+          var highestVersion = findHighestVersion(version, versionForGroup);
+          return highestVersion === version;
+        });
+      };
 
       function ownKeys(object, enumerableOnly) {
         var keys = Object.keys(object);
@@ -810,7 +981,8 @@
 
       var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
-      function _await$4(value, then, direct) {
+      /* eslint-env browser */
+      function _await$3(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -822,7 +994,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$4(f) {
+      function _async$3(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -849,7 +1021,7 @@
         }
       }
 
-      var fetchUsingXHR = _async$4(function (url) {
+      var fetchUsingXHR = _async$3(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             signal = _ref.signal,
             _ref$method = _ref.method,
@@ -933,7 +1105,7 @@
         }
 
         xhr.send(body);
-        return _await$4(headersPromise, function () {
+        return _await$3(headersPromise, function () {
           // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
           var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
           var responseStatus = xhr.status;
@@ -941,7 +1113,7 @@
           var responseHeaders = getHeadersFromXHR(xhr);
 
           var readBody = function readBody() {
-            return _await$4(bodyPromise, function () {
+            return _await$3(bodyPromise, function () {
               var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
               if (status === 0) {
@@ -977,7 +1149,7 @@
             return _call$1(text, JSON.parse);
           };
 
-          var blob = _async$4(function () {
+          var blob = _async$3(function () {
             if (!hasBlob) {
               throw new Error("blob not supported");
             }
@@ -1014,7 +1186,7 @@
             });
           };
 
-          var formData = _async$4(function () {
+          var formData = _async$3(function () {
             if (!hasFormData) {
               throw new Error("formData not supported");
             }
@@ -1195,7 +1367,7 @@
         return form;
       };
 
-      var blobToArrayBuffer = _async$4(function (blob) {
+      var blobToArrayBuffer = _async$3(function (blob) {
         var reader = new FileReader();
         var promise = fileReaderReady(reader);
         reader.readAsArrayBuffer(blob);
@@ -1246,7 +1418,7 @@
 
       var _excluded = ["mode"];
 
-      function _await$3(value, then, direct) {
+      function _await$2(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1258,14 +1430,14 @@
         return then ? value.then(then) : value;
       }
 
-      var fetchNative = _async$3(function (url) {
+      var fetchNative = _async$2(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         var _ref$mode = _ref.mode,
             mode = _ref$mode === void 0 ? "cors" : _ref$mode,
             options = _objectWithoutProperties(_ref, _excluded);
 
-        return _await$3(window.fetch(url, _objectSpread2({
+        return _await$2(window.fetch(url, _objectSpread2({
           mode: mode
         }, options)), function (response) {
           return {
@@ -1292,7 +1464,7 @@
         });
       });
 
-      function _async$3(f) {
+      function _async$2(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1316,7 +1488,7 @@
 
       var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-      function _await$2(value, then, direct) {
+      function _await$1(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1328,7 +1500,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$2(f) {
+      function _async$1(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1342,62 +1514,12 @@
         };
       }
 
-      var fetchJson = _async$2(function (url) {
+      var fetchJson = _async$1(function (url) {
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        return _await$2(fetchUrl(url, options), function (response) {
-          return _await$2(response.json());
+        return _await$1(fetchUrl(url, options), function (response) {
+          return _await$1(response.json());
         });
       });
-
-      var createDetailedMessage = function createDetailedMessage(message) {
-        var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        var string = "".concat(message);
-        Object.keys(details).forEach(function (key) {
-          var value = details[key];
-          string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-        });
-        return string;
-      };
-
-      var COMPILE_ID_OTHERWISE = "otherwise";
-
-      var computeCompileIdFromGroupId = function computeCompileIdFromGroupId(_ref) {
-        var groupId = _ref.groupId,
-            groupMap = _ref.groupMap;
-
-        if (typeof groupId === "undefined") {
-          if (COMPILE_ID_OTHERWISE in groupMap) {
-            return COMPILE_ID_OTHERWISE;
-          }
-
-          var keys = Object.keys(groupMap);
-
-          if (keys.length === 1) {
-            return keys[0];
-          }
-
-          throw new Error(createUnexpectedGroupIdMessage({
-            groupMap: groupMap
-          }));
-        }
-
-        if (groupId in groupMap === false) {
-          throw new Error(createUnexpectedGroupIdMessage({
-            groupId: groupId,
-            groupMap: groupMap
-          }));
-        }
-
-        return groupId;
-      };
-
-      var createUnexpectedGroupIdMessage = function createUnexpectedGroupIdMessage(_ref2) {
-        var _createDetailedMessag;
-
-        var compileId = _ref2.compileId,
-            groupMap = _ref2.groupMap;
-        return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
-      };
 
       var firstMatch = function firstMatch(regexp, string) {
         var match = string.match(regexp);
@@ -1620,123 +1742,7 @@
         return version;
       };
 
-      var valueToVersion = function valueToVersion(value) {
-        if (typeof value === "number") {
-          return numberToVersion(value);
-        }
-
-        if (typeof value === "string") {
-          return stringToVersion(value);
-        }
-
-        throw new TypeError("version must be a number or a string, got ".concat(value));
-      };
-
-      var numberToVersion = function numberToVersion(number) {
-        return {
-          major: number,
-          minor: 0,
-          patch: 0
-        };
-      };
-
-      var stringToVersion = function stringToVersion(string) {
-        if (string.indexOf(".") > -1) {
-          var parts = string.split(".");
-          return {
-            major: Number(parts[0]),
-            minor: parts[1] ? Number(parts[1]) : 0,
-            patch: parts[2] ? Number(parts[2]) : 0
-          };
-        }
-
-        if (isNaN(string)) {
-          return {
-            major: 0,
-            minor: 0,
-            patch: 0
-          };
-        }
-
-        return {
-          major: Number(string),
-          minor: 0,
-          patch: 0
-        };
-      };
-
-      var versionCompare = function versionCompare(versionA, versionB) {
-        var semanticVersionA = valueToVersion(versionA);
-        var semanticVersionB = valueToVersion(versionB);
-        var majorDiff = semanticVersionA.major - semanticVersionB.major;
-
-        if (majorDiff > 0) {
-          return majorDiff;
-        }
-
-        if (majorDiff < 0) {
-          return majorDiff;
-        }
-
-        var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-
-        if (minorDiff > 0) {
-          return minorDiff;
-        }
-
-        if (minorDiff < 0) {
-          return minorDiff;
-        }
-
-        var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-
-        if (patchDiff > 0) {
-          return patchDiff;
-        }
-
-        if (patchDiff < 0) {
-          return patchDiff;
-        }
-
-        return 0;
-      };
-
-      var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
-        return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
-      };
-
-      var findHighestVersion = function findHighestVersion() {
-        for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
-          values[_key] = arguments[_key];
-        }
-
-        if (values.length === 0) throw new Error("missing argument");
-        return values.reduce(function (highestVersion, value) {
-          if (versionIsBelow(highestVersion, value)) {
-            return value;
-          }
-
-          return highestVersion;
-        });
-      };
-
-      var resolveGroup = function resolveGroup(_ref, groupMap) {
-        var name = _ref.name,
-            version = _ref.version;
-        return Object.keys(groupMap).find(function (compileIdCandidate) {
-          var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
-          var versionForGroup = minRuntimeVersions[name];
-
-          if (!versionForGroup) {
-            return false;
-          }
-
-          var highestVersion = findHighestVersion(version, versionForGroup);
-          return highestVersion === version;
-        });
-      };
-
-      function _await$1(value, then, direct) {
+      function _await(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1748,7 +1754,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$1(f) {
+      function _async(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1799,14 +1805,14 @@
         return result;
       }
 
-      var scanBrowserRuntimeFeatures = _async$1(function () {
+      var scanBrowserRuntimeFeatures = _async(function () {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref$coverageHandledF = _ref.coverageHandledFromOutside,
             coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
             _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
             failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
-        return _await$1(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
+        return _await(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
           var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
               customCompilerPatterns = _ref2.customCompilerPatterns,
@@ -1825,12 +1831,12 @@
             cssImportAssertions: undefined,
             newStylesheet: undefined
           };
-          return _await$1(detectSupportedFeatures({
+          return _await(detectSupportedFeatures({
             featuresReport: featuresReport,
             failFastOnFeatureDetection: failFastOnFeatureDetection,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function () {
-            return _await$1(pluginRequiredNamesFromGroupInfo(groupInfo, {
+            return _await(pluginRequiredNamesFromGroupInfo(groupInfo, {
               featuresReport: featuresReport,
               coverageHandledFromOutside: coverageHandledFromOutside
             }), function (pluginRequiredNameArray) {
@@ -1850,7 +1856,7 @@
         });
       });
 
-      var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref3) {
+      var pluginRequiredNamesFromGroupInfo = _async(function (groupInfo, _ref3) {
         var featuresReport = _ref3.featuresReport,
             coverageHandledFromOutside = _ref3.coverageHandledFromOutside;
         var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
@@ -1895,14 +1901,14 @@
         });
       });
 
-      var detectSupportedFeatures = _async$1(function (_ref4) {
+      var detectSupportedFeatures = _async(function (_ref4) {
         var featuresReport = _ref4.featuresReport,
             failFastOnFeatureDetection = _ref4.failFastOnFeatureDetection,
             inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
-        return _await$1(supportsImportmap({
+        return _await(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -1933,7 +1939,7 @@
         });
       });
 
-      var supportsImportmap = _async$1(function () {
+      var supportsImportmap = _async(function () {
         var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref5$remote = _ref5.remote,
             remote = _ref5$remote === void 0 ? true : _ref5$remote;
@@ -1954,7 +1960,7 @@
 
         document.body.appendChild(importmapScript);
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+          return _await(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
             document.body.removeChild(importmapScript);
             return window.__jsenv_runtime_test_importmap__;
           });
@@ -1964,11 +1970,11 @@
         });
       });
 
-      var supportsDynamicImport = _async$1(function () {
+      var supportsDynamicImport = _async(function () {
         var moduleSource = asBase64Url("export default 42");
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
               return namespace.default === 42;
             });
           });
@@ -1988,8 +1994,8 @@
       };
 
       var supportsTopLevelAwait = function supportsTopLevelAwait() {
-        return _await$1(_catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+        return _await(_catch(function () {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
             return window.__jsenv_runtime_test_top_level_await__ === 42;
           });
         }, function () {
@@ -2001,12 +2007,12 @@
       // console.log(featuresReport)
 
 
-      var supportsJsonImportAssertions = _async$1(function () {
+      var supportsJsonImportAssertions = _async(function () {
         var jsonBase64Url = asBase64Url("42", "application/json");
         var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\nexport default data"));
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
               return namespace.default === 42;
             });
           });
@@ -2015,12 +2021,12 @@
         });
       });
 
-      var supportsCssImportAssertions = _async$1(function () {
+      var supportsCssImportAssertions = _async(function () {
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
         var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\nexport default css"));
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
               return namespace.default instanceof CSSStyleSheet;
             });
           });
@@ -2055,63 +2061,14 @@
       }; // const cssImportAssertions = await supportsCssImportAssertions()
       // console.log({ cssImportAssertions })
 
-      function _await(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      var redirect = _async(function () {
-        var redirectTarget = new URLSearchParams(window.location.search).get("redirect");
-        return _await(scanBrowserRuntimeFeatures({
-          failFastOnFeatureDetection: true
-        }), function (browserRuntimeFeaturesReport) {
-          var href = "".concat(getDirectoryUrl(browserRuntimeFeaturesReport)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
-          // otherwise it would break the back button
-
-          window.location.replace(href);
-        });
-      });
-
-      function _async(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var getDirectoryUrl = function getDirectoryUrl(_ref) {
-        var canAvoidCompilation = _ref.canAvoidCompilation,
-            outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-            compileId = _ref.compileId;
-
-        if (canAvoidCompilation) {
-          return "/";
-        }
-
-        return "/".concat(outDirectoryRelativeUrl).concat(compileId, "/");
-      };
-
-      redirect();
+      window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
+      window.resolveReadyPromise();
 
     })
   };
 }));
 
-//# sourceMappingURL=redirector.html__inline__15-b51d648d.js.map</script>
+//# sourceMappingURL=compile_proxy.html__inline__20-39c0801c.js.map</script>
   
 
 </body></html>

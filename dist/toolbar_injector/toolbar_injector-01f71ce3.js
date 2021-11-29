@@ -105,6 +105,7 @@
     return target;
   });
 
+  /* eslint-env browser */
   function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -745,7 +746,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-62adce56.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-d3d98c2e.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -967,4 +968,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-39897ded.js.map
+//# sourceMappingURL=toolbar_injector-01f71ce3.js.map

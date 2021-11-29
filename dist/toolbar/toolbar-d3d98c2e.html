@@ -1830,7 +1830,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-91792c38.js"
+    "./toolbar.main.js": "./toolbar.main-cab36c15.js"
   }
 }</script>
     <script>
@@ -2106,6 +2106,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         return target;
       });
 
+      /* eslint-env browser */
       function _await$5(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
@@ -3555,6 +3556,122 @@ html[data-toolbar-visible] #toolbar-trigger {
         return createDetailedMessage("unexpected groupId.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "expected compiled id", Object.keys(groupMap)), _defineProperty(_createDetailedMessag, "received compile id", compileId), _createDetailedMessag));
       };
 
+      var valueToVersion = function valueToVersion(value) {
+        if (typeof value === "number") {
+          return numberToVersion(value);
+        }
+
+        if (typeof value === "string") {
+          return stringToVersion(value);
+        }
+
+        throw new TypeError("version must be a number or a string, got ".concat(value));
+      };
+
+      var numberToVersion = function numberToVersion(number) {
+        return {
+          major: number,
+          minor: 0,
+          patch: 0
+        };
+      };
+
+      var stringToVersion = function stringToVersion(string) {
+        if (string.indexOf(".") > -1) {
+          var parts = string.split(".");
+          return {
+            major: Number(parts[0]),
+            minor: parts[1] ? Number(parts[1]) : 0,
+            patch: parts[2] ? Number(parts[2]) : 0
+          };
+        }
+
+        if (isNaN(string)) {
+          return {
+            major: 0,
+            minor: 0,
+            patch: 0
+          };
+        }
+
+        return {
+          major: Number(string),
+          minor: 0,
+          patch: 0
+        };
+      };
+
+      var versionCompare = function versionCompare(versionA, versionB) {
+        var semanticVersionA = valueToVersion(versionA);
+        var semanticVersionB = valueToVersion(versionB);
+        var majorDiff = semanticVersionA.major - semanticVersionB.major;
+
+        if (majorDiff > 0) {
+          return majorDiff;
+        }
+
+        if (majorDiff < 0) {
+          return majorDiff;
+        }
+
+        var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+
+        if (minorDiff > 0) {
+          return minorDiff;
+        }
+
+        if (minorDiff < 0) {
+          return minorDiff;
+        }
+
+        var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+
+        if (patchDiff > 0) {
+          return patchDiff;
+        }
+
+        if (patchDiff < 0) {
+          return patchDiff;
+        }
+
+        return 0;
+      };
+
+      var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
+        return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
+      };
+
+      var findHighestVersion = function findHighestVersion() {
+        for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
+          values[_key] = arguments[_key];
+        }
+
+        if (values.length === 0) throw new Error("missing argument");
+        return values.reduce(function (highestVersion, value) {
+          if (versionIsBelow(highestVersion, value)) {
+            return value;
+          }
+
+          return highestVersion;
+        });
+      };
+
+      var resolveGroup = function resolveGroup(_ref, groupMap) {
+        var name = _ref.name,
+            version = _ref.version;
+        return Object.keys(groupMap).find(function (compileIdCandidate) {
+          var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
+          var versionForGroup = minRuntimeVersions[name];
+
+          if (!versionForGroup) {
+            return false;
+          }
+
+          var highestVersion = findHighestVersion(version, versionForGroup);
+          return highestVersion === version;
+        });
+      };
+
       var firstMatch = function firstMatch(regexp, string) {
         var match = string.match(regexp);
         return match && match.length > 0 ? match[1] || undefined : undefined;
@@ -3774,122 +3891,6 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return version;
-      };
-
-      var valueToVersion = function valueToVersion(value) {
-        if (typeof value === "number") {
-          return numberToVersion(value);
-        }
-
-        if (typeof value === "string") {
-          return stringToVersion(value);
-        }
-
-        throw new TypeError("version must be a number or a string, got ".concat(value));
-      };
-
-      var numberToVersion = function numberToVersion(number) {
-        return {
-          major: number,
-          minor: 0,
-          patch: 0
-        };
-      };
-
-      var stringToVersion = function stringToVersion(string) {
-        if (string.indexOf(".") > -1) {
-          var parts = string.split(".");
-          return {
-            major: Number(parts[0]),
-            minor: parts[1] ? Number(parts[1]) : 0,
-            patch: parts[2] ? Number(parts[2]) : 0
-          };
-        }
-
-        if (isNaN(string)) {
-          return {
-            major: 0,
-            minor: 0,
-            patch: 0
-          };
-        }
-
-        return {
-          major: Number(string),
-          minor: 0,
-          patch: 0
-        };
-      };
-
-      var versionCompare = function versionCompare(versionA, versionB) {
-        var semanticVersionA = valueToVersion(versionA);
-        var semanticVersionB = valueToVersion(versionB);
-        var majorDiff = semanticVersionA.major - semanticVersionB.major;
-
-        if (majorDiff > 0) {
-          return majorDiff;
-        }
-
-        if (majorDiff < 0) {
-          return majorDiff;
-        }
-
-        var minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-
-        if (minorDiff > 0) {
-          return minorDiff;
-        }
-
-        if (minorDiff < 0) {
-          return minorDiff;
-        }
-
-        var patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-
-        if (patchDiff > 0) {
-          return patchDiff;
-        }
-
-        if (patchDiff < 0) {
-          return patchDiff;
-        }
-
-        return 0;
-      };
-
-      var versionIsBelow = function versionIsBelow(versionSupposedBelow, versionSupposedAbove) {
-        return versionCompare(versionSupposedBelow, versionSupposedAbove) < 0;
-      };
-
-      var findHighestVersion = function findHighestVersion() {
-        for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
-          values[_key] = arguments[_key];
-        }
-
-        if (values.length === 0) throw new Error("missing argument");
-        return values.reduce(function (highestVersion, value) {
-          if (versionIsBelow(highestVersion, value)) {
-            return value;
-          }
-
-          return highestVersion;
-        });
-      };
-
-      var resolveGroup = function resolveGroup(_ref, groupMap) {
-        var name = _ref.name,
-            version = _ref.version;
-        return Object.keys(groupMap).find(function (compileIdCandidate) {
-          var minRuntimeVersions = groupMap[compileIdCandidate].minRuntimeVersions;
-          var versionForGroup = minRuntimeVersions[name];
-
-          if (!versionForGroup) {
-            return false;
-          }
-
-          var highestVersion = findHighestVersion(version, versionForGroup);
-          return highestVersion === version;
-        });
       };
 
       function _await(value, then, direct) {
@@ -4771,7 +4772,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-91792c38.js.map</script>
+//# sourceMappingURL=toolbar.main-cab36c15.js.map</script>
   
 
 </body></html>
