@@ -133,8 +133,7 @@ const getBrowserSupportMessage = ({
 }) => {
   const parts = []
 
-  const { importmapSupported } = featuresReport
-  if (importmapSupported) {
+  if (featuresReport.importmap) {
     if (!missingOnly) {
       if (inlineImportMapIntoHTML) {
         parts.push(`importmaps are supported (only when inlined in html files)`)
@@ -146,8 +145,7 @@ const getBrowserSupportMessage = ({
     parts.push(`importmaps are not supported`)
   }
 
-  const { dynamicImportSupported } = featuresReport
-  if (dynamicImportSupported) {
+  if (featuresReport.dynamicImport) {
     if (!missingOnly) {
       parts.push(`dynamic imports are supported`)
     }
@@ -155,8 +153,7 @@ const getBrowserSupportMessage = ({
     parts.push(`dynamic imports are not supported`)
   }
 
-  const { topLevelAwaitSupported } = featuresReport
-  if (topLevelAwaitSupported) {
+  if (featuresReport.topLevelAwait) {
     if (!missingOnly) {
       parts.push(`top level await is supported`)
     }

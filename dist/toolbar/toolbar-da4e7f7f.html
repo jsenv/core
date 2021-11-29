@@ -1632,7 +1632,7 @@ html[data-toolbar-visible] #toolbar-trigger {
             </div>
             <div id="settings-box-body">
               <div class="settings-box-items-wrapper">
-                <div class="settings-box-item">
+                <div class="settings-box-item settings-notification">
                   <div class="category-title">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px">
                       <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"></path>
@@ -1648,6 +1648,9 @@ html[data-toolbar-visible] #toolbar-trigger {
                   </label>
                   <div class="category-subtitle">
                     Send system notification when execution fails or is fixed.
+                    <div class="notification-text">
+                      <a data-when="notif_permission:no" class="request_notification_permission" href="javascript:void(0);">Enable notification</a>
+                    </div>
                   </div>
                 </div>
                 <div class="settings-box-item settings-livereload">
@@ -1827,7 +1830,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-73b390fd.js"
+    "./toolbar.main.js": "./toolbar.main-f2a5ed37.js"
   }
 }</script>
     <script>
@@ -2091,7 +2094,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       }
 
-      function _call$3(body, then, direct) {
+      function _call$2(body, then, direct) {
         if (direct) {
           return then ? then(body()) : body();
         }
@@ -2212,7 +2215,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
 
           var text = function text() {
-            return _call$3(readBody, function (_ref2) {
+            return _call$2(readBody, function (_ref2) {
               var responseBody = _ref2.responseBody,
                   responseBodyType = _ref2.responseBodyType;
 
@@ -2229,7 +2232,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
 
           var json = function json() {
-            return _call$3(text, JSON.parse);
+            return _call$2(text, JSON.parse);
           };
 
           var blob = _async$6(function () {
@@ -2237,7 +2240,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               throw new Error("blob not supported");
             }
 
-            return _call$3(readBody, function (_ref3) {
+            return _call$2(readBody, function (_ref3) {
               var responseBody = _ref3.responseBody,
                   responseBodyType = _ref3.responseBodyType;
 
@@ -2262,10 +2265,10 @@ html[data-toolbar-visible] #toolbar-trigger {
           });
 
           var arrayBuffer = function arrayBuffer() {
-            return _call$3(readBody, function (_ref4) {
+            return _call$2(readBody, function (_ref4) {
               var responseBody = _ref4.responseBody,
                   responseBodyType = _ref4.responseBodyType;
-              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$3(blob, blobToArrayBuffer);
+              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$2(blob, blobToArrayBuffer);
             });
           };
 
@@ -2274,7 +2277,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               throw new Error("formData not supported");
             }
 
-            return _call$3(text, textToFormData);
+            return _call$2(text, textToFormData);
           });
 
           return {
@@ -2917,6 +2920,71 @@ html[data-toolbar-visible] #toolbar-trigger {
         updateIframeOverflowOnParentWindow();
       };
 
+      var enableVariant = function enableVariant(rootNode, variables) {
+        var nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
+        nodesNotMatching.forEach(function (nodeNotMatching) {
+          var conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
+          var matches = testCondition(conditionAttributeValue, variables);
+
+          if (matches) {
+            renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
+          }
+        });
+        var nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
+        nodesMatching.forEach(function (nodeMatching) {
+          var conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
+          var matches = testCondition(conditionAttributeValue, variables);
+
+          if (!matches) {
+            renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
+          }
+        });
+      };
+
+      var testCondition = function testCondition(conditionAttributeValue, variables) {
+        var condition = parseCondition(conditionAttributeValue);
+        return Object.keys(variables).some(function (key) {
+          if (condition.key !== key) {
+            return false;
+          } // the condition do not specify a value, any value is ok
+
+
+          if (condition.value === undefined) {
+            return true;
+          }
+
+          if (condition.value === variables[key]) {
+            return true;
+          }
+
+          return false;
+        });
+      };
+
+      var parseCondition = function parseCondition(conditionAttributeValue) {
+        var colonIndex = conditionAttributeValue.indexOf(":");
+
+        if (colonIndex === -1) {
+          return {
+            key: conditionAttributeValue,
+            value: undefined
+          };
+        }
+
+        return {
+          key: conditionAttributeValue.slice(0, colonIndex),
+          value: conditionAttributeValue.slice(colonIndex + 1)
+        };
+      };
+
+      var attributeIndicatingACondition = "data-when";
+      var attributeIndicatingAMatch = "data-when-active";
+
+      var renameAttribute = function renameAttribute(node, name, newName) {
+        node.setAttribute(newName, node.getAttribute(name));
+        node.removeAttribute(name);
+      };
+
       var _excluded = ["clickToFocus", "clickToClose"];
 
       function _await$1(value, then, direct) {
@@ -2930,21 +2998,6 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         return then ? value.then(then) : value;
       }
-
-      function _call$2(body, then, direct) {
-        if (direct) {
-          return then ? then(body()) : body();
-        }
-
-        try {
-          var result = Promise.resolve(body());
-          return then ? result.then(then) : result;
-        } catch (e) {
-          return Promise.reject(e);
-        }
-      }
-
-      var notificationPreference = createPreference("notification");
 
       function _async$2(f) {
         return function () {
@@ -2960,26 +3013,60 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       }
 
+      var notificationAvailable = typeof window.Notification === "function";
+      var notificationPreference = createPreference("notification");
       var arrayOfOpenedNotifications = [];
       var renderToolbarNotification = function renderToolbarNotification() {
         var notifCheckbox = document.querySelector("#toggle-notifs");
-        notifCheckbox.checked = getNotificationPreference();
 
-        notifCheckbox.onchange = function () {
-          setNotificationPreference(notifCheckbox.checked);
+        if (!notificationAvailable) {
+          var notifSetting = document.querySelector(".settings-notification");
+          notifSetting.setAttribute("data-disabled", "true");
+          notifSetting.setAttribute("title", "Notification not available in the browser");
+          notifCheckbox.disabled = true;
+          return;
+        }
 
-          if (notifCheckbox.checked) {
-            // request permission early
-            // especially useful on firefox where you can request permission
-            // only inside a user generated event such as this onchange handler
-            requestPermission();
-          } else {
-            // slice because arrayOfOpenedNotifications can be mutated while looping
-            arrayOfOpenedNotifications.slice().forEach(function (notification) {
-              notification.close();
-            });
+        var updatePermission = function updatePermission() {
+          if (Notification.permission === "denied") {
+            var _notifSetting = document.querySelector(".settings-notification");
+
+            _notifSetting.setAttribute("data-disabled", "true");
+
+            _notifSetting.setAttribute("title", "Notification denied");
+
+            notifCheckbox.disabled = true;
+            return;
+          }
+
+          notifCheckbox.checked = getNotificationPreference();
+
+          notifCheckbox.onchange = function () {
+            setNotificationPreference(notifCheckbox.checked);
+
+            if (!notifCheckbox.checked) {
+              // slice because arrayOfOpenedNotifications can be mutated while looping
+              arrayOfOpenedNotifications.slice().forEach(function (notification) {
+                notification.close();
+              });
+            }
+          };
+
+          var notifPermission = Notification.permission;
+          enableVariant(document.querySelector(".notification-text"), {
+            notif_permission: notifPermission === "granted" ? "yes" : "no"
+          });
+
+          if (notifPermission === "default") {
+            document.querySelector("a.request_notification_permission").onclick = function () {
+              requestPermission().then(function () {
+                updatePermission();
+              });
+            };
           }
         };
+
+        updatePermission();
       };
       var notifyExecutionResult = function notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution) {
         var notificationEnabled = getNotificationPreference();
@@ -3013,7 +3100,6 @@ html[data-toolbar-visible] #toolbar-trigger {
           }));
         }
       };
-      var notificationAvailable = typeof window.Notification === "function";
 
       var getNotificationPreference = function getNotificationPreference() {
         return notificationPreference.has() ? notificationPreference.get() : true;
@@ -3028,7 +3114,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         return link ? link.href : undefined;
       };
 
-      var notify = notificationAvailable ? function (title) {
+      var permission = "default";
+      var notify = notificationAvailable ? _async$2(function (title) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         var _ref$clickToFocus = _ref.clickToFocus,
@@ -3037,48 +3124,47 @@ html[data-toolbar-visible] #toolbar-trigger {
             clickToClose = _ref$clickToClose === void 0 ? false : _ref$clickToClose,
             options = _objectWithoutProperties(_ref, _excluded);
 
-        return _call$2(requestPermission, function (permission) {
-          if (permission === "granted") {
-            var notification = new Notification(title, options);
-            arrayOfOpenedNotifications.push(notification);
-
-            notification.onclick = function () {
-              // but if the user navigated inbetween
-              // focusing window will show something else
-              // in that case it could be great to do something
-              // maybe like showing a message saying this execution
-              // is no longer visible
-              // we could also navigauate to this file execution but
-              // there is no guarantee re-executing the file would give same output
-              // and it would also trigger an other notification
-              if (clickToFocus) window.focus();
-              if (clickToClose) notification.close();
-            };
-
-            notification.onclose = function () {
-              var index = arrayOfOpenedNotifications.indexOf(notification);
-
-              if (index > -1) {
-                arrayOfOpenedNotifications.splice(index, 1);
-              }
-            };
-
-            return notification;
-          }
-
+        if (permission !== "granted") {
           return null;
-        });
-      } : function () {};
-      var permissionPromise;
+        }
+
+        var notification = new Notification(title, options);
+        arrayOfOpenedNotifications.push(notification);
+
+        notification.onclick = function () {
+          // but if the user navigated inbetween
+          // focusing window will show something else
+          // in that case it could be great to do something
+          // maybe like showing a message saying this execution
+          // is no longer visible
+          // we could also navigauate to this file execution but
+          // there is no guarantee re-executing the file would give same output
+          // and it would also trigger an other notification
+          if (clickToFocus) window.focus();
+          if (clickToClose) notification.close();
+        };
+
+        notification.onclose = function () {
+          var index = arrayOfOpenedNotifications.indexOf(notification);
+
+          if (index > -1) {
+            arrayOfOpenedNotifications.splice(index, 1);
+          }
+        };
+
+        return notification;
+      }) : function () {};
+      var requestPromise;
       var requestPermission = notificationAvailable ? _async$2(function () {
-        if (permissionPromise) return permissionPromise;
-        permissionPromise = Notification.requestPermission();
-        return _await$1(permissionPromise, function (permission) {
-          permissionPromise = undefined;
+        if (requestPromise) return requestPromise;
+        requestPromise = Notification.requestPermission();
+        return _await$1(requestPromise, function (_requestPromise) {
+          permission = _requestPromise;
+          requestPromise = undefined;
           return permission;
         });
       }) : function () {
-        return Promise.resolve("denied");
+        return Promise.resolve("default");
       };
 
       var DARK_THEME = "dark";
@@ -3155,71 +3241,6 @@ html[data-toolbar-visible] #toolbar-trigger {
 
       var disableAnimation = function disableAnimation() {
         document.documentElement.setAttribute("data-animation-disabled", "");
-      };
-
-      var enableVariant = function enableVariant(rootNode, variables) {
-        var nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
-        nodesNotMatching.forEach(function (nodeNotMatching) {
-          var conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
-          var matches = testCondition(conditionAttributeValue, variables);
-
-          if (matches) {
-            renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
-          }
-        });
-        var nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
-        nodesMatching.forEach(function (nodeMatching) {
-          var conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
-          var matches = testCondition(conditionAttributeValue, variables);
-
-          if (!matches) {
-            renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
-          }
-        });
-      };
-
-      var testCondition = function testCondition(conditionAttributeValue, variables) {
-        var condition = parseCondition(conditionAttributeValue);
-        return Object.keys(variables).some(function (key) {
-          if (condition.key !== key) {
-            return false;
-          } // the condition do not specify a value, any value is ok
-
-
-          if (condition.value === undefined) {
-            return true;
-          }
-
-          if (condition.value === variables[key]) {
-            return true;
-          }
-
-          return false;
-        });
-      };
-
-      var parseCondition = function parseCondition(conditionAttributeValue) {
-        var colonIndex = conditionAttributeValue.indexOf(":");
-
-        if (colonIndex === -1) {
-          return {
-            key: conditionAttributeValue,
-            value: undefined
-          };
-        }
-
-        return {
-          key: conditionAttributeValue.slice(0, colonIndex),
-          value: conditionAttributeValue.slice(colonIndex + 1)
-        };
-      };
-
-      var attributeIndicatingACondition = "data-when";
-      var attributeIndicatingAMatch = "data-when-active";
-
-      var renameAttribute = function renameAttribute(node, name, newName) {
-        node.setAttribute(newName, node.getAttribute(name));
-        node.removeAttribute(name);
       };
 
       var createHorizontalBreakpoint = function createHorizontalBreakpoint(breakpointValue) {
@@ -4239,9 +4260,8 @@ html[data-toolbar-visible] #toolbar-trigger {
             pluginRequiredNameArray = _ref3.pluginRequiredNameArray,
             inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
         var parts = [];
-        var importmapSupported = featuresReport.importmapSupported;
 
-        if (importmapSupported) {
+        if (featuresReport.importmap) {
           if (!missingOnly) {
             if (inlineImportMapIntoHTML) {
               parts.push("importmaps are supported (only when inlined in html files)");
@@ -4253,9 +4273,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           parts.push("importmaps are not supported");
         }
 
-        var dynamicImportSupported = featuresReport.dynamicImportSupported;
-
-        if (dynamicImportSupported) {
+        if (featuresReport.dynamicImport) {
           if (!missingOnly) {
             parts.push("dynamic imports are supported");
           }
@@ -4263,9 +4281,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           parts.push("dynamic imports are not supported");
         }
 
-        var topLevelAwaitSupported = featuresReport.topLevelAwaitSupported;
-
-        if (topLevelAwaitSupported) {
+        if (featuresReport.topLevelAwait) {
           if (!missingOnly) {
             parts.push("top level await is supported");
           }
@@ -4696,7 +4712,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-73b390fd.js.map</script>
+//# sourceMappingURL=toolbar.main-f2a5ed37.js.map</script>
   
 
 </body></html>

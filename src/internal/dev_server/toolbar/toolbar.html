@@ -256,7 +256,7 @@
             </div>
             <div id="settings-box-body">
               <div class="settings-box-items-wrapper">
-                <div class="settings-box-item">
+                <div class="settings-box-item settings-notification">
                   <div class="category-title">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -279,6 +279,14 @@
                   </label>
                   <div class="category-subtitle">
                     Send system notification when execution fails or is fixed.
+                    <div class="notification-text">
+                      <a
+                        data-when="notif_permission:no"
+                        class="request_notification_permission"
+                        href="javascript:void(0);"
+                        >Enable notification</a
+                      >
+                    </div>
                   </div>
                 </div>
                 <div class="settings-box-item settings-livereload">
@@ -565,6 +573,10 @@
       // and a promise the toolbar injector can listen to act on the toolbar
       // or we could just consider all communication should pass by postmessage
     </script>
-    <script type="module" src="./toolbar.main.js" data-jsenv-force-inline></script>
+    <script
+      type="module"
+      src="./toolbar.main.js"
+      data-jsenv-force-inline
+    ></script>
   </body>
 </html>
