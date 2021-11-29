@@ -118,6 +118,11 @@ nodeRuntime.launch = async ({
     const nodeFeatures = await scanNodeRuntimeFeatures({
       compileServerOrigin,
       outDirectoryRelativeUrl,
+      // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
+      // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
+      // "transform-instrument" becomes non mandatory
+      coverageHandledFromOutside:
+        !coverageForceIstanbul && process.env.NODE_V8_COVERAGE,
     })
     const { canAvoidCompilation, compileId, importDefaultExtension } =
       nodeFeatures

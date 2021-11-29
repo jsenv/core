@@ -8,6 +8,7 @@ import { fetchSource } from "@jsenv/core/src/internal/runtime/createNodeRuntime/
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,
   outDirectoryRelativeUrl,
+  coverageHandledFromOutside = false,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const {
@@ -35,10 +36,7 @@ export const scanNodeRuntimeFeatures = async ({
   })
   const pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
     featuresReport,
-    // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
-    // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
-    // "transform-instrument" becomes non mandatory
-    coverageHandledFromOutside: process.env.NODE_V8_COVERAGE,
+    coverageHandledFromOutside,
   })
 
   const canAvoidCompilation =
@@ -102,9 +100,10 @@ const pluginRequiredNamesFromGroupInfo = (
   if (coverageHandledFromOutside) {
     markPluginAsSupported("transform-instrument")
   }
-  // We assume import assertions and constructable stylesheet won't be used
-  // in code executed in Node.js
-  // so event they are conceptually required, they are ignored
+  // CSS import assertions and constructable stylesheet are not supported by Node.js
+  // but we assume they are not used for code executed in Node.js
+  // Without this check code executed on Node.js would always be compiled
+  // because import assertions and constructable stylesheet are enabled by default
   markPluginAsSupported("transform-import-assertions")
   markPluginAsSupported("new-stylesheet-as-jsenv-import")
 
