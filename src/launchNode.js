@@ -35,7 +35,7 @@ nodeRuntime.launch = async ({
   stdout,
   stderr,
   stopAfterExecute,
-  canUseNativeModuleSystem,
+  forceSystemJs,
 
   remap = true,
 }) => {
@@ -104,7 +104,6 @@ nodeRuntime.launch = async ({
 
       fileRelativeUrl,
       executionId,
-      canUseNativeModuleSystem,
       exitAfterAction: stopAfterExecute,
 
       measurePerformance,
@@ -124,7 +123,7 @@ nodeRuntime.launch = async ({
       nodeFeatures
 
     let executionResult
-    if (canAvoidCompilation) {
+    if (canAvoidCompilation && !forceSystemJs) {
       executionResult = await requestActionOnChildProcess({
         signal,
         actionType: "execute-using-dynamic-import",
