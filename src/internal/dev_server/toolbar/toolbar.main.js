@@ -44,16 +44,6 @@ const renderToolbar = async () => {
     hideSettings()
   }
 
-  const toolbarElement = document.querySelector("#toolbar")
-  exposeOnParentWindow({
-    toolbar: {
-      element: toolbarElement,
-      show: showToolbar,
-      hide: () => hideToolbar(),
-      toggle: toogleToolbar,
-    },
-  })
-
   const toolbarVisible = toolbarVisibilityPreference.has()
     ? toolbarVisibilityPreference.get()
     : true
@@ -83,16 +73,6 @@ const renderToolbar = async () => {
   // that's why I used toggleToolbar and not hideToolbar
   document.querySelector("#button-close-toolbar").onclick = () =>
     toogleToolbar()
-}
-
-const exposeOnParentWindow = (object) => {
-  let { __jsenv__ } = window.parent
-  if (!__jsenv__) {
-    __jsenv__ = {}
-    window.parent.__jsenv__ = {}
-  }
-
-  Object.assign(__jsenv__, object)
 }
 
 const toogleToolbar = () => {
@@ -207,15 +187,54 @@ const getCompileGroup = ({
   }
 }
 
-const sendEventToParent = (type, value) => {
+const addExternalCommandCallback = (command, callback) => {
+  const messageEventCallback = (messageEvent) => {
+    const { data } = messageEvent
+    if (typeof data !== "object") {
+      return
+    }
+    const { __jsenv__ } = data
+    if (!__jsenv__) {
+      return
+    }
+
+    if (__jsenv__.command !== command) {
+      return
+    }
+
+    callback(...__jsenv__.args)
+  }
+
+  window.addEventListener("message", messageEventCallback)
+  return () => {
+    window.removeEventListener("message", messageEventCallback)
+  }
+}
+
+const sendEventToParent = (name, data) => {
   window.parent.postMessage(
     {
-      jsenv: true,
-      type,
-      value,
+      __jsenv__: {
+        event: name,
+        data,
+      },
     },
     "*",
   )
 }
 
-window.renderToolbar = renderToolbar
+addExternalCommandCallback("renderToolbar", () => {
+  renderToolbar()
+})
+addExternalCommandCallback("showToolbar", () => {
+  showToolbar()
+})
+addExternalCommandCallback("hideToolbar", () => {
+  hideToolbar()
+})
+
+window.toolbar = {
+  render: renderToolbar,
+  show: showToolbar,
+  hide: () => hideToolbar(),
+}

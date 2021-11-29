@@ -745,7 +745,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-da4e7f7f.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-62adce56.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -758,6 +758,22 @@
     } catch (e) {
       return Promise.reject(e);
     }
+  }
+
+  var jsenvLogoSvgUrl = new URL("assets/jsenv-logo-188b9ca6.svg", document.currentScript && document.currentScript.src || document.baseURI);
+
+  function _async(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
   }
 
   var injectToolbar = _async(function () {
@@ -800,30 +816,8 @@
         placeholder.parentNode.replaceChild(iframe, placeholder);
         return _await(iframeLoadedPromise, function () {
           iframe.removeAttribute("tabindex");
-
-          var listenToolbarIframeEvent = function listenToolbarIframeEvent(event, fn) {
-            window.addEventListener("message", function (messageEvent) {
-              var data = messageEvent.data;
-              if (_typeof(data) !== "object") return;
-              var jsenv = data.jsenv;
-              if (!jsenv) return;
-              var type = data.type;
-              if (type !== event) return;
-              fn(data.value);
-            }, false);
-          };
-
-          listenToolbarIframeEvent("toolbar-visibility-change", function (visible) {
-            if (visible) {
-              hideToolbarTrigger();
-            } else {
-              showToolbarTrigger();
-            }
-          });
           var div = document.createElement("div");
-          var jsenvLogoUrl = resolveUrl("./src/internal/dev_server/toolbar/jsenv-logo.svg", jsenvDirectoryServerUrl);
-          var jsenvLogoSvgSrc = jsenvLogoUrl;
-          div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgSrc, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+          div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
           var toolbarTrigger = div.firstElementChild;
           iframe.parentNode.appendChild(toolbarTrigger);
           var timer;
@@ -850,7 +844,7 @@
           };
 
           toolbarTrigger.onclick = function () {
-            window.__jsenv__.toolbar.show();
+            sendCommandToToolbar(iframe, "showToolbar");
           };
 
           var showToolbarTrigger = function showToolbarTrigger() {
@@ -870,26 +864,59 @@
           };
 
           hideToolbarTrigger();
-          iframe.contentWindow.renderToolbar();
+          addToolbarEventCallback(iframe, "toolbar-visibility-change", function (visible) {
+            if (visible) {
+              hideToolbarTrigger();
+            } else {
+              showToolbarTrigger();
+            }
+          });
+          sendCommandToToolbar(iframe, "renderToolbar");
           return iframe;
         });
       });
     });
   });
 
-  function _async(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
+  var addToolbarEventCallback = function addToolbarEventCallback(iframe, eventName, callback) {
+    var messageEventCallback = function messageEventCallback(messageEvent) {
+      var data = messageEvent.data;
+
+      if (_typeof(data) !== "object") {
+        return;
       }
 
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
+      var __jsenv__ = data.__jsenv__;
+
+      if (!__jsenv__) {
+        return;
       }
+
+      if (__jsenv__.event !== eventName) {
+        return;
+      }
+
+      callback(__jsenv__.data);
     };
-  }
+
+    window.addEventListener("message", messageEventCallback, false);
+    return function () {
+      window.removeEventListener("message", messageEventCallback, false);
+    };
+  };
+
+  var sendCommandToToolbar = function sendCommandToToolbar(iframe, command) {
+    for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+      args[_key - 2] = arguments[_key];
+    }
+
+    iframe.contentWindow.postMessage({
+      __jsenv__: {
+        command: command,
+        args: args
+      }
+    }, window.origin);
+  };
 
   var getToolbarPlaceholder = function getToolbarPlaceholder() {
     var placeholder = queryPlaceholder();
@@ -940,4 +967,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-a22964bc.js.map
+//# sourceMappingURL=toolbar_injector-39897ded.js.map

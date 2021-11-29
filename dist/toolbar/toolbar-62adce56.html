@@ -1809,7 +1809,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <!--
      Reusable svg(s)
     -->
-    <div style="display: none">
+    <div style="display: none; position: absolute">
       <svg id="loading_svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 430">
         <path fill="currentColor" d="m32.118 204.979.302 5.179c.124 3.4.638 8.29 1.434 14.48l.786 4.882.421 2.617c.154.89.376 1.789.558 2.712l1.197 5.75c.444 1.981 1.027 4.008 1.56 6.112 2.274 8.378 5.328 17.708 9.758 27.396a180.713 180.713 0 0 0 17.062 29.673 178.57 178.57 0 0 0 25.102 28.499c9.702 8.888 20.652 17.025 32.581 23.85a180.596 180.596 0 0 0 38.159 16.203c13.357 3.824 27.155 5.896 40.737 6.35l2.541.113 2.542-.017c1.689-.012 3.376-.142 5.059-.152l1.259-.126h.157c-.466 0-.034.113-.096.111l.329.039.657-.012 2.625-.138c1.748-.094 3.492-.181 5.229-.274l2.599-.14 2.399-.292c1.596-.203 3.188-.354 4.772-.526 3.147-.236 6.372-.888 9.541-1.397a213.826 213.826 0 0 0 35.916-9.232 622.925 622.925 0 0 1 8.182-3.142c2.655-1.114 5.222-2.329 7.782-3.459 2.6-1.056 4.984-2.43 7.407-3.636l3.584-1.832c1.189-.598 2.295-1.31 3.432-1.949 2.248-1.316 4.477-2.577 6.623-3.866l6.146-4.011c2.042-1.258 3.901-2.66 5.735-3.997 1.822-1.352 3.646-2.613 5.355-3.907l4.843-3.918c1.569-1.258 3.121-2.439 4.471-3.723l4.031-3.563c1.288-1.139 2.548-2.204 3.621-3.327 2.193-2.203 4.225-4.131 5.979-5.831 1.697-1.744 3.063-3.304 4.243-4.516l3.588-3.767.026-.028a.855.855 0 0 1 1.37.997s-.868 1.598-2.574 4.574c-.854 1.488-1.885 3.349-3.214 5.459-1.387 2.064-2.967 4.465-4.816 7.108-.887 1.355-1.955 2.669-3.051 4.075l-3.46 4.412c-1.185 1.56-2.571 3.036-3.979 4.607a11889.58 11889.58 0 0 1-4.424 4.853c-1.572 1.628-3.282 3.218-5.018 4.893-1.745 1.662-3.502 3.432-5.49 5.023l-6.021 5.047c-2.111 1.653-4.363 3.226-6.623 4.899-9.169 6.472-19.718 12.805-31.671 17.869-11.917 5.107-25.137 9.123-39.146 11.367-3.516.507-7.004 1.114-10.719 1.336-1.834.148-3.674.319-5.521.438l-2.773.192-2.611.027-5.237.045-2.63.012-1.585-.006-1.378-.074-5.521-.302-2.766-.157-2.764-.29a202.304 202.304 0 0 1-43.748-9.26 193.358 193.358 0 0 1-40.221-18.991c-12.467-7.743-23.632-16.999-33.41-26.861-9.758-9.893-18.135-20.455-24.833-31.222a187.62 187.62 0 0 1-15.97-31.794c-4.006-10.258-6.601-20.021-8.441-28.721-1.917-8.698-2.688-16.429-3.245-22.764-.396-6.374-.584-11.386-.485-14.752l.04-5.188a.85.85 0 0 1 .857-.844.86.86 0 0 1 .844.805zM393.625 225.021l-.297-4.979-.162-2.716-.093-1.565-.182-1.679c-.269-2.323-.534-4.99-.906-7.966l-.763-4.693-.408-2.516a34.227 34.227 0 0 0-.487-2.616c-.778-3.54-1.458-7.393-2.614-11.413l-.812-3.075a41.978 41.978 0 0 0-.908-3.147l-2.071-6.509c-1.604-4.392-3.258-9.013-5.353-13.684a178.146 178.146 0 0 0-15.844-28.827c-6.541-9.647-14.329-19.197-23.385-28.038l-1.683-1.677-1.766-1.605c-1.182-1.068-2.366-2.142-3.557-3.218-1.163-1.104-2.449-2.08-3.686-3.116l-3.75-3.083c-1.3-.972-2.604-1.946-3.91-2.924-1.324-.953-2.58-2.003-3.953-2.902l-4.075-2.768-2.042-1.389-2.112-1.291a179.101 179.101 0 0 0-35.961-17.193c-12.643-4.307-25.78-6.991-38.788-8.151-1.628-.128-3.24-.356-4.867-.403l-4.858-.205c-3.224-.204-6.444-.09-9.634-.125l-2.151-.002-2.495.128c-1.66.095-3.316.141-4.966.211l-2.47.097c-.809.042-1.532.143-2.3.21l-4.522.438c-2.979.166-6.046.719-9.053 1.084-3.023.336-5.975.917-8.906 1.449-1.462.28-2.93.501-4.374.794l-4.282.989-4.245.947c-1.396.353-2.766.767-4.137 1.143-2.735.781-5.465 1.47-8.073 2.398l-3.917 1.296c-1.3.42-2.588.844-3.827 1.363l-7.408 2.85a564.405 564.405 0 0 1-7.01 3.092c-1.163.477-2.267 1.042-3.361 1.598l-3.263 1.627-3.206 1.579a4807.3 4807.3 0 0 1-3.039 1.706c-1.992 1.14-4.003 2.158-5.868 3.29a478.807 478.807 0 0 1-5.419 3.344c-1.792 1.037-3.405 2.208-5.008 3.287l-4.64 3.135-7.955 5.898c-2.294 1.916-4.409 3.579-6.239 5.05-.934.718-1.729 1.45-2.471 2.111l-2.044 1.782-3.793 3.262-.025.022a.857.857 0 0 1-1.27-1.123s.969-1.457 2.861-4.161c.957-1.342 2.071-3.069 3.577-4.928 1.497-1.867 3.207-4.042 5.195-6.425a711.243 711.243 0 0 1 6.954-7.583l4.222-4.055c1.466-1.404 2.982-2.873 4.665-4.248a492.728 492.728 0 0 1 5.158-4.347c1.799-1.46 3.737-2.85 5.699-4.323l3.003-2.214 3.188-2.104a4521.47 4521.47 0 0 0 3.282-2.14c1.107-.723 2.227-1.456 3.411-2.104 9.235-5.625 19.942-10.626 31.724-14.697 1.475-.504 2.951-1.046 4.456-1.527a9356.8 9356.8 0 0 0 4.587-1.314l4.658-1.299c1.57-.402 3.17-.716 4.772-1.065l4.839-1.029a26.288 26.288 0 0 1 2.454-.433l2.478-.368c3.322-.481 6.616-1.035 10.133-1.254l5.236-.383c.866-.054 1.775-.143 2.61-.166l2.472-.042c1.65-.022 3.307-.069 4.97-.067l2.497-.011c-.163.003.397-.005.4-.001l.164.008.327.015.655.031 1.311.062c3.497.194 7.019.236 10.533.702l5.285.567c1.767.169 3.518.523 5.28.778a200.938 200.938 0 0 1 41.516 11.19 191.734 191.734 0 0 1 37.788 20.016l2.192 1.471 2.117 1.569 4.215 3.127c2.768 2.124 5.406 4.386 8.06 6.582l3.813 3.468c1.254 1.164 2.556 2.267 3.731 3.496l3.587 3.591 1.775 1.789 1.689 1.859c9.061 9.819 16.775 20.217 23.014 30.685a185.353 185.353 0 0 1 14.763 30.855c1.899 4.94 3.31 9.814 4.67 14.425l1.712 6.814c.297 1.098.526 2.196.731 3.282l.636 3.2c.923 4.179 1.378 8.165 1.943 11.813.151.911.247 1.811.318 2.695l.24 2.587.445 4.814c.173 3.065.257 5.808.365 8.183l.066 1.714-.015 1.567-.024 2.721-.045 4.987a.85.85 0 0 1-.857.843.852.852 0 0 1-.837-.8z"></path>
         <circle fill="currentColor" cx="70.536" cy="110.694" r="36.011"></circle>
@@ -1830,7 +1830,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-f2a5ed37.js"
+    "./toolbar.main.js": "./toolbar.main-91792c38.js"
   }
 }</script>
     <script>
@@ -1842,6 +1842,54 @@ html[data-toolbar-visible] #toolbar-trigger {
   'use strict';
   return {
     execute: (function () {
+
+      /* eslint-disable no-eq-null, eqeqeq */
+      function arrayLikeToArray(arr, len) {
+        if (len == null || len > arr.length) len = arr.length;
+        var arr2 = new Array(len);
+
+        for (var i = 0; i < len; i++) {
+          arr2[i] = arr[i];
+        }
+
+        return arr2;
+      }
+
+      var arrayWithoutHoles = (function (arr) {
+        if (Array.isArray(arr)) return arrayLikeToArray(arr);
+      });
+
+      function _iterableToArray(iter) {
+        if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+      }
+
+      /* eslint-disable consistent-return */
+      function unsupportedIterableToArray(o, minLen) {
+        if (!o) return;
+        if (typeof o === "string") return arrayLikeToArray(o, minLen);
+        var n = Object.prototype.toString.call(o).slice(8, -1);
+        if (n === "Object" && o.constructor) n = o.constructor.name;
+        if (n === "Map" || n === "Set") return Array.from(o);
+        if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+      }
+
+      var nonIterableSpread = (function () {
+        throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+      });
+
+      var _toConsumableArray = (function (arr) {
+        return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
+      });
+
+      var nativeTypeOf = function nativeTypeOf(obj) {
+        return typeof obj;
+      };
+
+      var customTypeOf = function customTypeOf(obj) {
+        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+      };
+
+      var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
       var urlIsInsideOf = function urlIsInsideOf(url, otherUrl) {
         var urlObject = new URL(url);
@@ -2057,16 +2105,6 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         return target;
       });
-
-      var nativeTypeOf = function nativeTypeOf(obj) {
-        return typeof obj;
-      };
-
-      var customTypeOf = function customTypeOf(obj) {
-        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-      };
-
-      var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
       function _await$5(value, then, direct) {
         if (direct) {
@@ -4527,17 +4565,6 @@ html[data-toolbar-visible] #toolbar-trigger {
             hideSettings();
           };
 
-          var toolbarElement = document.querySelector("#toolbar");
-          exposeOnParentWindow({
-            toolbar: {
-              element: toolbarElement,
-              show: showToolbar,
-              hide: function hide() {
-                return hideToolbar();
-              },
-              toggle: toogleToolbar
-            }
-          });
           var toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
 
           if (toolbarVisible) {
@@ -4575,17 +4602,6 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
         });
       });
-
-      var exposeOnParentWindow = function exposeOnParentWindow(object) {
-        var __jsenv__ = window.parent.__jsenv__;
-
-        if (!__jsenv__) {
-          __jsenv__ = {};
-          window.parent.__jsenv__ = {};
-        }
-
-        Object.assign(__jsenv__, object);
-      };
 
       var toogleToolbar = function toogleToolbar() {
         if (toolbarIsVisible()) {
@@ -4698,21 +4714,64 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       };
 
-      var sendEventToParent = function sendEventToParent(type, value) {
+      var addExternalCommandCallback = function addExternalCommandCallback(command, callback) {
+        var messageEventCallback = function messageEventCallback(messageEvent) {
+          var data = messageEvent.data;
+
+          if (_typeof(data) !== "object") {
+            return;
+          }
+
+          var __jsenv__ = data.__jsenv__;
+
+          if (!__jsenv__) {
+            return;
+          }
+
+          if (__jsenv__.command !== command) {
+            return;
+          }
+
+          callback.apply(void 0, _toConsumableArray(__jsenv__.args));
+        };
+
+        window.addEventListener("message", messageEventCallback);
+        return function () {
+          window.removeEventListener("message", messageEventCallback);
+        };
+      };
+
+      var sendEventToParent = function sendEventToParent(name, data) {
         window.parent.postMessage({
-          jsenv: true,
-          type: type,
-          value: value
+          __jsenv__: {
+            event: name,
+            data: data
+          }
         }, "*");
       };
 
-      window.renderToolbar = renderToolbar;
+      addExternalCommandCallback("renderToolbar", function () {
+        renderToolbar();
+      });
+      addExternalCommandCallback("showToolbar", function () {
+        showToolbar();
+      });
+      addExternalCommandCallback("hideToolbar", function () {
+        hideToolbar();
+      });
+      window.toolbar = {
+        render: renderToolbar,
+        show: showToolbar,
+        hide: function hide() {
+          return hideToolbar();
+        }
+      };
 
     })
   };
 }));
 
-//# sourceMappingURL=toolbar.main-f2a5ed37.js.map</script>
+//# sourceMappingURL=toolbar.main-91792c38.js.map</script>
   
 
 </body></html>
