@@ -15,6 +15,7 @@ import { getBrowserRuntimeReport } from "./browser_runtime_report.js"
 export const executeHtmlFile = async (
   fileRelativeUrl,
   {
+    runtime,
     executeOperation,
     projectDirectoryUrl,
     compileServerOrigin,
@@ -58,6 +59,7 @@ export const executeHtmlFile = async (
     page,
     coverageHandledFromOutside,
     compileServerId,
+    runtime,
   })
 
   try {
