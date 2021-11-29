@@ -10,8 +10,7 @@ export const babelPluginImportAssertions = (
   return {
     ...babelPluginImportVisitor(
       babel,
-      // During the build we throw when for import call expression where
-      // sepcifier or type is dynamic.
+      // During build we throw on import call expression where "specifier" or "type" is dynamic
       // Here there is no strong need to throw because keeping the source code intact
       // will throw an error when browser will execute the code
       ({ importPath, specifierPath }) => {
