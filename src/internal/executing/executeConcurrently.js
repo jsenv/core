@@ -133,7 +133,7 @@ export const executeConcurrently = async (
     }
   }
 
-  let executionLog = createLog({ newLine: "around" })
+  let executionLog = createLog({ newLine: "" })
   let abortedCount = 0
   let timedoutCount = 0
   let erroredCount = 0
@@ -257,6 +257,9 @@ export const executeConcurrently = async (
           erroredCount,
           completedCount,
         })
+        log = `${log}
+
+`
         const { columns = 80 } = process.stdout
         log = wrapAnsi(log, columns, {
           trim: false,
@@ -276,7 +279,7 @@ export const executeConcurrently = async (
           // nothing to do, we reuse the current executionLog object
         } else {
           executionLog.destroy()
-          executionLog = createLog({ newLine: "around" })
+          executionLog = createLog({ newLine: "" })
         }
       }
     },

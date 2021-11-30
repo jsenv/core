@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "24.4.0",
+  "version": "24.4.1",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -68,7 +68,7 @@
     "@jsenv/abort": "4.1.1",
     "@jsenv/filesystem": "2.5.1",
     "@jsenv/importmap": "1.2.0",
-    "@jsenv/log": "1.4.0",
+    "@jsenv/log": "1.5.0",
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.2.0",
     "@jsenv/uneval": "1.6.0",
