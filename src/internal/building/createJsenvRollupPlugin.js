@@ -1121,6 +1121,16 @@ export const createJsenvRollupPlugin = async ({
           urlVersionningForEntryPoints ||
           !file.isEntry
 
+        if (file.url in inlineModuleScripts && format === "systemjs") {
+          const magicString = new MagicString(file.code)
+          magicString.overwrite(
+            0,
+            "System.register([".length,
+            `System.register("${fileName}", [`,
+          )
+          file.code = magicString.toString()
+        }
+
         if (urlVersioning) {
           if (canBeVersioned && useImportMapToMaximizeCacheReuse) {
             buildRelativeUrl = computeBuildRelativeUrl(
@@ -1151,13 +1161,6 @@ export const createJsenvRollupPlugin = async ({
         if (jsRessource && jsRessource.isInline) {
           if (format === "systemjs") {
             markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
-            const magicString = new MagicString(file.code)
-            magicString.overwrite(
-              0,
-              "System.register([".length,
-              `System.register("${fileName}", [`,
-            )
-            file.code = magicString.toString()
           }
           buildInlineFileContents[buildRelativeUrl] = file.code
         } else {
@@ -1259,10 +1262,13 @@ export const createJsenvRollupPlugin = async ({
       Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
         const rollupFileInfo = rollupBuild[buildRelativeUrl]
         const ressource = ressourceBuilder.findRessource((ressource) => {
-          return (
-            ressource.buildRelativeUrl === buildRelativeUrl ||
-            rollupFileInfo.facadeModuleId === ressource.url
-          )
+          if (ressource.buildRelativeUrl === buildRelativeUrl) {
+            return true
+          }
+          if (ressource.url === rollupFileInfo.url) {
+            return true
+          }
+          return false
         })
         if (ressource && ressource.isInline) {
           const fileName = buildRelativeUrlToFileName(buildRelativeUrl)

@@ -298,7 +298,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       let jsString = String(bufferAfterBuild)
 
       // at this stage, for some reason the sourcemap url is not in the js
-      // (it will be added sshortly after by "injectSourcemapInRollupBuild")
+      // (it will be added shortly after by "injectSourcemapInRollupBuild")
       // but we know that a script type module have a sourcemap
       // and will be next to html file
       // with these assumptions we can force the sourcemap url
