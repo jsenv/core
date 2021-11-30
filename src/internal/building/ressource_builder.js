@@ -168,6 +168,7 @@ export const createRessourceBuilder = (
     isImportAssertion,
     contentTypeExpected,
     ressourceSpecifier,
+    referenceLabel,
     referenceUrl,
     referenceColumn,
     referenceLine,
@@ -302,6 +303,7 @@ export const createRessourceBuilder = (
       isRessourceHint,
       isImportAssertion,
       contentTypeExpected,
+      referenceLabel,
       referenceUrl,
       referenceColumn,
       referenceLine,
@@ -452,6 +454,7 @@ export const createRessourceBuilder = (
         isRessourceHint,
         contentTypeExpected,
         ressourceSpecifier,
+        referenceLabel,
         referenceLine,
         referenceColumn,
 
@@ -472,6 +475,7 @@ export const createRessourceBuilder = (
 
         const dependencyReference = createReference({
           ressourceSpecifier,
+          referenceLabel,
           referenceUrl: ressource.url,
           referenceLine,
           referenceColumn,
@@ -654,12 +658,6 @@ export const createRessourceBuilder = (
         if (ressource.contentType === "text/html") {
           effects.push(`parse html to find references`)
         }
-      } else {
-        effects.push(
-          `mark ${urlToHumanUrl(
-            ressource.url,
-          )} as referenced by ${urlToHumanUrl(reference.referenceUrl)}`,
-        )
       }
 
       if (reference.isRessourceHint) {
@@ -721,6 +719,7 @@ export const createRessourceBuilder = (
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,
           name,
+          // preserveSignature: ressource.isInline ? false : "strict",
         })
         ressource.rollupReferenceId = rollupReferenceId
         effects.push(`emit rollup chunk "${name}" (${rollupReferenceId})`)
@@ -751,6 +750,7 @@ export const createRessourceBuilder = (
           reference,
           referenceEffects,
           showReferenceSourceLocation,
+          shortenUrl,
         }),
       )
     }

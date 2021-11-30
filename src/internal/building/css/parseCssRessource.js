@@ -27,6 +27,7 @@ export const parseCssRessource = async (
   let sourcemapReference
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
+      referenceLabel: "css sourcemaping comment",
       contentTypeExpected: ["application/json", "application/octet-stream"],
       ressourceSpecifier: cssSourcemapUrl,
       // we don't really know the line or column
@@ -39,6 +40,7 @@ export const parseCssRessource = async (
     map = JSON.parse(String(sourcemapReference.ressource.bufferBeforeBuild))
   } else {
     sourcemapReference = notifyReferenceFound({
+      referenceLabel: "css sourcemaping comment",
       contentType: "application/octet-stream",
       ressourceSpecifier: `${urlToFilename(cssRessource.url)}.map`,
       isPlaceholder: true,
@@ -54,6 +56,7 @@ export const parseCssRessource = async (
   const atImportReferences = []
   atImports.forEach((atImport) => {
     const importReference = notifyReferenceFound({
+      referenceLabel: "css @import",
       ressourceSpecifier: atImport.specifier,
       ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
     })
@@ -64,8 +67,8 @@ export const parseCssRessource = async (
     if (urlDeclaration.specifier[0] === "#") {
       return
     }
-
     const urlReference = notifyReferenceFound({
+      referenceLabel: "css url",
       ressourceSpecifier: urlDeclaration.specifier,
       ...cssNodeToReferenceLocation(urlDeclaration.urlDeclarationNode),
     })
