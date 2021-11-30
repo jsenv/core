@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "24.4.2",
+  "version": "24.4.3",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -38,7 +38,8 @@
     "file-size": "node ./script/file_size/file_size.mjs --log",
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
-    "packages-install": "node ./script/packages/packages_install.js"
+    "packages-install": "node ./script/packages/packages_install.js",
+    "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {
     "playwright": "1.x"
