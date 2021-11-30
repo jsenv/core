@@ -55,7 +55,7 @@ jobs:
       - name: Install playwright
         run: npm run playwright-install
       - name: Run ESLint
-        run: npm run eslint-check
+        run: npm run eslint
       - name: Run tests
         run: npm run test-with-coverage
       - name: Upload coverage
