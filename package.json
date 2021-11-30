@@ -32,6 +32,7 @@
     "importmap": "node ./script/importmap/importmap.js",
     "build": "node ./script/build/build.js",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
+    "test-with-coverage": "npm run test -- --coverage",
     "dev": "node ./script/dev/start_dev_server.js",
     "performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
     "file-size": "node ./script/file_size/file_size.mjs --log",
