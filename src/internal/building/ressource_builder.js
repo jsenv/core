@@ -122,6 +122,7 @@ export const createRessourceBuilder = (
   }
 
   const createReferenceFoundInJsModule = async ({
+    referenceLabel,
     jsUrl,
     jsLine,
     jsColumn,
@@ -136,6 +137,7 @@ export const createRessourceBuilder = (
       isImportAssertion,
       ressourceSpecifier,
       contentTypeExpected,
+      referenceLabel,
       referenceUrl: jsUrl,
       referenceLine: jsLine,
       referenceColumn: jsColumn,

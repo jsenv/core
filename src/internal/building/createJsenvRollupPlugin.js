@@ -790,6 +790,7 @@ export const createJsenvRollupPlugin = async ({
         // otherwise rollup would never concat module together
         referenceShouldNotEmitChunk: jsConcatenation,
         contentTypeExpected: "application/javascript",
+        referenceLabel: "static or dynamic import",
         referenceUrl: importer.url,
         referenceColumn: importer.column,
         referenceLine: importer.line,
@@ -826,6 +827,7 @@ export const createJsenvRollupPlugin = async ({
           const { line, column } = importNode.loc.start
           const reference =
             await ressourceBuilder.createReferenceFoundInJsModule({
+              referenceLabel: "URL + import.meta.url",
               jsUrl: url,
               jsLine: line,
               jsColumn: column,
@@ -939,6 +941,7 @@ export const createJsenvRollupPlugin = async ({
             if (importAssertionSupportedByRuntime) {
               const reference =
                 await ressourceBuilder.createReferenceFoundInJsModule({
+                  referenceLabel: "import assertion",
                   isImportAssertion: true,
                   jsUrl: url,
                   jsLine: line,
