@@ -37,7 +37,8 @@ export const createRessourceBuilder = (
     emitChunk,
     emitAsset,
     setAssetSource,
-    onJsModuleReference = () => {},
+    onInlineJsModule = () => {},
+    onJsModule = () => {},
     resolveRessourceUrl,
     lineBreakNormalization,
   },
@@ -716,16 +717,25 @@ export const createRessourceBuilder = (
           return effects
         }
 
-        const jsModuleUrl = ressource.url
+        if (ressource.isInline) {
+          onInlineJsModule({
+            jsModuleUrl,
+            jsModuleSource: String(bufferBeforeBuild),
+            line: reference.referenceLine,
+            column: reference.referenceColumn,
+          })
+          effects.push(`generate an independent rollup build`)
+          return effects
+        }
 
-        onJsModuleReference({
+        const jsModuleUrl = ressource.url
+        onJsModule({
           jsModuleUrl,
           jsModuleIsInline: ressource.isInline,
           jsModuleSource: String(bufferBeforeBuild),
           line: reference.referenceLine,
           column: reference.referenceColumn,
         })
-
         const name = urlToBasename(jsModuleUrl)
         const rollupReferenceId = emitChunk({
           id: jsModuleUrl,

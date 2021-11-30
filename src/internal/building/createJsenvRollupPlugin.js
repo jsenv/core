@@ -555,15 +555,21 @@ export const createJsenvRollupPlugin = async ({
           emitChunk,
           emitAsset,
           setAssetSource,
-          onJsModuleReference: ({
-            jsModuleUrl,
-            jsModuleIsInline,
-            jsModuleSource,
-          }) => {
+          onInlineJsModule: ({ jsModuleUrl, jsModuleSource }) => {
             atleastOneChunkEmitted = true
-            if (jsModuleIsInline) {
-              inlineModuleScripts[jsModuleUrl] = jsModuleSource
+            inlineModuleScripts[jsModuleUrl] = jsModuleSource
+            urlImporterMap[jsModuleUrl] = {
+              url: resolveUrl(
+                entryPointsPrepared[0].entryProjectRelativeUrl,
+                compileDirectoryRemoteUrl,
+              ),
+              line: undefined,
+              column: undefined,
             }
+            jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
+          },
+          onJsModule: ({ jsModuleUrl }) => {
+            atleastOneChunkEmitted = true
             urlImporterMap[jsModuleUrl] = {
               url: resolveUrl(
                 entryPointsPrepared[0].entryProjectRelativeUrl,
