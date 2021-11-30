@@ -325,9 +325,10 @@ export const createRessourceBuilder = (
 
     reference.ressource = ressource
     if (fromRollup && ressourceImporter.isEntryPoint) {
-      // do not add that reference, it's already know and would duplicate the html referencing a js file
-      // but do apply its effects
-      ressource.applyReferenceEffects(reference, { isJsModule })
+      // When HTML references JS, ressource builder has emitted the js chunk.
+      // so it already knows it exists and is part of references
+      // -> no need to push into reference (would incorrectly consider html references js twice)
+      // -> no need to log the js ressource (already logged during the HTML parsing)
     } else {
       ressource.references.push(reference)
       const effects = ressource.applyReferenceEffects(reference, { isJsModule })
