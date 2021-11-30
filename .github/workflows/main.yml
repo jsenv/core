@@ -46,13 +46,19 @@ jobs:
           sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           ulimit -n
         # sudo ulimit should prevent npm link failure
-      - name: NPM installation
+      - name: Install node modules
         run: npm install
-      - name: check lint
+      - name: Generate importmap
+        run: npm run importmap
+      - name: Install packages
+        run: npm run packages-install
+      - name: Install playwright
+        run: npm run playwright-install
+      - name: Run ESLint
         run: npm run eslint-check
-      - name: check tests
+      - name: Run tests
         run: npm run test-with-coverage
-      - name: upload coverage
+      - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

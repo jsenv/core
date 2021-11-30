@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "24.4.1",
+  "version": "24.4.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -28,8 +28,8 @@
     "/main.js"
   ],
   "scripts": {
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
-    "importmap-generate": "node ./script/importmap/generate_importmap.js",
+    "eslint": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
+    "importmap": "node ./script/importmap/importmap.js",
     "build": "node ./script/build/build.js",
     "dist": "npm run build",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
@@ -42,13 +42,11 @@
     "test-launch-browser": "node ./script/test/test-launch-browser.js",
     "test-launch-node": "node ./script/test/test-launch-node.js",
     "measure-performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
-    "prettier-check": "prettier --check .",
+    "file-size": "node ./script/file_size/file_size.mjs --log",
+    "prettier": "prettier --check .",
     "prettier-write": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
-    "packages-install": "node ./script/packages/packages_install.js",
-    "postinstall": "npm run importmap-generate && npm run playwright-install && npm run packages-install",
-    "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
-    "postpublish": "node ./script/publish/restore_postinstall.mjs"
+    "packages-install": "node ./script/packages/packages_install.js"
   },
   "optionalDependencies": {
     "playwright": "1.x"
@@ -120,6 +118,7 @@
     "@jsenv/assert": "2.3.2",
     "@jsenv/babel-preset": "./packages/jsenv-babel-preset",
     "@jsenv/eslint-config": "16.0.9",
+    "@jsenv/file-size-impact": "12.1.1",
     "@jsenv/github-release-package": "1.2.3",
     "@jsenv/https-local": "1.0.3",
     "@jsenv/importmap-eslint-resolver": "5.2.1",
