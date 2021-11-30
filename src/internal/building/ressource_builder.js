@@ -3,7 +3,6 @@ import {
   urlToRelativeUrl,
   urlIsInsideOf,
   urlToParentUrl,
-  urlToBasename,
   urlToFilename,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
@@ -34,11 +33,9 @@ export const createRessourceBuilder = (
     asOriginalServerUrl,
     urlToHumanUrl,
 
-    emitChunk,
     emitAsset,
     setAssetSource,
-    onInlineJsModule = () => {},
-    onJsModule = () => {},
+    onJsModule,
     resolveRessourceUrl,
     lineBreakNormalization,
   },
@@ -717,33 +714,19 @@ export const createRessourceBuilder = (
           return effects
         }
 
-        if (ressource.isInline) {
-          onInlineJsModule({
-            jsModuleUrl,
-            jsModuleSource: String(bufferBeforeBuild),
-            line: reference.referenceLine,
-            column: reference.referenceColumn,
-          })
-          effects.push(`generate an independent rollup build`)
-          return effects
-        }
-
         const jsModuleUrl = ressource.url
-        onJsModule({
+        const rollupChunk = onJsModule({
+          ressource,
           jsModuleUrl,
           jsModuleIsInline: ressource.isInline,
           jsModuleSource: String(bufferBeforeBuild),
           line: reference.referenceLine,
           column: reference.referenceColumn,
         })
-        const name = urlToBasename(jsModuleUrl)
-        const rollupReferenceId = emitChunk({
-          id: jsModuleUrl,
-          name,
-          // preserveSignature: ressource.isInline ? false : "strict",
-        })
-        ressource.rollupReferenceId = rollupReferenceId
-        effects.push(`emit rollup chunk "${name}" (${rollupReferenceId})`)
+        ressource.rollupReferenceId = rollupChunk.rollupReferenceId
+        effects.push(
+          `emit rollup chunk "${rollupChunk.name}" (${rollupChunk.rollupReferenceId})`,
+        )
         return effects
       }
 
@@ -759,7 +742,6 @@ export const createRessourceBuilder = (
       effects.push(
         `emit rollup asset "${ressource.relativeUrl}" (${rollupReferenceId})`,
       )
-
       return effects
     }
 
