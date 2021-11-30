@@ -330,7 +330,15 @@ export const createRessourceBuilder = (
       ressource.applyReferenceEffects(reference, { isJsModule })
     } else {
       ressource.references.push(reference)
-      ressource.applyReferenceEffects(reference, { isJsModule })
+      const effects = ressource.applyReferenceEffects(reference, { isJsModule })
+      logger.debug(
+        formatFoundReference({
+          reference,
+          referenceEffects: effects,
+          showReferenceSourceLocation,
+          shortenUrl,
+        }),
+      )
     }
 
     return reference
@@ -654,7 +662,7 @@ export const createRessourceBuilder = (
       }
     }
 
-    const onReference = (reference, infoFromReference) => {
+    const applyReferenceEffects = (reference, infoFromReference) => {
       const effects = []
       if (ressource.isEntryPoint) {
         if (ressource.contentType === "text/html") {
@@ -742,19 +750,6 @@ export const createRessourceBuilder = (
       )
 
       return effects
-    }
-
-    const applyReferenceEffects = (reference, infoFromReference) => {
-      const referenceEffects = onReference(reference, infoFromReference)
-
-      logger.debug(
-        formatFoundReference({
-          reference,
-          referenceEffects,
-          showReferenceSourceLocation,
-          shortenUrl,
-        }),
-      )
     }
 
     Object.assign(ressource, {
