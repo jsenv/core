@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head>
-    <title>Jsenv redirector</title>
+    <title>Compile proxy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
@@ -568,7 +568,7 @@
   var systemRegister = systemJSPrototype.register;
   var inlineScriptCount = 0;
 
-  systemJSPrototype.register = function (deps, declare) {
+  systemJSPrototype.register = function (deps, declare, autoUrl) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
       var scripts = document.querySelectorAll('script[src]');
       var lastScript = scripts[scripts.length - 1];
@@ -577,6 +577,8 @@
 
       if (lastScript) {
         lastAutoImportUrl = lastScript.src;
+      } else if (autoUrl) {
+        lastAutoImportUrl = autoUrl;
       } else {
         inlineScriptCount++;
         lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
@@ -695,108 +697,57 @@
 })();
 
 (function () {
-  /*
-  * SystemJS named register extension
-  * Supports System.register('name', [..deps..], function (_export, _context) { ... })
-  *
-  * Names are written to the registry as-is
-  * System.register('x', ...) can be imported as System.import('x')
-  */
-  (function (global) {
-    var System = global.System;
-    setRegisterRegistry(System);
-    var systemJSPrototype = System.constructor.prototype;
-    var constructor = System.constructor;
+  var envGlobal = typeof self !== 'undefined' ? self : global;
+  var System = envGlobal.System;
+  var register = System.register;
+  var registerRegistry = Object.create(null);
 
-    var SystemJS = function () {
-      constructor.call(this);
-      setRegisterRegistry(this);
-    };
+  System.register = function (name, deps, declare) {
+    if (typeof name !== 'string') return register.apply(this, arguments);
+    var define = [deps, declare];
+    var url = System.resolve(`./${name}`);
+    registerRegistry[url] = define;
+    return register.call(this, deps, declare, url);
+  };
 
-    SystemJS.prototype = systemJSPrototype;
-    System.constructor = SystemJS;
-    var firstNamedDefine, firstName;
+  var instantiate = System.instantiate;
 
-    function setRegisterRegistry(systemInstance) {
-      systemInstance.registerRegistry = Object.create(null);
-      systemInstance.namedRegisterAliases = Object.create(null);
-    }
+  System.instantiate = function (url, firstParentUrl) {
+    var result = registerRegistry[url];
 
-    var register = systemJSPrototype.register;
-
-    systemJSPrototype.register = function (name, deps, declare) {
-      if (typeof name !== 'string') return register.apply(this, arguments);
-      var define = [deps, declare];
-      this.registerRegistry[name] = define;
-
-      if (!firstNamedDefine) {
-        firstNamedDefine = define;
-        firstName = name;
-      }
-
-      Promise.resolve().then(function () {
-        firstNamedDefine = null;
-        firstName = null;
-      });
-      return register.apply(this, [deps, declare]);
-    };
-
-    var resolve = systemJSPrototype.resolve;
-
-    systemJSPrototype.resolve = function (id, parentURL) {
-      try {
-        // Prefer import map (or other existing) resolution over the registerRegistry
-        return resolve.call(this, id, parentURL);
-      } catch (err) {
-        if (id in this.registerRegistry) {
-          return this.namedRegisterAliases[id] || id;
-        }
-
-        throw err;
-      }
-    };
-
-    var instantiate = systemJSPrototype.instantiate;
-
-    systemJSPrototype.instantiate = function (url, firstParentUrl) {
-      var result = this.registerRegistry[url];
-
-      if (result) {
-        this.registerRegistry[url] = null;
-        return result;
-      } else {
-        return instantiate.call(this, url, firstParentUrl);
-      }
-    };
-
-    var getRegister = systemJSPrototype.getRegister;
-
-    systemJSPrototype.getRegister = function (url) {
-      // Calling getRegister() because other extras need to know it was called so they can perform side effects
-      var register = getRegister.call(this, url);
-
-      if (firstName && url) {
-        this.namedRegisterAliases[firstName] = url;
-      }
-
-      var result = firstNamedDefine || register;
-      firstNamedDefine = null;
-      firstName = null;
+    if (result) {
+      registerRegistry[url] = null;
       return result;
-    };
-  })(typeof self !== 'undefined' ? self : global);
+    } else {
+      return instantiate.call(this, url, firstParentUrl);
+    }
+  };
+
+  var getRegister = System.getRegister;
+
+  System.getRegister = function (url) {
+    // Calling getRegister() because other extras need to know it was called so they can perform side effects
+    var register = getRegister.call(this, url);
+    var result = registerRegistry[url] || register;
+    return result;
+  };
 })();
-//# sourceMappingURL=assets/s.js-55849eca.map</script>
+//# sourceMappingURL=assets/s.js-6192a06c.map</script>
       </head>
 
   <body>
+    <script>
+      window.readyPromise = new Promise((resolve) => {
+        window.resolveReadyPromise = resolve
+      })
+    </script>
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./redirector.html__inline__15.js": "./redirector.html__inline__15-4d453af0.js"
+    "./compile_proxy.html__inline__20.js": "./compile_proxy.html__inline__20-672ba17c.js"
   }
 }</script>
-    <script>System.register("redirector.html__inline__15.js", [], (function () {
+    <script>System.register("compile_proxy.html__inline__20.js", [], (function () {
   'use strict';
   return {
     execute: (function () {
@@ -1072,7 +1023,7 @@
       var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
       /* eslint-env browser */
-      function _await$4(value, then, direct) {
+      function _await$3(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1084,7 +1035,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$4(f) {
+      function _async$3(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1111,7 +1062,7 @@
         }
       }
 
-      var fetchUsingXHR = _async$4(function (url) {
+      var fetchUsingXHR = _async$3(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             signal = _ref.signal,
             _ref$method = _ref.method,
@@ -1195,7 +1146,7 @@
         }
 
         xhr.send(body);
-        return _await$4(headersPromise, function () {
+        return _await$3(headersPromise, function () {
           // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
           var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
           var responseStatus = xhr.status;
@@ -1203,7 +1154,7 @@
           var responseHeaders = getHeadersFromXHR(xhr);
 
           var readBody = function readBody() {
-            return _await$4(bodyPromise, function () {
+            return _await$3(bodyPromise, function () {
               var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
               if (status === 0) {
@@ -1239,7 +1190,7 @@
             return _call$1(text, JSON.parse);
           };
 
-          var blob = _async$4(function () {
+          var blob = _async$3(function () {
             if (!hasBlob) {
               throw new Error("blob not supported");
             }
@@ -1276,7 +1227,7 @@
             });
           };
 
-          var formData = _async$4(function () {
+          var formData = _async$3(function () {
             if (!hasFormData) {
               throw new Error("formData not supported");
             }
@@ -1457,7 +1408,7 @@
         return form;
       };
 
-      var blobToArrayBuffer = _async$4(function (blob) {
+      var blobToArrayBuffer = _async$3(function (blob) {
         var reader = new FileReader();
         var promise = fileReaderReady(reader);
         reader.readAsArrayBuffer(blob);
@@ -1508,7 +1459,7 @@
 
       var _excluded = ["mode"];
 
-      function _await$3(value, then, direct) {
+      function _await$2(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1520,14 +1471,14 @@
         return then ? value.then(then) : value;
       }
 
-      var fetchNative = _async$3(function (url) {
+      var fetchNative = _async$2(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         var _ref$mode = _ref.mode,
             mode = _ref$mode === void 0 ? "cors" : _ref$mode,
             options = _objectWithoutProperties(_ref, _excluded);
 
-        return _await$3(window.fetch(url, _objectSpread2({
+        return _await$2(window.fetch(url, _objectSpread2({
           mode: mode
         }, options)), function (response) {
           return {
@@ -1554,7 +1505,7 @@
         });
       });
 
-      function _async$3(f) {
+      function _async$2(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1578,7 +1529,7 @@
 
       var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-      function _await$2(value, then, direct) {
+      function _await$1(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1590,7 +1541,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$2(f) {
+      function _async$1(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1604,10 +1555,10 @@
         };
       }
 
-      var fetchJson = _async$2(function (url) {
+      var fetchJson = _async$1(function (url) {
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        return _await$2(fetchUrl(url, options), function (response) {
-          return _await$2(response.json());
+        return _await$1(fetchUrl(url, options), function (response) {
+          return _await$1(response.json());
         });
       });
 
@@ -1832,7 +1783,7 @@
         return version;
       };
 
-      function _await$1(value, then, direct) {
+      function _await(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1844,7 +1795,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$1(f) {
+      function _async(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1895,14 +1846,14 @@
         return result;
       }
 
-      var scanBrowserRuntimeFeatures = _async$1(function () {
+      var scanBrowserRuntimeFeatures = _async(function () {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref$coverageHandledF = _ref.coverageHandledFromOutside,
             coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
             _ref$failFastOnFeatur = _ref.failFastOnFeatureDetection,
             failFastOnFeatureDetection = _ref$failFastOnFeatur === void 0 ? false : _ref$failFastOnFeatur;
 
-        return _await$1(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
+        return _await(fetchJson("/.jsenv/__compile_server_meta__.json"), function (_ref2) {
           var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
               customCompilerPatterns = _ref2.customCompilerPatterns,
@@ -1921,12 +1872,12 @@
             cssImportAssertions: undefined,
             newStylesheet: undefined
           };
-          return _await$1(detectSupportedFeatures({
+          return _await(detectSupportedFeatures({
             featuresReport: featuresReport,
             failFastOnFeatureDetection: failFastOnFeatureDetection,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function () {
-            return _await$1(pluginRequiredNamesFromGroupInfo(groupInfo, {
+            return _await(pluginRequiredNamesFromGroupInfo(groupInfo, {
               featuresReport: featuresReport,
               coverageHandledFromOutside: coverageHandledFromOutside
             }), function (pluginRequiredNameArray) {
@@ -1946,7 +1897,7 @@
         });
       });
 
-      var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref3) {
+      var pluginRequiredNamesFromGroupInfo = _async(function (groupInfo, _ref3) {
         var featuresReport = _ref3.featuresReport,
             coverageHandledFromOutside = _ref3.coverageHandledFromOutside;
         var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
@@ -1991,14 +1942,14 @@
         });
       });
 
-      var detectSupportedFeatures = _async$1(function (_ref4) {
+      var detectSupportedFeatures = _async(function (_ref4) {
         var featuresReport = _ref4.featuresReport,
             failFastOnFeatureDetection = _ref4.failFastOnFeatureDetection,
             inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
-        return _await$1(supportsImportmap({
+        return _await(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -2029,7 +1980,7 @@
         });
       });
 
-      var supportsImportmap = _async$1(function () {
+      var supportsImportmap = _async(function () {
         var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref5$remote = _ref5.remote,
             remote = _ref5$remote === void 0 ? true : _ref5$remote;
@@ -2050,7 +2001,7 @@
 
         document.body.appendChild(importmapScript);
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+          return _await(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
             document.body.removeChild(importmapScript);
             return window.__jsenv_runtime_test_importmap__;
           });
@@ -2060,11 +2011,11 @@
         });
       });
 
-      var supportsDynamicImport = _async$1(function () {
+      var supportsDynamicImport = _async(function () {
         var moduleSource = asBase64Url("export default 42");
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
               return namespace.default === 42;
             });
           });
@@ -2084,8 +2035,8 @@
       };
 
       var supportsTopLevelAwait = function supportsTopLevelAwait() {
-        return _await$1(_catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+        return _await(_catch(function () {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
             return window.__jsenv_runtime_test_top_level_await__ === 42;
           });
         }, function () {
@@ -2097,12 +2048,12 @@
       // console.log(featuresReport)
 
 
-      var supportsJsonImportAssertions = _async$1(function () {
+      var supportsJsonImportAssertions = _async(function () {
         var jsonBase64Url = asBase64Url("42", "application/json");
         var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\nexport default data"));
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
               return namespace.default === 42;
             });
           });
@@ -2111,12 +2062,12 @@
         });
       });
 
-      var supportsCssImportAssertions = _async$1(function () {
+      var supportsCssImportAssertions = _async(function () {
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
         var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\nexport default css"));
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+          return _await(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
               return namespace.default instanceof CSSStyleSheet;
             });
           });
@@ -2151,63 +2102,14 @@
       }; // const cssImportAssertions = await supportsCssImportAssertions()
       // console.log({ cssImportAssertions })
 
-      function _await(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      var redirect = _async(function () {
-        var redirectTarget = new URLSearchParams(window.location.search).get("redirect");
-        return _await(scanBrowserRuntimeFeatures({
-          failFastOnFeatureDetection: true
-        }), function (browserRuntimeFeaturesReport) {
-          var href = "".concat(getDirectoryUrl(browserRuntimeFeaturesReport)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
-          // otherwise it would break the back button
-
-          window.location.replace(href);
-        });
-      });
-
-      function _async(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var getDirectoryUrl = function getDirectoryUrl(_ref) {
-        var canAvoidCompilation = _ref.canAvoidCompilation,
-            outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
-            compileId = _ref.compileId;
-
-        if (canAvoidCompilation) {
-          return "/";
-        }
-
-        return "/".concat(outDirectoryRelativeUrl).concat(compileId, "/");
-      };
-
-      redirect();
+      window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
+      window.resolveReadyPromise();
 
     })
   };
 }));
 
-//# sourceMappingURL=redirector.html__inline__15-4d453af0.js.map</script>
+//# sourceMappingURL=compile_proxy.html__inline__20-672ba17c.js.map</script>
   
 
 </body></html>

@@ -4127,7 +4127,7 @@
     var systemRegister = systemJSPrototype.register;
     var inlineScriptCount = 0;
 
-    systemJSPrototype.register = function (deps, declare) {
+    systemJSPrototype.register = function (deps, declare, autoUrl) {
       if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
         var scripts = document.querySelectorAll('script[src]');
         var lastScript = scripts[scripts.length - 1];
@@ -4136,6 +4136,8 @@
 
         if (lastScript) {
           lastAutoImportUrl = lastScript.src;
+        } else if (autoUrl) {
+          lastAutoImportUrl = autoUrl;
         } else {
           inlineScriptCount++;
           lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
@@ -4256,96 +4258,40 @@
   })();
 
   (function () {
-    /*
-    * SystemJS named register extension
-    * Supports System.register('name', [..deps..], function (_export, _context) { ... })
-    *
-    * Names are written to the registry as-is
-    * System.register('x', ...) can be imported as System.import('x')
-    */
-    (function (global) {
-      var System = global.System;
-      setRegisterRegistry(System);
-      var systemJSPrototype = System.constructor.prototype;
-      var constructor = System.constructor;
+    var envGlobal = typeof self !== 'undefined' ? self : global;
+    var System = envGlobal.System;
+    var register = System.register;
+    var registerRegistry = Object.create(null);
 
-      var SystemJS = function SystemJS() {
-        constructor.call(this);
-        setRegisterRegistry(this);
-      };
+    System.register = function (name, deps, declare) {
+      if (typeof name !== 'string') return register.apply(this, arguments);
+      var define = [deps, declare];
+      var url = System.resolve("./".concat(name));
+      registerRegistry[url] = define;
+      return register.call(this, deps, declare, url);
+    };
 
-      SystemJS.prototype = systemJSPrototype;
-      System.constructor = SystemJS;
-      var firstNamedDefine, firstName;
+    var instantiate = System.instantiate;
 
-      function setRegisterRegistry(systemInstance) {
-        systemInstance.registerRegistry = Object.create(null);
-        systemInstance.namedRegisterAliases = Object.create(null);
-      }
+    System.instantiate = function (url, firstParentUrl) {
+      var result = registerRegistry[url];
 
-      var register = systemJSPrototype.register;
-
-      systemJSPrototype.register = function (name, deps, declare) {
-        if (typeof name !== 'string') return register.apply(this, arguments);
-        var define = [deps, declare];
-        this.registerRegistry[name] = define;
-
-        if (!firstNamedDefine) {
-          firstNamedDefine = define;
-          firstName = name;
-        }
-
-        Promise.resolve().then(function () {
-          firstNamedDefine = null;
-          firstName = null;
-        });
-        return register.apply(this, [deps, declare]);
-      };
-
-      var resolve = systemJSPrototype.resolve;
-
-      systemJSPrototype.resolve = function (id, parentURL) {
-        try {
-          // Prefer import map (or other existing) resolution over the registerRegistry
-          return resolve.call(this, id, parentURL);
-        } catch (err) {
-          if (id in this.registerRegistry) {
-            return this.namedRegisterAliases[id] || id;
-          }
-
-          throw err;
-        }
-      };
-
-      var instantiate = systemJSPrototype.instantiate;
-
-      systemJSPrototype.instantiate = function (url, firstParentUrl) {
-        var result = this.registerRegistry[url];
-
-        if (result) {
-          this.registerRegistry[url] = null;
-          return result;
-        } else {
-          return instantiate.call(this, url, firstParentUrl);
-        }
-      };
-
-      var getRegister = systemJSPrototype.getRegister;
-
-      systemJSPrototype.getRegister = function (url) {
-        // Calling getRegister() because other extras need to know it was called so they can perform side effects
-        var register = getRegister.call(this, url);
-
-        if (firstName && url) {
-          this.namedRegisterAliases[firstName] = url;
-        }
-
-        var result = firstNamedDefine || register;
-        firstNamedDefine = null;
-        firstName = null;
+      if (result) {
+        registerRegistry[url] = null;
         return result;
-      };
-    })(typeof self !== 'undefined' ? self : global);
+      } else {
+        return instantiate.call(this, url, firstParentUrl);
+      }
+    };
+
+    var getRegister = System.getRegister;
+
+    System.getRegister = function (url) {
+      // Calling getRegister() because other extras need to know it was called so they can perform side effects
+      var register = getRegister.call(this, url);
+      var result = registerRegistry[url] || register;
+      return result;
+    };
   })();
 
   /* eslint-env browser */
@@ -5227,4 +5173,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime-015d0fc5.js.map
+//# sourceMappingURL=browser_runtime-75fe4f45.js.map
