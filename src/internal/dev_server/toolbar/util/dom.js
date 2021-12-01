@@ -1,7 +1,7 @@
 export const updateIframeOverflowOnParentWindow = () => {
   if (!window.parent) {
     // can happen while parent iframe reloads
-    return null
+    return
   }
 
   const aTooltipIsOpened =
