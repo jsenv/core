@@ -731,8 +731,8 @@
 }());
 
 (function(){
-  var global = typeof self !== 'undefined' ? self : global;
-  var System = global.System;
+  var envGlobal = typeof self !== 'undefined' ? self : global;
+  var System = envGlobal.System;
   var register = System.register;
   var registerRegistry = Object.create(null)
 
@@ -763,4 +763,4 @@
     var result = registerRegistry[url] || register;
     return result;
   };
-})()
+}());
