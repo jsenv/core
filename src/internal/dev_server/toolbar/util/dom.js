@@ -1,4 +1,9 @@
 export const updateIframeOverflowOnParentWindow = () => {
+  if (!window.parent) {
+    // can happen while parent iframe reloads
+    return null
+  }
+
   const aTooltipIsOpened =
     document.querySelector("[data-tooltip-visible]") ||
     document.querySelector("[data-tooltip-auto-visible]")

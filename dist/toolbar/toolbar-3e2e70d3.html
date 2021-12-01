@@ -1363,7 +1363,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       var lastAutoImportUrl;
       lastAutoImportDeps = deps;
 
-      if (lastScript) {
+      if (lastScript && lastScript.src) {
         lastAutoImportUrl = lastScript.src;
       } else if (autoUrl) {
         lastAutoImportUrl = autoUrl;
@@ -1493,9 +1493,11 @@ html[data-toolbar-visible] #toolbar-trigger {
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
-    var url = System.resolve(`./${name}`);
-    registerRegistry[url] = define;
-    return register.call(this, deps, declare, url);
+    return System.prepareImport().then(function () {
+      var url = System.resolve(`./${name}`);
+      registerRegistry[url] = define;
+      return register.call(System, deps, declare, url);
+    });
   };
 
   var instantiate = System.instantiate;
@@ -1520,7 +1522,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     return result;
   };
 })();
-//# sourceMappingURL=assets/s.js-6192a06c.map</script>
+//# sourceMappingURL=assets/s.js-fcba0e35.map</script>
       </head>
   <body>
     <div id="toolbar-overlay"></div>
@@ -1869,7 +1871,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-53e1ab2b.js"
+    "./toolbar.main.js": "./toolbar.main-b23f63e6.js"
   }
 }</script>
     <script>
@@ -2743,6 +2745,11 @@ html[data-toolbar-visible] #toolbar-trigger {
       });
 
       var updateIframeOverflowOnParentWindow = function updateIframeOverflowOnParentWindow() {
+        if (!window.parent) {
+          // can happen while parent iframe reloads
+          return null;
+        }
+
         var aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
         var settingsAreOpened = document.querySelector("#settings[data-active]");
 
@@ -4812,7 +4819,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-53e1ab2b.js.map</script>
+//# sourceMappingURL=toolbar.main-b23f63e6.js.map</script>
   
 
 </body></html>
