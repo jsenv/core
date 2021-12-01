@@ -179,6 +179,7 @@ const regularScriptSrcVisitor = (
   }
 
   const remoteScriptReference = notifyReferenceFound({
+    referenceLabel: "html script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
@@ -244,6 +245,7 @@ const regularScriptTextNodeVisitor = (
     `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
   )
   const jsReference = notifyReferenceFound({
+    referenceLabel: "html inline script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier,
     ...referenceLocationFromHtmlNode(script),
@@ -271,6 +273,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   }
 
   const remoteScriptReference = notifyReferenceFound({
+    referenceLabel: "html module script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
@@ -295,7 +298,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       let jsString = String(bufferAfterBuild)
 
       // at this stage, for some reason the sourcemap url is not in the js
-      // (it will be added sshortly after by "injectSourcemapInRollupBuild")
+      // (it will be added shortly after by "injectSourcemapInRollupBuild")
       // but we know that a script type module have a sourcemap
       // and will be next to html file
       // with these assumptions we can force the sourcemap url
@@ -341,6 +344,7 @@ const moduleScriptTextNodeVisitor = (
     `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
   )
   const jsReference = notifyReferenceFound({
+    referenceLabel: "html inline module script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier,
     ...referenceLocationFromHtmlNode(script),
@@ -378,6 +382,7 @@ const importmapScriptSrcVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
+    referenceLabel: "html importmap",
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
@@ -465,6 +470,7 @@ const importmapScriptTextNodeVisitor = (
   }
 
   const importmapReference = notifyReferenceFound({
+    referenceLabel: "html inline importmap",
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       script,
@@ -505,6 +511,7 @@ const linkStylesheetHrefVisitor = (
   }
 
   const cssReference = notifyReferenceFound({
+    referenceLabel: "html stylesheet link",
     contentTypeExpected: "text/css",
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
@@ -574,6 +581,7 @@ const linkHrefVisitor = (
     return null
   }
 
+  const href = hrefAttribute.value
   const relAttribute = getHtmlNodeAttributeByName(link, "rel")
   const rel = relAttribute ? relAttribute.value : undefined
   const isRessourceHint = [
@@ -598,9 +606,10 @@ const linkHrefVisitor = (
   }
 
   const linkReference = notifyReferenceFound({
+    referenceLabel: rel ? `html ${rel} link href` : `html link href`,
     isRessourceHint,
     contentTypeExpected,
-    ressourceSpecifier: hrefAttribute.value,
+    ressourceSpecifier: href,
     ...referenceLocationFromHtmlNode(link, "href"),
     urlVersioningDisabled: contentTypeExpected === "application/manifest+json",
     isJsModule,
@@ -664,6 +673,7 @@ const styleTextNodeVisitor = (
   }
 
   const inlineStyleReference = notifyReferenceFound({
+    referenceLabel: "html style",
     contentTypeExpected: "text/css",
     ressourceSpecifier: getUniqueNameForInlineHtmlNode(
       style,
@@ -689,6 +699,7 @@ const imgSrcVisitor = (img, { notifyReferenceFound }) => {
   }
 
   const srcReference = notifyReferenceFound({
+    referenceLabel: "html img src",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(img, "src"),
   })
@@ -709,8 +720,9 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
   }
 
   const srcsetParts = parseSrcset(srcsetAttribute.value)
-  const srcsetPartsReferences = srcsetParts.map(({ specifier }) =>
+  const srcsetPartsReferences = srcsetParts.map(({ specifier }, index) =>
     notifyReferenceFound({
+      referenceLabel: `html srcset ${index}`,
       ressourceSpecifier: specifier,
       ...referenceLocationFromHtmlNode(htmlNode, "srcset"),
     }),
@@ -742,6 +754,7 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
 
   const typeAttribute = getHtmlNodeAttributeByName(source, "type")
   const srcReference = notifyReferenceFound({
+    referenceLabel: "html source",
     contentTypeExpected: typeAttribute ? typeAttribute.value : undefined,
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(source, "src"),

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "24.3.1",
+  "version": "24.4.3",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -28,27 +28,18 @@
     "/main.js"
   ],
   "scripts": {
-    "eslint-check": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
-    "importmap-generate": "node ./script/importmap/generate_importmap.js",
+    "eslint": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
+    "importmap": "node ./script/importmap/importmap.js",
     "build": "node ./script/build/build.js",
-    "dist": "npm run build",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
-    "dev": "node ./script/dev/start_dev_server.js",
     "test-with-coverage": "npm run test -- --coverage",
-    "test-js-transform": "node ./script/test/test-js-transform.js",
-    "test-compile-server": "node ./script/test/test-compile-server.js",
-    "test-execute-test-plan": "node ./script/test/test-execute-test-plan.js",
-    "test-build": "node ./script/test/test_build.js",
-    "test-launch-browser": "node ./script/test/test-launch-browser.js",
-    "test-launch-node": "node ./script/test/test-launch-node.js",
-    "measure-performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
-    "prettier-check": "prettier --check .",
-    "prettier-write": "prettier --write .",
+    "dev": "node ./script/dev/start_dev_server.js",
+    "performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
+    "file-size": "node ./script/file_size/file_size.mjs --log",
+    "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "packages-install": "node ./script/packages/packages_install.js",
-    "postinstall": "npm run importmap-generate && npm run playwright-install && npm run packages-install",
-    "prepublishOnly": "node ./script/publish/remove_postinstall.mjs && npm run dist",
-    "postpublish": "node ./script/publish/restore_postinstall.mjs"
+    "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {
     "playwright": "1.x"
@@ -68,7 +59,7 @@
     "@jsenv/abort": "4.1.1",
     "@jsenv/filesystem": "2.5.1",
     "@jsenv/importmap": "1.2.0",
-    "@jsenv/log": "1.4.0",
+    "@jsenv/log": "1.5.0",
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.2.0",
     "@jsenv/uneval": "1.6.0",
@@ -120,6 +111,7 @@
     "@jsenv/assert": "2.3.2",
     "@jsenv/babel-preset": "./packages/jsenv-babel-preset",
     "@jsenv/eslint-config": "16.0.9",
+    "@jsenv/file-size-impact": "12.1.1",
     "@jsenv/github-release-package": "1.2.3",
     "@jsenv/https-local": "1.0.3",
     "@jsenv/importmap-eslint-resolver": "5.2.1",

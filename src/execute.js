@@ -88,11 +88,7 @@ export const execute = async ({
   }
 
   try {
-    const {
-      outDirectoryRelativeUrl,
-      origin: compileServerOrigin,
-      stop,
-    } = await startCompileServer({
+    const compileServer = await startCompileServer({
       signal: executeOperation.signal,
       logLevel: compileServerLogLevel,
 
@@ -117,7 +113,7 @@ export const execute = async ({
       compileServerCanWriteOnFilesystem,
     })
     executeOperation.addEndCallback(async () => {
-      await stop("execution done")
+      await compileServer.stop("execution done")
     })
 
     const result = await launchAndExecute({
@@ -127,8 +123,9 @@ export const execute = async ({
       runtime,
       runtimeParams: {
         projectDirectoryUrl,
-        compileServerOrigin,
-        outDirectoryRelativeUrl,
+        compileServerOrigin: compileServer.origin,
+        compileServerId: compileServer.id,
+        outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
         ...runtimeParams,
       },
       executeParams: {
@@ -155,8 +152,8 @@ export const execute = async ({
     })
 
     if (collectCompileServerInfo) {
-      result.outDirectoryRelativeUrl = outDirectoryRelativeUrl
-      result.compileServerOrigin = compileServerOrigin
+      result.compileServerOrigin = compileServer.origin
+      result.outDirectoryRelativeUrl = compileServer.outDirectoryRelativeUrl
     }
 
     if (result.status === "errored") {

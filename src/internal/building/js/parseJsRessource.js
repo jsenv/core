@@ -18,6 +18,7 @@ export const parseJsRessource = async (
 
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
+      referenceLabel: "js sourcemapping comment",
       contentTypeExpected: ["application/json", "application/octet-stream"],
       ressourceSpecifier: jsSourcemapUrl,
       // we don't really know the line or column
@@ -29,6 +30,7 @@ export const parseJsRessource = async (
     })
   } else {
     sourcemapReference = notifyReferenceFound({
+      referenceLabel: "js sourcemapping comment",
       contentType: "application/octet-stream",
       ressourceSpecifier: `${urlToFilename(jsUrl)}.map`,
       isPlaceholder: true,

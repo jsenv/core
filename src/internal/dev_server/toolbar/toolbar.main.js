@@ -223,6 +223,12 @@ const sendEventToParent = (name, data) => {
   )
 }
 
+window.toolbar = {
+  render: renderToolbar,
+  show: showToolbar,
+  hide: () => hideToolbar(),
+}
+
 addExternalCommandCallback("renderToolbar", () => {
   renderToolbar()
 })
@@ -232,9 +238,4 @@ addExternalCommandCallback("showToolbar", () => {
 addExternalCommandCallback("hideToolbar", () => {
   hideToolbar()
 })
-
-window.toolbar = {
-  render: renderToolbar,
-  show: showToolbar,
-  hide: () => hideToolbar(),
-}
+sendEventToParent("toolbar_ready")

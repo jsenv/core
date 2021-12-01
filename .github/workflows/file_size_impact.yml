@@ -1,0 +1,37 @@
+# This is a GitHub workflow YAML file
+# see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+#
+# For every push on a pull request, it
+# - creates or updates a comment about potential pr impact on several files size
+# Read more in
+# - https://github.com/jsenv/file-size-impact
+#
+# If you want to update this file it's recommended to use a YAML validator
+# https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
+# configured to validate with https://json.schemastore.org/github-workflow.json
+
+name: file size impact
+
+on: pull_request
+
+jobs:
+  pr_impact:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        node: [16.13.0]
+    runs-on: ${{ matrix.os }}
+    name: pr impact
+    steps:
+      - name: Setup git
+        uses: actions/checkout@v2
+      - name: Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install node modules
+        run: npm install
+      - name: Report file size impact
+        run: node ./.github/workflows/pr_impact/report_file_size_impact.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

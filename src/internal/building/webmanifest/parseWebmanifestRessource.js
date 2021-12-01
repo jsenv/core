@@ -9,8 +9,9 @@ export const parseWebmanifestRessource = (
   const manifest = JSON.parse(manifestString)
   const { icons = [] } = manifest
 
-  const iconReferences = icons.map((icon) => {
+  const iconReferences = icons.map((icon, index) => {
     const iconReference = notifyReferenceFound({
+      referenceLabel: `web manifest icon ${index}`,
       ressourceSpecifier: icon.src,
     })
     return iconReference

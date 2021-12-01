@@ -26,6 +26,7 @@ export const executePlan = async (
 
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
+    stopAfterExecute,
     cooldownBetweenExecutions,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
@@ -146,8 +147,7 @@ export const executePlan = async (
       launchAndExecuteLogLevel,
 
       projectDirectoryUrl,
-      compileServerOrigin: compileServer.origin,
-      outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+      compileServer,
 
       // not sure we actually have to pass import params to executeConcurrently
       importResolutionMethod,
@@ -157,6 +157,7 @@ export const executePlan = async (
 
       defaultMsAllocatedPerExecution,
       maxExecutionsInParallel,
+      stopAfterExecute,
       cooldownBetweenExecutions,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,

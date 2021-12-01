@@ -15,6 +15,7 @@ const buildInternalFile = async ({
     urlVersionningForEntryPoints: true,
     buildDirectoryRelativeUrl,
     entryPointMap,
+    assetManifestFile: true,
     ...params,
   })
   buildManifest = build.buildManifest

@@ -10,13 +10,16 @@ import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_ut
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../node_runtime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
+import { getBrowserRuntimeReport } from "./browser_runtime_report.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
   {
+    runtime,
     executeOperation,
     projectDirectoryUrl,
     compileServerOrigin,
+    compileServerId,
     outDirectoryRelativeUrl,
     page,
 
@@ -48,25 +51,16 @@ export const executeHtmlFile = async (
   )
   executeOperation.throwIfAborted()
   await page.goto(compileProxyClientUrl)
+  executeOperation.throwIfAborted()
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
-
-  executeOperation.throwIfAborted()
-  const browserRuntimeFeaturesReport = await page.evaluate(
-    /* istanbul ignore next */
-    async ({ coverageHandledFromOutside }) => {
-      // eslint-disable-next-line no-undef
-      await window.readyPromise
-
-      // eslint-disable-next-line no-undef
-      return window.scanBrowserRuntimeFeatures({
-        coverageHandledFromOutside,
-        failFastOnFeatureDetection: true,
-      })
-    },
-    { coverageHandledFromOutside },
-  )
+  const browserRuntimeFeaturesReport = await getBrowserRuntimeReport({
+    page,
+    coverageHandledFromOutside,
+    compileServerId,
+    runtime,
+  })
 
   try {
     let executionResult

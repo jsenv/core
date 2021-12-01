@@ -60,6 +60,7 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
   }
 
   const hrefReference = notifyReferenceFound({
+    referenceLabel: "svg image href",
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(image, "href"),
   })
@@ -81,6 +82,7 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
 
   const { hash } = new URL(href, "file://")
   const hrefReference = notifyReferenceFound({
+    referenceLabel: "svg use href",
     ressourceSpecifier: href,
     ...referenceLocationFromHtmlNode(use, "href"),
   })

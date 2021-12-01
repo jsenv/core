@@ -30,6 +30,7 @@ export const createUrlLoader = ({
       const importer = urlImporterMap[url]
       const cssReference =
         await ressourceBuilder.createReferenceFoundInJsModule({
+          referenceLabel: "css import assertion",
           // If all references to a ressource are only import assertions
           // the file referenced do not need to be written on filesystem
           // as it was converted to a js file
@@ -84,6 +85,7 @@ export const createUrlLoader = ({
       const importer = urlImporterMap[url]
       const jsonReference =
         await ressourceBuilder.createReferenceFoundInJsModule({
+          referenceLabel: "json import assertion",
           // If all references to a ressource are only import assertions
           // the file referenced do not need to be written on filesystem
           // as it was converted to a js file
@@ -114,7 +116,7 @@ export const createUrlLoader = ({
 
     if (url in inlineModuleScripts) {
       const transformResult = await transformJs({
-        code: inlineModuleScripts[url],
+        code: String(inlineModuleScripts[url].bufferBeforeBuild),
         url: asOriginalUrl(url), // transformJs expect a file:// url
         projectDirectoryUrl,
         babelPluginMap,

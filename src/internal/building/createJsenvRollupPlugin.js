@@ -1,4 +1,5 @@
 import { extname } from "node:path"
+import MagicString from "magic-string"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
 import { createDetailedMessage, loggerToLogLevel } from "@jsenv/logger"
@@ -205,7 +206,14 @@ export const createJsenvRollupPlugin = async ({
       fileName,
     })
   }
+  // rollup expects an input option, if we provide only an html file
+  // without any script type module in it, we won't emit "chunk" and rollup will throw.
+  // It is valid to build an html not referencing any js (rare but valid)
+  // In that case jsenv emits an empty chunk and discards rollup warning about it
+  // This chunk is later ignored in "generateBundle" hook
+  let atleastOneChunkEmitted = false
   const emitChunk = (chunk) => {
+    atleastOneChunkEmitted = true
     return rollupEmitFile({
       type: "chunk",
       ...chunk,
@@ -444,12 +452,6 @@ export const createJsenvRollupPlugin = async ({
         })
       }
 
-      // rollup expects an input option, if we provide only an html file
-      // without any script type module in it, we won't emit "chunk" and rollup will throw.
-      // It is valid to build an html not referencing any js (rare but valid)
-      // In that case jsenv emits an empty chunk and discards rollup warning about it
-      // This chunk is later ignored in "generateBundle" hook
-      let atleastOneChunkEmitted = false
       ressourceBuilder = createRessourceBuilder(
         {
           urlFetcher,
@@ -555,15 +557,11 @@ export const createJsenvRollupPlugin = async ({
           emitChunk,
           emitAsset,
           setAssetSource,
-          onJsModuleReference: ({
-            jsModuleUrl,
-            jsModuleIsInline,
-            jsModuleSource,
-          }) => {
-            atleastOneChunkEmitted = true
+          onJsModule: ({ ressource, jsModuleUrl, jsModuleIsInline }) => {
             if (jsModuleIsInline) {
-              inlineModuleScripts[jsModuleUrl] = jsModuleSource
+              inlineModuleScripts[jsModuleUrl] = ressource
             }
+
             urlImporterMap[jsModuleUrl] = {
               url: resolveUrl(
                 entryPointsPrepared[0].entryProjectRelativeUrl,
@@ -573,6 +571,15 @@ export const createJsenvRollupPlugin = async ({
               column: undefined,
             }
             jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
+            const name = urlToBasename(jsModuleUrl)
+            const rollupReferenceId = emitChunk({
+              id: asRollupUrl(jsModuleUrl),
+              name,
+            })
+            return {
+              name,
+              rollupReferenceId,
+            }
           },
           lineBreakNormalization,
         },
@@ -587,7 +594,6 @@ export const createJsenvRollupPlugin = async ({
             entryBuffer,
           }) => {
             if (entryContentType === "application/javascript") {
-              atleastOneChunkEmitted = true
               emitChunk({
                 id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
                 name: urlToBasename(`file:///${entryBuildRelativeUrl}`),
@@ -620,6 +626,7 @@ export const createJsenvRollupPlugin = async ({
           },
         ),
       )
+
       if (!atleastOneChunkEmitted) {
         emitChunk({
           id: EMPTY_CHUNK_URL,
@@ -790,6 +797,7 @@ export const createJsenvRollupPlugin = async ({
         // otherwise rollup would never concat module together
         referenceShouldNotEmitChunk: jsConcatenation,
         contentTypeExpected: "application/javascript",
+        referenceLabel: "static or dynamic import",
         referenceUrl: importer.url,
         referenceColumn: importer.column,
         referenceLine: importer.line,
@@ -826,6 +834,7 @@ export const createJsenvRollupPlugin = async ({
           const { line, column } = importNode.loc.start
           const reference =
             await ressourceBuilder.createReferenceFoundInJsModule({
+              referenceLabel: "URL + import.meta.url",
               jsUrl: url,
               jsLine: line,
               jsColumn: column,
@@ -939,6 +948,7 @@ export const createJsenvRollupPlugin = async ({
             if (importAssertionSupportedByRuntime) {
               const reference =
                 await ressourceBuilder.createReferenceFoundInJsModule({
+                  referenceLabel: "import assertion",
                   isImportAssertion: true,
                   jsUrl: url,
                   jsLine: line,
@@ -991,7 +1001,6 @@ export const createJsenvRollupPlugin = async ({
         },
       })
       if (mutations.length > 0) {
-        const { default: MagicString } = await import("magic-string")
         const magicString = new MagicString(code)
         mutations.forEach((mutation) => {
           mutation(magicString)
@@ -1071,30 +1080,32 @@ export const createJsenvRollupPlugin = async ({
       // as rollup rightfully prevent late js emission
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
-        if (file.type !== "chunk") {
+
+        // there is 3 types of file: "placeholder", "asset", "chunk"
+        if (file.type === "asset") {
           return
         }
 
-        const { facadeModuleId } = file
-        if (facadeModuleId === EMPTY_CHUNK_URL) {
-          return
+        if (file.type === "chunk") {
+          const { facadeModuleId } = file
+          if (facadeModuleId === EMPTY_CHUNK_URL) {
+            return
+          }
+          const fileCopy = { ...file }
+          if (facadeModuleId) {
+            fileCopy.url = asServerUrl(facadeModuleId)
+          } else {
+            const sourcePath = file.map.sources[file.map.sources.length - 1]
+            const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
+            const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
+            fileCopy.url = asCompiledServerUrl(originalProjectUrl, {
+              projectDirectoryUrl,
+              compileServerOrigin,
+              compileDirectoryRelativeUrl,
+            })
+          }
+          jsChunks[fileName] = fileCopy
         }
-
-        const fileCopy = { ...file }
-        if (facadeModuleId) {
-          fileCopy.url = asServerUrl(facadeModuleId)
-        } else {
-          const sourcePath = file.map.sources[file.map.sources.length - 1]
-          const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
-          const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
-          fileCopy.url = asCompiledServerUrl(originalProjectUrl, {
-            projectDirectoryUrl,
-            compileServerOrigin,
-            compileDirectoryRelativeUrl,
-          })
-        }
-
-        jsChunks[fileName] = fileCopy
       })
       await ensureTopLevelAwaitTranspilationIfNeeded({
         format,
@@ -1109,6 +1120,16 @@ export const createJsenvRollupPlugin = async ({
           asRollupUrl(file.url) in jsModulesFromEntry ||
           urlVersionningForEntryPoints ||
           !file.isEntry
+
+        if (file.url in inlineModuleScripts && format === "systemjs") {
+          const magicString = new MagicString(file.code)
+          magicString.overwrite(
+            0,
+            "System.register([".length,
+            `System.register("${fileName}", [`,
+          )
+          file.code = magicString.toString()
+        }
 
         if (urlVersioning) {
           if (canBeVersioned && useImportMapToMaximizeCacheReuse) {
@@ -1134,18 +1155,20 @@ export const createJsenvRollupPlugin = async ({
           originalProjectUrl,
           projectDirectoryUrl,
         )
-
-        jsModuleBuild[buildRelativeUrl] = file
-
         const jsRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.url === file.url,
         )
         if (jsRessource && jsRessource.isInline) {
+          if (format === "systemjs") {
+            markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
+          }
           buildInlineFileContents[buildRelativeUrl] = file.code
         } else {
           markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
           buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
         }
+
+        jsModuleBuild[buildRelativeUrl] = file
       })
 
       // it's important to do this to emit late asset
@@ -1239,10 +1262,13 @@ export const createJsenvRollupPlugin = async ({
       Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
         const rollupFileInfo = rollupBuild[buildRelativeUrl]
         const ressource = ressourceBuilder.findRessource((ressource) => {
-          return (
-            ressource.buildRelativeUrl === buildRelativeUrl ||
-            rollupFileInfo.facadeModuleId === ressource.url
-          )
+          if (ressource.buildRelativeUrl === buildRelativeUrl) {
+            return true
+          }
+          if (ressource.url === rollupFileInfo.url) {
+            return true
+          }
+          return false
         })
         if (ressource && ressource.isInline) {
           const fileName = buildRelativeUrlToFileName(buildRelativeUrl)

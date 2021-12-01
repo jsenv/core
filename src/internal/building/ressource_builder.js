@@ -3,7 +3,6 @@ import {
   urlToRelativeUrl,
   urlIsInsideOf,
   urlToParentUrl,
-  urlToBasename,
   urlToFilename,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
@@ -34,10 +33,9 @@ export const createRessourceBuilder = (
     asOriginalServerUrl,
     urlToHumanUrl,
 
-    emitChunk,
     emitAsset,
     setAssetSource,
-    onJsModuleReference = () => {},
+    onJsModule,
     resolveRessourceUrl,
     lineBreakNormalization,
   },
@@ -122,6 +120,7 @@ export const createRessourceBuilder = (
   }
 
   const createReferenceFoundInJsModule = async ({
+    referenceLabel,
     jsUrl,
     jsLine,
     jsColumn,
@@ -136,6 +135,7 @@ export const createRessourceBuilder = (
       isImportAssertion,
       ressourceSpecifier,
       contentTypeExpected,
+      referenceLabel,
       referenceUrl: jsUrl,
       referenceLine: jsLine,
       referenceColumn: jsColumn,
@@ -168,6 +168,7 @@ export const createRessourceBuilder = (
     isImportAssertion,
     contentTypeExpected,
     ressourceSpecifier,
+    referenceLabel,
     referenceUrl,
     referenceColumn,
     referenceLine,
@@ -302,6 +303,7 @@ export const createRessourceBuilder = (
       isRessourceHint,
       isImportAssertion,
       contentTypeExpected,
+      referenceLabel,
       referenceUrl,
       referenceColumn,
       referenceLine,
@@ -321,12 +323,21 @@ export const createRessourceBuilder = (
 
     reference.ressource = ressource
     if (fromRollup && ressourceImporter.isEntryPoint) {
-      // do not add that reference, it's already know and would duplicate the html referencing a js file
-      // but do apply its effects
-      ressource.applyReferenceEffects(reference, { isJsModule })
+      // When HTML references JS, ressource builder has emitted the js chunk.
+      // so it already knows it exists and is part of references
+      // -> no need to push into reference (would incorrectly consider html references js twice)
+      // -> no need to log the js ressource (already logged during the HTML parsing)
     } else {
       ressource.references.push(reference)
-      ressource.applyReferenceEffects(reference, { isJsModule })
+      const effects = ressource.applyReferenceEffects(reference, { isJsModule })
+      logger.debug(
+        formatFoundReference({
+          reference,
+          referenceEffects: effects,
+          showReferenceSourceLocation,
+          shortenUrl,
+        }),
+      )
     }
 
     return reference
@@ -452,6 +463,7 @@ export const createRessourceBuilder = (
         isRessourceHint,
         contentTypeExpected,
         ressourceSpecifier,
+        referenceLabel,
         referenceLine,
         referenceColumn,
 
@@ -472,6 +484,7 @@ export const createRessourceBuilder = (
 
         const dependencyReference = createReference({
           ressourceSpecifier,
+          referenceLabel,
           referenceUrl: ressource.url,
           referenceLine,
           referenceColumn,
@@ -648,18 +661,12 @@ export const createRessourceBuilder = (
       }
     }
 
-    const onReference = (reference, infoFromReference) => {
+    const applyReferenceEffects = (reference, infoFromReference) => {
       const effects = []
       if (ressource.isEntryPoint) {
         if (ressource.contentType === "text/html") {
           effects.push(`parse html to find references`)
         }
-      } else {
-        effects.push(
-          `mark ${urlToHumanUrl(
-            ressource.url,
-          )} as referenced by ${urlToHumanUrl(reference.referenceUrl)}`,
-        )
       }
 
       if (reference.isRessourceHint) {
@@ -708,22 +715,18 @@ export const createRessourceBuilder = (
         }
 
         const jsModuleUrl = ressource.url
-
-        onJsModuleReference({
+        const rollupChunk = onJsModule({
+          ressource,
           jsModuleUrl,
           jsModuleIsInline: ressource.isInline,
           jsModuleSource: String(bufferBeforeBuild),
           line: reference.referenceLine,
           column: reference.referenceColumn,
         })
-
-        const name = urlToBasename(jsModuleUrl)
-        const rollupReferenceId = emitChunk({
-          id: jsModuleUrl,
-          name,
-        })
-        ressource.rollupReferenceId = rollupReferenceId
-        effects.push(`emit rollup chunk "${name}" (${rollupReferenceId})`)
+        ressource.rollupReferenceId = rollupChunk.rollupReferenceId
+        effects.push(
+          `emit rollup chunk "${rollupChunk.name}" (${rollupChunk.rollupReferenceId})`,
+        )
         return effects
       }
 
@@ -739,20 +742,7 @@ export const createRessourceBuilder = (
       effects.push(
         `emit rollup asset "${ressource.relativeUrl}" (${rollupReferenceId})`,
       )
-
       return effects
-    }
-
-    const applyReferenceEffects = (reference, infoFromReference) => {
-      const referenceEffects = onReference(reference, infoFromReference)
-
-      logger.debug(
-        formatFoundReference({
-          reference,
-          referenceEffects,
-          showReferenceSourceLocation,
-        }),
-      )
     }
 
     Object.assign(ressource, {

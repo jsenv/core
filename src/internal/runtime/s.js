@@ -599,7 +599,7 @@
   var autoImportCandidates = {};
   var systemRegister = systemJSPrototype.register;
   var inlineScriptCount = 0;
-  systemJSPrototype.register = function (deps, declare) {
+  systemJSPrototype.register = function (deps, declare, autoUrl) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
       var scripts = document.querySelectorAll('script[src]');
       var lastScript = scripts[scripts.length - 1];
@@ -607,6 +607,9 @@
       lastAutoImportDeps = deps;
       if (lastScript) {
         lastAutoImportUrl = lastScript.src;
+      }
+      else if (autoUrl) {
+        lastAutoImportUrl = autoUrl
       }
       else {
         inlineScriptCount++
@@ -725,4 +728,39 @@
       });
     };
 
+}());
+
+(function(){
+  var envGlobal = typeof self !== 'undefined' ? self : global;
+  var System = envGlobal.System;
+  var register = System.register;
+  var registerRegistry = Object.create(null)
+
+  System.register = function (name, deps, declare) {
+    if (typeof name !== 'string') return register.apply(this, arguments);
+    var define = [deps, declare];
+    var url = System.resolve(`./${name}`);
+    registerRegistry[url] = define;
+    return register.call(this, deps, declare, url);
+  };
+
+  var instantiate = System.instantiate;
+  System.instantiate = function (url, firstParentUrl) {
+    var result = registerRegistry[url];
+
+    if (result) {
+      registerRegistry[url] = null;
+      return result;
+    } else {
+      return instantiate.call(this, url, firstParentUrl);
+    }
+  };
+
+  var getRegister = System.getRegister;
+  System.getRegister = function (url) {
+    // Calling getRegister() because other extras need to know it was called so they can perform side effects
+    var register = getRegister.call(this, url);
+    var result = registerRegistry[url] || register;
+    return result;
+  };
 }());

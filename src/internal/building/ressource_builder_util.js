@@ -120,156 +120,29 @@ export const formatFoundReference = ({
   reference,
   showReferenceSourceLocation,
   referenceEffects,
+  shortenUrl,
 }) => {
-  const { isRessourceHint } = reference
-  if (isRessourceHint) {
-    return formatFoundRessourceHint({
-      reference,
-      showReferenceSourceLocation,
-      referenceEffects,
-    })
-  }
-
   const { ressource } = reference
   const { isEntryPoint } = ressource
   if (isEntryPoint) {
-    return formatCreateReferenceForEntry({
-      reference,
-      showReferenceSourceLocation,
+    return `
+Start from entry file ${reference.ressource.relativeUrl}${appendEffects(
       referenceEffects,
-    })
-  }
-
-  const { isExternal } = ressource
-  if (isExternal) {
-    return formatFoundReferenceToExternalRessource({
-      reference,
-      showReferenceSourceLocation,
-      referenceEffects,
-    })
+    )}`
   }
 
   const { isPlaceholder } = ressource
   if (isPlaceholder) {
-    return formatCreateRessourcePlaceholder({
-      reference,
-      showReferenceSourceLocation,
+    return `
+Create placeholder for ${showReferenceSourceLocation(reference)}${appendEffects(
       referenceEffects,
-    })
+    )}`
   }
 
-  const { isInline, isJsModule } = ressource
-  if (isInline && !isJsModule) {
-    return formatFoundReferenceToInlineRessource({
-      reference,
-      showReferenceSourceLocation,
-      referenceEffects,
-    })
-  }
-
-  if (isInline && isJsModule) {
-    return formatFoundReferenceToInlineModule({
-      reference,
-      showReferenceSourceLocation,
-      referenceEffects,
-    })
-  }
-
-  if (!isJsModule) {
-    return formatFoundReferenceToRessource({
-      reference,
-      showReferenceSourceLocation,
-      referenceEffects,
-    })
-  }
-
-  return formatFoundReferenceToModule({
-    reference,
-    showReferenceSourceLocation,
-    referenceEffects,
-  })
-}
-
-const formatCreateReferenceForEntry = ({ reference, referenceEffects }) => {
+  const { referenceLabel = "unlabelled reference" } = reference
   return `
-Start from entry file ${reference.ressource.relativeUrl}${appendEffects(
-    referenceEffects,
-  )}`
-}
-
-const formatFoundRessourceHint = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Found ressource hint in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
-}
-
-const formatFoundReferenceToExternalRessource = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Found external url in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
-}
-
-const formatCreateRessourcePlaceholder = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Create placeholder for ressource in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
-}
-
-const formatFoundReferenceToInlineRessource = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Found inline ressource in ${showReferenceSourceLocation(
-    reference,
-  )}${appendEffects(referenceEffects)}`
-}
-
-const formatFoundReferenceToInlineModule = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Found inline module in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
-}
-
-const formatFoundReferenceToRessource = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Found ressource in ${showReferenceSourceLocation(reference)}${appendEffects(
-    referenceEffects,
-  )}`
-}
-
-const formatFoundReferenceToModule = ({
-  reference,
-  showReferenceSourceLocation,
-  referenceEffects,
-}) => {
-  return `
-Found module script in ${showReferenceSourceLocation(reference)}${appendEffects(
+Found "${referenceLabel}" referencing "${shortenUrl(reference.ressource.url)}"
+  in ${showReferenceSourceLocation(reference)}${appendEffects(
     referenceEffects,
   )}`
 }

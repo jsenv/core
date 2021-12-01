@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <link rel="icon" href="data:," />
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      import { answer } from "./helper.js"
+
+      import("./file.js")
+
+      window.resolveNamespacePromise({ answer })
+    </script>
+
+    <script type="module">
+      console.log("toto")
+    </script>
+  </body>
+</html>

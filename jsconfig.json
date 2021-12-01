@@ -20,9 +20,6 @@
       "@jsenv/abort/*": [
         "./node_modules/@jsenv/abort/*"
       ],
-      "@jsenv/uneval": [
-        "./node_modules/@jsenv/uneval/index.js"
-      ],
       "cjs-module-lexer": [
         "./node_modules/cjs-module-lexer/dist/lexer.mjs"
       ],
@@ -44,20 +41,26 @@
       "istanbul-lib-coverage/*": [
         "./node_modules/istanbul-lib-coverage/*"
       ],
-      "postcss-value-parser/*": [
-        "./node_modules/postcss-value-parser/*"
+      "parse5/*": [
+        "./node_modules/parse5/*"
       ],
       "pidtree/*": [
         "./node_modules/pidtree/*"
       ],
-      "parse5/*": [
-        "./node_modules/parse5/*"
+      "postcss-value-parser/*": [
+        "./node_modules/postcss-value-parser/*"
+      ],
+      "regenerator-runtime/*": [
+        "./node_modules/regenerator-runtime/*"
       ],
       "rollup": [
         "./node_modules/rollup/dist/es/rollup.js"
       ],
       "rollup/dist/*": [
         "./node_modules/rollup/dist/*"
+      ],
+      "source-map/*": [
+        "./node_modules/source-map/*"
       ],
       "systemjs": [
         "./node_modules/systemjs/dist/system-node.cjs"
@@ -71,11 +74,11 @@
       "systemjs/dist/*": [
         "./node_modules/systemjs/dist/*"
       ],
-      "source-map/*": [
-        "./node_modules/source-map/*"
-      ],
       "vm2/*": [
         "./node_modules/vm2/*"
+      ],
+      "@jsenv/uneval": [
+        "./node_modules/@jsenv/uneval/index.js"
       ],
       "@jsenv/eslint-config": [
         "./node_modules/@jsenv/eslint-config/main.js"
@@ -85,9 +88,6 @@
       ],
       "babel-plugin-transform-async-to-promises/*": [
         "./node_modules/babel-plugin-transform-async-to-promises/*"
-      ],
-      "regenerator-runtime/*": [
-        "./node_modules/regenerator-runtime/*"
       ],
       "preact": [
         "./node_modules/preact/dist/preact.mjs"
@@ -137,6 +137,12 @@
       "@jsenv/importmap/*": [
         "./node_modules/@jsenv/importmap/*"
       ],
+      "@jsenv/pwa": [
+        "./node_modules/@jsenv/pwa/main.js"
+      ],
+      "@jsenv/pwa/*": [
+        "./node_modules/@jsenv/pwa/*"
+      ],
       "construct-style-sheets-polyfill": [
         "./node_modules/construct-style-sheets-polyfill/dist/adoptedStyleSheets.js"
       ],
@@ -149,20 +155,17 @@
       "istanbul-lib-coverage": [
         "./node_modules/istanbul-lib-coverage/index.js"
       ],
-      "postcss-value-parser": [
-        "./node_modules/postcss-value-parser/lib/index.js"
+      "parse5": [
+        "./node_modules/parse5/lib/index.js"
       ],
       "pidtree": [
         "./node_modules/pidtree/index.js"
       ],
-      "@jsenv/pwa": [
-        "./node_modules/@jsenv/pwa/main.js"
+      "postcss-value-parser": [
+        "./node_modules/postcss-value-parser/lib/index.js"
       ],
-      "@jsenv/pwa/*": [
-        "./node_modules/@jsenv/pwa/*"
-      ],
-      "parse5": [
-        "./node_modules/parse5/lib/index.js"
+      "regenerator-runtime": [
+        "./node_modules/regenerator-runtime/runtime.js"
       ],
       "source-map": [
         "./node_modules/source-map/source-map.js"
@@ -172,9 +175,6 @@
       ],
       "babel-plugin-transform-async-to-promises": [
         "./node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js"
-      ],
-      "regenerator-runtime": [
-        "./node_modules/regenerator-runtime/runtime.js"
       ],
       "prettier": [
         "./node_modules/prettier/index.js"
@@ -209,26 +209,8 @@
       "@jsenv/assert/*": [
         "./node_modules/@jsenv/assert/*"
       ],
-      "@babel/plugin-syntax-dynamic-import/*": [
-        "./node_modules/@babel/plugin-syntax-dynamic-import/*"
-      ],
-      "@babel/plugin-syntax-import-meta/*": [
-        "./node_modules/@babel/plugin-syntax-import-meta/*"
-      ],
-      "@babel/plugin-proposal-dynamic-import/*": [
-        "./node_modules/@babel/plugin-proposal-dynamic-import/*"
-      ],
-      "@babel/plugin-syntax-numeric-separator/*": [
-        "./node_modules/@babel/plugin-syntax-numeric-separator/*"
-      ],
-      "@babel/plugin-syntax-import-assertions/*": [
-        "./node_modules/@babel/plugin-syntax-import-assertions/*"
-      ],
-      "@babel/plugin-syntax-jsx/*": [
-        "./node_modules/@babel/plugin-syntax-jsx/*"
-      ],
-      "@babel/plugin-transform-block-scoping/*": [
-        "./node_modules/@babel/plugin-transform-block-scoping/*"
+      "rollup-plugin-import-assert": [
+        "./node_modules/rollup-plugin-import-assert/dist/import-assert.js"
       ],
       "@jsenv/server": [
         "./node_modules/@jsenv/server/main.js"
@@ -236,17 +218,35 @@
       "@jsenv/server/*": [
         "./node_modules/@jsenv/server/*"
       ],
-      "rollup-plugin-import-assert": [
-        "./node_modules/rollup-plugin-import-assert/dist/import-assert.js"
-      ],
       "ansi-to-html/*": [
         "./node_modules/ansi-to-html/*"
+      ],
+      "@babel/plugin-syntax-import-assertions/*": [
+        "./node_modules/@babel/plugin-syntax-import-assertions/*"
+      ],
+      "@babel/plugin-syntax-dynamic-import/*": [
+        "./node_modules/@babel/plugin-syntax-dynamic-import/*"
+      ],
+      "@babel/plugin-syntax-import-meta/*": [
+        "./node_modules/@babel/plugin-syntax-import-meta/*"
+      ],
+      "@babel/plugin-syntax-numeric-separator/*": [
+        "./node_modules/@babel/plugin-syntax-numeric-separator/*"
+      ],
+      "@babel/plugin-syntax-jsx/*": [
+        "./node_modules/@babel/plugin-syntax-jsx/*"
+      ],
+      "@babel/plugin-transform-block-scoping/*": [
+        "./node_modules/@babel/plugin-transform-block-scoping/*"
+      ],
+      "@babel/plugin-proposal-dynamic-import/*": [
+        "./node_modules/@babel/plugin-proposal-dynamic-import/*"
       ],
       "istanbul-reports/*": [
         "./node_modules/istanbul-reports/*"
       ],
-      "istanbul-lib-instrument/*": [
-        "./node_modules/istanbul-lib-instrument/*"
+      "magic-string/*": [
+        "./node_modules/magic-string/*"
       ],
       "postcss": [
         "./node_modules/postcss/lib/postcss.mjs"
@@ -332,8 +332,14 @@
       "postcss/package.json": [
         "./node_modules/postcss/package.json"
       ],
-      "magic-string/*": [
-        "./node_modules/magic-string/*"
+      "istanbul-lib-instrument/*": [
+        "./node_modules/istanbul-lib-instrument/*"
+      ],
+      "ansi-to-html": [
+        "./node_modules/ansi-to-html/lib/ansi_to_html.js"
+      ],
+      "@babel/plugin-syntax-import-assertions": [
+        "./node_modules/@babel/plugin-syntax-import-assertions/lib/index.js"
       ],
       "@babel/plugin-syntax-dynamic-import": [
         "./node_modules/@babel/plugin-syntax-dynamic-import/lib/index.js"
@@ -341,14 +347,8 @@
       "@babel/plugin-syntax-import-meta": [
         "./node_modules/@babel/plugin-syntax-import-meta/lib/index.js"
       ],
-      "@babel/plugin-proposal-dynamic-import": [
-        "./node_modules/@babel/plugin-proposal-dynamic-import/lib/index.js"
-      ],
       "@babel/plugin-syntax-numeric-separator": [
         "./node_modules/@babel/plugin-syntax-numeric-separator/lib/index.js"
-      ],
-      "@babel/plugin-syntax-import-assertions": [
-        "./node_modules/@babel/plugin-syntax-import-assertions/lib/index.js"
       ],
       "@babel/plugin-syntax-jsx": [
         "./node_modules/@babel/plugin-syntax-jsx/lib/index.js"
@@ -356,20 +356,20 @@
       "@babel/plugin-transform-block-scoping": [
         "./node_modules/@babel/plugin-transform-block-scoping/lib/index.js"
       ],
+      "@babel/plugin-proposal-dynamic-import": [
+        "./node_modules/@babel/plugin-proposal-dynamic-import/lib/index.js"
+      ],
       "cssnano/*": [
         "./node_modules/cssnano/*"
-      ],
-      "ansi-to-html": [
-        "./node_modules/ansi-to-html/lib/ansi_to_html.js"
       ],
       "istanbul-reports": [
         "./node_modules/istanbul-reports/index.js"
       ],
-      "istanbul-lib-instrument": [
-        "./node_modules/istanbul-lib-instrument/src/index.js"
-      ],
       "magic-string": [
         "./node_modules/magic-string/dist/magic-string.es.js"
+      ],
+      "istanbul-lib-instrument": [
+        "./node_modules/istanbul-lib-instrument/src/index.js"
       ],
       "cssnano": [
         "./node_modules/cssnano/dist/index.js"
@@ -377,8 +377,11 @@
       "redux/*": [
         "./node_modules/redux/*"
       ],
-      "redux": [
-        "./node_modules/redux/es/redux.js"
+      "@jsenv/performance-impact": [
+        "./node_modules/@jsenv/performance-impact/main.js"
+      ],
+      "@jsenv/performance-impact/*": [
+        "./node_modules/@jsenv/performance-impact/*"
       ],
       "@jsenv/importmap-eslint-resolver": [
         "./node_modules/@jsenv/importmap-eslint-resolver/main.js"
@@ -386,8 +389,8 @@
       "@jsenv/importmap-eslint-resolver/*": [
         "./node_modules/@jsenv/importmap-eslint-resolver/*"
       ],
-      "wrap-ansi": [
-        "./node_modules/wrap-ansi/index.js"
+      "redux": [
+        "./node_modules/redux/es/redux.js"
       ],
       "@jsenv/importmap-node-module": [
         "./node_modules/@jsenv/importmap-node-module/index.js"
@@ -395,35 +398,38 @@
       "@jsenv/importmap-node-module/*": [
         "./node_modules/@jsenv/importmap-node-module/*"
       ],
-      "@babel/helpers/*": [
-        "./node_modules/@babel/helpers/*"
+      "v8-to-istanbul/*": [
+        "./node_modules/v8-to-istanbul/*"
       ],
       "@babel/helper-module-imports/*": [
         "./node_modules/@babel/helper-module-imports/*"
       ],
-      "v8-to-istanbul/*": [
-        "./node_modules/v8-to-istanbul/*"
-      ],
-      "@rollup/plugin-node-resolve": [
-        "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
+      "@babel/helpers/*": [
+        "./node_modules/@babel/helpers/*"
       ],
       "@rollup/plugin-json/*": [
         "./node_modules/@rollup/plugin-json/*"
       ],
+      "@rollup/plugin-node-resolve": [
+        "./node_modules/@rollup/plugin-node-resolve/dist/es/index.js"
+      ],
       "@rollup/plugin-replace/*": [
         "./node_modules/@rollup/plugin-replace/*"
       ],
-      "@babel/helpers": [
-        "./node_modules/@babel/helpers/lib/index.js"
+      "v8-to-istanbul": [
+        "./node_modules/v8-to-istanbul/index.js"
       ],
       "@babel/helper-module-imports": [
         "./node_modules/@babel/helper-module-imports/lib/index.js"
       ],
+      "@babel/helpers": [
+        "./node_modules/@babel/helpers/lib/index.js"
+      ],
       "@babel/plugin-transform-react-jsx/*": [
         "./node_modules/@babel/plugin-transform-react-jsx/*"
       ],
-      "v8-to-istanbul": [
-        "./node_modules/v8-to-istanbul/index.js"
+      "react/*": [
+        "./node_modules/react/*"
       ],
       "@rollup/plugin-json": [
         "./node_modules/@rollup/plugin-json/dist/index.es.js"
@@ -440,17 +446,14 @@
       "@jsenv/https-local/*": [
         "./node_modules/@jsenv/https-local/*"
       ],
-      "react-dom/*": [
-        "./node_modules/react-dom/*"
-      ],
       "@babel/plugin-transform-react-jsx": [
         "./node_modules/@babel/plugin-transform-react-jsx/lib/index.js"
       ],
+      "react": [
+        "./node_modules/react/index.js"
+      ],
       "istanbul-lib-report/*": [
         "./node_modules/istanbul-lib-report/*"
-      ],
-      "rollup-plugin-node-globals": [
-        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
       ],
       "terser": [
         "./node_modules/terser/main.js"
@@ -464,17 +467,11 @@
       "terser/bin/terser": [
         "./node_modules/terser/bin/terser"
       ],
+      "rollup-plugin-node-globals": [
+        "./node_modules/rollup-plugin-node-globals/dist/rollup-plugin-node-globals.es6.js"
+      ],
       "resolve/*": [
         "./node_modules/resolve/*"
-      ],
-      "postcss-import/*": [
-        "./node_modules/postcss-import/*"
-      ],
-      "react/*": [
-        "./node_modules/react/*"
-      ],
-      "react-dom": [
-        "./node_modules/react-dom/index.js"
       ],
       "@jsenv/log": [
         "./node_modules/@jsenv/log/main.js"
@@ -482,8 +479,17 @@
       "@jsenv/log/*": [
         "./node_modules/@jsenv/log/*"
       ],
+      "postcss-import/*": [
+        "./node_modules/postcss-import/*"
+      ],
+      "react-dom/*": [
+        "./node_modules/react-dom/*"
+      ],
       "istanbul-lib-report": [
         "./node_modules/istanbul-lib-report/index.js"
+      ],
+      "wrap-ansi": [
+        "./node_modules/wrap-ansi/index.js"
       ],
       "@babel/eslint-parser": [
         "./node_modules/@babel/eslint-parser/lib/index.cjs"
@@ -497,8 +503,8 @@
       "resolve": [
         "./node_modules/resolve/index.js"
       ],
-      "react": [
-        "./node_modules/react/index.js"
+      "react-dom": [
+        "./node_modules/react-dom/index.js"
       ],
       "rollup-plugin-polyfill-node/*": [
         "./node_modules/rollup-plugin-polyfill-node/*"
@@ -515,14 +521,20 @@
       "is-valid-identifier/*": [
         "./node_modules/is-valid-identifier/*"
       ],
-      "@jsenv/performance-impact": [
-        "./node_modules/@jsenv/performance-impact/main.js"
+      "@jsenv/file-size-impact": [
+        "./node_modules/@jsenv/file-size-impact/index.js"
       ],
-      "@jsenv/performance-impact/*": [
-        "./node_modules/@jsenv/performance-impact/*"
+      "@jsenv/file-size-impact/*": [
+        "./node_modules/@jsenv/file-size-impact/*"
       ],
       "node-notifier/*": [
         "./node_modules/node-notifier/*"
+      ],
+      "@jsenv/package-publish": [
+        "./node_modules/@jsenv/package-publish/index.js"
+      ],
+      "@jsenv/package-publish/*": [
+        "./node_modules/@jsenv/package-publish/*"
       ],
       "@babel/plugin-transform-typescript": [
         "./node_modules/@babel/plugin-transform-typescript/lib/index.js"
@@ -539,17 +551,11 @@
       "is-valid-identifier": [
         "./node_modules/is-valid-identifier/index.js"
       ],
-      "@jsenv/package-publish": [
-        "./node_modules/@jsenv/package-publish/index.js"
-      ],
-      "@jsenv/package-publish/*": [
-        "./node_modules/@jsenv/package-publish/*"
+      "eslint-plugin-react/*": [
+        "./node_modules/eslint-plugin-react/*"
       ],
       "node-notifier": [
         "./node_modules/node-notifier/index.js"
-      ],
-      "eslint-plugin-react/*": [
-        "./node_modules/eslint-plugin-react/*"
       ],
       "@babel/plugin-transform-modules-systemjs": [
         "./node_modules/@babel/plugin-transform-modules-systemjs/lib/index.js"
@@ -563,20 +569,20 @@
       "eslint-plugin-react": [
         "./node_modules/eslint-plugin-react/index.js"
       ],
+      "eslint-plugin-html/*": [
+        "./node_modules/eslint-plugin-html/*"
+      ],
       "@babel/preset-env/*": [
         "./node_modules/@babel/preset-env/*"
       ],
-      "@jsenv/github-release-package": [
-        "./node_modules/@jsenv/github-release-package/index.js"
-      ],
-      "eslint-plugin-html/*": [
-        "./node_modules/eslint-plugin-html/*"
+      "eslint-plugin-html": [
+        "./node_modules/eslint-plugin-html/src/index.js"
       ],
       "@babel/preset-env": [
         "./node_modules/@babel/preset-env/lib/index.js"
       ],
-      "eslint-plugin-html": [
-        "./node_modules/eslint-plugin-html/src/index.js"
+      "@jsenv/github-release-package": [
+        "./node_modules/@jsenv/github-release-package/index.js"
       ],
       "cssnano-preset-default/*": [
         "./node_modules/cssnano-preset-default/*"
@@ -587,20 +593,14 @@
       "@jsenv/babel-preset/*": [
         "./node_modules/@jsenv/babel-preset/*"
       ],
-      "rollup-plugin-node-builtins-brofs/*": [
-        "./node_modules/rollup-plugin-node-builtins-brofs/*"
-      ],
       "@jsenv/babel-preset": [
         "./node_modules/@jsenv/babel-preset/jsenv_babel_preset.cjs"
       ],
+      "rollup-plugin-node-builtins-brofs/*": [
+        "./node_modules/rollup-plugin-node-builtins-brofs/*"
+      ],
       "rollup-plugin-node-builtins-brofs": [
         "./node_modules/rollup-plugin-node-builtins-brofs/dist/rollup-plugin-node-builtins.es6.js"
-      ],
-      "eslint/*": [
-        "./node_modules/eslint/*"
-      ],
-      "eslint": [
-        "./node_modules/eslint/lib/api.js"
       ],
       "playwright": [
         "./node_modules/playwright/index.mjs"
@@ -610,6 +610,12 @@
       ],
       "playwright/package.json": [
         "./node_modules/playwright/package.json"
+      ],
+      "eslint/*": [
+        "./node_modules/eslint/*"
+      ],
+      "eslint": [
+        "./node_modules/eslint/lib/api.js"
       ],
       "@babel/core/*": [
         "./node_modules/@babel/core/*"

@@ -6,14 +6,13 @@
  * and one of them has two tabs
  */
 
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   executeTestPlan,
   chromiumTabRuntime,
   chromiumRuntime,
-  nodeRuntime,
+  firefoxRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
@@ -24,7 +23,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}file.html`
 const headless = false
 const testPlan = {
   [fileRelativeUrl]: {
@@ -40,64 +39,20 @@ const testPlan = {
       runtime: chromiumTabRuntime,
       runtimeParams: { headless },
     },
-    node: {
-      runtime: nodeRuntime,
+    firefox: {
+      runtime: firefoxRuntime,
+      runtimeParams: { headless },
     },
   },
+  // [`${testDirectoryRelativeUrl}file.js`]: {
+  //   node: {
+  //     runtime: nodeRuntime,
+  //   },
+  // },
 }
-const { testPlanSummary, testPlanReport } = await executeTestPlan({
+await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
   stopAfterExecute: false,
 })
-const actual = {
-  testPlanSummary,
-  testPlanReport,
-}
-const expected = {
-  testPlanSummary: {
-    executionCount: 4,
-    timedoutCount: 0,
-    erroredCount: 0,
-    completedCount: 4,
-    cancelledCount: 0,
-  },
-  testPlanReport: {
-    [fileRelativeUrl]: {
-      tab1: {
-        status: "completed",
-        namespace: {
-          default: 42,
-        },
-        runtimeName: "chromium",
-        runtimeVersion: testPlanReport[fileRelativeUrl].chromium.runtimeVersion,
-      },
-      chromium: {
-        status: "completed",
-        namespace: {
-          default: 42,
-        },
-        runtimeName: "chromium",
-        runtimeVersion: testPlanReport[fileRelativeUrl].chromium.runtimeVersion,
-      },
-      tab2: {
-        status: "completed",
-        namespace: {
-          default: 42,
-        },
-        runtimeName: "chromium",
-        runtimeVersion: testPlanReport[fileRelativeUrl].chromium.runtimeVersion,
-      },
-      node: {
-        status: "completed",
-        namespace: {
-          default: 42,
-        },
-        runtimeName: "node",
-        runtimeVersion: testPlanReport[fileRelativeUrl].node.runtimeVersion,
-      },
-    },
-  },
-}
-assert({ actual, expected })

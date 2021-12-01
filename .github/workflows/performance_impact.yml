@@ -17,11 +17,11 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
-      - name: Setup npm
+      - name: Install node modules
         run: npm install
-      - name: Setup playwright
+      - name: Install playwright
         run: npm run playwright-install
       - name: Report performance impact
-        run: node --expose-gc ./.github/workflows/performance_impact/report_performance_impact.js
+        run: node --expose-gc ./.github/workflows/pr_impact/report_performance_impact.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
