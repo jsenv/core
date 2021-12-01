@@ -605,7 +605,7 @@
       var lastScript = scripts[scripts.length - 1];
       var lastAutoImportUrl
       lastAutoImportDeps = deps;
-      if (lastScript) {
+      if (lastScript && lastScript.src) {
         lastAutoImportUrl = lastScript.src;
       }
       else if (autoUrl) {
@@ -739,9 +739,11 @@
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
-    var url = System.resolve(`./${name}`);
-    registerRegistry[url] = define;
-    return register.call(this, deps, declare, url);
+    return System.prepareImport().then(function () {
+      var url = System.resolve(`./${name}`);
+      registerRegistry[url] = define;
+      return register.call(System, deps, declare, url);
+    })
   };
 
   var instantiate = System.instantiate;
