@@ -15,6 +15,7 @@
 !/**/*syntax_error*.test.js
 /**/*error_syntax*.js
 !/**/*error_syntax*.test.js
+/**/dist/**
 
 /**/*.es5.js
 /jsconfig.json
