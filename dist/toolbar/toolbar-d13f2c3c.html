@@ -1871,7 +1871,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-b23f63e6.js"
+    "./toolbar.main.js": "./toolbar.main-320b0544.js"
   }
 }</script>
     <script>
@@ -2747,7 +2747,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       var updateIframeOverflowOnParentWindow = function updateIframeOverflowOnParentWindow() {
         if (!window.parent) {
           // can happen while parent iframe reloads
-          return null;
+          return;
         }
 
         var aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
@@ -4819,7 +4819,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-b23f63e6.js.map</script>
+//# sourceMappingURL=toolbar.main-320b0544.js.map</script>
   
 
 </body></html>

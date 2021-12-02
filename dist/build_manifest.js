@@ -7,6 +7,6 @@ export const COMPILE_PROXY_BUILD_URL = new URL("compile_proxy/compile_proxy-e666
 
 export const EVENT_SOURCE_CLIENT_BUILD_URL = new URL("event_source_client/event_source_client-9f14c8b9.js", import.meta.url).href
 
-export const TOOLBAR_BUILD_URL = new URL("toolbar/toolbar-3e2e70d3.html", import.meta.url).href
+export const TOOLBAR_BUILD_URL = new URL("toolbar/toolbar-d13f2c3c.html", import.meta.url).href
 
-export const TOOLBAR_INJECTOR_BUILD_URL = new URL("toolbar_injector/toolbar_injector-69fc0515.js", import.meta.url).href
+export const TOOLBAR_INJECTOR_BUILD_URL = new URL("toolbar_injector/toolbar_injector-828ec83b.js", import.meta.url).href
