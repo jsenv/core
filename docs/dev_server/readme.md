@@ -2,7 +2,7 @@
 
 This is an in-depth documentation about jsenv dev server. For a quick overview go to [dev server overview](../../readme.md#Dev-server-overview).
 
-This documentation list [key features](#key-features) and gives the [definition of a dev server for jsenv](#Definition-of-a-dev-server-for-jsenv) to get an idea of how things where designed. Then it documents [startDevServer](#startDevServer) function, its parameters and return value. Finally you can find:
+This documentation list [key features](#key-features) and gives the [definition of a dev server for jsenv](#Definition-of-a-dev-server-for-jsenv) to get an idea of how things where designed. Then it documents [startDevServer](#startDevServer) function, its parameters and return value.
 
 # Key features
 
@@ -11,7 +11,7 @@ This documentation list [key features](#key-features) and gives the [definition 
 - Server uses filesystem as cache for compiled files
   - You can see compiled files with your own eyes
   - Files are recompiled only if they changed, otherwise cache is used
-- Livereloading: Page auto reload when you save a file
+- Autoreloading: Page auto reload when you save a file
 
 # Definition of a dev server for jsenv
 
@@ -21,7 +21,7 @@ These type of servers focuses on development. During development files change of
 
 # startDevServer
 
-`startDevServer` is an async function starting a development server. This development server consider that more than one html file in your project can be an entry point. You can use it to debug a file in isolation, create a storybook and so on.
+`startDevServer` is an async function starting a development server. This server can be used to execute one or more html file.
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -36,8 +36,6 @@ startDevServer({
   },
 })
 ```
-
-— source code at [src/startDevServer.js](../../src/startDevServer.js).
 
 ## explorableConfig
 
