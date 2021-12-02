@@ -185,7 +185,7 @@ Toolbar has a few animations, mostly when it's opened or closed. If animations b
 
 ## Dark mode switch
 
-Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website behind it.
+Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website above.
 
 ## Browser support
 
