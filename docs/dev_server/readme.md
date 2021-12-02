@@ -148,14 +148,14 @@ This component is an icon representing the html file execution state. The icon c
 
 This component is an icon representing the dev server connection state. The icon can be clicked to get more information and can be in the following states.
 
-| State                             | Screenshot                                                                                  | Description                                                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| connecting                        | ![connecting screenshot](./server-connecting.png)                                           | Jsenv toolbar is connecting to the server server                                                                       |
-| disconnected                      | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button in previous state                                                                |
-| failed                            | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to the server. You should check the terminal where server was started                     |
-| connected with livereloading      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to the server and will autoreload on save                                                   |
-| connected without livereloading   | ![connected without livereloading screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to the server but won't autoreload on save. Happens if your disable livereload in settings. |
-| connected without livereloading 2 | ![connected without livereloading second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                   |
+| State                          | Screenshot                                                                                  | Description                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| connecting                     | ![connecting screenshot](./server-connecting.png)                                           | Jsenv toolbar is connecting to the dev server                                                                          |
+| disconnected                   | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button from above state                                                                 |
+| failed                         | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to the server. You should check the terminal where server was started                     |
+| connected with autoreload      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to the server and will autoreload on save                                                   |
+| connected without autoreload   | ![connected without livereloading screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to the server but won't autoreload on save. Happens if your disable livereload in settings. |
+| connected without autoreload 2 | ![connected without livereloading second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                   |
 
 ## Settings button
 
@@ -165,7 +165,11 @@ This component is a button opening a setting panel when clicked. Each setting is
 
 ## Notification switch
 
-Control if a notification is shown when file execution fails, is still failing or is fixed.
+Control if a notification is shown when:
+
+- file execution fails (throw)
+- file execution is still failing (keeps throwing after browser is reloaded)
+- file execution is fixed (stops throwing after browser is reloaded)
 
 ## Livereload switch
 
