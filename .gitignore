@@ -14,4 +14,5 @@
 /node_resolution.importmap
 /package-lock.json
 /secrets.json
+/jsconfig.json
 /yarn.lock
