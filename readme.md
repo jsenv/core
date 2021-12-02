@@ -1,6 +1,6 @@
 # jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core) [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main) [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-`@jsenv/core` was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
+_@jsenv/core_ was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
 
 - A test runner to execute test files
 - A development server
@@ -29,7 +29,7 @@ Each standard listed in this section is potentially supported natively by the br
 
 # Test runner overview
 
-Let's assume you want to test `countDogs` exported by `animals.js` file.
+Let's assume you want to test `countDogs` exported by _animals.js_ file.
 
 ```js
 export const countDogs = (animals) => {
@@ -37,7 +37,7 @@ export const countDogs = (animals) => {
 }
 ```
 
-1 - Create `animals.test.html`
+1 - Create _animals.test.html_
 
 ```html
 <!DOCTYPE html>
@@ -61,7 +61,7 @@ export const countDogs = (animals) => {
 </html>
 ```
 
-2 - Create `execute_test_plan.mjs`
+2 - Create _execute_test_plan.mjs_
 
 ```js
 import {
@@ -85,7 +85,7 @@ executeTestPlan({
 })
 ```
 
-3 - Add `"@jsenv/core"` and `playwright`
+3 - Add _@jsenv/core_ and _playwright_
 
 ```console
 npm install --save-dev @jsenv/core
@@ -94,7 +94,7 @@ npx playwright install-deps
 npx playwright install
 ```
 
-4 - Run `execute_test_plan.mjs` with Node.js
+4 - Run _execute_test_plan.mjs_ with Node.js
 
 ```console
 > node ./execute_test_plan.mjs
@@ -134,13 +134,13 @@ You have an html file that you want to open in a browser on your machine.
 </html>
 ```
 
-1 - Add `"@jsenv/core"` to your _devDependencies_
+1 - Add _@jsenv/core_ to your _devDependencies_
 
 ```console
 npm install --save-dev @jsenv/core
 ```
 
-2 - Create `start_dev_server.mjs`
+2 - Create _start_dev_server.mjs_
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -156,23 +156,23 @@ startDevServer({
 })
 ```
 
-3 - Run `start_dev_server.mjs` with Node.js
+3 - Run _start_dev_server.mjs_ with Node.js
 
 ```console
 > node ./start_dev_server.mjs
 
-server started at https://localhost:3456
+server started at http://localhost:3456
 ```
 
-4 - Open a browser and navigate to `https://localhost:3456`
+4 - Open a browser and navigate to `http://localhost:3456`
 
-When you open `https://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of links to your html files.
+When you open `http://localhost:3456` in a browser, a page called jsenv exploring index is shown. It displays a list of links to your html files.
 
 ![dev server index screenshot](./docs/demo_exploring_index.png)
 
-5 - Click `main.html`
+5 - Click _main.html_
 
-Browser navigates to `main.html` and execute the file. Hello world is displayed in the browser.
+Browser navigates to _main.html_ and execute the file. Hello world is displayed in the browser.
 
 ![dev server hello world screenshot](./docs/demo_exploring_hello_world.png)
 
@@ -201,13 +201,13 @@ Only the content of html files is shown below because the content of non-html fi
 </html>
 ```
 
-1 - Add `"@jsenv/core"` to your _devDependencies_
+1 - Add _@jsenv/core_ to your _devDependencies_
 
 ```console
 npm install --save-dev @jsenv/core
 ```
 
-2 - Create `build.mjs`
+2 - Create _build.mjs_
 
 ```js
 import { buildProject } from "@jsenv/core"
@@ -223,7 +223,7 @@ await buildProject({
 })
 ```
 
-3 - Run `build.mjs` with Node.js
+3 - Run _build.mjs_ with Node.js
 
 ```console
 > node ./build.mjs
@@ -246,7 +246,7 @@ build duration: 1.85 seconds
 ✔ build end
 ```
 
-4 - Open `dist/main.prod.html`
+4 - Open _dist/main.prod.html_
 
 ```html
 <!DOCTYPE html>
@@ -282,7 +282,7 @@ To sum up, jsenv focuses on simplicity and flexibility making it a perfect candi
 
 ## Main dependencies
 
-An overview of the main dependencies used by `@jsenv/core`.
+An overview of the main dependencies used by _@jsenv/core_.
 
 | Dependency                                            | How it is used by jsenv                     |
 | ----------------------------------------------------- | ------------------------------------------- |
@@ -296,16 +296,16 @@ An overview of the main dependencies used by `@jsenv/core`.
 
 ## Name
 
-The name `jsenv` stands for JavaScript environments. This is because the original purpose of `jsenv` was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect of `jsenv` is not highlighted in the documentation but it exists.
+The name "jsenv" stands for JavaScript environments. This is because the original purpose of jsenv was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect is not highlighted in the documentation but it exists.
 
-Maybe `jsenv` should be written `JSEnv`? That makes typing the name too complex:
+Maybe "jsenv" should be written "JSEnv"? That makes typing the name too complex:
 
 1. Hold `shift` on keyboard
 2. While holding `shift`, type `JSE`
 3. Release `shift`
 4. Finally, type `nv`.
 
-No one should have to do that, the prefered syntax is `jsenv`.
+No one wants to do that: the prefered syntax is "jsenv".
 
 ## Logo
 
@@ -328,17 +328,17 @@ The logo is composed by the name at the center and two circles orbiting around i
 npm install --save-dev @jsenv/core
 ```
 
-`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 14.17.0. Other operating systems and Node.js versions are not tested.
+_@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.13.0. Other operating systems and Node.js versions are not tested.
 
 # Configuration
 
-Jsenv configuration is done in [jsenv.config.mjs](https://github.com/jsenv/jsenv-core#jsenvconfigmjs) and [babel.config.cjs](https://github.com/jsenv/jsenv-core#babelconfigcjs).
+Jsenv configuration is done in [jsenv.config.mjs](#jsenvconfigmjs) and [babel.config.cjs](#babelconfigcjs).
 
 ## jsenv.config.mjs
 
-Jsenv codebase usually puts configuration in a top level file named `jsenv.config.mjs`.
+Jsenv codebase usually puts configuration in a top level file named _jsenv.config.mjs_.
 
-It's recommended to use the following `jsenv.config.mjs`
+It's recommended to use the following _jsenv.config.mjs_
 
 ```js
 /*
@@ -353,19 +353,13 @@ It's recommended to use the following `jsenv.config.mjs`
 export const projectDirectoryUrl = String(new URL("./", import.meta.url))
 ```
 
-The file is meant to be imported and passed using the spread operator.
-
-![screenshot about jsenv config import and spread operator](./docs/jsenv-config-spread.png)
-
-— See [script/test/test.js](https://github.com/jsenv/jsenv-core/blob/8da56c4aeb70891be1245f388bfe5d3088145ec6/script/test/test.js#L3)
-
-This technic helps to see jsenv custom configuration quickly and share it between files. That being said you are free to organize your configuration as you want.
+This file helps to see jsenv configuration quickly and share it between files. That being said you are free to organize your configuration as you want.
 
 ## babel.config.cjs
 
 When code needs to be transformed, the project must contain a [babel config file](https://babeljs.io/docs/en/config-files).
 
-It's recommended to use the following `babel.config.cjs`
+It's recommended to use the following _babel.config.cjs_
 
 ```js
 /*
@@ -426,6 +420,8 @@ You must also add an [importmap](https://github.com/WICG/import-maps#import-maps
   }
 </script>
 ```
+
+The import mappings can be generated programmatically, you can use https://github.com/jsenv/importmap-node-module to do that.
 
 ## JSX
 
