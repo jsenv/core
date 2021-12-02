@@ -21,7 +21,9 @@ These type of servers focuses on development. During development files change of
 
 # startDevServer
 
-`startDevServer` is an async function starting a development server. This server can be used to execute one or more html file.
+`startDevServer` is an async function starting a development server.
+
+It is meant to execute html file(s) during development.
 
 ```js
 import { startDevServer } from "@jsenv/core"
