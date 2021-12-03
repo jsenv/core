@@ -3,8 +3,9 @@ import { ANSI } from "@jsenv/log"
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
 
-export const createSummaryLog = (summary) => `
--------------- summary -----------------
+export const createSummaryLog = (
+  summary,
+) => `-------------- summary -----------------
 ${createSummaryMessage(summary)}
 total duration: ${msAsDuration(summary.duration)}
 ----------------------------------------`

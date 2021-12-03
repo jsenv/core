@@ -2,10 +2,7 @@
 
 This is an in-depth documentation about jsenv test runner. For a quick overview go to [test runner overview](../../readme.md#Test-runner-overview).
 
-This documentation list [key features](#key-features) and gives the [definition of a test for jsenv](#Definition-of-a-test-for-jsenv) to get an idea of how things where designed. Then it documents [executeTestPlan](#executeTestPlan) function, its parameters and return value. Finally you can find:
-
-- [How tests are executed?](#How-tests-are-executed)
-- [How to test async code?](#How-to-test-async-code)
+This documentation list [key features](#key-features) and gives the [definition of a test for jsenv](#Definition-of-a-test-for-jsenv) to get an idea of how things where designed. Then it documents [How tests are executed?](#How-tests-are-executed), [How to test async code?](#How-to-test-async-code) and finally the [executeTestPlan](#executeTestPlan) function.
 
 # Key features
 
@@ -26,6 +23,139 @@ Test are putting you in the shoes of someone using your code. In that perspectiv
 Finally testing mitigates the risk of breaking in the future what is working today.
 
 Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test inside chromium and Node.js as long as code can execute in both.
+
+# How tests are executed?
+
+Each test file will be executed in his own browser or node.js process. It reduces chances that a file execution have a side effect on an other file execution. For example if a test file creates an infinite loop, only this test file will be considered failing and other test can keep going.
+
+jsenv provides several test execution environments, called _runtime_.
+
+- A chromium browser per test
+- A chromium browser tab per test
+- A firefox browser per test
+- A firefox tab per test
+- A webkit browser per test
+- A webkit tab per test
+- A node process per test
+
+Test is executed by something equivalent to a dynamic import.
+
+```js
+await import("file:///file.test.js")
+```
+
+If dynamic import resolves, execution is considered successfull.<br />
+If dynamic import rejects, execution is considered errored.<br />
+If dynamic import takes too long to settle, execution is considered timedout.<br />
+
+Once the execution becomes either successfull, errored or timedout jsenv stops the runtime launched to execute the test (a browser or node.js process). Inside a node process there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 30s, if the node process has not exited by its own it is killed by force.
+
+```console
+❯ node ./docs/testing/demo/mixed/demo.mjs
+
+✔ execution 1 of 4 completed (all completed)
+file: docs/testing/demo/mixed/a.spec.js
+runtime: node/16.13.0
+duration: 0.31 seconds
+
+✖ execution 2 of 4 timeout after 30000ms (1 timed out, 1 completed)
+file: docs/testing/demo/mixed/b.spec.js
+runtime: node/16.13.0
+duration: 30 seconds
+
+✖ execution 3 of 4 errored (1 timed out, 1 errored, 1 completed)
+file: docs/testing/demo/mixed/c.spec.js
+runtime: node/16.13.0
+duration: 0.24 seconds
+error: <stack hidden>
+
+✖ execution 4 of 4 errored (1 timed out, 2 errored, 1 completed)
+file: docs/testing/demo/mixed/d.spec.js
+runtime: node/16.13.0
+duration: 0.2 seconds
+error: Error: runtime stopped during execution
+    at callExecute (file:///Users/dmail/jsenv-core/src/internal/executing/launchAndExecute.js:367:14)
+    at processTicksAndRejections (node:internal/process/task_queues:96:5)
+
+-------------- summary -----------------
+4 executions: 1 timed out, 2 errored, 1 completed
+total duration: 31.2 seconds
+----------------------------------------
+```
+
+## Execution error example
+
+Any value thrown during file execution sets execution status to errored and test is considered as failed.
+
+```js
+throw new Error("here")
+```
+
+If the browser or node process stops during execution, the execution is also considered as errored and test as failed.
+
+## Execution timeout example
+
+Execution taking longer than an allocated amout of milliseconds sets execution status to timedout and test is considered as failed.
+
+```js
+await new Promise((resolve) => {
+  setTimeout(resolve, 100000)
+})
+```
+
+Note: By default an execution is given 30s before being considered as a timeout.
+Check [defaultMsAllocatedPerExecution](#defaultMsAllocatedPerExecution) to know how to configure this value.
+
+## Execution completed example
+
+When none of the aboves scenario occurs, execution status is success and test is considered as completed.
+
+```js
+const actual = 10 + 10
+const expected = 20
+if (actual !== expected) {
+  throw new Error(`10 + 10 should be 20`)
+}
+```
+
+Note: An empty file is a completed test.
+
+# How to test async code?
+
+Top level await is a standard (and damn cool) way to make your top level code execution asynchronous. Use it to test async code.
+
+```js
+const actual = await Promise.resolve(42)
+const expected = 42
+if (actual !== expected) {
+  throw new Error("should be 42")
+}
+```
+
+Without top level await your execution is considered done while your code is still executing.
+
+```js
+console.log("execution start")
+;(async () => {
+  const actual = await Promise.resolve(42)
+  const expected = 42
+  if (actual !== expected) {
+    throw new Error("should be 42")
+  }
+  console.log("test done")
+})()
+console.log("execution end")
+```
+
+Logs
+
+```console
+execution start
+execution end
+test done
+```
+
+If jsenv executed that code, runtime would be stopped after "execution end" log and "test done" would never happen.
 
 # executeTestPlan
 
@@ -473,146 +603,3 @@ When true _consoleCalls_ property is availabe on every execution result inside [
 A boolean controlling if execution success is logged in your terminal. This parameter is optional and enabled by default.
 
 When false and execution completes normally nothing is logged.
-
-# How tests are executed?
-
-Each test file will be executed in his own browser or node.js process. It reduces chances that a file execution have a side effect on an other file execution. For example if a test file creates an infinite loop, only this test file will be considered failing and other test can keep going.
-
-jsenv provides several test execution environments, called _runtime_.
-
-- A chromium browser per test
-- A chromium browser tab per test
-- A firefox browser per test
-- A firefox tab per test
-- A webkit browser per test
-- A webkit tab per test
-- A node process per test
-
-Test is executed by something equivalent to a dynamic import.
-
-```js
-await import("file:///file.test.js")
-```
-
-If dynamic import resolves, execution is considered successfull.<br />
-If dynamic import rejects, execution is considered errored.<br />
-If dynamic import takes too long to settle, execution is considered timedout.<br />
-
-Once the execution becomes either successfull, errored or timedout jsenv stops the runtime launched to execute the test (a browser or node.js process). Inside a node process there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
-
-```console
-❯ node ./docs/testing/demo/mixed/demo.mjs
-
-✔ execution 1 of 4 completed (all completed)
-file: docs/testing/demo/mixed/a.spec.js
-runtime: node/16.13.0
-duration: 0.31 seconds
-
-✖ execution 2 of 4 timeout after 3000ms (1 timed out, 1 completed)
-file: docs/testing/demo/mixed/b.spec.js
-runtime: node/16.13.0
-duration: 3 seconds
-
-✖ execution 3 of 4 errored (1 timed out, 1 errored, 1 completed)
-file: docs/testing/demo/mixed/c.spec.js
-runtime: node/16.13.0
-duration: 0.24 seconds
-error: <stack hidden>
-
-✖ execution 4 of 4 errored (1 timed out, 2 errored, 1 completed)
-file: docs/testing/demo/mixed/d.spec.js
-runtime: node/16.13.0
-duration: 0.2 seconds
-error: Error: runtime stopped during execution
-    at callExecute (file:///Users/dmail/jsenv-core/src/internal/executing/launchAndExecute.js:367:14)
-    at processTicksAndRejections (node:internal/process/task_queues:96:5)
-
--------------- summary -----------------
-4 executions: 1 timed out, 2 errored, 1 completed
-total duration: 4.2 seconds
-----------------------------------------
-```
-
-## Execution error example
-
-Any value thrown during file execution sets execution status to errored and test is considered as failed.
-
-```js
-throw new Error("here")
-```
-
-## Execution timeout example
-
-Execution taking longer than an allocated amout of milliseconds sets execution status to timedout and test is considered as failed.
-
-```js
-await new Promise(() => {})
-```
-
-Note: By default an execution is given 30s before being considered as a timeout.
-Check [defaultMsAllocatedPerExecution](#defaultMsAllocatedPerExecution) to know how to configure this value.
-
-## Execution disconnected example
-
-Runtime disconnected during file execution sets execution status to disconnected and test is considered as failed.
-
-```js
-while (true) {}
-```
-
-Note: There is, fortunately, no way to crash a browser during execution so this code might either crash the runtime or result in a timeout. Inside node however you could write code resulting in a disconnected execution.
-
-```js
-process.exit()
-```
-
-## Execution completed example
-
-When none of the aboves scenario occurs, execution status is success and test is considered as completed.
-
-```js
-const actual = 10 + 10
-const expected = 20
-if (actual !== expected) {
-  throw new Error(`10 + 10 should be 20`)
-}
-```
-
-Note: An empty file is a completed test.
-
-# How to test async code?
-
-Top level await is a standard (and damn cool) way to make your top level code execution asynchronous. Use it to test async code.
-
-```js
-const actual = await Promise.resolve(42)
-const expected = 42
-if (actual !== expected) {
-  throw new Error("should be 42")
-}
-```
-
-Without top level await your execution is considered done while your code is still executing.
-
-```js
-console.log("execution start")
-;(async () => {
-  const actual = await Promise.resolve(42)
-  const expected = 42
-  if (actual !== expected) {
-    throw new Error("should be 42")
-  }
-  console.log("test done")
-})()
-console.log("execution end")
-```
-
-Logs
-
-```console
-execution start
-execution end
-test done
-```
-
-If jsenv executed that code, runtime would be stopped after "execution end" log and "test done" would never happen.

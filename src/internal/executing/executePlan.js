@@ -129,16 +129,30 @@ export const executePlan = async (
     })
 
     logger.debug(`Generate executions`)
-    const executionSteps = await generateExecutionSteps(
-      {
-        ...plan,
-        [compileServer.outDirectoryRelativeUrl]: null,
-      },
-      {
-        signal: multipleExecutionsOperation.signal,
-        projectDirectoryUrl,
-      },
-    )
+
+    let executionSteps
+    try {
+      executionSteps = await generateExecutionSteps(
+        {
+          ...plan,
+          [compileServer.outDirectoryRelativeUrl]: null,
+        },
+        {
+          signal: multipleExecutionsOperation.signal,
+          projectDirectoryUrl,
+        },
+      )
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        return {
+          aborted: true,
+          planSummary: {},
+          planReport: {},
+          planCoverage: null,
+        }
+      }
+      throw e
+    }
     logger.debug(`${executionSteps.length} executions planned`)
 
     const result = await executeConcurrently(executionSteps, {

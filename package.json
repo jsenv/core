@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "24.4.7",
+  "version": "24.4.8",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -56,7 +56,7 @@
     "@babel/plugin-syntax-numeric-separator": "7.10.4",
     "@babel/plugin-transform-modules-systemjs": "7.16.0",
     "@c88/v8-coverage": "0.1.1",
-    "@jsenv/abort": "4.1.1",
+    "@jsenv/abort": "4.1.2",
     "@jsenv/filesystem": "2.5.1",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/log": "1.5.0",
@@ -99,6 +99,7 @@
     "terser": "5.10.0",
     "v8-to-istanbul": "8.1.0",
     "vm2": "3.9.5",
+    "why-is-node-running": "2.2.0",
     "wrap-ansi": "8.0.1"
   },
   "devDependencies": {
