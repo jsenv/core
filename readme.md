@@ -180,7 +180,7 @@ To read more about jsenv dev server, check [jsenv dev server documentation](./do
 
 # Build overview
 
-Following the steps below turns an `index.html` into an optimized `dist/main.html`.
+Following the steps below turns a `main.html` into an optimized `dist/main.prod.html`.
 Only the content of html files is shown below because the content of non-html files is trivial.
 
 ```html
@@ -350,7 +350,7 @@ It's recommended to use the following _jsenv.config.mjs_
  * Read more at https://github.com/jsenv/jsenv-core#jsenvconfigmjs
  */
 
-export const projectDirectoryUrl = String(new URL("./", import.meta.url))
+export const projectDirectoryUrl = new URL("./", import.meta.url)
 ```
 
 This file helps to see jsenv configuration quickly and share it between files. That being said you are free to organize your configuration as you want.
