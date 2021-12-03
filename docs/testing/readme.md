@@ -26,7 +26,7 @@ Jsenv provides an api to execute your test files inside one or many environments
 
 # How tests are executed?
 
-Each test file will be executed in his own browser or node.js process. It reduces chances that a file execution have a side effect on an other file execution. For example if a test file creates an infinite loop, only this test file will be considered failing and other test can keep going.
+Each test file will be executed in his own browser or node.js process. It removes almost completely the possibility of having side effects between two test executions. A test file creates an infinite loop, write a global variable, the other tests won't be affected.
 
 jsenv provides several test execution environments, called _runtime_.
 
@@ -48,40 +48,15 @@ If dynamic import resolves, execution is considered successfull.<br />
 If dynamic import rejects, execution is considered errored.<br />
 If dynamic import takes too long to settle, execution is considered timedout.<br />
 
-Once the execution becomes either successfull, errored or timedout jsenv stops the runtime launched to execute the test (a browser or node.js process). Inside a node process there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 30s, if the node process has not exited by its own it is killed by force.
+An execution is considered done when it is in one of the following status:
 
-```console
-❯ node ./docs/testing/demo/mixed/demo.mjs
+- aborted
+- cancelled
+- timedout
+- errored
+- completed
 
-✔ execution 1 of 4 completed (all completed)
-file: docs/testing/demo/mixed/a.spec.js
-runtime: node/16.13.0
-duration: 0.31 seconds
-
-✖ execution 2 of 4 timeout after 30000ms (1 timed out, 1 completed)
-file: docs/testing/demo/mixed/b.spec.js
-runtime: node/16.13.0
-duration: 30 seconds
-
-✖ execution 3 of 4 errored (1 timed out, 1 errored, 1 completed)
-file: docs/testing/demo/mixed/c.spec.js
-runtime: node/16.13.0
-duration: 0.24 seconds
-error: <stack hidden>
-
-✖ execution 4 of 4 errored (1 timed out, 2 errored, 1 completed)
-file: docs/testing/demo/mixed/d.spec.js
-runtime: node/16.13.0
-duration: 0.2 seconds
-error: Error: runtime stopped during execution
-    at callExecute (file:///Users/dmail/jsenv-core/src/internal/executing/launchAndExecute.js:367:14)
-    at processTicksAndRejections (node:internal/process/task_queues:96:5)
-
--------------- summary -----------------
-4 executions: 1 timed out, 2 errored, 1 completed
-total duration: 31.2 seconds
-----------------------------------------
-```
+Once execution is done, jsenv stops the runtime launched to execute the test. This step is part of the execution, if an error occur while stopping the runtime, execution is considered as "errored". For node there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
 ## Execution error example
 
@@ -108,7 +83,7 @@ Check [defaultMsAllocatedPerExecution](#defaultMsAllocatedPerExecution) to know 
 
 ## Execution completed example
 
-When none of the aboves scenario occurs, execution status is success and test is considered as completed.
+When none of the aboves scenario occurs, execution status is completed and test is considered as passed.
 
 ```js
 const actual = 10 + 10
@@ -118,7 +93,7 @@ if (actual !== expected) {
 }
 ```
 
-Note: An empty file is a completed test.
+Note: An empty file is a completed execution.
 
 # How to test async code?
 
