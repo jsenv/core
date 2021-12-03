@@ -9,13 +9,14 @@ This documentation list [key features](#key-features) and gives the [definition 
 
 # Key features
 
-- Test files are "normal" js files:
-  - Test can be written and debugged like a regular file
-  - Test can be executed independently
+- Test files are "normal" files:
+  - Almost zero context switching when opening a test file
+  - Tests are written like the rest of the codebase
+  - Tests are debugged like the rest of the codebase
+  - Tests can be executed independently
 - Tests can be executed on Chrome, Firefox, Safari and Node.js
 - Tests are executed in total isolation: a dedicated browser or node process per test
 - Tests have a configurable amount of ms to end; This is also configurable per test
-- Test runner is not a magic command line; It is just a function in a js file that you can simply execute with the _node_ command.
 
 # Definition of a test for jsenv
 
@@ -24,19 +25,25 @@ A test runs your code to ensure it works as expected.
 Test are putting you in the shoes of someone using your code. In that perspective they document how to use your code and the variety of scenarios your code supports.<br />
 Finally testing mitigates the risk of breaking in the future what is working today.
 
-Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
+Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test inside chromium and Node.js as long as code can execute in both.
 
 # executeTestPlan
 
 `executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
 
 ```js
-import { executeTestPlan, nodeRuntime } from "@jsenv/core"
+import { executeTestPlan, nodeRuntime, chromiumTabRuntime } from "@jsenv/core"
 
-executeTestPlan({
+await executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./test/**/*.test.js": {
+    "./test/**/*.test.html": {
+      chromium: {
+        runtime: chromiumTabRuntime,
+        allocatedMs: 7000,
+      },
+    },
+    "./test/**/*.test.mjs": {
       node: {
         runtime: nodeRuntime,
         allocatedMs: 5000,
@@ -53,25 +60,11 @@ executeTestPlan({
 })
 ```
 
-— source code at [src/executeTestPlan.js](../../src/executeTestPlan.js).
-
 ## testPlan
 
-`testPlan` parameter is an object describing where are your test files and how they should be executed. This is an optional parameter with a default value of:
+_testPlan_ parameter is an object describing where are your test files and how they should be executed. This parameter is **required**.
 
-```js
-{
-  "./test/**/*.test.js": {
-    node: {
-      runtime: nodeRuntime
-    }
-  }
-}
-```
-
-This default value translates into the following sentence: "Execute all files in my project that ends with `test.js` on Node.js".
-
-`testPlan` parts are named `pattern`, `filePlan`, `executionName` and `executionOptions`. To better see what is named how, let's name every value from `testPlan` above.
+_testPlan_ parts are named _pattern_, _filePlan_, _executionName_ and _executionOptions_. To better see what is named how, let's name every value from _testPlan_ above.
 
 ```js
 const pattern = "./test/**/*.test.js"
@@ -89,15 +82,15 @@ const testPlan = {
 
 ### pattern
 
-`pattern` is documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
+_pattern_ is documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
 
 ### executionName
 
-`executionName` can be anything. Up to you to name this execution.
+_executionName_ can be anything. Up to you to name this execution.
 
 ### executionOptions
 
-`executionOptions` can be `null`, in that case the execution is ignored.
+_executionOptions_ can be `null`, in that case the execution is ignored.
 It exists to prevent an execution planified by a previous pattern.
 
 ```js
@@ -118,15 +111,15 @@ It exists to prevent an execution planified by a previous pattern.
 }
 ```
 
-Otherwise `executionOptions` must be an object describing how to execute files. See [All execution options](#all-execution-options).
+Otherwise _executionOptions_ must be an object describing how to execute files. See [All execution options](#all-execution-options).
 
 ## defaultMsAllocatedPerExecution
 
-`defaultMsAllocatedPerExecution` parameter is a number representing a number of ms allocated given for each file execution to complete. This parameter is optional with a default value corresponding to 30 seconds.
+_defaultMsAllocatedPerExecution_ parameter is a number representing a number of ms allocated given for each file execution to complete. This parameter is optional with a default value corresponding to 30 seconds.
 
 ## completedExecutionLogAbbreviation
 
-`completedExecutionLogAbbreviation` parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional and disabled by default.
+_completedExecutionLogAbbreviation_ parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional and disabled by default.
 
 ![test execution mixed full terminal screenshot](./mixed-full-terminal-screenshot.png)
 
@@ -138,7 +131,7 @@ Becomes
 
 ## completedExecutionLogMerging
 
-`completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and disabled by default.
+_completedExecutionLogMerging_ parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and disabled by default.
 
 ![test execution mixed short terminal screenshot](./mixed-short-terminal-screenshot.png)
 
@@ -150,53 +143,53 @@ Becomes
 
 ## maxExecutionsInParallel
 
-`maxExecutionsInParallel` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value of `1`.
+_maxExecutionsInParallel_ parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value of `1`.
 
 ## coverage parameters
 
 ### coverage
 
-`coverage` parameter is a boolean used to enable coverage or not while executing test files. This parameter is enabled if node process args includes `--coverage`.
+_coverage_ parameter is a boolean used to enable coverage or not while executing test files. This parameter is enabled if node process args includes `--coverage`.
 
 ### coverageConfig
 
-`coverageConfig` parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/jsenvCoverageConfig.js](../../src/jsenvCoverageConfig.js). Keys are patterns as documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
+_coverageConfig_ parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/jsenvCoverageConfig.js](../../src/jsenvCoverageConfig.js). Keys are patterns as documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
 
 ### coverageIncludeMissing
 
-`coverageIncludeMissing` parameter is a boolean used to controls if testPlanCoverage will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
+_coverageIncludeMissing_ parameter is a boolean used to controls if testPlanCoverage will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
 
 ### coverageAndExecutionAllowed
 
-`coverageAndExecutionAllowed` parameter is a boolean controlling if files can be both executed and instrumented for coverage. A test file should not appear in your coverage but if `coverageConfig` include your test files for coverage they would. This parameter should help to prevent this to happen in case you missconfigured `coverageConfig` or `testPlan`. This parameter is optional and enabled by default.
+_coverageAndExecutionAllowed_ parameter is a boolean controlling if files can be both executed and instrumented for coverage. A test file should not appear in your coverage but if _coverageConfig_ include your test files for coverage they would. This parameter should help to prevent this to happen in case you missconfigured _coverageConfig_ or _testPlan_. This parameter is optional and enabled by default.
 
 ### coverageTextLog
 
-`coverageTextLog` parameter is a boolean controlling if the coverage will be logged to the console after test plan is fully executed. This parameter is optional and enabled by default.
+_coverageTextLog_ parameter is a boolean controlling if the coverage will be logged to the console after test plan is fully executed. This parameter is optional and enabled by default.
 
 ### coverageJsonFile
 
-`coverageJsonFile` parameter is a boolean controlling if a json file containing your test plan coverage will be written after test plan is fully executed. This parameter is optional and enabled by default when `process.env.CI` is truthy.
+_coverageJsonFile_ parameter is a boolean controlling if a json file containing your test plan coverage will be written after test plan is fully executed. This parameter is optional and enabled by default when `process.env.CI` is truthy.
 
 ### coverageJsonFileLog
 
-`coverageJsonFileLog` parameter is a boolean controlling if the json file path for coverage will be logged to the console. This parameters is optional and enabled by default.
+_coverageJsonFileLog_ parameter is a boolean controlling if the json file path for coverage will be logged to the console. This parameters is optional and enabled by default.
 
 ### coverageJsonFileRelativeUrl
 
-`coverageJsonFileRelativeUrl` parameter is a string controlling where the json file for coverage will be written. This parameter is optional with a default value of `"./coverage/coverage.json"`.
+_coverageJsonFileRelativeUrl_ parameter is a string controlling where the json file for coverage will be written. This parameter is optional with a default value of `"./coverage/coverage.json"`.
 
 ### coverageHtmlDirectory
 
-`coverageHtmlDirectory` parameter is a boolean controlling if a directory with html files showing your coverage will be generated. This parameter is optional and enabled by default when `process.env.CI` is falsy.
+_coverageHtmlDirectory_ parameter is a boolean controlling if a directory with html files showing your coverage will be generated. This parameter is optional and enabled by default when `process.env.CI` is falsy.
 
 ### coverageHtmlDirectoryRelativeUrl
 
-`coverageHtmlDirectoryRelativeUrl` parameter is a string controlling where the directory with html files will be written. This parameter is optional with a default value of `./coverage/`.
+_coverageHtmlDirectoryRelativeUrl_ parameter is a string controlling where the directory with html files will be written. This parameter is optional with a default value of `"./coverage/"`.
 
 ### coverageHtmlDirectoryIndexLog
 
-`coverageHtmlDirectoryIndexLog` parameter is a boolean controlling if the html coverage directory index file path will be logged to the console. This parameter is optional and enabled by default.
+_coverageHtmlDirectoryIndexLog_ parameter is a boolean controlling if the html coverage directory index file path will be logged to the console. This parameter is optional and enabled by default.
 
 ## Shared parameters
 
@@ -216,11 +209,11 @@ To avoid duplication some parameter are linked to a generic documentation.
 
 # executeTestPlan return value
 
-`executeTestPlan` returns signature is `{ testPlanSummary, testPlanReport, testPlanCoverage }`
+_executeTestPlan_ returns signature is `{ testPlanSummary, testPlanReport, testPlanCoverage }`
 
 ## testPlanSummary
 
-`testPlanSummary` is an object describing quickly how the testPlan execution went. It is returned by `executeTestPlan`.
+_testPlanSummary_ is an object describing quickly how the testPlan execution went. It is returned by _executeTestPlan_.
 
 ```js
 const { testPlanSummary } = await executeTestPlan({
@@ -229,7 +222,7 @@ const { testPlanSummary } = await executeTestPlan({
 })
 ```
 
-`testPlanSummary` is an object like this one:
+_testPlanSummary_ is an object like this one:
 
 ```js
 {
@@ -244,7 +237,7 @@ const { testPlanSummary } = await executeTestPlan({
 
 ## testPlanReport
 
-`testPlanReport` is an object containing information about every test plan file execution. It is returned by `executeTestPlan`.
+_testPlanReport_ is an object containing information about every test plan file execution. It is returned by _executeTestPlan_.
 
 ```js
 const { testPlanReport } = await executeTestPlan({
@@ -259,7 +252,7 @@ const { testPlanReport } = await executeTestPlan({
 })
 ```
 
-`testPlanReport` is an object like this one:
+_testPlanReport_ is an object like this one:
 
 ```json
 {
@@ -277,7 +270,7 @@ const { testPlanReport } = await executeTestPlan({
 
 ## testPlanCoverage
 
-`testPlanCoverage` is an object is the coverage of your test plan, it aggregates every file execution coverage. It is returned by `executeTestPlan`.
+_testPlanCoverage_ is an object is the coverage of your test plan, it aggregates every file execution coverage. It is returned by _executeTestPlan_.
 
 ```js
 const { testPlanCoverage } = await executeTestPlan({
@@ -293,7 +286,7 @@ const { testPlanCoverage } = await executeTestPlan({
 })
 ```
 
-`testPlanCoverage` is an object like this one:
+_testPlanCoverage_ is an object like this one:
 
 ```json
 {
@@ -321,12 +314,12 @@ A function capable to launch a runtime. This parameter is **required**, the avai
 
 An object used to configure the launch function. This parameter is optional.
 
-`runtimeParams` works so that the two code below are equivalent:
+_runtimeParams_ works so that the two code below are equivalent:
 
 ```js
 import { executeTestPlan, chromiumRuntime } from "@jsenv/core"
 
-executeTestPlan({
+await executeTestPlan({
   testPlan: {
     "./foo.test.html": {
       chromium: {
@@ -343,7 +336,7 @@ executeTestPlan({
 ```js
 import { executeTestPlan, chromiumRuntime } from "@jsenv/core"
 
-executeTestPlan({
+await executeTestPlan({
   testPlan: {
     "./foo.test.html": {
       chromium: {
@@ -366,7 +359,7 @@ A number representing the amount of milliseconds allocated for this file executi
 ```js
 import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 
-executeTestPlan({
+await executeTestPlan({
   defaultMsAllocatedPerExecution: 5000,
   testPlan: {
     "./foo.test.js": {
@@ -383,7 +376,7 @@ executeTestPlan({
 
 A boolean controlling if console logs are captured during file execution and reported back. This param is optional and enabled by default.
 
-When true `consoleCalls` property is availabe on every execution result inside [testPlanReport](#testPlanReport).
+When true _consoleCalls_ property is availabe on every execution result inside [testPlanReport](#testPlanReport).
 
 ## logSuccess
 
@@ -395,7 +388,7 @@ When false and execution completes normally nothing is logged.
 
 Each test file will be executed in his own browser or node.js process. It reduces chances that a file execution have a side effect on an other file execution. For example if a test file creates an infinite loop, only this test file will be considered failing and other test can keep going.
 
-jsenv provides several test execution environments, called `runtime`.
+jsenv provides several test execution environments, called _runtime_.
 
 - A chromium browser per test
 - A chromium browser tab per test
@@ -501,4 +494,4 @@ execution end
 test done
 ```
 
-If jsenv executed that code, runtime would be stopped after `execution end` logs and `test done` would never happen.
+If jsenv executed that code, runtime would be stopped after "execution end" log and "test done" would never happen.
