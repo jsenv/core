@@ -38,6 +38,10 @@ export const visitNodeV8Directory = async ({
       const tryReadJsonFile = async (timeSpentTrying = 0) => {
         const fileContent = await readFile(dirEntryUrl, { as: "string" })
         if (fileContent === "") {
+          if (timeSpentTrying < 400) {
+            await new Promise((resolve) => setTimeout(resolve, 200))
+            return tryReadJsonFile(timeSpentTrying + 200)
+          }
           console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`)
           return null
         }
