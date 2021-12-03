@@ -10,7 +10,7 @@ This documentation list [key features](#key-features) and gives the [definition 
 # Key features
 
 - Test files are "normal" files:
-  - Almost zero context switching when opening a test file
+  - **Almost zero context switching when opening a test file**
   - Tests are written like the rest of the codebase
   - Tests are debugged like the rest of the codebase
   - Tests can be executed independently
@@ -29,7 +29,7 @@ Jsenv provides an api to execute your test files inside one or many environments
 
 # executeTestPlan
 
-`executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
+_executeTestPlan_ is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
 
 ```js
 import { executeTestPlan, nodeRuntime, chromiumTabRuntime } from "@jsenv/core"
@@ -96,7 +96,7 @@ It exists to prevent an execution planified by a previous pattern.
 ```js
 {
   // execute every file twice on node (why not ^^)
-  "./test/**/*.test.js": {
+  "./test/**/*.test.mjs": {
     node: {
       runtime: nodeRuntime
     },
@@ -105,7 +105,7 @@ It exists to prevent an execution planified by a previous pattern.
     }
   },
   // but executes foo.test.js once
-  "./test/foo.test.js": {
+  "./test/foo.test.mjs": {
     node2: null
   }
 }
@@ -121,11 +121,63 @@ _defaultMsAllocatedPerExecution_ parameter is a number representing a number of 
 
 _completedExecutionLogAbbreviation_ parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional and disabled by default.
 
-![test execution mixed full terminal screenshot](./mixed-full-terminal-screenshot.png)
+```console
+❯ node ./docs/testing/demo/abbreviation/demo_abbreviation_without.mjs
+
+✔ execution 1 of 4 completed (all completed)
+file: docs/testing/demo/abbreviation/a.spec.js
+runtime: node/16.13.0
+duration: 0.3 seconds
+
+✖ execution 2 of 4 errored (1 errored, 1 completed)
+file: docs/testing/demo/abbreviation/b.spec.js
+runtime: node/16.13.0
+duration: 0.23 seconds
+error: Error: here
+    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
+
+✔ execution 3 of 4 completed (1 errored, 2 completed)
+file: docs/testing/demo/abbreviation/c.spec.js
+runtime: node/16.13.0
+duration: 0.25 seconds
+
+✔ execution 4 of 4 completed (1 errored, 3 completed)
+file: docs/testing/demo/abbreviation/d.spec.js
+runtime: node/16.13.0
+duration: 0.24 seconds
+
+
+-------------- summary -----------------
+4 executions: 1 errored, 3 completed
+total duration: 1 second
+----------------------------------------
+```
 
 Becomes
 
-![test execution mixed short terminal screenshot](./mixed-short-terminal-screenshot.png)
+```console
+❯ node ./docs/testing/demo/abbreviation/demo_abbreviation.mjs
+
+✔ execution 1 of 4 completed (all completed)
+
+✖ execution 2 of 4 errored (1 errored, 1 completed)
+file: docs/testing/demo/abbreviation/b.spec.js
+runtime: node/16.13.0
+duration: 0.18 seconds
+error: Error: here
+    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
+
+✔ execution 3 of 4 completed (1 errored, 2 completed)
+
+✔ execution 4 of 4 completed (1 errored, 3 completed)
+
+-------------- summary -----------------
+4 executions: 1 errored, 3 completed
+total duration: 0.84 seconds
+----------------------------------------
+```
 
 > Note how completed executions are shorter. The idea is that you don't need additional information for completed executions.
 
@@ -133,11 +185,49 @@ Becomes
 
 _completedExecutionLogMerging_ parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and disabled by default.
 
-![test execution mixed short terminal screenshot](./mixed-short-terminal-screenshot.png)
+```console
+❯ node ./docs/testing/demo/abbreviation/demo_abbreviation.mjs
+
+✔ execution 1 of 4 completed (all completed)
+
+✖ execution 2 of 4 errored (1 errored, 1 completed)
+file: docs/testing/demo/abbreviation/b.spec.js
+runtime: node/16.13.0
+duration: 0.18 seconds
+error: Error: here
+    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
+
+✔ execution 3 of 4 completed (1 errored, 2 completed)
+
+✔ execution 4 of 4 completed (1 errored, 3 completed)
+
+-------------- summary -----------------
+4 executions: 1 errored, 3 completed
+total duration: 0.84 seconds
+----------------------------------------
+```
 
 Becomes
 
-![test execution mixed short and merge terminal screenshot](./mixed-short-merge-terminal-screenshot.png)
+```console
+❯ node ./docs/testing/demo/abbreviation/demo_abbreviation_and_merge.mjs
+
+✖ execution 2 of 4 errored (1 errored, 1 completed)
+file: docs/testing/demo/abbreviation/b.spec.js
+runtime: node/16.13.0
+duration: 0.23 seconds
+error: Error: here
+    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
+
+✔ execution 4 of 4 completed (1 errored, 3 completed)
+
+-------------- summary -----------------
+4 executions: 1 errored, 3 completed
+total duration: 0.95 seconds
+----------------------------------------
+```
 
 > Note how the first two completed execution got merged into one line. The idea is to reduce output length as long as execution are completed.
 

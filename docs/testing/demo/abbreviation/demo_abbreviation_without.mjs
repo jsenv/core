@@ -18,12 +18,12 @@ const testPlan = {
   },
 }
 
-executeTestPlan({
+await executeTestPlan({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,
   completedExecutionLogAbbreviation: false,
-  completedExecutionLogMerging: true,
-  executionDefaultOptions: { allocatedMs: 5000 },
+  completedExecutionLogMerging: false,
+  defaultMsAllocatedPerExecution: 3000,
 })

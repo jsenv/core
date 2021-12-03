@@ -99,7 +99,7 @@ const descriptionFormatters = {
   },
   errored: ({ executionNumber, executionCount }) => {
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${executionNumber} of ${executionCount} error`,
+      `${UNICODE.FAILURE_RAW} execution ${executionNumber} of ${executionCount} errored`,
       EXECUTION_COLORS.errored,
     )
   },
