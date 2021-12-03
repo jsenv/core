@@ -26,7 +26,7 @@ Jsenv provides an api to execute your test files inside one or many environments
 
 # How tests are executed?
 
-Each test file will be executed in his own browser or node.js process. It removes almost completely the possibility of having side effects between two test executions. A test file creates an infinite loop, write a global variable, the other tests won't be affected.
+Each test file will be executed in his own browser or node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
 
 jsenv provides several test execution environments, called _runtime_.
 
@@ -44,17 +44,15 @@ Test is executed by something equivalent to a dynamic import.
 await import("file:///file.test.js")
 ```
 
-If dynamic import resolves, execution is considered successfull.<br />
-If dynamic import rejects, execution is considered errored.<br />
-If dynamic import takes too long to settle, execution is considered timedout.<br />
+If dynamic import resolves, execution is considered _completed_.<br />
+If dynamic import rejects, execution is considered _errored_.<br />
+If dynamic import takes too long to settle, execution is considered _timedout_.<br />
 
 An execution is considered done when it is in one of the following status:
 
-- aborted
-- cancelled
-- timedout
-- errored
-- completed
+- _timedout_
+- _errored_
+- _completed_
 
 Once execution is done, jsenv stops the runtime launched to execute the test. This step is part of the execution, if an error occur while stopping the runtime, execution is considered as "errored". For node there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
@@ -94,6 +92,10 @@ if (actual !== expected) {
 ```
 
 Note: An empty file is a completed execution.
+
+# Aborting test execution
+
+You can abort test execution from the terminal. Hit Ctrl+C and test executions will stop immediatly.
 
 # How to test async code?
 
