@@ -134,7 +134,7 @@ file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.23 seconds
 error: Error: here
-    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
 ✔ execution 3 of 4 completed (1 errored, 2 completed)
@@ -166,7 +166,7 @@ file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.18 seconds
 error: Error: here
-    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
 ✔ execution 3 of 4 completed (1 errored, 2 completed)
@@ -195,7 +195,7 @@ file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.18 seconds
 error: Error: here
-    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
 ✔ execution 3 of 4 completed (1 errored, 2 completed)
@@ -218,7 +218,7 @@ file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.23 seconds
 error: Error: here
-    at file:///Users/d.maillard/Dev/Github/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
+    at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
 ✔ execution 4 of 4 completed (1 errored, 3 completed)
@@ -229,7 +229,7 @@ total duration: 0.95 seconds
 ----------------------------------------
 ```
 
-> Note how the first two completed execution got merged into one line. The idea is to reduce output length as long as execution are completed.
+> Note how the completed executions are merged. The idea is to reduce output length as long as execution are completed.
 
 ## maxExecutionsInParallel
 
@@ -500,7 +500,38 @@ If dynamic import takes too long to settle, execution is considered timedout.<br
 
 Once the execution becomes either successfull, errored or timedout jsenv stops the runtime launched to execute the test (a browser or node.js process). Inside a node process there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
-![test execution all status terminal screenshot](./all-status-terminal-screenshot.png)
+```console
+❯ node ./docs/testing/demo/mixed/demo.mjs
+
+✔ execution 1 of 4 completed (all completed)
+file: docs/testing/demo/mixed/a.spec.js
+runtime: node/16.13.0
+duration: 0.31 seconds
+
+✖ execution 2 of 4 timeout after 3000ms (1 timed out, 1 completed)
+file: docs/testing/demo/mixed/b.spec.js
+runtime: node/16.13.0
+duration: 3 seconds
+
+✖ execution 3 of 4 errored (1 timed out, 1 errored, 1 completed)
+file: docs/testing/demo/mixed/c.spec.js
+runtime: node/16.13.0
+duration: 0.24 seconds
+error: <stack hidden>
+
+✖ execution 4 of 4 errored (1 timed out, 2 errored, 1 completed)
+file: docs/testing/demo/mixed/d.spec.js
+runtime: node/16.13.0
+duration: 0.2 seconds
+error: Error: runtime stopped during execution
+    at callExecute (file:///Users/dmail/jsenv-core/src/internal/executing/launchAndExecute.js:367:14)
+    at processTicksAndRejections (node:internal/process/task_queues:96:5)
+
+-------------- summary -----------------
+4 executions: 1 timed out, 2 errored, 1 completed
+total duration: 4.2 seconds
+----------------------------------------
+```
 
 ## Execution error example
 

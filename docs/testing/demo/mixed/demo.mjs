@@ -23,7 +23,7 @@ await executeTestPlan({
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,
-  completedExecutionLogAbbreviation: true,
+  completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: false,
   defaultMsAllocatedPerExecution: 3000,
 })

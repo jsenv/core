@@ -7,8 +7,7 @@ export const createSummaryLog = (summary) => `
 -------------- summary -----------------
 ${createSummaryMessage(summary)}
 total duration: ${msAsDuration(summary.duration)}
-----------------------------------------
-`
+----------------------------------------`
 
 const createSummaryMessage = ({
   executionCount,

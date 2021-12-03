@@ -133,6 +133,7 @@ export const executeConcurrently = async (
     }
   }
 
+  logger.info("")
   let executionLog = createLog({ newLine: "" })
   let abortedCount = 0
   let timedoutCount = 0
