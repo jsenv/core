@@ -80,13 +80,15 @@ jobs:
           sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           ulimit -n
         # sudo ulimit should prevent npm link failure
-      - name: npm install
+      - name: Install node modules
         run: npm install
+      - name: Install packages
+        run: npm run packages-install
       - name: publish package
-        run: node --experimental-top-level-await ./.github/workflows/main/publish-package.js
+        run: node ./.github/workflows/main/publish-package.js
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: ensure github release
-        run: node --experimental-top-level-await ./.github/workflows/main/ensure-github-release-for-package.js
+        run: node ./.github/workflows/main/ensure-github-release-for-package.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
