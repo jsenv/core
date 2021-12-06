@@ -1566,7 +1566,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <div id="toolbar">
       <div id="toolbar-wrapper">
         <section id="file-list-link" data-responsive-toolbar-element="">
-          <a class="toolbar-icon-wrapper" href="/">
+          <a class="toolbar-icon-wrapper" href="javascript:void(0);">
             <svg id="fileIconSvg" class="iconToolbar" viewBox="0 0 24 24" width="35" height="35">
               <path d="M0 0h24v24H0V0z" fill="none"></path>
               <path d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"></path>
@@ -1907,7 +1907,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-320b0544.js"
+    "./toolbar.main.js": "./toolbar.main-feac7fa3.js"
   }
 }</script>
     <script>
@@ -4660,6 +4660,10 @@ html[data-toolbar-visible] #toolbar-trigger {
             });
           }
 
+          document.querySelector(".toolbar-icon-wrapper").onclick = function () {
+            window.parent.location.href = "/";
+          };
+
           renderToolbarNotification();
           makeToolbarResponsive();
           renderToolbarSettings();
@@ -4855,7 +4859,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-320b0544.js.map</script>
+//# sourceMappingURL=toolbar.main-feac7fa3.js.map</script>
   
 
 </body></html>
