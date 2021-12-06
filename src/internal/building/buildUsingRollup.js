@@ -15,7 +15,7 @@ import {
 } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
-import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
+import { createJsenvRollupPlugin } from "./rollup_plugin_jsenv.js"
 
 export const buildUsingRollup = async ({
   buildOperation,
