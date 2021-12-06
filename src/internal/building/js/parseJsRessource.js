@@ -69,7 +69,7 @@ export const parseJsRessource = async (
     if (minify) {
       const result = await minifyJs({
         url: map ? asProjectUrl(jsCompiledUrl) : jsOriginalUrl,
-        code: jsString,
+        code,
         map,
         toplevel: false,
       })
