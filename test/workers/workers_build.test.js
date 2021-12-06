@@ -40,34 +40,36 @@ const { namespace, serverOrigin } = await browserImportEsModuleBuild({
   // debug: true,
 })
 
-const actual = namespace
-const expected = {
-  workerUrl: `${serverOrigin}/dist/esmodule/assets/worker-a850e925.js`,
-  pingResponse: `pong`,
-  serviceWorkerUrl: `${serverOrigin}/dist/esmodule/assets/sw.js`,
-  inspectResponse: {
-    order: ["before-a", "before-b", "b", "after-b", "after-a"],
-    generatedUrlsConfig: {
-      "worker-a850e925.js": {
-        versioned: true,
-      },
-      "": {
-        versioned: false,
-        version: "f856c8b2",
-      },
-      "../main.html": {
-        versioned: false,
-        // because when html file is modified, it's url is not
-        // if you update only the html file, browser won't update the service worker.
-        // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
-        // to include a hash for the html file.
-        // -> when html file changes -> hash changes -> worker updates
-        version: "13886ff5",
-      },
-      "style-b126d686.css": {
-        versioned: true,
+if (process.platform !== "win32") {
+  const actual = namespace
+  const expected = {
+    workerUrl: `${serverOrigin}/dist/esmodule/assets/worker-a850e925.js`,
+    pingResponse: `pong`,
+    serviceWorkerUrl: `${serverOrigin}/dist/esmodule/assets/sw.js`,
+    inspectResponse: {
+      order: ["before-a", "before-b", "b", "after-b", "after-a"],
+      generatedUrlsConfig: {
+        "worker-a850e925.js": {
+          versioned: true,
+        },
+        "": {
+          versioned: false,
+          version: "f856c8b2",
+        },
+        "../main.html": {
+          versioned: false,
+          // because when html file is modified, it's url is not
+          // if you update only the html file, browser won't update the service worker.
+          // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
+          // to include a hash for the html file.
+          // -> when html file changes -> hash changes -> worker updates
+          version: "13886ff5",
+        },
+        "style-b126d686.css": {
+          versioned: true,
+        },
       },
     },
-  },
+  }
+  assert({ actual, expected })
 }
-assert({ actual, expected })
