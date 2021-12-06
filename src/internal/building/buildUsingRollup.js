@@ -91,7 +91,7 @@ export const buildUsingRollup = async ({
 
   const {
     jsenvRollupPlugin,
-    getLastError,
+    getLastErrorMessage,
     getResult,
     asOriginalUrl,
     asProjectUrl,
@@ -157,17 +157,18 @@ export const buildUsingRollup = async ({
     })
   } catch (e) {
     if (e.plugin === "jsenv") {
-      const jsenvPluginError = getLastError()
-      if (jsenvPluginError) {
+      const jsenvPluginErrorMessage = getLastErrorMessage()
+      if (jsenvPluginErrorMessage) {
         // rollup is adding properties to the original error
         // making it a bit harder to read
         // It does not add useful information so we restore the error
-        delete jsenvPluginError.code
-        delete jsenvPluginError.hook
-        delete jsenvPluginError.id
-        delete jsenvPluginError.watchFiles
-        delete jsenvPluginError.plugin
-        throw jsenvPluginError
+        delete e.code
+        delete e.hook
+        delete e.id
+        delete e.watchFiles
+        delete e.plugin
+        e.message = jsenvPluginErrorMessage
+        throw e
       }
       throw e
     }

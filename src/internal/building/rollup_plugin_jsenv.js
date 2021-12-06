@@ -96,9 +96,9 @@ export const createJsenvRollupPlugin = async ({
   let buildStats = {}
   const buildStartMs = Date.now()
 
-  let lastError
+  let lastErrorMessage
   const storeLatestJsenvPluginError = (error) => {
-    lastError = error
+    lastErrorMessage = error.message
   }
 
   const workerUrls = Object.keys(workers).map((key) =>
@@ -1367,7 +1367,7 @@ export const createJsenvRollupPlugin = async ({
 
   return {
     jsenvRollupPlugin,
-    getLastError: () => lastError,
+    getLastErrorMessage: () => lastErrorMessage,
     getResult: () => {
       return {
         rollupBuild,
