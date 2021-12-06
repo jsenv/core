@@ -54,6 +54,10 @@ const renderToolbar = async () => {
     hideToolbar({ animate: false })
   }
 
+  document.querySelector(".toolbar-icon-wrapper").onclick = () => {
+    window.parent.location.href = "/"
+  }
+
   renderToolbarNotification()
   makeToolbarResponsive()
   renderToolbarSettings()
