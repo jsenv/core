@@ -1558,6 +1558,8 @@ const finalizeServiceWorkers = async ({
 }) => {
   await Promise.all(
     Object.keys(serviceWorkers).map(async (projectRelativeUrl) => {
+      const projectUrl = resolveUrl(projectRelativeUrl, "file://")
+      projectRelativeUrl = urlToRelativeUrl(projectUrl, "file://")
       const buildRelativeUrl = buildMappings[projectRelativeUrl]
       if (!buildRelativeUrl) {
         throw new Error(
