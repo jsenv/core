@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  resolveUrl,
-} from "@jsenv/filesystem"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -20,21 +16,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
-const buildDirectoryUrl = resolveUrl(
-  buildDirectoryRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
-
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}main.html`]: "./main.html",
+  },
   workers: {
     [`${testDirectoryRelativeUrl}worker/worker.js`]: "worker.js",
   },
@@ -47,19 +36,25 @@ await buildProject({
 const { namespace, serverOrigin } = await browserImportEsModuleBuild({
   ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  codeToRunInBrowser: "window.namespace",
+  codeToRunInBrowser: "window.namespacePromise",
   // debug: true,
 })
 
 const actual = namespace
 const expected = {
-  workerUrl: `${serverOrigin}/worker.js`,
-  pingResponse: ``,
-  serviceWorkerUrl: `${serverOrigin}/sw.js`,
+  workerUrl: `${serverOrigin}/dist/esmodule/assets/worker-62d97e66.js`,
+  pingResponse: `pong`,
+  serviceWorkerUrl: `${serverOrigin}/dist/esmodule/assets/sw.js`,
   inspectResponse: {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
-    jsenvBuildUrls: {
-      "assets/style-b126d686.css": { versioned: true },
+    generatedUrlsConfig: {
+      "assets/worker-62d97e66.js": {
+        versioned: true,
+      },
+      "assets/sw.js": {
+        versioned: false,
+        version: "01d9b550",
+      },
       "main.html": {
         versioned: false,
         // because when html file is modified, it's url is not
@@ -67,7 +62,10 @@ const expected = {
         // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
         // to include a hash for the html file.
         // -> when html file changes -> hash changes -> worker updates
-        version: "9baaa6c1",
+        version: "bbb5cd8e",
+      },
+      "assets/style-b126d686.css": {
+        versioned: true,
       },
     },
   },

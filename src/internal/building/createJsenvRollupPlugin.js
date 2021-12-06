@@ -67,6 +67,7 @@ export const createJsenvRollupPlugin = async ({
   importPaths,
   workers,
   serviceWorkers,
+  serviceWorkerFinalizer,
 
   format,
   systemJsUrl,
@@ -567,14 +568,14 @@ export const createJsenvRollupPlugin = async ({
               }
             }
 
-            if (isWorkerUrl(projectUrl)) {
+            const originalUrl = asOriginalUrl(projectUrl)
+            if (isWorkerUrl(originalUrl)) {
               return {
                 isWorker: true,
                 url: ressourceUrl,
               }
             }
-
-            if (isServiceWorkerUrl(projectUrl)) {
+            if (isServiceWorkerUrl(originalUrl)) {
               return {
                 isServiceWorker: true,
                 url: ressourceUrl,
@@ -1313,6 +1314,18 @@ export const createJsenvRollupPlugin = async ({
         }
       })
 
+      await finalizeServiceWorkers({
+        serviceWorkers,
+        serviceWorkerFinalizer,
+        projectDirectoryUrl,
+        buildDirectoryUrl,
+        rollupBuild,
+        buildMappings,
+        buildManifest,
+        lineBreakNormalization,
+        minify,
+      })
+
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
@@ -1533,4 +1546,33 @@ const acceptsJsonContentType = ({ node, format }) => {
     return true
   }
   return false
+}
+
+const finalizeServiceWorkers = async ({
+  serviceWorkers,
+  serviceWorkerFinalizer,
+  buildMappings,
+  buildManifest,
+  rollupBuild,
+  lineBreakNormalization,
+}) => {
+  await Promise.all(
+    Object.keys(serviceWorkers).map(async (projectRelativeUrl) => {
+      const buildRelativeUrl = buildMappings[projectRelativeUrl]
+      if (!buildRelativeUrl) {
+        throw new Error(
+          `"${projectRelativeUrl}" service worker file not generated during build`,
+        )
+      }
+      const buildFileContent = rollupBuild[buildRelativeUrl].source
+      rollupBuild[buildRelativeUrl].source = serviceWorkerFinalizer(
+        buildFileContent,
+        {
+          buildManifest,
+          rollupBuild,
+          lineBreakNormalization,
+        },
+      )
+    }),
+  )
 }

@@ -4,7 +4,8 @@ window.__resolveImportUrl__ = (url, baseUrl) => {
 
   if (importmapNode) {
     const importmap = JSON.parse(importmapNode.textContent)
-    return new URL(importmap.imports[url], baseUrl)
+    const specifier = importmap.imports[url] || url
+    return new URL(specifier, baseUrl)
   }
 
   return new URL(url, baseUrl)

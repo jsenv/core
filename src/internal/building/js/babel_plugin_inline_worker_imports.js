@@ -1,22 +1,24 @@
-import { resolveUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  fileSystemPathToUrl,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 
-export const babelPluginInlineWorkerImports = (api, { inline }) => {
-  const { types, parse } = api
+export const babelPluginInlineWorkerImports = (
+  babel,
+  { readImportedScript },
+) => {
+  const { types } = babel
+
   return {
     name: "transform-inline-worker-imports",
 
     visitor: {
-      CallExpression: (
-        path,
-        {
-          file: {
-            opts: { filename },
-          },
-        },
-      ) => {
+      CallExpression: (path, opts) => {
         const calleePath = path.get("callee")
 
         const replaceImportScriptsWithFileContents = () => {
+          const filename = opts.filename
           const fileUrl = fileSystemPathToUrl(filename)
 
           let previousArgType = ""
@@ -46,9 +48,24 @@ export const babelPluginInlineWorkerImports = (api, { inline }) => {
 
           if (previousArgType === "local") {
             const nodes = importedUrls.reduce((previous, importedUrl) => {
-              const importedScriptResult = inline(importedUrl, fileUrl)
-              const importedSourceAst = parse(importedScriptResult.code)
-              return [...previous, ...importedSourceAst.program.body]
+              const importedScriptCode = readImportedScript(importedUrl)
+              const { ast } = babel.transformSync(importedScriptCode, {
+                filename: urlToFileSystemPath(importedUrl),
+                configFile: false,
+                babelrc: false, // trust only these options, do not read any babelrc config file
+                ast: true,
+                sourceMaps: true,
+                // sourceFileName: scriptPath,
+                plugins: [
+                  [
+                    babelPluginInlineWorkerImports,
+                    {
+                      readImportedScript,
+                    },
+                  ],
+                ],
+              })
+              return [...previous, ...ast.program.body]
             }, [])
 
             calleePath.parentPath.replaceWithMultiple(nodes)

@@ -8,8 +8,16 @@
   </head>
 
   <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
     <script type="module">
-      const workerUrl = new URL(".worker/worker.js", import.meta.url)
+      const namespace = {}
+
+      const workerUrl = new URL("./worker/worker.js", import.meta.url)
+      namespace.workerUrl = String(workerUrl)
       const worker = new Worker(workerUrl)
       const pingResponse = await new Promise((resolve, reject) => {
         worker.onmessage = (e) => {
@@ -20,28 +28,29 @@
         }
         worker.postMessage("ping")
       })
+      namespace.pingResponse = pingResponse
 
       const serviceWorkerUrl = new URL(
         "./service_worker/sw.js",
         import.meta.url,
       )
-      window.navigator.serviceWorker.register(serviceWorkerUrl)
-      const inspectResponse = await new Promise((resolve, reject) => {
-        worker.onmessage = (e) => {
-          resolve(e.data)
+      namespace.serviceWorkerUrl = String(serviceWorkerUrl)
+      const serviceWorker = await window.navigator.serviceWorker
+        .register(serviceWorkerUrl)
+        .then((registration) => {
+          const { installing, waiting, active } = registration
+          return installing || waiting || active
+        })
+      const inspectResponse = await new Promise((resolve) => {
+        const { port1, port2 } = new MessageChannel()
+        port1.onmessage = function (event) {
+          resolve(event.data)
         }
-        worker.onerror = (e) => {
-          reject(e.message)
-        }
-        worker.postMessage("inspect")
+        serviceWorker.postMessage("inspect", [port2])
       })
+      namespace.inspectResponse = inspectResponse
 
-      window.namespace = {
-        workerUrl: String(workerUrl),
-        pingResponse,
-        serviceWorkerUrl: String(serviceWorkerUrl),
-        inspectResponse,
-      }
+      window.resolveNamespacePromise(namespace)
     </script>
   </body>
 </html>

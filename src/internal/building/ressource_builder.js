@@ -373,7 +373,7 @@ export const createRessourceBuilder = (
     isServiceWorker = false,
 
     fileNamePattern,
-    urlVersioningDisabled = false,
+    urlVersioningDisabled = isServiceWorker,
   }) => {
     const ressource = {
       contentType,

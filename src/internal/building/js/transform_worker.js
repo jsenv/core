@@ -3,7 +3,7 @@
 // window.URL.createObjectURL(blob)
 
 import { readFileSync } from "fs"
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { babelPluginInlineWorkerImports } from "./babel_plugin_inline_worker_imports.js"
@@ -23,11 +23,7 @@ export const transformWorker = async ({ url, code, map }) => {
       [
         babelPluginInlineWorkerImports,
         {
-          inline: (specifier, importer) => {
-            const url = resolveUrl(specifier, importer)
-            const code = readWorkerFile(url)
-            return transformWorker({ url, code })
-          },
+          readImportedScript: readWorkerFile,
         },
       ],
     ],
