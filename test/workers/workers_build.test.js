@@ -42,18 +42,18 @@ const { namespace, serverOrigin } = await browserImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  workerUrl: `${serverOrigin}/dist/esmodule/assets/worker-62d97e66.js`,
+  workerUrl: `${serverOrigin}/dist/esmodule/assets/worker-a850e925.js`,
   pingResponse: `pong`,
   serviceWorkerUrl: `${serverOrigin}/dist/esmodule/assets/sw.js`,
   inspectResponse: {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     generatedUrlsConfig: {
-      "assets/worker-62d97e66.js": {
+      "assets/worker-a850e925.js": {
         versioned: true,
       },
       "assets/sw.js": {
         versioned: false,
-        version: "01d9b550",
+        version: "f856c8b2",
       },
       "main.html": {
         versioned: false,
@@ -62,7 +62,7 @@ const expected = {
         // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
         // to include a hash for the html file.
         // -> when html file changes -> hash changes -> worker updates
-        version: "bbb5cd8e",
+        version: "13886ff5",
       },
       "assets/style-b126d686.css": {
         versioned: true,

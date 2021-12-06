@@ -5,7 +5,7 @@ import {
   urlToParentUrl,
   urlToFilename,
 } from "@jsenv/filesystem"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { racePromises } from "../promise_race.js"
@@ -343,14 +343,16 @@ export const createRessourceBuilder = (
     } else {
       ressource.references.push(reference)
       const effects = ressource.applyReferenceEffects(reference, { isJsModule })
-      logger.debug(
-        formatFoundReference({
-          reference,
-          referenceEffects: effects,
-          showReferenceSourceLocation,
-          shortenUrl,
-        }),
-      )
+      if (loggerToLevels(logger).debug) {
+        logger.debug(
+          formatFoundReference({
+            reference,
+            referenceEffects: effects,
+            showReferenceSourceLocation,
+            shortenUrl,
+          }),
+        )
+      }
     }
 
     return reference

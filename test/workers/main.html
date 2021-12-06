@@ -15,8 +15,10 @@
     </script>
     <script type="module">
       const namespace = {}
-
-      const workerUrl = new URL("./worker/worker.js", import.meta.url)
+      const workerUrl = new URL(
+        "/test/workers/worker/worker.js",
+        import.meta.url,
+      )
       namespace.workerUrl = String(workerUrl)
       const worker = new Worker(workerUrl)
       const pingResponse = await new Promise((resolve, reject) => {
@@ -31,7 +33,7 @@
       namespace.pingResponse = pingResponse
 
       const serviceWorkerUrl = new URL(
-        "./service_worker/sw.js",
+        "/test/workers/service_worker/sw.js",
         import.meta.url,
       )
       namespace.serviceWorkerUrl = String(serviceWorkerUrl)

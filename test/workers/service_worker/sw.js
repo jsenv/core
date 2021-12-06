@@ -13,3 +13,9 @@ self.addEventListener("message", async (messageEvent) => {
     })
   }
 })
+
+// trigger jsenv dynamic import for slicedToArray
+const fn = ([a]) => {
+  console.log(a)
+}
+fn(["a"])
