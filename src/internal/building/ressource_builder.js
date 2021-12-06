@@ -441,12 +441,13 @@ export const createRessourceBuilder = (
 
       const response = await urlFetcher.fetchUrl(ressource.url, {
         contentTypeExpected: ressource.firstStrongReference.contentTypeExpected,
-        urlTrace: () =>
-          createRessourceTrace({
+        urlTrace: () => {
+          return createRessourceTrace({
             ressource,
             createUrlSiteFromReference,
             findRessourceByUrl,
-          }),
+          })
+        },
       })
       if (response.url !== ressource.url) {
         const urlBeforeRedirection = ressource.url
@@ -892,7 +893,7 @@ export const createRessourceBuilder = (
       ? String(referenceSource)
       : ""
 
-    return {
+    const urlSite = {
       type:
         referenceRessource && referenceRessource.isJsModule
           ? "import"
@@ -901,6 +902,30 @@ export const createRessourceBuilder = (
       line: referenceLine,
       column: referenceColumn,
       source: referenceSourceAsString,
+    }
+
+    if (!referenceRessource.isInline) {
+      return urlSite
+    }
+    const { firstStrongReference } = referenceRessource
+    if (!firstStrongReference) {
+      return urlSite
+    }
+    const htmlUrlSite = createUrlSiteFromReference(firstStrongReference)
+    // when the html node is injected there is no line in the source file to target
+    if (htmlUrlSite.line === undefined) {
+      return urlSite
+    }
+    const importerRessource = findRessourceByUrl(
+      firstStrongReference.referenceUrl,
+    )
+    if (!importerRessource || importerRessource.contentType !== "text/html") {
+      return urlSite
+    }
+    return {
+      ...htmlUrlSite,
+      line: htmlUrlSite.line + urlSite.line,
+      column: htmlUrlSite.column + urlSite.column,
     }
   }
 
