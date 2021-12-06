@@ -4,7 +4,7 @@ import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { transformWorker } from "@jsenv/core/src/internal/building/worker/transform_worker.js"
+import { transformWorker } from "./transform_worker.js"
 
 export const parseJsRessource = async (
   jsRessource,
@@ -47,12 +47,11 @@ export const parseJsRessource = async (
       map = JSON.parse(String(sourcemapRessource.bufferBeforeBuild))
     }
 
-    // in case this js asset is a worker, bundle it so that:
-    // importScripts are inlined which is good for:
-    // - not breaking things (otherwise we would have to copy imported files in the build directory)
-    // - perf (one less http request)
-    const mightBeAWorkerScript = !jsRessource.isInline
-    if (mightBeAWorkerScript) {
+    // in case this js asset is a worker, we transform it so that
+    // importScripts() calls are inlined
+    // We could also parse each importScripts call and decide to inline
+    // or not. For now inlining/concatenation is forced
+    if (jsRessource.isWorker || jsRessource.isServiceWorker) {
       const transformResult = await transformWorker({
         url: asOriginalUrl(jsUrl),
         code: String(jsRessource.bufferBeforeBuild),

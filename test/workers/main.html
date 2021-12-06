@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" type="text/css" href="./style.css" />
+  </head>
+
+  <body>
+    <script type="module">
+      const workerUrl = new URL(".worker//worker.js", import.meta.url)
+      const worker = new Worker(workerUrl)
+      const pingResponse = await new Promise((resolve, reject) => {
+        worker.onmessage = (e) => {
+          resolve(e.data)
+        }
+        worker.onerror = (e) => {
+          reject(e.message)
+        }
+        worker.postMessage("ping")
+      })
+
+      const serviceWorkerUrl = new URL(
+        "./service_worker/sw.js",
+        import.meta.url,
+      )
+      window.navigator.serviceWorker.register(serviceWorkerUrl)
+
+      window.namespace = {
+        pingResponse,
+        workerUrl: String(workerUrl),
+        serviceWorkerUrl: String(serviceWorkerUrl),
+      }
+    </script>
+  </body>
+</html>

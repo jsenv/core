@@ -232,12 +232,16 @@ export const createRessourceBuilder = (
 
     let ressourceUrl
     let isExternal = false
+    let isWorker = false
     let isServiceWorker = false
     if (typeof ressourceUrlResolution === "object") {
-      if (ressourceUrlResolution.external) {
+      if (ressourceUrlResolution.isExternal) {
         isExternal = true
       }
-      if (isServiceWorker.serviceWorker) {
+      if (ressourceUrlResolution.isWorker) {
+        isWorker = true
+      }
+      if (ressourceUrlResolution.isServiceWorker) {
         isServiceWorker = true
       }
       ressourceUrl = ressourceUrlResolution.url
@@ -299,6 +303,7 @@ export const createRessourceBuilder = (
         isExternal,
         isInline,
         isPlaceholder,
+        isWorker,
         isServiceWorker,
         fileNamePattern,
         urlVersioningDisabled,
@@ -364,6 +369,7 @@ export const createRessourceBuilder = (
     isExternal = false,
     isInline = false,
     isPlaceholder = false,
+    isWorker = false,
     isServiceWorker = false,
 
     fileNamePattern,
@@ -382,6 +388,7 @@ export const createRessourceBuilder = (
       isInline,
       isExternal,
       isPlaceholder,
+      isWorker,
       isServiceWorker,
 
       urlVersioningDisabled,

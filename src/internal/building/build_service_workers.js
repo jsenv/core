@@ -8,20 +8,20 @@ import {
 import {
   readWorkerFile,
   transformWorker,
-} from "@jsenv/core/src/internal/building/worker/transform_worker.js"
+} from "@jsenv/core/src/internal/building/js/transform_worker.js"
 import { minifyJs } from "@jsenv/core/src/internal/building/js/minifyJs.js"
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 
-export const buildWorkers = async ({
-  workers,
+export const buildServiceWorkers = async ({
+  serviceWorkers,
   projectDirectoryUrl,
   buildDirectoryUrl,
   replacePlaceholders,
   minify,
 }) => {
   await Promise.all(
-    Object.keys(workers).map(async (workerProjectRelativeUrl) => {
-      const workerBuildRelativeUrl = workers[workerProjectRelativeUrl]
+    Object.keys(serviceWorkers).map(async (workerProjectRelativeUrl) => {
+      const workerBuildRelativeUrl = serviceWorkers[workerProjectRelativeUrl]
       const workerProjectUrl = resolveUrl(
         workerProjectRelativeUrl,
         projectDirectoryUrl,
@@ -30,7 +30,7 @@ export const buildWorkers = async ({
         workerBuildRelativeUrl,
         buildDirectoryUrl,
       )
-      await buildWorker({
+      await buildServiceWorker({
         workerProjectUrl,
         workerBuildUrl,
         replacePlaceholders,
@@ -40,7 +40,7 @@ export const buildWorkers = async ({
   )
 }
 
-const buildWorker = async ({
+const buildServiceWorker = async ({
   workerProjectUrl,
   workerBuildUrl,
   replacePlaceholders,

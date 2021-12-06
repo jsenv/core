@@ -66,6 +66,7 @@ export const createJsenvRollupPlugin = async ({
   externalImportUrlPatterns,
   importPaths,
   workers,
+  serviceWorkers,
 
   format,
   systemJsUrl,
@@ -99,9 +100,13 @@ export const createJsenvRollupPlugin = async ({
     lastErrorMessage = error.message
   }
 
-  const serviceWorkerUrls = Object.keys(workers).map((key) =>
+  const workerUrls = Object.keys(workers).map((key) =>
     resolveUrl(key, projectDirectoryUrl),
   )
+  const serviceWorkerUrls = Object.keys(serviceWorkers).map((key) =>
+    resolveUrl(key, projectDirectoryUrl),
+  )
+  const isWorkerUrl = (url) => workerUrls.includes(url)
   const isServiceWorkerUrl = (url) => serviceWorkerUrls.includes(url)
 
   let ressourceBuilder
@@ -556,12 +561,22 @@ export const createJsenvRollupPlugin = async ({
             // and ignore them and console.info/debug about remote url (https, http, ...)
             const projectUrl = asProjectUrl(ressourceUrl)
             if (!projectUrl) {
-              return { external: true, url: ressourceUrl }
+              return {
+                isExternal: true,
+                url: ressourceUrl,
+              }
+            }
+
+            if (isWorkerUrl(projectUrl)) {
+              return {
+                isWorker: true,
+                url: ressourceUrl,
+              }
             }
 
             if (isServiceWorkerUrl(projectUrl)) {
               return {
-                serviceWorker: true,
+                isServiceWorker: true,
                 url: ressourceUrl,
               }
             }

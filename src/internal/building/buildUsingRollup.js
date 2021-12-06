@@ -16,7 +16,7 @@ import {
 import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
-import { buildWorkers } from "./build_workers.js"
+import { buildServiceWorkers } from "./build_service_workers.js"
 
 export const buildUsingRollup = async ({
   buildOperation,
@@ -49,6 +49,7 @@ export const buildUsingRollup = async ({
   externalImportUrlPatterns,
   importPaths,
   workers,
+  serviceWorkers,
   serviceWorkerFinalizer,
 
   urlVersioning,
@@ -121,6 +122,7 @@ export const buildUsingRollup = async ({
     externalImportUrlPatterns,
     importPaths,
     workers,
+    serviceWorkers,
 
     urlVersioning,
     urlVersionningForEntryPoints,
@@ -220,8 +222,8 @@ export const buildUsingRollup = async ({
       }),
     )
 
-    await buildWorkers({
-      workers,
+    await buildServiceWorkers({
+      serviceWorkers,
       projectDirectoryUrl,
       buildDirectoryUrl,
       replacePlaceholders: (code) => {

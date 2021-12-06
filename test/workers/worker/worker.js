@@ -1,5 +1,6 @@
 /* globals self */
-self.importScripts("./dep.js")
+
+self.importScripts("./ping.js")
 
 self.addEventListener("message", (e) => {
   if (e.data === "ping") {

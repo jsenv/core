@@ -1,3 +1,7 @@
+// we could inline a worker by doing
+// var blob = new Blob(code, { type: 'text/javascript' })
+// window.URL.createObjectURL(blob)
+
 import { readFileSync } from "fs"
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
@@ -6,6 +10,7 @@ import { babelPluginInlineWorkerImports } from "./babel_plugin_inline_worker_imp
 
 export const transformWorker = async ({ url, code, map }) => {
   const { transformSync } = await import("@babel/core")
+
   const transformResult = transformSync(code, {
     filename: urlToFileSystemPath(url),
     configFile: false,

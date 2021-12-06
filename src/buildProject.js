@@ -80,6 +80,7 @@ export const buildProject = async ({
   minifyCssOptions,
 
   workers = {},
+  serviceWorkers = {},
   serviceWorkerFinalizer,
 
   env = {},
@@ -238,6 +239,7 @@ export const buildProject = async ({
       minifyCssOptions,
 
       workers,
+      serviceWorkers,
       serviceWorkerFinalizer,
 
       writeOnFileSystem,
