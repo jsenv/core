@@ -43,8 +43,12 @@ const serviceWorkerBuildUrl = resolveUrl("sw.cjs", buildDirectoryUrl)
 global.self = {}
 // eslint-disable-next-line import/no-dynamic-require
 require(urlToFileSystemPath(serviceWorkerBuildUrl))
-const actual = global.self
+const actual = {
+  order: global.self.order,
+  generatedUrlsConfig: global.self.generatedUrlsConfig,
+}
 const expected = {
+  order: ["before-a", "before-b", "b", "after-b", "after-a"],
   generatedUrlsConfig: {
     "assets/style-b126d686.css": { versioned: true },
     "main.html": {
