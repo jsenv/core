@@ -48,7 +48,7 @@ const actual = {
 }
 const expected = {
   jsUrlInstanceOfUrl: true,
-  jsUrl: String(new URL(`./assets/file-b514b4fb.js`, serverOrigin)),
+  jsUrl: String(new URL(`./assets/file-7aa95da0.js`, serverOrigin)),
 }
 assert({ actual, expected })
 

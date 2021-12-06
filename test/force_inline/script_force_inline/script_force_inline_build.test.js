@@ -59,9 +59,9 @@ await buildProject({
       // which creates an other hash on the sourcemap
       process.platform === "win32"
         ? actual.textNodeValue
-        : `const answer = 42;
+        : `var answer = 42;
 console.log(answer);
-//# sourceMappingURL=assets/file.js-ebc40214.map`,
+//# sourceMappingURL=assets/file.js-5dab1097.map`,
   }
   assert({ actual, expected })
 }
