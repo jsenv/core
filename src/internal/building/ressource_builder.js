@@ -5,7 +5,7 @@ import {
   urlToParentUrl,
   urlToFilename,
 } from "@jsenv/filesystem"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { racePromises } from "../promise_race.js"
@@ -143,6 +143,9 @@ export const createRessourceBuilder = (
       contentType,
       bufferBeforeBuild,
     })
+    if (!reference) {
+      return null
+    }
     await reference.ressource.getReadyPromise()
     return reference
   }
@@ -229,9 +232,17 @@ export const createRessourceBuilder = (
 
     let ressourceUrl
     let isExternal = false
+    let isWorker = false
+    let isServiceWorker = false
     if (typeof ressourceUrlResolution === "object") {
-      if (ressourceUrlResolution.external) {
+      if (ressourceUrlResolution.isExternal) {
         isExternal = true
+      }
+      if (ressourceUrlResolution.isWorker) {
+        isWorker = true
+      }
+      if (ressourceUrlResolution.isServiceWorker) {
+        isServiceWorker = true
       }
       ressourceUrl = ressourceUrlResolution.url
     } else {
@@ -292,6 +303,8 @@ export const createRessourceBuilder = (
         isExternal,
         isInline,
         isPlaceholder,
+        isWorker,
+        isServiceWorker,
         fileNamePattern,
         urlVersioningDisabled,
       })
@@ -330,14 +343,16 @@ export const createRessourceBuilder = (
     } else {
       ressource.references.push(reference)
       const effects = ressource.applyReferenceEffects(reference, { isJsModule })
-      logger.debug(
-        formatFoundReference({
-          reference,
-          referenceEffects: effects,
-          showReferenceSourceLocation,
-          shortenUrl,
-        }),
-      )
+      if (loggerToLevels(logger).debug) {
+        logger.debug(
+          formatFoundReference({
+            reference,
+            referenceEffects: effects,
+            showReferenceSourceLocation,
+            shortenUrl,
+          }),
+        )
+      }
     }
 
     return reference
@@ -356,9 +371,11 @@ export const createRessourceBuilder = (
     isExternal = false,
     isInline = false,
     isPlaceholder = false,
+    isWorker = false,
+    isServiceWorker = false,
 
     fileNamePattern,
-    urlVersioningDisabled = false,
+    urlVersioningDisabled = isServiceWorker,
   }) => {
     const ressource = {
       contentType,
@@ -373,6 +390,8 @@ export const createRessourceBuilder = (
       isInline,
       isExternal,
       isPlaceholder,
+      isWorker,
+      isServiceWorker,
 
       urlVersioningDisabled,
       fileNamePattern,
@@ -424,12 +443,13 @@ export const createRessourceBuilder = (
 
       const response = await urlFetcher.fetchUrl(ressource.url, {
         contentTypeExpected: ressource.firstStrongReference.contentTypeExpected,
-        urlTrace: () =>
-          createRessourceTrace({
+        urlTrace: () => {
+          return createRessourceTrace({
             ressource,
             createUrlSiteFromReference,
             findRessourceByUrl,
-          }),
+          })
+        },
       })
       if (response.url !== ressource.url) {
         const urlBeforeRedirection = ressource.url
@@ -875,7 +895,7 @@ export const createRessourceBuilder = (
       ? String(referenceSource)
       : ""
 
-    return {
+    const urlSite = {
       type:
         referenceRessource && referenceRessource.isJsModule
           ? "import"
@@ -884,6 +904,30 @@ export const createRessourceBuilder = (
       line: referenceLine,
       column: referenceColumn,
       source: referenceSourceAsString,
+    }
+
+    if (!referenceRessource.isInline) {
+      return urlSite
+    }
+    const { firstStrongReference } = referenceRessource
+    if (!firstStrongReference) {
+      return urlSite
+    }
+    const htmlUrlSite = createUrlSiteFromReference(firstStrongReference)
+    // when the html node is injected there is no line in the source file to target
+    if (htmlUrlSite.line === undefined) {
+      return urlSite
+    }
+    const importerRessource = findRessourceByUrl(
+      firstStrongReference.referenceUrl,
+    )
+    if (!importerRessource || importerRessource.contentType !== "text/html") {
+      return urlSite
+    }
+    return {
+      ...htmlUrlSite,
+      line: htmlUrlSite.line + urlSite.line,
+      column: htmlUrlSite.column + urlSite.column,
     }
   }
 

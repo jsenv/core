@@ -79,6 +79,7 @@ export const buildProject = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
+  workers = {},
   serviceWorkers = {},
   serviceWorkerFinalizer,
 
@@ -237,6 +238,7 @@ export const buildProject = async ({
       minifyJsOptions,
       minifyCssOptions,
 
+      workers,
       serviceWorkers,
       serviceWorkerFinalizer,
 

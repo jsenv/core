@@ -8,7 +8,6 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import {
   isNodePartOfSupportedRuntimes,
@@ -16,7 +15,7 @@ import {
 } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
-import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
+import { createJsenvRollupPlugin } from "./rollup_plugin_jsenv.js"
 
 export const buildUsingRollup = async ({
   buildOperation,
@@ -48,6 +47,9 @@ export const buildUsingRollup = async ({
   externalImportSpecifiers,
   externalImportUrlPatterns,
   importPaths,
+  workers,
+  serviceWorkers,
+  serviceWorkerFinalizer,
 
   urlVersioning,
   urlVersionningForEntryPoints,
@@ -62,9 +64,6 @@ export const buildUsingRollup = async ({
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-
-  serviceWorkers,
-  serviceWorkerFinalizer,
 }) => {
   const node = isNodePartOfSupportedRuntimes(runtimeSupport)
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
@@ -121,6 +120,9 @@ export const buildUsingRollup = async ({
     externalImportSpecifiers,
     externalImportUrlPatterns,
     importPaths,
+    workers,
+    serviceWorkers,
+    serviceWorkerFinalizer,
 
     urlVersioning,
     urlVersionningForEntryPoints,
@@ -157,7 +159,16 @@ export const buildUsingRollup = async ({
     if (e.plugin === "jsenv") {
       const jsenvPluginErrorMessage = getLastErrorMessage()
       if (jsenvPluginErrorMessage) {
+        // rollup is adding properties to the original error
+        // making it a bit harder to read
+        // It does not add useful information so we restore the error
+        delete e.code
+        delete e.hook
+        delete e.id
+        delete e.watchFiles
+        delete e.plugin
         e.message = jsenvPluginErrorMessage
+        throw e
       }
       throw e
     }
@@ -218,29 +229,6 @@ export const buildUsingRollup = async ({
         const fileBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
         await writeFile(fileBuildUrl, buildFileContents[buildRelativeUrl])
       }),
-    )
-
-    await Promise.all(
-      Object.keys(serviceWorkers).map(
-        async (serviceWorkerProjectRelativeUrl) => {
-          const serviceWorkerBuildRelativeUrl =
-            serviceWorkers[serviceWorkerProjectRelativeUrl]
-          await buildServiceWorker({
-            projectDirectoryUrl,
-            buildDirectoryUrl,
-            serviceWorkerProjectRelativeUrl,
-            serviceWorkerBuildRelativeUrl,
-            serviceWorkerTransformer: (code) =>
-              serviceWorkerFinalizer(code, {
-                buildManifest,
-                rollupBuild,
-                lineBreakNormalization,
-              }),
-
-            minify,
-          })
-        },
-      ),
     )
   }
 

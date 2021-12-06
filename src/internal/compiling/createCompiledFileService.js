@@ -56,9 +56,9 @@ export const createCompiledFileService = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 }) => {
-  const moduleFormats = {}
+  const compileIdModuleFormats = {}
   Object.keys(groupMap).forEach((groupName) => {
-    moduleFormats[groupName] = canAvoidSystemJs({
+    compileIdModuleFormats[groupName] = canAvoidSystemJs({
       runtimeSupport: groupMap[groupName].minRuntimeVersions,
     })
       ? "esmodule"
@@ -187,7 +187,7 @@ export const createCompiledFileService = ({
           runtimeSupport,
           moduleOutFormat:
             moduleOutFormat === undefined
-              ? moduleFormats[compileId]
+              ? compileIdModuleFormats[compileId]
               : moduleOutFormat,
           importMetaFormat,
           transformTopLevelAwait,

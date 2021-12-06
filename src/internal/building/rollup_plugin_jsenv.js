@@ -65,6 +65,9 @@ export const createJsenvRollupPlugin = async ({
   externalImportSpecifiers,
   externalImportUrlPatterns,
   importPaths,
+  workers,
+  serviceWorkers,
+  serviceWorkerFinalizer,
 
   format,
   systemJsUrl,
@@ -97,6 +100,15 @@ export const createJsenvRollupPlugin = async ({
   const storeLatestJsenvPluginError = (error) => {
     lastErrorMessage = error.message
   }
+
+  const workerUrls = Object.keys(workers).map((key) =>
+    resolveUrl(key, projectDirectoryUrl),
+  )
+  const serviceWorkerUrls = Object.keys(serviceWorkers).map((key) =>
+    resolveUrl(key, projectDirectoryUrl),
+  )
+  const isWorkerUrl = (url) => workerUrls.includes(url)
+  const isServiceWorkerUrl = (url) => serviceWorkerUrls.includes(url)
 
   let ressourceBuilder
   let importResolver
@@ -194,7 +206,7 @@ export const createJsenvRollupPlugin = async ({
     compileDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-  const compileDirectoryRemoteUrl = resolveDirectoryUrl(
+  const compileDirectoryServerUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
     compileServerOrigin,
   )
@@ -371,7 +383,7 @@ export const createJsenvRollupPlugin = async ({
             )
             importMapUrl = applyUrlMappings(importMapUrl)
 
-            if (!urlIsInsideOf(importMapUrl, compileDirectoryRemoteUrl)) {
+            if (!urlIsInsideOf(importMapUrl, compileDirectoryServerUrl)) {
               logger.warn(
                 formatImportmapOutsideCompileDirectory({
                   importMapInfo: importMapInfoFromHtml,
@@ -392,7 +404,7 @@ export const createJsenvRollupPlugin = async ({
               firstHtmlEntryPoint.entryProjectRelativeUrl
             const htmlCompiledUrl = resolveUrl(
               htmlProjectRelativeUrl,
-              compileDirectoryRemoteUrl,
+              compileDirectoryServerUrl,
             )
             importMapUrl = htmlCompiledUrl
             fetchImportMap = () => {
@@ -404,7 +416,7 @@ export const createJsenvRollupPlugin = async ({
         } else if (importMapFileRelativeUrl) {
           importMapUrl = resolveUrl(
             importMapFileRelativeUrl,
-            compileDirectoryRemoteUrl,
+            compileDirectoryServerUrl,
           )
           fetchImportMap = () => {
             return fetchImportMapFromUrl(
@@ -428,7 +440,7 @@ export const createJsenvRollupPlugin = async ({
             })
             const entryCompileServerUrl = resolveUrl(
               entryProjectRelativeUrl,
-              compileDirectoryRemoteUrl,
+              compileDirectoryServerUrl,
             )
             return normalizeImportMap(defaultImportMap, entryCompileServerUrl)
           }
@@ -550,8 +562,26 @@ export const createJsenvRollupPlugin = async ({
             // and ignore them and console.info/debug about remote url (https, http, ...)
             const projectUrl = asProjectUrl(ressourceUrl)
             if (!projectUrl) {
-              return { external: true, url: ressourceUrl }
+              return {
+                isExternal: true,
+                url: ressourceUrl,
+              }
             }
+
+            const originalUrl = asOriginalUrl(projectUrl)
+            if (isWorkerUrl(originalUrl)) {
+              return {
+                isWorker: true,
+                url: ressourceUrl,
+              }
+            }
+            if (isServiceWorkerUrl(originalUrl)) {
+              return {
+                isServiceWorker: true,
+                url: ressourceUrl,
+              }
+            }
+
             return ressourceUrl
           },
           emitChunk,
@@ -565,7 +595,7 @@ export const createJsenvRollupPlugin = async ({
             urlImporterMap[jsModuleUrl] = {
               url: resolveUrl(
                 entryPointsPrepared[0].entryProjectRelativeUrl,
-                compileDirectoryRemoteUrl,
+                compileDirectoryServerUrl,
               ),
               line: undefined,
               column: undefined,
@@ -615,7 +645,7 @@ export const createJsenvRollupPlugin = async ({
             const entryUrl =
               entryContentType === "text/html"
                 ? resolveUrl(entryProjectRelativeUrl, compileServerOrigin)
-                : resolveUrl(entryProjectRelativeUrl, compileDirectoryRemoteUrl)
+                : resolveUrl(entryProjectRelativeUrl, compileDirectoryServerUrl)
             await ressourceBuilder.createReferenceForEntryPoint({
               entryContentType,
               entryUrl,
@@ -640,7 +670,7 @@ export const createJsenvRollupPlugin = async ({
         if (specifier.endsWith(".html")) {
           importer = compileServerOrigin
         } else {
-          importer = compileDirectoryRemoteUrl
+          importer = compileDirectoryServerUrl
         }
       } else {
         importer = asServerUrl(importer)
@@ -1284,6 +1314,18 @@ export const createJsenvRollupPlugin = async ({
         }
       })
 
+      await finalizeServiceWorkers({
+        serviceWorkers,
+        serviceWorkerFinalizer,
+        projectDirectoryUrl,
+        buildDirectoryUrl,
+        rollupBuild,
+        buildMappings,
+        buildManifest,
+        lineBreakNormalization,
+        minify,
+      })
+
       rollupBuild = sortObjectByPathnames(rollupBuild)
       buildManifest = sortObjectByPathnames(buildManifest)
       buildMappings = sortObjectByPathnames(buildMappings)
@@ -1504,4 +1546,34 @@ const acceptsJsonContentType = ({ node, format }) => {
     return true
   }
   return false
+}
+
+const finalizeServiceWorkers = async ({
+  serviceWorkers,
+  serviceWorkerFinalizer,
+  buildMappings,
+  buildManifest,
+  rollupBuild,
+  lineBreakNormalization,
+}) => {
+  await Promise.all(
+    Object.keys(serviceWorkers).map(async (projectRelativeUrl) => {
+      const projectUrl = resolveUrl(projectRelativeUrl, "file://")
+      projectRelativeUrl = urlToRelativeUrl(projectUrl, "file://")
+      const serviceWorkerBuildRelativeUrl = buildMappings[projectRelativeUrl]
+      if (!serviceWorkerBuildRelativeUrl) {
+        throw new Error(
+          `"${projectRelativeUrl}" service worker file missing in the build`,
+        )
+      }
+      const buildFileContent = rollupBuild[serviceWorkerBuildRelativeUrl].source
+      rollupBuild[serviceWorkerBuildRelativeUrl].source =
+        serviceWorkerFinalizer(buildFileContent, {
+          serviceWorkerBuildRelativeUrl,
+          buildManifest,
+          rollupBuild,
+          lineBreakNormalization,
+        })
+    }),
+  )
 }

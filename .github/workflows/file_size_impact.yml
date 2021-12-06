@@ -31,6 +31,8 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Install node modules
         run: npm install
+      - name: Generate importmap
+        run: npm run importmap
       - name: Report file size impact
         run: node ./.github/workflows/pr_impact/report_file_size_impact.mjs
         env:

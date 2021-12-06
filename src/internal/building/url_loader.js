@@ -24,7 +24,6 @@ export const createUrlLoader = ({
   const loadUrl = async (rollupUrl, { signal, logger, ressourceBuilder }) => {
     let url = asServerUrl(rollupUrl)
     const { importType, urlWithoutImportType } = extractImportTypeFromUrl(url)
-
     // importing CSS from JS with import assertions
     if (importType === "css") {
       const importer = urlImporterMap[url]
@@ -79,7 +78,6 @@ export const createUrlLoader = ({
         map,
       }
     }
-
     // importing json from JS with import assertion
     if (importType === "json") {
       const importer = urlImporterMap[url]

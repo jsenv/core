@@ -1,73 +1,24 @@
-import { readFileSync } from "fs"
 import {
   resolveUrl,
-  urlToFileSystemPath,
   fileSystemPathToUrl,
+  urlToFileSystemPath,
 } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
-import { require } from "@jsenv/core/src/internal/require.js"
 
-export const bundleWorker = ({ workerScriptUrl, workerScriptSourceMap }) => {
-  const { code, map } = transformWorkerScript(workerScriptUrl, {
-    workerScriptSourceMap,
-  })
-  return { code, map }
-}
-
-const transformWorkerScript = (
-  scriptUrl,
-  { workerScriptSourceMap, importerUrl },
+export const babelPluginInlineWorkerImports = (
+  babel,
+  { readImportedScript },
 ) => {
-  const scriptPath = urlToFileSystemPath(scriptUrl)
-  let scriptContent
-  try {
-    scriptContent = String(readFileSync(scriptPath))
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      if (importerUrl) {
-        throw new Error(
-          createDetailedMessage(`no file found for an import in a worker.`, {
-            ["worker url"]: importerUrl,
-            ["imported url"]: scriptUrl,
-          }),
-        )
-      }
-      throw new Error(`no worker file at ${scriptUrl}`)
-    }
-    throw e
-  }
+  const { types } = babel
 
-  const { transformSync } = require("@babel/core")
-  const { code, map } = transformSync(scriptContent, {
-    filename: scriptPath,
-    configFile: false,
-    babelrc: false, // trust only these options, do not read any babelrc config file
-    ast: false,
-    inputSourceMap: workerScriptSourceMap,
-    sourceMaps: true,
-    // sourceFileName: scriptPath,
-    plugins: [[babelPluginInlineImportScripts, {}]],
-  })
-  return { code, map }
-}
-
-const babelPluginInlineImportScripts = (api) => {
-  const { types, parse } = api
   return {
-    name: "transform-inline-import-scripts",
+    name: "transform-inline-worker-imports",
 
     visitor: {
-      CallExpression: (
-        path,
-        {
-          file: {
-            opts: { filename },
-          },
-        },
-      ) => {
+      CallExpression: (path, opts) => {
         const calleePath = path.get("callee")
 
         const replaceImportScriptsWithFileContents = () => {
+          const filename = opts.filename
           const fileUrl = fileSystemPathToUrl(filename)
 
           let previousArgType = ""
@@ -97,11 +48,24 @@ const babelPluginInlineImportScripts = (api) => {
 
           if (previousArgType === "local") {
             const nodes = importedUrls.reduce((previous, importedUrl) => {
-              const importedScriptResult = transformWorkerScript(importedUrl, {
-                importerUrl: fileUrl,
+              const importedScriptCode = readImportedScript(importedUrl)
+              const { ast } = babel.transformSync(importedScriptCode, {
+                filename: urlToFileSystemPath(importedUrl),
+                configFile: false,
+                babelrc: false, // trust only these options, do not read any babelrc config file
+                ast: true,
+                sourceMaps: true,
+                // sourceFileName: scriptPath,
+                plugins: [
+                  [
+                    babelPluginInlineWorkerImports,
+                    {
+                      readImportedScript,
+                    },
+                  ],
+                ],
               })
-              const importedSourceAst = parse(importedScriptResult.code)
-              return [...previous, ...importedSourceAst.program.body]
+              return [...previous, ...ast.program.body]
             }, [])
 
             calleePath.parentPath.replaceWithMultiple(nodes)
