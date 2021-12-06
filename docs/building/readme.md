@@ -293,9 +293,34 @@ _main.html_ can be found at _dist/main.html_, _src/main.css_ at _dist/assets/mai
 
 ## How to reference assets?
 
-### With import.meta.url
+### import assertions
 
-With this pattern you get an url to a file that can be used later to fetch that file.
+For JSON and CSS import assertions are recommended.
+
+```js
+import json from "./data.json" assert { type: "json" }
+
+console.log(json)
+```
+
+```js
+import sheet from "./style.css" assert { type: "css" }
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+```
+
+Dynamic import assertion are also supported
+
+```js
+const jsonModule = await import("./data.json", {
+  assert: { type: "json" },
+})
+console.log(jsonModule.default)
+```
+
+### import meta url pattern
+
+For the remaining ressources `new URL() + import meta url` pattern is recommended.
 
 ```js
 const imageUrl = new URL("./img.png", import.meta.url)
@@ -305,44 +330,13 @@ img.src = imageUrl
 document.body.appendChild(img)
 ```
 
-### With import assertions
-
-There is 2 standard import assertions type: `"css"` and `"json"`. Ad the time of writing this documentation only chrome natively supports them. With this solution you can use static and dynamic import to reference non-js files.
-
-#### JSON
-
 ```js
-// static import for JSON
-import json from "./data.json" assert { type: "json" }
+const workerUrl = new URL("/worker.js", import.meta.url)
 
-console.log(json)
-
-// dynamic import for JSON
-const jsonModule = await import("./data.json", {
-  assert: { type: "css" },
-})
-
-console.log(jsonModule.default)
+const worker = new Worker(workerUrl)
 ```
 
-#### CSS
-
-```js
-// static import for CSS
-import sheet from "./style.css" assert { type: "css" }
-
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
-
-// dynamic import for CSS
-const cssModule = await import("./style.css", {
-  assert: { type: "css" },
-})
-
-document.adoptedStyleSheets = [
-  ...document.adoptedStyleSheets,
-  cssModule.default,
-]
-```
+> Worker must be referenced with the absolute path: starting with "/"
 
 ### With customCompilers
 
