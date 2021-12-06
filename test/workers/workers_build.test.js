@@ -52,10 +52,6 @@ if (process.platform !== "win32") {
         "assets/worker-a850e925.js": {
           versioned: true,
         },
-        "": {
-          versioned: false,
-          version: "67a7a2b0",
-        },
         "main.html": {
           versioned: false,
           // because when html file is modified, it's url is not

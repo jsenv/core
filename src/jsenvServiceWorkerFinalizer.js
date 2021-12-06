@@ -27,6 +27,10 @@ export const jsenvServiceWorkerFinalizer = (
       buildUrl,
       serviceWorkerBuildUrl,
     )
+    if (urlRelativeToServiceWorker === "") {
+      // don't put the service worker itself
+      return
+    }
     const versioned = fileNameContainsHash(buildRelativeUrl)
     const rollupFile = rollupBuild[buildRelativeUrl]
 
