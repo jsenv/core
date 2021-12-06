@@ -48,14 +48,14 @@ const expected = {
   inspectResponse: {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     generatedUrlsConfig: {
-      "assets/worker-a850e925.js": {
+      "worker-a850e925.js": {
         versioned: true,
       },
-      "assets/sw.js": {
+      "": {
         versioned: false,
         version: "f856c8b2",
       },
-      "main.html": {
+      "../main.html": {
         versioned: false,
         // because when html file is modified, it's url is not
         // if you update only the html file, browser won't update the service worker.
@@ -64,7 +64,7 @@ const expected = {
         // -> when html file changes -> hash changes -> worker updates
         version: "13886ff5",
       },
-      "assets/style-b126d686.css": {
+      "style-b126d686.css": {
         versioned: true,
       },
     },

@@ -1560,21 +1560,20 @@ const finalizeServiceWorkers = async ({
     Object.keys(serviceWorkers).map(async (projectRelativeUrl) => {
       const projectUrl = resolveUrl(projectRelativeUrl, "file://")
       projectRelativeUrl = urlToRelativeUrl(projectUrl, "file://")
-      const buildRelativeUrl = buildMappings[projectRelativeUrl]
-      if (!buildRelativeUrl) {
+      const serviceWorkerBuildRelativeUrl = buildMappings[projectRelativeUrl]
+      if (!serviceWorkerBuildRelativeUrl) {
         throw new Error(
           `"${projectRelativeUrl}" service worker file missing in the build`,
         )
       }
-      const buildFileContent = rollupBuild[buildRelativeUrl].source
-      rollupBuild[buildRelativeUrl].source = serviceWorkerFinalizer(
-        buildFileContent,
-        {
+      const buildFileContent = rollupBuild[serviceWorkerBuildRelativeUrl].source
+      rollupBuild[serviceWorkerBuildRelativeUrl].source =
+        serviceWorkerFinalizer(buildFileContent, {
+          serviceWorkerBuildRelativeUrl,
           buildManifest,
           rollupBuild,
           lineBreakNormalization,
-        },
-      )
+        })
     }),
   )
 }

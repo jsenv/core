@@ -1,19 +1,36 @@
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+
 import { generateContentHash } from "./internal/building/url-versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (
   code,
-  { buildManifest, rollupBuild, lineBreakNormalization },
+  {
+    serviceWorkerBuildRelativeUrl,
+    buildManifest,
+    rollupBuild,
+    lineBreakNormalization,
+  },
 ) => {
   const generatedUrlsConfig = {}
   Object.keys(buildManifest).forEach((projectRelativeUrl) => {
     if (projectRelativeUrl.endsWith(".map")) {
       return
     }
+
     const buildRelativeUrl = buildManifest[projectRelativeUrl]
+    const buildUrl = resolveUrl(buildRelativeUrl, "file://")
+    const serviceWorkerBuildUrl = resolveUrl(
+      serviceWorkerBuildRelativeUrl,
+      "file://",
+    )
+    const urlRelativeToServiceWorker = urlToRelativeUrl(
+      buildUrl,
+      serviceWorkerBuildUrl,
+    )
     const versioned = fileNameContainsHash(buildRelativeUrl)
     const rollupFile = rollupBuild[buildRelativeUrl]
 
-    generatedUrlsConfig[buildRelativeUrl] = {
+    generatedUrlsConfig[urlRelativeToServiceWorker] = {
       versioned,
       ...(versioned
         ? {}
