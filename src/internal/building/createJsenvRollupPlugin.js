@@ -65,6 +65,7 @@ export const createJsenvRollupPlugin = async ({
   externalImportSpecifiers,
   externalImportUrlPatterns,
   importPaths,
+  workers,
 
   format,
   systemJsUrl,
@@ -97,6 +98,11 @@ export const createJsenvRollupPlugin = async ({
   const storeLatestJsenvPluginError = (error) => {
     lastErrorMessage = error.message
   }
+
+  const serviceWorkerUrls = Object.keys(workers).map((key) =>
+    resolveUrl(key, projectDirectoryUrl),
+  )
+  const isServiceWorkerUrl = (url) => serviceWorkerUrls.includes(url)
 
   let ressourceBuilder
   let importResolver
@@ -552,6 +558,14 @@ export const createJsenvRollupPlugin = async ({
             if (!projectUrl) {
               return { external: true, url: ressourceUrl }
             }
+
+            if (isServiceWorkerUrl(projectUrl)) {
+              return {
+                serviceWorker: true,
+                url: ressourceUrl,
+              }
+            }
+
             return ressourceUrl
           },
           emitChunk,

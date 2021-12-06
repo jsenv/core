@@ -8,7 +8,6 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { buildServiceWorker } from "@jsenv/core/src/internal/building/buildServiceWorker.js"
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import {
   isNodePartOfSupportedRuntimes,
@@ -17,6 +16,7 @@ import {
 import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin.js"
+import { buildWorkers } from "./build_workers.js"
 
 export const buildUsingRollup = async ({
   buildOperation,
@@ -48,6 +48,8 @@ export const buildUsingRollup = async ({
   externalImportSpecifiers,
   externalImportUrlPatterns,
   importPaths,
+  workers,
+  serviceWorkerFinalizer,
 
   urlVersioning,
   urlVersionningForEntryPoints,
@@ -62,9 +64,6 @@ export const buildUsingRollup = async ({
   minifyJsOptions,
   minifyCssOptions,
   minifyHtmlOptions,
-
-  serviceWorkers,
-  serviceWorkerFinalizer,
 }) => {
   const node = isNodePartOfSupportedRuntimes(runtimeSupport)
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
@@ -121,6 +120,7 @@ export const buildUsingRollup = async ({
     externalImportSpecifiers,
     externalImportUrlPatterns,
     importPaths,
+    workers,
 
     urlVersioning,
     urlVersionningForEntryPoints,
@@ -220,28 +220,19 @@ export const buildUsingRollup = async ({
       }),
     )
 
-    await Promise.all(
-      Object.keys(serviceWorkers).map(
-        async (serviceWorkerProjectRelativeUrl) => {
-          const serviceWorkerBuildRelativeUrl =
-            serviceWorkers[serviceWorkerProjectRelativeUrl]
-          await buildServiceWorker({
-            projectDirectoryUrl,
-            buildDirectoryUrl,
-            serviceWorkerProjectRelativeUrl,
-            serviceWorkerBuildRelativeUrl,
-            serviceWorkerTransformer: (code) =>
-              serviceWorkerFinalizer(code, {
-                buildManifest,
-                rollupBuild,
-                lineBreakNormalization,
-              }),
-
-            minify,
-          })
-        },
-      ),
-    )
+    await buildWorkers({
+      workers,
+      projectDirectoryUrl,
+      buildDirectoryUrl,
+      replacePlaceholders: (code) => {
+        return serviceWorkerFinalizer(code, {
+          buildManifest,
+          rollupBuild,
+          lineBreakNormalization,
+        })
+      },
+      minify,
+    })
   }
 
   return {

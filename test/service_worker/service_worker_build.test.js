@@ -33,7 +33,7 @@ await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap,
-  serviceWorkers: {
+  workers: {
     [`${testDirectoryRelativeUrl}sw.js`]: "sw.cjs",
   },
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,

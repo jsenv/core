@@ -1,60 +1,9 @@
-import { readFileSync } from "fs"
-import {
-  resolveUrl,
-  urlToFileSystemPath,
-  fileSystemPathToUrl,
-} from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
-import { require } from "@jsenv/core/src/internal/require.js"
+import { resolveUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
 
-export const bundleWorker = ({ workerScriptUrl, workerScriptSourceMap }) => {
-  const { code, map } = transformWorkerScript(workerScriptUrl, {
-    workerScriptSourceMap,
-  })
-  return { code, map }
-}
-
-const transformWorkerScript = (
-  scriptUrl,
-  { workerScriptSourceMap, importerUrl },
-) => {
-  const scriptPath = urlToFileSystemPath(scriptUrl)
-  let scriptContent
-  try {
-    scriptContent = String(readFileSync(scriptPath))
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      if (importerUrl) {
-        throw new Error(
-          createDetailedMessage(`no file found for an import in a worker.`, {
-            ["worker url"]: importerUrl,
-            ["imported url"]: scriptUrl,
-          }),
-        )
-      }
-      throw new Error(`no worker file at ${scriptUrl}`)
-    }
-    throw e
-  }
-
-  const { transformSync } = require("@babel/core")
-  const { code, map } = transformSync(scriptContent, {
-    filename: scriptPath,
-    configFile: false,
-    babelrc: false, // trust only these options, do not read any babelrc config file
-    ast: false,
-    inputSourceMap: workerScriptSourceMap,
-    sourceMaps: true,
-    // sourceFileName: scriptPath,
-    plugins: [[babelPluginInlineImportScripts, {}]],
-  })
-  return { code, map }
-}
-
-const babelPluginInlineImportScripts = (api) => {
+export const babelPluginInlineWorkerImports = (api, { inline }) => {
   const { types, parse } = api
   return {
-    name: "transform-inline-import-scripts",
+    name: "transform-inline-worker-imports",
 
     visitor: {
       CallExpression: (
@@ -97,9 +46,7 @@ const babelPluginInlineImportScripts = (api) => {
 
           if (previousArgType === "local") {
             const nodes = importedUrls.reduce((previous, importedUrl) => {
-              const importedScriptResult = transformWorkerScript(importedUrl, {
-                importerUrl: fileUrl,
-              })
+              const importedScriptResult = inline(importedUrl, fileUrl)
               const importedSourceAst = parse(importedScriptResult.code)
               return [...previous, ...importedSourceAst.program.body]
             }, [])

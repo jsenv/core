@@ -143,6 +143,9 @@ export const createRessourceBuilder = (
       contentType,
       bufferBeforeBuild,
     })
+    if (!reference) {
+      return null
+    }
     await reference.ressource.getReadyPromise()
     return reference
   }
@@ -229,9 +232,13 @@ export const createRessourceBuilder = (
 
     let ressourceUrl
     let isExternal = false
+    let isServiceWorker = false
     if (typeof ressourceUrlResolution === "object") {
       if (ressourceUrlResolution.external) {
         isExternal = true
+      }
+      if (isServiceWorker.serviceWorker) {
+        isServiceWorker = true
       }
       ressourceUrl = ressourceUrlResolution.url
     } else {
@@ -292,6 +299,7 @@ export const createRessourceBuilder = (
         isExternal,
         isInline,
         isPlaceholder,
+        isServiceWorker,
         fileNamePattern,
         urlVersioningDisabled,
       })
@@ -356,6 +364,7 @@ export const createRessourceBuilder = (
     isExternal = false,
     isInline = false,
     isPlaceholder = false,
+    isServiceWorker = false,
 
     fileNamePattern,
     urlVersioningDisabled = false,
@@ -373,6 +382,7 @@ export const createRessourceBuilder = (
       isInline,
       isExternal,
       isPlaceholder,
+      isServiceWorker,
 
       urlVersioningDisabled,
       fileNamePattern,

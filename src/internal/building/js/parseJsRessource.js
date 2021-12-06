@@ -4,7 +4,7 @@ import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { bundleWorker } from "@jsenv/core/src/internal/building/bundleWorker.js"
+import { transformWorker } from "@jsenv/core/src/internal/building/worker/transform_worker.js"
 
 export const parseJsRessource = async (
   jsRessource,
@@ -53,13 +53,13 @@ export const parseJsRessource = async (
     // - perf (one less http request)
     const mightBeAWorkerScript = !jsRessource.isInline
     if (mightBeAWorkerScript) {
-      const workerScriptUrl = asOriginalUrl(jsUrl)
-      const workerBundle = await bundleWorker({
-        workerScriptUrl,
-        workerScriptSourceMap: map,
+      const transformResult = await transformWorker({
+        url: asOriginalUrl(jsUrl),
+        code: String(jsRessource.bufferBeforeBuild),
+        map,
       })
-      code = workerBundle.code
-      map = workerBundle.map
+      code = transformResult.code
+      map = transformResult.map
     } else {
       code = jsString
     }
