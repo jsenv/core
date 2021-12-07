@@ -1907,7 +1907,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-ece8404d.js"
+    "./toolbar.main.js": "./toolbar.main-bdbf37d1.js"
   }
 }</script>
     <script>
@@ -3754,6 +3754,38 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       };
 
+      /*
+       * Prefer window.navigator.userAgentData before resorting to
+       * window.navigator.userAgent because of
+       * https://blog.chromium.org/2021/09/user-agent-reduction-origin-trial-and-dates.html
+       */
+      var detectFromUserAgentData = function detectFromUserAgentData() {
+        var userAgentData = window.navigator.userAgentData;
+
+        if (!userAgentData) {
+          return null;
+        }
+
+        var brands = userAgentData.brands;
+        var i = 0;
+
+        while (i < brands.legth) {
+          var _brands$i = brands[i],
+              brand = _brands$i.brand,
+              version = _brands$i.version;
+          i++;
+
+          if (brand === "chromium" || brand === "Google Chrome") {
+            return {
+              name: "chrome",
+              version: version
+            };
+          }
+        }
+
+        return null;
+      };
+
       var firstMatch = function firstMatch(regexp, string) {
         var match = string.match(regexp);
         return match && match.length > 0 ? match[1] || undefined : undefined;
@@ -3854,21 +3886,6 @@ html[data-toolbar-visible] #toolbar-trigger {
       };
 
       var detectChrome = function detectChrome() {
-        var userAgentData = window.navigator.userAgentData;
-
-        if (userAgentData) {
-          var brand = userAgentData.brands.some(function (brand) {
-            return brand.brand === "chromium" || brand.brand === "Google Chrome";
-          });
-
-          if (brand) {
-            return {
-              name: "chrome",
-              version: brand.version
-            };
-          }
-        }
-
         return userAgentToBrowser$1(window.navigator.userAgent);
       };
 
@@ -3955,7 +3972,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       };
 
-      var detector = detectorCompose([detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
+      var detector = detectorCompose([detectFromUserAgentData, // keep this first
+      detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
       var detectBrowser = function detectBrowser() {
         var _ref = detector() || {},
             _ref$name = _ref.name,
@@ -4874,7 +4892,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-ece8404d.js.map</script>
+//# sourceMappingURL=toolbar.main-bdbf37d1.js.map</script>
   
 
 </body></html>
