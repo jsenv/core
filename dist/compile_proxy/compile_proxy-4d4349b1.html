@@ -782,7 +782,7 @@
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./compile_proxy.html__inline__20.js": "./compile_proxy.html__inline__20-672ba17c.js"
+    "./compile_proxy.html__inline__20.js": "./compile_proxy.html__inline__20-f94f176c.js"
   }
 }</script>
     <script>System.register("compile_proxy.html__inline__20.js", [], (function () {
@@ -1700,6 +1700,21 @@
       };
 
       var detectChrome = function detectChrome() {
+        var userAgentData = window.navigator.userAgentData;
+
+        if (userAgentData) {
+          var brand = userAgentData.brands.some(function (brand) {
+            return brand.brand === "chromium" || brand.brand === "Google Chrome";
+          });
+
+          if (brand) {
+            return {
+              name: "chrome",
+              version: brand.version
+            };
+          }
+        }
+
         return userAgentToBrowser$1(window.navigator.userAgent);
       };
 
@@ -2147,7 +2162,7 @@
   };
 }));
 
-//# sourceMappingURL=compile_proxy.html__inline__20-672ba17c.js.map</script>
+//# sourceMappingURL=compile_proxy.html__inline__20-f94f176c.js.map</script>
   
 
 </body></html>

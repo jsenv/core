@@ -1907,7 +1907,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-feac7fa3.js"
+    "./toolbar.main.js": "./toolbar.main-ece8404d.js"
   }
 }</script>
     <script>
@@ -3854,6 +3854,21 @@ html[data-toolbar-visible] #toolbar-trigger {
       };
 
       var detectChrome = function detectChrome() {
+        var userAgentData = window.navigator.userAgentData;
+
+        if (userAgentData) {
+          var brand = userAgentData.brands.some(function (brand) {
+            return brand.brand === "chromium" || brand.brand === "Google Chrome";
+          });
+
+          if (brand) {
+            return {
+              name: "chrome",
+              version: brand.version
+            };
+          }
+        }
+
         return userAgentToBrowser$1(window.navigator.userAgent);
       };
 
@@ -4859,7 +4874,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 }));
 
-//# sourceMappingURL=toolbar.main-feac7fa3.js.map</script>
+//# sourceMappingURL=toolbar.main-ece8404d.js.map</script>
   
 
 </body></html>

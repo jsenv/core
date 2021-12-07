@@ -777,7 +777,7 @@
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./redirector.html__inline__15.js": "./redirector.html__inline__15-4d453af0.js"
+    "./redirector.html__inline__15.js": "./redirector.html__inline__15-7a0d16d6.js"
   }
 }</script>
     <script>System.register("redirector.html__inline__15.js", [], (function () {
@@ -1695,6 +1695,21 @@
       };
 
       var detectChrome = function detectChrome() {
+        var userAgentData = window.navigator.userAgentData;
+
+        if (userAgentData) {
+          var brand = userAgentData.brands.some(function (brand) {
+            return brand.brand === "chromium" || brand.brand === "Google Chrome";
+          });
+
+          if (brand) {
+            return {
+              name: "chrome",
+              version: brand.version
+            };
+          }
+        }
+
         return userAgentToBrowser$1(window.navigator.userAgent);
       };
 
@@ -2191,7 +2206,7 @@
   };
 }));
 
-//# sourceMappingURL=redirector.html__inline__15-4d453af0.js.map</script>
+//# sourceMappingURL=redirector.html__inline__15-7a0d16d6.js.map</script>
   
 
 </body></html>
