@@ -12,7 +12,7 @@ export const detectFromUserAgentData = () => {
 
   const { brands } = userAgentData
   let i = 0
-  while (i < brands.legth) {
+  while (i < brands.length) {
     const { brand, version } = brands[i]
     i++
     if (brand === "chromium" || brand === "Google Chrome") {
