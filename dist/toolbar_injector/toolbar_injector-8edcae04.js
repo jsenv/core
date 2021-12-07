@@ -746,7 +746,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-c23caf7b.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-84985f43.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -970,4 +970,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-52ec0940.js.map
+//# sourceMappingURL=toolbar_injector-8edcae04.js.map
