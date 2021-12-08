@@ -32,20 +32,23 @@ export const executeTestPlan = async ({
   importDefaultExtension,
 
   testPlan,
-  defaultMsAllocatedPerExecution,
-  cooldownBetweenExecutions,
 
-  maxExecutionsInParallel,
+  logMemoryHeapUsage = false,
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
+
+  maxExecutionsInParallel = 1,
+  defaultMsAllocatedPerExecution = 30000,
   // stopAfterExecute: true to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and
   // we have associated coverage and capturedConsole
   // passsing false means all node process and browsers launched stays opened
   // (can eventually be used for debug)
   stopAfterExecute = true,
+  cooldownBetweenExecutions = 0,
+  gcBetweenExecutions = logMemoryHeapUsage,
 
   coverage = process.argv.includes("--cover") ||
     process.argv.includes("--coverage"),
@@ -148,13 +151,16 @@ export const executeTestPlan = async ({
     importResolutionMethod,
     importDefaultExtension,
 
+    logMemoryHeapUsage,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
+    logSummary,
+
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
     stopAfterExecute,
     cooldownBetweenExecutions,
-    completedExecutionLogMerging,
-    completedExecutionLogAbbreviation,
-    logSummary,
+    gcBetweenExecutions,
 
     coverage,
     coverageConfig,

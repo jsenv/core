@@ -39,6 +39,7 @@ await executeTestPlan({
       },
     },
   },
+  logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,
   // completedExecutionLogAbbreviation: false,
   coverage: process.argv.includes("--coverage"),

@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs"
+import { memoryUsage } from "node:process"
 import wrapAnsi from "wrap-ansi"
 import cuid from "cuid"
 import { loggerToLevels } from "@jsenv/logger"
@@ -17,6 +18,7 @@ import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
 import { formatExecuting, formatExecutionResult } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
+import { ensureGlobalGc } from "./gc.js"
 
 export const executeConcurrently = async (
   executionSteps,
@@ -28,15 +30,18 @@ export const executeConcurrently = async (
 
     projectDirectoryUrl,
     compileServer,
-
     babelPluginMap,
 
-    defaultMsAllocatedPerExecution = 30000,
-    cooldownBetweenExecutions = 0,
-    maxExecutionsInParallel = 1,
-    stopAfterExecute,
+    logSummary,
+    logMemoryHeapUsage,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
+
+    maxExecutionsInParallel,
+    defaultMsAllocatedPerExecution,
+    stopAfterExecute,
+    cooldownBetweenExecutions,
+    gcBetweenExecutions,
 
     coverage,
     coverageConfig,
@@ -48,8 +53,6 @@ export const executeConcurrently = async (
 
     beforeExecutionCallback = () => {},
     afterExecutionCallback = () => {},
-
-    logSummary,
   },
 ) => {
   if (completedExecutionLogMerging && !process.stdout.isTTY) {
@@ -62,11 +65,14 @@ export const executeConcurrently = async (
   const executionSpinner = executionLogsEnabled && process.stdout.isTTY
 
   const startMs = Date.now()
-
   const report = {}
   const executionCount = executionSteps.length
 
   let transformReturnValue = (value) => value
+
+  if (gcBetweenExecutions) {
+    ensureGlobalGc()
+  }
 
   const coverageTempDirectoryUrl = resolveUrl(
     coverageTempDirectoryRelativeUrl,
@@ -249,6 +255,10 @@ export const executeConcurrently = async (
         completedCount++
       }
 
+      if (gcBetweenExecutions) {
+        global.gc()
+      }
+
       if (executionLogsEnabled) {
         let log = formatExecutionResult(afterExecutionInfo, {
           completedExecutionLogAbbreviation,
@@ -257,6 +267,7 @@ export const executeConcurrently = async (
           timedoutCount,
           erroredCount,
           completedCount,
+          ...(logMemoryHeapUsage ? { memoryHeap: memoryUsage().heapUsed } : {}),
         })
         log = `${log}
 

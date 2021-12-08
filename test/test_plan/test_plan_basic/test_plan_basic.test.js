@@ -44,6 +44,8 @@ const testPlan = {
 
 const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
+  // logLevel: "info",
+  logMemoryHeapUsage: true,
   jsenvDirectoryRelativeUrl,
   testPlan,
 })

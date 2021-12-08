@@ -33,7 +33,7 @@ const actual = {
 const expected = {
   status: "completed",
   namespace: {
-    default: 1000000000000,
+    value: 1000000000000,
   },
 }
 assert({ actual, expected })

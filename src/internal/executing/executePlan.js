@@ -24,13 +24,16 @@ export const executePlan = async (
     importResolutionMethod,
     importDefaultExtension,
 
-    defaultMsAllocatedPerExecution,
-    maxExecutionsInParallel,
-    stopAfterExecute,
-    cooldownBetweenExecutions,
+    logSummary,
+    logMemoryHeapUsage,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    logSummary,
+
+    defaultMsAllocatedPerExecution,
+    maxExecutionsInParallel,
+    gcBetweenExecutions,
+    stopAfterExecute,
+    cooldownBetweenExecutions,
 
     coverage,
     coverageConfig,
@@ -169,13 +172,16 @@ export const executePlan = async (
 
       babelPluginMap: compileServer.babelPluginMap,
 
+      logSummary,
+      logMemoryHeapUsage,
+      completedExecutionLogMerging,
+      completedExecutionLogAbbreviation,
+
       defaultMsAllocatedPerExecution,
       maxExecutionsInParallel,
       stopAfterExecute,
+      gcBetweenExecutions,
       cooldownBetweenExecutions,
-      completedExecutionLogMerging,
-      completedExecutionLogAbbreviation,
-      logSummary,
 
       coverage,
       coverageConfig,
