@@ -1,16 +1,17 @@
 import { ANSI } from "@jsenv/log"
 
 import { msAsDuration } from "../logs/msAsDuration.js"
+import { formatByte } from "../logs/byte.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
 
 export const createSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
-${createSummaryMessage(summary)}
+${createAllExecutionsSummary(summary)}
 total duration: ${msAsDuration(summary.duration)}
 ----------------------------------------`
 
-const createSummaryMessage = ({
+const createAllExecutionsSummary = ({
   executionCount,
   abortedCount,
   timedoutCount,
@@ -24,7 +25,7 @@ const createSummaryMessage = ({
 
   const executionLabel =
     executionCount === 1 ? `1 execution` : `${executionCount} executions`
-  return `${executionLabel}: ${createSummaryDetails({
+  return `${executionLabel}: ${createStatusSummary({
     executionCount,
     abortedCount,
     timedoutCount,
@@ -34,7 +35,32 @@ const createSummaryMessage = ({
   })}`
 }
 
-export const createSummaryDetails = ({
+export const createIntermediateSummary = ({
+  executionCount,
+  abortedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount,
+  cancelledCount,
+  memoryHeap,
+}) => {
+  let intermediateSummary = createStatusSummary({
+    executionCount,
+    abortedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount,
+    cancelledCount,
+  })
+
+  if (memoryHeap) {
+    intermediateSummary += ` / memory heap: ${formatByte(memoryHeap)}`
+  }
+
+  return intermediateSummary
+}
+
+const createStatusSummary = ({
   executionCount,
   abortedCount,
   timedoutCount,

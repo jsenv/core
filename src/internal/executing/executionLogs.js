@@ -2,12 +2,18 @@ import { ANSI, UNICODE } from "@jsenv/log"
 
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
-import { createSummaryDetails } from "./createSummaryLog.js"
-import { formatByte } from "../logs/byte.js"
+import { createIntermediateSummary } from "./createSummaryLog.js"
 
 export const formatExecuting = (
   { executionIndex },
-  { executionCount, abortedCount, timedoutCount, erroredCount, completedCount },
+  {
+    executionCount,
+    abortedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount,
+    memoryHeap,
+  },
 ) => {
   const executionNumber = executionIndex + 1
   const description = ANSI.color(
@@ -17,12 +23,13 @@ export const formatExecuting = (
   const summary =
     executionIndex === 0
       ? ""
-      : `(${createSummaryDetails({
+      : `(${createIntermediateSummary({
           executionCount: executionIndex,
           abortedCount,
           timedoutCount,
           erroredCount,
           completedCount,
+          memoryHeap,
         })})`
 
   return formatExecution({
@@ -59,17 +66,14 @@ export const formatExecutionResult = (
     allocatedMs,
   })
 
-  let summary = `${createSummaryDetails({
+  const summary = `(${createIntermediateSummary({
     executionCount: executionNumber,
     abortedCount,
     timedoutCount,
     erroredCount,
     completedCount,
-  })}`
-  if (memoryHeap) {
-    summary += ` / memory heap: ${formatByte(memoryHeap)}`
-  }
-  summary = `(${summary})`
+    memoryHeap,
+  })})`
 
   if (completedExecutionLogAbbreviation && status === "completed") {
     return `${description} ${summary}`

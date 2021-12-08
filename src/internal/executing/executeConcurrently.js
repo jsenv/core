@@ -191,6 +191,9 @@ export const executeConcurrently = async (
             timedoutCount,
             erroredCount,
             completedCount,
+            ...(logMemoryHeapUsage
+              ? { memoryHeap: memoryUsage().heapUsed }
+              : {}),
           }),
         })
       }
