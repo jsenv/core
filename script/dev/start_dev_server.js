@@ -4,7 +4,9 @@ import { startDevServer } from "@jsenv/core"
 import { projectDirectoryUrl } from "../../jsenv.config.mjs"
 
 const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+  await requestCertificateForLocalhost({
+    serverCertificateAltNames: ["local"],
+  })
 
 startDevServer({
   projectDirectoryUrl,
