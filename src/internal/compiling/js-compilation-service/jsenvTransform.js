@@ -52,6 +52,9 @@ export const jsenvTransform = async ({
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait,
     },
+    generatorOpts: {
+      compact: false,
+    },
   }
 
   const babelHelperName = filePathToBabelHelperName(inputPath)
