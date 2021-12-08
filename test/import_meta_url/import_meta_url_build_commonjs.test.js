@@ -3,7 +3,6 @@ import {
   resolveDirectoryUrl,
   resolveUrl,
   urlToRelativeUrl,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -19,10 +18,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
-const mainFileBasename = `${testDirectoryname}.js`
+const mainFileBasename = `import_meta_url.js`
 const entryPointMap = {
   [`./${testDirectoryRelativeUrl}${mainFileBasename}`]: "./main.cjs",
 }

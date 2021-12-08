@@ -159,9 +159,8 @@ export const buildProject = async ({
     jsenvDirectoryRelativeUrl,
     jsenvDirectoryClean,
     // build compiled files are written into a different directory
-    // than exploring-server. This is because here we compile for rollup
+    // than dev-server. This is because here we compile for rollup
     // that is expecting esmodule format, not systemjs
-    // + some more differences like import.meta.dev
     outDirectoryName: "build",
     importDefaultExtension,
     moduleOutFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
