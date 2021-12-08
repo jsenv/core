@@ -31,9 +31,15 @@ const { namespace } = await requireCommonJsBuild({
   buildDirectoryRelativeUrl,
 })
 
-const actual = namespace
+const actual = {
+  namespace,
+}
 const expected = {
-  whatever: "It's cool",
-  [`w"ow`]: 42,
+  namespace: {
+    value: {
+      whatever: "It's cool",
+      [`w"ow`]: 42,
+    },
+  },
 }
 assert({ actual, expected })

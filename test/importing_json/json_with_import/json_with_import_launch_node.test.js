@@ -54,7 +54,7 @@ const test = async ({ jsonModulesFlag = false } = {}) => {
   const expected = {
     status: "completed",
     namespace: {
-      default: {
+      value: {
         whatever: "It's cool",
         [`w"ow`]: 42,
       },
