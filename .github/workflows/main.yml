@@ -84,6 +84,8 @@ jobs:
         run: npm install
       - name: Install packages
         run: npm run packages-install
+      - name: Generate importmap
+        run: npm run importmap
       - name: publish package
         run: node ./.github/workflows/main/publish-package.js
         env:

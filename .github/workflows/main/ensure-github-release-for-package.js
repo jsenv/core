@@ -1,5 +1,5 @@
 import { ensureGithubReleaseForPackage } from "@jsenv/github-release-package"
 
-ensureGithubReleaseForPackage({
+await ensureGithubReleaseForPackage({
   projectDirectoryUrl: new URL("../../../", import.meta.url),
 })
