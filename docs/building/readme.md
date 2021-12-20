@@ -9,7 +9,6 @@ This documentation list [key features](#key-features) and gives the [definition 
 - [SystemJS format](#SystemJS-format)
 - [Frontend build](#Frontend-build)
 - [Node package build](#Node-package-build)
-- [Disable concatenation](#Disable-concatenation)
 
 # Key features
 
@@ -547,113 +546,8 @@ await buildProject({
 })
 ```
 
-## Embed frontend
-
-Embed refers to a product that is meant to be injected into website you don't own, like a video embed for instance. In that case, developper using your product can inject it in their web page using an iframe.
-
-```html
-<iframe src="./dist/main.html"></iframe>
-```
-
-## Progressive Web Application (PWA)
-
-There is a pre configured GitHub repository template for this use case: [jsenv-template-pwa](https://github.com/jsenv/jsenv-template-pwa#progressive-web-application-template).
-
-If you want to build a PWA, you have a service worker file referenced somewhere by _navigator.serviceWorker.register_.
-
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf8" />
-    <link rel="icon" href="data:," />
-  </head>
-  <body>
-    <script type="module">
-      navigator.serviceWorker.register("/sw.js")
-    </script>
-  </body>
-</html>
-```
-
-For this scenario, you must manually specify the usage of `"/sw.js"` to jsenv using _serviceWorkers_ parameter.
-
-```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  serviceWorkers: {
-    "./sw.js": "./sw.js",
-  },
-})
-```
-
-For each service worker file specified in _serviceWorkers_ a corresponding file will be written to the build directory. So if you forget to pass `"sw.js"` using _serviceWorkers_ parameter, `"sw.js"` won't be in the build directory.
-
-A service worker file is special:
-
-- you can use _self.importScripts_
-- you cannot use _import_ keyword
-- ...many more differences...
-
-Jsenv won't try to change this.
-So you must write the service worker file in a way that browser can understand.
-During build, the following steps are taken for every service worker file specified in _serviceWorkers_:
-
-1. Inline every _self.importScripts_
-2. Minify the resulting service worker file
-3. Write the final service worker file into the build directory
-
-### Jsenv service worker
-
-When generating the build jsenv knows every file used by your frontend files. This information can be injected into a service worker to preload or put into cache all these urls. This can be done with _serviceWorkerFinalizer_ as shown in the code below:
-
-```diff
-- import { buildProject } from "@jsenv/core"
-+ import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  serviceWorkers: {
-    "./sw.js": "./sw.js",
-  },
-+ serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
-})
-```
-
-_serviceWorkerFinalizer_ injects a variable into the service worker file called `self.generatedUrlsConfig`. At this stage you can write your own service worker to do something with it. You can also use a service worker already written to handle this: https://github.com/jsenv/jsenv-pwa/blob/master/docs/jsenv-service-worker.md.
+There is a pre configured GitHub repository template for this use case: [jsenv-template-pwa](https://github.com/jsenv/jsenv-template-pwa#progressive-web-application-template). You can use the template both to create a regular website or a progressive web application.
 
 # Node package build
 
 A node package does not have the same constraints than the web. If you are targeting recent Node.js versions you can skip the build step completely and serve your files untouched. See the jsenv GitHub repository template to start a node package from sratch: [jsenv-template-node-package](https://github.com/jsenv/jsenv-template-node-package).
-
-# Disable concatenation
-
-By default js files are concatenated as much as possible. There is legitimates reasons to disable this behaviour. Merging `n` files into chunks poses two issues:
-
-- On a big project it becomes very hard to know what ends up where.
-  Tools like [webpack bundle analyzer](https://github.com/webpack-contrib/webpack-bundle-analyzer) exists to mitigate this but it's still hard to grasp what is going on.
-- When a file part of a chunk is modified the entire chunk must be recreated. A returning user have to redownload/parse/execute the entire chunk even if you modified only one line in one file.
-
-Disabling concatenation will fixe these two issues, but also means browser will have to create an http request per file. Thanks to http2, one connection can be reused to serve `n` files meaning concatenation becomes less crucial.
-
-> It's still faster for a web browser to donwload/parse/execute one big file than doing the same for 50 tiny files.
-
-I would consider the following before disabling concatenation:
-
-- Is production server compatible with http2?
-- Is there a friendly loading experience on the website? (A loading screen + a progress bar for instance)
-- What type of user experience I want to favor: new users or returning users?
-
-Use _jsConcatenation_ parameter to disable concatenation.
-
-```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  format: "esmodule",
-  jsConcatenation: false,
-})
-```
