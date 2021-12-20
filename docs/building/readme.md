@@ -54,39 +54,42 @@ const { buildMappings, buildManifest } = await buildProject({
 
 ## buildDirectoryRelativeUrl
 
-_buildDirectoryRelativeUrl_ is a string leading to a directory where files are written. This parameter is **required**.
+_buildDirectoryRelativeUrl_ is a string leading to a directory where files are written.
+
+_buildDirectoryRelativeUrl_ is **required**.
 
 ## entryPointMap
 
-_entryPointMap_ is an object describing the project files you want to read and their destination in the build directory. This parameter is **required**.
+_entryPointMap_ is an object describing the project files you want to read and their destination in the build directory.
+
+_entryPointMap_ is **required**.
 
 _entryPointMap_ keys are relative to project directory and values are relative to build directory.
 
 ## format
 
-_format_ is a string indicating the module format of the files written in the build directory. This parameter is **required** and must be one of `"esmodule"`, `"systemjs"`, `"commonjs"`, `"global"`.
+_format_ is a string indicating the module format of the files written in the build directory.
+
+_format_ is **required**. It must be `"esmodule"`, `"systemjs"`, `"commonjs"` or `"global"`.
 
 — see [SystemJS format](#SystemJS-format)
 
-## minify
+## importResolutionMethod
 
-_minify_ is a boolean controlling if build files will be minified to save bytes. This parameter is optional and enabled by default when `process.env.NODE_ENV` is `"production"`.
+_importResolutionMethod_ is a string controlling how import will be resolved.
 
-When enabled: js, css, html, importmap, json, svg are minified.
+_importResolutionMethod_ is optional. The default is `"importmap'` but becomes `"node"` when [format](#format) is `"commonjs"`.
 
-```js
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  format: "esmodule",
-  minify: true,
-})
-```
+| Value         | Description                                                                     |
+| ------------- | ------------------------------------------------------------------------------- |
+| `"importmap"` | import are resolved by standard import resolution, the one used by web browsers |
+| `"node"`      | imports are resolved by Node.js module resolution                               |
 
 ## externalImportSpecifiers
 
-_externalImportSpecifiers_ is an array of string representing imports that will be ignored whle generating the build files. This parameter is optional with a default value being an empty array. This parameter can be used to avoid building some dependencies.
+_externalImportSpecifiers_ is an array of string representing imports that will be ignored whle generating the build files. This parameter can be used to avoid building some dependencies.
+
+_externalImportSpecifiers_ is optional.
 
 To better understand this let's assume your source files contains the following import.
 
@@ -190,17 +193,48 @@ buildProject({
 })
 ```
 
+## workers
+
+_workers_ is an object used to declare files written for [web workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
+
+_workers_ is optional.
+
+If your source file references a worker file as below:
+
+```js
+const workerUrl = new URL("/worker.js", import.meta.url)
+
+const worker = new Worker(workerUrl)
+```
+
+Then you should tell jsenv this is a worker using _workers_ parameter.
+
+```diff
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryRelativeUrl: "./dist/",
+  format: "systemjs",
+  workers: {
++   "./worker.js": "./worker.js",
+  }
+})
+```
+
+Thanks to this, jsenv knows it's a worker file and will detect usage of [importScripts](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers#importing_scripts_and_libraries).
+
 ## urlVersioning
 
-_urlVersioning_ is a boolean controlling the file written in the build directory will be versioned. This parameter is optional and enabled by default.
+_urlVersioning_ is a boolean controlling the file written in the build directory will be versioned. When enabled, the files written in the build directory have dynamic names computed from the source file content. This allows to enable [long term caching](#long-term-caching) of your files.
 
-When enabled, the files written in the build directory have dynamic names computed from the source file content. This allows to enable [long term caching](#long-term-caching) of your files.
+_urlVersioning_ is optional. It is enabled by default.
 
 ## assetManifestFile
 
-_assetManifestFile_ is a boolean controlling if an _asset-manifest.json_ file will be written in the build directory. This parameter is optional and disabled by default.
+_assetManifestFile_ is a boolean controlling if an _asset-manifest.json_ file will be written in the build directory. When _urlVersioning_ is enabled, the files have dynamic names. Generating a manifest file can be important to be able to find the generated files.
 
-When _urlVersioning_ is enabled, the files have dynamic names. Generating a manifest file can be important to be able to find the generated files.
+_assetManifestFile_ is optional.
 
 Example of an _asset-manifest.json_ file content:
 
@@ -214,14 +248,21 @@ Example of an _asset-manifest.json_ file content:
 }
 ```
 
-## importResolutionMethod
+## minify
 
-_importResolutionMethod_ is a string controlling how import will be resolved. This parameter is optional, the default value is infered from [format](#format). When _format_ is `"commonjs"` default is `"node"`, otherwise it is `"importmap'`.
+_minify_ is a boolean controlling if build files will be minified to save bytes. When enabled js, css, html, importmap, json and svg files are minified.
 
-| Value         | Description                                                                     |
-| ------------- | ------------------------------------------------------------------------------- |
-| `"importmap"` | import are resolved by standard import resolution, the one used by web browsers |
-| `"node"`      | imports are resolved by Node.js module resolution                               |
+_minify_ is optional.
+
+```js
+import { buildProject } from "@jsenv/core"
+
+await buildProject({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  format: "esmodule",
+  minify: true,
+})
+```
 
 ## Shared parameters
 
