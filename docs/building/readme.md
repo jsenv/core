@@ -78,7 +78,7 @@ _format_ is **required**. It must be `"esmodule"`, `"systemjs"`, `"commonjs"` or
 
 _importResolutionMethod_ is a string controlling how import will be resolved.
 
-_importResolutionMethod_ is optional. The default is `"importmap'` but becomes `"node"` when [format](#format) is `"commonjs"`.
+_importResolutionMethod_ is optional. The default is `"importmap"` or `"node"` when [format](#format) is `"commonjs"`.
 
 | Value         | Description                                                                     |
 | ------------- | ------------------------------------------------------------------------------- |
@@ -91,15 +91,23 @@ _externalImportSpecifiers_ is an array of string representing imports that will 
 
 _externalImportSpecifiers_ is optional.
 
-To better understand this let's assume your source files contains the following import.
+For example, you have a file with the following import:
 
 ```js
-import { answer } from "foo"
+import { value } from "foo"
 
-export const ask = () => answer
+export const getValue = () => value
 ```
 
-If _externalImportSpecifiers_ contains `"foo"` the generated files will keep that import untouched. Depending on _format_ the generated code differs as shown below:
+And you mark `"foo"` as external using _externalImportSpecifiers_:
+
+```js
+await buildProject({
+  externalImportSpecifiers: ["foo"],
+})
+```
+
+The code generated during the build depends on _format_ as shown below:
 
 <table>
   <thead>
