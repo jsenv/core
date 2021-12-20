@@ -119,7 +119,7 @@ To read more about testing in jsenv, check [jsenv test runner documentation](./d
 
 # Dev server overview
 
-You have an html file that you want to open in a browser on your machine.
+You want to execute the following _main.html_ file in a browser.
 
 ```html
 <!DOCTYPE html>
@@ -145,11 +145,11 @@ npm install --save-dev @jsenv/core
 ```js
 import { startDevServer } from "@jsenv/core"
 
-startDevServer({
+await startDevServer({
   projectDirectoryUrl: new URL("./", import.meta.url),
   explorableConfig: {
     source: {
-      "**/*.html": true,
+      "./*.html": true,
     },
   },
   port: 3456,
@@ -336,9 +336,7 @@ Jsenv configuration is done in [jsenv.config.mjs](#jsenvconfigmjs) and [babel.co
 
 ## jsenv.config.mjs
 
-Jsenv codebase usually puts configuration in a top level file named _jsenv.config.mjs_.
-
-It's recommended to use the following _jsenv.config.mjs_
+We recommend to put configuration in a top level file named _jsenv.config.mjs_ like the one below:
 
 ```js
 /*
