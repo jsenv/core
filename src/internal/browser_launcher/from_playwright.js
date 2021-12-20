@@ -45,6 +45,7 @@ export const createRuntimeFromPlaywright = ({
     stopOnExit = true,
     ignoreHTTPSErrors = true,
     stopAfterAllExecutionCallbackList,
+    forceCompilation,
   }) => {
     const stopCallbackList = createCallbackListNotifiedOnce()
     const stoppedCallbackList = createCallbackListNotifiedOnce()
@@ -139,6 +140,7 @@ export const createRuntimeFromPlaywright = ({
 
       coveragePlaywrightAPIAvailable,
       transformErrorHook,
+      forceCompilation,
     })
 
     return {
@@ -272,6 +274,7 @@ const createExecuteHook = ({
 
   coveragePlaywrightAPIAvailable,
   transformErrorHook,
+  forceCompilation,
 }) => {
   const execute = async ({ signal, fileRelativeUrl }) => {
     const executeOperation = Abort.startOperation()
@@ -294,6 +297,7 @@ const createExecuteHook = ({
       coveragePlaywrightAPIAvailable,
       coverageIgnorePredicate,
       transformErrorHook,
+      forceCompilation,
     })
     return result
   }

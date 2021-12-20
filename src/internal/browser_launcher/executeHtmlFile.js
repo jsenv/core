@@ -30,6 +30,7 @@ export const executeHtmlFile = async (
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
     transformErrorHook,
+    forceCompilation,
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
@@ -66,7 +67,7 @@ export const executeHtmlFile = async (
     let executionResult
     const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
     executeOperation.throwIfAborted()
-    if (canAvoidCompilation) {
+    if (canAvoidCompilation && !forceCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
         compileServerOrigin,
