@@ -61,7 +61,7 @@ export const countDogs = (animals) => {
 </html>
 ```
 
-2 - Create _execute_test_plan.mjs_
+2 - Create _test.mjs_
 
 ```js
 import {
@@ -70,7 +70,7 @@ import {
   firefoxTabRuntime,
 } from "@jsenv/core"
 
-executeTestPlan({
+await executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./animals.test.html": {
@@ -94,24 +94,24 @@ npx playwright install-deps
 npx playwright install
 ```
 
-4 - Run _execute_test_plan.mjs_ with Node.js
+4 - Run _test.mjs_ with Node.js
 
 ```console
-> node ./execute_test_plan.mjs
+> node ./test.mjs
 
 ✔ execution 1 of 2 completed (all completed)
 file: animals.test.html
-runtime: chromium/82.0.4057.0
-duration: 1.2 seconds
+runtime: chromium/97.0.4666.0
+duration: 0.45 seconds
 
 ✔ execution 2 of 2 completed (all completed)
 file: animals.test.html
-runtime: firefox/73.0b13
-duration: 2.4 seconds
+runtime: firefox/93.0
+duration: 0.81 seconds
 
 -------------- summary -----------------
 2 executions: all completed
-total duration: 3.6 seconds
+total duration: 1.2 seconds
 ----------------------------------------
 ```
 
