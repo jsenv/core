@@ -5,11 +5,9 @@ import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/babel_p
 import {
   getMinimalBabelPluginMap,
   babelPluginsFromBabelPluginMap,
-  extractSyntaxBabelPluginMap,
 } from "@jsenv/core/src/internal/compiling/babel_plugins.js"
 import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compiling/babel_plugin_import_metadata.js"
 
-import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
@@ -28,7 +26,6 @@ export const jsenvTransform = async ({
 
   babelHelpersInjectionAsImport,
   allowTopLevelAwait,
-  transformTopLevelAwait,
   transformGenerator,
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
@@ -147,55 +144,11 @@ export const jsenvTransform = async ({
     "import-metadata": [babelPluginImportMetadata],
   }
 
-  const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
-
-  if (
-    moduleOutFormat === "systemjs" &&
-    transformTopLevelAwait &&
-    asyncPluginName
-  ) {
-    const babelPluginMapWithoutAsync = {
-      ...babelPluginMap,
-      "proposal-dynamic-import": [proposalDynamicImport],
-      "transform-modules-systemjs": [transformModulesSystemJs],
-    }
-    delete babelPluginMapWithoutAsync[asyncPluginName]
-
-    // put body inside something like (async () => {})()
-    const result = await babelTransform({
-      ast,
-      code,
-      options: {
-        ...options,
-        plugins: babelPluginsFromBabelPluginMap(babelPluginMapWithoutAsync),
-      },
-    })
-
-    // we need to retranspile the await keywords now wrapped
-    // inside Systemjs function.
-    // They are ignored, at least by transform-async-to-promises
-    // see https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/26
-    const { babelSyntaxPluginMap } = extractSyntaxBabelPluginMap(babelPluginMap)
-    const finalResult = await babelTransform({
-      // ast: result.ast,
-      code: result.code,
-      options: {
-        ...options,
-        // about inputSourceMap see
-        // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
-        // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
-        inputSourceMap: result.map,
-        plugins: babelPluginsFromBabelPluginMap({
-          ...babelSyntaxPluginMap,
-          [asyncPluginName]: babelPluginMap[asyncPluginName],
-        }),
-      },
-    })
-
-    return {
-      ...result,
-      ...finalResult,
-      metadata: { ...result.metadata, ...finalResult.metadata },
+  if (allowTopLevelAwait) {
+    const asyncToPromise = babelPluginMap["transform-async-to-promises"]
+    if (asyncToPromise) {
+      asyncToPromise.options.topLevelAwait =
+        moduleOutFormat === "systemjs" ? "return" : "simple"
     }
   }
 

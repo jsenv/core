@@ -34,17 +34,24 @@ module.exports = (
     require("@babel/plugin-proposal-optional-catch-binding"),
     require("@babel/plugin-proposal-optional-chaining"),
     require("@babel/plugin-proposal-unicode-property-regex"),
-    (...args) => {
-      // enforce babel-plugin-transform-async-to-promises to return a name
-      // so that when jsenv uses loadOptionsFromFile it can know which babel plugin
-      // we are talking about
-      const transformAsyncToPromisesFactory = require("babel-plugin-transform-async-to-promises")
-      const transformAsyncToPromises = transformAsyncToPromisesFactory(...args)
-      return {
-        name: "transform-async-to-promises",
-        ...transformAsyncToPromises,
-      }
-    },
+    [
+      (...args) => {
+        // enforce babel-plugin-transform-async-to-promises to return a name
+        // so that when jsenv uses loadOptionsFromFile it can know which babel plugin
+        // we are talking about
+        const transformAsyncToPromisesFactory = require("babel-plugin-transform-async-to-promises")
+        const transformAsyncToPromises = transformAsyncToPromisesFactory(
+          ...args,
+        )
+        return {
+          name: "transform-async-to-promises",
+          ...transformAsyncToPromises,
+        }
+      },
+      {
+        topLevelAwait: "simple",
+      },
+    ],
     require("@babel/plugin-transform-arrow-functions"),
     require("@babel/plugin-transform-block-scoped-functions"),
     require("@babel/plugin-transform-block-scoping"),
