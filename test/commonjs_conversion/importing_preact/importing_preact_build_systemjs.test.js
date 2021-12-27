@@ -63,9 +63,9 @@ const sourcemapBuildRelativeUrl = `${mainJsBuildRelativeUrl}.map`
     sources: [
       `${buildRelativeParts}helpers/babel/typeof/typeof.js`,
       `${buildRelativeParts}node_modules/preact/src/util.js`,
-      `${buildRelativeParts}node_modules/preact/src/constants.js`,
       `${buildRelativeParts}node_modules/preact/src/options.js`,
       `${buildRelativeParts}node_modules/preact/src/create-element.js`,
+      `${buildRelativeParts}node_modules/preact/src/constants.js`,
       `${buildRelativeParts}node_modules/preact/src/diff/catch-error.js`,
       `${buildRelativeParts}node_modules/preact/src/component.js`,
       "../../importing_preact.js",
