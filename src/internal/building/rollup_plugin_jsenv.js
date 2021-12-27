@@ -254,7 +254,10 @@ export const createRollupPlugins = async ({
         projectDirectoryUrl,
         babelPluginMap,
         babelHelpersInjectionAsImport: false,
-        moduleOutFormat: format,
+        moduleOutFormat:
+          // pass undefined when format is "systemjs" to avoid
+          // re-wrapping the code in systemjs format
+          format === "systemjs" ? undefined : format,
       })
       code = result.code
       map = result.map
@@ -1173,10 +1176,12 @@ export const createRollupPlugins = async ({
           !file.isEntry
 
         if (file.url in inlineModuleScripts && format === "systemjs") {
-          const magicString = new MagicString(file.code)
+          const code = file.code
+          const systemRegisterIndex = code.indexOf("System.register([")
+          const magicString = new MagicString(code)
           magicString.overwrite(
-            0,
-            "System.register([".length,
+            systemRegisterIndex,
+            systemRegisterIndex + "System.register([".length,
             `System.register("${fileName}", [`,
           )
           file.code = magicString.toString()

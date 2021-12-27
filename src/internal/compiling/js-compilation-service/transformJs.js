@@ -11,7 +11,7 @@ export const transformJs = async ({
   babelPluginMap,
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
-  babelHelpersInjectionAsImport = true,
+  babelHelpersInjectionAsImport = moduleOutFormat === "esmodule",
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformGenerator = true,
