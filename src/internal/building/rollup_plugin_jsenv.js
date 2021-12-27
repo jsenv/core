@@ -17,6 +17,7 @@ import {
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { require } from "@jsenv/core/src/internal/require.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
@@ -246,14 +247,18 @@ export const createRollupPlugins = async ({
     name: "jsenv_transform_rollup_helpers",
     async renderChunk(code, chunk) {
       let map = chunk.map
+
       const result = await transformJs({
         code,
         url: chunk.facadeModuleId
           ? asOriginalUrl(chunk.facadeModuleId)
           : resolveUrl(chunk.fileName, buildDirectoryUrl),
         projectDirectoryUrl,
-        babelPluginMap,
+        babelPluginMap: {
+          "transform-async-to-promises": require("babel-plugin-transform-async-to-promises"),
+        },
         babelHelpersInjectionAsImport: false,
+        transformGenerator: false, // rollup do inject generator
         moduleOutFormat:
           // pass undefined when format is "systemjs" to avoid
           // re-wrapping the code in systemjs format
