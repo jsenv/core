@@ -46,7 +46,7 @@ const compilationResult = buildToCompilationResult(build, {
 const sourceMap = JSON.parse(compilationResult.assetsContent[0])
 const sourceMapConsumer = await new SourceMapConsumer(sourceMap)
 const actual = sourceMapConsumer.originalPositionFor({
-  line: 6,
+  line: 8,
   column: 0,
   bias: 2,
 })
