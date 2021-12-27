@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -33,9 +33,18 @@ const { namespace } = await browserImportSystemJsBuild({
   testDirectoryRelativeUrl,
   mainRelativeUrl: `./${mainJsBuildRelativeUrl}`,
 })
+const fileContent = await readFile(
+  new URL(`./dist/systemjs/${mainJsBuildRelativeUrl}`, import.meta.url),
+)
 
 {
-  const actual = namespace
-  const expected = { default: 42 }
+  const actual = {
+    containsAsync: fileContent.includes("async function"),
+    namespace,
+  }
+  const expected = {
+    containsAsync: false,
+    namespace: { default: 42 },
+  }
   assert({ actual, expected })
 }

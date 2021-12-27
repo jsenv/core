@@ -17,6 +17,7 @@ import {
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
@@ -239,6 +240,28 @@ export const createRollupPlugins = async ({
   let minifyHtml
 
   const rollupPlugins = []
+  // rollup may add code that is not supported by the runtime (such as async/await)
+  // so we "have" to re-transform the output
+  rollupPlugins.push({
+    name: "jsenv_transform_rollup_helpers",
+    async renderChunk(code, chunk) {
+      let map = chunk.map
+      const result = await transformJs({
+        code,
+        url: chunk.facadeModuleId
+          ? asOriginalUrl(chunk.facadeModuleId)
+          : resolveUrl(chunk.fileName, buildDirectoryUrl),
+        projectDirectoryUrl,
+        babelPluginMap,
+      })
+      code = result.code
+      map = result.map
+      return {
+        code,
+        map,
+      }
+    },
+  })
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {
@@ -281,9 +304,6 @@ export const createRollupPlugins = async ({
           map,
           ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         })
-        // TODO here: apply async/await transformation (and more)
-        // because rollup may rely on things not supported by the runtime
-        // (such as async/await)
 
         code = result.code
         map = result.map
