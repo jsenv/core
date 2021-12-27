@@ -10,10 +10,8 @@ Jsenv integrates naturally with standard html, css and js. It can be configured 
 
 # Jsenv iconic features
 
-- Relies web standards
-  - Dispensable by default: as long as your code use only standards, jsenv can be removed and code still runs.
-  - Compiles when mandatory: if code can be executed without compilation, source files are used.
-- Test files and regular files have more in common. They are easier to understand and debug.
+- Make test files simple
+- Compiles only when mandatory
 - Great developer experience with explicit and coherent apis
 
 ## Web standards used by jsenv
