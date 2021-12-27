@@ -143,6 +143,7 @@ export const buildUsingRollup = async ({
       logger,
 
       rollupPlugins,
+      babelPluginMap,
       format,
       globals,
       globalName,
@@ -248,6 +249,7 @@ const useRollup = async ({
   buildOperation,
   logger,
   rollupPlugins,
+  babelPluginMap,
   format,
   globals,
   globalName,
@@ -318,9 +320,13 @@ const useRollup = async ({
   const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
-    // we could put prefConst to true by checking 'transform-block-scoping'
-    // presence in babelPluginMap
-    preferConst: false,
+    // https://rollupjs.org/guide/en/#outputgeneratedcode
+    generatedCode: {
+      arrowFunctions: !babelPluginMap["transform-arrow-functions"],
+      constBindings: !babelPluginMap["transform-block-scoping"],
+      objectShorthand: !babelPluginMap["transform-shorthand-properties"],
+      reservedNamesAsProps: !babelPluginMap["transform-reserved-words"],
+    },
     // https://rollupjs.org/guide/en#output-dir
     dir: urlToFileSystemPath(buildDirectoryUrl),
     // https://rollupjs.org/guide/en#output-format
