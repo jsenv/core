@@ -1,7 +1,7 @@
 (function () {
   'use strict';
-
   /* eslint-env browser */
+
   var createEventSourceConnection = function createEventSourceConnection(eventSourceUrl) {
     var events = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -212,8 +212,9 @@
       emitter.removeEventListener(event, callback);
     };
   };
-
   /* eslint-env browser */
+
+
   var isLivereloadEnabled = function isLivereloadEnabled() {
     var value = window.localStorage.hasOwnProperty("livereload");
 
@@ -223,11 +224,13 @@
 
     return true;
   };
+
   var setLivereloadPreference = function setLivereloadPreference(value) {
     window.localStorage.setItem("livereload", value ? "1" : "0");
   };
-
   /* eslint-env browser */
+
+
   var fileChanges = {};
 
   var filechangeCallback = function filechangeCallback() {};
@@ -235,6 +238,7 @@
   var getFileChanges = function getFileChanges() {
     return fileChanges;
   };
+
   var addFileChange = function addFileChange(_ref) {
     var file = _ref.file,
         eventType = _ref.eventType;
@@ -246,9 +250,11 @@
       filechangeCallback();
     }
   };
+
   var setFileChangeCallback = function setFileChangeCallback(callback) {
     filechangeCallback = callback;
   };
+
   var reloadIfNeeded = function reloadIfNeeded() {
     var customReloads = [];
     var cssReloads = [];
@@ -305,8 +311,9 @@
   var reloadPage = function reloadPage() {
     window.parent.location.reload(true);
   };
-
   /* eslint-env browser */
+
+
   var eventsourceConnection = createEventSourceConnection(document.location.href, {
     "file-added": function fileAdded(_ref) {
       var data = _ref.data;
@@ -350,7 +357,6 @@
     isLivereloadEnabled: isLivereloadEnabled,
     setLivereloadPreference: setLivereloadPreference
   };
-
 })();
 
 //# sourceMappingURL=event_source_client-9f14c8b9.js.map

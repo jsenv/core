@@ -1907,7 +1907,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-7aa01366.js"
+    "./toolbar.main.js": "./toolbar.main-eb8acf83.js"
   }
 }</script>
     <script>
@@ -1915,11 +1915,11 @@ html[data-toolbar-visible] #toolbar-trigger {
       // and a promise the toolbar injector can listen to act on the toolbar
       // or we could just consider all communication should pass by postmessage
     </script>
-    <script>System.register([], (function () {
+    <script>System.register([], function () {
   'use strict';
-  return {
-    execute: (function () {
 
+  return {
+    execute: function () {
       /* eslint-disable no-eq-null, eqeqeq */
       function arrayLikeToArray(arr, len) {
         if (len == null || len > arr.length) len = arr.length;
@@ -1932,15 +1932,16 @@ html[data-toolbar-visible] #toolbar-trigger {
         return arr2;
       }
 
-      var arrayWithoutHoles = (function (arr) {
+      var arrayWithoutHoles = function (arr) {
         if (Array.isArray(arr)) return arrayLikeToArray(arr);
-      });
+      };
 
       function _iterableToArray(iter) {
         if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
       }
-
       /* eslint-disable consistent-return */
+
+
       function unsupportedIterableToArray(o, minLen) {
         if (!o) return;
         if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -1950,13 +1951,13 @@ html[data-toolbar-visible] #toolbar-trigger {
         if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
       }
 
-      var nonIterableSpread = (function () {
+      var nonIterableSpread = function () {
         throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-      });
+      };
 
-      var _toConsumableArray = (function (arr) {
+      var _toConsumableArray = function (arr) {
         return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-      });
+      };
 
       var nativeTypeOf = function nativeTypeOf(obj) {
         return typeof obj;
@@ -2089,7 +2090,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         return relativeUrl;
       };
 
-      var _defineProperty = (function (obj, key, value) {
+      var _defineProperty = function (obj, key, value) {
         // Shortcircuit the slow defineProperty path when possible.
         // We are trying to avoid issues where setters defined on the
         // prototype cause side effects under the fast path of simple
@@ -2107,7 +2108,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return obj;
-      });
+      };
 
       function ownKeys(object, enumerableOnly) {
         var keys = Object.keys(object);
@@ -2147,7 +2148,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         return target;
       }
 
-      var objectWithoutPropertiesLoose = (function (source, excluded) {
+      var objectWithoutPropertiesLoose = function (source, excluded) {
         if (source === null) return {};
         var target = {};
         var sourceKeys = Object.keys(source);
@@ -2161,9 +2162,9 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return target;
-      });
+      };
 
-      var _objectWithoutProperties = (function (source, excluded) {
+      var _objectWithoutProperties = function (source, excluded) {
         if (source === null) return {};
         var target = objectWithoutPropertiesLoose(source, excluded);
         var key;
@@ -2181,9 +2182,10 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return target;
-      });
-
+      };
       /* eslint-env browser */
+
+
       function _await$5(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
@@ -2795,6 +2797,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           disableIframeOverflowOnParentWindow();
         }
       };
+
       var iframeOverflowEnabled = false;
 
       var enableIframeOverflowOnParentWindow = function enableIframeOverflowOnParentWindow() {
@@ -2841,12 +2844,15 @@ html[data-toolbar-visible] #toolbar-trigger {
           return iframe.contentWindow === window;
         });
       };
+
       var forceHideElement = function forceHideElement(element) {
         element.setAttribute("data-force-hide", "");
       };
+
       var removeForceHideElement = function removeForceHideElement(element) {
         element.removeAttribute("data-force-hide");
       };
+
       var setStyles = function setStyles(element, styles) {
         var elementStyle = element.style;
         var restoreStyles = Object.keys(styles).map(function (styleName) {
@@ -2873,12 +2879,15 @@ html[data-toolbar-visible] #toolbar-trigger {
           });
         };
       };
+
       var toolbarSectionIsActive = function toolbarSectionIsActive(element) {
         return element.hasAttribute("data-active");
       };
+
       var activateToolbarSection = function activateToolbarSection(element) {
         element.setAttribute("data-active", "");
       };
+
       var deactivateToolbarSection = function deactivateToolbarSection(element) {
         element.removeAttribute("data-active");
       };
@@ -2946,9 +2955,9 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
 
         return stop;
-      };
+      }; // handle data-last-interaction attr on html (focusring)
 
-      // handle data-last-interaction attr on html (focusring)
+
       window.addEventListener("mousedown", function (mousedownEvent) {
         if (mousedownEvent.defaultPrevented) {
           return;
@@ -2992,23 +3001,28 @@ html[data-toolbar-visible] #toolbar-trigger {
           showTooltip(element);
         }
       };
+
       var hideTooltip = function hideTooltip(element) {
         element.removeAttribute("data-tooltip-visible");
         element.removeAttribute("data-tooltip-auto-visible");
         updateIframeOverflowOnParentWindow();
       };
+
       var showTooltip = function showTooltip(element) {
         element.setAttribute("data-tooltip-visible", "");
         updateIframeOverflowOnParentWindow();
       };
+
       var autoShowTooltip = function autoShowTooltip(element) {
         element.setAttribute("data-tooltip-auto-visible", "");
         updateIframeOverflowOnParentWindow();
       };
+
       var removeAutoShowTooltip = function removeAutoShowTooltip(element) {
         element.removeAttribute("data-tooltip-auto-visible");
         updateIframeOverflowOnParentWindow();
       };
+
       var hideAllTooltip = function hideAllTooltip() {
         var elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"));
         elementsWithTooltip.forEach(function (elementWithTooltip) {
@@ -3032,10 +3046,12 @@ html[data-toolbar-visible] #toolbar-trigger {
       var settingsAreVisible = function settingsAreVisible() {
         return toolbarSectionIsActive(document.querySelector("#settings"));
       };
+
       var hideSettings = function hideSettings() {
         deactivateToolbarSection(document.querySelector("#settings"));
         updateIframeOverflowOnParentWindow();
       };
+
       var showSettings = function showSettings() {
         activateToolbarSection(document.querySelector("#settings"));
         updateIframeOverflowOnParentWindow();
@@ -3137,6 +3153,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       var notificationAvailable = typeof window.Notification === "function";
       var notificationPreference = createPreference("notification");
       var arrayOfOpenedNotifications = [];
+
       var renderToolbarNotification = function renderToolbarNotification() {
         var notifCheckbox = document.querySelector("#toggle-notifs");
 
@@ -3189,6 +3206,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         updatePermission();
       };
+
       var notifyExecutionResult = function notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution) {
         var notificationEnabled = getNotificationPreference();
         if (!notificationEnabled) return;
@@ -3287,10 +3305,10 @@ html[data-toolbar-visible] #toolbar-trigger {
       }) : function () {
         return Promise.resolve("default");
       };
-
       var DARK_THEME = "dark";
       var LIGHT_THEME = "light";
       var themePreference = createPreference("theme");
+
       var renderToolbarTheme = function renderToolbarTheme() {
         var theme = getThemePreference();
         var checkbox = document.querySelector("#checkbox-dark-theme");
@@ -3322,6 +3340,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       };
 
       var animationPreference = createPreference("animation");
+
       var renderToolbarAnimation = function renderToolbarAnimation() {
         var animCheckbox = document.querySelector("#toggle-anims");
         animCheckbox.checked = getAnimationPreference();
@@ -3496,10 +3515,12 @@ html[data-toolbar-visible] #toolbar-trigger {
       //   },
       // })
 
+
       var WINDOW_MEDIUM_WIDTH = 570;
+
       var renderExecutionInToolbar = function renderExecutionInToolbar(_ref) {
-        var executedFileRelativeUrl = _ref.executedFileRelativeUrl;
-        // reset file execution indicator ui
+        var executedFileRelativeUrl = _ref.executedFileRelativeUrl; // reset file execution indicator ui
+
         applyExecutionIndicator();
         removeForceHideElement(document.querySelector("#execution-indicator")); // apply responsive design on fileInput if needed + add listener on resize screen
 
@@ -3753,12 +3774,13 @@ html[data-toolbar-visible] #toolbar-trigger {
           return highestVersion === version;
         });
       };
-
       /*
        * Prefer window.navigator.userAgentData before resorting to
        * window.navigator.userAgent because of
        * https://blog.chromium.org/2021/09/user-agent-reduction-origin-trial-and-dates.html
        */
+
+
       var detectFromUserAgentData = function detectFromUserAgentData() {
         var userAgentData = window.navigator.userAgentData;
 
@@ -3790,10 +3812,12 @@ html[data-toolbar-visible] #toolbar-trigger {
         var match = string.match(regexp);
         return match && match.length > 0 ? match[1] || undefined : undefined;
       };
+
       var secondMatch = function secondMatch(regexp, string) {
         var match = string.match(regexp);
         return match && match.length > 1 ? match[2] || undefined : undefined;
       };
+
       var userAgentToVersion = function userAgentToVersion(userAgent) {
         return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
       };
@@ -3926,6 +3950,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         return null;
       }; // TODO
 
+
       var detectIOS = function detectIOS() {
         return navigatorToBrowser(window.navigator);
       };
@@ -3949,9 +3974,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return null;
-      };
+      }; // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
-      // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
       var detectorCompose = function detectorCompose(detectors) {
         return function () {
@@ -3974,6 +3998,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 
       var detector = detectorCompose([detectFromUserAgentData, // keep this first
       detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
+
       var detectBrowser = function detectBrowser() {
         var _ref = detector() || {},
             _ref$name = _ref.name,
@@ -4170,10 +4195,10 @@ html[data-toolbar-visible] #toolbar-trigger {
       var detectSupportedFeatures = _async$1(function (_ref4) {
         var featuresReport = _ref4.featuresReport,
             failFastOnFeatureDetection = _ref4.failFastOnFeatureDetection,
-            inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
-        // start testing importmap support first and not in paralell
+            inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML; // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
+
         return _await(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
@@ -4327,6 +4352,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       }; // const cssImportAssertions = await supportsCssImportAssertions()
       // console.log({ cssImportAssertions })
 
+
       var renderCompilationInToolbar = function renderCompilationInToolbar(_ref) {
         var compileGroup = _ref.compileGroup;
         var browserSupportRootNode = document.querySelector("#browser_support");
@@ -4454,16 +4480,15 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         var customCompilerCount = customCompilerPatterns.length;
-
-        if (customCompilerCount === 0) ; else {
+        if (customCompilerCount === 0) ;else {
           parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerPatterns));
         }
-
         return "\n- ".concat(parts.join("\n- "));
       };
 
       var livereloadingAvailableOnServer = false;
       var parentEventSourceClient = window.parent.__jsenv_event_source_client__;
+
       var initToolbarEventSource = function initToolbarEventSource(_ref) {
         var livereloading = _ref.livereloading;
         removeForceHideElement(document.querySelector("#eventsource-indicator"));
@@ -4540,6 +4565,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       };
 
       var WINDOW_SMALL_WIDTH = 420;
+
       var makeToolbarResponsive = function makeToolbarResponsive() {
         // apply responsive design on toolbar icons if needed + add listener on resize screen
         // ideally we should listen breakpoint once, for now restore toolbar
@@ -4887,12 +4913,11 @@ html[data-toolbar-visible] #toolbar-trigger {
         hideToolbar();
       });
       sendEventToParent("toolbar_ready");
-
-    })
+    }
   };
-}));
+});
 
-//# sourceMappingURL=toolbar.main-7aa01366.js.map</script>
+//# sourceMappingURL=toolbar.main-eb8acf83.js.map</script>
   
 
 </body></html>
