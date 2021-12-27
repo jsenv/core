@@ -17,7 +17,6 @@ import {
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
-import { require } from "@jsenv/core/src/internal/require.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
@@ -241,37 +240,39 @@ export const createRollupPlugins = async ({
   let minifyHtml
 
   const rollupPlugins = []
-  // rollup may add code that is not supported by the runtime (such as async/await)
-  // so we "have" to re-transform the output
-  rollupPlugins.push({
-    name: "jsenv_transform_rollup_helpers",
-    async renderChunk(code, chunk) {
-      let map = chunk.map
-
-      const result = await transformJs({
-        code,
-        url: chunk.facadeModuleId
-          ? asOriginalUrl(chunk.facadeModuleId)
-          : resolveUrl(chunk.fileName, buildDirectoryUrl),
-        projectDirectoryUrl,
-        babelPluginMap: {
-          "transform-async-to-promises": require("babel-plugin-transform-async-to-promises"),
-        },
-        babelHelpersInjectionAsImport: false,
-        transformGenerator: false, // rollup do inject generator
-        moduleOutFormat:
-          // pass undefined when format is "systemjs" to avoid
-          // re-wrapping the code in systemjs format
-          format === "systemjs" ? undefined : format,
-      })
-      code = result.code
-      map = result.map
-      return {
-        code,
-        map,
-      }
-    },
-  })
+  // rollup add async/await that might be unsupported by the runtime
+  // in that case we have to transform the rollup output
+  if (babelPluginMap["transform-async-to-promises"]) {
+    rollupPlugins.push({
+      name: "jsenv_fix_async_await",
+      async renderChunk(code, chunk) {
+        let map = chunk.map
+        const result = await transformJs({
+          code,
+          url: chunk.facadeModuleId
+            ? asOriginalUrl(chunk.facadeModuleId)
+            : resolveUrl(chunk.fileName, buildDirectoryUrl),
+          projectDirectoryUrl,
+          babelPluginMap: {
+            "transform-async-to-promises":
+              babelPluginMap["transform-async-to-promises"],
+          },
+          babelHelpersInjectionAsImport: false,
+          transformGenerator: false,
+          moduleOutFormat:
+            // pass undefined when format is "systemjs" to avoid
+            // re-wrapping the code in systemjs format
+            format === "systemjs" ? undefined : format,
+        })
+        code = result.code
+        map = result.map
+        return {
+          code,
+          map,
+        }
+      },
+    })
+  }
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {

@@ -87,7 +87,6 @@ const htmlString = await readFile(htmlBuildUrl)
     srcAttribute: undefined,
     forceInlineAttribute: undefined,
     textNodeValue: `// eslint-disable-next-line import/no-unresolved
-
 {
   var answer = 42;
   console.log(answer);
