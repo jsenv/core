@@ -48,7 +48,7 @@ import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
 import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildStats } from "./build_stats.js"
 
-export const createJsenvRollupPlugin = async ({
+export const createRollupPlugins = async ({
   buildOperation,
   logger,
 
@@ -72,7 +72,6 @@ export const createJsenvRollupPlugin = async ({
   format,
   systemJsUrl,
   babelPluginMap,
-  transformTopLevelAwait,
   node,
   importAssertionsSupport,
 
@@ -239,8 +238,7 @@ export const createJsenvRollupPlugin = async ({
   let minifyJs
   let minifyHtml
 
-  const jsenvRollupPlugin = {}
-
+  const rollupPlugins = []
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {
@@ -271,27 +269,32 @@ export const createJsenvRollupPlugin = async ({
       return methodHooks.minifyHtml(html, minifyHtmlOptions)
     }
 
-    jsenvRollupPlugin.renderChunk = async (code, chunk) => {
-      let map = chunk.map
-      const result = await minifyJs({
-        url: chunk.facadeModuleId
-          ? asOriginalUrl(chunk.facadeModuleId)
-          : resolveUrl(chunk.fileName, buildDirectoryUrl),
-        code,
-        map,
-        ...(format === "global" ? { toplevel: false } : { toplevel: true }),
-      })
+    rollupPlugins.push({
+      name: "jsenv_minifier",
+      async renderChunk(code, chunk) {
+        let map = chunk.map
+        const result = await minifyJs({
+          url: chunk.facadeModuleId
+            ? asOriginalUrl(chunk.facadeModuleId)
+            : resolveUrl(chunk.fileName, buildDirectoryUrl),
+          code,
+          map,
+          ...(format === "global" ? { toplevel: false } : { toplevel: true }),
+        })
+        // TODO here: apply async/await transformation (and more)
+        // because rollup may rely on things not supported by the runtime
+        // (such as async/await)
 
-      code = result.code
-      map = result.map
-      return {
-        code,
-        map,
-      }
-    }
+        code = result.code
+        map = result.map
+        return {
+          code,
+          map,
+        }
+      },
+    })
   }
-
-  Object.assign(jsenvRollupPlugin, {
+  rollupPlugins.unshift({
     name: "jsenv",
 
     async buildStart() {
@@ -1105,8 +1108,8 @@ export const createJsenvRollupPlugin = async ({
 
     async generateBundle(outputOptions, rollupResult) {
       const jsChunks = {}
-      // rollupResult can be mutated by late asset emission
-      // howeverl late chunk (js module) emission is not possible
+      // To keep in mind: rollupResult object can be mutated by late asset emission
+      // however late chunk (js module) emission is not possible
       // as rollup rightfully prevent late js emission
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
@@ -1136,10 +1139,6 @@ export const createJsenvRollupPlugin = async ({
           }
           jsChunks[fileName] = fileCopy
         }
-      })
-      await ensureTopLevelAwaitTranspilationIfNeeded({
-        format,
-        transformTopLevelAwait,
       })
 
       const jsModuleBuild = {}
@@ -1366,7 +1365,7 @@ export const createJsenvRollupPlugin = async ({
   }
 
   return {
-    jsenvRollupPlugin,
+    rollupPlugins,
     getLastErrorMessage: () => lastErrorMessage,
     getResult: () => {
       return {
@@ -1383,26 +1382,6 @@ export const createJsenvRollupPlugin = async ({
     asOriginalUrl,
     asProjectUrl,
     rollupGetModuleInfo,
-  }
-}
-
-const ensureTopLevelAwaitTranspilationIfNeeded = async ({
-  format,
-  transformTopLevelAwait,
-}) => {
-  if (!transformTopLevelAwait) {
-    return
-  }
-
-  if (format === "esmodule") {
-    // transform-async-to-promises won't be able to transform top level await
-    // for "esmodule", so it would be useless
-    return
-  }
-
-  if (format === "systemjs") {
-    // top level await is an async function for systemjs
-    return
   }
 }
 
