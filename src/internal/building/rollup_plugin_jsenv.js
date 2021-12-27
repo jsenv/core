@@ -253,6 +253,8 @@ export const createRollupPlugins = async ({
           : resolveUrl(chunk.fileName, buildDirectoryUrl),
         projectDirectoryUrl,
         babelPluginMap,
+        babelHelpersInjectionAsImport: false,
+        moduleOutFormat: format,
       })
       code = result.code
       map = result.map
