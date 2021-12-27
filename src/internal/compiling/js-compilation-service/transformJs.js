@@ -11,7 +11,7 @@ export const transformJs = async ({
   babelPluginMap,
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
-  babelHelpersInjectionAsImport = true,
+  babelHelpersInjectionAsImport = moduleOutFormat === "esmodule",
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformGenerator = true,
@@ -32,6 +32,11 @@ export const transformJs = async ({
   }
   if (typeof url !== "string") {
     throw new TypeError(`url must be a string, got ${url}`)
+  }
+  if (babelHelpersInjectionAsImport && moduleOutFormat !== "esmodule") {
+    throw new Error(
+      `babelHelpersInjectionAsImport can be enabled only when "moduleOutFormat" is "esmodule"`,
+    )
   }
 
   const transformResult = await jsenvTransform({

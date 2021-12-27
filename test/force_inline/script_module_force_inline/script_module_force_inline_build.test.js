@@ -43,11 +43,11 @@ const { buildManifest, buildFileContents, buildInlineFileContents } =
       "main.html": "main.html",
     },
     buildFileContents: {
-      "file-02c226c4.js.map": assert.any(String),
+      "file-73d04a60.js.map": assert.any(String),
       "main.html": assert.any(String),
     },
     buildInlineFileContents: {
-      "file-02c226c4.js": assert.any(String),
+      "file-73d04a60.js": assert.any(String),
     },
   }
   assert({ actual, expected })
@@ -87,13 +87,12 @@ const htmlString = await readFile(htmlBuildUrl)
     srcAttribute: undefined,
     forceInlineAttribute: undefined,
     textNodeValue: `// eslint-disable-next-line import/no-unresolved
-
 {
   var answer = 42;
   console.log(answer);
 }
 
-//# sourceMappingURL=file-02c226c4.js.map`,
+//# sourceMappingURL=file-73d04a60.js.map`,
   }
   assert({ actual, expected })
 }

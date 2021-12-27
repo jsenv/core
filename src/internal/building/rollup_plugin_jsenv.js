@@ -17,6 +17,7 @@ import {
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
@@ -48,7 +49,7 @@ import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
 import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildStats } from "./build_stats.js"
 
-export const createJsenvRollupPlugin = async ({
+export const createRollupPlugins = async ({
   buildOperation,
   logger,
 
@@ -72,7 +73,6 @@ export const createJsenvRollupPlugin = async ({
   format,
   systemJsUrl,
   babelPluginMap,
-  transformTopLevelAwait,
   node,
   importAssertionsSupport,
 
@@ -239,8 +239,40 @@ export const createJsenvRollupPlugin = async ({
   let minifyJs
   let minifyHtml
 
-  const jsenvRollupPlugin = {}
-
+  const rollupPlugins = []
+  // rollup add async/await that might be unsupported by the runtime
+  // in that case we have to transform the rollup output
+  if (babelPluginMap["transform-async-to-promises"]) {
+    rollupPlugins.push({
+      name: "jsenv_fix_async_await",
+      async renderChunk(code, chunk) {
+        let map = chunk.map
+        const result = await transformJs({
+          code,
+          url: chunk.facadeModuleId
+            ? asOriginalUrl(chunk.facadeModuleId)
+            : resolveUrl(chunk.fileName, buildDirectoryUrl),
+          projectDirectoryUrl,
+          babelPluginMap: {
+            "transform-async-to-promises":
+              babelPluginMap["transform-async-to-promises"],
+          },
+          babelHelpersInjectionAsImport: false,
+          transformGenerator: false,
+          moduleOutFormat:
+            // pass undefined when format is "systemjs" to avoid
+            // re-wrapping the code in systemjs format
+            format === "systemjs" ? undefined : format,
+        })
+        code = result.code
+        map = result.map
+        return {
+          code,
+          map,
+        }
+      },
+    })
+  }
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {
@@ -271,27 +303,29 @@ export const createJsenvRollupPlugin = async ({
       return methodHooks.minifyHtml(html, minifyHtmlOptions)
     }
 
-    jsenvRollupPlugin.renderChunk = async (code, chunk) => {
-      let map = chunk.map
-      const result = await minifyJs({
-        url: chunk.facadeModuleId
-          ? asOriginalUrl(chunk.facadeModuleId)
-          : resolveUrl(chunk.fileName, buildDirectoryUrl),
-        code,
-        map,
-        ...(format === "global" ? { toplevel: false } : { toplevel: true }),
-      })
+    rollupPlugins.push({
+      name: "jsenv_minifier",
+      async renderChunk(code, chunk) {
+        let map = chunk.map
+        const result = await minifyJs({
+          url: chunk.facadeModuleId
+            ? asOriginalUrl(chunk.facadeModuleId)
+            : resolveUrl(chunk.fileName, buildDirectoryUrl),
+          code,
+          map,
+          ...(format === "global" ? { toplevel: false } : { toplevel: true }),
+        })
 
-      code = result.code
-      map = result.map
-      return {
-        code,
-        map,
-      }
-    }
+        code = result.code
+        map = result.map
+        return {
+          code,
+          map,
+        }
+      },
+    })
   }
-
-  Object.assign(jsenvRollupPlugin, {
+  rollupPlugins.unshift({
     name: "jsenv",
 
     async buildStart() {
@@ -1105,8 +1139,8 @@ export const createJsenvRollupPlugin = async ({
 
     async generateBundle(outputOptions, rollupResult) {
       const jsChunks = {}
-      // rollupResult can be mutated by late asset emission
-      // howeverl late chunk (js module) emission is not possible
+      // To keep in mind: rollupResult object can be mutated by late asset emission
+      // however late chunk (js module) emission is not possible
       // as rollup rightfully prevent late js emission
       Object.keys(rollupResult).forEach((fileName) => {
         const file = rollupResult[fileName]
@@ -1137,10 +1171,6 @@ export const createJsenvRollupPlugin = async ({
           jsChunks[fileName] = fileCopy
         }
       })
-      await ensureTopLevelAwaitTranspilationIfNeeded({
-        format,
-        transformTopLevelAwait,
-      })
 
       const jsModuleBuild = {}
       Object.keys(jsChunks).forEach((fileName) => {
@@ -1152,10 +1182,12 @@ export const createJsenvRollupPlugin = async ({
           !file.isEntry
 
         if (file.url in inlineModuleScripts && format === "systemjs") {
-          const magicString = new MagicString(file.code)
+          const code = file.code
+          const systemRegisterIndex = code.indexOf("System.register([")
+          const magicString = new MagicString(code)
           magicString.overwrite(
-            0,
-            "System.register([".length,
+            systemRegisterIndex,
+            systemRegisterIndex + "System.register([".length,
             `System.register("${fileName}", [`,
           )
           file.code = magicString.toString()
@@ -1366,7 +1398,7 @@ export const createJsenvRollupPlugin = async ({
   }
 
   return {
-    jsenvRollupPlugin,
+    rollupPlugins,
     getLastErrorMessage: () => lastErrorMessage,
     getResult: () => {
       return {
@@ -1383,26 +1415,6 @@ export const createJsenvRollupPlugin = async ({
     asOriginalUrl,
     asProjectUrl,
     rollupGetModuleInfo,
-  }
-}
-
-const ensureTopLevelAwaitTranspilationIfNeeded = async ({
-  format,
-  transformTopLevelAwait,
-}) => {
-  if (!transformTopLevelAwait) {
-    return
-  }
-
-  if (format === "esmodule") {
-    // transform-async-to-promises won't be able to transform top level await
-    // for "esmodule", so it would be useless
-    return
-  }
-
-  if (format === "systemjs") {
-    // top level await is an async function for systemjs
-    return
   }
 }
 

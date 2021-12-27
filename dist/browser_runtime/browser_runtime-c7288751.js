@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var _defineProperty = (function (obj, key, value) {
+  var _defineProperty = function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -19,7 +19,7 @@
     }
 
     return obj;
-  });
+  };
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -58,8 +58,9 @@
 
     return target;
   }
-
   /* eslint-disable no-eq-null, eqeqeq */
+
+
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
@@ -71,15 +72,16 @@
     return arr2;
   }
 
-  var arrayWithoutHoles = (function (arr) {
+  var arrayWithoutHoles = function (arr) {
     if (Array.isArray(arr)) return arrayLikeToArray(arr);
-  });
+  };
 
   function _iterableToArray(iter) {
     if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
   }
-
   /* eslint-disable consistent-return */
+
+
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -89,13 +91,13 @@
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
-  var nonIterableSpread = (function () {
+  var nonIterableSpread = function () {
     throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  });
+  };
 
-  var _toConsumableArray = (function (arr) {
+  var _toConsumableArray = function (arr) {
     return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-  });
+  };
 
   var createDetailedMessage = function createDetailedMessage(message) {
     var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -127,8 +129,9 @@
   };
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-
   /* eslint-env browser, node */
+
+
   var parseDataUrl = function parseDataUrl(dataUrl) {
     var afterDataProtocol = dataUrl.slice("data:".length);
     var commaIndex = afterDataProtocol.indexOf(",");
@@ -151,11 +154,13 @@
       data: afterComma
     };
   };
+
   var dataUrlToRawData = function dataUrlToRawData(_ref2) {
     var base64Flag = _ref2.base64Flag,
         data = _ref2.data;
     return base64Flag ? base64ToString(data) : data;
   };
+
   (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
     return Buffer.from(data).toString("base64");
   };
@@ -170,6 +175,7 @@
     });
     return sourceMappingUrl;
   };
+
   var javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
 
   var replaceSourceMappingUrl = function replaceSourceMappingUrl(source, regexp, callback) {
@@ -200,9 +206,11 @@
     if (secondChar !== ":") return false;
     return true;
   };
+
   var windowsFilePathToUrl = function windowsFilePathToUrl(windowsFilePath) {
     return "file:///".concat(replaceBackSlashesWithSlashes(windowsFilePath));
   };
+
   var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(string) {
     return string.replace(/\\/g, "/");
   };
@@ -299,8 +307,8 @@
       }
     }, function (_result) {
       var _exit2 = false;
-      if (_exit) return _result;
-      // Code called using eval() needs special handling
+      if (_exit) return _result; // Code called using eval() needs special handling
+
       return _invoke$6(function () {
         if (callSite.isEval()) {
           var origin = callSite.getEvalOrigin();
@@ -452,8 +460,8 @@
     var _exit3 = false;
     var resolveFile = _ref3.resolveFile,
         urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
-        onFailure = _ref3.onFailure;
-    // Most eval() calls are in this format
+        onFailure = _ref3.onFailure; // Most eval() calls are in this format
+
     var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
     return _invoke$6(function () {
       if (topLevelEvalMatch) {
@@ -474,8 +482,8 @@
       }
     }, function (_result4) {
       var _exit4 = false;
-      if (_exit3) return _result4;
-      // Parse nested eval() calls using recursion
+      if (_exit3) return _result4; // Parse nested eval() calls using recursion
+
       var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
       return _invoke$6(function () {
         if (nestedEvalMatch) {
@@ -1087,9 +1095,9 @@
         });
       }),
       resolveFile: function resolveFile(specifier) {
-        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
-        // browsers having Error.captureStrackTrace got window.URL
+        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href; // browsers having Error.captureStrackTrace got window.URL
         // and this executes only when Error.captureStackTrace exists
+
         return String(new URL(specifier, importer));
       }
     }, options));
@@ -1103,7 +1111,7 @@
     return headers;
   };
 
-  var objectWithoutPropertiesLoose = (function (source, excluded) {
+  var objectWithoutPropertiesLoose = function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -1117,9 +1125,9 @@
     }
 
     return target;
-  });
+  };
 
-  var _objectWithoutProperties = (function (source, excluded) {
+  var _objectWithoutProperties = function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -1137,9 +1145,10 @@
     }
 
     return target;
-  });
-
+  };
   /* eslint-env browser */
+
+
   function _await$7(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -1693,9 +1702,9 @@
 
   var appendSourceURL = function appendSourceURL(code, sourceURL) {
     return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
-  };
+  }; // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
 
-  // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
+
   var isComposite = function isComposite(value) {
     if (value === null) {
       return false;
@@ -1716,9 +1725,11 @@
 
   var compositeWellKnownMap = new WeakMap();
   var primitiveWellKnownMap = new Map();
+
   var getCompositeGlobalPath = function getCompositeGlobalPath(value) {
     return compositeWellKnownMap.get(value);
   };
+
   var getPrimitiveGlobalPath = function getPrimitiveGlobalPath(value) {
     return primitiveWellKnownMap.get(value);
   };
@@ -2192,11 +2203,11 @@
   var createUnknownPrototypeMessage = function createUnknownPrototypeMessage(_ref10) {
     var prototypeValue = _ref10.prototypeValue;
     return "prototype must be global, like Object.prototype, or somewhere in the value.\nprototype constructor name: ".concat(prototypeValue.constructor.name);
-  };
-
-  // be carefull because this function is mutating recipe objects inside the recipeArray.
+  }; // be carefull because this function is mutating recipe objects inside the recipeArray.
   // this is not an issue because each recipe object is not accessible from the outside
   // when used internally by uneval
+
+
   var sortRecipe = function sortRecipe(recipeArray) {
     var findInRecipePrototypeChain = function findInRecipePrototypeChain(recipe, callback) {
       var currentRecipe = recipe; // eslint-disable-next-line no-constant-condition
@@ -2268,10 +2279,10 @@
       return 1;
     });
     return recipeArrayOrdered;
-  };
-
-  // https://github.com/joliss/js-string-escape/blob/master/index.js
+  }; // https://github.com/joliss/js-string-escape/blob/master/index.js
   // http://javascript.crockford.com/remedial.html
+
+
   var escapeString = function escapeString(value) {
     var string = String(value);
     var i = 0;
@@ -2524,8 +2535,9 @@
 
     return fnWithMemoization;
   };
-
   /* eslint-env browser */
+
+
   var displayErrorInDocument = function displayErrorInDocument(error) {
     var title = "An error occured";
     var theme;
@@ -2697,8 +2709,9 @@
       }
     };
   };
-
   /* eslint-env browser */
+
+
   var _window$1 = window,
       Notification = _window$1.Notification;
 
@@ -2800,9 +2813,9 @@
     }
 
     return pathname.slice(0, slashLastIndex + 1);
-  };
+  }; // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
 
-  // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+
   var resolveUrl = function resolveUrl(specifier, baseUrl) {
     if (baseUrl) {
       if (typeof baseUrl !== "string") {
@@ -2929,6 +2942,7 @@
     });
     return mappingsSorted;
   };
+
   var sortScopes = function sortScopes(scopes) {
     var scopesSorted = {};
     Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeSpecifier) {
@@ -3295,6 +3309,7 @@
       }
     };
   }
+
   var getJavaScriptModuleResponseError = _async$4(function (response, _ref) {
     var _exit = false;
     var url = _ref.url,
@@ -3349,6 +3364,7 @@
       }))) : null;
     });
   });
+
   var getModuleDetails = function getModuleDetails(_ref2) {
     var url = _ref2.url,
         importerUrl = _ref2.importerUrl,
@@ -3371,6 +3387,7 @@
     } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
     return details;
   };
+
   var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
     var compileServerOrigin = _ref5.compileServerOrigin,
         compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
@@ -3399,6 +3416,7 @@
   //   typeof window === "object"
   //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
   //     : (text) => Buffer.from(text, "utf8").toString("base64")
+
 
   var applyDefaultExtension = function applyDefaultExtension(specifier, importer) {
     if (!importer) {
@@ -3518,8 +3536,9 @@
     }));
     return new Error(detailedMessage);
   };
-
   /* eslint-env browser */
+
+
   var _window = window,
       performance$1 = _window.performance;
 
@@ -3566,11 +3585,11 @@
   }) : _async$3(function (fn) {
     return fn();
   });
-
   /*
   * SJS 6.11.0
   * Minimal SystemJS Build
   */
+
   (function () {
     function errMsg(errCode, msg) {
       return (msg || "") + " (SystemJS https://git.io/JvFET#" + errCode + ")";
@@ -4295,8 +4314,8 @@
       return result;
     };
   })();
-
   /* eslint-env browser */
+
 
   function _await$2(value, then, direct) {
     if (direct) {
@@ -4666,7 +4685,6 @@
 
   var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
   var maybeTypes = ["Array", "Object", "Map", "Set"];
-
   /* eslint-env browser */
 
   function _await$1(value, then, direct) {
@@ -5172,7 +5190,6 @@
     executeFileUsingDynamicImport: executeFileUsingDynamicImport,
     executeFileUsingSystemJs: executeFileUsingSystemJs
   };
-
 })();
 
 //# sourceMappingURL=browser_runtime-c7288751.js.map

@@ -15,7 +15,7 @@ import {
 } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
-import { createJsenvRollupPlugin } from "./rollup_plugin_jsenv.js"
+import { createRollupPlugins } from "./rollup_plugin_jsenv.js"
 
 export const buildUsingRollup = async ({
   buildOperation,
@@ -90,12 +90,12 @@ export const buildUsingRollup = async ({
   }
 
   const {
-    jsenvRollupPlugin,
+    rollupPlugins,
     getLastErrorMessage,
     getResult,
     asOriginalUrl,
     asProjectUrl,
-  } = await createJsenvRollupPlugin({
+  } = await createRollupPlugins({
     buildOperation,
     logger,
 
@@ -142,7 +142,8 @@ export const buildUsingRollup = async ({
       buildOperation,
       logger,
 
-      jsenvRollupPlugin,
+      rollupPlugins,
+      babelPluginMap,
       format,
       globals,
       globalName,
@@ -247,7 +248,8 @@ export const buildUsingRollup = async ({
 const useRollup = async ({
   buildOperation,
   logger,
-  jsenvRollupPlugin,
+  rollupPlugins,
+  babelPluginMap,
   format,
   globals,
   globalName,
@@ -312,15 +314,19 @@ const useRollup = async ({
     input: [],
     preserveEntrySignatures,
     treeshake,
-    plugins: [jsenvRollupPlugin],
+    plugins: rollupPlugins,
     acornInjectPlugins: [importAssertions],
   }
   const rollupOutputOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
-    // we could put prefConst to true by checking 'transform-block-scoping'
-    // presence in babelPluginMap
-    preferConst: false,
+    // https://rollupjs.org/guide/en/#outputgeneratedcode
+    generatedCode: {
+      arrowFunctions: !babelPluginMap["transform-arrow-functions"],
+      constBindings: !babelPluginMap["transform-block-scoping"],
+      objectShorthand: !babelPluginMap["transform-shorthand-properties"],
+      reservedNamesAsProps: !babelPluginMap["transform-reserved-words"],
+    },
     // https://rollupjs.org/guide/en#output-dir
     dir: urlToFileSystemPath(buildDirectoryUrl),
     // https://rollupjs.org/guide/en#output-format
