@@ -42,10 +42,10 @@ export const compileHtml = async ({
   outDirectoryRelativeUrl,
   compileId,
 
-  transformTopLevelAwait,
+  babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
-  babelPluginMap,
+  topLevelAwait,
 
   sourcemapMethod,
 
@@ -284,10 +284,10 @@ export const compileHtml = async ({
           compiledUrl: scriptCompiledFileUrl,
           projectDirectoryUrl,
 
-          transformTopLevelAwait,
+          babelPluginMap,
           moduleOutFormat,
           importMetaFormat,
-          babelPluginMap,
+          topLevelAwait,
         })
       } catch (e) {
         // If there is a syntax error in inline script

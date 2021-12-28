@@ -82,9 +82,9 @@ export const startCompileServer = async ({
   projectFileCacheStrategy = "mtime",
 
   // js compile options
-  transformTopLevelAwait = true,
   moduleOutFormat,
   importMetaFormat,
+  topLevelAwait,
   env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -310,7 +310,7 @@ export const startCompileServer = async ({
       importDefaultExtension,
 
       runtimeSupport,
-      transformTopLevelAwait,
+      topLevelAwait,
       groupMap: compileServerGroupMap,
       babelPluginMap,
       customCompilers,

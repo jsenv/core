@@ -9,9 +9,9 @@ export const compileJavascript = async ({
   projectDirectoryUrl,
 
   babelPluginMap,
-  transformTopLevelAwait,
   moduleOutFormat,
   importMetaFormat,
+  topLevelAwait,
 
   sourcemapExcludeSources,
   sourcemapMethod,
@@ -24,9 +24,9 @@ export const compileJavascript = async ({
     projectDirectoryUrl,
 
     babelPluginMap,
-    transformTopLevelAwait,
     moduleOutFormat,
     importMetaFormat,
+    topLevelAwait,
   })
 
   return transformResultToCompilationResult(

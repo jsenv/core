@@ -119,6 +119,9 @@ export const createUrlLoader = ({
         projectDirectoryUrl,
         babelPluginMap,
         // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
+        // we compile for rollup, let top level await untouched
+        // it will be converted, if needed, during "renderChunk" hook
+        topLevelAwait: "ignore",
       })
       let code = transformResult.code
       let map = transformResult.map
