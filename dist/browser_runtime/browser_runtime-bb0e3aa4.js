@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var _defineProperty = function (obj, key, value) {
+  var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -19,7 +19,7 @@
     }
 
     return obj;
-  };
+  });
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -58,9 +58,8 @@
 
     return target;
   }
+
   /* eslint-disable no-eq-null, eqeqeq */
-
-
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
@@ -72,16 +71,15 @@
     return arr2;
   }
 
-  var arrayWithoutHoles = function (arr) {
+  var arrayWithoutHoles = (function (arr) {
     if (Array.isArray(arr)) return arrayLikeToArray(arr);
-  };
+  });
 
   function _iterableToArray(iter) {
     if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
   }
+
   /* eslint-disable consistent-return */
-
-
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -91,13 +89,13 @@
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
 
-  var nonIterableSpread = function () {
+  var nonIterableSpread = (function () {
     throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  };
+  });
 
-  var _toConsumableArray = function (arr) {
+  var _toConsumableArray = (function (arr) {
     return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
-  };
+  });
 
   var createDetailedMessage = function createDetailedMessage(message) {
     var details = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -129,9 +127,8 @@
   };
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
   /* eslint-env browser, node */
-
-
   var parseDataUrl = function parseDataUrl(dataUrl) {
     var afterDataProtocol = dataUrl.slice("data:".length);
     var commaIndex = afterDataProtocol.indexOf(",");
@@ -154,13 +151,11 @@
       data: afterComma
     };
   };
-
   var dataUrlToRawData = function dataUrlToRawData(_ref2) {
     var base64Flag = _ref2.base64Flag,
         data = _ref2.data;
     return base64Flag ? base64ToString(data) : data;
   };
-
   (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
     return Buffer.from(data).toString("base64");
   };
@@ -175,7 +170,6 @@
     });
     return sourceMappingUrl;
   };
-
   var javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
 
   var replaceSourceMappingUrl = function replaceSourceMappingUrl(source, regexp, callback) {
@@ -206,11 +200,9 @@
     if (secondChar !== ":") return false;
     return true;
   };
-
   var windowsFilePathToUrl = function windowsFilePathToUrl(windowsFilePath) {
     return "file:///".concat(replaceBackSlashesWithSlashes(windowsFilePath));
   };
-
   var replaceBackSlashesWithSlashes = function replaceBackSlashesWithSlashes(string) {
     return string.replace(/\\/g, "/");
   };
@@ -307,8 +299,8 @@
       }
     }, function (_result) {
       var _exit2 = false;
-      if (_exit) return _result; // Code called using eval() needs special handling
-
+      if (_exit) return _result;
+      // Code called using eval() needs special handling
       return _invoke$6(function () {
         if (callSite.isEval()) {
           var origin = callSite.getEvalOrigin();
@@ -460,8 +452,8 @@
     var _exit3 = false;
     var resolveFile = _ref3.resolveFile,
         urlToSourcemapConsumer = _ref3.urlToSourcemapConsumer,
-        onFailure = _ref3.onFailure; // Most eval() calls are in this format
-
+        onFailure = _ref3.onFailure;
+    // Most eval() calls are in this format
     var topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
     return _invoke$6(function () {
       if (topLevelEvalMatch) {
@@ -476,14 +468,16 @@
           urlToSourcemapConsumer: urlToSourcemapConsumer,
           onFailure: onFailure
         }), function (originalPosition) {
+          var _temp = "eval at ".concat(topLevelEvalMatch[1], " (").concat(originalPosition.source, ":").concat(originalPosition.line, ":").concat(originalPosition.column + 1, ")");
+
           _exit3 = true;
-          return "eval at ".concat(topLevelEvalMatch[1], " (").concat(originalPosition.source, ":").concat(originalPosition.line, ":").concat(originalPosition.column + 1, ")");
+          return _temp;
         });
       }
     }, function (_result4) {
       var _exit4 = false;
-      if (_exit3) return _result4; // Parse nested eval() calls using recursion
-
+      if (_exit3) return _result4;
+      // Parse nested eval() calls using recursion
       var nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
       return _invoke$6(function () {
         if (nestedEvalMatch) {
@@ -492,8 +486,10 @@
             urlToSourcemapConsumer: urlToSourcemapConsumer,
             onFailure: onFailure
           }), function (originalEvalOrigin) {
+            var _temp2 = "eval at ".concat(nestedEvalMatch[1], " (").concat(originalEvalOrigin, ")");
+
             _exit4 = true;
-            return "eval at ".concat(nestedEvalMatch[1], " (").concat(originalEvalOrigin, ")");
+            return _temp2;
           });
         }
       }, function (_result5) {
@@ -664,8 +660,9 @@
                 onFailure(createDetailedMessage("unexpected response fetching stack trace file.", (_createDetailedMessag = {}, _defineProperty(_createDetailedMessag, "response status", status), _defineProperty(_createDetailedMessag, "response text", fileResponse.body), _defineProperty(_createDetailedMessag, "stack trace file", stackTraceFileUrl), _createDetailedMessag)));
               }
 
+              var _temp6 = null;
               _exit = true;
-              return null;
+              return _temp6;
             }
 
             return _await$a(fileResponse.text(), function (_fileResponse$text) {
@@ -676,8 +673,9 @@
           var _createDetailedMessag2;
 
           onFailure(createDetailedMessage("error while fetching stack trace file.", (_createDetailedMessag2 = {}, _defineProperty(_createDetailedMessag2, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag2, "stack trace file", stackTraceFileUrl), _createDetailedMessag2)));
+          var _temp2 = null;
           _exit = true;
-          return null;
+          return _temp2;
         }), function (_result) {
           var _exit2 = false;
           if (_exit) return _result;
@@ -707,16 +705,17 @@
                         if (status === 404) {
                           onFailure("sourcemap file not found at ".concat(sourcemapUrl));
                         } else {
-                          var _temp2 = "unexpected response for sourcemap file.";
+                          var _temp7 = "unexpected response for sourcemap file.";
                           return _await$a(sourcemapResponse.text(), function (_sourcemapResponse$te) {
                             var _createDetailedMessag3;
 
-                            onFailure(createDetailedMessage(_temp2, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
+                            onFailure(createDetailedMessage(_temp7, (_createDetailedMessag3 = {}, _defineProperty(_createDetailedMessag3, "response status", status), _defineProperty(_createDetailedMessag3, "response text", _sourcemapResponse$te), _defineProperty(_createDetailedMessag3, "sourcemap url", sourcemapUrl), _createDetailedMessag3)));
                           });
                         }
                       }, function () {
+                        var _temp3 = null;
                         _exit2 = true;
-                        return null;
+                        return _temp3;
                       });
                     }
                   }, function (_result3) {
@@ -729,8 +728,9 @@
                 var _createDetailedMessag4;
 
                 onFailure(createDetailedMessage("error while fetching sourcemap.", (_createDetailedMessag4 = {}, _defineProperty(_createDetailedMessag4, "fetch error stack", readErrorStack(e)), _defineProperty(_createDetailedMessag4, "sourcemap url", sourcemapUrl), _createDetailedMessag4)));
+                var _temp4 = null;
                 _exit2 = true;
-                return null;
+                return _temp4;
               });
             }
           }, function (_result4) {
@@ -779,11 +779,11 @@
                         return;
                       }
 
-                      var _temp4 = "unexpected response for sourcemap source.";
+                      var _temp9 = "unexpected response for sourcemap source.";
                       return _await$a(sourceResponse.text(), function (_sourceResponse$text) {
                         var _createDetailedMessag7;
 
-                        firstSourceMapSourceFailure = createDetailedMessage(_temp4, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
+                        firstSourceMapSourceFailure = createDetailedMessage(_temp9, (_createDetailedMessag7 = {}, _defineProperty(_createDetailedMessag7, "response status", status), _defineProperty(_createDetailedMessag7, "response text", _sourceResponse$text), _defineProperty(_createDetailedMessag7, "sourcemap source url", sourcemapSourceUrl), _defineProperty(_createDetailedMessag7, "sourcemap url", sourcemapUrl), _createDetailedMessag7));
                         _exit4 = true;
                       });
                     }
@@ -998,11 +998,13 @@
                 });
               }
 
-              _exit = true;
-              return stackToString(originalCallsites, {
+              var _stackToString = stackToString(originalCallsites, {
                 error: error,
                 indent: indent
               });
+
+              _exit = true;
+              return _stackToString;
             });
           }, function (e) {
             var _createDetailedMessag;
@@ -1095,9 +1097,9 @@
         });
       }),
       resolveFile: function resolveFile(specifier) {
-        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href; // browsers having Error.captureStrackTrace got window.URL
+        var importer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.href;
+        // browsers having Error.captureStrackTrace got window.URL
         // and this executes only when Error.captureStackTrace exists
-
         return String(new URL(specifier, importer));
       }
     }, options));
@@ -1111,7 +1113,7 @@
     return headers;
   };
 
-  var objectWithoutPropertiesLoose = function (source, excluded) {
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -1125,9 +1127,9 @@
     }
 
     return target;
-  };
+  });
 
-  var _objectWithoutProperties = function (source, excluded) {
+  var _objectWithoutProperties = (function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -1145,10 +1147,9 @@
     }
 
     return target;
-  };
+  });
+
   /* eslint-env browser */
-
-
   function _await$7(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -1597,6 +1598,20 @@
     return then ? value.then(then) : value;
   }
 
+  function _async$6(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
   var fetchNative = _async$6(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -1630,20 +1645,6 @@
       };
     });
   });
-
-  function _async$6(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
 
   var responseToHeaders = function responseToHeaders(response) {
     var headers = {};
@@ -1702,9 +1703,9 @@
 
   var appendSourceURL = function appendSourceURL(code, sourceURL) {
     return "".concat(code, "\n", "//#", " sourceURL=").concat(sourceURL);
-  }; // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
+  };
 
-
+  // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
   var isComposite = function isComposite(value) {
     if (value === null) {
       return false;
@@ -1725,11 +1726,9 @@
 
   var compositeWellKnownMap = new WeakMap();
   var primitiveWellKnownMap = new Map();
-
   var getCompositeGlobalPath = function getCompositeGlobalPath(value) {
     return compositeWellKnownMap.get(value);
   };
-
   var getPrimitiveGlobalPath = function getPrimitiveGlobalPath(value) {
     return primitiveWellKnownMap.get(value);
   };
@@ -2203,11 +2202,11 @@
   var createUnknownPrototypeMessage = function createUnknownPrototypeMessage(_ref10) {
     var prototypeValue = _ref10.prototypeValue;
     return "prototype must be global, like Object.prototype, or somewhere in the value.\nprototype constructor name: ".concat(prototypeValue.constructor.name);
-  }; // be carefull because this function is mutating recipe objects inside the recipeArray.
+  };
+
+  // be carefull because this function is mutating recipe objects inside the recipeArray.
   // this is not an issue because each recipe object is not accessible from the outside
   // when used internally by uneval
-
-
   var sortRecipe = function sortRecipe(recipeArray) {
     var findInRecipePrototypeChain = function findInRecipePrototypeChain(recipe, callback) {
       var currentRecipe = recipe; // eslint-disable-next-line no-constant-condition
@@ -2279,10 +2278,10 @@
       return 1;
     });
     return recipeArrayOrdered;
-  }; // https://github.com/joliss/js-string-escape/blob/master/index.js
+  };
+
+  // https://github.com/joliss/js-string-escape/blob/master/index.js
   // http://javascript.crockford.com/remedial.html
-
-
   var escapeString = function escapeString(value) {
     var string = String(value);
     var i = 0;
@@ -2535,9 +2534,8 @@
 
     return fnWithMemoization;
   };
+
   /* eslint-env browser */
-
-
   var displayErrorInDocument = function displayErrorInDocument(error) {
     var title = "An error occured";
     var theme;
@@ -2709,9 +2707,8 @@
       }
     };
   };
+
   /* eslint-env browser */
-
-
   var _window$1 = window,
       Notification = _window$1.Notification;
 
@@ -2813,9 +2810,9 @@
     }
 
     return pathname.slice(0, slashLastIndex + 1);
-  }; // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+  };
 
-
+  // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
   var resolveUrl = function resolveUrl(specifier, baseUrl) {
     if (baseUrl) {
       if (typeof baseUrl !== "string") {
@@ -2942,7 +2939,6 @@
     });
     return mappingsSorted;
   };
-
   var sortScopes = function sortScopes(scopes) {
     var scopesSorted = {};
     Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(function (scopeSpecifier) {
@@ -3309,7 +3305,6 @@
       }
     };
   }
-
   var getJavaScriptModuleResponseError = _async$4(function (response, _ref) {
     var _exit = false;
     var url = _ref.url,
@@ -3364,7 +3359,6 @@
       }))) : null;
     });
   });
-
   var getModuleDetails = function getModuleDetails(_ref2) {
     var url = _ref2.url,
         importerUrl = _ref2.importerUrl,
@@ -3387,7 +3381,6 @@
     } : {}), {}, _defineProperty({}, "file url", url), importerUrl ? _defineProperty({}, "imported by", importerRelativeUrl || importerUrl) : {});
     return details;
   };
-
   var tryToFindProjectRelativeUrl = function tryToFindProjectRelativeUrl(url, _ref5) {
     var compileServerOrigin = _ref5.compileServerOrigin,
         compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl;
@@ -3416,7 +3409,6 @@
   //   typeof window === "object"
   //     ? (text) => window.btoa(window.unescape(window.encodeURIComponent(text)))
   //     : (text) => Buffer.from(text, "utf8").toString("base64")
-
 
   var applyDefaultExtension = function applyDefaultExtension(specifier, importer) {
     if (!importer) {
@@ -3536,9 +3528,8 @@
     }));
     return new Error(detailedMessage);
   };
+
   /* eslint-env browser */
-
-
   var _window = window,
       performance$1 = _window.performance;
 
@@ -3585,11 +3576,11 @@
   }) : _async$3(function (fn) {
     return fn();
   });
+
   /*
   * SJS 6.11.0
   * Minimal SystemJS Build
   */
-
   (function () {
     function errMsg(errCode, msg) {
       return (msg || "") + " (SystemJS https://git.io/JvFET#" + errCode + ")";
@@ -4314,8 +4305,8 @@
       return result;
     };
   })();
-  /* eslint-env browser */
 
+  /* eslint-env browser */
 
   function _await$2(value, then, direct) {
     if (direct) {
@@ -4685,6 +4676,7 @@
 
   var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
   var maybeTypes = ["Array", "Object", "Map", "Set"];
+
   /* eslint-env browser */
 
   function _await$1(value, then, direct) {
@@ -5190,6 +5182,7 @@
     executeFileUsingDynamicImport: executeFileUsingDynamicImport,
     executeFileUsingSystemJs: executeFileUsingSystemJs
   };
+
 })();
 
-//# sourceMappingURL=browser_runtime-c7288751.js.map
+//# sourceMappingURL=browser_runtime-bb0e3aa4.js.map

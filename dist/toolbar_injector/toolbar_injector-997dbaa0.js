@@ -11,7 +11,7 @@
 
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
-  var defineProperty = function (obj, key, value) {
+  var defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
     // prototype cause side effects under the fast path of simple
@@ -29,7 +29,7 @@
     }
 
     return obj;
-  };
+  });
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -69,7 +69,7 @@
     return target;
   }
 
-  var objectWithoutPropertiesLoose = function (source, excluded) {
+  var objectWithoutPropertiesLoose = (function (source, excluded) {
     if (source === null) return {};
     var target = {};
     var sourceKeys = Object.keys(source);
@@ -83,9 +83,9 @@
     }
 
     return target;
-  };
+  });
 
-  var _objectWithoutProperties = function (source, excluded) {
+  var _objectWithoutProperties = (function (source, excluded) {
     if (source === null) return {};
     var target = objectWithoutPropertiesLoose(source, excluded);
     var key;
@@ -103,10 +103,9 @@
     }
 
     return target;
-  };
+  });
+
   /* eslint-env browser */
-
-
   function _await$4(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
@@ -555,6 +554,20 @@
     return then ? value.then(then) : value;
   }
 
+  function _async$3(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+
   var fetchNative = _async$3(function (url) {
     var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -588,20 +601,6 @@
       };
     });
   });
-
-  function _async$3(f) {
-    return function () {
-      for (var args = [], i = 0; i < arguments.length; i++) {
-        args[i] = arguments[i];
-      }
-
-      try {
-        return Promise.resolve(f.apply(this, args));
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    };
-  }
 
   var responseToHeaders = function responseToHeaders(response) {
     var headers = {};
@@ -729,7 +728,6 @@
       });
     };
   };
-
   var setAttributes = function setAttributes(element, attributes) {
     Object.keys(attributes).forEach(function (name) {
       element.setAttribute(name, attributes[name]);
@@ -748,7 +746,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-bab473ea.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-1fbf8dcb.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -969,6 +967,7 @@
   } else {
     window.addEventListener("load", injectToolbar);
   }
+
 })();
 
-//# sourceMappingURL=toolbar_injector-5e32f96a.js.map
+//# sourceMappingURL=toolbar_injector-997dbaa0.js.map

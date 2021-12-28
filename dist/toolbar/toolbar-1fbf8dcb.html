@@ -1907,7 +1907,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     <script type="systemjs-importmap">
 {
   "imports": {
-    "./toolbar.main.js": "./toolbar.main-eb8acf83.js"
+    "./toolbar.main.js": "./toolbar.main-a5ef2c60.js"
   }
 }</script>
     <script>
@@ -2634,6 +2634,20 @@ html[data-toolbar-visible] #toolbar-trigger {
         return then ? value.then(then) : value;
       }
 
+      function _async$5(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
       var fetchNative = _async$5(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -2667,20 +2681,6 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
         });
       });
-
-      function _async$5(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
 
       var responseToHeaders = function responseToHeaders(response) {
         var headers = {};
@@ -3124,18 +3124,6 @@ html[data-toolbar-visible] #toolbar-trigger {
 
       var _excluded = ["clickToFocus", "clickToClose"];
 
-      function _await$1(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
       function _async$2(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
@@ -3148,6 +3136,18 @@ html[data-toolbar-visible] #toolbar-trigger {
             return Promise.reject(e);
           }
         };
+      }
+
+      function _await$1(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
       }
 
       var notificationAvailable = typeof window.Notification === "function";
@@ -4917,7 +4917,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main-eb8acf83.js.map</script>
+//# sourceMappingURL=toolbar.main-a5ef2c60.js.map</script>
   
 
 </body></html>
