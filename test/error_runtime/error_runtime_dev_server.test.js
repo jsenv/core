@@ -15,63 +15,77 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `error_runtime.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const compileId = "best"
-
-const devServer = await startDevServer({
-  ...START_DEV_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
-const compiledFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
-
-const { browser, pageLogs, pageErrors, executionResult } =
-  await openBrowserPage(compiledFileUrl, {
-    headless: true,
+const test = async (params) => {
+  const devServer = await startDevServer({
+    ...START_DEV_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    ...params,
   })
-browser.close()
+  const compileDirectoryUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/`
+  const compiledFileUrl = `${compileDirectoryUrl}${fileRelativeUrl}`
+
+  const { browser, pageLogs, pageErrors, executionResult } =
+    await openBrowserPage(compiledFileUrl, {
+      headless: true,
+    })
+  browser.close()
+
+  return {
+    pageLogs,
+    pageErrors,
+    executionResult,
+    devServer,
+  }
+}
 
 {
-  const actual = { pageLogs, pageErrors, executionResult }
+  const { pageLogs, executionResult, devServer } = await test()
+  const compileDirectoryUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/`
+  const expectedErrorStack = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+    at triggerError (${compileDirectoryUrl}${testDirectoryRelativeUrl}trigger_error.js:2:9)
+    at ${compileDirectoryUrl}${testDirectoryRelativeUrl}error_runtime.js:2:1`
+  const expectedPageFirstLog = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+    at triggerError (${compileDirectoryUrl}${testDirectoryRelativeUrl}trigger_error.js:2:9)
+    at ${compileDirectoryUrl}${testDirectoryRelativeUrl}error_runtime.js:2:1`
+  const actual = {
+    error: executionResult.error,
+    pageFirstLog: pageLogs[0].text.slice(0, expectedPageFirstLog.length),
+    errorStack: executionResult.error.stack.slice(0, expectedErrorStack.length),
+  }
   const expected = {
-    pageLogs: [
-      {
-        type: "error",
-        text: assert.any(String),
-      },
-    ],
-    pageErrors: [],
-    executionResult: {
-      status: "errored",
-      startTime: assert.any(Number),
-      endTime: assert.any(Number),
-      fileExecutionResultMap: {
-        [`./error_runtime.js`]: {
-          status: "errored",
-          exceptionSource: assert.any(String),
-        },
-      },
-      error: Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
-        filename: actual.executionResult.error.filename,
-        lineno: actual.executionResult.error.lineno,
-        columnno: actual.executionResult.error.columnno,
-      }),
-    },
+    error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
+    pageFirstLog: expectedPageFirstLog,
+    errorStack: expectedErrorStack,
   }
   assert({ actual, expected })
 }
 
 {
-  const stack = executionResult.error.stack
-  const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+  const { pageLogs, executionResult, devServer } = await test({
+    runtimeSupportDuringDev: {
+      chrome: "93",
+      firefox: "70",
+    },
+  })
+  const expectedErrorStack = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
   at triggerError (${devServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
   at Object.triggerError (${devServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
-  const actual = stack.slice(0, expected.length)
-  assert({ actual, expected })
-}
-
-{
-  const stack = pageLogs[0].text
-  const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+  const expectedPageFirstLog = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
   at triggerError (${devServer.origin}/${testDirectoryRelativeUrl}trigger_error.js:2:9)
   at Object.triggerError (${devServer.origin}/${testDirectoryRelativeUrl}error_runtime.js:3:1)`
-  const actual = stack.slice(0, expected.length)
+  const actual = {
+    error: executionResult.error,
+    pageFirstLog: pageLogs[0].text.slice(0, expectedPageFirstLog.length),
+    errorStack: executionResult.error.stack.slice(0, expectedErrorStack.length),
+  }
+  const expected = {
+    error: Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
+      filename: executionResult.error.filename,
+      lineno: executionResult.error.lineno,
+      columnno: executionResult.error.columnno,
+    }),
+    pageFirstLog: expectedPageFirstLog,
+    errorStack: expectedErrorStack,
+  }
   assert({ actual, expected })
 }
