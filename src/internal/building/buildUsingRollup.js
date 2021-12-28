@@ -38,7 +38,6 @@ export const buildUsingRollup = async ({
   globals,
   babelPluginMap,
   runtimeSupport,
-  transformTopLevelAwait,
 
   urlMappings,
   importResolutionMethod,
@@ -108,7 +107,6 @@ export const buildUsingRollup = async ({
     format,
     systemJsUrl,
     babelPluginMap,
-    transformTopLevelAwait,
     node,
     browser,
     importAssertionsSupport,

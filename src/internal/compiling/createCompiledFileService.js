@@ -41,10 +41,10 @@ export const createCompiledFileService = ({
   outDirectoryRelativeUrl,
 
   runtimeSupport,
-  transformTopLevelAwait,
+  babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
-  babelPluginMap,
+  topLevelAwait,
   groupMap,
   customCompilers,
 
@@ -185,16 +185,16 @@ export const createCompiledFileService = ({
           request,
 
           runtimeSupport,
+          babelPluginMap: babelPluginMapFromCompileId(compileId, {
+            babelPluginMap,
+            groupMap,
+          }),
           moduleOutFormat:
             moduleOutFormat === undefined
               ? compileIdModuleFormats[compileId]
               : moduleOutFormat,
           importMetaFormat,
-          transformTopLevelAwait,
-          babelPluginMap: babelPluginMapFromCompileId(compileId, {
-            babelPluginMap,
-            groupMap,
-          }),
+          topLevelAwait,
 
           sourcemapMethod,
           sourcemapExcludeSources,

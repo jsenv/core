@@ -257,12 +257,12 @@ export const createRollupPlugins = async ({
             "transform-async-to-promises":
               babelPluginMap["transform-async-to-promises"],
           },
-          babelHelpersInjectionAsImport: false,
-          transformGenerator: false,
           moduleOutFormat:
             // pass undefined when format is "systemjs" to avoid
             // re-wrapping the code in systemjs format
             format === "systemjs" ? undefined : format,
+          babelHelpersInjectionAsImport: false,
+          transformGenerator: false,
         })
         code = result.code
         map = result.map

@@ -41,7 +41,6 @@ export const buildProject = async ({
   format === "esmodule"
     ? jsenvBrowserRuntimeSupport
     : jsenvNodeRuntimeSupport,
-  transformTopLevelAwait = true,
 
   urlMappings = {},
   importResolutionMethod = format === "commonjs" ? "node" : "importmap",
@@ -163,8 +162,9 @@ export const buildProject = async ({
     // that is expecting esmodule format, not systemjs
     outDirectoryName: "build",
     importDefaultExtension,
-    moduleOutFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
-    importMetaFormat: "esmodule", // rollup or jsenv rollup plugin will transform into the right format
+    moduleOutFormat: "esmodule", // rollup will transform into the right format
+    importMetaFormat: "esmodule", // rollup will transform into the right format
+    topLevelAwait: "ignore", // rollup will transform if needed
 
     protocol,
     privateKey,
@@ -173,7 +173,6 @@ export const buildProject = async ({
     port,
     env,
     babelPluginMap,
-    transformTopLevelAwait,
     customCompilers,
     runtimeSupport,
 
@@ -220,7 +219,6 @@ export const buildProject = async ({
       globalName,
       globals,
       babelPluginMap: compileServer.babelPluginMap,
-      transformTopLevelAwait,
       runtimeSupport,
 
       urlVersioning,

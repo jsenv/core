@@ -23,9 +23,9 @@ export const jsenvTransform = async ({
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat = moduleOutFormat,
+  topLevelAwait,
 
   babelHelpersInjectionAsImport,
-  allowTopLevelAwait,
   transformGenerator,
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
@@ -47,7 +47,11 @@ export const jsenvTransform = async ({
     sourceFileName: inputPath,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
-      allowAwaitOutsideFunction: allowTopLevelAwait,
+      allowAwaitOutsideFunction:
+        topLevelAwait === undefined ||
+        topLevelAwait === "return" ||
+        topLevelAwait === "simple" ||
+        topLevelAwait === "ignore",
     },
     generatorOpts: {
       compact: false,
@@ -144,12 +148,9 @@ export const jsenvTransform = async ({
     "import-metadata": [babelPluginImportMetadata],
   }
 
-  if (allowTopLevelAwait) {
-    const asyncToPromise = babelPluginMap["transform-async-to-promises"]
-    if (asyncToPromise) {
-      asyncToPromise.options.topLevelAwait =
-        moduleOutFormat === "systemjs" ? "return" : "simple"
-    }
+  const asyncToPromise = babelPluginMap["transform-async-to-promises"]
+  if (topLevelAwait && asyncToPromise) {
+    asyncToPromise.options.topLevelAwait = topLevelAwait
   }
 
   const babelTransformReturnValue = await babelTransform({
