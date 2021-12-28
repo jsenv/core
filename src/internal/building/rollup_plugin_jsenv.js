@@ -240,9 +240,10 @@ export const createRollupPlugins = async ({
   let minifyHtml
 
   const rollupPlugins = []
-  // rollup add async/await that might be unsupported by the runtime
+  // When format is systemjs, rollup add async/await
+  // that might be unsupported by the runtime.
   // in that case we have to transform the rollup output
-  if (babelPluginMap["transform-async-to-promises"]) {
+  if (babelPluginMap["transform-async-to-promises"] && format === "systemjs") {
     rollupPlugins.push({
       name: "jsenv_fix_async_await",
       async renderChunk(code, chunk) {
@@ -257,10 +258,9 @@ export const createRollupPlugins = async ({
             "transform-async-to-promises":
               babelPluginMap["transform-async-to-promises"],
           },
-          moduleOutFormat:
-            // pass undefined when format is "systemjs" to avoid
-            // re-wrapping the code in systemjs format
-            format === "systemjs" ? undefined : format,
+          // pass undefined when format is "systemjs" to avoid
+          // re-wrapping the code in systemjs format
+          moduleOutFormat: undefined,
           babelHelpersInjectionAsImport: false,
           transformGenerator: false,
         })
