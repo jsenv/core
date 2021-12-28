@@ -21,7 +21,6 @@ import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "./internal/jsenvInternalFiles.js"
-import { jsenvRuntimeSupportDuringDev } from "./jsenvRuntimeSupportDuringDev.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -46,7 +45,12 @@ export const startDevServer = async ({
   keepProcessAlive = true,
 
   babelPluginMap,
-  runtimeSupportDuringDev = jsenvRuntimeSupportDuringDev,
+  runtimeSupportDuringDev = {
+    // this allows to compile nothing or almost nothing when opening files
+    // with a recent chrome. Without this we would compile all the things not yet unsupported
+    // by Firefox and Safari such as top level await, importmap, etc
+    chrome: "93",
+  },
   logLevel,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
