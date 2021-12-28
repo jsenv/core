@@ -25,20 +25,33 @@ const importedFileUrl = resolveUrl(
 )
 const importedFilePath = urlToFileSystemPath(importedFileUrl)
 const compileId = `best`
-
-const devServer = await startDevServer({
-  ...START_DEV_SERVER_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-})
-const compiledHtmlFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
-const compiledImportedFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
-
-const { browser, pageLogs, pageErrors, executionResult } =
-  await openBrowserPage(compiledHtmlFileUrl, {
-    // headless: false,
+const test = async (params) => {
+  const devServer = await startDevServer({
+    ...START_DEV_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    ...params,
   })
-browser.close()
+  const compiledHtmlFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
 
+  const { browser, pageLogs, pageErrors, executionResult } =
+    await openBrowserPage(compiledHtmlFileUrl, {
+      // headless: false,
+    })
+  browser.close()
+  return {
+    pageLogs,
+    pageErrors,
+    executionResult,
+    devServer,
+  }
+}
+
+const { pageLogs, pageErrors, executionResult, devServer } = await test({
+  runtimeSupportDuringDev: {
+    firefox: 70,
+  },
+})
+const compiledImportedFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 const actual = { pageLogs, pageErrors, executionResult }
 const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:11)
 
