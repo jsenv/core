@@ -8,23 +8,6 @@ _@jsenv/core_ was first created to write tests that could be executed in differe
 
 Jsenv integrates naturally with standard html, css and js. It can be configured to work with React and JSX.
 
-# Jsenv iconic features
-
-- Make test files simple
-- Compiles only when mandatory
-- Great developer experience with explicit and coherent apis
-
-## Web standards used by jsenv
-
-Each standard listed in this section is potentially supported natively by the browser. When browser supports all of them, jsenv will use source files without modification. Otherwise, the files are compiled to be executable in the browser.
-
-- `<script type="module">`
-- `<script type="importmap">`
-- top level await
-- import.meta.url
-- dynamic imports
-- import assertions
-
 # Test runner overview
 
 Let's assume you want to test `countDogs` exported by _animals.js_ file.
@@ -267,6 +250,15 @@ build duration: 1.85 seconds
 To read more about jsenv build tool, check [jsenv build documentation](./docs/building/readme.md#jsenv-build).
 
 # About
+
+Jsenv relies on standard web features. Each standard listed below is potentially supported natively by the browser. When browser supports all of them, jsenv will use source files without modification. Otherwise, the files are compiled to be executable in the browser.
+
+- `<script type="module">`
+- `<script type="importmap">`
+- top level await
+- import.meta.url
+- dynamic imports
+- import assertions
 
 ## When to use it
 
