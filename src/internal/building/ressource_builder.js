@@ -19,7 +19,6 @@ import {
   // formatDependenciesCollectedMessage,
   checkContentType,
 } from "./ressource_builder_util.js"
-import { computeBuildRelativeUrlForRessource } from "./asset_url_versioning.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
 export const createRessourceBuilder = (
@@ -33,11 +32,11 @@ export const createRessourceBuilder = (
     asOriginalServerUrl,
     urlToHumanUrl,
 
-    emitAsset,
-    setAssetSource,
+    onAsset,
+    onAssetSourceUpdated,
     onJsModule,
     resolveRessourceUrl,
-    lineBreakNormalization,
+    computeBuildRelativeUrl,
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -46,8 +45,6 @@ export const createRessourceBuilder = (
     entryContentType,
     entryUrl,
     entryBuffer,
-    entryBuildRelativeUrl,
-    urlVersionningForEntryPoints,
   }) => {
     // The entry point is conceptually referenced by code passing "entryPointMap"
     // to buildProject. So we analyse stack trace to put this function caller
@@ -65,14 +62,6 @@ export const createRessourceBuilder = (
       bufferBeforeBuild: entryBuffer,
 
       isEntryPoint: true,
-
-      // don't hash asset entry points
-      ...(urlVersionningForEntryPoints
-        ? {}
-        : {
-            urlVersioningDisabled: true,
-            fileNamePattern: entryBuildRelativeUrl,
-          }),
     })
     entryReference.isProgrammatic = true
 
@@ -179,6 +168,7 @@ export const createRessourceBuilder = (
     isSourcemap,
     isInline,
     isPlaceholder,
+
     fileNamePattern,
     urlVersioningDisabled,
 
@@ -267,9 +257,7 @@ export const createRessourceBuilder = (
       fileNamePattern = () => {
         const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
           ressourceImporter,
-          {
-            lineBreakNormalization,
-          },
+          { computeBuildRelativeUrl },
         )
         const importerParentRelativeUrl = urlToRelativeUrl(
           urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
@@ -304,6 +292,7 @@ export const createRessourceBuilder = (
         isPlaceholder,
         isWorker,
         isServiceWorker,
+
         fileNamePattern,
         urlVersioningDisabled,
       })
@@ -374,7 +363,7 @@ export const createRessourceBuilder = (
     isServiceWorker = false,
 
     fileNamePattern,
-    urlVersioningDisabled = isServiceWorker,
+    urlVersioningDisabled,
   }) => {
     const ressource = {
       contentType,
@@ -392,8 +381,8 @@ export const createRessourceBuilder = (
       isWorker,
       isServiceWorker,
 
-      urlVersioningDisabled,
       fileNamePattern,
+      urlVersioningDisabled,
 
       relativeUrl: urlToRelativeUrl(ressourceUrl, compileServerOrigin),
       bufferAfterBuild: undefined,
@@ -598,15 +587,13 @@ export const createRessourceBuilder = (
       // to ensure we resolve dependency against where the importer file will be
       const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
         ressource,
-        {
-          lineBreakNormalization,
-        },
+        { computeBuildRelativeUrl },
       )
       await transform({
         buildDirectoryUrl,
         precomputeBuildRelativeUrl: (ressource) =>
           precomputeBuildRelativeUrlForRessource(ressource, {
-            lineBreakNormalization,
+            computeBuildRelativeUrl,
           }),
         getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
@@ -656,12 +643,7 @@ export const createRessourceBuilder = (
       if (bufferAfterBuild !== undefined) {
         ressource.bufferAfterBuild = bufferAfterBuild
         if (buildRelativeUrl === undefined) {
-          ressource.buildRelativeUrl = computeBuildRelativeUrlForRessource(
-            ressource,
-            {
-              lineBreakNormalization,
-            },
-          )
+          ressource.buildRelativeUrl = computeBuildRelativeUrl(ressource)
         }
       }
 
@@ -676,7 +658,7 @@ export const createRessourceBuilder = (
         !ressource.isInline &&
         !ressource.isJsModule
       ) {
-        setAssetSource(ressource.rollupReferenceId, ressource.bufferAfterBuild)
+        onAssetSourceUpdated({ ressource })
       }
     }
 
@@ -744,7 +726,7 @@ export const createRessourceBuilder = (
         })
         ressource.rollupReferenceId = rollupChunk.rollupReferenceId
         effects.push(
-          `emit rollup chunk "${rollupChunk.name}" (${rollupChunk.rollupReferenceId})`,
+          `emit rollup chunk "${rollupChunk.fileName}" (${rollupChunk.rollupReferenceId})`,
         )
         return effects
       }
@@ -754,12 +736,12 @@ export const createRessourceBuilder = (
         return effects
       }
 
-      const rollupReferenceId = emitAsset({
-        fileName: ressource.relativeUrl,
+      const rollupAsset = onAsset({
+        ressource,
       })
-      ressource.rollupReferenceId = rollupReferenceId
+      ressource.rollupReferenceId = rollupAsset.rollupReferenceId
       effects.push(
-        `emit rollup asset "${ressource.relativeUrl}" (${rollupReferenceId})`,
+        `emit rollup asset "${rollupAsset.fileName}" (${rollupAsset.rollupReferenceId})`,
       )
       return effects
     }
@@ -962,20 +944,14 @@ export const createRessourceBuilder = (
 
 const precomputeBuildRelativeUrlForRessource = (
   ressource,
-  { bufferAfterBuild = "", lineBreakNormalization } = {},
+  { bufferAfterBuild = "", computeBuildRelativeUrl } = {},
 ) => {
   if (ressource.buildRelativeUrl) {
     return ressource.buildRelativeUrl
   }
 
   ressource.bufferAfterBuild = bufferAfterBuild
-  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForRessource(
-    ressource,
-    {
-      lineBreakNormalization,
-      contentType: ressource.contentType,
-    },
-  )
+  const precomputedBuildRelativeUrl = computeBuildRelativeUrl(ressource)
   ressource.bufferAfterBuild = undefined
   return precomputedBuildRelativeUrl
 }

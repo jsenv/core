@@ -208,7 +208,7 @@ export const buildUsingRollup = async ({
     buildFileContents,
     buildInlineFileContents,
     buildStats,
-  } = getResult()
+  } = await getResult()
 
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {

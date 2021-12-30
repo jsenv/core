@@ -13,7 +13,6 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
-  urlToBasename,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
@@ -40,7 +39,7 @@ import {
   referenceToCodeForRollup,
 } from "./ressource_builder.js"
 
-import { computeBuildRelativeUrl } from "./url-versioning.js"
+import { computeBuildRelativeUrlForRessource } from "./url_versioning.js"
 import { visitImportReferences } from "./import_references.js"
 
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
@@ -103,23 +102,26 @@ export const createRollupPlugins = async ({
     lastErrorMessage = error.message
   }
 
-  const workerUrls = Object.keys(workers).map((key) =>
-    resolveUrl(key, projectDirectoryUrl),
-  )
-  const serviceWorkerUrls = Object.keys(serviceWorkers).map((key) =>
-    resolveUrl(key, projectDirectoryUrl),
-  )
-  const classicWorkerUrls = Object.keys(classicWorkers).map((key) =>
-    resolveUrl(key, projectDirectoryUrl),
-  )
-  const classicServiceWorkerUrls = Object.keys(classicServiceWorkers).map(
-    (key) => resolveUrl(key, projectDirectoryUrl),
-  )
-  const isWorkerUrl = (url) => workerUrls.includes(url)
-  const isServiceWorkerUrl = (url) => serviceWorkerUrls.includes(url)
-  const isClassicWorkerUrl = (url) => classicWorkerUrls.includes(url)
-  const isClassicServiceWorkerUrl = (url) =>
-    classicServiceWorkerUrls.includes(url)
+  const workerUrls = {}
+  Object.keys(workers).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    workerUrls[url] = workers[key]
+  })
+  const serviceWorkerUrls = {}
+  Object.keys(serviceWorkers).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    serviceWorkerUrls[url] = serviceWorkers[key]
+  })
+  const classicWorkerUrls = {}
+  Object.keys(classicWorkers).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    classicWorkerUrls[url] = classicWorkers[key]
+  })
+  const classicServiceWorkerUrls = {}
+  Object.keys(classicServiceWorkers).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    classicServiceWorkerUrls[url] = classicServiceWorkers[key]
+  })
 
   let ressourceBuilder
   let importResolver
@@ -127,6 +129,16 @@ export const createRollupPlugins = async ({
   let rollupSetAssetSource = () => {}
   let _rollupGetModuleInfo = () => {}
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
+
+  const computeBuildRelativeUrl = (ressource) => {
+    return computeBuildRelativeUrlForRessource(ressource, {
+      urlVersionningForEntryPoints,
+      entryPointMap,
+      workerUrls,
+      asOriginalUrl,
+      lineBreakNormalization,
+    })
+  }
 
   const {
     asRollupUrl,
@@ -174,30 +186,42 @@ export const createRollupPlugins = async ({
     projectDirectoryUrl,
   )
 
-  // map fileName (build relative urls without hash) to build relative url
+  // map build relative urls without hash (called "ressourceName") to real build relative urls
   let buildManifest = {}
-  const buildRelativeUrlToFileName = (buildRelativeUrl) => {
-    const fileName = Object.keys(buildManifest).find(
+  const ressourceNameFromBuildRelativeUrl = (buildRelativeUrl) => {
+    const ressourceName = Object.keys(buildManifest).find(
       (key) => buildManifest[key] === buildRelativeUrl,
     )
-    return fileName
+    return ressourceName
   }
-  const buildRelativeUrlsUsedInJs = []
-  const markBuildRelativeUrlAsUsedByJs = (buildRelativeUrl) => {
-    buildRelativeUrlsUsedInJs.push(buildRelativeUrl)
-    buildManifest[rollupFileNameWithoutHash(buildRelativeUrl)] =
-      buildRelativeUrl
-  }
-  const createImportMapForFilesUsedInJs = () => {
-    const topLevelMappings = {}
-    buildRelativeUrlsUsedInJs
-      .sort(comparePathnames)
-      .forEach((buildRelativeUrl) => {
-        const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
-        if (fileName !== buildRelativeUrl && fileName) {
-          topLevelMappings[`./${fileName}`] = `./${buildRelativeUrl}`
+
+  const ressourcesReferencedByJs = []
+  const createImportMapForFilesUsedInJs = async () => {
+    // wait for asset build relative urls
+    // to ensure the importmap will contain remappings for them
+    await Promise.all(
+      ressourcesReferencedByJs.map(async (ressourceName) => {
+        const ressource = ressourceBuilder.findRessource((ressource) => {
+          return ressource.relativeUrl === ressourceName
+        })
+        if (ressource && !ressource.isJsModule) {
+          await ressource.getReadyPromise()
+          buildManifest[ressourceName] = ressource.buildRelativeUrl
         }
-      })
+      }),
+    )
+
+    const topLevelMappings = {}
+    ressourcesReferencedByJs.sort(comparePathnames).forEach((ressourceName) => {
+      const buildRelativeUrl = buildManifest[ressourceName]
+      if (
+        ressourceName &&
+        buildRelativeUrl &&
+        ressourceName !== buildRelativeUrl
+      ) {
+        topLevelMappings[`./${ressourceName}`] = `./${buildRelativeUrl}`
+      }
+    })
     return {
       imports: topLevelMappings,
     }
@@ -614,27 +638,32 @@ export const createRollupPlugins = async ({
             }
 
             const originalUrl = asOriginalUrl(projectUrl)
-            if (isWorkerUrl(originalUrl)) {
+            const workerBuildRelativeUrl = workerUrls[originalUrl]
+            if (workerBuildRelativeUrl) {
               return {
                 isWorker: true,
                 isJsModule: true,
                 url: ressourceUrl,
               }
             }
-            if (isServiceWorkerUrl(originalUrl)) {
+            const serviceWorkerBuildRelativeUrl = serviceWorkerUrls[originalUrl]
+            if (serviceWorkerBuildRelativeUrl) {
               return {
                 isServiceWorker: true,
                 isJsModule: true,
                 url: ressourceUrl,
               }
             }
-            if (isClassicWorkerUrl(originalUrl)) {
+            const classicWorkerBuildRelativeUrl = classicWorkerUrls[originalUrl]
+            if (classicWorkerBuildRelativeUrl) {
               return {
                 isWorker: true,
                 url: ressourceUrl,
               }
             }
-            if (isClassicServiceWorkerUrl(originalUrl)) {
+            const classicServiceWorkerBuildRelativeUrl =
+              classicServiceWorkerUrls[originalUrl]
+            if (classicServiceWorkerBuildRelativeUrl) {
               return {
                 isServiceWorker: true,
                 url: ressourceUrl,
@@ -643,9 +672,6 @@ export const createRollupPlugins = async ({
 
             return ressourceUrl
           },
-          emitChunk,
-          emitAsset,
-          setAssetSource,
           onJsModule: ({ ressource, jsModuleUrl, jsModuleIsInline }) => {
             if (jsModuleIsInline) {
               inlineModuleScripts[jsModuleUrl] = ressource
@@ -660,17 +686,34 @@ export const createRollupPlugins = async ({
               column: undefined,
             }
             jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
-            const name = urlToBasename(jsModuleUrl)
+            const fileName = ressource.relativeUrl
             const rollupReferenceId = emitChunk({
               id: asRollupUrl(jsModuleUrl),
-              name,
+              fileName,
             })
             return {
-              name,
+              fileName,
               rollupReferenceId,
             }
           },
-          lineBreakNormalization,
+          onAsset: ({ ressource }) => {
+            const fileName = ressource.relativeUrl
+            const rollupReferenceId = emitAsset({
+              name: ressource.name,
+              fileName,
+            })
+            return {
+              rollupReferenceId,
+              fileName,
+            }
+          },
+          onAssetSourceUpdated: ({ ressource }) => {
+            setAssetSource(
+              ressource.rollupReferenceId,
+              ressource.bufferAfterBuild,
+            )
+          },
+          computeBuildRelativeUrl,
         },
       )
 
@@ -685,10 +728,7 @@ export const createRollupPlugins = async ({
             if (entryContentType === "application/javascript") {
               emitChunk({
                 id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
-                name: urlToBasename(`file:///${entryBuildRelativeUrl}`),
-                ...(urlVersionningForEntryPoints
-                  ? {}
-                  : { fileName: entryBuildRelativeUrl }),
+                fileName: entryBuildRelativeUrl,
               })
               return
             }
@@ -709,8 +749,6 @@ export const createRollupPlugins = async ({
               entryContentType,
               entryUrl,
               entryBuffer,
-              entryBuildRelativeUrl,
-              urlVersionningForEntryPoints,
             })
           },
         ),
@@ -806,48 +844,29 @@ export const createRollupPlugins = async ({
       return asRollupUrl(importUrl)
     },
 
-    resolveFileUrl: ({ referenceId, fileName }) => {
-      const ressourceFound = ressourceBuilder.findRessource((ressource) => {
-        return ressource.rollupReferenceId === referenceId
-      })
-      let buildRelativeUrl
-      if (ressourceFound) {
-        if (ressourceFound.buildRelativeUrl) {
-          // the ressource build relative url is known
-          buildRelativeUrl = ressourceFound.buildRelativeUrl
-        } else {
-          // ressource build relative url is not yet known
-          // because "buildEnd" not called by rollup
-          // HOWEVER rollup already knows the referenced file content because
-          // when hash is enabled "fileName" would contain the hash
-          markBuildRelativeUrlAsUsedByJs(fileName)
-          buildRelativeUrl = fileName
-        }
-      } else {
-        buildRelativeUrl = fileName
-      }
+    resolveFileUrl: ({
+      // referenceId,
+      fileName,
+    }) => {
+      ressourcesReferencedByJs.push(fileName)
 
       if (format === "esmodule") {
         if (!node && useImportMapToMaximizeCacheReuse && urlVersioning) {
-          const buildRelativeUrlWithoutVersion =
-            buildRelativeUrlToFileName(buildRelativeUrl)
-          return `window.__resolveImportUrl__("./${buildRelativeUrlWithoutVersion}", import.meta.url)`
+          return `window.__resolveImportUrl__("./${fileName}", import.meta.url)`
         }
-        return `new URL("${buildRelativeUrl}", import.meta.url)`
+        return `new URL("${fileName}", import.meta.url)`
       }
       if (format === "systemjs") {
-        if (useImportMapToMaximizeCacheReuse && urlVersioning) {
-          const buildRelativeUrlWithoutVersion =
-            buildRelativeUrlToFileName(buildRelativeUrl)
-          return `new URL(System.resolve("./${buildRelativeUrlWithoutVersion}", module.meta.url))`
-        }
-        return `new URL(System.resolve("./${buildRelativeUrl}", module.meta.url))`
+        // if (useImportMapToMaximizeCacheReuse && urlVersioning) {
+        //   return `new URL(System.resolve("./${fileName}", module.meta.url))`
+        // }
+        return `new URL(System.resolve("./${fileName}", module.meta.url))`
       }
       if (format === "global") {
-        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI)`
+        return `new URL("${fileName}", document.currentScript && document.currentScript.src || document.baseURI)`
       }
       if (format === "commonjs") {
-        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/"))`
+        return `new URL("${fileName}", "file:///" + __filename.replace(/\\/g, "/"))`
       }
       return null
     },
@@ -943,10 +962,6 @@ export const createRollupPlugins = async ({
           })
           if (!reference) {
             return
-          }
-          if (!reference.ressource.isJsModule) {
-            await reference.ressource.getReadyPromise()
-            markBuildRelativeUrlAsUsedByJs(reference.ressource.buildRelativeUrl)
           }
           mutations.push((magicString) => {
             magicString.overwrite(
@@ -1065,9 +1080,9 @@ export const createRollupPlugins = async ({
                 return
               }
               await reference.ressource.getReadyPromise()
-              markBuildRelativeUrlAsUsedByJs(
-                reference.ressource.buildRelativeUrl,
-              )
+              // markBuildRelativeUrlAsUsedByJs(
+              //   reference.ressource.buildRelativeUrl,
+              // )
               return
             }
 
@@ -1218,10 +1233,6 @@ export const createRollupPlugins = async ({
       Object.keys(jsChunks).forEach((fileName) => {
         const file = jsChunks[fileName]
         let buildRelativeUrl
-        const canBeVersioned =
-          asRollupUrl(file.url) in jsModulesFromEntry ||
-          urlVersionningForEntryPoints ||
-          !file.isEntry
 
         if (file.url in inlineModuleScripts && format === "systemjs") {
           const code = file.code
@@ -1235,25 +1246,6 @@ export const createRollupPlugins = async ({
           file.code = magicString.toString()
         }
 
-        if (urlVersioning) {
-          if (canBeVersioned && useImportMapToMaximizeCacheReuse) {
-            buildRelativeUrl = computeBuildRelativeUrl(
-              resolveUrl(fileName, buildDirectoryUrl),
-              file.code,
-              {
-                pattern: `[name]-[hash][extname]`,
-                lineBreakNormalization,
-                contentType: "application/javascript",
-              },
-            )
-          } else {
-            buildRelativeUrl = fileName
-          }
-        } else {
-          buildRelativeUrl = fileName
-          fileName = rollupFileNameWithoutHash(fileName)
-        }
-
         const originalProjectUrl = asOriginalUrl(file.url)
         const originalProjectRelativeUrl = urlToRelativeUrl(
           originalProjectUrl,
@@ -1262,13 +1254,27 @@ export const createRollupPlugins = async ({
         const jsRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.url === file.url,
         )
-        if (jsRessource && jsRessource.isInline) {
-          if (format === "systemjs") {
-            markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
+
+        let ressourceName
+        if (urlVersioning) {
+          ressourceName = fileName
+          if (useImportMapToMaximizeCacheReuse) {
+            buildRelativeUrl = computeBuildRelativeUrl(jsRessource)
+            buildManifest[ressourceName] = buildRelativeUrl
+          } else {
+            buildRelativeUrl = fileName
           }
-          buildInlineFileContents[buildRelativeUrl] = file.code
         } else {
-          markBuildRelativeUrlAsUsedByJs(buildRelativeUrl)
+          ressourceName = asFileNameWithoutHash(fileName)
+          buildRelativeUrl = fileName
+        }
+
+        if (jsRessource && jsRessource.isInline) {
+          buildInlineFileContents[buildRelativeUrl] = file.code
+          if (format === "systemjs") {
+            ressourcesReferencedByJs.push(ressourceName)
+          }
+        } else {
           buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
         }
 
@@ -1297,21 +1303,16 @@ export const createRollupPlugins = async ({
           return
         }
 
-        const { facadeModuleId } = file
-        if (facadeModuleId === EMPTY_CHUNK_URL) {
-          return
-        }
-
         const assetRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.relativeUrl === rollupFileId,
         )
+        // the asset does not exists in the project it was generated during building
+        // happens for sourcemap
         if (!assetRessource) {
           const buildRelativeUrl = rollupFileId
-          const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
           assetBuild[buildRelativeUrl] = file
-          buildManifest[fileName] = buildRelativeUrl
-          // the asset does not exists in the project it was generated during building
-          // happens for sourcemap
+          const ressourceName = asFileNameWithoutHash(buildRelativeUrl)
+          buildManifest[ressourceName] = buildRelativeUrl
           return
         }
 
@@ -1335,22 +1336,22 @@ export const createRollupPlugins = async ({
         }
 
         const buildRelativeUrl = assetRessource.buildRelativeUrl
-        const fileName = rollupFileNameWithoutHash(buildRelativeUrl)
         if (assetRessource.isInline) {
           buildInlineFileContents[buildRelativeUrl] = file.source
-        } else {
-          const originalProjectUrl = asOriginalUrl(assetRessource.url)
-          const originalProjectRelativeUrl = urlToRelativeUrl(
-            originalProjectUrl,
-            projectDirectoryUrl,
-          )
-          // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
-          file.source = assetRessource.bufferAfterBuild
-
-          assetBuild[buildRelativeUrl] = file
-          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-          buildManifest[fileName] = buildRelativeUrl
+          return
         }
+
+        const ressourceName = asFileNameWithoutHash(buildRelativeUrl)
+        const originalProjectUrl = asOriginalUrl(assetRessource.url)
+        const originalProjectRelativeUrl = urlToRelativeUrl(
+          originalProjectUrl,
+          projectDirectoryUrl,
+        )
+        // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
+        file.source = assetRessource.bufferAfterBuild
+        assetBuild[buildRelativeUrl] = file
+        buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+        buildManifest[ressourceName] = buildRelativeUrl
       })
 
       rollupBuild = {
@@ -1375,14 +1376,17 @@ export const createRollupPlugins = async ({
           return false
         })
         if (ressource && ressource.isInline) {
-          const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
-          if (fileName) {
-            delete buildManifest[fileName]
+          const ressourceName =
+            ressourceNameFromBuildRelativeUrl(buildRelativeUrl)
+          if (ressourceName) {
+            delete buildManifest[ressourceName]
           }
           const originalProjectUrl = asOriginalUrl(ressource.url)
-          delete buildMappings[
-            urlToRelativeUrl(originalProjectUrl, projectDirectoryUrl)
-          ]
+          const originalRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          delete buildMappings[originalRelativeUrl]
           buildInlineFileContents[buildRelativeUrl] = rollupFileInfo.code
           delete rollupBuild[buildRelativeUrl]
         }
@@ -1443,13 +1447,13 @@ export const createRollupPlugins = async ({
   return {
     rollupPlugins,
     getLastErrorMessage: () => lastErrorMessage,
-    getResult: () => {
+    getResult: async () => {
       return {
         rollupBuild,
         urlResponseBodyMap: urlLoader.getUrlResponseBodyMap(),
         buildMappings,
         buildManifest,
-        buildImportMap: createImportMapForFilesUsedInJs(),
+        buildImportMap: await createImportMapForFilesUsedInJs(),
         buildFileContents,
         buildInlineFileContents,
         buildStats,
@@ -1554,7 +1558,7 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
   return resolveReturnValue
 }
 
-const rollupFileNameWithoutHash = (fileName) => {
+const asFileNameWithoutHash = (fileName) => {
   return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
     return afterHash
   })
@@ -1630,7 +1634,7 @@ const finalizeServiceWorkers = async ({
         )
       }
       const rollupFileInfo = rollupBuild[serviceWorkerBuildRelativeUrl]
-      // module worker
+      // module service worker
       if (serviceWorkerKeys.includes(projectRelativeUrl)) {
         let code = rollupFileInfo.code
         code = await serviceWorkerFinalizer(code, {
@@ -1641,7 +1645,7 @@ const finalizeServiceWorkers = async ({
         })
         rollupFileInfo.code = code
       }
-      // "classic" worker
+      // "classic" service worker
       else {
         let code = rollupFileInfo.source
         code = await serviceWorkerFinalizer(code, {

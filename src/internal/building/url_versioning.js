@@ -1,15 +1,99 @@
 import { createHash } from "crypto"
 import {
+  resolveUrl,
   urlToParentUrl,
   urlToBasename,
   urlToExtension,
 } from "@jsenv/filesystem"
 import { renderNamePattern } from "../renderNamePattern.js"
 
-export const computeBuildRelativeUrl = (
+export const computeBuildRelativeUrlForRessource = (
+  ressource,
+  {
+    urlVersionningForEntryPoints,
+    entryPointMap,
+    workerUrls,
+    asOriginalUrl,
+    lineBreakNormalization,
+  },
+) => {
+  const pattern = getFilenamePattern({
+    ressource,
+    urlVersionningForEntryPoints,
+    entryPointMap,
+    workerUrls,
+    asOriginalUrl,
+  })
+  return computeBuildRelativeUrl(ressource.url, ressource.bufferAfterBuild, {
+    pattern,
+    contentType: ressource.contentType,
+    lineBreakNormalization,
+  })
+}
+
+const getFilenamePattern = ({
+  ressource,
+  urlVersionningForEntryPoints,
+  entryPointMap,
+  workerUrls,
+  asOriginalUrl,
+}) => {
+  if (ressource.isEntryPoint) {
+    const entryKey = Object.keys(entryPointMap).find((key) => {
+      return key === `./${ressource.relativeUrl}`
+    })
+    if (entryKey) {
+      const buildRelativeUrl = entryPointMap[entryKey]
+      const name = urlToBasename(resolveUrl(buildRelativeUrl, "file:///"))
+      return urlVersionningForEntryPoints
+        ? `${name}-[hash][extname]`
+        : `${name}[extname]`
+    }
+    return urlVersionningForEntryPoints
+      ? "[name]-[hash][extname]"
+      : "[name]-[extname]"
+  }
+
+  if (ressource.isJsModule) {
+    const originalUrl = asOriginalUrl(ressource.url)
+
+    // it's a module worker
+    if (ressource.isWorker) {
+      const workerBuildRelativeUrl = workerUrls[originalUrl]
+      const workerBuildUrl = resolveUrl(workerBuildRelativeUrl, "file:///")
+      const name = urlToBasename(workerBuildUrl)
+      return `${name}-[hash][extname]`
+    }
+
+    // TODO: it's a module service worker
+
+    // it's a js module
+    return "[name]-[hash][extname]"
+  }
+
+  if (ressource.fileNamePattern) {
+    return ressource.fileNamePattern
+  }
+
+  if (
+    // service worker MUST be at the root (same level than the HTML file)
+    // otherwise it might be registered for the scope "/assets/" instead of "/"
+    // Also they must not be versioned
+    ressource.isServiceWorker
+  ) {
+    return "[name][extname]"
+  }
+
+  return ressource.urlVersioningDisabled
+    ? "assets/[name][extname]"
+    : "assets/[name]-[hash][extname]"
+}
+
+const computeBuildRelativeUrl = (
   fileUrl,
   fileContent,
   {
+    name = urlToBasename(fileUrl),
     pattern = "[name]-[hash][extname]",
     contentType = "application/octet-stream",
     lineBreakNormalization = false,
@@ -19,7 +103,7 @@ export const computeBuildRelativeUrl = (
     typeof pattern === "function" ? pattern() : pattern,
     {
       dirname: () => urlToParentUrl(fileUrl),
-      name: () => urlToBasename(fileUrl),
+      name: () => name,
       hash: () =>
         generateContentHash(fileContent, {
           contentType,

@@ -22,7 +22,7 @@ import { parseJsRessource } from "./js/parseJsRessource.js"
 import { parseJsonRessource } from "./json/parseJsonRessource.js"
 import { parseWebmanifestRessource } from "./webmanifest/parseWebmanifestRessource.js"
 
-export const parseRessource = (
+export const parseRessource = async (
   ressource,
   notifiers,
   {
@@ -138,7 +138,7 @@ export const parseRessource = (
     return parseImportmapRessource(ressource, notifiers, {
       minify,
       importMapToInject: useImportMapToMaximizeCacheReuse
-        ? createImportMapForFilesUsedInJs()
+        ? await createImportMapForFilesUsedInJs()
         : undefined,
     })
   }

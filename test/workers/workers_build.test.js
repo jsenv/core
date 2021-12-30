@@ -25,16 +25,18 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}main.html`]: "./main.html",
   },
   workers: {
-    [`${testDirectoryRelativeUrl}worker/worker.js`]: "worker.js",
+    [`${testDirectoryRelativeUrl}worker/worker.js`]: "worker_toto.js",
   },
-  serviceWorkers: {
-    [`${testDirectoryRelativeUrl}service_worker/sw.js`]: "sw.js",
-  },
+  // serviceWorkers: {
+  //   [`${testDirectoryRelativeUrl}service_worker/sw.js`]: "sw.js",
+  // },
   classicWorkers: {
-    [`${testDirectoryRelativeUrl}classic_worker/worker.js`]: "worker.js",
+    [`${testDirectoryRelativeUrl}classic_worker/worker.js`]:
+      "classic_worker.js",
   },
   // classicServiceWorkers: {
-  //   [`${testDirectoryRelativeUrl}classic_service_worker/sw.js`]: "sw.js",
+  //   [`${testDirectoryRelativeUrl}classic_service_worker/sw.js`]:
+  //     "classic_sw.js",
   // },
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
@@ -50,14 +52,37 @@ if (process.platform !== "win32") {
   const actual = namespace
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/worker-e8d3de54.js`,
+      url: `${serverOrigin}/dist/esmodule/worker_toto-e8d3de54.js`,
       pingResponse: `pong`,
+    },
+    serviceWorker: {
+      url: `${serverOrigin}/dist/esmodule/sw-35be433e.js`,
+      inspectResponse: {
+        order: [],
+        generatedUrlsConfig: {
+          "worker_toto-e8d3de54.js": {
+            versioned: true,
+          },
+          "main.html": {
+            versioned: false,
+            // because when html file is modified, it's url is not
+            // if you update only the html file, browser won't update the service worker.
+            // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
+            // to include a hash for the html file.
+            // -> when html file changes -> hash changes -> worker updates
+            version: "bf2217fc",
+          },
+          "assets/style-b126d686.css": {
+            versioned: true,
+          },
+        },
+      },
     },
     classicWorker: {
       url: `${serverOrigin}/dist/esmodule/assets/worker-a850e925`,
       pingResponse: `pong`,
     },
-    serviceWorker: {
+    classicServiceWorker: {
       url: `${serverOrigin}/dist/esmodule/sw-35be433e.js`,
       inspectResponse: {
         order: [],
