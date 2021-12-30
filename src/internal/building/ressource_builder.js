@@ -244,6 +244,9 @@ export const createRessourceBuilder = (
       if (ressourceUrlResolution.isServiceWorker) {
         isServiceWorker = true
       }
+      if (ressourceUrlResolution.isJsModule) {
+        isJsModule = true
+      }
       ressourceUrl = ressourceUrlResolution.url
     } else {
       ressourceUrl = ressourceUrlResolution

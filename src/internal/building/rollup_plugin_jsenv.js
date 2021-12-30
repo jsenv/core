@@ -69,6 +69,8 @@ export const createRollupPlugins = async ({
   workers,
   serviceWorkers,
   serviceWorkerFinalizer,
+  classicWorkers,
+  classicServiceWorkers,
 
   format,
   systemJsUrl,
@@ -107,8 +109,17 @@ export const createRollupPlugins = async ({
   const serviceWorkerUrls = Object.keys(serviceWorkers).map((key) =>
     resolveUrl(key, projectDirectoryUrl),
   )
+  const classicWorkerUrls = Object.keys(classicWorkers).map((key) =>
+    resolveUrl(key, projectDirectoryUrl),
+  )
+  const classicServiceWorkerUrls = Object.keys(classicServiceWorkers).map(
+    (key) => resolveUrl(key, projectDirectoryUrl),
+  )
   const isWorkerUrl = (url) => workerUrls.includes(url)
   const isServiceWorkerUrl = (url) => serviceWorkerUrls.includes(url)
+  const isClassicWorkerUrl = (url) => classicWorkerUrls.includes(url)
+  const isClassicServiceWorkerUrl = (url) =>
+    classicServiceWorkerUrls.includes(url)
 
   let ressourceBuilder
   let importResolver
@@ -606,10 +617,24 @@ export const createRollupPlugins = async ({
             if (isWorkerUrl(originalUrl)) {
               return {
                 isWorker: true,
+                isJsModule: true,
                 url: ressourceUrl,
               }
             }
             if (isServiceWorkerUrl(originalUrl)) {
+              return {
+                isServiceWorker: true,
+                isJsModule: true,
+                url: ressourceUrl,
+              }
+            }
+            if (isClassicWorkerUrl(originalUrl)) {
+              return {
+                isWorker: true,
+                url: ressourceUrl,
+              }
+            }
+            if (isClassicServiceWorkerUrl(originalUrl)) {
               return {
                 isServiceWorker: true,
                 url: ressourceUrl,

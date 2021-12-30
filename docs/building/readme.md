@@ -21,7 +21,7 @@ This documentation list [key features](#key-features) and gives the [definition 
   - anything babel can transform
 - Can minify html, css, js, json, svg.
 - Generate sourcemap files for js and css
-- Can build service worker files
+- Can build workers and service workers
 - Regroup js files into chunks (concatenation)
 
 # Definition of a build for jsenv
@@ -209,9 +209,9 @@ _workers_ is optional.
 If your source file references a worker file as below:
 
 ```js
-const workerUrl = new URL("/worker.js", import.meta.url)
+const workerUrl = new URL("./worker.js", import.meta.url)
 
-const worker = new Worker(workerUrl)
+const worker = new Worker(workerUrl, { type: "module" })
 ```
 
 Then you should tell jsenv this is a worker using _workers_ parameter.
@@ -229,7 +229,7 @@ await buildProject({
 })
 ```
 
-Thanks to this, jsenv knows it's a worker file and will detect usage of [importScripts](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers#importing_scripts_and_libraries).
+Thanks to this, jsenv knows "worker.js" is not a classic js file but a worker module.
 
 ## urlVersioning
 
@@ -379,12 +379,10 @@ document.body.appendChild(img)
 ```
 
 ```js
-const workerUrl = new URL("/worker.js", import.meta.url)
+const workerUrl = new URL("./worker.js", import.meta.url)
 
-const worker = new Worker(workerUrl)
+const worker = new Worker(workerUrl, { type: "module" })
 ```
-
-> Worker must be referenced with the absolute path: starting with "/"
 
 ### With customCompilers
 

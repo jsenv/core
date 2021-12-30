@@ -15,42 +15,60 @@
     </script>
     <script type="module">
       const namespace = {}
-      const workerUrl = new URL(
-        "/test/workers/worker/worker.js",
-        import.meta.url,
-      )
-      namespace.workerUrl = String(workerUrl)
-      const worker = new Worker(workerUrl)
-      const pingResponse = await new Promise((resolve, reject) => {
-        worker.onmessage = (e) => {
-          resolve(e.data)
-        }
-        worker.onerror = (e) => {
-          reject(e.message)
-        }
-        worker.postMessage("ping")
-      })
-      namespace.pingResponse = pingResponse
 
+      const testWorker = async (worker) => {
+        const pingResponse = await new Promise((resolve, reject) => {
+          worker.onmessage = (e) => {
+            resolve(e.data)
+          }
+          worker.onerror = (e) => {
+            reject(e.message)
+          }
+          worker.postMessage("ping")
+        })
+        return pingResponse
+      }
+      const workerUrl = new URL("./worker/worker.js", import.meta.url)
+      const worker = new Worker(workerUrl, { type: "module" })
+      const pingResponse = await testWorker(worker)
+      namespace.worker = {
+        url: String(workerUrl),
+        pingResponse,
+      }
+      // TODO: test classic worker
+
+      const registerServiceWorker = async (url, options) => {
+        const serviceWorker = await window.navigator.serviceWorker
+          .register(url, options)
+          .then((registration) => {
+            const { installing, waiting, active } = registration
+            return installing || waiting || active
+          })
+        return serviceWorker
+      }
+      const testServiceWorker = async (serviceWorker) => {
+        const inspectResponse = await new Promise((resolve) => {
+          const { port1, port2 } = new MessageChannel()
+          port1.onmessage = function (event) {
+            resolve(event.data)
+          }
+          serviceWorker.postMessage("inspect", [port2])
+        })
+        return inspectResponse
+      }
       const serviceWorkerUrl = new URL(
-        "/test/workers/service_worker/sw.js",
+        "./service_worker/sw.js",
         import.meta.url,
       )
-      namespace.serviceWorkerUrl = String(serviceWorkerUrl)
-      const serviceWorker = await window.navigator.serviceWorker
-        .register(serviceWorkerUrl)
-        .then((registration) => {
-          const { installing, waiting, active } = registration
-          return installing || waiting || active
-        })
-      const inspectResponse = await new Promise((resolve) => {
-        const { port1, port2 } = new MessageChannel()
-        port1.onmessage = function (event) {
-          resolve(event.data)
-        }
-        serviceWorker.postMessage("inspect", [port2])
+      const serviceWorker = await registerServiceWorker(serviceWorkerUrl, {
+        type: "module",
       })
-      namespace.inspectResponse = inspectResponse
+      const inspectResponse = await testServiceWorker(serviceWorker)
+      namespace.serviceWorker = {
+        url: String(serviceWorkerUrl),
+        inspectResponse,
+      }
+      // TODO: test classic service worker too
 
       window.resolveNamespacePromise(namespace)
 

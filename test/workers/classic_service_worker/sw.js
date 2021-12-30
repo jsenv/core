@@ -1,11 +1,8 @@
-/* globals self */
+/* globals self, importScripts */
 
 self.order = []
 self.order.push("before-a")
-
-// eslint-disable-next-line import/first
-import "./a.js"
-
+importScripts("./a.js")
 self.order.push("after-a")
 
 self.addEventListener("message", async (messageEvent) => {

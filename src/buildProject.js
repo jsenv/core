@@ -81,6 +81,8 @@ export const buildProject = async ({
   workers = {},
   serviceWorkers = {},
   serviceWorkerFinalizer,
+  classicWorkers = {},
+  classicServiceWorkers = {},
 
   env = {},
   protocol,
@@ -238,6 +240,8 @@ export const buildProject = async ({
       workers,
       serviceWorkers,
       serviceWorkerFinalizer,
+      classicWorkers,
+      classicServiceWorkers,
 
       writeOnFileSystem,
       sourcemapExcludeSources,

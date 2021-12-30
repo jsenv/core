@@ -1,9 +1,9 @@
 /* globals self */
 
-import { pingResponse } from "./ping.js"
+self.importScripts("./ping.js")
 
 self.addEventListener("message", (e) => {
   if (e.data === "ping") {
-    self.postMessage(pingResponse)
+    self.postMessage(self.pingResponse)
   }
 })

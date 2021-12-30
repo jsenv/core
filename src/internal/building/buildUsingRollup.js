@@ -49,6 +49,8 @@ export const buildUsingRollup = async ({
   workers,
   serviceWorkers,
   serviceWorkerFinalizer,
+  classicWorkers,
+  classicServiceWorkers,
 
   urlVersioning,
   urlVersionningForEntryPoints,
@@ -121,6 +123,8 @@ export const buildUsingRollup = async ({
     workers,
     serviceWorkers,
     serviceWorkerFinalizer,
+    classicWorkers,
+    classicServiceWorkers,
 
     urlVersioning,
     urlVersionningForEntryPoints,

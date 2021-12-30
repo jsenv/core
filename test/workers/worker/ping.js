@@ -1,3 +1,1 @@
-/* globals self */
-
-self.pingResponse = "pong"
+export const pingResponse = "pong"
