@@ -30,12 +30,19 @@
       }
       const workerUrl = new URL("./worker/worker.js", import.meta.url)
       const worker = new Worker(workerUrl, { type: "module" })
-      const pingResponse = await testWorker(worker)
       namespace.worker = {
         url: String(workerUrl),
-        pingResponse,
+        pingResponse: await testWorker(worker),
       }
-      // TODO: test classic worker
+      const classicWorkerUrl = new URL(
+        "/test/workers/classic_worker/worker.js",
+        import.meta.url,
+      )
+      const classicWorker = new Worker(classicWorkerUrl)
+      namespace.classicWorker = {
+        url: String(classicWorkerUrl),
+        pingResponse: await testWorker(classicWorker),
+      }
 
       const registerServiceWorker = async (url, options) => {
         const serviceWorker = await window.navigator.serviceWorker

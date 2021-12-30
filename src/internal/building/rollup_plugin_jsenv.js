@@ -944,6 +944,10 @@ export const createRollupPlugins = async ({
           if (!reference) {
             return
           }
+          if (!reference.ressource.isJsModule) {
+            await reference.ressource.getReadyPromise()
+            markBuildRelativeUrlAsUsedByJs(reference.ressource.buildRelativeUrl)
+          }
           mutations.push((magicString) => {
             magicString.overwrite(
               importNode.start,
@@ -1386,6 +1390,7 @@ export const createRollupPlugins = async ({
 
       await finalizeServiceWorkers({
         serviceWorkers,
+        classicServiceWorkers,
         serviceWorkerFinalizer,
         projectDirectoryUrl,
         buildDirectoryUrl,
@@ -1600,14 +1605,22 @@ const acceptsJsonContentType = ({ node, format }) => {
 
 const finalizeServiceWorkers = async ({
   serviceWorkers,
+  classicServiceWorkers,
   serviceWorkerFinalizer,
   buildMappings,
   buildManifest,
   rollupBuild,
   lineBreakNormalization,
 }) => {
+  const serviceWorkerKeys = Object.keys(serviceWorkers)
+  const classicServiceWorkerKeys = Object.keys(classicServiceWorkers)
+  const projectRelativeUrls = [
+    ...serviceWorkerKeys,
+    ...classicServiceWorkerKeys,
+  ]
+
   await Promise.all(
-    Object.keys(serviceWorkers).map(async (projectRelativeUrl) => {
+    projectRelativeUrls.map(async (projectRelativeUrl) => {
       const projectUrl = resolveUrl(projectRelativeUrl, "file://")
       projectRelativeUrl = urlToRelativeUrl(projectUrl, "file://")
       const serviceWorkerBuildRelativeUrl = buildMappings[projectRelativeUrl]
@@ -1617,14 +1630,28 @@ const finalizeServiceWorkers = async ({
         )
       }
       const rollupFileInfo = rollupBuild[serviceWorkerBuildRelativeUrl]
-      let code = rollupFileInfo.code
-      code = await serviceWorkerFinalizer(code, {
-        serviceWorkerBuildRelativeUrl,
-        buildManifest,
-        rollupBuild,
-        lineBreakNormalization,
-      })
-      rollupFileInfo.code = code
+      // module worker
+      if (serviceWorkerKeys.includes(projectRelativeUrl)) {
+        let code = rollupFileInfo.code
+        code = await serviceWorkerFinalizer(code, {
+          serviceWorkerBuildRelativeUrl,
+          buildManifest,
+          rollupBuild,
+          lineBreakNormalization,
+        })
+        rollupFileInfo.code = code
+      }
+      // "classic" worker
+      else {
+        let code = rollupFileInfo.source
+        code = await serviceWorkerFinalizer(code, {
+          serviceWorkerBuildRelativeUrl,
+          buildManifest,
+          rollupBuild,
+          lineBreakNormalization,
+        })
+        rollupFileInfo.source = code
+      }
     }),
   )
 }

@@ -33,9 +33,9 @@ await buildProject({
   classicWorkers: {
     [`${testDirectoryRelativeUrl}classic_worker/worker.js`]: "worker.js",
   },
-  classicServiceWorkers: {
-    [`${testDirectoryRelativeUrl}classic_service_worker/sw.js`]: "sw.js",
-  },
+  // classicServiceWorkers: {
+  //   [`${testDirectoryRelativeUrl}classic_service_worker/sw.js`]: "sw.js",
+  // },
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
 
@@ -51,6 +51,10 @@ if (process.platform !== "win32") {
   const expected = {
     worker: {
       url: `${serverOrigin}/dist/esmodule/worker-e8d3de54.js`,
+      pingResponse: `pong`,
+    },
+    classicWorker: {
+      url: `${serverOrigin}/dist/esmodule/assets/worker-a850e925`,
       pingResponse: `pong`,
     },
     serviceWorker: {
