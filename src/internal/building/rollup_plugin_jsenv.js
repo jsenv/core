@@ -194,7 +194,7 @@ export const createRollupPlugins = async ({
       .sort(comparePathnames)
       .forEach((buildRelativeUrl) => {
         const fileName = buildRelativeUrlToFileName(buildRelativeUrl)
-        if (fileName !== buildRelativeUrl) {
+        if (fileName !== buildRelativeUrl && fileName) {
           topLevelMappings[`./${fileName}`] = `./${buildRelativeUrl}`
         }
       })
@@ -371,7 +371,7 @@ export const createRollupPlugins = async ({
       if (typeof useImportMapToMaximizeCacheReuse === "undefined") {
         useImportMapToMaximizeCacheReuse =
           htmlEntryPointCount > 0 &&
-          // node has no importmap concept, le'ts use the versionned url in that case
+          // node has no importmap concept, let's use the versionned url in that case
           !node
       }
 
@@ -470,7 +470,7 @@ export const createRollupPlugins = async ({
             )
           }
         } else {
-          // there is no importmap, its' fine it's not mandatory to use one
+          // there is no importmap, it's fine, it's not mandatory
           fetchImportMap = () => {
             const firstEntryPoint = htmlEntryPoints[0] || entryPointsPrepared[0]
             const { entryProjectRelativeUrl } = firstEntryPoint
@@ -810,9 +810,22 @@ export const createRollupPlugins = async ({
       const ressourceFound = ressourceBuilder.findRessource((ressource) => {
         return ressource.rollupReferenceId === referenceId
       })
-      const buildRelativeUrl = ressourceFound
-        ? ressourceFound.buildRelativeUrl
-        : fileName
+      let buildRelativeUrl
+      if (ressourceFound) {
+        if (ressourceFound.buildRelativeUrl) {
+          // the ressource build relative url is known
+          buildRelativeUrl = ressourceFound.buildRelativeUrl
+        } else {
+          // ressource build relative url is not yet known
+          // because "buildEnd" not called by rollup
+          // HOWEVER rollup already knows the referenced file content because
+          // when hash is enabled "fileName" would contain the hash
+          markBuildRelativeUrlAsUsedByJs(fileName)
+          buildRelativeUrl = fileName
+        }
+      } else {
+        buildRelativeUrl = fileName
+      }
 
       if (format === "esmodule") {
         if (!node && useImportMapToMaximizeCacheReuse && urlVersioning) {
@@ -921,18 +934,16 @@ export const createRollupPlugins = async ({
         onReferenceWithImportMetaUrlPattern: async ({ importNode }) => {
           const specifier = importNode.arguments[0].value
           const { line, column } = importNode.loc.start
-          const reference =
-            await ressourceBuilder.createReferenceFoundInJsModule({
-              referenceLabel: "URL + import.meta.url",
-              jsUrl: url,
-              jsLine: line,
-              jsColumn: column,
-              ressourceSpecifier: specifier,
-            })
+          const reference = ressourceBuilder.createReferenceFoundInJsModule({
+            referenceLabel: "URL + import.meta.url",
+            jsUrl: url,
+            jsLine: line,
+            jsColumn: column,
+            ressourceSpecifier: specifier,
+          })
           if (!reference) {
             return
           }
-          markBuildRelativeUrlAsUsedByJs(reference.ressource.buildRelativeUrl)
           mutations.push((magicString) => {
             magicString.overwrite(
               importNode.start,
@@ -1035,19 +1046,21 @@ export const createRollupPlugins = async ({
           const ressourceUrl = asServerUrl(id)
           if (external) {
             if (importAssertionSupportedByRuntime) {
-              const reference =
-                await ressourceBuilder.createReferenceFoundInJsModule({
+              const reference = ressourceBuilder.createReferenceFoundInJsModule(
+                {
                   referenceLabel: "import assertion",
                   isImportAssertion: true,
                   jsUrl: url,
                   jsLine: line,
                   jsColumn: column,
                   ressourceSpecifier: ressourceUrl,
-                })
+                },
+              )
               // reference can be null for cross origin urls
               if (!reference) {
                 return
               }
+              await reference.ressource.getReadyPromise()
               markBuildRelativeUrlAsUsedByJs(
                 reference.ressource.buildRelativeUrl,
               )
@@ -1603,14 +1616,15 @@ const finalizeServiceWorkers = async ({
           `"${projectRelativeUrl}" service worker file missing in the build`,
         )
       }
-      const buildFileContent = rollupBuild[serviceWorkerBuildRelativeUrl].source
-      rollupBuild[serviceWorkerBuildRelativeUrl].source =
-        serviceWorkerFinalizer(buildFileContent, {
-          serviceWorkerBuildRelativeUrl,
-          buildManifest,
-          rollupBuild,
-          lineBreakNormalization,
-        })
+      const rollupFileInfo = rollupBuild[serviceWorkerBuildRelativeUrl]
+      let code = rollupFileInfo.code
+      code = await serviceWorkerFinalizer(code, {
+        serviceWorkerBuildRelativeUrl,
+        buildManifest,
+        rollupBuild,
+        lineBreakNormalization,
+      })
+      rollupFileInfo.code = code
     }),
   )
 }

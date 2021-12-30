@@ -119,7 +119,7 @@ export const createRessourceBuilder = (
     })
   }
 
-  const createReferenceFoundInJsModule = async ({
+  const createReferenceFoundInJsModule = ({
     referenceLabel,
     jsUrl,
     jsLine,
@@ -143,10 +143,6 @@ export const createRessourceBuilder = (
       contentType,
       bufferBeforeBuild,
     })
-    if (!reference) {
-      return null
-    }
-    await reference.ressource.getReadyPromise()
     return reference
   }
 

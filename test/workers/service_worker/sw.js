@@ -1,12 +1,8 @@
 /* globals self */
 
-self.order = []
-self.order.push("before-a")
-
-// eslint-disable-next-line import/first
 import "./a.js"
 
-self.order.push("after-a")
+self.order = []
 
 self.addEventListener("message", async (messageEvent) => {
   if (messageEvent.data === "inspect") {

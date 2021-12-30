@@ -27,20 +27,19 @@ export const createUrlLoader = ({
     // importing CSS from JS with import assertions
     if (importType === "css") {
       const importer = urlImporterMap[url]
-      const cssReference =
-        await ressourceBuilder.createReferenceFoundInJsModule({
-          referenceLabel: "css import assertion",
-          // If all references to a ressource are only import assertions
-          // the file referenced do not need to be written on filesystem
-          // as it was converted to a js file
-          // We pass "isImportAssertion: true" for this purpose
-          isImportAssertion: true,
-          jsUrl: importer.url,
-          jsLine: importer.line,
-          jsColumn: importer.column,
-          ressourceSpecifier: urlWithoutImportType,
-          contentTypeExpected: "text/css",
-        })
+      const cssReference = ressourceBuilder.createReferenceFoundInJsModule({
+        referenceLabel: "css import assertion",
+        // If all references to a ressource are only import assertions
+        // the file referenced do not need to be written on filesystem
+        // as it was converted to a js file
+        // We pass "isImportAssertion: true" for this purpose
+        isImportAssertion: true,
+        jsUrl: importer.url,
+        jsLine: importer.line,
+        jsColumn: importer.column,
+        ressourceSpecifier: urlWithoutImportType,
+        contentTypeExpected: "text/css",
+      })
       await cssReference.ressource.getReadyPromise()
       const cssBuildUrl = resolveUrl(
         cssReference.ressource.buildRelativeUrl,
@@ -81,20 +80,19 @@ export const createUrlLoader = ({
     // importing json from JS with import assertion
     if (importType === "json") {
       const importer = urlImporterMap[url]
-      const jsonReference =
-        await ressourceBuilder.createReferenceFoundInJsModule({
-          referenceLabel: "json import assertion",
-          // If all references to a ressource are only import assertions
-          // the file referenced do not need to be written on filesystem
-          // as it was converted to a js file
-          // We pass "isImportAssertion: true" for this purpose
-          isImportAssertion: true,
-          jsUrl: importer.url,
-          jsLine: importer.line,
-          jsColumn: importer.column,
-          ressourceSpecifier: asServerUrl(urlWithoutImportType),
-          contentTypeExpected: "application/json",
-        })
+      const jsonReference = ressourceBuilder.createReferenceFoundInJsModule({
+        referenceLabel: "json import assertion",
+        // If all references to a ressource are only import assertions
+        // the file referenced do not need to be written on filesystem
+        // as it was converted to a js file
+        // We pass "isImportAssertion: true" for this purpose
+        isImportAssertion: true,
+        jsUrl: importer.url,
+        jsLine: importer.line,
+        jsColumn: importer.column,
+        ressourceSpecifier: asServerUrl(urlWithoutImportType),
+        contentTypeExpected: "application/json",
+      })
       await jsonReference.ressource.getReadyPromise()
       let code = String(jsonReference.ressource.bufferAfterBuild)
       let map

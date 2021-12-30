@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "info",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -50,15 +50,15 @@ if (process.platform !== "win32") {
   const actual = namespace
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/assets/worker-a850e925.js`,
+      url: `${serverOrigin}/dist/esmodule/worker-e8d3de54.js`,
       pingResponse: `pong`,
     },
     serviceWorker: {
-      url: `${serverOrigin}/dist/esmodule/sw.js`,
+      url: `${serverOrigin}/dist/esmodule/sw-35be433e.js`,
       inspectResponse: {
-        order: ["before-a", "before-b", "b", "after-b", "after-a"],
+        order: [],
         generatedUrlsConfig: {
-          "assets/worker-a850e925.js": {
+          "worker-e8d3de54.js": {
             versioned: true,
           },
           "main.html": {
@@ -68,7 +68,7 @@ if (process.platform !== "win32") {
             // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
             // to include a hash for the html file.
             // -> when html file changes -> hash changes -> worker updates
-            version: "03c933a5",
+            version: "bf2217fc",
           },
           "assets/style-b126d686.css": {
             versioned: true,
