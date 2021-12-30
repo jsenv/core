@@ -2,7 +2,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
   urlIsInsideOf,
-  urlToParentUrl,
   urlToFilename,
 } from "@jsenv/filesystem"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
@@ -36,7 +35,7 @@ export const createRessourceBuilder = (
     onAssetSourceUpdated,
     onJsModule,
     resolveRessourceUrl,
-    computeBuildRelativeUrl,
+    urlVersioner,
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -169,7 +168,6 @@ export const createRessourceBuilder = (
     isInline,
     isPlaceholder,
 
-    fileNamePattern,
     urlVersioningDisabled,
 
     fromRollup,
@@ -252,21 +250,6 @@ export const createRessourceBuilder = (
     // any hash in the url would mess up with filenames
     ressourceUrl = removePotentialUrlHash(ressourceUrl)
 
-    if (isInline && fileNamePattern === undefined) {
-      // inherit parent directory location because it's an inline file
-      fileNamePattern = () => {
-        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
-          ressourceImporter,
-          { computeBuildRelativeUrl },
-        )
-        const importerParentRelativeUrl = urlToRelativeUrl(
-          urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
-          "file://",
-        )
-        return `${importerParentRelativeUrl}[name]-[hash][extname]`
-      }
-    }
-
     const existingRessource = findRessourceByUrl(ressourceUrl)
     let ressource
     if (existingRessource) {
@@ -293,7 +276,6 @@ export const createRessourceBuilder = (
         isWorker,
         isServiceWorker,
 
-        fileNamePattern,
         urlVersioningDisabled,
       })
       ressourceMap[ressourceUrl] = ressource
@@ -362,7 +344,6 @@ export const createRessourceBuilder = (
     isWorker = false,
     isServiceWorker = false,
 
-    fileNamePattern,
     urlVersioningDisabled,
   }) => {
     const ressource = {
@@ -381,7 +362,6 @@ export const createRessourceBuilder = (
       isWorker,
       isServiceWorker,
 
-      fileNamePattern,
       urlVersioningDisabled,
 
       relativeUrl: urlToRelativeUrl(ressourceUrl, compileServerOrigin),
@@ -482,7 +462,6 @@ export const createRessourceBuilder = (
         isSourcemap = false,
         isPlaceholder = false,
         urlVersioningDisabled,
-        fileNamePattern,
       }) => {
         if (parsingDone) {
           throw new Error(
@@ -507,7 +486,6 @@ export const createRessourceBuilder = (
           isPlaceholder,
 
           urlVersioningDisabled,
-          fileNamePattern,
         })
 
         if (dependencyReference) {
@@ -585,16 +563,12 @@ export const createRessourceBuilder = (
       // }
       // we don't yet know the exact importerBuildRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
-      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
-        ressource,
-        { computeBuildRelativeUrl },
-      )
+      const importerBuildRelativeUrl =
+        urlVersioner.precomputeBuildRelativeUrl(ressource)
       await transform({
         buildDirectoryUrl,
         precomputeBuildRelativeUrl: (ressource) =>
-          precomputeBuildRelativeUrlForRessource(ressource, {
-            computeBuildRelativeUrl,
-          }),
+          urlVersioner.precomputeBuildRelativeUrl(ressource),
         getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
 
@@ -643,7 +617,8 @@ export const createRessourceBuilder = (
       if (bufferAfterBuild !== undefined) {
         ressource.bufferAfterBuild = bufferAfterBuild
         if (buildRelativeUrl === undefined) {
-          ressource.buildRelativeUrl = computeBuildRelativeUrl(ressource)
+          ressource.buildRelativeUrl =
+            urlVersioner.computeBuildRelativeUrl(ressource)
         }
       }
 
@@ -941,20 +916,6 @@ export const createRessourceBuilder = (
 //   )
 //   return ressourceUrlPreRedirect
 // }
-
-const precomputeBuildRelativeUrlForRessource = (
-  ressource,
-  { bufferAfterBuild = "", computeBuildRelativeUrl } = {},
-) => {
-  if (ressource.buildRelativeUrl) {
-    return ressource.buildRelativeUrl
-  }
-
-  ressource.bufferAfterBuild = bufferAfterBuild
-  const precomputedBuildRelativeUrl = computeBuildRelativeUrl(ressource)
-  ressource.bufferAfterBuild = undefined
-  return precomputedBuildRelativeUrl
-}
 
 export const referenceToCodeForRollup = (reference) => {
   const ressource = reference.ressource

@@ -16,12 +16,7 @@ Or be sure to also reference this url somewhere in the html file like
 
 */
 
-import {
-  urlToFilename,
-  urlToRelativeUrl,
-  resolveUrl,
-  urlToParentUrl,
-} from "@jsenv/filesystem"
+import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
 
 import {
   parseHtmlString,
@@ -386,23 +381,6 @@ const importmapScriptSrcVisitor = (
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
     ...referenceLocationFromHtmlNode(script, "src"),
-    // here we want to force the fileName for the importmap
-    // so that we don't have to rewrite its content
-    // the goal is to put the importmap at the same relative path
-    // than in the project
-    fileNamePattern: () => {
-      const importmapReferenceUrl = importmapReference.referenceUrl
-      const importmapRessourceUrl = importmapReference.ressource.url
-      const importmapUrlRelativeToImporter = urlToRelativeUrl(
-        importmapRessourceUrl,
-        importmapReferenceUrl,
-      )
-      const importmapParentRelativeUrl = urlToRelativeUrl(
-        urlToParentUrl(resolveUrl(importmapUrlRelativeToImporter, "file://")),
-        "file://",
-      )
-      return `${importmapParentRelativeUrl}[name]-[hash][extname]`
-    },
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = importmapReference

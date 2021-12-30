@@ -39,7 +39,7 @@ import {
   referenceToCodeForRollup,
 } from "./ressource_builder.js"
 
-import { computeBuildRelativeUrlForRessource } from "./url_versioning.js"
+import { createUrlVersioner } from "./url_versioning.js"
 import { visitImportReferences } from "./import_references.js"
 
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
@@ -130,15 +130,13 @@ export const createRollupPlugins = async ({
   let _rollupGetModuleInfo = () => {}
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
-  const computeBuildRelativeUrl = (ressource) => {
-    return computeBuildRelativeUrlForRessource(ressource, {
-      urlVersionningForEntryPoints,
-      entryPointMap,
-      workerUrls,
-      asOriginalUrl,
-      lineBreakNormalization,
-    })
-  }
+  const urlVersioner = createUrlVersioner({
+    urlVersionningForEntryPoints,
+    entryPointMap,
+    workerUrls,
+    asOriginalUrl,
+    lineBreakNormalization,
+  })
 
   const {
     asRollupUrl,
@@ -713,7 +711,7 @@ export const createRollupPlugins = async ({
               ressource.bufferAfterBuild,
             )
           },
-          computeBuildRelativeUrl,
+          urlVersioner,
         },
       )
 
@@ -1259,7 +1257,11 @@ export const createRollupPlugins = async ({
         if (urlVersioning) {
           ressourceName = fileName
           if (useImportMapToMaximizeCacheReuse) {
-            buildRelativeUrl = computeBuildRelativeUrl(jsRessource)
+            // TOOD: jsRessource might not exists
+            // for chunks generated dynamically by rollup
+            // for thoose ressource
+            // we should create a new type of ressource
+            buildRelativeUrl = urlVersioner.computeBuildRelativeUrl(jsRessource)
             buildManifest[ressourceName] = buildRelativeUrl
           } else {
             buildRelativeUrl = fileName

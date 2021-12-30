@@ -4,31 +4,49 @@ import {
   urlToParentUrl,
   urlToBasename,
   urlToExtension,
+  urlToRelativeUrl,
 } from "@jsenv/filesystem"
+
 import { renderNamePattern } from "../renderNamePattern.js"
 
-export const computeBuildRelativeUrlForRessource = (
-  ressource,
-  {
-    urlVersionningForEntryPoints,
-    entryPointMap,
-    workerUrls,
-    asOriginalUrl,
-    lineBreakNormalization,
-  },
-) => {
-  const pattern = getFilenamePattern({
-    ressource,
-    urlVersionningForEntryPoints,
-    entryPointMap,
-    workerUrls,
-    asOriginalUrl,
-  })
-  return computeBuildRelativeUrl(ressource.url, ressource.bufferAfterBuild, {
-    pattern,
-    contentType: ressource.contentType,
-    lineBreakNormalization,
-  })
+export const createUrlVersioner = ({
+  urlVersionningForEntryPoints,
+  entryPointMap,
+  workerUrls,
+  asOriginalUrl,
+  lineBreakNormalization,
+}) => {
+  const computeBuildRelativeUrl = (ressource) => {
+    const pattern = getFilenamePattern({
+      ressource,
+      urlVersionningForEntryPoints,
+      entryPointMap,
+      workerUrls,
+      asOriginalUrl,
+      precomputeBuildRelativeUrl,
+    })
+    return generateBuildRelativeUrl(ressource.url, ressource.bufferAfterBuild, {
+      pattern,
+      contentType: ressource.contentType,
+      lineBreakNormalization,
+    })
+  }
+
+  const precomputeBuildRelativeUrl = (ressource, bufferAfterBuild = "") => {
+    if (ressource.buildRelativeUrl) {
+      return ressource.buildRelativeUrl
+    }
+
+    ressource.bufferAfterBuild = bufferAfterBuild
+    const precomputedBuildRelativeUrl = computeBuildRelativeUrl(ressource)
+    ressource.bufferAfterBuild = undefined
+    return precomputedBuildRelativeUrl
+  }
+
+  return {
+    computeBuildRelativeUrl,
+    precomputeBuildRelativeUrl,
+  }
 }
 
 const getFilenamePattern = ({
@@ -37,6 +55,7 @@ const getFilenamePattern = ({
   entryPointMap,
   workerUrls,
   asOriginalUrl,
+  precomputeBuildRelativeUrl,
 }) => {
   if (ressource.isEntryPoint) {
     const entryKey = Object.keys(entryPointMap).find((key) => {
@@ -71,8 +90,36 @@ const getFilenamePattern = ({
     return "[name]-[hash][extname]"
   }
 
-  if (ressource.fileNamePattern) {
-    return ressource.fileNamePattern
+  // inline ressource inherit parent location
+  if (ressource.isInline) {
+    const ressourceImporter = ressource.references[0].ressource
+    // inherit parent directory location because it's an inline file
+    const importerBuildRelativeUrl =
+      precomputeBuildRelativeUrl(ressourceImporter)
+    const importerParentRelativeUrl = urlToRelativeUrl(
+      urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
+      "file://",
+    )
+    return `${importerParentRelativeUrl}[name]-[hash][extname]`
+  }
+
+  // here we want to force the fileName for the importmap
+  // so that we don't have to rewrite its content
+  // the goal is to put the importmap at the same relative path
+  // than in the project
+  if (ressource.contentType === "application/importmap+json") {
+    const importmapFirstReference = ressource.references[0]
+    const importmapReferenceUrl = importmapFirstReference.referenceUrl
+    const importmapRessourceUrl = ressource.url
+    const importmapUrlRelativeToImporter = urlToRelativeUrl(
+      importmapRessourceUrl,
+      importmapReferenceUrl,
+    )
+    const importmapParentRelativeUrl = urlToRelativeUrl(
+      urlToParentUrl(resolveUrl(importmapUrlRelativeToImporter, "file://")),
+      "file://",
+    )
+    return `${importmapParentRelativeUrl}[name]-[hash][extname]`
   }
 
   if (
@@ -89,7 +136,7 @@ const getFilenamePattern = ({
     : "assets/[name]-[hash][extname]"
 }
 
-const computeBuildRelativeUrl = (
+const generateBuildRelativeUrl = (
   fileUrl,
   fileContent,
   {
