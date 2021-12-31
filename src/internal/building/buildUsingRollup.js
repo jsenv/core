@@ -53,7 +53,6 @@ export const buildUsingRollup = async ({
   classicServiceWorkers,
 
   urlVersioning,
-  urlVersionningForEntryPoints,
   lineBreakNormalization,
   jsConcatenation,
   cssConcatenation,
@@ -127,7 +126,6 @@ export const buildUsingRollup = async ({
     classicServiceWorkers,
 
     urlVersioning,
-    urlVersionningForEntryPoints,
     lineBreakNormalization,
     jsConcatenation,
     cssConcatenation,

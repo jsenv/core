@@ -78,7 +78,6 @@ export const createRollupPlugins = async ({
   importAssertionsSupport,
 
   urlVersioning,
-  urlVersionningForEntryPoints,
   lineBreakNormalization,
   jsConcatenation,
   cssConcatenation,
@@ -146,7 +145,6 @@ export const createRollupPlugins = async ({
   })
 
   const urlVersioner = createUrlVersioner({
-    urlVersionningForEntryPoints,
     entryPointMap,
     workerUrls,
     classicWorkerUrls,

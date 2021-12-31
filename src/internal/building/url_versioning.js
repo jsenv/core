@@ -8,7 +8,6 @@ import {
 } from "@jsenv/filesystem"
 
 export const createUrlVersioner = ({
-  urlVersionningForEntryPoints,
   entryPointMap,
   workerUrls,
   classicWorkerUrls,
@@ -20,7 +19,6 @@ export const createUrlVersioner = ({
   const computeBuildRelativeUrl = (ressource) => {
     const pattern = getFilenamePattern({
       ressource,
-      urlVersionningForEntryPoints,
       entryPointMap,
       workerUrls,
       classicWorkerUrls,

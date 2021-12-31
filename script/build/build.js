@@ -12,7 +12,6 @@ const buildInternalFile = async ({
 }) => {
   const build = await buildProject({
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    urlVersionningForEntryPoints: true,
     buildDirectoryRelativeUrl,
     entryPointMap,
     assetManifestFile: true,
@@ -33,7 +32,8 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/redirector/",
   entryPointMap: {
-    "./src/internal/dev_server/redirector/redirector.html": "./redirector.html",
+    "./src/internal/dev_server/redirector/redirector.html":
+      "./redirector_[hash].html",
   },
 })
 addExport(
@@ -46,7 +46,8 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/browser_runtime/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPointMap: {
-    "./src/internal/browser_runtime/browser_runtime.js": "./browser_runtime.js",
+    "./src/internal/browser_runtime/browser_runtime.js":
+      "./browser_runtime_[hash].js",
   },
 })
 addExport(
@@ -59,7 +60,7 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/compile_proxy/",
   entryPointMap: {
     "./src/internal/browser_feature_detection/compile_proxy.html":
-      "./compile_proxy.html",
+      "./compile_proxy_[hash].html",
   },
 })
 addExport(
@@ -72,7 +73,7 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/event_source_client/",
   entryPointMap: {
     "./src/internal/dev_server/event_source_client/event_source_client.js":
-      "./event_source_client.js",
+      "./event_source_client_[hash].js",
   },
 })
 addExport(
@@ -84,7 +85,7 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/toolbar/",
   entryPointMap: {
-    "./src/internal/dev_server/toolbar/toolbar.html": "./toolbar.html",
+    "./src/internal/dev_server/toolbar/toolbar.html": "./toolbar_[hash].html",
   },
   cssConcatenation: true,
 })
@@ -96,7 +97,7 @@ await buildInternalFile({
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPointMap: {
     "./src/internal/dev_server/toolbar/toolbar.injector.js":
-      "./toolbar_injector.js",
+      "./toolbar_injector_[hash].js",
   },
   customCompilers: {
     "./src/internal/dev_server/toolbar/toolbar.injector.js": ({ code }) => {
