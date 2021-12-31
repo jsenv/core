@@ -68,7 +68,7 @@
       }
 
       const classicWorkerUrl = new URL(
-        "/test/workers/classic_worker/worker.js",
+        "/test/workers/workers_complex/classic_worker/worker.js",
         import.meta.url,
       )
       const classicWorker = new Worker(classicWorkerUrl)
@@ -77,7 +77,7 @@
         pingResponse: await testWorker(classicWorker),
       }
       const classicServiceWorkerUrl = new URL(
-        "/test/workers/classic_service_worker/sw.js",
+        "/test/workers/workers_complex/classic_service_worker/sw.js",
         import.meta.url,
       )
       const classicServiceWorker = await registerServiceWorker(

@@ -77,7 +77,7 @@ if (process.platform !== "win32") {
             // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
             // to include a hash for the html file.
             // -> when html file changes -> hash changes -> worker updates
-            version: "3e750724",
+            version: "062e87e4",
           },
           "assets/style_b126d686.css": {
             versioned: true,
@@ -106,7 +106,7 @@ if (process.platform !== "win32") {
           },
           "main.html": {
             versioned: false,
-            version: "3e750724",
+            version: "062e87e4",
           },
           "assets/style_b126d686.css": {
             versioned: true,
