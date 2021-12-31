@@ -265,6 +265,7 @@ export const createRessourceBuilder = (
       ressource = createRessource({
         contentType,
         ressourceUrl,
+        ressourceImporter,
         bufferBeforeBuild,
 
         isEntryPoint,
@@ -333,6 +334,7 @@ export const createRessourceBuilder = (
   const createRessource = ({
     contentType,
     ressourceUrl,
+    ressourceImporter,
     bufferBeforeBuild,
 
     isEntryPoint = false,
@@ -349,6 +351,7 @@ export const createRessourceBuilder = (
     const ressource = {
       contentType,
       url: ressourceUrl,
+      importer: ressourceImporter,
       bufferBeforeBuild,
       firstStrongReference: null,
       references: [],

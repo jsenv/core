@@ -79,7 +79,7 @@ if (process.platform !== "win32") {
       },
     },
     classicWorker: {
-      url: `${serverOrigin}/dist/esmodule/assets/worker-a850e925`,
+      url: `${serverOrigin}/dist/esmodule/classic_worker-a850e925.js`,
       pingResponse: `pong`,
     },
     classicServiceWorker: {

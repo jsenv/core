@@ -13,6 +13,7 @@ export const createUrlVersioner = ({
   urlVersionningForEntryPoints,
   entryPointMap,
   workerUrls,
+  classicWorkerUrls,
   asOriginalUrl,
   lineBreakNormalization,
 }) => {
@@ -22,6 +23,7 @@ export const createUrlVersioner = ({
       urlVersionningForEntryPoints,
       entryPointMap,
       workerUrls,
+      classicWorkerUrls,
       asOriginalUrl,
       precomputeBuildRelativeUrl,
     })
@@ -54,6 +56,7 @@ const getFilenamePattern = ({
   urlVersionningForEntryPoints,
   entryPointMap,
   workerUrls,
+  classicWorkerUrls,
   asOriginalUrl,
   precomputeBuildRelativeUrl,
 }) => {
@@ -63,77 +66,76 @@ const getFilenamePattern = ({
     })
     if (entryKey) {
       const buildRelativeUrl = entryPointMap[entryKey]
-      const name = urlToBasename(resolveUrl(buildRelativeUrl, "file:///"))
+      const patternStart = asPatternStart(buildRelativeUrl)
       return urlVersionningForEntryPoints
-        ? `${name}-[hash][extname]`
-        : `${name}[extname]`
+        ? `${patternStart}-[hash][extname]`
+        : `${patternStart}[extname]`
     }
     return urlVersionningForEntryPoints
       ? "[name]-[hash][extname]"
       : "[name]-[extname]"
   }
 
-  if (ressource.isJsModule) {
+  // service worker:
+  // - MUST be at the root (same level than the HTML file)
+  //   otherwise it might be registered for the scope "/assets/" instead of "/"
+  // - MUST not be versioned
+  if (ressource.isServiceWorker) {
+    return "[name][extname]"
+  }
+
+  // it's a module worker
+  if (ressource.isWorker) {
     const originalUrl = asOriginalUrl(ressource.url)
-
-    // it's a module worker
-    if (ressource.isWorker) {
-      const workerBuildRelativeUrl = workerUrls[originalUrl]
-      const workerBuildUrl = resolveUrl(workerBuildRelativeUrl, "file:///")
-      const name = urlToBasename(workerBuildUrl)
-      return `${name}-[hash][extname]`
-    }
-
-    // TODO: it's a module service worker
-
-    // it's a js module
-    return "[name]-[hash][extname]"
+    const workerBuildRelativeUrl = ressource.isJsModule
+      ? workerUrls[originalUrl]
+      : classicWorkerUrls[originalUrl]
+    const patternStart = asPatternStart(workerBuildRelativeUrl)
+    return `${patternStart}-[hash][extname]`
   }
 
-  // inline ressource inherit parent location
+  // inline ressource inherits location
   if (ressource.isInline) {
-    const ressourceImporter = ressource.references[0].ressource
     // inherit parent directory location because it's an inline file
-    const importerBuildRelativeUrl =
-      precomputeBuildRelativeUrl(ressourceImporter)
-    const importerParentRelativeUrl = urlToRelativeUrl(
-      urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
-      "file://",
+    const importerBuildRelativeUrl = precomputeBuildRelativeUrl(
+      ressource.importer,
     )
-    return `${importerParentRelativeUrl}[name]-[hash][extname]`
+    const patternStart = asPatternStart(importerBuildRelativeUrl)
+    return `${patternStart}-[hash][extname]`
   }
 
-  // here we want to force the fileName for the importmap
+  // importmap.
+  // we want to force the fileName for the importmap
   // so that we don't have to rewrite its content
   // the goal is to put the importmap at the same relative path
   // than in the project
   if (ressource.contentType === "application/importmap+json") {
-    const importmapFirstReference = ressource.references[0]
-    const importmapReferenceUrl = importmapFirstReference.referenceUrl
+    const importmapImporterUrl = ressource.importer.url
     const importmapRessourceUrl = ressource.url
     const importmapUrlRelativeToImporter = urlToRelativeUrl(
       importmapRessourceUrl,
-      importmapReferenceUrl,
+      importmapImporterUrl,
     )
-    const importmapParentRelativeUrl = urlToRelativeUrl(
-      urlToParentUrl(resolveUrl(importmapUrlRelativeToImporter, "file://")),
-      "file://",
-    )
-    return `${importmapParentRelativeUrl}[name]-[hash][extname]`
+    const patternStart = asPatternStart(importmapUrlRelativeToImporter)
+    return `${patternStart}-[hash][extname]`
   }
 
-  if (
-    // service worker MUST be at the root (same level than the HTML file)
-    // otherwise it might be registered for the scope "/assets/" instead of "/"
-    // Also they must not be versioned
-    ressource.isServiceWorker
-  ) {
-    return "[name][extname]"
+  if (ressource.isJsModule) {
+    // it's a js module
+    return "[name]-[hash][extname]"
   }
 
   return ressource.urlVersioningDisabled
     ? "assets/[name][extname]"
     : "assets/[name]-[hash][extname]"
+}
+
+const asPatternStart = (buildRelativeUrl) => {
+  const buildUrl = resolveUrl(buildRelativeUrl, "file://")
+  const parentUrl = urlToParentUrl(buildUrl)
+  const parentRelativeUrl = urlToRelativeUrl(parentUrl, "file://")
+  const basename = urlToBasename(buildUrl)
+  return `${parentRelativeUrl}${basename}`
 }
 
 const generateBuildRelativeUrl = (

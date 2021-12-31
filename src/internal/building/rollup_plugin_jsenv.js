@@ -130,14 +130,6 @@ export const createRollupPlugins = async ({
   let _rollupGetModuleInfo = () => {}
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
-  const urlVersioner = createUrlVersioner({
-    urlVersionningForEntryPoints,
-    entryPointMap,
-    workerUrls,
-    asOriginalUrl,
-    lineBreakNormalization,
-  })
-
   const {
     asRollupUrl,
     asProjectUrl,
@@ -151,6 +143,15 @@ export const createRollupPlugins = async ({
     compileServerOrigin,
     compileDirectoryRelativeUrl,
     urlMappings,
+  })
+
+  const urlVersioner = createUrlVersioner({
+    urlVersionningForEntryPoints,
+    entryPointMap,
+    workerUrls,
+    classicWorkerUrls,
+    asOriginalUrl,
+    lineBreakNormalization,
   })
 
   const urlFetcher = createUrlFetcher({
