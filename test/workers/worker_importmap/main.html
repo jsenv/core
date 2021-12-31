@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "foo": "./bar.js"
+        }
+      }
+    </script>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      const namespace = {}
+
+      // eslint-disable-next-line import/no-unresolved
+      const { value } = await import("foo")
+
+      const workerUrl = new URL("./worker.js", import.meta.url)
+      const worker = new Worker(workerUrl, { type: "module" })
+      namespace.worker = {
+        value,
+        pingResponse: await new Promise((resolve, reject) => {
+          worker.onmessage = (e) => {
+            resolve(e.data)
+          }
+          worker.onerror = (e) => {
+            reject(e.message)
+          }
+          worker.postMessage("ping")
+        }),
+      }
+
+      window.resolveNamespacePromise(namespace)
+
+      export { namespace }
+    </script>
+  </body>
+</html>
