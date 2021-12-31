@@ -275,9 +275,9 @@ const assertEntryPointMap = ({ entryPointMap }) => {
         `unexpected value in entryPointMap, all values must be strings found ${value} for key ${key}`,
       )
     }
-    if (!value.startsWith("./")) {
+    if (value.includes("/")) {
       throw new TypeError(
-        `unexpected value in entryPointMap, all values must starts with ./ but found ${value} for key ${key}`,
+        `unexpected value in entryPointMap, all values must be plain strings (no "/") but found ${value} for key ${key}`,
       )
     }
   })

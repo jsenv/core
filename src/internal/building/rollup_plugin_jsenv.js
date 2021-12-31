@@ -13,6 +13,7 @@ import {
   urlIsInsideOf,
   normalizeStructuredMetaMap,
   urlToMeta,
+  urlToBasename,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
@@ -688,17 +689,16 @@ export const createRollupPlugins = async ({
             const fileName = ressource.relativeUrl
             const rollupReferenceId = emitChunk({
               id: asRollupUrl(jsModuleUrl),
-              fileName,
+              name: urlToBasename(jsModuleUrl),
             })
             return {
-              fileName,
               rollupReferenceId,
+              fileName,
             }
           },
           onAsset: ({ ressource }) => {
             const fileName = ressource.relativeUrl
             const rollupReferenceId = emitAsset({
-              name: ressource.name,
               fileName,
             })
             return {

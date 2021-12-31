@@ -22,7 +22,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}script_module.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}script_module.html`]: "main.html",
 }
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
