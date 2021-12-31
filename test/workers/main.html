@@ -29,12 +29,12 @@
         return pingResponse
       }
 
-      // const workerUrl = new URL("./worker/worker.js", import.meta.url)
-      // const worker = new Worker(workerUrl, { type: "module" })
-      // namespace.worker = {
-      //   url: String(workerUrl),
-      //   pingResponse: await testWorker(worker),
-      // }
+      const workerUrl = new URL("./worker/worker.js", import.meta.url)
+      const worker = new Worker(workerUrl, { type: "module" })
+      namespace.worker = {
+        url: String(workerUrl),
+        pingResponse: await testWorker(worker),
+      }
 
       // const registerServiceWorker = async (url, options) => {
       //   const serviceWorker = await window.navigator.serviceWorker

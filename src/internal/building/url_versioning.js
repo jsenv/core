@@ -27,11 +27,16 @@ export const createUrlVersioner = ({
       asOriginalUrl,
       precomputeBuildRelativeUrl,
     })
-    return generateBuildRelativeUrl(ressource.url, ressource.bufferAfterBuild, {
-      pattern,
-      contentType: ressource.contentType,
-      lineBreakNormalization,
-    })
+    const buildRelativeUrl = generateBuildRelativeUrl(
+      ressource.url,
+      ressource.bufferAfterBuild,
+      {
+        pattern,
+        contentType: ressource.contentType,
+        lineBreakNormalization,
+      },
+    )
+    return buildRelativeUrl
   }
 
   const precomputeBuildRelativeUrl = (ressource, bufferAfterBuild = "") => {

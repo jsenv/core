@@ -52,7 +52,7 @@ if (process.platform !== "win32") {
   const actual = namespace
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/worker_toto-e8d3de54.js`,
+      url: `${serverOrigin}/dist/esmodule/worker_toto-6e5dac0a.js`,
       pingResponse: `pong`,
     },
     serviceWorker: {

@@ -736,18 +736,16 @@ export const createRessourceBuilder = (
     return ressource
   }
 
-  const rollupBuildEnd = ({ jsModuleBuild, buildManifest }) => {
+  const rollupBuildEnd = ({ jsChunks }) => {
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
 
-      const buildRelativeUrl = Object.keys(jsModuleBuild).find(
-        (buildRelativeUrlCandidate) => {
-          const file = jsModuleBuild[buildRelativeUrlCandidate]
-          return file.url === ressourceUrl
-        },
-      )
-      const buildFileInfo = jsModuleBuild[buildRelativeUrl]
-      applyBuildEndEffects(ressource, { buildFileInfo, buildManifest })
+      const key = Object.keys(jsChunks).find((key) => {
+        const rollupFileInfo = jsChunks[key]
+        return rollupFileInfo.url === ressourceUrl
+      })
+      const rollupFileInfo = jsChunks[key]
+      applyBuildEndEffects(ressource, { rollupFileInfo })
       const { rollupBuildDoneCallbacks } = ressource
       rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
         rollupBuildDoneCallback()
@@ -758,7 +756,7 @@ export const createRessourceBuilder = (
   const applyBuildEndEffects = (
     ressource,
     {
-      buildFileInfo,
+      rollupFileInfo,
       // buildManifest
     },
   ) => {
@@ -771,7 +769,7 @@ export const createRessourceBuilder = (
     // rollup chunk was not emitted, which happens when:
     // - js was only preloaded/prefetched and never referenced afterwards
     // - js was only referenced by other js
-    if (!buildFileInfo) {
+    if (!rollupFileInfo) {
       const referencedOnlyByRessourceHint = !ressource.firstStrongReference
       if (referencedOnlyByRessourceHint) {
         return
@@ -789,11 +787,11 @@ export const createRessourceBuilder = (
       )
     }
 
-    const fileName = buildFileInfo.fileName
+    const fileName = rollupFileInfo.fileName
     // const buildRelativeUrl = buildManifest[fileName] || fileName
-    let code = buildFileInfo.code
+    let code = rollupFileInfo.code
 
-    if (buildFileInfo.type === "chunk") {
+    if (rollupFileInfo.type === "chunk") {
       ressource.contentType = "application/javascript"
     }
     ressource.fileName = fileName
@@ -802,7 +800,7 @@ export const createRessourceBuilder = (
       // buildRelativeUrl
     )
 
-    const map = buildFileInfo.map
+    const map = rollupFileInfo.map
     if (map) {
       const jsBuildUrl = resolveUrl(
         ressource.buildRelativeUrl,
@@ -810,7 +808,7 @@ export const createRessourceBuilder = (
       )
       const sourcemapUrlForJs = `${urlToFilename(jsBuildUrl)}.map`
       code = setJavaScriptSourceMappingUrl(code, sourcemapUrlForJs)
-      buildFileInfo.code = code
+      rollupFileInfo.code = code
       ressource.bufferAfterBuild = code
     }
   }

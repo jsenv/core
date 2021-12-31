@@ -1224,26 +1224,39 @@ export const createRollupPlugins = async ({
               compileDirectoryRelativeUrl,
             })
           }
+
+          if (fileCopy.url in inlineModuleScripts && format === "systemjs") {
+            const code = file.code
+            const systemRegisterIndex = code.indexOf("System.register([")
+            const magicString = new MagicString(code)
+            magicString.overwrite(
+              systemRegisterIndex,
+              systemRegisterIndex + "System.register([".length,
+              `System.register("${fileName}", [`,
+            )
+            fileCopy.code = magicString.toString()
+          }
+
           jsChunks[fileName] = fileCopy
         }
       })
+
+      // it's important to do this to emit late asset
+      rollupEmitFile = (...args) => this.emitFile(...args)
+      rollupSetAssetSource = (...args) => this.setAssetSource(...args)
+
+      // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
+      // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
+      // donc lorsque le build se termine on va indiquer
+      // aux assets faisant référence a ces chunk js qu'ils sont terminés
+      // et donc les assets peuvent connaitre le nom du chunk
+      // et mettre a jour leur dépendance vers ce fichier js
+      ressourceBuilder.rollupBuildEnd({ jsChunks })
 
       const jsModuleBuild = {}
       Object.keys(jsChunks).forEach((fileName) => {
         const file = jsChunks[fileName]
         let buildRelativeUrl
-
-        if (file.url in inlineModuleScripts && format === "systemjs") {
-          const code = file.code
-          const systemRegisterIndex = code.indexOf("System.register([")
-          const magicString = new MagicString(code)
-          magicString.overwrite(
-            systemRegisterIndex,
-            systemRegisterIndex + "System.register([".length,
-            `System.register("${fileName}", [`,
-          )
-          file.code = magicString.toString()
-        }
 
         const originalProjectUrl = asOriginalUrl(file.url)
         const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -1284,17 +1297,6 @@ export const createRollupPlugins = async ({
         jsModuleBuild[buildRelativeUrl] = file
       })
 
-      // it's important to do this to emit late asset
-      rollupEmitFile = (...args) => this.emitFile(...args)
-      rollupSetAssetSource = (...args) => this.setAssetSource(...args)
-
-      // malheureusement rollup ne permet pas de savoir lorsqu'un chunk
-      // a fini d'etre résolu (parsing des imports statiques et dynamiques recursivement)
-      // donc lorsque le build se termine on va indiquer
-      // aux assets faisant référence a ces chunk js qu'ils sont terminés
-      // et donc les assets peuvent connaitre le nom du chunk
-      // et mettre a jour leur dépendance vers ce fichier js
-      ressourceBuilder.rollupBuildEnd({ jsModuleBuild, buildManifest })
       // wait html files to be emitted
       await ressourceBuilder.getAllEntryPointsEmittedPromise()
       onBundleEnd()
