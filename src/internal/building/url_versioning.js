@@ -7,13 +7,13 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { renderNamePattern } from "../renderNamePattern.js"
-
 export const createUrlVersioner = ({
   urlVersionningForEntryPoints,
   entryPointMap,
   workerUrls,
   classicWorkerUrls,
+  serviceWorkerUrls,
+  classicServiceWorkerUrls,
   asOriginalUrl,
   lineBreakNormalization,
 }) => {
@@ -24,6 +24,8 @@ export const createUrlVersioner = ({
       entryPointMap,
       workerUrls,
       classicWorkerUrls,
+      serviceWorkerUrls,
+      classicServiceWorkerUrls,
       asOriginalUrl,
       precomputeBuildRelativeUrl,
     })
@@ -58,10 +60,11 @@ export const createUrlVersioner = ({
 
 const getFilenamePattern = ({
   ressource,
-  urlVersionningForEntryPoints,
   entryPointMap,
   workerUrls,
   classicWorkerUrls,
+  serviceWorkerUrls,
+  classicServiceWorkerUrls,
   asOriginalUrl,
   precomputeBuildRelativeUrl,
 }) => {
@@ -69,16 +72,7 @@ const getFilenamePattern = ({
     const entryKey = Object.keys(entryPointMap).find((key) => {
       return key === `./${ressource.relativeUrl}`
     })
-    if (entryKey) {
-      const buildRelativeUrl = entryPointMap[entryKey]
-      const patternStart = asPatternStart(buildRelativeUrl)
-      return urlVersionningForEntryPoints
-        ? `${patternStart}-[hash][extname]`
-        : `${patternStart}[extname]`
-    }
-    return urlVersionningForEntryPoints
-      ? "[name]-[hash][extname]"
-      : "[name]-[extname]"
+    return entryPointMap[entryKey]
   }
 
   // service worker:
@@ -86,7 +80,14 @@ const getFilenamePattern = ({
   //   otherwise it might be registered for the scope "/assets/" instead of "/"
   // - MUST not be versioned
   if (ressource.isServiceWorker) {
-    return "[name][extname]"
+    const originalUrl = asOriginalUrl(ressource.url)
+    const serviceWorkerBuildRelativeUrl = ressource.isJsModule
+      ? serviceWorkerUrls[originalUrl]
+      : classicServiceWorkerUrls[originalUrl]
+    // we could/should log a warning when service worker is not at the root
+    // we should also disable versioning for this file
+    // of the build directory
+    return serviceWorkerBuildRelativeUrl
   }
 
   // it's a module worker
@@ -95,8 +96,7 @@ const getFilenamePattern = ({
     const workerBuildRelativeUrl = ressource.isJsModule
       ? workerUrls[originalUrl]
       : classicWorkerUrls[originalUrl]
-    const patternStart = asPatternStart(workerBuildRelativeUrl)
-    return `${patternStart}-[hash][extname]`
+    return workerBuildRelativeUrl
   }
 
   // inline ressource inherits location
@@ -106,7 +106,7 @@ const getFilenamePattern = ({
       ressource.importer,
     )
     const patternStart = asPatternStart(importerBuildRelativeUrl)
-    return `${patternStart}-[hash][extname]`
+    return `${patternStart}_[hash][extname]`
   }
 
   // importmap.
@@ -122,17 +122,17 @@ const getFilenamePattern = ({
       importmapImporterUrl,
     )
     const patternStart = asPatternStart(importmapUrlRelativeToImporter)
-    return `${patternStart}-[hash][extname]`
+    return `${patternStart}_[hash][extname]`
   }
 
   if (ressource.isJsModule) {
     // it's a js module
-    return "[name]-[hash][extname]"
+    return "[name]_[hash][extname]"
   }
 
   return ressource.urlVersioningDisabled
     ? "assets/[name][extname]"
-    : "assets/[name]-[hash][extname]"
+    : "assets/[name]_[hash][extname]"
 }
 
 const asPatternStart = (buildRelativeUrl) => {
@@ -153,20 +153,26 @@ const generateBuildRelativeUrl = (
     lineBreakNormalization = false,
   } = {},
 ) => {
-  const buildRelativeUrl = renderNamePattern(
-    typeof pattern === "function" ? pattern() : pattern,
-    {
-      dirname: () => urlToParentUrl(fileUrl),
-      name: () => name,
-      hash: () =>
-        generateContentHash(fileContent, {
-          contentType,
-          lineBreakNormalization,
-        }),
-      extname: () => urlToExtension(fileUrl),
-    },
-  )
+  pattern = typeof pattern === "function" ? pattern() : pattern
+  if (pattern.startsWith("./")) pattern = pattern.slice(2)
+  const buildRelativeUrl = renderFileNamePattern(pattern, {
+    dirname: () => urlToParentUrl(fileUrl),
+    name: () => name,
+    hash: () =>
+      generateContentHash(fileContent, {
+        contentType,
+        lineBreakNormalization,
+      }),
+    extname: () => urlToExtension(fileUrl),
+  })
   return buildRelativeUrl
+}
+
+const renderFileNamePattern = (pattern, replacements) => {
+  return pattern.replace(/\[(\w+)\]/g, (_match, type) => {
+    const replacement = replacements[type]()
+    return replacement
+  })
 }
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47

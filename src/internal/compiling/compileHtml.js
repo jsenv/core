@@ -9,8 +9,8 @@ which one is being done first
 */
 
 import { createHash } from "crypto"
+
 import { require } from "../require.js"
-import { renderNamePattern } from "../renderNamePattern.js"
 
 // https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
 // eslint-disable-next-line import/no-unresolved
@@ -516,6 +516,13 @@ export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
 
       return line
     },
+  })
+}
+
+const renderNamePattern = (pattern, replacements) => {
+  return pattern.replace(/\[(\w+)\]/g, (_match, type) => {
+    const replacement = replacements[type]()
+    return replacement
   })
 }
 

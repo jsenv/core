@@ -57,4 +57,4 @@ ${code}
 }
 
 const fileNameContainsHash = (fileName) =>
-  /-[a-z0-9]{8,}(\..*?)?$/.test(fileName)
+  /_[a-z0-9]{8,}(\..*?)?$/.test(fileName)

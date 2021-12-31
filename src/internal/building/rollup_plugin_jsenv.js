@@ -150,6 +150,8 @@ export const createRollupPlugins = async ({
     entryPointMap,
     workerUrls,
     classicWorkerUrls,
+    serviceWorkerUrls,
+    classicServiceWorkerUrls,
     asOriginalUrl,
     lineBreakNormalization,
   })
@@ -1149,11 +1151,12 @@ export const createRollupPlugins = async ({
         }
         return id
       }
-      outputOptions.entryFileNames = () => {
-        if (urlVersionningForEntryPoints) {
-          return `[name]-[hash]${outputExtension}`
+      outputOptions.entryFileNames = (chunkInfo) => {
+        debugger
+        if (useImportMapToMaximizeCacheReuse) {
+          return `[name]${outputExtension}`
         }
-        return `[name]${outputExtension}`
+        return entryPointMap
       }
       outputOptions.chunkFileNames = () => {
         // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
@@ -1161,7 +1164,8 @@ export const createRollupPlugins = async ({
         if (useImportMapToMaximizeCacheReuse) {
           return `[name]${outputExtension}`
         }
-        return `[name]-[hash]${outputExtension}`
+        debugger
+        return `[name]_[hash]${outputExtension}`
       }
 
       // rollup does not expects to have http dependency in the mix: fix them
@@ -1564,7 +1568,7 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
 }
 
 const asFileNameWithoutHash = (fileName) => {
-  return fileName.replace(/-[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
+  return fileName.replace(/_[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
     return afterHash
   })
 }
