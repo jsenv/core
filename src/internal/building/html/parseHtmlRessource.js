@@ -250,7 +250,7 @@ const regularScriptTextNodeVisitor = (
   })
   return () => {
     const { bufferAfterBuild } = jsReference.ressource
-    textNode.value = bufferAfterBuild
+    textNode.value = String(bufferAfterBuild)
   }
 }
 
@@ -354,8 +354,6 @@ const moduleScriptTextNodeVisitor = (
     }
     const { bufferAfterBuild } = jsReference.ressource
     const jsText = String(bufferAfterBuild)
-    // ici on voudrait pouvoir ajouter le commentaire de la sourcemap
-    // sauf que cela se produit un poil plus tard je crois?
     textNode.value = jsText
   }
 }
