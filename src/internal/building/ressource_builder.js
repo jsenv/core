@@ -743,7 +743,30 @@ export const createRessourceBuilder = (
         const rollupFileInfo = rollupJsFileInfos[key]
         return rollupFileInfo.url === ressourceUrl
       })
+      // nothing special to do for non-js ressources
+      if (!ressource.isJsModule) {
+        return
+      }
       const rollupFileInfo = rollupJsFileInfos[key]
+      // We expect to find the ressource in the rollup build except when:
+      // - js was only preloaded/prefetched and never referenced afterwards
+      // - js was only referenced by other js
+      if (!rollupFileInfo) {
+        const referencedOnlyByRessourceHint = !ressource.firstStrongReference
+        if (referencedOnlyByRessourceHint) {
+          return
+        }
+        const referencedOnlyByOtherJs = ressource.references.every(
+          (ref) => ref.referenceShouldNotEmitChunk,
+        )
+        if (referencedOnlyByOtherJs) {
+          return
+        }
+        throw new Error(
+          `${shortenUrl(ressource.url)} cannot be found in the build info`,
+        )
+      }
+
       applyBuildEndEffects(ressource, { rollupFileInfo, rollupAssetFileInfos })
       const { rollupBuildDoneCallbacks } = ressource
       rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
@@ -762,33 +785,6 @@ export const createRessourceBuilder = (
       // buildManifest
     },
   ) => {
-    if (!ressource.isJsModule) {
-      // nothing special to do for non-js ressources
-      return
-    }
-
-    // If the module is not in the rollup build, that's an error except when
-    // rollup chunk was not emitted, which happens when:
-    // - js was only preloaded/prefetched and never referenced afterwards
-    // - js was only referenced by other js
-    if (!rollupFileInfo) {
-      const referencedOnlyByRessourceHint = !ressource.firstStrongReference
-      if (referencedOnlyByRessourceHint) {
-        return
-      }
-
-      const referencedOnlyByOtherJs = ressource.references.every(
-        (ref) => ref.referenceShouldNotEmitChunk,
-      )
-      if (referencedOnlyByOtherJs) {
-        return
-      }
-
-      throw new Error(
-        `${shortenUrl(ressource.url)} cannot be found in the build info`,
-      )
-    }
-
     const fileName = rollupFileInfo.fileName
     // const buildRelativeUrl = buildManifest[fileName] || fileName
     let code = rollupFileInfo.code
@@ -800,9 +796,6 @@ export const createRessourceBuilder = (
       code,
       // buildRelativeUrl
     )
-
-    // here we should update buildManifest
-    // with something like buildManifest[ressource.fileName] = ressource.buildRelativeUrl
 
     const map = rollupFileInfo.map
     if (map) {
