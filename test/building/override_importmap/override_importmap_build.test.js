@@ -16,15 +16,13 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}override_importmap.html`]: "./main.html",
-}
-
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}override_importmap.html`]: "main.html",
+  },
   urlMappings: {
     [`./${testDirectoryRelativeUrl}dev.importmap`]: `./${testDirectoryRelativeUrl}prod.importmap`,
   },
