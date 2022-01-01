@@ -7,37 +7,37 @@ await executeTestPlan({
   runtimeSupport,
   logLevel: "debug",
   testPlan: {
-    "test/**/*.test.js": {
+    "test/**/entry_html/**/*.test.js": {
       node: {
         runtime: nodeRuntime,
         allocatedMs: 30 * 1000,
       },
     },
     // give more time to some tests
-    "test/coverage/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/dev_server/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/execute/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/test_plan/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
+    // "test/coverage/**/*.test.js": {
+    //   node: {
+    //     runtime: nodeRuntime,
+    //     allocatedMs: 60 * 1000,
+    //   },
+    // },
+    // "test/dev_server/**/*.test.js": {
+    //   node: {
+    //     runtime: nodeRuntime,
+    //     allocatedMs: 60 * 1000,
+    //   },
+    // },
+    // "test/execute/**/*.test.js": {
+    //   node: {
+    //     runtime: nodeRuntime,
+    //     allocatedMs: 60 * 1000,
+    //   },
+    // },
+    // "test/test_plan/**/*.test.js": {
+    //   node: {
+    //     runtime: nodeRuntime,
+    //     allocatedMs: 60 * 1000,
+    //   },
+    // },
   },
   logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,
