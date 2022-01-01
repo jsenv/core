@@ -1214,7 +1214,10 @@ export const createRollupPlugins = async ({
         }
 
         if (rollupFileInfo.type === "chunk") {
-          if (rollupFileInfo.isDynamicEntry) {
+          if (
+            rollupFileInfo.isDynamicEntry ||
+            (!jsConcatenation && rollupFileInfo.isEntry)
+          ) {
             ressourcesReferencedByJs.push(rollupFileInfo.fileName)
           }
 
