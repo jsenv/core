@@ -856,9 +856,6 @@ export const createRollupPlugins = async ({
         return `new URL("${fileName}", import.meta.url)`
       }
       if (format === "systemjs") {
-        // if (useImportMapToMaximizeCacheReuse && urlVersioning) {
-        //   return `new URL(System.resolve("./${fileName}", module.meta.url))`
-        // }
         return `new URL(System.resolve("./${fileName}", module.meta.url))`
       }
       if (format === "global") {
@@ -1149,13 +1146,13 @@ export const createRollupPlugins = async ({
         }
         return id
       }
-      outputOptions.entryFileNames = (chunkInfo) => {
+      outputOptions.entryFileNames = () => {
         if (useImportMapToMaximizeCacheReuse) {
           return `[name]${outputExtension}`
         }
         return entryPointMap
       }
-      outputOptions.chunkFileNames = (chunkInfo) => {
+      outputOptions.chunkFileNames = () => {
         // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
         // const basename = urlToBasename(originalUrl)
         if (useImportMapToMaximizeCacheReuse) {
@@ -1209,6 +1206,10 @@ export const createRollupPlugins = async ({
         }
 
         if (rollupFileInfo.type === "chunk") {
+          if (rollupFileInfo.isDynamicEntry) {
+            ressourcesReferencedByJs.push(rollupFileInfo.fileName)
+          }
+
           const { facadeModuleId } = rollupFileInfo
           if (facadeModuleId === EMPTY_CHUNK_URL) {
             return
@@ -1260,7 +1261,7 @@ export const createRollupPlugins = async ({
       const { jsRessources } = ressourceBuilder.rollupBuildEnd({
         rollupJsFileInfos,
         rollupAssetFileInfos,
-        buildManifest,
+        useImportMapToMaximizeCacheReuse,
       })
       Object.keys(jsRessources).forEach((ressourceUrl) => {
         const jsRessource = jsRessources[ressourceUrl]
@@ -1298,15 +1299,6 @@ export const createRollupPlugins = async ({
         const assetRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.relativeUrl === rollupFileId,
         )
-        // the asset does not exists in the project.
-        // it was generated during build (happens for sourcemap)
-        if (!assetRessource) {
-          const buildRelativeUrl = rollupFileId
-          assetBuild[buildRelativeUrl] = file
-          const ressourceName = asFileNameWithoutHash(buildRelativeUrl)
-          buildManifest[ressourceName] = buildRelativeUrl
-          return
-        }
 
         // ignore potential useless assets which happens when:
         // - sourcemap re-emitted
@@ -1333,7 +1325,7 @@ export const createRollupPlugins = async ({
           return
         }
 
-        const ressourceName = asFileNameWithoutHash(buildRelativeUrl)
+        const ressourceName = assetRessource.fileName
         const originalProjectUrl = asOriginalUrl(assetRessource.url)
         const originalProjectRelativeUrl = urlToRelativeUrl(
           originalProjectUrl,
@@ -1533,12 +1525,6 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
   }
 
   return resolveReturnValue
-}
-
-const asFileNameWithoutHash = (fileName) => {
-  return fileName.replace(/_[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
-    return afterHash
-  })
 }
 
 const externalImportUrlPatternsToExternalUrlPredicate = (

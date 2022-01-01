@@ -25,12 +25,11 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap: {
-      [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "./main.html",
+      [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "main.html",
     },
   })
   const mainJsFileBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
-
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -52,7 +51,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
     // we build the HTML instead of the JS file on purpose
     // to test the warning about html + node
     entryPointMap: {
-      [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "./main.html",
+      [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "main.html",
     },
     runtimeSupport: {
       node: "14",

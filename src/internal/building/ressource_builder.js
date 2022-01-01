@@ -733,7 +733,11 @@ export const createRessourceBuilder = (
     return ressource
   }
 
-  const rollupBuildEnd = ({ rollupJsFileInfos, rollupAssetFileInfos }) => {
+  const rollupBuildEnd = ({
+    rollupJsFileInfos,
+    rollupAssetFileInfos,
+    useImportMapToMaximizeCacheReuse,
+  }) => {
     // TODO: ressource might not exists for chunks generated dynamically by rollup
     // we should create a new type of ressource
     const jsRessources = {}
@@ -767,7 +771,11 @@ export const createRessourceBuilder = (
         )
       }
 
-      applyBuildEndEffects(ressource, { rollupFileInfo, rollupAssetFileInfos })
+      applyBuildEndEffects(ressource, {
+        rollupFileInfo,
+        rollupAssetFileInfos,
+        useImportMapToMaximizeCacheReuse,
+      })
       const { rollupBuildDoneCallbacks } = ressource
       rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
         rollupBuildDoneCallback()
@@ -779,23 +787,21 @@ export const createRessourceBuilder = (
 
   const applyBuildEndEffects = (
     ressource,
-    {
-      rollupFileInfo,
-      rollupAssetFileInfos,
-      // buildManifest
-    },
+    { rollupFileInfo, rollupAssetFileInfos, useImportMapToMaximizeCacheReuse },
   ) => {
     const fileName = rollupFileInfo.fileName
-    // const buildRelativeUrl = buildManifest[fileName] || fileName
     let code = rollupFileInfo.code
     if (rollupFileInfo.type === "chunk") {
       ressource.contentType = "application/javascript"
     }
-    ressource.fileName = fileName
-    ressource.buildEnd(
-      code,
-      // buildRelativeUrl
-    )
+
+    if (useImportMapToMaximizeCacheReuse) {
+      ressource.fileName = fileName
+      ressource.buildEnd(code)
+    } else {
+      ressource.fileName = asFileNameWithoutHash(fileName)
+      ressource.buildEnd(code, fileName)
+    }
 
     const map = rollupFileInfo.map
     if (map) {
@@ -938,6 +944,12 @@ export const createRessourceBuilder = (
       }
     },
   }
+}
+
+const asFileNameWithoutHash = (fileName) => {
+  return fileName.replace(/_[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
+    return afterHash
+  })
 }
 
 // const preredirectUrlFromRessource = (ressource, ressourceRedirectionMap) => {
