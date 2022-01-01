@@ -103,9 +103,10 @@ export const parseJsRessource = async (
     map.file = urlToFilename(jsBuildUrl)
     if (map.sources) {
       map.sources = map.sources.map((source) => {
-        const sourceUrl = resolveUrl(source, jsOriginalUrl)
+        const sourceUrl = resolveUrl(source, jsUrl)
+        const sourceOriginalUrl = asOriginalUrl(sourceUrl)
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
-          sourceUrl,
+          sourceOriginalUrl,
           sourcemapPrecomputedBuildUrl,
         )
         return sourceUrlRelativeToSourceMap

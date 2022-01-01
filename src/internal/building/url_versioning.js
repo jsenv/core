@@ -104,7 +104,7 @@ const getFilenamePattern = ({
     const importerBuildRelativeUrl = precomputeBuildRelativeUrl(
       ressource.importer,
     )
-    const name = urlToBasename(importerBuildRelativeUrl)
+    const name = urlToBasename(`file://${importerBuildRelativeUrl}`)
     return `${name}_[hash][extname]`
   }
 

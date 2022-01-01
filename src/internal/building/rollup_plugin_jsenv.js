@@ -847,10 +847,7 @@ export const createRollupPlugins = async ({
       return asRollupUrl(importUrl)
     },
 
-    resolveFileUrl: ({
-      // referenceId,
-      fileName,
-    }) => {
+    resolveFileUrl: ({ referenceId, fileName }) => {
       ressourcesReferencedByJs.push(fileName)
 
       if (format === "esmodule") {
@@ -863,10 +860,20 @@ export const createRollupPlugins = async ({
         return `new URL(System.resolve("./${fileName}", module.meta.url))`
       }
       if (format === "global") {
-        return `new URL("${fileName}", document.currentScript && document.currentScript.src || document.baseURI)`
+        const ressource = ressourceBuilder.findRessource((ressource) => {
+          return ressource.rollupReferenceId === referenceId
+        })
+        ressource.fileName = fileName
+        const buildRelativeUrl = ressource.buildRelativeUrl
+        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI)`
       }
       if (format === "commonjs") {
-        return `new URL("${fileName}", "file:///" + __filename.replace(/\\/g, "/"))`
+        const ressource = ressourceBuilder.findRessource((ressource) => {
+          return ressource.rollupReferenceId === referenceId
+        })
+        ressource.fileName = fileName
+        const buildRelativeUrl = ressource.buildRelativeUrl
+        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/"))`
       }
       return null
     },
@@ -962,6 +969,9 @@ export const createRollupPlugins = async ({
           })
           if (!reference) {
             return
+          }
+          if (!reference.ressource.isJsModule) {
+            await reference.ressource.getReadyPromise()
           }
           mutations.push((magicString) => {
             magicString.overwrite(
@@ -1150,6 +1160,9 @@ export const createRollupPlugins = async ({
         }
         return id
       }
+      // outputOptions.assetFileNames = () => {
+      //   return `assets/[name]_[hash][extname]`
+      // }
       outputOptions.entryFileNames = () => {
         if (useImportMapToMaximizeCacheReuse) {
           return `[name]${outputExtension}`
@@ -1301,14 +1314,18 @@ export const createRollupPlugins = async ({
         ...rollupJsFileInfos,
       }
       const assetBuild = {}
-      Object.keys(rollupResult).forEach((rollupFileId) => {
-        const file = rollupResult[rollupFileId]
+      Object.keys(rollupResult).forEach((fileName) => {
+        const file = rollupResult[fileName]
         if (file.type !== "asset") {
           return
         }
 
         const assetRessource = ressourceBuilder.findRessource(
-          (ressource) => ressource.relativeUrl === rollupFileId,
+          (ressource) =>
+            // happens for import.meta.url pattern
+            ressource.fileName === fileName ||
+            // happens for sourcemap
+            ressource.relativeUrl === fileName,
         )
 
         // ignore potential useless assets which happens when:
