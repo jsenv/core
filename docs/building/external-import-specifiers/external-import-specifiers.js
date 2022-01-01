@@ -4,7 +4,7 @@ buildProject({
   format: "commonjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
-    main: "./file.cjs",
+    main: "file.cjs",
   },
   externalImportSpecifiers: ["./answer.js"],
 })
@@ -13,7 +13,7 @@ buildProject({
   format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
-    main: "./file.js",
+    main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
 })
@@ -22,7 +22,7 @@ buildProject({
   format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
-    main: "./file.js",
+    main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
 })
@@ -31,7 +31,7 @@ buildProject({
   format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPointMap: {
-    main: "./file.js",
+    main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
   globals: {

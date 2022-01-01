@@ -40,7 +40,7 @@ const build = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [mainFileRelativeUrl]: "./main.cjs",
+    [mainFileRelativeUrl]: "main.cjs",
   },
 })
 const sourcemapFileUrl = resolveUrl(

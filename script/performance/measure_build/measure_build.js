@@ -12,7 +12,7 @@ await buildProject({
   buildDirectoryRelativeUrl: "./dist/",
   format: "esmodule",
   entryPointMap: {
-    "./main.html": "./main.min.html",
+    "./main.html": "main.min.html",
   },
   jsenvDirectoryClean: true,
   buildDirectoryClean: true,

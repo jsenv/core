@@ -22,7 +22,7 @@ await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.cjs",
   },
 })
 

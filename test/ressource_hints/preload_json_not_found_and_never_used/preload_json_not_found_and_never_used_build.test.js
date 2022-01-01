@@ -22,7 +22,7 @@ await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
   logLevel: "error", // ideally we should catch the exact warning and assert it is correct
 })

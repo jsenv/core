@@ -44,7 +44,7 @@ const { buildMappings, buildManifest } = await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
   entryPointMap: {
-    "./main.html": "./main.min.html",
+    "./main.html": "main.min.html",
   },
   format: "esmodule",
   minify: true,
@@ -538,7 +538,7 @@ await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
   entryPointMap: {
-    "./main.html": "./main.html",
+    "./main.html": "main.html",
   },
   format: "systemjs",
 })

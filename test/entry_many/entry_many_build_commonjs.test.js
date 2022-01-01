@@ -24,8 +24,8 @@ const { buildManifest, buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${firstEntryRelativeUrl}`]: "./a.cjs",
-    [`./${secondEntryRelativeUrl}`]: "./b.cjs",
+    [`./${firstEntryRelativeUrl}`]: "a.cjs",
+    [`./${secondEntryRelativeUrl}`]: "b.cjs",
   },
   assetManifestFile: true,
   assetManifestFileRelativeUrl: "manifest.json",

@@ -20,7 +20,7 @@ try {
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPointMap: {
-      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
     },
   })
 } catch (actual) {

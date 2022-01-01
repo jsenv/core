@@ -21,7 +21,7 @@ await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}main.js`]: `./main.cjs`,
+    [`./${testDirectoryRelativeUrl}main.js`]: `main.cjs`,
   },
 })
 const { namespace } = await requireCommonJsBuild({
