@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}top_level_await.html`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}top_level_await.html`]: "main.html",
 }
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,

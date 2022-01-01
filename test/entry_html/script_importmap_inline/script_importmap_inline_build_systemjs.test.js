@@ -23,7 +23,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `script_importmap_inline.html`
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
 }
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,

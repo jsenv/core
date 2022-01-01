@@ -101,6 +101,11 @@ export const createRollupPlugins = async ({
     lastErrorMessage = error.message
   }
 
+  const entryPointUrls = {}
+  Object.keys(entryPointMap).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    entryPointUrls[url] = entryPointMap[key]
+  })
   const workerUrls = {}
   Object.keys(workers).forEach((key) => {
     const url = resolveUrl(key, projectDirectoryUrl)
@@ -145,7 +150,7 @@ export const createRollupPlugins = async ({
   })
 
   const urlVersioner = createUrlVersioner({
-    entryPointMap,
+    entryPointUrls,
     workerUrls,
     classicWorkerUrls,
     serviceWorkerUrls,
@@ -714,13 +719,15 @@ export const createRollupPlugins = async ({
           async ({
             entryContentType,
             entryProjectRelativeUrl,
-            entryBuildRelativeUrl,
             entryBuffer,
           }) => {
             if (entryContentType === "application/javascript") {
-              emitChunk({
-                id: ensureRelativeUrlNotation(entryProjectRelativeUrl),
-                fileName: entryBuildRelativeUrl,
+              await ressourceBuilder.createReferenceForEntryPoint({
+                entryContentType,
+                entryUrl: resolveUrl(
+                  entryProjectRelativeUrl,
+                  compileDirectoryServerUrl,
+                ),
               })
               return
             }
@@ -1463,7 +1470,6 @@ const prepareEntryPoints = async (
       entryPointMap[entryFileRelativeUrl],
       buildDirectoryUrl,
     )
-
     const entryProjectRelativeUrl = urlToRelativeUrl(
       entryProjectUrl,
       projectDirectoryUrl,
@@ -1472,20 +1478,16 @@ const prepareEntryPoints = async (
       entryBuildUrl,
       buildDirectoryUrl,
     )
-
     logger.debug(`${UNICODE.INFO} load entry point ${entryProjectRelativeUrl}`)
-
     const entryServerUrl = resolveUrl(
       entryProjectRelativeUrl,
       compileServerOrigin,
     )
-
     const entryResponse = await urlFetcher.fetchUrl(entryServerUrl, {
       urlTrace: `entryPointMap`,
     })
     const entryContentType = entryResponse.headers["content-type"]
     const isHtml = entryContentType === "text/html"
-
     entryPointsPrepared.push({
       entryContentType:
         entryContentType === "text/javascript"
@@ -1537,14 +1539,6 @@ const asFileNameWithoutHash = (fileName) => {
   return fileName.replace(/_[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
     return afterHash
   })
-}
-
-// otherwise importmap handle it as a bare import
-const ensureRelativeUrlNotation = (relativeUrl) => {
-  if (relativeUrl.startsWith("../")) {
-    return relativeUrl
-  }
-  return `./${relativeUrl}`
 }
 
 const externalImportUrlPatternsToExternalUrlPredicate = (
