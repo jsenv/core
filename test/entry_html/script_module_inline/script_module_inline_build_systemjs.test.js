@@ -32,7 +32,7 @@ const htmlString = await readFile(htmlUrl)
 const inlineScriptNode = findHtmlNodeById(htmlString, "script_module_inline")
 const inlineScriptContent = getHtmlNodeTextNode(inlineScriptNode).value
 const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
 }
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,

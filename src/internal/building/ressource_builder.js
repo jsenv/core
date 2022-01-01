@@ -1,15 +1,10 @@
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlIsInsideOf,
-  urlToFilename,
-} from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
 import { racePromises } from "../promise_race.js"
 import { parseDataUrl } from "../dataUrl.utils.js"
-
 import {
   getRessourceAsBase64Url,
   memoize,
@@ -353,6 +348,7 @@ export const createRessourceBuilder = (
       url: ressourceUrl,
       importer: ressourceImporter,
       bufferBeforeBuild,
+      bufferAfterBuild: undefined,
       firstStrongReference: null,
       references: [],
 
@@ -367,8 +363,9 @@ export const createRessourceBuilder = (
 
       urlVersioningDisabled,
 
-      relativeUrl: urlToRelativeUrl(ressourceUrl, compileServerOrigin),
-      bufferAfterBuild: undefined,
+      relativeUrl: ressourceUrl.startsWith(compileServerOrigin)
+        ? urlToRelativeUrl(ressourceUrl, compileServerOrigin)
+        : urlToRelativeUrl(ressourceUrl, buildDirectoryUrl),
     }
 
     ressource.usedPromise = new Promise((resolve) => {
@@ -736,27 +733,32 @@ export const createRessourceBuilder = (
     return ressource
   }
 
-  const rollupBuildEnd = ({ jsChunks }) => {
+  const rollupBuildEnd = ({ rollupJsFileInfos, rollupAssetFileInfos }) => {
+    // TODO: ressource might not exists for chunks generated dynamically by rollup
+    // we should create a new type of ressource
+    const jsRessources = {}
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
-
-      const key = Object.keys(jsChunks).find((key) => {
-        const rollupFileInfo = jsChunks[key]
+      const key = Object.keys(rollupJsFileInfos).find((key) => {
+        const rollupFileInfo = rollupJsFileInfos[key]
         return rollupFileInfo.url === ressourceUrl
       })
-      const rollupFileInfo = jsChunks[key]
-      applyBuildEndEffects(ressource, { rollupFileInfo })
+      const rollupFileInfo = rollupJsFileInfos[key]
+      applyBuildEndEffects(ressource, { rollupFileInfo, rollupAssetFileInfos })
       const { rollupBuildDoneCallbacks } = ressource
       rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
         rollupBuildDoneCallback()
       })
+      jsRessources[ressourceUrl] = ressource
     })
+    return { jsRessources }
   }
 
   const applyBuildEndEffects = (
     ressource,
     {
       rollupFileInfo,
+      rollupAssetFileInfos,
       // buildManifest
     },
   ) => {
@@ -790,7 +792,6 @@ export const createRessourceBuilder = (
     const fileName = rollupFileInfo.fileName
     // const buildRelativeUrl = buildManifest[fileName] || fileName
     let code = rollupFileInfo.code
-
     if (rollupFileInfo.type === "chunk") {
       ressource.contentType = "application/javascript"
     }
@@ -800,16 +801,49 @@ export const createRessourceBuilder = (
       // buildRelativeUrl
     )
 
+    // here we should update buildManifest
+    // with something like buildManifest[ressource.fileName] = ressource.buildRelativeUrl
+
     const map = rollupFileInfo.map
     if (map) {
-      const jsBuildUrl = resolveUrl(
-        ressource.buildRelativeUrl,
-        buildDirectoryUrl,
-      )
-      const sourcemapUrlForJs = `${urlToFilename(jsBuildUrl)}.map`
-      code = setJavaScriptSourceMappingUrl(code, sourcemapUrlForJs)
-      rollupFileInfo.code = code
-      ressource.bufferAfterBuild = code
+      const sourcemapBuildRelativeUrl = `${ressource.buildRelativeUrl}.map`
+      const sourcemapRollupFileInfo =
+        rollupAssetFileInfos[sourcemapBuildRelativeUrl]
+      if (!sourcemapRollupFileInfo) {
+        const ressourceBuildUrl = resolveUrl(
+          ressource.buildRelativeUrl,
+          buildDirectoryUrl,
+        )
+        const sourcemapBuildUrl = resolveUrl(
+          sourcemapBuildRelativeUrl,
+          buildDirectoryUrl,
+        )
+        const sourcemapAsString = JSON.stringify(rollupFileInfo.map, null, "  ")
+        const sourcemapBuildUrlRelativeToFileBuildUrl = urlToRelativeUrl(
+          sourcemapBuildUrl,
+          ressourceBuildUrl,
+        )
+        const codeWithSourcemapComment = setJavaScriptSourceMappingUrl(
+          rollupFileInfo.code,
+          sourcemapBuildUrlRelativeToFileBuildUrl,
+        )
+        ressource.bufferAfterBuild = codeWithSourcemapComment
+        rollupFileInfo.code = codeWithSourcemapComment
+        const sourcemapReference = createReference({
+          referenceLabel: "js sourcemapping comment",
+          contentType: "application/octet-stream",
+          ressourceSpecifier: sourcemapBuildUrlRelativeToFileBuildUrl,
+          referenceUrl: ressourceBuildUrl,
+          referenceLine: codeWithSourcemapComment.split(/\r?\n/).length,
+          // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
+          referenceColumn: `${"//#"} sourceMappingURL=`.length + 1,
+          isSourcemap: true,
+        })
+        sourcemapReference.ressource.buildEnd(
+          sourcemapAsString,
+          sourcemapBuildUrlRelativeToFileBuildUrl,
+        )
+      }
     }
   }
 
@@ -863,6 +897,9 @@ export const createRessourceBuilder = (
       source: referenceSourceAsString,
     }
 
+    if (!referenceRessource) {
+      return urlSite
+    }
     if (!referenceRessource.isInline) {
       return urlSite
     }

@@ -46,7 +46,6 @@ import { visitImportReferences } from "./import_references.js"
 import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
-import { injectSourcemapInRollupBuild } from "./rollup_build_sourcemap.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -1196,29 +1195,35 @@ export const createRollupPlugins = async ({
     },
 
     async generateBundle(outputOptions, rollupResult) {
-      const jsChunks = {}
+      const rollupJsFileInfos = {}
+      const rollupAssetFileInfos = {}
       // To keep in mind: rollupResult object can be mutated by late asset emission
       // however late chunk (js module) emission is not possible
       // as rollup rightfully prevent late js emission
       Object.keys(rollupResult).forEach((fileName) => {
-        const file = rollupResult[fileName]
+        const rollupFileInfo = rollupResult[fileName]
 
         // there is 3 types of file: "placeholder", "asset", "chunk"
-        if (file.type === "asset") {
+        if (rollupFileInfo.type === "asset") {
+          rollupAssetFileInfos[fileName] = rollupFileInfo
           return
         }
 
-        if (file.type === "chunk") {
-          const { facadeModuleId } = file
+        if (rollupFileInfo.type === "chunk") {
+          const { facadeModuleId } = rollupFileInfo
           if (facadeModuleId === EMPTY_CHUNK_URL) {
             return
           }
-          const fileCopy = { ...file }
+          const fileCopy = { ...rollupFileInfo }
           if (facadeModuleId) {
             fileCopy.url = asServerUrl(facadeModuleId)
           } else {
-            const sourcePath = file.map.sources[file.map.sources.length - 1]
-            const fileBuildUrl = resolveUrl(file.fileName, buildDirectoryUrl)
+            const sourcePath =
+              rollupFileInfo.map.sources[rollupFileInfo.map.sources.length - 1]
+            const fileBuildUrl = resolveUrl(
+              rollupFileInfo.fileName,
+              buildDirectoryUrl,
+            )
             const originalProjectUrl = resolveUrl(sourcePath, fileBuildUrl)
             fileCopy.url = asCompiledServerUrl(originalProjectUrl, {
               projectDirectoryUrl,
@@ -1228,7 +1233,7 @@ export const createRollupPlugins = async ({
           }
 
           if (fileCopy.url in inlineModuleScripts && format === "systemjs") {
-            const code = file.code
+            const code = rollupFileInfo.code
             const systemRegisterIndex = code.indexOf("System.register([")
             const magicString = new MagicString(code)
             magicString.overwrite(
@@ -1239,7 +1244,7 @@ export const createRollupPlugins = async ({
             fileCopy.code = magicString.toString()
           }
 
-          jsChunks[fileName] = fileCopy
+          rollupJsFileInfos[fileName] = fileCopy
         }
       })
 
@@ -1253,56 +1258,35 @@ export const createRollupPlugins = async ({
       // aux assets faisant référence a ces chunk js qu'ils sont terminés
       // et donc les assets peuvent connaitre le nom du chunk
       // et mettre a jour leur dépendance vers ce fichier js
-      ressourceBuilder.rollupBuildEnd({ jsChunks })
-
-      const jsModuleBuild = {}
-      Object.keys(jsChunks).forEach((fileName) => {
-        const file = jsChunks[fileName]
-        let buildRelativeUrl
-
-        const originalProjectUrl = asOriginalUrl(file.url)
-        const originalProjectRelativeUrl = urlToRelativeUrl(
-          originalProjectUrl,
-          projectDirectoryUrl,
-        )
-        const jsRessource = ressourceBuilder.findRessource(
-          (ressource) => ressource.url === file.url,
-        )
-
-        let ressourceName
-        if (urlVersioning) {
-          ressourceName = fileName
-          if (useImportMapToMaximizeCacheReuse) {
-            // TOOD: jsRessource might not exists
-            // for chunks generated dynamically by rollup
-            // for thoose ressource
-            // we should create a new type of ressource
-            buildRelativeUrl = urlVersioner.computeBuildRelativeUrl(jsRessource)
-            buildManifest[ressourceName] = buildRelativeUrl
-          } else {
-            buildRelativeUrl = fileName
-          }
-        } else {
-          ressourceName = asFileNameWithoutHash(fileName)
-          buildRelativeUrl = fileName
-        }
-
-        if (jsRessource && jsRessource.isInline) {
-          buildInlineFileContents[buildRelativeUrl] = file.code
-          if (format === "systemjs") {
-            ressourcesReferencedByJs.push(ressourceName)
-          }
-        } else {
-          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-        }
-
-        jsModuleBuild[buildRelativeUrl] = file
+      const { jsRessources } = ressourceBuilder.rollupBuildEnd({
+        rollupJsFileInfos,
+        rollupAssetFileInfos,
+        buildManifest,
       })
-
+      Object.keys(jsRessources).forEach((ressourceUrl) => {
+        const jsRessource = jsRessources[ressourceUrl]
+        if (jsRessource.isInline) {
+          buildInlineFileContents[jsRessource.buildRelativeUrl] =
+            jsRessource.bufferAfterBuild
+          if (format === "systemjs") {
+            ressourcesReferencedByJs.push(jsRessource.fileName)
+          }
+        } else {
+          const originalProjectUrl = asOriginalUrl(ressourceUrl)
+          const originalProjectRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          buildMappings[originalProjectRelativeUrl] =
+            jsRessource.buildRelativeUrl
+        }
+      })
       // wait html files to be emitted
       await ressourceBuilder.getAllEntryPointsEmittedPromise()
       onBundleEnd()
-
+      const jsModuleBuild = {
+        ...rollupJsFileInfos,
+      }
       const assetBuild = {}
       Object.keys(rollupResult).forEach((rollupFileId) => {
         const file = rollupResult[rollupFileId]
@@ -1313,8 +1297,8 @@ export const createRollupPlugins = async ({
         const assetRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.relativeUrl === rollupFileId,
         )
-        // the asset does not exists in the project it was generated during building
-        // happens for sourcemap
+        // the asset does not exists in the project.
+        // it was generated during build (happens for sourcemap)
         if (!assetRessource) {
           const buildRelativeUrl = rollupFileId
           assetBuild[buildRelativeUrl] = file
@@ -1365,10 +1349,6 @@ export const createRollupPlugins = async ({
         ...jsModuleBuild,
         ...assetBuild,
       }
-      rollupBuild = injectSourcemapInRollupBuild(rollupBuild, {
-        buildDirectoryUrl,
-      })
-
       // update rollupBuild, buildInlineFilesContents, buildManifest and buildMappings
       // in case some ressources where inlined by ressourceBuilder.rollupBuildEnd
       Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
