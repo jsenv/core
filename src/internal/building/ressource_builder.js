@@ -54,10 +54,16 @@ export const createRessourceBuilder = (
 
       contentType: entryContentType,
       bufferBeforeBuild: entryBuffer,
+      isJsModule: entryContentType === "application/javascript",
 
       isEntryPoint: true,
     })
     entryReference.isProgrammatic = true
+    if (entryReference.ressource.isJsModule) {
+      // no need to call getDependenciesAvailablePromise and so on
+      // rollup is handling js entries
+      return
+    }
 
     await entryReference.ressource.getDependenciesAvailablePromise()
 
@@ -738,50 +744,47 @@ export const createRessourceBuilder = (
     rollupAssetFileInfos,
     useImportMapToMaximizeCacheReuse,
   }) => {
-    // TODO: ressource might not exists for chunks generated dynamically by rollup
-    // we should create a new type of ressource
     const jsRessources = {}
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
-      const key = Object.keys(rollupJsFileInfos).find((key) => {
+      const jsModuleFileName = Object.keys(rollupJsFileInfos).find((key) => {
         const rollupFileInfo = rollupJsFileInfos[key]
         return rollupFileInfo.url === ressourceUrl
       })
-      // nothing special to do for non-js ressources
-      if (!ressource.isJsModule) {
+      if (jsModuleFileName) {
+        const rollupFileInfo = rollupJsFileInfos[jsModuleFileName]
+        // We expect to find the ressource in the rollup build except when:
+        // - js was only preloaded/prefetched and never referenced afterwards
+        // - js was only referenced by other js
+        if (!rollupFileInfo) {
+          const referencedOnlyByRessourceHint = !ressource.firstStrongReference
+          if (referencedOnlyByRessourceHint) {
+            return
+          }
+          const referencedOnlyByOtherJs = ressource.references.every(
+            (ref) => ref.referenceShouldNotEmitChunk,
+          )
+          if (referencedOnlyByOtherJs) {
+            return
+          }
+          throw new Error(
+            `${shortenUrl(ressource.url)} cannot be found in the build info`,
+          )
+        }
+        applyBuildEndEffects(ressource, {
+          rollupFileInfo,
+          rollupAssetFileInfos,
+          useImportMapToMaximizeCacheReuse,
+        })
+        const { rollupBuildDoneCallbacks } = ressource
+        rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
+          rollupBuildDoneCallback()
+        })
+        jsRessources[ressourceUrl] = ressource
         return
       }
-      const rollupFileInfo = rollupJsFileInfos[key]
-      // We expect to find the ressource in the rollup build except when:
-      // - js was only preloaded/prefetched and never referenced afterwards
-      // - js was only referenced by other js
-      if (!rollupFileInfo) {
-        const referencedOnlyByRessourceHint = !ressource.firstStrongReference
-        if (referencedOnlyByRessourceHint) {
-          return
-        }
-        const referencedOnlyByOtherJs = ressource.references.every(
-          (ref) => ref.referenceShouldNotEmitChunk,
-        )
-        if (referencedOnlyByOtherJs) {
-          return
-        }
-        throw new Error(
-          `${shortenUrl(ressource.url)} cannot be found in the build info`,
-        )
-      }
-
-      applyBuildEndEffects(ressource, {
-        rollupFileInfo,
-        rollupAssetFileInfos,
-        useImportMapToMaximizeCacheReuse,
-      })
-      const { rollupBuildDoneCallbacks } = ressource
-      rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
-        rollupBuildDoneCallback()
-      })
-      jsRessources[ressourceUrl] = ressource
     })
+
     return { jsRessources }
   }
 
@@ -838,6 +841,9 @@ export const createRessourceBuilder = (
           referenceColumn: `${"//#"} sourceMappingURL=`.length + 1,
           isSourcemap: true,
         })
+        sourcemapReference.ressource.fileName = asFileNameWithoutHash(
+          sourcemapBuildUrlRelativeToFileBuildUrl,
+        )
         sourcemapReference.ressource.buildEnd(
           sourcemapAsString,
           sourcemapBuildUrlRelativeToFileBuildUrl,

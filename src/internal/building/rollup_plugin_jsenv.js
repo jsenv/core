@@ -762,6 +762,10 @@ export const createRollupPlugins = async ({
     },
 
     async resolveId(specifier, importer, { custom }) {
+      if (specifier === EMPTY_CHUNK_URL) {
+        return specifier
+      }
+
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
           importer = compileServerOrigin
@@ -1152,11 +1156,15 @@ export const createRollupPlugins = async ({
         }
         return entryPointMap
       }
-      outputOptions.chunkFileNames = () => {
+      outputOptions.chunkFileNames = (chunkInfo) => {
         // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
         // const basename = urlToBasename(originalUrl)
         if (useImportMapToMaximizeCacheReuse) {
           return `[name]${outputExtension}`
+        }
+        if (chunkInfo.isEntry) {
+          const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
+          return entryPointUrls[originalUrl]
         }
         return `[name]_[hash]${outputExtension}`
       }
@@ -1325,17 +1333,18 @@ export const createRollupPlugins = async ({
           return
         }
 
-        const ressourceName = assetRessource.fileName
-        const originalProjectUrl = asOriginalUrl(assetRessource.url)
-        const originalProjectRelativeUrl = urlToRelativeUrl(
-          originalProjectUrl,
-          projectDirectoryUrl,
-        )
         // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
         file.source = assetRessource.bufferAfterBuild
         assetBuild[buildRelativeUrl] = file
-        buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
-        buildManifest[ressourceName] = buildRelativeUrl
+        buildManifest[assetRessource.fileName] = buildRelativeUrl
+        if (assetRessource.bufferBeforeBuild) {
+          const originalProjectUrl = asOriginalUrl(assetRessource.url)
+          const originalProjectRelativeUrl = urlToRelativeUrl(
+            originalProjectUrl,
+            projectDirectoryUrl,
+          )
+          buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+        }
       })
       rollupBuild = {
         ...jsModuleBuild,

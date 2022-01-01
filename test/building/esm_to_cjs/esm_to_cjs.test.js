@@ -19,6 +19,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 
 const { buildMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -26,7 +27,6 @@ const { buildMappings } = await buildProject({
   },
   assetManifestFile: true,
   assetManifestFileRelativeUrl: "manifest.json",
-  // logLevel: "debug",
 })
 
 {
@@ -38,11 +38,18 @@ const { buildMappings } = await buildProject({
 }
 
 {
-  const { namespace: actual } = await requireCommonJsBuild({
+  const { namespace } = await requireCommonJsBuild({
     ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
     buildDirectoryRelativeUrl,
     mainRelativeUrl: "./main.cjs",
   })
-  const expected = { readFileType: "function" }
+  const actual = {
+    namespace,
+  }
+  const expected = {
+    namespace: {
+      readFileType: "function",
+    },
+  }
   assert({ actual, expected })
 }
