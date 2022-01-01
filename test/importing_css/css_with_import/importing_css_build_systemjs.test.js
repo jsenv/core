@@ -17,9 +17,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}main.js`]: "./main.js",
-}
 
 try {
   await buildProject({
@@ -27,7 +24,9 @@ try {
     useImportMapToMaximizeCacheReuse: false,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
+    },
     // logLevel: "debug",
     // minify: true,
   })

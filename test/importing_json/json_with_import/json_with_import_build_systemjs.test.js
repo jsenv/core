@@ -17,9 +17,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}main.html`]: "./main.html",
-}
 const jsonFileUrl = resolveUrl("./file.json", import.meta.url)
 const jsFileUrl = resolveUrl("./main.js", import.meta.url)
 const htmlFileUrl = resolveUrl("./main.html", import.meta.url)
@@ -29,7 +26,9 @@ try {
     ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
+    },
     minify: true,
   })
   throw new Error("should throw")

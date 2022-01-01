@@ -21,9 +21,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.prod.html",
-}
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
@@ -33,7 +30,9 @@ const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.prod.html",
+  },
 })
 
 // check sourcemap content
