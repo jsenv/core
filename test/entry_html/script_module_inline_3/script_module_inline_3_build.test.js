@@ -17,16 +17,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
-
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+  },
 })
 
 const { namespace } = await browserImportSystemJsBuild({

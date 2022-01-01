@@ -33,9 +33,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `script_with_sourcemap.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -46,7 +43,9 @@ const test = async (params) => {
     // logLevel: "info",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+    },
     ...params,
   })
   const scriptBuildRelativeUrl =
