@@ -63,6 +63,6 @@ const cssString = await readFile(cssFileBuildUrl)
   const fontSpecifier = cssUrls.urlDeclarations[0].specifier
 
   const actual = fontSpecifier
-  const expected = "roboto_v27_latin_regular-cc46322d.woff2"
+  const expected = "roboto_v27_latin_regular_cc46322d.woff2"
   assert({ actual, expected })
 }
