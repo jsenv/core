@@ -1,5 +1,4 @@
 import { extname } from "node:path"
-import cuid from "cuid"
 import MagicString from "magic-string"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
@@ -1167,8 +1166,7 @@ export const createRollupPlugins = async ({
                 urlToFilename(jsUrl),
                 buildDirectoryUrl,
               )
-              let code = String(fileReference.ressource.bufferAfterBuild)
-              let map
+              code = String(fileReference.ressource.bufferAfterBuild)
               const sourcemapReference =
                 fileReference.ressource.dependencies.find((dependency) => {
                   return dependency.ressource.isSourcemap
