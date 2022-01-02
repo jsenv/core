@@ -198,6 +198,7 @@ export const buildUsingRollup = async ({
   }
 
   const {
+    rollupBuild,
     urlResponseBodyMap,
     buildMappings,
     buildManifest,
@@ -233,6 +234,7 @@ export const buildUsingRollup = async ({
   }
 
   return {
+    rollupBuild,
     urlResponseBodyMap,
     buildMappings,
     buildManifest,

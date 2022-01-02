@@ -1462,6 +1462,7 @@ export const createRollupPlugins = async ({
     getLastErrorMessage: () => lastErrorMessage,
     getResult: async () => {
       return {
+        rollupBuild,
         urlResponseBodyMap: urlLoader.getUrlResponseBodyMap(),
         buildMappings,
         buildManifest,
