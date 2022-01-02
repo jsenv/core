@@ -173,25 +173,27 @@ export const createRessourceBuilder = (
 
     fromRollup,
   }) => {
-    const existingRessourceForReference = findRessourceByUrl(referenceUrl)
     let ressourceImporter
-    if (existingRessourceForReference) {
-      ressourceImporter = existingRessourceForReference
-    } else {
-      const referenceOriginalUrl = asOriginalServerUrl(referenceUrl)
-      if (referenceOriginalUrl) {
-        ressourceImporter = findRessourceByUrl(referenceOriginalUrl)
-      }
-      if (!ressourceImporter) {
-        // happens only for entry points?
-        // in that case the importer is theoric
-        // see "getCallerLocation()" in createReferenceForEntryPoint
-        ressourceImporter = {
-          url: referenceUrl,
-          isEntryPoint: false,
-          isJsModule: true,
-          bufferAfterBuild: "",
+    if (referenceUrl) {
+      const existingRessourceForReference = findRessourceByUrl(referenceUrl)
+      if (existingRessourceForReference) {
+        ressourceImporter = existingRessourceForReference
+      } else {
+        const referenceOriginalUrl = asOriginalServerUrl(referenceUrl)
+        if (referenceOriginalUrl) {
+          ressourceImporter = findRessourceByUrl(referenceOriginalUrl)
         }
+      }
+    }
+    if (!ressourceImporter) {
+      // happens only for entry points?
+      // in that case the importer is theoric
+      // see "getCallerLocation()" in createReferenceForEntryPoint
+      ressourceImporter = {
+        url: referenceUrl,
+        isEntryPoint: false,
+        isJsModule: true,
+        bufferAfterBuild: "",
       }
     }
 
@@ -307,26 +309,33 @@ export const createRessourceBuilder = (
     }
 
     reference.ressource = ressource
-    if (fromRollup && ressourceImporter.isEntryPoint) {
-      // When HTML references JS, ressource builder has emitted the js chunk.
-      // so it already knows it exists and is part of references
-      // -> no need to push into reference (would incorrectly consider html references js twice)
-      // -> no need to log the js ressource (already logged during the HTML parsing)
-    } else {
-      ressource.references.push(reference)
-      const effects = ressource.applyReferenceEffects(reference, { isJsModule })
-      if (loggerToLevels(logger).debug) {
-        logger.debug(
-          formatFoundReference({
-            reference,
-            referenceEffects: effects,
-            showReferenceSourceLocation,
-            shortenUrl,
-          }),
-        )
+    if (fromRollup) {
+      if (ressourceImporter.isEntryPoint) {
+        // When HTML references JS, ressource builder has emitted the js chunk.
+        // so it already knows it exists and is part of references
+        // -> no need to push into reference (would incorrectly consider html references js twice)
+        // -> no need to log the js ressource (already logged during the HTML parsing)
+        return reference
+      }
+      if (ressource.isEntryPoint) {
+        // When rollup "loads" a js entry point, ressource builder is already aware of it
+        // because of "createReferenceForEntryPoint"
+        return reference
       }
     }
 
+    ressource.references.push(reference)
+    const effects = ressource.applyReferenceEffects(reference, { isJsModule })
+    if (loggerToLevels(logger).debug) {
+      logger.debug(
+        formatFoundReference({
+          reference,
+          referenceEffects: effects,
+          showReferenceSourceLocation,
+          shortenUrl,
+        }),
+      )
+    }
     return reference
   }
 

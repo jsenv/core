@@ -4,7 +4,6 @@ import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
 import { createDetailedMessage, loggerToLogLevel } from "@jsenv/logger"
 import {
-  isFileSystemPath,
   fileSystemPathToUrl,
   resolveUrl,
   urlToRelativeUrl,
@@ -671,22 +670,26 @@ export const createRollupPlugins = async ({
             return ressourceUrl
           },
           onJsModule: ({ ressource, jsModuleUrl, jsModuleIsInline }) => {
-            if (jsModuleIsInline) {
-              inlineModuleScripts[jsModuleUrl] = ressource
-            }
-
-            urlImporterMap[jsModuleUrl] = {
-              url: resolveUrl(
+            if (ressource.isEntryPoint) {
+            } else {
+              const importerUrl = resolveUrl(
                 entryPointsPrepared[0].entryProjectRelativeUrl,
                 compileDirectoryServerUrl,
-              ),
-              line: undefined,
-              column: undefined,
+              )
+              urlImporterMap[jsModuleUrl] = {
+                url: importerUrl,
+                line: undefined,
+                column: undefined,
+              }
+              jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
+              if (jsModuleIsInline) {
+                inlineModuleScripts[jsModuleUrl] = ressource
+              }
             }
-            jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
+
             const fileName = ressource.relativeUrl
             const rollupReferenceId = emitChunk({
-              id: asRollupUrl(jsModuleUrl),
+              id: jsModuleUrl,
               name: urlToBasename(jsModuleUrl),
             })
             return {
@@ -766,14 +769,15 @@ export const createRollupPlugins = async ({
         return specifier
       }
 
+      let importerUrl
       if (importer === undefined) {
         if (specifier.endsWith(".html")) {
-          importer = compileServerOrigin
+          importerUrl = compileServerOrigin
         } else {
-          importer = compileDirectoryServerUrl
+          importerUrl = compileDirectoryServerUrl
         }
       } else {
-        importer = asServerUrl(importer)
+        importerUrl = asServerUrl(importer)
       }
 
       const { importAssertionInfo } = custom
@@ -801,22 +805,21 @@ export const createRollupPlugins = async ({
         return specifier
       }
 
-      if (isFileSystemPath(importer)) {
-        importer = fileSystemPathToUrl(importer)
-      }
-
-      const importUrl = await importResolver.resolveImport(specifier, importer)
+      const importUrl = await importResolver.resolveImport(
+        specifier,
+        importerUrl,
+      )
 
       const existingImporter = urlImporterMap[importUrl]
       if (!existingImporter) {
         urlImporterMap[importUrl] = importAssertionInfo
           ? {
-              url: importer,
+              url: importerUrl,
               column: importAssertionInfo.column,
               line: importAssertionInfo.line,
             }
           : {
-              url: importer,
+              url: importerUrl,
               // rollup do not expose a way to know line and column for the static or dynamic import
               // referencing that file
               column: undefined,
@@ -910,6 +913,7 @@ export const createRollupPlugins = async ({
         originalUrl,
         jsenvHelpersDirectoryInfo.url,
       )
+      // const isEntryPoint = entryPointUrls[originalUrl]
 
       const importer = urlImporterMap[url]
       // Inform ressource builder that this js module exists
@@ -930,7 +934,6 @@ export const createRollupPlugins = async ({
         referenceColumn: importer.column,
         referenceLine: importer.line,
         ressourceSpecifier: url,
-
         isJsenvHelperFile,
         contentType: "application/javascript",
         bufferBeforeBuild: Buffer.from(code),
@@ -971,6 +974,7 @@ export const createRollupPlugins = async ({
             return
           }
           if (!reference.ressource.isJsModule) {
+            // so that ressource.buildRelativeUrl is known during "resolveFileUrl" hook`
             await reference.ressource.getReadyPromise()
           }
           mutations.push((magicString) => {
