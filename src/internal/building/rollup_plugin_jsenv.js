@@ -1,4 +1,5 @@
 import { extname } from "node:path"
+import cuid from "cuid"
 import MagicString from "magic-string"
 import { normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
@@ -13,9 +14,12 @@ import {
   normalizeStructuredMetaMap,
   urlToMeta,
   urlToBasename,
+  urlToFilename,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { convertJsonTextToJavascriptModule } from "@jsenv/core/src/internal/building/json_module.js"
+import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
@@ -23,7 +27,6 @@ import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js
 import { stringifyUrlTrace } from "@jsenv/core/src/internal/building/url_trace.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 
 import {
   formatBuildStartLog,
@@ -100,6 +103,9 @@ export const createRollupPlugins = async ({
     lastErrorMessage = error.message
   }
 
+  const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
+  const outputExtension = extension === ".html" ? ".js" : extension
+
   const entryPointUrls = {}
   Object.keys(entryPointMap).forEach((key) => {
     const url = resolveUrl(key, projectDirectoryUrl)
@@ -168,13 +174,11 @@ export const createRollupPlugins = async ({
     },
   })
 
+  const urlCustomLoaders = {}
   const urlLoader = createUrlLoader({
-    projectDirectoryUrl,
-    buildDirectoryUrl,
-    babelPluginMap,
+    urlCustomLoaders,
     allowJson: acceptsJsonContentType({ node, format }),
     urlImporterMap,
-    inlineModuleScripts,
     jsConcatenation,
 
     asServerUrl,
@@ -692,6 +696,26 @@ export const createRollupPlugins = async ({
               jsModulesFromEntry[asRollupUrl(jsModuleUrl)] = true
               if (jsModuleIsInline) {
                 inlineModuleScripts[jsModuleUrl] = ressource
+                urlCustomLoaders[jsModuleUrl] = async () => {
+                  const transformResult = await transformJs({
+                    code: String(
+                      inlineModuleScripts[jsModuleUrl].bufferBeforeBuild,
+                    ),
+                    url: asOriginalUrl(jsModuleUrl), // transformJs expect a file:// url
+                    projectDirectoryUrl,
+                    babelPluginMap,
+                    // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
+                    // we compile for rollup, let top level await untouched
+                    // it will be converted, if needed, during "renderChunk" hook
+                    topLevelAwait: "ignore",
+                  })
+                  let code = transformResult.code
+                  let map = transformResult.map
+                  return {
+                    code,
+                    map,
+                  }
+                }
               }
             }
 
@@ -817,7 +841,6 @@ export const createRollupPlugins = async ({
         specifier,
         importerUrl,
       )
-
       const existingImporter = urlImporterMap[importUrl]
       if (!existingImporter) {
         urlImporterMap[importUrl] = importAssertionInfo
@@ -905,11 +928,10 @@ export const createRollupPlugins = async ({
         return urlLoader.loadUrl(rollupUrl, {
           signal,
           logger,
-          ressourceBuilder,
         })
       })
 
-      url = loadResult.url
+      if (loadResult.url) url = loadResult.url
       const code = loadResult.code
       const map = loadResult.map
 
@@ -1073,29 +1095,31 @@ export const createRollupPlugins = async ({
               },
             }),
           )
-          const ressourceUrl = asServerUrl(id)
-          if (external) {
-            if (importAssertionSupportedByRuntime) {
-              const reference = ressourceBuilder.createReferenceFoundInJsModule(
-                {
-                  referenceLabel: "import assertion",
-                  isImportAssertion: true,
-                  jsUrl: url,
-                  jsLine: line,
-                  jsColumn: column,
-                  ressourceSpecifier: ressourceUrl,
-                },
-              )
-              // reference can be null for cross origin urls
-              if (!reference) {
-                return
-              }
-              await reference.ressource.getReadyPromise()
-              // markBuildRelativeUrlAsUsedByJs(
-              //   reference.ressource.buildRelativeUrl,
-              // )
-              return
-            }
+          // remove import
+          let ressourceUrl = asServerUrl(id)
+          // lod the asset without ?import_type in it
+          ressourceUrl = ressourceUrl.replace(`?import_type=${type}`, "")
+          const fileReference = ressourceBuilder.createReferenceFoundInJsModule(
+            {
+              referenceLabel: `${type} import assertion`,
+              // If all references to a ressource are only import assertions
+              // the file referenced do not need to be written on filesystem
+              // as it was converted to a js file
+              // We pass "isImportAssertion: true" for this purpose
+              isImportAssertion: true,
+              jsUrl: url,
+              jsLine: line,
+              jsColumn: column,
+              ressourceSpecifier: ressourceUrl,
+              contentTypeExpected:
+                type === "css" ? "text/css" : "application/json",
+            },
+          )
+          // reference can be null for cross origin urls
+          if (!fileReference) {
+            return
+          }
+          if (external && !importAssertionSupportedByRuntime) {
             throw new Error(
               createDetailedMessage(
                 `import assertion ressource cannot be external when runtime do not support import assertions`,
@@ -1108,16 +1132,66 @@ export const createRollupPlugins = async ({
             )
           }
 
-          // we want to convert the import assertions into a js module
-          // to do that we append ?import_type to the url
-          // In theory this is not needed anymore:
-          // This is already done by the compile server
-          const ressourceUrlAsJsModule = setUrlSearchParamsDescriptor(
+          // await fileReference.ressource.getReadyPromise()
+          // once the file is ready, we know its buildRelativeUrl
+          // we can update either to the fileName or buildRelativeUrl
+          // should be use the rollup reference id?
+          const ressourceUrlAsJsModule = resolveUrl(
+            `${urlToBasename(
+              ressourceUrl,
+            )}${outputExtension}?import_type=${type}`,
             ressourceUrl,
-            {
-              import_type: type,
-            },
           )
+          const jsUrl = url
+          urlCustomLoaders[ressourceUrlAsJsModule] = async () => {
+            let code
+            let map
+
+            if (type === "json") {
+              await fileReference.ressource.getReadyPromise()
+              code = String(fileReference.ressource.bufferAfterBuild)
+              const jsModuleConversionResult =
+                await convertJsonTextToJavascriptModule({
+                  code,
+                  map,
+                })
+              code = jsModuleConversionResult.code
+              map = jsModuleConversionResult.map
+            } else if (type === "css") {
+              await fileReference.ressource.getReadyPromise()
+              const cssBuildUrl = resolveUrl(
+                fileReference.ressource.buildRelativeUrl,
+                buildDirectoryUrl,
+              )
+              const jsBuildUrl = resolveUrl(
+                urlToFilename(jsUrl),
+                buildDirectoryUrl,
+              )
+              let code = String(fileReference.ressource.bufferAfterBuild)
+              let map
+              const sourcemapReference =
+                fileReference.ressource.dependencies.find((dependency) => {
+                  return dependency.ressource.isSourcemap
+                })
+              if (sourcemapReference) {
+                // because css is ready, it's sourcemap is also ready
+                // we can read directly sourcemapReference.ressource.bufferAfterBuild
+                map = JSON.parse(sourcemapReference.ressource.bufferAfterBuild)
+              }
+              const jsModuleConversionResult =
+                await convertCssTextToJavascriptModule({
+                  cssUrl: cssBuildUrl,
+                  jsUrl: jsBuildUrl,
+                  code,
+                  map,
+                })
+              code = jsModuleConversionResult.code
+              map = jsModuleConversionResult.map
+            }
+
+            return { code, map }
+          }
+
           mutations.push((magicString) => {
             magicString.overwrite(
               importNode.source.start,
@@ -1144,9 +1218,6 @@ export const createRollupPlugins = async ({
 
     // resolveImportMeta: () => {}
     outputOptions: (outputOptions) => {
-      const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
-      const outputExtension = extension === ".html" ? ".js" : extension
-
       outputOptions.paths = (id) => {
         const mapping = importPaths[id]
         if (mapping) {

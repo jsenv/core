@@ -39,7 +39,7 @@ const { buildMappings } = await buildProject({
 // check sourcemap content
 {
   const sourcemapBuildRelativeUrl = `${
-    buildMappings[`${testDirectoryRelativeUrl}data.json?import_type=json`]
+    buildMappings[`${testDirectoryRelativeUrl}data.js?import_type=json`]
   }.map`
   const sourcemapBuildUrl = resolveUrl(
     sourcemapBuildRelativeUrl,
@@ -58,7 +58,7 @@ const { buildMappings } = await buildProject({
     file: "data.js", // "data.json" becomes "data.js"
     sources: [
       // the source url is theoric because data.js file do not really exist
-      "../../.jsenv/build/best/test/importing_json/json_with_dynamic_import_assertion/data.json?import_type=json",
+      "../../.jsenv/build/best/test/importing_json/json_with_dynamic_import_assertion/data.js?import_type=json",
     ],
     sourcesContent: [
       // the source content is the fake "data.js" exporting the json
