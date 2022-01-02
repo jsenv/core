@@ -298,6 +298,7 @@ export const createRessourceBuilder = (
     }
 
     const reference = {
+      fromRollup,
       isRessourceHint,
       isImportAssertion,
       contentTypeExpected,
