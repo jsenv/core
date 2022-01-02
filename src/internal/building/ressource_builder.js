@@ -143,12 +143,21 @@ export const createRessourceBuilder = (
       urlToWait.map(async (url) => {
         const ressource = ressourceMap[url]
         await ressource.getReadyPromise()
-        if (!ressource.isJsModule) {
-          ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
-        }
         return ressource
       }),
     )
+
+    // compute all asset fileName
+    Object.keys(ressourceMap).forEach((key) => {
+      const ressource = ressourceMap[key]
+      if (!ressource.isJsModule && !ressource.fileName) {
+        if (ressource.isPlaceholder && !ressource.buildRelativeUrl) {
+          // placeholder not filled, that's ok
+          return
+        }
+        ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
+      }
+    })
   }
 
   const ressourceMap = {}
@@ -853,9 +862,6 @@ export const createRessourceBuilder = (
           referenceColumn: `${"//#"} sourceMappingURL=`.length + 1,
           isSourcemap: true,
         })
-        sourcemapReference.ressource.fileName = asFileNameWithoutHash(
-          sourcemapBuildUrlRelativeToFileBuildUrl,
-        )
         sourcemapReference.ressource.buildEnd(
           sourcemapAsString,
           sourcemapBuildUrlRelativeToFileBuildUrl,
