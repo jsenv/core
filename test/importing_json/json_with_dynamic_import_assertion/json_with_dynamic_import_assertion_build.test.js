@@ -28,6 +28,7 @@ const buildDirectoryUrl = resolveUrl(
 )
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
@@ -76,9 +77,13 @@ const { buildMappings } = await buildProject({
     jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
   })
 
-  const actual = namespace
+  const actual = {
+    namespace,
+  }
   const expected = {
-    data: 42,
+    namespace: {
+      data: 42,
+    },
   }
   assert({ actual, expected })
 }

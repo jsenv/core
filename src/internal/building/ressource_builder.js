@@ -164,7 +164,6 @@ export const createRessourceBuilder = (
   const ressourceMap = {}
   const ressourceRedirectionMap = {}
   const createReference = ({
-    referenceShouldNotEmitChunk,
     isRessourceHint,
     isImportAssertion,
     contentTypeExpected,
@@ -299,7 +298,6 @@ export const createRessourceBuilder = (
     }
 
     const reference = {
-      referenceShouldNotEmitChunk,
       isRessourceHint,
       isImportAssertion,
       contentTypeExpected,
@@ -714,10 +712,6 @@ export const createRessourceBuilder = (
       }
 
       if (ressource.isJsModule) {
-        if (!isEmitChunkNeeded({ ressource, reference })) {
-          return effects
-        }
-
         const jsModuleUrl = ressource.url
         const rollupChunk = onJsModule({
           ressource,
@@ -727,10 +721,12 @@ export const createRessourceBuilder = (
           line: reference.referenceLine,
           column: reference.referenceColumn,
         })
-        ressource.rollupReferenceId = rollupChunk.rollupReferenceId
-        effects.push(
-          `emit rollup chunk "${rollupChunk.fileName}" (${rollupChunk.rollupReferenceId})`,
-        )
+        if (rollupChunk) {
+          ressource.rollupReferenceId = rollupChunk.rollupReferenceId
+          effects.push(
+            `emit rollup chunk "${rollupChunk.fileName}" (${rollupChunk.rollupReferenceId})`,
+          )
+        }
         return effects
       }
 
@@ -783,10 +779,11 @@ export const createRessourceBuilder = (
           if (referencedOnlyByRessourceHint) {
             return
           }
-          const referencedOnlyByOtherJs = ressource.references.every(
-            (ref) => ref.referenceShouldNotEmitChunk,
+          const referencedOnlyByRollup = ressource.references.every(
+            (ref) => ref.fromRollup,
           )
-          if (referencedOnlyByOtherJs) {
+          if (referencedOnlyByRollup) {
+            // concatened by rollup
             return
           }
           throw new Error(
@@ -1042,20 +1039,6 @@ const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)
   urlObject.hash = ""
   return String(urlObject)
-}
-
-const isEmitChunkNeeded = ({ ressource, reference }) => {
-  if (reference.referenceShouldNotEmitChunk) {
-    // si la ressource est preload ou prefetch
-    const isReferencedByRessourceHint = ressource.references.some(
-      (ref) => ref.isRessourceHint,
-    )
-    if (isReferencedByRessourceHint) {
-      return true
-    }
-    return false
-  }
-  return true
 }
 
 /*

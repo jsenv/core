@@ -75,6 +75,7 @@ export const createUrlLoader = ({
         url,
         code,
         map,
+        importType,
       }
     }
     // importing json from JS with import assertion
@@ -96,17 +97,16 @@ export const createUrlLoader = ({
       await jsonReference.ressource.getReadyPromise()
       let code = String(jsonReference.ressource.bufferAfterBuild)
       let map
-
       const jsModuleConversionResult = await convertJsonTextToJavascriptModule({
         code,
         map,
       })
       code = jsModuleConversionResult.code
       map = jsModuleConversionResult.map
-
       return {
         url,
         code,
+        importType,
       }
     }
 

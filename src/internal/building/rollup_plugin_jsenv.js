@@ -670,6 +670,14 @@ export const createRollupPlugins = async ({
             return ressourceUrl
           },
           onJsModule: ({ ressource, jsModuleUrl, jsModuleIsInline }) => {
+            // we want to emit chunk only when ressource is referenced by something else than rollup
+            if (
+              jsConcatenation &&
+              ressource.references.every((ref) => ref.fromRollup)
+            ) {
+              return null
+            }
+
             if (ressource.isEntryPoint) {
             } else {
               const importerUrl = resolveUrl(
@@ -923,11 +931,6 @@ export const createRollupPlugins = async ({
       // For import assertions, the imported ressource (css,json,...)
       // is arelady converted to a js module
       ressourceBuilder.createReferenceFoundByRollup({
-        // we don't want to emit a js chunk for every js file found
-        // (However we want if the file is preload/prefetch by something else)
-        // so we tell asset builder not to emit a chunk for this js reference
-        // otherwise rollup would never concat module together
-        referenceShouldNotEmitChunk: jsConcatenation,
         contentTypeExpected: "application/javascript",
         referenceLabel: "static or dynamic import",
         referenceUrl: importer.url,
@@ -993,7 +996,6 @@ export const createRollupPlugins = async ({
           const { source } = importNode
           const importSpecifier = source.value
           const { line, column } = importNode.loc.start
-
           // "type" is dynamic on dynamic import such as
           // import("./data.json", {
           //   assert: {
@@ -1021,9 +1023,7 @@ export const createRollupPlugins = async ({
               type: typePropertyValue.value,
             }
           }
-
           const { type } = assertions
-
           // "specifier" is dynamic on dynamic import such as
           // import(true ? "./a.json" : "b.json", {
           //   assert: {
@@ -1047,9 +1047,7 @@ export const createRollupPlugins = async ({
               ),
             )
           }
-
           // There is no strategy for css import assertion on Node.js
-          // and that's normal
           if (type === "css" && node) {
             throw new Error(
               createDetailedMessage(
@@ -1075,7 +1073,6 @@ export const createRollupPlugins = async ({
               },
             }),
           )
-
           const ressourceUrl = asServerUrl(id)
           if (external) {
             if (importAssertionSupportedByRuntime) {
@@ -1099,7 +1096,6 @@ export const createRollupPlugins = async ({
               // )
               return
             }
-
             throw new Error(
               createDetailedMessage(
                 `import assertion ressource cannot be external when runtime do not support import assertions`,
@@ -1122,7 +1118,6 @@ export const createRollupPlugins = async ({
               import_type: type,
             },
           )
-
           mutations.push((magicString) => {
             magicString.overwrite(
               importNode.source.start,
