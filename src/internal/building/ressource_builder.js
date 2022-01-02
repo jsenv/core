@@ -154,8 +154,17 @@ export const createRessourceBuilder = (
         return
       }
       if (ressource.isPlaceholder && !ressource.buildRelativeUrl) {
-        // placeholder not filled, that's ok
         return
+      }
+      if (!ressource.buildRelativeUrl) {
+        if (ressource.isPlaceholder) {
+          // placeholder not filled, that's ok
+          return
+        }
+        if (ressource.references.every((ref) => ref.isRessourceHint)) {
+          // ressource hint never used, the ressource can be ignored
+          return
+        }
       }
       ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
     })
@@ -558,6 +567,10 @@ export const createRessourceBuilder = (
         dependencies.map(async (dependencyReference) => {
           const dependencyRessource = dependencyReference.ressource
           if (dependencyRessource.isPlaceholder) {
+            return
+          }
+          // don't keep waiting for ever in case ressource hint is never used
+          if (dependencyReference.isRessourceHint) {
             return
           }
           await dependencyRessource.getReadyPromise()

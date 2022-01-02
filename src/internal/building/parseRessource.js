@@ -138,7 +138,7 @@ export const parseRessource = async (
     return parseImportmapRessource(ressource, notifiers, {
       minify,
       importMapToInject: useImportMapToMaximizeCacheReuse
-        ? await createImportMapForFilesUsedInJs()
+        ? createImportMapForFilesUsedInJs()
         : undefined,
     })
   }

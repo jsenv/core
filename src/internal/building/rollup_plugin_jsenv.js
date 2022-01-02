@@ -196,21 +196,7 @@ export const createRollupPlugins = async ({
   let buildManifest = {}
 
   const ressourcesReferencedByJs = []
-  const createImportMapForFilesUsedInJs = async () => {
-    // wait for asset build relative urls
-    // to ensure the importmap will contain remappings for them
-    await Promise.all(
-      ressourcesReferencedByJs.map(async (ressourceName) => {
-        const ressource = ressourceBuilder.findRessource((ressource) => {
-          return ressource.relativeUrl === ressourceName
-        })
-        if (ressource && !ressource.isJsModule) {
-          await ressource.getReadyPromise()
-          buildManifest[ressourceName] = ressource.buildRelativeUrl
-        }
-      }),
-    )
-
+  const createImportMapForFilesUsedInJs = () => {
     const topLevelMappings = {}
     ressourcesReferencedByJs.sort(comparePathnames).forEach((ressourceName) => {
       const buildRelativeUrl = buildManifest[ressourceName]
@@ -1383,6 +1369,22 @@ export const createRollupPlugins = async ({
 
         buildManifest[jsRessource.fileName] = jsRessource.buildRelativeUrl
       })
+
+      // wait for asset build relative urls
+      // to ensure the importmap will contain remappings for them
+      // (not sure this is required anymore)
+      await Promise.all(
+        ressourcesReferencedByJs.map(async (ressourceName) => {
+          const ressource = ressourceBuilder.findRessource((ressource) => {
+            return ressource.relativeUrl === ressourceName
+          })
+          if (ressource && !ressource.isJsModule) {
+            await ressource.getReadyPromise()
+            buildManifest[ressourceName] = ressource.buildRelativeUrl
+          }
+        }),
+      )
+
       // wait html files to be emitted
       await ressourceBuilder.getAllEntryPointsEmittedPromise()
       onBundleEnd()
@@ -1533,7 +1535,7 @@ export const createRollupPlugins = async ({
         urlResponseBodyMap: urlLoader.getUrlResponseBodyMap(),
         buildMappings,
         buildManifest,
-        buildImportMap: await createImportMapForFilesUsedInJs(),
+        buildImportMap: createImportMapForFilesUsedInJs(),
         buildFileContents,
         buildInlineFileContents,
         buildStats,
