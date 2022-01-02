@@ -1181,9 +1181,14 @@ export const createRollupPlugins = async ({
         }
         if (chunkInfo.isEntry) {
           const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
-          return entryPointUrls[originalUrl]
+          const entryPointPattern = entryPointUrls[originalUrl]
+          if (entryPointPattern) {
+            return entryPointPattern
+          }
         }
-        return `[name]_[hash]${outputExtension}`
+        return urlVersioning
+          ? `[name]_[hash]${outputExtension}`
+          : `[name]${outputExtension}`
       }
 
       // rollup does not expects to have http dependency in the mix: fix them

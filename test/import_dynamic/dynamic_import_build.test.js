@@ -46,6 +46,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 {
   const { buildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     // we build the HTML instead of the JS file on purpose
