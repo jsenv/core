@@ -70,7 +70,6 @@ const htmlString = await readFile(htmlBuildUrl)
     mappings: {
       imports: {
         "./file.js": `./${buildMappings[`${testDirectoryRelativeUrl}file.js`]}`,
-        "./main.js": `./main-d480b852.js`, // should not here because was inlined but that's ok
       },
     },
   }

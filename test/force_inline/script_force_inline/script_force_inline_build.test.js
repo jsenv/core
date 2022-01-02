@@ -60,7 +60,7 @@ await buildProject({
         ? actual.textNodeValue
         : `var answer = 42;
 console.log(answer);
-//# sourceMappingURL=assets/file.js-5dab1097.map`,
+//# sourceMappingURL=assets/file.js_0fe11fe1.map`,
   }
   assert({ actual, expected })
 }
