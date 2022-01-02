@@ -39,14 +39,15 @@ const { buildManifest, buildFileContents, buildInlineFileContents } =
   }
   const expected = {
     buildManifest: {
+      "file.js.map": "file_02c226c4.js.map",
       "main.html": "main.html",
     },
     buildFileContents: {
-      "file-02c226c4.js.map": assert.any(String),
+      "file_02c226c4.js.map": assert.any(String),
       "main.html": assert.any(String),
     },
     buildInlineFileContents: {
-      "file-02c226c4.js": assert.any(String),
+      "file_02c226c4.js": assert.any(String),
     },
   }
   assert({ actual, expected })
@@ -92,7 +93,7 @@ const htmlString = await readFile(htmlBuildUrl)
   console.log(answer);
 }
 
-//# sourceMappingURL=file-02c226c4.js.map`,
+//# sourceMappingURL=file_02c226c4.js.map`,
   }
   assert({ actual, expected })
 }

@@ -139,10 +139,13 @@ export const createRessourceBuilder = (
     const urlToWait = Object.keys(ressourceMap).filter(
       (url) => ressourceMap[url].isEntryPoint,
     )
-    return Promise.all(
+    await Promise.all(
       urlToWait.map(async (url) => {
         const ressource = ressourceMap[url]
         await ressource.getReadyPromise()
+        if (!ressource.isJsModule) {
+          ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
+        }
         return ressource
       }),
     )
