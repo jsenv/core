@@ -18,9 +18,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
 const jsFileUrl = resolveUrl("./404.js", testDirectoryUrl)
 const htmlFileUrl = resolveUrl(`./${mainFilename}`, testDirectoryUrl)
 
@@ -30,7 +27,9 @@ try {
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+    },
   })
   throw new Error("should throw")
 } catch (e) {

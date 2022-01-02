@@ -21,14 +21,13 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFileBasename = `import_meta_url.js`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFileBasename}`]: "./main.cjs",
-}
 await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}${mainFileBasename}`]: "main.cjs",
+  },
 })
 const { namespace } = await requireCommonJsBuild({
   ...REQUIRE_COMMONJS_BUILD_TEST_PARAMS,

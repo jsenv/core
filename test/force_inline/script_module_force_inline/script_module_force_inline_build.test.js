@@ -19,16 +19,15 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
-const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.html",
-}
 const { buildManifest, buildFileContents, buildInlineFileContents } =
   await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPointMap: {
+      [`./${fileRelativeUrl}`]: "main.html",
+    },
   })
 
 // ensuire buildManifest, fileContents and inlineFileContents looks good

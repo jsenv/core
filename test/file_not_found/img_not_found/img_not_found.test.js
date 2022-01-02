@@ -16,9 +16,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}img_not_found.html`]: "./main.html",
-}
 const imgUrl = resolveUrl("img.png", import.meta.url)
 const htmlFileUrl = resolveUrl("img_not_found.html", import.meta.url)
 
@@ -27,7 +24,9 @@ try {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPointMap: {
+      [`./${testDirectoryRelativeUrl}img_not_found.html`]: "main.html",
+    },
   })
   throw new Error("should throw")
 } catch (e) {
