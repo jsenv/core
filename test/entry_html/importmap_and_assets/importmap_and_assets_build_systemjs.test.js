@@ -57,9 +57,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const actual = importmap
   const expected = {
     imports: {
-      "./assets/img.png": `./${imgBuildRelativeUrl}`,
       // the importmap for img-remap is available
-      "./main.js": `./${mainBuildRelativeUrl}`,
+      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img.png": `./${imgBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
