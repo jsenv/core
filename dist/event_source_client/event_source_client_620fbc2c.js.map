@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "event_source_client-9f14c8b9.js",
+  "file": "event_source_client_620fbc2c.js",
   "sources": [
     "../../src/internal/dev_server/event_source_client/event_source_connection.js",
     "../../src/internal/dev_server/event_source_client/livereload_preference.js",

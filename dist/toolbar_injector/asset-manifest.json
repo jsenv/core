@@ -1,4 +1,5 @@
 {
-  "assets/jsenv-logo.svg": "assets/jsenv-logo-188b9ca6.svg",
-  "toolbar_injector.js": "toolbar_injector-997dbaa0.js"
+  ".jsenv/build/best/src/internal/dev_server/toolbar/jsenv-logo.svg": "assets/jsenv-logo_188b9ca6.svg",
+  "toolbar_injector.js": "toolbar_injector_4f9c19e5.js",
+  "toolbar_injector.js.map": "toolbar_injector_4f9c19e5.js.map"
 }

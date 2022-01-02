@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "browser_runtime-bb0e3aa4.js",
+  "file": "browser_runtime_a8097085.js",
   "sources": [
     "../../helpers/babel/defineProperty/defineProperty.js",
     "../../helpers/babel/objectSpread2/objectSpread2.js",

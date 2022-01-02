@@ -746,7 +746,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar-1fbf8dcb.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_412abb83.html";
 
   function _call(body, then, direct) {
     if (direct) {
@@ -761,7 +761,7 @@
     }
   }
 
-  var jsenvLogoSvgUrl = new URL("assets/jsenv-logo-188b9ca6.svg", document.currentScript && document.currentScript.src || document.baseURI);
+  var jsenvLogoSvgUrl = new URL("assets/jsenv-logo_188b9ca6.svg", document.currentScript && document.currentScript.src || document.baseURI);
 
   function _async(f) {
     return function () {
@@ -970,4 +970,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector-997dbaa0.js.map
+//# sourceMappingURL=toolbar_injector_4f9c19e5.js.map
