@@ -150,13 +150,14 @@ export const createRessourceBuilder = (
     // compute all asset fileName
     Object.keys(ressourceMap).forEach((key) => {
       const ressource = ressourceMap[key]
-      if (!ressource.isJsModule && !ressource.fileName) {
-        if (ressource.isPlaceholder && !ressource.buildRelativeUrl) {
-          // placeholder not filled, that's ok
-          return
-        }
-        ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
+      if (ressource.isExternal || ressource.isJsModule || ressource.fileName) {
+        return
       }
+      if (ressource.isPlaceholder && !ressource.buildRelativeUrl) {
+        // placeholder not filled, that's ok
+        return
+      }
+      ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
     })
   }
 

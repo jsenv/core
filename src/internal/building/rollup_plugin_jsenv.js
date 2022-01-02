@@ -1236,13 +1236,6 @@ export const createRollupPlugins = async ({
         }
 
         if (rollupFileInfo.type === "chunk") {
-          if (
-            rollupFileInfo.isDynamicEntry ||
-            (!jsConcatenation && rollupFileInfo.isEntry)
-          ) {
-            ressourcesReferencedByJs.push(rollupFileInfo.fileName)
-          }
-
           const { facadeModuleId } = rollupFileInfo
           if (facadeModuleId === EMPTY_CHUNK_URL) {
             return
@@ -1275,6 +1268,16 @@ export const createRollupPlugins = async ({
               `System.register("${fileName}", [`,
             )
             fileCopy.code = magicString.toString()
+          }
+
+          if (
+            isReferencedByJs({
+              rollupFileInfo: fileCopy,
+              jsConcatenation,
+              ressourceBuilder,
+            })
+          ) {
+            ressourcesReferencedByJs.push(fileCopy.fileName)
           }
 
           rollupJsFileInfos[fileName] = fileCopy
@@ -1596,6 +1599,29 @@ const acceptsJsonContentType = ({ node, format }) => {
     return true
   }
   if (process.execArgv.includes("--experimental-json-modules")) {
+    return true
+  }
+  return false
+}
+
+const isReferencedByJs = ({
+  rollupFileInfo,
+  jsConcatenation,
+  ressourceBuilder,
+}) => {
+  if (rollupFileInfo.isDynamicEntry) {
+    return true
+  }
+  const jsRessource = ressourceBuilder.findRessource((ressource) => {
+    return ressource.url === rollupFileInfo.url
+  })
+  if (!jsConcatenation && rollupFileInfo.isEntry) {
+    return true
+  }
+  if (
+    jsRessource &&
+    jsRessource.references.some((ref) => ref.isRessourceHint)
+  ) {
     return true
   }
   return false

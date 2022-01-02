@@ -21,7 +21,7 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPointMap: {
-    [`./${testDirectoryRelativeUrl}modulepreload.html`]: "./main.html",
+    [`./${testDirectoryRelativeUrl}modulepreload.html`]: "main.html",
   },
   format: "systemjs",
   // logLevel: "debug",

@@ -4,7 +4,6 @@ import {
   urlToRelativeUrl,
   resolveUrl,
   readFile,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
@@ -24,19 +23,17 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `${testDirectoryname}.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPointMap: {
+    [`./${testDirectoryRelativeUrl}importmap_and_dynamic_import.html`]:
+      "main.html",
+  },
   // minify: true,
 })
 const buildDirectoryUrl = resolveUrl(
@@ -52,15 +49,12 @@ const buildDirectoryUrl = resolveUrl(
   const importmapTextNode = getHtmlNodeTextNode(importmapHtmlNode)
   const importmapString = importmapTextNode.value
   const importmap = JSON.parse(importmapString)
-  const fileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}file.js`]
   const fooBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}foo.js`]
 
   const actual = importmap
   const expected = {
     imports: {
       // the importmap for foo is available
-      "./file.js": `./${fileBuildRelativeUrl}`,
       "./foo.js": `./${fooBuildRelativeUrl}`,
       // and nothing more because js is referencing only an other js
     },
