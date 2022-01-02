@@ -56,8 +56,8 @@ const { buildManifest, buildMappings } = await buildProject({
     "a.cjs.map": "a.cjs.map",
     "b.cjs": "b.cjs",
     "b.cjs.map": "b.cjs.map",
-    "used-by-both.cjs": "used-by-both_2f9b92e5.cjs",
-    "used-by-both.cjs.map": "used-by-both_2f9b92e5.cjs.map",
+    "used-by-both.cjs": "used-by-both.cjs",
+    "used-by-both.cjs.map": "used-by-both.cjs.map",
   }
   assert({ actual, expected })
 
