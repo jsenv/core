@@ -12,6 +12,7 @@ export const transformJs = async ({
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
   babelHelpersInjectionAsImport = moduleOutFormat === "esmodule",
+  systemJsInjectionAsImport,
   topLevelAwait,
   transformGenerator = true,
   sourcemapEnabled = true,
@@ -51,6 +52,7 @@ export const transformJs = async ({
     importMetaFormat,
 
     babelHelpersInjectionAsImport,
+    systemJsInjectionAsImport,
     topLevelAwait,
     transformGenerator,
     sourcemapEnabled,

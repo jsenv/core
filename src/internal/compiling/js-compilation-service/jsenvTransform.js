@@ -79,7 +79,6 @@ export const jsenvTransform = async ({
       ],
     }
   }
-
   babelPluginMap = {
     ...getMinimalBabelPluginMap(),
     "transform-import-meta": [
@@ -149,17 +148,17 @@ export const jsenvTransform = async ({
       : {}),
     "import-metadata": [babelPluginImportMetadata],
   }
-
   if (moduleOutFormat === "systemjs") {
     babelPluginMap = {
       ...babelPluginMap,
       "proposal-dynamic-import": [proposalDynamicImport],
       "transform-modules-systemjs": [transformModulesSystemJs],
-      ...(systemJsInjectionAsImport
-        ? {
-            "systemjs-as-jsenv-import": [babelPluginSystemJsAsJsenvImport],
-          }
-        : {}),
+    }
+  }
+  if (systemJsInjectionAsImport) {
+    babelPluginMap = {
+      ...babelPluginMap,
+      "systemjs-as-jsenv-import": [babelPluginSystemJsAsJsenvImport],
     }
   }
 

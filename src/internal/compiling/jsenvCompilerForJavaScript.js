@@ -9,6 +9,7 @@ export const compileJavascript = async ({
   projectDirectoryUrl,
 
   babelPluginMap,
+  workerUrls,
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
@@ -27,6 +28,7 @@ export const compileJavascript = async ({
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
+    systemJsInjectionAsImport: Boolean(workerUrls[url]),
   })
 
   return transformResultToCompilationResult(

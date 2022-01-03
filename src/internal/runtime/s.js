@@ -497,6 +497,8 @@
 
   var importMapPromise = Promise.resolve();
   var importMap = { imports: {}, scopes: {}, depcache: {}, integrity: {} };
+  systemJSPrototype.importMap = importMap;
+  systemJSPrototype.baseUrl = baseUrl;
 
   // Scripts are processed immediately, on the first System.import, and on DOMReady.
   // Import map scripts are processed only once (by being marked) and in order for each phase.
@@ -552,6 +554,7 @@
           return fetchPromise;
         }).then(function (text) {
           extendImportMap(importMap, text, script.src || baseUrl);
+          return importMap
         });
       }
     });
@@ -566,6 +569,7 @@
     }
     resolveAndComposeImportMap(newMap, newMapUrl, importMap);
   }
+  System.extendImportMap = extendImportMap
 
   /*
    * Script instantiation loading
@@ -599,6 +603,7 @@
   var autoImportCandidates = {};
   var systemRegister = systemJSPrototype.register;
   var inlineScriptCount = 0;
+  systemJSPrototype.autoImportCandidates = autoImportCandidates
   systemJSPrototype.register = function (deps, declare, autoUrl) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
       var scripts = document.querySelectorAll('script[src]');
@@ -722,10 +727,18 @@
   if (hasSelf && typeof importScripts === 'function')
     systemJSPrototype.instantiate = function (url) {
       var loader = this;
-      return Promise.resolve().then(function () {
-        importScripts(url);
+      return self.fetch(url, {
+        credentials: 'same-origin',
+      }).then(function (response) {
+        if (!response.ok) {
+          throw Error(errMsg(7,  [response.status, response.statusText, url].join(', ') ));
+        }
+        return response.text()
+      }).then(function (source) {
+        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+        (0, eval)(source);
         return loader.getRegister(url);
-      });
+      })
     };
 
 }());
@@ -736,6 +749,7 @@
 
   var registerRegistry = Object.create(null)
   var register = System.register;
+  System.registerRegistry = registerRegistry;
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
@@ -768,34 +782,58 @@
 }());
 
 (function () {
-  if (WorkerGlobalScope && self instanceof WorkerGlobalScope) {
+  if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
     var importMapFromParentPromise = new Promise((resolve) => {
-      self.addEventListener("message", (e) => {
-        if (typeof e.data === "object" && e.data.name === '__importmap_response__') {
-          resolve(e.data.importmap)
+      var importmapResponseCallback = function (e) {
+        if (typeof e.data === "object" && e.data.__importmap_response__) {
+          self.removeEventListener("message", importmapResponseCallback)
+          resolve(e.data.__importmap_response__)
         }
-      })
-      self.postMessage({
-        name: '__importmap_request__'
-      })
+      }
+      self.addEventListener("message", importmapResponseCallback)
+      self.postMessage('__importmap_request__')
     })
-    var prepareImport = System.prepareImport
+    // var prepareImport = System.prepareImport
     System.prepareImport = function () {
-      return prepareImport.call(this).then(function() {
-        return importMapFromParentPromise
+      return importMapFromParentPromise.then(function (importmap) {
+        System.extendImportMap(System.importMap, JSON.stringify(importmap), System.baseUrl)
+      })
+    }
+
+    // auto import first register
+    const messageEvents = []
+    const messageCallback = (event) => {
+      messageEvents.push(event)
+    }
+    self.addEventListener('message', messageCallback)
+    var register = System.register;
+    System.register = function(deps, declare) {
+      System.register = register;
+      System.registerRegistry[self.location.href] = [deps, declare];
+      System.import(self.location.href).then(() => {
+        self.removeEventListener('message', messageCallback)
+        messageEvents.forEach((messageEvent) => {
+          self.dispatchEvent(messageEvent)
+        })
       })
     }
   }
   else {
-    window.addEventListener('message', function (e) {
-      if (typeof e.data === 'object' && e.data.name === '__importmap_request__') {
-        System.prepareImport().then(function (importmap) {
-          e.postMessage({
-            name: '__importmap_response__',
-            importmap,
+    var WorkerConstructor = window.Worker;
+    window.Worker = function (url, options) {
+      var worker = new WorkerConstructor(url, options)
+      var importmapRequestCallback = function(e) {
+        if (e.data === '__importmap_request__') {
+          worker.removeEventListener('message', importmapRequestCallback)
+          System.prepareImport().then(function (importmap) {
+            e.target.postMessage({
+              __importmap_response__: importmap
+            });
           });
-        });
+        }
       }
-    });
+      worker.addEventListener('message', importmapRequestCallback)
+      return worker
+    }
   }
 }());

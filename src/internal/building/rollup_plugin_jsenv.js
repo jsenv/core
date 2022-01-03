@@ -14,6 +14,7 @@ import {
   urlToMeta,
   urlToBasename,
   urlToFilename,
+  readFile,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
@@ -1284,6 +1285,25 @@ export const createRollupPlugins = async ({
       }
 
       return outputOptions
+    },
+
+    async renderChunk(code, chunk) {
+      const url = asOriginalUrl(chunk.facadeModuleId)
+      const worker = workerUrls[url]
+      if (worker) {
+        const magicString = new MagicString(code)
+        const systemjsCode = await readFile(
+          new URL("../runtime/s.js", import.meta.url),
+        )
+        magicString.prepend(systemjsCode)
+        code = magicString.toString()
+        const map = magicString.generateMap({ hires: true })
+        return {
+          code,
+          map,
+        }
+      }
+      return null
     },
 
     async generateBundle(outputOptions, rollupResult) {

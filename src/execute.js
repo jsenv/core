@@ -46,6 +46,8 @@ export const execute = async ({
   port,
   babelPluginMap,
   customCompilers,
+  workers,
+  serviceWorkers,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
 
@@ -105,10 +107,12 @@ export const execute = async ({
       ip,
       port,
       babelPluginMap,
-      customCompilers,
       runtimeSupport: normalizeRuntimeSupport({
         [runtime.name]: runtime.version,
       }),
+      customCompilers,
+      workers,
+      serviceWorkers,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })

@@ -47,6 +47,8 @@ export const createCompiledFileService = ({
   topLevelAwait,
   groupMap,
   customCompilers,
+  workerUrls,
+  serviceWorkerUrls,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -183,12 +185,13 @@ export const createCompiledFileService = ({
           outDirectoryRelativeUrl,
           compileId,
           request,
-
-          runtimeSupport,
           babelPluginMap: babelPluginMapFromCompileId(compileId, {
             babelPluginMap,
             groupMap,
           }),
+          runtimeSupport,
+          workerUrls,
+          serviceWorkerUrls,
           moduleOutFormat:
             moduleOutFormat === undefined
               ? compileIdModuleFormats[compileId]

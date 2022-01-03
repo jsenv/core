@@ -95,10 +95,11 @@ export const startCompileServer = async ({
   babelPluginMap,
   babelConfigFileUrl,
   customCompilers = {},
-
-  // remaining options
+  workers = {},
+  serviceWorkers = {},
   runtimeSupport,
 
+  // remaining options
   livereloadWatchConfig = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
@@ -140,6 +141,17 @@ export const startCompileServer = async ({
   )
 
   const logger = createLogger({ logLevel })
+
+  const workerUrls = {}
+  Object.keys(workers).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    workerUrls[url] = workers[key]
+  })
+  const serviceWorkerUrls = {}
+  Object.keys(serviceWorkers).forEach((key) => {
+    const url = resolveUrl(key, projectDirectoryUrl)
+    serviceWorkerUrls[url] = serviceWorkers[key]
+  })
 
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
@@ -314,6 +326,8 @@ export const startCompileServer = async ({
       groupMap: compileServerGroupMap,
       babelPluginMap,
       customCompilers,
+      workerUrls,
+      serviceWorkerUrls,
       moduleOutFormat,
       importMetaFormat,
       jsenvEventSourceClientInjection,

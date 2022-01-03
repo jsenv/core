@@ -5,19 +5,6 @@
  * rely on importmap users have to format: 'systemjs' to generate valid code
  */
 
-/*
- * Things to do:
- * - inject systemjs in the worker
- *   ça faudra la faire aussi pendant le dev
- *   donc en gros il s'agit d'un truc a faire lorsque le fichier est un worker
- *   (mais on pourrait presque dire lorsque le fichier est un point d'entré)
- *   et on pourrait alors supprimer le fait qu'on inline systemjs dans la page
- *   sauf que le point d'entrée c'est du HTML donc non
- * when systemjs is injected in a worker (or all the time with feature detection)
- * - install specific code requesting importmap from parent page
- * - on parent page, install code sending importmap (all the time)
- */
-
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
@@ -38,7 +25,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  logLevel: "debug",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPoints: {
@@ -60,7 +47,7 @@ const actual = namespace
 const expected = {
   worker: {
     value: 42,
-    pingResponse: "pong",
+    pingResponse: 42,
   },
 }
 assert({ actual, expected })
