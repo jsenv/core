@@ -733,9 +733,9 @@
 (function(){
   var envGlobal = typeof self !== 'undefined' ? self : global;
   var System = envGlobal.System;
-  var register = System.register;
-  var registerRegistry = Object.create(null)
 
+  var registerRegistry = Object.create(null)
+  var register = System.register;
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
@@ -765,4 +765,37 @@
     var result = registerRegistry[url] || register;
     return result;
   };
+}());
+
+(function () {
+  if (WorkerGlobalScope && self instanceof WorkerGlobalScope) {
+    var importMapFromParentPromise = new Promise((resolve) => {
+      self.addEventListener("message", (e) => {
+        if (typeof e.data === "object" && e.data.name === '__importmap_response__') {
+          resolve(e.data.importmap)
+        }
+      })
+      self.postMessage({
+        name: '__importmap_request__'
+      })
+    })
+    var prepareImport = System.prepareImport
+    System.prepareImport = function () {
+      return prepareImport.call(this).then(function() {
+        return importMapFromParentPromise
+      })
+    }
+  }
+  else {
+    window.addEventListener('message', function (e) {
+      if (typeof e.data === 'object' && e.data.name === '__importmap_request__') {
+        System.prepareImport().then(function (importmap) {
+          e.postMessage({
+            name: '__importmap_response__',
+            importmap,
+          });
+        });
+      }
+    });
+  }
 }());
