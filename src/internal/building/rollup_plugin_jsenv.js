@@ -781,7 +781,7 @@ export const createRollupPlugins = async ({
       }
     },
 
-    async resolveId(specifier, importer, { custom }) {
+    async resolveId(specifier, importer, { custom = {} } = {}) {
       if (specifier === EMPTY_CHUNK_URL) {
         return specifier
       }
@@ -868,31 +868,28 @@ export const createRollupPlugins = async ({
 
     resolveFileUrl: ({ referenceId, fileName }) => {
       ressourcesReferencedByJs.push(fileName)
-
+      const getBuildRelativeUrl = () => {
+        const ressource = ressourceBuilder.findRessource((ressource) => {
+          return ressource.rollupReferenceId === referenceId
+        })
+        ressource.fileName = fileName
+        const buildRelativeUrl = ressource.buildRelativeUrl
+        return buildRelativeUrl
+      }
       if (format === "esmodule") {
         if (!node && useImportMapToMaximizeCacheReuse && urlVersioning) {
           return `window.__resolveImportUrl__("./${fileName}", import.meta.url)`
         }
-        return `new URL("${fileName}", import.meta.url)`
+        return `new URL("${getBuildRelativeUrl()}", import.meta.url)`
       }
       if (format === "systemjs") {
         return `new URL(System.resolve("./${fileName}", module.meta.url))`
       }
       if (format === "global") {
-        const ressource = ressourceBuilder.findRessource((ressource) => {
-          return ressource.rollupReferenceId === referenceId
-        })
-        ressource.fileName = fileName
-        const buildRelativeUrl = ressource.buildRelativeUrl
-        return `new URL("${buildRelativeUrl}", document.currentScript && document.currentScript.src || document.baseURI)`
+        return `new URL("${getBuildRelativeUrl()}", document.currentScript && document.currentScript.src || document.baseURI)`
       }
       if (format === "commonjs") {
-        const ressource = ressourceBuilder.findRessource((ressource) => {
-          return ressource.rollupReferenceId === referenceId
-        })
-        ressource.fileName = fileName
-        const buildRelativeUrl = ressource.buildRelativeUrl
-        return `new URL("${buildRelativeUrl}", "file:///" + __filename.replace(/\\/g, "/"))`
+        return `new URL("${getBuildRelativeUrl()}", "file:///" + __filename.replace(/\\/g, "/"))`
       }
       return null
     },
@@ -973,12 +970,22 @@ export const createRollupPlugins = async ({
         onReferenceWithImportMetaUrlPattern: async ({ importNode }) => {
           const specifier = importNode.arguments[0].value
           const { line, column } = importNode.loc.start
+
+          const { id } = normalizeRollupResolveReturnValue(
+            await this.resolve(specifier, url),
+          )
+          const ressourceUrl = asServerUrl(id)
+          const originalUrl = asOriginalUrl(ressourceUrl)
+          const isJsModule = Boolean(
+            workerUrls[originalUrl] || serviceWorkerUrls[originalUrl],
+          )
           const reference = ressourceBuilder.createReferenceFoundInJsModule({
             referenceLabel: "URL + import.meta.url",
             jsUrl: url,
             jsLine: line,
             jsColumn: column,
-            ressourceSpecifier: specifier,
+            ressourceSpecifier: ressourceUrl,
+            isJsModule,
           })
           if (!reference) {
             return

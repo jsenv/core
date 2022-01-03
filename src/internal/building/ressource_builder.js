@@ -114,6 +114,7 @@ export const createRessourceBuilder = (
     jsLine,
     jsColumn,
     isImportAssertion,
+    isJsModule,
 
     contentTypeExpected,
     ressourceSpecifier,
@@ -131,6 +132,7 @@ export const createRessourceBuilder = (
 
       contentType,
       bufferBeforeBuild,
+      isJsModule,
     })
     return reference
   }
