@@ -17,15 +17,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}with_js_concatenation.html`
-const entryPointMap = {
-  [`./${htmlFileRelativeUrl}`]: "./main.html",
-}
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${htmlFileRelativeUrl}`]: "main.html",
+  },
   // minify: true,
 })
 

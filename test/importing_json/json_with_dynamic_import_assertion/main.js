@@ -1,6 +1,4 @@
-const json = await import("./data.json", {
-  assert: { type: "json" },
-})
+const json = await import("./data.json", { assert: { type: "json" } })
 
 const data = json.default
 

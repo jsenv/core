@@ -19,9 +19,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
-const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.html",
-}
 const imgFileUrl = resolveUrl("img.png", testDirectoryUrl)
 
 await buildProject({
@@ -29,7 +26,9 @@ await buildProject({
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${fileRelativeUrl}`]: "main.html",
+  },
 })
 
 // ensure src is properly inlined

@@ -1,16 +1,10 @@
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlIsInsideOf,
-  urlToParentUrl,
-  urlToFilename,
-} from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
 import { racePromises } from "../promise_race.js"
 import { parseDataUrl } from "../dataUrl.utils.js"
-
 import {
   getRessourceAsBase64Url,
   memoize,
@@ -19,7 +13,6 @@ import {
   // formatDependenciesCollectedMessage,
   checkContentType,
 } from "./ressource_builder_util.js"
-import { computeBuildRelativeUrlForRessource } from "./asset_url_versioning.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
 export const createRessourceBuilder = (
@@ -33,11 +26,11 @@ export const createRessourceBuilder = (
     asOriginalServerUrl,
     urlToHumanUrl,
 
-    emitAsset,
-    setAssetSource,
+    onAsset,
+    onAssetSourceUpdated,
     onJsModule,
     resolveRessourceUrl,
-    lineBreakNormalization,
+    urlVersioner,
   },
 ) => {
   const logger = createLogger({ logLevel })
@@ -46,10 +39,8 @@ export const createRessourceBuilder = (
     entryContentType,
     entryUrl,
     entryBuffer,
-    entryBuildRelativeUrl,
-    urlVersionningForEntryPoints,
   }) => {
-    // The entry point is conceptually referenced by code passing "entryPointMap"
+    // The entry point is conceptually referenced by code passing "entryPoints"
     // to buildProject. So we analyse stack trace to put this function caller
     // as the reference to this ressource file
     // we store this info in reference.isProgrammatic
@@ -63,18 +54,16 @@ export const createRessourceBuilder = (
 
       contentType: entryContentType,
       bufferBeforeBuild: entryBuffer,
+      isJsModule: entryContentType === "application/javascript",
 
       isEntryPoint: true,
-
-      // don't hash asset entry points
-      ...(urlVersionningForEntryPoints
-        ? {}
-        : {
-            urlVersioningDisabled: true,
-            fileNamePattern: entryBuildRelativeUrl,
-          }),
     })
     entryReference.isProgrammatic = true
+    if (entryReference.ressource.isJsModule) {
+      // no need to call getDependenciesAvailablePromise and so on
+      // rollup is handling js entries
+      return
+    }
 
     await entryReference.ressource.getDependenciesAvailablePromise()
 
@@ -119,7 +108,7 @@ export const createRessourceBuilder = (
     })
   }
 
-  const createReferenceFoundInJsModule = async ({
+  const createReferenceFoundInJsModule = ({
     referenceLabel,
     jsUrl,
     jsLine,
@@ -143,10 +132,6 @@ export const createRessourceBuilder = (
       contentType,
       bufferBeforeBuild,
     })
-    if (!reference) {
-      return null
-    }
-    await reference.ressource.getReadyPromise()
     return reference
   }
 
@@ -154,19 +139,40 @@ export const createRessourceBuilder = (
     const urlToWait = Object.keys(ressourceMap).filter(
       (url) => ressourceMap[url].isEntryPoint,
     )
-    return Promise.all(
+    await Promise.all(
       urlToWait.map(async (url) => {
         const ressource = ressourceMap[url]
         await ressource.getReadyPromise()
         return ressource
       }),
     )
+
+    // compute all asset fileName
+    Object.keys(ressourceMap).forEach((key) => {
+      const ressource = ressourceMap[key]
+      if (ressource.isExternal || ressource.isJsModule || ressource.fileName) {
+        return
+      }
+      if (ressource.isPlaceholder && !ressource.buildRelativeUrl) {
+        return
+      }
+      if (!ressource.buildRelativeUrl) {
+        if (ressource.isPlaceholder) {
+          // placeholder not filled, that's ok
+          return
+        }
+        if (ressource.references.every((ref) => ref.isRessourceHint)) {
+          // ressource hint never used, the ressource can be ignored
+          return
+        }
+      }
+      ressource.fileName = asFileNameWithoutHash(ressource.buildRelativeUrl)
+    })
   }
 
   const ressourceMap = {}
   const ressourceRedirectionMap = {}
   const createReference = ({
-    referenceShouldNotEmitChunk,
     isRessourceHint,
     isImportAssertion,
     contentTypeExpected,
@@ -183,30 +189,32 @@ export const createRessourceBuilder = (
     isSourcemap,
     isInline,
     isPlaceholder,
-    fileNamePattern,
+
     urlVersioningDisabled,
 
     fromRollup,
   }) => {
-    const existingRessourceForReference = findRessourceByUrl(referenceUrl)
     let ressourceImporter
-    if (existingRessourceForReference) {
-      ressourceImporter = existingRessourceForReference
-    } else {
-      const referenceOriginalUrl = asOriginalServerUrl(referenceUrl)
-      if (referenceOriginalUrl) {
-        ressourceImporter = findRessourceByUrl(referenceOriginalUrl)
-      }
-      if (!ressourceImporter) {
-        // happens only for entry points?
-        // in that case the importer is theoric
-        // see "getCallerLocation()" in createReferenceForEntryPoint
-        ressourceImporter = {
-          url: referenceUrl,
-          isEntryPoint: false,
-          isJsModule: true,
-          bufferAfterBuild: "",
+    if (referenceUrl) {
+      const existingRessourceForReference = findRessourceByUrl(referenceUrl)
+      if (existingRessourceForReference) {
+        ressourceImporter = existingRessourceForReference
+      } else {
+        const referenceOriginalUrl = asOriginalServerUrl(referenceUrl)
+        if (referenceOriginalUrl) {
+          ressourceImporter = findRessourceByUrl(referenceOriginalUrl)
         }
+      }
+    }
+    if (!ressourceImporter) {
+      // happens only for entry points?
+      // in that case the importer is theoric
+      // see "getCallerLocation()" in createReferenceForEntryPoint
+      ressourceImporter = {
+        url: referenceUrl,
+        isEntryPoint: false,
+        isJsModule: true,
+        bufferAfterBuild: "",
       }
     }
 
@@ -244,6 +252,9 @@ export const createRessourceBuilder = (
       if (ressourceUrlResolution.isServiceWorker) {
         isServiceWorker = true
       }
+      if (ressourceUrlResolution.isJsModule) {
+        isJsModule = true
+      }
       ressourceUrl = ressourceUrlResolution.url
     } else {
       ressourceUrl = ressourceUrlResolution
@@ -263,23 +274,6 @@ export const createRessourceBuilder = (
     // any hash in the url would mess up with filenames
     ressourceUrl = removePotentialUrlHash(ressourceUrl)
 
-    if (isInline && fileNamePattern === undefined) {
-      // inherit parent directory location because it's an inline file
-      fileNamePattern = () => {
-        const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
-          ressourceImporter,
-          {
-            lineBreakNormalization,
-          },
-        )
-        const importerParentRelativeUrl = urlToRelativeUrl(
-          urlToParentUrl(resolveUrl(importerBuildRelativeUrl, "file://")),
-          "file://",
-        )
-        return `${importerParentRelativeUrl}[name]-[hash][extname]`
-      }
-    }
-
     const existingRessource = findRessourceByUrl(ressourceUrl)
     let ressource
     if (existingRessource) {
@@ -295,6 +289,7 @@ export const createRessourceBuilder = (
       ressource = createRessource({
         contentType,
         ressourceUrl,
+        ressourceImporter,
         bufferBeforeBuild,
 
         isEntryPoint,
@@ -305,14 +300,14 @@ export const createRessourceBuilder = (
         isPlaceholder,
         isWorker,
         isServiceWorker,
-        fileNamePattern,
+
         urlVersioningDisabled,
       })
       ressourceMap[ressourceUrl] = ressource
     }
 
     const reference = {
-      referenceShouldNotEmitChunk,
+      fromRollup,
       isRessourceHint,
       isImportAssertion,
       contentTypeExpected,
@@ -335,26 +330,33 @@ export const createRessourceBuilder = (
     }
 
     reference.ressource = ressource
-    if (fromRollup && ressourceImporter.isEntryPoint) {
-      // When HTML references JS, ressource builder has emitted the js chunk.
-      // so it already knows it exists and is part of references
-      // -> no need to push into reference (would incorrectly consider html references js twice)
-      // -> no need to log the js ressource (already logged during the HTML parsing)
-    } else {
-      ressource.references.push(reference)
-      const effects = ressource.applyReferenceEffects(reference, { isJsModule })
-      if (loggerToLevels(logger).debug) {
-        logger.debug(
-          formatFoundReference({
-            reference,
-            referenceEffects: effects,
-            showReferenceSourceLocation,
-            shortenUrl,
-          }),
-        )
+    if (fromRollup) {
+      if (ressourceImporter.isEntryPoint) {
+        // When HTML references JS, ressource builder has emitted the js chunk.
+        // so it already knows it exists and is part of references
+        // -> no need to push into reference (would incorrectly consider html references js twice)
+        // -> no need to log the js ressource (already logged during the HTML parsing)
+        return reference
+      }
+      if (ressource.isEntryPoint) {
+        // When rollup "loads" a js entry point, ressource builder is already aware of it
+        // because of "createReferenceForEntryPoint"
+        return reference
       }
     }
 
+    ressource.references.push(reference)
+    const effects = ressource.applyReferenceEffects(reference, { isJsModule })
+    if (loggerToLevels(logger).debug) {
+      logger.debug(
+        formatFoundReference({
+          reference,
+          referenceEffects: effects,
+          showReferenceSourceLocation,
+          shortenUrl,
+        }),
+      )
+    }
     return reference
   }
 
@@ -363,6 +365,7 @@ export const createRessourceBuilder = (
   const createRessource = ({
     contentType,
     ressourceUrl,
+    ressourceImporter,
     bufferBeforeBuild,
 
     isEntryPoint = false,
@@ -374,13 +377,14 @@ export const createRessourceBuilder = (
     isWorker = false,
     isServiceWorker = false,
 
-    fileNamePattern,
-    urlVersioningDisabled = isServiceWorker,
+    urlVersioningDisabled,
   }) => {
     const ressource = {
       contentType,
       url: ressourceUrl,
+      importer: ressourceImporter,
       bufferBeforeBuild,
+      bufferAfterBuild: undefined,
       firstStrongReference: null,
       references: [],
 
@@ -394,10 +398,10 @@ export const createRessourceBuilder = (
       isServiceWorker,
 
       urlVersioningDisabled,
-      fileNamePattern,
 
-      relativeUrl: urlToRelativeUrl(ressourceUrl, compileServerOrigin),
-      bufferAfterBuild: undefined,
+      relativeUrl: ressourceUrl.startsWith(compileServerOrigin)
+        ? urlToRelativeUrl(ressourceUrl, compileServerOrigin)
+        : urlToRelativeUrl(ressourceUrl, buildDirectoryUrl),
     }
 
     ressource.usedPromise = new Promise((resolve) => {
@@ -494,7 +498,6 @@ export const createRessourceBuilder = (
         isSourcemap = false,
         isPlaceholder = false,
         urlVersioningDisabled,
-        fileNamePattern,
       }) => {
         if (parsingDone) {
           throw new Error(
@@ -519,7 +522,6 @@ export const createRessourceBuilder = (
           isPlaceholder,
 
           urlVersioningDisabled,
-          fileNamePattern,
         })
 
         if (dependencyReference) {
@@ -567,6 +569,10 @@ export const createRessourceBuilder = (
           if (dependencyRessource.isPlaceholder) {
             return
           }
+          // don't keep waiting for ever in case ressource hint is never used
+          if (dependencyReference.isRessourceHint) {
+            return
+          }
           await dependencyRessource.getReadyPromise()
         }),
       )
@@ -597,18 +603,12 @@ export const createRessourceBuilder = (
       // }
       // we don't yet know the exact importerBuildRelativeUrl but we can generate a fake one
       // to ensure we resolve dependency against where the importer file will be
-      const importerBuildRelativeUrl = precomputeBuildRelativeUrlForRessource(
-        ressource,
-        {
-          lineBreakNormalization,
-        },
-      )
+      const importerBuildRelativeUrl =
+        urlVersioner.precomputeBuildRelativeUrl(ressource)
       await transform({
         buildDirectoryUrl,
         precomputeBuildRelativeUrl: (ressource) =>
-          precomputeBuildRelativeUrlForRessource(ressource, {
-            lineBreakNormalization,
-          }),
+          urlVersioner.precomputeBuildRelativeUrl(ressource),
         getUrlRelativeToImporter: (referencedRessource) => {
           const ressourceImporter = ressource
 
@@ -657,12 +657,8 @@ export const createRessourceBuilder = (
       if (bufferAfterBuild !== undefined) {
         ressource.bufferAfterBuild = bufferAfterBuild
         if (buildRelativeUrl === undefined) {
-          ressource.buildRelativeUrl = computeBuildRelativeUrlForRessource(
-            ressource,
-            {
-              lineBreakNormalization,
-            },
-          )
+          ressource.buildRelativeUrl =
+            urlVersioner.computeBuildRelativeUrl(ressource)
         }
       }
 
@@ -677,7 +673,7 @@ export const createRessourceBuilder = (
         !ressource.isInline &&
         !ressource.isJsModule
       ) {
-        setAssetSource(ressource.rollupReferenceId, ressource.bufferAfterBuild)
+        onAssetSourceUpdated({ ressource })
       }
     }
 
@@ -730,10 +726,6 @@ export const createRessourceBuilder = (
       }
 
       if (ressource.isJsModule) {
-        if (!isEmitChunkNeeded({ ressource, reference })) {
-          return effects
-        }
-
         const jsModuleUrl = ressource.url
         const rollupChunk = onJsModule({
           ressource,
@@ -743,10 +735,12 @@ export const createRessourceBuilder = (
           line: reference.referenceLine,
           column: reference.referenceColumn,
         })
-        ressource.rollupReferenceId = rollupChunk.rollupReferenceId
-        effects.push(
-          `emit rollup chunk "${rollupChunk.name}" (${rollupChunk.rollupReferenceId})`,
-        )
+        if (rollupChunk) {
+          ressource.rollupReferenceId = rollupChunk.rollupReferenceId
+          effects.push(
+            `emit rollup chunk "${rollupChunk.fileName}" (${rollupChunk.rollupReferenceId})`,
+          )
+        }
         return effects
       }
 
@@ -755,12 +749,12 @@ export const createRessourceBuilder = (
         return effects
       }
 
-      const rollupReferenceId = emitAsset({
-        fileName: ressource.relativeUrl,
+      const rollupAsset = onAsset({
+        ressource,
       })
-      ressource.rollupReferenceId = rollupReferenceId
+      ressource.rollupReferenceId = rollupAsset.rollupReferenceId
       effects.push(
-        `emit rollup asset "${ressource.relativeUrl}" (${rollupReferenceId})`,
+        `emit rollup asset "${rollupAsset.fileName}" (${rollupAsset.rollupReferenceId})`,
       )
       return effects
     }
@@ -777,82 +771,114 @@ export const createRessourceBuilder = (
     return ressource
   }
 
-  const rollupBuildEnd = ({ jsModuleBuild, buildManifest }) => {
+  const rollupBuildEnd = ({
+    rollupJsFileInfos,
+    rollupAssetFileInfos,
+    useImportMapToMaximizeCacheReuse,
+  }) => {
+    const jsRessources = {}
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
-
-      const buildRelativeUrl = Object.keys(jsModuleBuild).find(
-        (buildRelativeUrlCandidate) => {
-          const file = jsModuleBuild[buildRelativeUrlCandidate]
-          return file.url === ressourceUrl
-        },
-      )
-      const buildFileInfo = jsModuleBuild[buildRelativeUrl]
-      applyBuildEndEffects(ressource, { buildFileInfo, buildManifest })
-      const { rollupBuildDoneCallbacks } = ressource
-      rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
-        rollupBuildDoneCallback()
+      const jsModuleFileName = Object.keys(rollupJsFileInfos).find((key) => {
+        const rollupFileInfo = rollupJsFileInfos[key]
+        return rollupFileInfo.url === ressourceUrl
       })
+      if (jsModuleFileName) {
+        const rollupFileInfo = rollupJsFileInfos[jsModuleFileName]
+        // We expect to find the ressource in the rollup build except when:
+        // - js was only preloaded/prefetched and never referenced afterwards
+        // - js was only referenced by other js
+        if (!rollupFileInfo) {
+          const referencedOnlyByRessourceHint = !ressource.firstStrongReference
+          if (referencedOnlyByRessourceHint) {
+            return
+          }
+          const referencedOnlyByRollup = ressource.references.every(
+            (ref) => ref.fromRollup,
+          )
+          if (referencedOnlyByRollup) {
+            // concatened by rollup
+            return
+          }
+          throw new Error(
+            `${shortenUrl(ressource.url)} cannot be found in the build info`,
+          )
+        }
+        applyBuildEndEffects(ressource, {
+          rollupFileInfo,
+          rollupAssetFileInfos,
+          useImportMapToMaximizeCacheReuse,
+        })
+        const { rollupBuildDoneCallbacks } = ressource
+        rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
+          rollupBuildDoneCallback()
+        })
+        jsRessources[ressourceUrl] = ressource
+        return
+      }
     })
+
+    return { jsRessources }
   }
 
   const applyBuildEndEffects = (
     ressource,
-    {
-      buildFileInfo,
-      // buildManifest
-    },
+    { rollupFileInfo, rollupAssetFileInfos, useImportMapToMaximizeCacheReuse },
   ) => {
-    if (!ressource.isJsModule) {
-      // nothing special to do for non-js ressources
-      return
-    }
-
-    // If the module is not in the rollup build, that's an error except when
-    // rollup chunk was not emitted, which happens when:
-    // - js was only preloaded/prefetched and never referenced afterwards
-    // - js was only referenced by other js
-    if (!buildFileInfo) {
-      const referencedOnlyByRessourceHint = !ressource.firstStrongReference
-      if (referencedOnlyByRessourceHint) {
-        return
-      }
-
-      const referencedOnlyByOtherJs = ressource.references.every(
-        (ref) => ref.referenceShouldNotEmitChunk,
-      )
-      if (referencedOnlyByOtherJs) {
-        return
-      }
-
-      throw new Error(
-        `${shortenUrl(ressource.url)} cannot be found in the build info`,
-      )
-    }
-
-    const fileName = buildFileInfo.fileName
-    // const buildRelativeUrl = buildManifest[fileName] || fileName
-    let code = buildFileInfo.code
-
-    if (buildFileInfo.type === "chunk") {
+    const fileName = rollupFileInfo.fileName
+    let code = rollupFileInfo.code
+    if (rollupFileInfo.type === "chunk") {
       ressource.contentType = "application/javascript"
     }
-    ressource.fileName = fileName
-    ressource.buildEnd(
-      code,
-      // buildRelativeUrl
-    )
 
-    const map = buildFileInfo.map
+    if (useImportMapToMaximizeCacheReuse) {
+      ressource.fileName = fileName
+      ressource.buildEnd(code)
+    } else {
+      ressource.fileName = asFileNameWithoutHash(fileName)
+      ressource.buildEnd(code, fileName)
+    }
+
+    const map = rollupFileInfo.map
     if (map) {
-      const jsBuildUrl = resolveUrl(
-        ressource.buildRelativeUrl,
-        buildDirectoryUrl,
-      )
-      const sourcemapUrlForJs = `${urlToFilename(jsBuildUrl)}.map`
-      code = setJavaScriptSourceMappingUrl(code, sourcemapUrlForJs)
-      buildFileInfo.code = code
-      ressource.bufferAfterBuild = code
+      const sourcemapBuildRelativeUrl = `${ressource.buildRelativeUrl}.map`
+      const sourcemapRollupFileInfo =
+        rollupAssetFileInfos[sourcemapBuildRelativeUrl]
+      if (!sourcemapRollupFileInfo) {
+        const ressourceBuildUrl = resolveUrl(
+          ressource.buildRelativeUrl,
+          buildDirectoryUrl,
+        )
+        const sourcemapBuildUrl = resolveUrl(
+          sourcemapBuildRelativeUrl,
+          buildDirectoryUrl,
+        )
+        const sourcemapAsString = JSON.stringify(rollupFileInfo.map, null, "  ")
+        const sourcemapBuildUrlRelativeToFileBuildUrl = urlToRelativeUrl(
+          sourcemapBuildUrl,
+          ressourceBuildUrl,
+        )
+        const codeWithSourcemapComment = setJavaScriptSourceMappingUrl(
+          rollupFileInfo.code,
+          sourcemapBuildUrlRelativeToFileBuildUrl,
+        )
+        ressource.bufferAfterBuild = codeWithSourcemapComment
+        rollupFileInfo.code = codeWithSourcemapComment
+        const sourcemapReference = createReference({
+          referenceLabel: "js sourcemapping comment",
+          contentType: "application/octet-stream",
+          ressourceSpecifier: sourcemapBuildUrlRelativeToFileBuildUrl,
+          referenceUrl: ressourceBuildUrl,
+          referenceLine: codeWithSourcemapComment.split(/\r?\n/).length,
+          // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
+          referenceColumn: `${"//#"} sourceMappingURL=`.length + 1,
+          isSourcemap: true,
+        })
+        sourcemapReference.ressource.buildEnd(
+          sourcemapAsString,
+          sourcemapBuildUrlRelativeToFileBuildUrl,
+        )
+      }
     }
   }
 
@@ -906,6 +932,9 @@ export const createRessourceBuilder = (
       source: referenceSourceAsString,
     }
 
+    if (!referenceRessource) {
+      return urlSite
+    }
     if (!referenceRessource.isInline) {
       return urlSite
     }
@@ -953,6 +982,12 @@ export const createRessourceBuilder = (
   }
 }
 
+const asFileNameWithoutHash = (fileName) => {
+  return fileName.replace(/_[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
+    return afterHash
+  })
+}
+
 // const preredirectUrlFromRessource = (ressource, ressourceRedirectionMap) => {
 //   const ressourceUrlPreRedirect = Object.keys(ressourceRedirectionMap).find(
 //     (urlPreRedirect) =>
@@ -960,26 +995,6 @@ export const createRessourceBuilder = (
 //   )
 //   return ressourceUrlPreRedirect
 // }
-
-const precomputeBuildRelativeUrlForRessource = (
-  ressource,
-  { bufferAfterBuild = "", lineBreakNormalization } = {},
-) => {
-  if (ressource.buildRelativeUrl) {
-    return ressource.buildRelativeUrl
-  }
-
-  ressource.bufferAfterBuild = bufferAfterBuild
-  const precomputedBuildRelativeUrl = computeBuildRelativeUrlForRessource(
-    ressource,
-    {
-      lineBreakNormalization,
-      contentType: ressource.contentType,
-    },
-  )
-  ressource.bufferAfterBuild = undefined
-  return precomputedBuildRelativeUrl
-}
 
 export const referenceToCodeForRollup = (reference) => {
   const ressource = reference.ressource
@@ -1038,20 +1053,6 @@ const removePotentialUrlHash = (url) => {
   const urlObject = new URL(url)
   urlObject.hash = ""
   return String(urlObject)
-}
-
-const isEmitChunkNeeded = ({ ressource, reference }) => {
-  if (reference.referenceShouldNotEmitChunk) {
-    // si la ressource est preload ou prefetch
-    const isReferencedByRessourceHint = ressource.references.some(
-      (ref) => ref.isRessourceHint,
-    )
-    if (isReferencedByRessourceHint) {
-      return true
-    }
-    return false
-  }
-  return true
 }
 
 /*

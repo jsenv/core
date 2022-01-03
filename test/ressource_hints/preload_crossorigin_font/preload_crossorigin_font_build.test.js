@@ -20,8 +20,8 @@ const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}main.html`]: "./main.html",
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
   lineBreakNormalization: true,
   // logLevel: "debug",
@@ -31,7 +31,6 @@ const { buildMappings } = await buildProject({
   const actual = buildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}main.css`]: assert.any(String),
-    [`${testDirectoryRelativeUrl}main.css.map`]: assert.any(String),
     [`${testDirectoryRelativeUrl}main.html`]: "main.html",
   }
   assert({ actual, expected })

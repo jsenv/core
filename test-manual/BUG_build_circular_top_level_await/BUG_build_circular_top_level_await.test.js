@@ -14,11 +14,14 @@ import {
 import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativeUrl = urlToRelativeUrl(
+  testDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+)
 const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
+const entryPoints = {
   [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
 
@@ -26,13 +29,14 @@ const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints,
   // logLevel: "debug",
   // preserveEntrySignatures: false,
 })
 
 {
-  const mainJsFileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const mainJsFileBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

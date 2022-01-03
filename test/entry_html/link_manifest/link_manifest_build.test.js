@@ -22,15 +22,13 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}link_manifest.html`]: "./main.html",
-}
-
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}link_manifest.html`]: "main.html",
+  },
   // minify: true,
 })
 
@@ -65,7 +63,7 @@ const manifestFileBuildRelativeUrl = "assets/manifest.webmanifest"
   const actual = manifestAfterBuild.icons
   const expected = [
     {
-      src: "pwa.icon-574c1c76.png",
+      src: "pwa.icon_574c1c76.png",
       sizes: "192x192",
       type: "image/png",
     },
@@ -74,7 +72,7 @@ const manifestFileBuildRelativeUrl = "assets/manifest.webmanifest"
 
   // ensure manifest can find this file
   const iconUrlForManifestBuild = resolveUrl(
-    "pwa.icon-574c1c76.png",
+    "pwa.icon_574c1c76.png",
     manifestFileBuildUrl,
   )
   await assertFilePresence(iconUrlForManifestBuild)

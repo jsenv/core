@@ -23,15 +23,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `preload_local_font.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: `./${mainFilename}`,
-}
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: `${mainFilename}`,
+  },
 })
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
@@ -49,13 +48,13 @@ const cssString = await readFile(cssFileBuildUrl)
   const fontPreloadLink = findHtmlNodeById(htmlString, "font_preload_link")
   const hrefAttribute = getHtmlNodeAttributeByName(fontPreloadLink, "href")
   const href = hrefAttribute.value
-
-  const actual = href
-  const expected = "assets/roboto_v27_latin_regular-cc46322d.woff2"
-  assert({
-    actual,
-    expected,
-  })
+  const actual = {
+    href,
+  }
+  const expected = {
+    href: "assets/roboto_v27_latin_regular_cc46322d.woff2",
+  }
+  assert({ actual, expected })
 }
 
 // ensure font urls properly updated in css file
@@ -64,6 +63,6 @@ const cssString = await readFile(cssFileBuildUrl)
   const fontSpecifier = cssUrls.urlDeclarations[0].specifier
 
   const actual = fontSpecifier
-  const expected = "roboto_v27_latin_regular-cc46322d.woff2"
+  const expected = "roboto_v27_latin_regular_cc46322d.woff2"
   assert({ actual, expected })
 }

@@ -23,9 +23,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -39,7 +36,9 @@ const test = async (params) => {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints: {
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+    },
     ...params,
   })
 

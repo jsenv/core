@@ -16,23 +16,21 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `importmap_not_found_build_esmodule.js`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
-}
 const importMapFileRelativeUrl = "./not-found.importmap"
 const importMapFileUrl = resolveUrl(
   importMapFileRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-
 try {
   await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     importMapFileRelativeUrl,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints: {
+      [`./${testDirectoryRelativeUrl}importmap_not_found_build_esmodule.js`]:
+        "main.js",
+    },
   })
 } catch (e) {
   const actual = e.message

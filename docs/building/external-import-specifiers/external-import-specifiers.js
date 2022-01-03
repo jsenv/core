@@ -3,8 +3,8 @@ import { buildProject } from "@jsenv/core"
 buildProject({
   format: "commonjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
-    main: "./file.cjs",
+  entryPoints: {
+    main: "file.cjs",
   },
   externalImportSpecifiers: ["./answer.js"],
 })
@@ -12,8 +12,8 @@ buildProject({
 buildProject({
   format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
-    main: "./file.js",
+  entryPoints: {
+    main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
 })
@@ -21,8 +21,8 @@ buildProject({
 buildProject({
   format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
-    main: "./file.js",
+  entryPoints: {
+    main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
 })
@@ -30,8 +30,8 @@ buildProject({
 buildProject({
   format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
-    main: "./file.js",
+  entryPoints: {
+    main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
   globals: {

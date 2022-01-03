@@ -21,7 +21,7 @@ This documentation list [key features](#key-features) and gives the [definition 
   - anything babel can transform
 - Can minify html, css, js, json, svg.
 - Generate sourcemap files for js and css
-- Can build service worker files
+- Can build workers and service workers
 - Regroup js files into chunks (concatenation)
 
 # Definition of a build for jsenv
@@ -43,8 +43,8 @@ import { buildProject } from "@jsenv/core"
 const { buildMappings, buildManifest } = await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
-  entryPointMap: {
-    "./main.html": "./main.min.html",
+  entryPoints: {
+    "./main.html": "main.min.html",
   },
   format: "esmodule",
   minify: true,
@@ -57,13 +57,13 @@ _buildDirectoryRelativeUrl_ is a string leading to a directory where files are w
 
 _buildDirectoryRelativeUrl_ is **required**.
 
-## entryPointMap
+## entryPoints
 
-_entryPointMap_ is an object describing the project files you want to read and their destination in the build directory.
+_entryPoints_ is an object describing the project files you want to read and their destination in the build directory.
 
-_entryPointMap_ is **required**.
+_entryPoints_ is **required**.
 
-_entryPointMap_ keys are relative to project directory and values are relative to build directory.
+_entryPoints_ keys are relative to project directory and values are relative to build directory.
 
 ## format
 
@@ -209,9 +209,9 @@ _workers_ is optional.
 If your source file references a worker file as below:
 
 ```js
-const workerUrl = new URL("/worker.js", import.meta.url)
+const workerUrl = new URL("./worker.js", import.meta.url)
 
-const worker = new Worker(workerUrl)
+const worker = new Worker(workerUrl, { type: "module" })
 ```
 
 Then you should tell jsenv this is a worker using _workers_ parameter.
@@ -229,7 +229,7 @@ await buildProject({
 })
 ```
 
-Thanks to this, jsenv knows it's a worker file and will detect usage of [importScripts](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers#importing_scripts_and_libraries).
+Thanks to this, jsenv knows "worker.js" is not a classic js file but a worker module.
 
 ## urlVersioning
 
@@ -379,12 +379,10 @@ document.body.appendChild(img)
 ```
 
 ```js
-const workerUrl = new URL("/worker.js", import.meta.url)
+const workerUrl = new URL("./worker.js", import.meta.url)
 
-const worker = new Worker(workerUrl)
+const worker = new Worker(workerUrl, { type: "module" })
 ```
-
-> Worker must be referenced with the absolute path: starting with "/"
 
 ### With customCompilers
 
@@ -539,8 +537,8 @@ import { buildProject } from "@jsenv/core"
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
-  entryPointMap: {
-    "./main.html": "./main.html",
+  entryPoints: {
+    "./main.html": "main.html",
   },
   format: "systemjs",
 })

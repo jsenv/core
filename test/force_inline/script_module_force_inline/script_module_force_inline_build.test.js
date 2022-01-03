@@ -19,16 +19,15 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
-const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.html",
-}
 const { buildManifest, buildFileContents, buildInlineFileContents } =
   await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints: {
+      [`./${fileRelativeUrl}`]: "main.html",
+    },
   })
 
 // ensuire buildManifest, fileContents and inlineFileContents looks good
@@ -40,14 +39,15 @@ const { buildManifest, buildFileContents, buildInlineFileContents } =
   }
   const expected = {
     buildManifest: {
+      "file.js.map": "file_02c226c4.js.map",
       "main.html": "main.html",
     },
     buildFileContents: {
-      "file-02c226c4.js.map": assert.any(String),
+      "file_02c226c4.js.map": assert.any(String),
       "main.html": assert.any(String),
     },
     buildInlineFileContents: {
-      "file-02c226c4.js": assert.any(String),
+      "file_02c226c4.js": assert.any(String),
     },
   }
   assert({ actual, expected })
@@ -93,7 +93,7 @@ const htmlString = await readFile(htmlBuildUrl)
   console.log(answer);
 }
 
-//# sourceMappingURL=file-02c226c4.js.map`,
+//# sourceMappingURL=file_02c226c4.js.map`,
   }
   assert({ actual, expected })
 }

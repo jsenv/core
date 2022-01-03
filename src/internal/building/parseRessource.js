@@ -22,7 +22,7 @@ import { parseJsRessource } from "./js/parseJsRessource.js"
 import { parseJsonRessource } from "./json/parseJsonRessource.js"
 import { parseWebmanifestRessource } from "./webmanifest/parseWebmanifestRessource.js"
 
-export const parseRessource = (
+export const parseRessource = async (
   ressource,
   notifiers,
   {

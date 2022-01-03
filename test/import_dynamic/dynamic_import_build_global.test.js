@@ -19,8 +19,8 @@ try {
     ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
-      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+    entryPoints: {
+      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
     },
   })
 } catch (actual) {

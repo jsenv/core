@@ -15,15 +15,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}main.js`]: "./main.js",
-}
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   logLevel: "error", // to disable CIRCULAR_DEPENDENCY warning
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
+  },
 })
 const { namespace } = await nodeImportEsModuleBuild({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,

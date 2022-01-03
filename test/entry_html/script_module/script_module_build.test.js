@@ -21,8 +21,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}script_module.html`]: "./main.html",
+const entryPoints = {
+  [`./${testDirectoryRelativeUrl}script_module.html`]: "main.html",
 }
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
@@ -34,7 +34,7 @@ const test = async (params) => {
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints,
     ...params,
   })
   const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]

@@ -18,9 +18,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `import_not_found.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
-const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.js",
-}
 const mainFileUrl = resolveUrl(mainFilename, import.meta.url)
 const intermediateFileUrl = resolveUrl("./intermediate.js", import.meta.url)
 const fooFileUrl = resolveUrl("foo.js", import.meta.url)
@@ -30,7 +27,9 @@ try {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints: {
+      [`./${fileRelativeUrl}`]: "main.js",
+    },
   })
   throw new Error("should throw")
 } catch (e) {

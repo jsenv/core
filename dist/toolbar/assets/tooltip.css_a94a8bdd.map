@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/internal/dev_server/toolbar/tooltip/tooltip.css"
+  ],
+  "names": [],
+  "mappings": "AAAA;EACE,aAAa;EACb,iCAAiC;EACjC,WAAW;EACX,kBAAkB;EAClB,kBAAkB;EAClB,kBAAkB;EAClB,YAAY;EACZ,aAAa;EACb,eAAe;EACf,kBAAkB;EAClB,gBAAgB;EAChB,eAAe;AACjB;;AAEA;EACE,WAAW;EACX,kBAAkB;EAClB,SAAS;EACT,UAAU;EACV,iBAAiB;EACjB,iBAAiB;EACjB,mBAAmB;EACnB,iEAAiE;AACnE;;AAEA;;EAEE,cAAc;EACd,2BAA2B;AAC7B;;AAEA;EACE;IACE,UAAU;EACZ;EACA;IACE,UAAU;EACZ;AACF;;AAEA;EACE,qBAAqB;EACrB,yBAAyB;EACzB,kBAAkB;EAClB,gBAAgB;EAChB,eAAe;AACjB;;AAEA;EACE,sBAAsB;EACtB,YAAY;EACZ,qBAAqB;AACvB;;AAEA;EACE,WAAW;EACX,WAAW;EACX,YAAY;EACZ,sBAAsB;AACxB",
+  "file": "tooltip_b99a4b4d.css",
+  "sourcesContent": [
+    ".tooltip {\n  display: none;\n  background-color: rgb(94, 94, 94);\n  color: #fff;\n  text-align: center;\n  border-radius: 6px;\n  position: absolute;\n  bottom: 120%;\n  padding: 10px;\n  font-size: 14px;\n  margin-left: -40px;\n  max-width: 160px;\n  cursor: default;\n}\n\n.tooltip::after {\n  content: \"\";\n  position: absolute;\n  top: 100%;\n  left: 60px;\n  margin-left: -5px;\n  border-width: 5px;\n  border-style: solid;\n  border-color: rgb(94, 94, 94) transparent transparent transparent;\n}\n\n[data-tooltip-visible] .tooltip,\n[data-tooltip-auto-visible] .tooltip {\n  display: block;\n  animation: fadeIn ease 0.4s;\n}\n\n@keyframes fadeIn {\n  0% {\n    opacity: 0;\n  }\n  100% {\n    opacity: 1;\n  }\n}\n\n.tooltipAction {\n  display: inline-block;\n  border: 1px solid #a0a0a0;\n  border-radius: 3px;\n  padding: 3px 7px;\n  margin-top: 6px;\n}\n\n.tooltipAction a {\n  vertical-align: middle;\n  color: white;\n  text-decoration: none;\n}\n\n.tooltipIcon {\n  fill: white;\n  width: 20px;\n  height: 20px;\n  vertical-align: middle;\n}\n"
+  ]
+}

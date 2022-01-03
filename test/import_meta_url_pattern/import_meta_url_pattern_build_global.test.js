@@ -21,15 +21,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
-const mainFilename = `index.js`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
-}
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}index.js`]: "main.js",
+  },
 })
 const { globalValue, serverOrigin } = await scriptLoadGlobalBuild({
   ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
@@ -48,7 +47,7 @@ const actual = {
 }
 const expected = {
   jsUrlInstanceOfUrl: true,
-  jsUrl: String(new URL(`./assets/file-7aa95da0.js`, serverOrigin)),
+  jsUrl: String(new URL(`./assets/file_7aa95da0.js`, serverOrigin)),
 }
 assert({ actual, expected })
 

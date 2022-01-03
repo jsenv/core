@@ -7,14 +7,13 @@ let buildManifestCode = ""
 let buildManifest
 const buildInternalFile = async ({
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints,
   ...params
 }) => {
   const build = await buildProject({
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    urlVersionningForEntryPoints: true,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints,
     assetManifestFile: true,
     ...params,
   })
@@ -32,8 +31,9 @@ export const ${exportName} = new URL(${JSON.stringify(
 await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/redirector/",
-  entryPointMap: {
-    "./src/internal/dev_server/redirector/redirector.html": "./redirector.html",
+  entryPoints: {
+    "./src/internal/dev_server/redirector/redirector.html":
+      "redirector_[hash].html",
   },
 })
 addExport(
@@ -45,8 +45,9 @@ await buildInternalFile({
   format: "global",
   buildDirectoryRelativeUrl: "./dist/browser_runtime/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
-  entryPointMap: {
-    "./src/internal/browser_runtime/browser_runtime.js": "./browser_runtime.js",
+  entryPoints: {
+    "./src/internal/browser_runtime/browser_runtime.js":
+      "browser_runtime_[hash].js",
   },
 })
 addExport(
@@ -57,9 +58,9 @@ addExport(
 await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/compile_proxy/",
-  entryPointMap: {
+  entryPoints: {
     "./src/internal/browser_feature_detection/compile_proxy.html":
-      "./compile_proxy.html",
+      "compile_proxy_[hash].html",
   },
 })
 addExport(
@@ -70,9 +71,9 @@ addExport(
 await buildInternalFile({
   format: "global",
   buildDirectoryRelativeUrl: "./dist/event_source_client/",
-  entryPointMap: {
+  entryPoints: {
     "./src/internal/dev_server/event_source_client/event_source_client.js":
-      "./event_source_client.js",
+      "event_source_client_[hash].js",
   },
 })
 addExport(
@@ -83,8 +84,8 @@ addExport(
 await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/toolbar/",
-  entryPointMap: {
-    "./src/internal/dev_server/toolbar/toolbar.html": "./toolbar.html",
+  entryPoints: {
+    "./src/internal/dev_server/toolbar/toolbar.html": "toolbar_[hash].html",
   },
   cssConcatenation: true,
 })
@@ -94,9 +95,9 @@ await buildInternalFile({
   format: "global",
   buildDirectoryRelativeUrl: "./dist/toolbar_injector/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
-  entryPointMap: {
+  entryPoints: {
     "./src/internal/dev_server/toolbar/toolbar.injector.js":
-      "./toolbar_injector.js",
+      "toolbar_injector_[hash].js",
   },
   customCompilers: {
     "./src/internal/dev_server/toolbar/toolbar.injector.js": ({ code }) => {

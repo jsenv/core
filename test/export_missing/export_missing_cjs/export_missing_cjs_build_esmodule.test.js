@@ -18,9 +18,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `file_importing_commonjs.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
-const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.js",
-}
 const importerFileUrl = resolveUrl(mainFilename, testDirectoryUrl)
 const importedFileUrl = resolveUrl(
   "file_written_in_commonjs.js",
@@ -33,7 +30,9 @@ try {
     jsConcatenation: false,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap,
+    entryPoints: {
+      [`./${fileRelativeUrl}`]: "main.js",
+    },
   })
   throw new Error("should throw")
 } catch (e) {

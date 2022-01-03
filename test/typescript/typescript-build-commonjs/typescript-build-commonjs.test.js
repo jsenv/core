@@ -31,8 +31,8 @@ await buildProject({
   importDefaultExtension: true,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.cjs",
   },
 })
 const { namespace: actual } = await requireCommonJsBuild({

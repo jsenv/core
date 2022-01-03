@@ -19,15 +19,14 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `main.html`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
-const entryPointMap = {
-  [`./${fileRelativeUrl}`]: "./main.html",
-}
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${fileRelativeUrl}`]: "main.html",
+  },
 })
 
 // ensure src is properly inlined
@@ -61,7 +60,7 @@ await buildProject({
         ? actual.textNodeValue
         : `var answer = 42;
 console.log(answer);
-//# sourceMappingURL=assets/file.js-5dab1097.map`,
+//# sourceMappingURL=assets/file.js_0fe11fe1.map`,
   }
   assert({ actual, expected })
 }

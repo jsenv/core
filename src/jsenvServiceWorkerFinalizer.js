@@ -1,13 +1,13 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { generateContentHash } from "./internal/building/url-versioning.js"
+import { generateContentHash } from "./internal/building/url_versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (
   code,
   {
     serviceWorkerBuildRelativeUrl,
     buildManifest,
-    rollupBuild,
+    buildFileContents,
     lineBreakNormalization,
   },
 ) => {
@@ -32,7 +32,7 @@ export const jsenvServiceWorkerFinalizer = (
       return
     }
     const versioned = fileNameContainsHash(buildRelativeUrl)
-    const rollupFile = rollupBuild[buildRelativeUrl]
+    const buildFileContent = buildFileContents[buildRelativeUrl]
 
     generatedUrlsConfig[urlRelativeToServiceWorker] = {
       versioned,
@@ -42,10 +42,9 @@ export const jsenvServiceWorkerFinalizer = (
             // when url is not versioned we compute a "version" for that url anyway
             // so that service worker source still changes and navigator
             // detect there is a change
-            version: generateContentHash(
-              rollupFile.type === "chunk" ? rollupFile.code : rollupFile.source,
-              { lineBreakNormalization },
-            ),
+            version: generateContentHash(buildFileContent, {
+              lineBreakNormalization,
+            }),
           }),
     }
   })
@@ -57,4 +56,4 @@ ${code}
 }
 
 const fileNameContainsHash = (fileName) =>
-  /-[a-z0-9]{8,}(\..*?)?$/.test(fileName)
+  /_[a-z0-9]{8,}(\..*?)?$/.test(fileName)

@@ -21,8 +21,8 @@ await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.cjs",
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.cjs",
   },
 })
 await requireCommonJsBuild({

@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/internal/dev_server/toolbar/focus/focus.css"
+  ],
+  "names": [],
+  "mappings": "AAAA;;;;EAIE,mBAAmB;EACnB,oBAAoB;AACtB;;AAEA;EACE,kBAAkB;EAClB,oBAAoB;AACtB;;AAEA;;;;;;;EAOE,mBAAmB;AACrB;;AAEA;;;;EAIE,+BAA+B;AACjC;;AAEA;;;;;;;;CAQC;;AACD;EACE;;;;;;;IAOE,kBAAkB;IAClB,iBAAiB;IACjB,oBAAoB;IACpB;;;;KAIC;IACD,+BAA+B;EACjC;AACF;;AACA;EACE,SAAS;AACX",
+  "file": "focus_62ce6b4e.css",
+  "sourcesContent": [
+    "button:focus,\na:focus,\ninput:focus,\n*[data-contains-hidden-input] input:focus + * {\n  outline-style: none;\n  outline-offset: -2px;\n}\n\n*[data-contains-hidden-input] input:focus + * {\n  outline-width: 4px;\n  outline-offset: -2px;\n}\n\nhtml[data-last-interaction=\"keyboard\"] button:focus,\nhtml[data-last-interaction=\"keyboard\"] a:focus,\nhtml[data-last-interaction=\"keyboard\"] input:focus,\nhtml[data-last-interaction=\"keyboard\"]\n  *[data-contains-hidden-input]\n  input:focus\n  + * {\n  outline-style: auto;\n}\n\nhtml[data-last-interaction=\"keyboard\"]\n  *[data-contains-hidden-input]\n  input:focus\n  + * {\n  outline-color: rgb(0, 150, 255);\n}\n\n/*\nDon't try to replace @-moz-document url-prefix() this by\n\n-moz-outline or -moz-outline-color\nBecause firefox would take into account outline instead of -moz-outline\n\n:moz-focus-ring\nBecause for some element we set the focus outline on a div which would not match :focusring\n*/\n@-moz-document url-prefix() {\n  html[data-last-interaction=\"keyboard\"] button:focus,\n  html[data-last-interaction=\"keyboard\"] a:focus,\n  html[data-last-interaction=\"keyboard\"] input:focus,\n  html[data-last-interaction=\"keyboard\"]\n    *[data-input-customized]\n    input:focus\n    + * {\n    outline-width: 2px;\n    outline-offset: 0;\n    outline-style: solid;\n    /*\n    force a blue color for firefox otherwise\n    it uses outline-color: inherit\n    making it unpredictible and sometimes hard to see\n    */\n    outline-color: rgb(0, 150, 255);\n  }\n}\n::-moz-focus-inner {\n  border: 0;\n}\n"
+  ]
+}

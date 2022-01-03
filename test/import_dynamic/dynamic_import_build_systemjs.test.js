@@ -23,8 +23,8 @@ const { buildMappings } = await buildProject({
   useImportMapToMaximizeCacheReuse: false,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
 })
 const mainBuildRelativeUrl =

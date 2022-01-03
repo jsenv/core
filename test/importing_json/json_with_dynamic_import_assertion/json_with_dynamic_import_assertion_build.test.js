@@ -21,9 +21,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.prod.html",
-}
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
@@ -31,15 +28,18 @@ const buildDirectoryUrl = resolveUrl(
 )
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.prod.html",
+  },
 })
 
 // check sourcemap content
 {
   const sourcemapBuildRelativeUrl = `${
-    buildMappings[`${testDirectoryRelativeUrl}data.json?import_type=json`]
+    buildMappings[`${testDirectoryRelativeUrl}data.js?import_type=json`]
   }.map`
   const sourcemapBuildUrl = resolveUrl(
     sourcemapBuildRelativeUrl,
@@ -58,7 +58,7 @@ const { buildMappings } = await buildProject({
     file: "data.js", // "data.json" becomes "data.js"
     sources: [
       // the source url is theoric because data.js file do not really exist
-      "../../.jsenv/build/best/test/importing_json/json_with_dynamic_import_assertion/data.json?import_type=json",
+      "../../.jsenv/build/best/test/importing_json/json_with_dynamic_import_assertion/data.js?import_type=json",
     ],
     sourcesContent: [
       // the source content is the fake "data.js" exporting the json
@@ -77,9 +77,13 @@ const { buildMappings } = await buildProject({
     jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
   })
 
-  const actual = namespace
+  const actual = {
+    namespace,
+  }
   const expected = {
-    data: 42,
+    namespace: {
+      data: 42,
+    },
   }
   assert({ actual, expected })
 }

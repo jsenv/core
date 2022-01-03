@@ -11,8 +11,8 @@ await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
   format: "esmodule",
-  entryPointMap: {
-    "./main.html": "./main.min.html",
+  entryPoints: {
+    "./main.html": "main.min.html",
   },
   jsenvDirectoryClean: true,
   buildDirectoryClean: true,

@@ -27,15 +27,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `main.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+  },
   systemJsName: "toto",
   // minify: true,
 })
@@ -71,7 +70,6 @@ const htmlString = await readFile(htmlBuildUrl)
     mappings: {
       imports: {
         "./file.js": `./${buildMappings[`${testDirectoryRelativeUrl}file.js`]}`,
-        "./main.js": `./main-d480b852.js`, // should not here because was inlined but that's ok
       },
     },
   }

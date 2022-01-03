@@ -23,9 +23,9 @@ const { buildManifest, buildMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${firstEntryRelativeUrl}`]: "./a.cjs",
-    [`./${secondEntryRelativeUrl}`]: "./b.cjs",
+  entryPoints: {
+    [`./${firstEntryRelativeUrl}`]: "a.cjs",
+    [`./${secondEntryRelativeUrl}`]: "b.cjs",
   },
   assetManifestFile: true,
   assetManifestFileRelativeUrl: "manifest.json",
@@ -52,9 +52,12 @@ const { buildManifest, buildMappings } = await buildProject({
   const manifestFileObject = JSON.parse(manifestFileContent)
   const actual = manifestFileObject
   const expected = {
-    [`a.cjs`]: "a.cjs",
-    [`b.cjs`]: "b.cjs",
-    [`used-by-both.cjs`]: actual[`used-by-both.cjs`],
+    "a.cjs": "a.cjs",
+    "a.cjs.map": "a.cjs.map",
+    "b.cjs": "b.cjs",
+    "b.cjs.map": "b.cjs.map",
+    "used-by-both.cjs": "used-by-both.cjs",
+    "used-by-both.cjs.map": "used-by-both.cjs.map",
   }
   assert({ actual, expected })
 

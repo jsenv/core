@@ -21,8 +21,8 @@ const mainFilename = `${testDirectoryBasename}.js`
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.js",
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
   },
 })
 const { globalValue: actual } = await requireGlobalBuild({

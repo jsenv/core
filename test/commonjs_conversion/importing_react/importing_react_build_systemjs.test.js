@@ -20,9 +20,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `importing_react.html`
-const entryPointMap = {
-  [`./${testDirectoryRelativeUrl}${mainFilename}`]: "./main.html",
-}
 const customCompilers = {
   "./node_modules/react/index.js": (options) => {
     return commonJsToJavaScriptModule({
@@ -47,7 +44,9 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   // filesystemCache: true,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints: {
+    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+  },
   customCompilers,
   babelPluginMap: {
     "transform-react-jsx": [

@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { readFile, resolveUrl } from "@jsenv/filesystem"
 
-import { generateContentHash } from "@jsenv/core/src/internal/building/url-versioning.js"
+import { generateContentHash } from "@jsenv/core/src/internal/building/url_versioning.js"
 
 const stringWithUnixLineBreak = `console.log(42);\n`
 const stringWithWindowsLineBreak = `console.log(42);\r\n`
