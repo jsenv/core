@@ -39,6 +39,7 @@
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "packages-install": "node ./script/packages/packages_install.js",
+    "certificate-install": "node ./script/dev/install_certificate_authority.mjs",
     "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {
