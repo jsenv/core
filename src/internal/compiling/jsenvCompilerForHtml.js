@@ -8,7 +8,7 @@ import {
   TOOLBAR_INJECTOR_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { getDefaultImportMap } from "@jsenv/core/src/internal/import-resolution/importmap-default.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
 
 import {
   setJavaScriptSourceMappingUrl,
@@ -39,8 +39,8 @@ export const compileHtml = async ({
   url,
   compiledUrl,
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  compileId,
+  // outDirectoryRelativeUrl,
+  // compileId,
 
   babelPluginMap,
   moduleOutFormat,
@@ -120,58 +120,57 @@ export const compileHtml = async ({
           importmapInfo = {
             script,
             url: resolveUrl(src, url),
-            loadAsText: async () => {
+            load: async () => {
               const importMapResponse = await fetchUrl(importmapInfo.url)
-              if (importMapResponse.status !== 200) {
-                logger.warn(
-                  createDetailedMessage(
-                    importMapResponse.status === 404
-                      ? `importmap script file cannot be found.`
-                      : `importmap script file unexpected response status (${importMapResponse.status}).`,
-                    {
-                      "importmap url": importmapInfo.url,
-                      "html url": url,
-                    },
-                  ),
+              if (importMapResponse.status === 200) {
+                const importmapAsText = await importMapResponse.text()
+                let htmlImportmap = JSON.parse(importmapAsText)
+                htmlImportmap = moveImportMap(
+                  htmlImportmap,
+                  importmapInfo.url,
+                  url,
                 )
-                return "{}"
+                sources.push(importmapInfo.url)
+                sourcesContent.push(importmapAsText)
+                return htmlImportmap
               }
-              const importmapAsText = await importMapResponse.text()
-              sources.push(importmapInfo.url)
-              sourcesContent.push(importmapAsText)
-
-              const importMapMoved = moveImportMap(
-                JSON.parse(importmapAsText),
-                importmapInfo.url,
-                url,
+              logger.warn(
+                createDetailedMessage(
+                  importMapResponse.status === 404
+                    ? `importmap script file cannot be found.`
+                    : `importmap script file unexpected response status (${importMapResponse.status}).`,
+                  {
+                    "importmap url": importmapInfo.url,
+                    "html url": url,
+                  },
+                ),
               )
-              const compiledImportmapAsText = JSON.stringify(
-                importMapMoved,
-                null,
-                "  ",
-              )
-              return compiledImportmapAsText
+              return {}
             },
           }
         } else {
           importmapInfo = {
             script,
             url: compiledUrl,
-            loadAsText: () => getHtmlNodeTextNode(script).value,
+            load: () => {
+              const jsenvImportmap = getDefaultImportmap(compiledUrl)
+              const htmlImportmap = JSON.parse(
+                getHtmlNodeTextNode(script).value,
+              )
+              const importmap = composeTwoImportMaps(
+                jsenvImportmap,
+                htmlImportmap,
+              )
+              return importmap
+            },
           }
         }
       }
     }
   })
   if (importmapInfo) {
-    const htmlImportMap = JSON.parse(await importmapInfo.loadAsText())
-    const importMapFromJsenv = getDefaultImportMap({
-      importMapFileUrl: compiledUrl,
-      projectDirectoryUrl,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
-    })
-    const mappings = composeTwoImportMaps(importMapFromJsenv, htmlImportMap)
-    const importmapAsText = JSON.stringify(mappings, null, "  ")
+    const importmap = await importmapInfo.load()
+    const importmapAsText = JSON.stringify(importmap, null, "  ")
     replaceHtmlNode(
       importmapInfo.script,
       `<script type="${
@@ -182,15 +181,9 @@ export const compileHtml = async ({
       },
     )
     importmapInfo.inlinedFrom = importmapInfo.url
-    importmapInfo.url = compiledUrl
     importmapInfo.text = importmapAsText
   } else {
-    // inject a default importmap
-    const defaultImportMap = getDefaultImportMap({
-      importMapFileUrl: compiledUrl,
-      projectDirectoryUrl,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
-    })
+    const defaultImportMap = getDefaultImportmap(compiledUrl)
     const importmapAsText = JSON.stringify(defaultImportMap, null, "  ")
     manipulateHtmlAst(htmlAst, {
       scriptInjections: [

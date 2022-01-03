@@ -1,6 +1,6 @@
 import { extname } from "node:path"
 import MagicString from "magic-string"
-import { normalizeImportMap } from "@jsenv/importmap"
+import { composeTwoImportMaps, normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
 import { createDetailedMessage, loggerToLogLevel } from "@jsenv/logger"
 import {
@@ -26,6 +26,9 @@ import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js
 import { stringifyUrlTrace } from "@jsenv/core/src/internal/building/url_trace.js"
 import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
+import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import-resolution/import-resolver-importmap.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
 
 import {
   formatBuildStartLog,
@@ -44,9 +47,6 @@ import {
 import { createUrlVersioner } from "./url_versioning.js"
 import { visitImportReferences } from "./import_references.js"
 
-import { createImportResolverForNode } from "../import-resolution/import-resolver-node.js"
-import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
-import { getDefaultImportMap } from "../import-resolution/importmap-default.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -463,9 +463,18 @@ export const createRollupPlugins = async ({
             )
             importMapUrl = htmlCompiledUrl
             fetchImportMap = () => {
-              const importMapRaw = JSON.parse(importMapInfoFromHtml.text)
-              const importMap = normalizeImportMap(importMapRaw, importMapUrl)
-              return importMap
+              const importmapFileUrl = asProjectUrl(importMapUrl)
+              const jsenvImportmap = getDefaultImportmap(importmapFileUrl)
+              const htmlImportmap = JSON.parse(importMapInfoFromHtml.text)
+              const importmap = composeTwoImportMaps(
+                jsenvImportmap,
+                htmlImportmap,
+              )
+              const importmapNormalized = normalizeImportMap(
+                importmap,
+                importMapUrl,
+              )
+              return importmapNormalized
             }
           }
         } else if (importMapFileRelativeUrl) {
@@ -488,16 +497,16 @@ export const createRollupPlugins = async ({
               entryProjectRelativeUrl,
               compileDirectoryUrl,
             )
-            const defaultImportMap = getDefaultImportMap({
-              importMapFileUrl: entryCompileUrl,
-              projectDirectoryUrl,
-              compileDirectoryRelativeUrl,
-            })
+            const jsenvImportmap = getDefaultImportmap(entryCompileUrl)
             const entryCompileServerUrl = resolveUrl(
               entryProjectRelativeUrl,
               compileDirectoryServerUrl,
             )
-            return normalizeImportMap(defaultImportMap, entryCompileServerUrl)
+            const importmapNormalized = normalizeImportMap(
+              jsenvImportmap,
+              entryCompileServerUrl,
+            )
+            return importmapNormalized
           }
         }
 
