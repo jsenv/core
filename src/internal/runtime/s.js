@@ -603,7 +603,6 @@
   var autoImportCandidates = {};
   var systemRegister = systemJSPrototype.register;
   var inlineScriptCount = 0;
-  systemJSPrototype.autoImportCandidates = autoImportCandidates
   systemJSPrototype.register = function (deps, declare, autoUrl) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
       var scripts = document.querySelectorAll('script[src]');
@@ -801,8 +800,8 @@
     }
 
     // auto import first register
-    const messageEvents = []
-    const messageCallback = (event) => {
+    var messageEvents = []
+    var messageCallback = (event) => {
       messageEvents.push(event)
     }
     self.addEventListener('message', messageCallback)
@@ -815,6 +814,7 @@
         messageEvents.forEach((messageEvent) => {
           self.dispatchEvent(messageEvent)
         })
+        messageEvents = null
       })
     }
   }
