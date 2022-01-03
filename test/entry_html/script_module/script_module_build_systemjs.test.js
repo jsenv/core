@@ -21,7 +21,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const entryPointMap = {
+const entryPoints = {
   [`./${testDirectoryRelativeUrl}script_module.html`]: "main.html",
 }
 const buildDirectoryUrl = resolveUrl(
@@ -33,7 +33,7 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints,
   minify: true,
 })
 const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]

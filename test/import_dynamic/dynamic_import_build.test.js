@@ -24,7 +24,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "main.html",
     },
   })
@@ -51,7 +51,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
     buildDirectoryRelativeUrl,
     // we build the HTML instead of the JS file on purpose
     // to test the warning about html + node
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}dynamic_import.html`]: "main.html",
     },
     runtimeSupport: {

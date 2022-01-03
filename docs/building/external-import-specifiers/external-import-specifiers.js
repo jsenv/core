@@ -3,7 +3,7 @@ import { buildProject } from "@jsenv/core"
 buildProject({
   format: "commonjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
+  entryPoints: {
     main: "file.cjs",
   },
   externalImportSpecifiers: ["./answer.js"],
@@ -12,7 +12,7 @@ buildProject({
 buildProject({
   format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
+  entryPoints: {
     main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
@@ -21,7 +21,7 @@ buildProject({
 buildProject({
   format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
+  entryPoints: {
     main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],
@@ -30,7 +30,7 @@ buildProject({
 buildProject({
   format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
-  entryPointMap: {
+  entryPoints: {
     main: "file.js",
   },
   externalImportSpecifiers: ["./answer.js"],

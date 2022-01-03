@@ -3,7 +3,7 @@ import { buildProject } from "@jsenv/core"
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
-  entryPointMap: {
+  entryPoints: {
     "./main.html": "main.prod.html",
   },
   format: "esmodule",

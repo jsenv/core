@@ -30,7 +30,7 @@ const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}importmap_and_assets.html`]: "main.html",
   },
   // minify: true,

@@ -54,7 +54,7 @@ export const createRollupPlugins = async ({
   logger,
 
   projectDirectoryUrl,
-  entryPointMap,
+  entryPoints,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
   buildDirectoryUrl,
@@ -102,13 +102,13 @@ export const createRollupPlugins = async ({
     lastErrorMessage = error.message
   }
 
-  const extension = extname(entryPointMap[Object.keys(entryPointMap)[0]])
+  const extension = extname(entryPoints[Object.keys(entryPoints)[0]])
   const outputExtension = extension === ".html" ? ".js" : extension
 
   const entryPointUrls = {}
-  Object.keys(entryPointMap).forEach((key) => {
+  Object.keys(entryPoints).forEach((key) => {
     const url = resolveUrl(key, projectDirectoryUrl)
-    entryPointUrls[url] = entryPointMap[key]
+    entryPointUrls[url] = entryPoints[key]
   })
   const workerUrls = {}
   Object.keys(workers).forEach((key) => {
@@ -350,9 +350,9 @@ export const createRollupPlugins = async ({
     name: "jsenv",
 
     async buildStart() {
-      logger.info(formatBuildStartLog({ entryPointMap }))
+      logger.info(formatBuildStartLog({ entryPoints }))
 
-      const entryPointsPrepared = await prepareEntryPoints(entryPointMap, {
+      const entryPointsPrepared = await prepareEntryPoints(entryPoints, {
         logger,
         projectDirectoryUrl,
         buildDirectoryUrl,
@@ -1221,7 +1221,7 @@ export const createRollupPlugins = async ({
         if (useImportMapToMaximizeCacheReuse) {
           return `[name]${outputExtension}`
         }
-        return entryPointMap
+        return entryPoints
       }
       outputOptions.chunkFileNames = (chunkInfo) => {
         // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
@@ -1548,7 +1548,7 @@ export const createRollupPlugins = async ({
 }
 
 const prepareEntryPoints = async (
-  entryPointMap,
+  entryPoints,
   {
     logger,
     projectDirectoryUrl,
@@ -1557,7 +1557,7 @@ const prepareEntryPoints = async (
     urlFetcher,
   },
 ) => {
-  const entryFileRelativeUrls = Object.keys(entryPointMap)
+  const entryFileRelativeUrls = Object.keys(entryPoints)
   const entryPointsPrepared = []
   await entryFileRelativeUrls.reduce(async (previous, entryFileRelativeUrl) => {
     await previous
@@ -1567,7 +1567,7 @@ const prepareEntryPoints = async (
       projectDirectoryUrl,
     )
     const entryBuildUrl = resolveUrl(
-      entryPointMap[entryFileRelativeUrl],
+      entryPoints[entryFileRelativeUrl],
       buildDirectoryUrl,
     )
     const entryProjectRelativeUrl = urlToRelativeUrl(
@@ -1584,7 +1584,7 @@ const prepareEntryPoints = async (
       compileServerOrigin,
     )
     const entryResponse = await urlFetcher.fetchUrl(entryServerUrl, {
-      urlTrace: `entryPointMap`,
+      urlTrace: `entryPoints`,
     })
     const entryContentType = entryResponse.headers["content-type"]
     const isHtml = entryContentType === "text/html"

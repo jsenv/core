@@ -24,7 +24,7 @@ try {
     useImportMapToMaximizeCacheReuse: false,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
     },
     // logLevel: "debug",

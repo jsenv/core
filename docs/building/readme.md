@@ -43,7 +43,7 @@ import { buildProject } from "@jsenv/core"
 const { buildMappings, buildManifest } = await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
-  entryPointMap: {
+  entryPoints: {
     "./main.html": "main.min.html",
   },
   format: "esmodule",
@@ -57,13 +57,13 @@ _buildDirectoryRelativeUrl_ is a string leading to a directory where files are w
 
 _buildDirectoryRelativeUrl_ is **required**.
 
-## entryPointMap
+## entryPoints
 
-_entryPointMap_ is an object describing the project files you want to read and their destination in the build directory.
+_entryPoints_ is an object describing the project files you want to read and their destination in the build directory.
 
-_entryPointMap_ is **required**.
+_entryPoints_ is **required**.
 
-_entryPointMap_ keys are relative to project directory and values are relative to build directory.
+_entryPoints_ keys are relative to project directory and values are relative to build directory.
 
 ## format
 
@@ -537,7 +537,7 @@ import { buildProject } from "@jsenv/core"
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
-  entryPointMap: {
+  entryPoints: {
     "./main.html": "main.html",
   },
   format: "systemjs",

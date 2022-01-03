@@ -21,7 +21,7 @@ await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
   },
 })

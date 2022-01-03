@@ -22,7 +22,7 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${htmlFileRelativeUrl}`]: "main.html",
   },
   // minify: true,

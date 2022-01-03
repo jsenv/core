@@ -31,7 +31,7 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}importmap_and_assets.html`]: "main.html",
   },
   // minify: true,

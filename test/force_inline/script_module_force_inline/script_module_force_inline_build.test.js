@@ -25,7 +25,7 @@ const { buildManifest, buildFileContents, buildInlineFileContents } =
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${fileRelativeUrl}`]: "main.html",
     },
   })

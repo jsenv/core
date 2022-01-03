@@ -36,7 +36,7 @@ const test = async (params) => {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
     },
     ...params,

@@ -39,7 +39,7 @@ const generate = () =>
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.cjs",
     },
     filesystemCache: true,

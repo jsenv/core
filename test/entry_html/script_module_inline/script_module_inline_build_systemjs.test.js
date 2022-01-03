@@ -31,7 +31,7 @@ const htmlUrl = resolveUrl("script_module_inline.html", import.meta.url)
 const htmlString = await readFile(htmlUrl)
 const inlineScriptNode = findHtmlNodeById(htmlString, "script_module_inline")
 const inlineScriptContent = getHtmlNodeTextNode(inlineScriptNode).value
-const entryPointMap = {
+const entryPoints = {
   [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
 }
 const buildDirectoryUrl = resolveUrl(
@@ -43,7 +43,7 @@ await buildProject({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap,
+  entryPoints,
   // minify: true,
 })
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)

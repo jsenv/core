@@ -44,7 +44,7 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   // filesystemCache: true,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
   customCompilers,

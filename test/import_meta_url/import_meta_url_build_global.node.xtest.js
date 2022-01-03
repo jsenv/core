@@ -21,7 +21,7 @@ const mainFilename = `${testDirectoryBasename}.js`
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
   },
 })

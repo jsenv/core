@@ -22,7 +22,7 @@ export const buildProject = async ({
   logger,
 
   projectDirectoryUrl,
-  entryPointMap,
+  entryPoints,
   buildDirectoryRelativeUrl,
   buildDirectoryClean = true,
   assetManifestFile = false,
@@ -118,10 +118,10 @@ export const buildProject = async ({
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertEntryPointMap({ entryPointMap })
+  assertentryPoints({ entryPoints })
 
-  if (Object.keys(entryPointMap).length === 0) {
-    logger.error(`entryPointMap is an empty object`)
+  if (Object.keys(entryPoints).length === 0) {
+    logger.error(`entryPoints is an empty object`)
     return {
       rollupBuilds: {},
     }
@@ -198,7 +198,7 @@ export const buildProject = async ({
       buildOperation,
       logger,
 
-      entryPointMap,
+      entryPoints,
       projectDirectoryUrl,
       compileServerOrigin,
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
@@ -257,27 +257,27 @@ export const buildProject = async ({
   }
 }
 
-const assertEntryPointMap = ({ entryPointMap }) => {
-  if (typeof entryPointMap !== "object") {
-    throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
+const assertentryPoints = ({ entryPoints }) => {
+  if (typeof entryPoints !== "object") {
+    throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
   }
-  const keys = Object.keys(entryPointMap)
+  const keys = Object.keys(entryPoints)
   keys.forEach((key) => {
     if (!key.startsWith("./")) {
       throw new TypeError(
-        `unexpected key in entryPointMap, all keys must start with ./ but found ${key}`,
+        `unexpected key in entryPoints, all keys must start with ./ but found ${key}`,
       )
     }
 
-    const value = entryPointMap[key]
+    const value = entryPoints[key]
     if (typeof value !== "string") {
       throw new TypeError(
-        `unexpected value in entryPointMap, all values must be strings found ${value} for key ${key}`,
+        `unexpected value in entryPoints, all values must be strings found ${value} for key ${key}`,
       )
     }
     if (value.includes("/")) {
       throw new TypeError(
-        `unexpected value in entryPointMap, all values must be plain strings (no "/") but found ${value} for key ${key}`,
+        `unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`,
       )
     }
   })

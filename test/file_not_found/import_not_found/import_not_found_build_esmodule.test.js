@@ -27,7 +27,7 @@ try {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${fileRelativeUrl}`]: "main.js",
     },
   })

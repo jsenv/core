@@ -24,7 +24,7 @@ await buildProject({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${fileRelativeUrl}`]: "main.html",
   },
 })

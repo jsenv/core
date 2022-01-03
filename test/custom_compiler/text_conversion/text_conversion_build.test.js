@@ -18,7 +18,7 @@ await buildProject({
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}main.mjs`]: "main.js",
   },
   customCompilers: {

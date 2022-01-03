@@ -24,7 +24,7 @@ try {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}img_not_found.html`]: "main.html",
     },
   })

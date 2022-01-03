@@ -24,7 +24,7 @@ const { buildMappings } = await buildProject({
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}style.css`]: "style_build.css",
   },
 })

@@ -22,7 +22,7 @@ const testBuild = async (params) => {
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.prod.html",
     },
     ...params,

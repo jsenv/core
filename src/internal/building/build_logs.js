@@ -5,8 +5,8 @@ import { byteAsFileSize } from "../logs/byteAsFileSize.js"
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
-export const formatBuildStartLog = ({ entryPointMap }) => {
-  const entryFileRelativeUrls = Object.keys(entryPointMap)
+export const formatBuildStartLog = ({ entryPoints }) => {
+  const entryFileRelativeUrls = Object.keys(entryPoints)
   if (entryFileRelativeUrls.length === 1) {
     return `
 building ${entryFileRelativeUrls[0]}...`

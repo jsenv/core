@@ -27,7 +27,7 @@ try {
     importMapFileRelativeUrl,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}importmap_not_found_build_esmodule.js`]:
         "main.js",
     },

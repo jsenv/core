@@ -22,7 +22,7 @@ export const buildUsingRollup = async ({
   logger,
 
   projectDirectoryUrl,
-  entryPointMap,
+  entryPoints,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
   buildDirectoryUrl,
@@ -100,7 +100,7 @@ export const buildUsingRollup = async ({
     logger,
 
     projectDirectoryUrl,
-    entryPointMap,
+    entryPoints,
     compileServerOrigin,
     compileDirectoryRelativeUrl,
     buildDirectoryUrl,
@@ -266,7 +266,7 @@ const useRollup = async ({
 
   const rollupInputOptions = {
     // about cache here, we should/could reuse previous rollup call
-    // to get the cache from the entryPointMap
+    // to get the cache from the entryPoints
     // as shown here: https://rollupjs.org/guide/en#cache
     // it could be passed in arguments to this function
     // however parallelism and having different rollup options per
@@ -309,7 +309,7 @@ const useRollup = async ({
       logger.warn(String(warning))
     },
     // on passe input: [] car c'est le plugin jsenv qui se chargera d'emit des chunks
-    // en fonction de entryPointMap
+    // en fonction de entryPoints
     // on fait cela car sinon rollup est pénible si on passe un input de type html
     input: [],
     preserveEntrySignatures,

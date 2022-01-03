@@ -30,7 +30,7 @@ try {
     jsConcatenation: false,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${fileRelativeUrl}`]: "main.js",
     },
   })

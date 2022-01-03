@@ -40,7 +40,7 @@ export const createRessourceBuilder = (
     entryUrl,
     entryBuffer,
   }) => {
-    // The entry point is conceptually referenced by code passing "entryPointMap"
+    // The entry point is conceptually referenced by code passing "entryPoints"
     // to buildProject. So we analyse stack trace to put this function caller
     // as the reference to this ressource file
     // we store this info in reference.isProgrammatic

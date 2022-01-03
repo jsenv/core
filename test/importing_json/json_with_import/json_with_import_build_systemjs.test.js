@@ -26,7 +26,7 @@ try {
     ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
     },
     minify: true,

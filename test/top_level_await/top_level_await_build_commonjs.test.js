@@ -17,7 +17,7 @@ try {
     ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}top_level_await.js`]: "main.cjs",
     },
   })

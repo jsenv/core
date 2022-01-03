@@ -31,7 +31,7 @@ await buildProject({
   importDefaultExtension: true,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.cjs",
   },
 })

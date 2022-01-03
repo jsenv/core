@@ -20,7 +20,7 @@ await buildProject({
   logLevel: "error", // to disable CIRCULAR_DEPENDENCY warning
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
   },
 })

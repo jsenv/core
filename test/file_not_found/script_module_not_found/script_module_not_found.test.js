@@ -27,7 +27,7 @@ try {
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
-    entryPointMap: {
+    entryPoints: {
       [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
     },
   })

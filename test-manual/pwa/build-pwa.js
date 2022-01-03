@@ -10,7 +10,7 @@ buildProject({
   projectDirectoryUrl,
   buildDirectoryRelativeUrl,
   babelPluginMap: {},
-  entryPointMap: {
+  entryPoints: {
     [`${pwaDirectoryRelativeUrl}main.html`]: "main.html",
   },
   serviceWorkers: {

@@ -23,7 +23,7 @@ const { buildManifest, buildMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
-  entryPointMap: {
+  entryPoints: {
     [`./${firstEntryRelativeUrl}`]: "a.cjs",
     [`./${secondEntryRelativeUrl}`]: "b.cjs",
   },
