@@ -829,7 +829,7 @@ export const createRollupPlugins = async ({
       }
 
       if (inlineModuleScripts.hasOwnProperty(specifier)) {
-        return specifier
+        return asRollupUrl(specifier)
       }
 
       const importUrl = await importResolver.resolveImport(
@@ -1288,7 +1288,13 @@ export const createRollupPlugins = async ({
     },
 
     async renderChunk(code, chunk) {
-      const url = asOriginalUrl(chunk.facadeModuleId)
+      const { facadeModuleId } = chunk
+      if (!facadeModuleId) {
+        // happens for inline module scripts for instance
+        return null
+      }
+
+      const url = asOriginalUrl(facadeModuleId)
       const worker = workerUrls[url]
       if (worker) {
         const magicString = new MagicString(code)
@@ -1303,6 +1309,7 @@ export const createRollupPlugins = async ({
           map,
         }
       }
+
       return null
     },
 
