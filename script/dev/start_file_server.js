@@ -7,7 +7,7 @@ const { serverCertificate, serverCertificatePrivateKey } =
     serverCertificateAltNames: ["local"],
   })
 
-const directoryUrl = resolveUrl("./", import.meta.url)
+const directoryUrl = resolveUrl("../../", import.meta.url)
 
 await startServer({
   protocol: "https",
