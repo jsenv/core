@@ -818,7 +818,7 @@
       })
     }
   }
-  else {
+  else if (typeof window === 'object') {
     var WorkerConstructor = window.Worker;
     window.Worker = function (url, options) {
       var worker = new WorkerConstructor(url, options)
