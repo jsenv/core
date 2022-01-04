@@ -20,7 +20,7 @@ export const getDefaultImportmap = (
   )
 
   let jsenvCoreUrl
-  if (urlIsInsideOf(url, compileDirectoryUrl)) {
+  if (compileDirectoryUrl && urlIsInsideOf(url, compileDirectoryUrl)) {
     jsenvCoreUrl = resolveUrl(
       jsenvCoreDirectoryRelativeUrl,
       compileDirectoryUrl,

@@ -283,6 +283,7 @@ const visitImportmapScripts = async ({
   inlineImportMapIntoHTML,
   htmlAst,
   htmlFileUrl,
+  projectDirectoryUrl,
 }) => {
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const importmapScripts = scripts.filter((script) => {
@@ -337,7 +338,9 @@ const visitImportmapScripts = async ({
 
       const textNode = getHtmlNodeTextNode(importmapScript)
       if (!srcAttribute && textNode) {
-        const jsenvImportmap = getDefaultImportmap(htmlFileUrl)
+        const jsenvImportmap = getDefaultImportmap(htmlFileUrl, {
+          projectDirectoryUrl,
+        })
         const htmlImportmap = JSON.parse(textNode.value)
         const importmap = composeTwoImportMaps(jsenvImportmap, htmlImportmap)
         textNode.value = JSON.stringify(importmap, null, "  ")
