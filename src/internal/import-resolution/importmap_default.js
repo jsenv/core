@@ -6,14 +6,32 @@
  *
  */
 
-import { urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
+import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/filesystem"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
-export const getDefaultImportmap = (url) => {
+export const getDefaultImportmap = (
+  url,
+  { projectDirectoryUrl, compileDirectoryUrl },
+) => {
+  const jsenvCoreDirectoryRelativeUrl = urlToRelativeUrl(
+    jsenvCoreDirectoryUrl,
+    projectDirectoryUrl,
+  )
+
+  let jsenvCoreUrl
+  if (urlIsInsideOf(url, compileDirectoryUrl)) {
+    jsenvCoreUrl = resolveUrl(
+      jsenvCoreDirectoryRelativeUrl,
+      compileDirectoryUrl,
+    )
+  } else {
+    jsenvCoreUrl = jsenvCoreDirectoryUrl
+  }
+
   const importmap = {
     imports: {
-      "@jsenv/core/": urlToRelativeUrlRemapping(jsenvCoreDirectoryUrl, url),
+      "@jsenv/core/": makeRelativeMapping(jsenvCoreUrl, url),
     },
   }
   return importmap
@@ -21,7 +39,7 @@ export const getDefaultImportmap = (url) => {
 
 // this function just here to ensure relative urls starts with './'
 // so that importmap do not consider them as bare specifiers
-const urlToRelativeUrlRemapping = (url, baseUrl) => {
+const makeRelativeMapping = (url, baseUrl) => {
   const relativeUrl = urlToRelativeUrl(url, baseUrl)
 
   if (urlIsInsideOf(url, baseUrl)) {

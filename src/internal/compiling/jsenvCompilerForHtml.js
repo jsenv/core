@@ -39,8 +39,8 @@ export const compileHtml = async ({
   url,
   compiledUrl,
   projectDirectoryUrl,
-  // outDirectoryRelativeUrl,
-  // compileId,
+  outDirectoryRelativeUrl,
+  compileId,
 
   babelPluginMap,
   moduleOutFormat,
@@ -153,7 +153,10 @@ export const compileHtml = async ({
             script,
             url: compiledUrl,
             load: () => {
-              const jsenvImportmap = getDefaultImportmap(compiledUrl)
+              const jsenvImportmap = getDefaultImportmap(compiledUrl, {
+                projectDirectoryUrl,
+                compileDirectoryUrl: `${projectDirectoryUrl}${compileId}/${outDirectoryRelativeUrl}`,
+              })
               const htmlImportmap = JSON.parse(
                 getHtmlNodeTextNode(script).value,
               )
@@ -183,7 +186,10 @@ export const compileHtml = async ({
     importmapInfo.inlinedFrom = importmapInfo.url
     importmapInfo.text = importmapAsText
   } else {
-    const defaultImportMap = getDefaultImportmap(compiledUrl)
+    const defaultImportMap = getDefaultImportmap(compiledUrl, {
+      projectDirectoryUrl,
+      compileDirectoryUrl: `${projectDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/`,
+    })
     const importmapAsText = JSON.stringify(defaultImportMap, null, "  ")
     manipulateHtmlAst(htmlAst, {
       scriptInjections: [

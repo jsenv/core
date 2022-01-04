@@ -465,7 +465,10 @@ export const createRollupPlugins = async ({
             importMapUrl = htmlCompiledUrl
             fetchImportMap = () => {
               const importmapFileUrl = asProjectUrl(importMapUrl)
-              const jsenvImportmap = getDefaultImportmap(importmapFileUrl)
+              const jsenvImportmap = getDefaultImportmap(importmapFileUrl, {
+                projectDirectoryUrl,
+                compileDirectoryUrl,
+              })
               const htmlImportmap = JSON.parse(importMapInfoFromHtml.text)
               const importmap = composeTwoImportMaps(
                 jsenvImportmap,
@@ -498,7 +501,10 @@ export const createRollupPlugins = async ({
               entryProjectRelativeUrl,
               compileDirectoryUrl,
             )
-            const jsenvImportmap = getDefaultImportmap(entryCompileUrl)
+            const jsenvImportmap = getDefaultImportmap(entryCompileUrl, {
+              projectDirectoryUrl,
+              compileDirectoryUrl,
+            })
             const entryCompileServerUrl = resolveUrl(
               entryProjectRelativeUrl,
               compileDirectoryServerUrl,
