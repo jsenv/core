@@ -99,7 +99,7 @@ if (process.platform !== "win32") {
           },
           "sw.js": {
             versioned: false,
-            version: "6f1979bc",
+            version: "8c13ad75",
           },
           "classic_worker_a850e925.js": {
             versioned: true,
