@@ -260,7 +260,13 @@ Jsenv relies on standard web features. Each standard listed below is potentially
 - dynamic imports
 - import assertions
 
-## When to use it
+## What is jsenv?
+
+Jsenv is a quick start pack to launch a js project.
+
+You don't have to pick a JavaScript framework. Moreover it provides everything you need from the beginning: a dev server, a build tool and a test "framework", all in one.
+
+## When to use it?
 
 Amongst other use cases, the ease of use and flexibility of jsenv makes it a great tool to start and learn web development.
 
