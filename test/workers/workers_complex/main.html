@@ -19,7 +19,9 @@
       const testWorker = async (worker) => {
         const pingResponse = await new Promise((resolve, reject) => {
           worker.onmessage = (e) => {
-            resolve(e.data)
+            if (e.data !== "__importmap_request__") {
+              resolve(e.data)
+            }
           }
           worker.onerror = (e) => {
             reject(e.message)
