@@ -796,19 +796,21 @@ export const createRessourceBuilder = (
           ressource.fileName = rollupFileName
           return
         }
-        applyBuildEndEffects(ressource, {
-          rollupFileInfo,
-          rollupResult,
-          useImportMapToMaximizeCacheReuse,
-        })
-        const { rollupBuildDoneCallbacks } = ressource
-        rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
-          rollupBuildDoneCallback()
-        })
         if (rollupFileInfo.type === "chunk") {
-          jsRessources[ressourceUrl] = ressource
+          applyBuildEndEffects(ressource, {
+            rollupFileInfo,
+            rollupResult,
+            useImportMapToMaximizeCacheReuse,
+          })
+          const { rollupBuildDoneCallbacks } = ressource
+          rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
+            rollupBuildDoneCallback()
+          })
+          if (rollupFileInfo.type === "chunk") {
+            jsRessources[ressourceUrl] = ressource
+          }
+          return
         }
-        return
       }
     })
     return { jsRessources }
@@ -820,9 +822,7 @@ export const createRessourceBuilder = (
   ) => {
     const fileName = rollupFileInfo.fileName
     let code = rollupFileInfo.code
-    if (rollupFileInfo.type === "chunk") {
-      ressource.contentType = "application/javascript"
-    }
+    ressource.contentType = "application/javascript"
 
     if (useImportMapToMaximizeCacheReuse) {
       ressource.fileName = fileName
