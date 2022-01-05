@@ -7,7 +7,7 @@ const displayErrorNotificationImplementation = (error, { icon } = {}) => {
   if (Notification.permission === "granted") {
     const notification = new Notification("An error occured", {
       lang: "en",
-      body: error.stack,
+      body: error ? error.stack : "undefined",
       icon,
     })
     notification.onclick = () => {

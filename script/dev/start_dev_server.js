@@ -30,6 +30,7 @@ startDevServer({
       "./test/**/*.html": false,
       "./**/docs/**/*.html": false,
       "./test-manual/**/*.html": true,
+      "./test/workers/**/*.html": true,
       "./**/.jsenv/": false,
       "./**/node_modules/": false,
     },

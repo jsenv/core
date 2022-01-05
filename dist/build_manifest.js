@@ -1,7 +1,7 @@
 
 export const REDIRECTOR_BUILD_URL = new URL("redirector/redirector_ddda1af8.html", import.meta.url).href
 
-export const BROWSER_RUNTIME_BUILD_URL = new URL("browser_runtime/browser_runtime_f007a981.js", import.meta.url).href
+export const BROWSER_RUNTIME_BUILD_URL = new URL("browser_runtime/browser_runtime_f2e319bb.js", import.meta.url).href
 
 export const COMPILE_PROXY_BUILD_URL = new URL("compile_proxy/compile_proxy_116204e3.html", import.meta.url).href
 

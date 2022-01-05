@@ -1,6 +1,16 @@
 (function () {
   'use strict';
 
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return typeof obj;
+  };
+
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+  };
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
   var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
@@ -117,16 +127,6 @@
     }).join("");
     return "".concat(name, ": ").concat(message).concat(stackString);
   };
-
-  var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
-  };
-
-  var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-  };
-
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   /* eslint-env browser, node */
   var parseDataUrl = function parseDataUrl(dataUrl) {
@@ -2500,7 +2500,7 @@
   };
 
   var unevalException = function unevalException(value) {
-    if (value.hasOwnProperty("toString")) {
+    if (value && value.hasOwnProperty("toString")) {
       delete value.toString;
     }
 
@@ -2576,6 +2576,8 @@
       }
     } else if (typeof error === "string") {
       html = error;
+    } else if (error === undefined) {
+      html = "undefined";
     } else {
       html = JSON.stringify(error);
     }
@@ -2721,7 +2723,7 @@
     if (Notification.permission === "granted") {
       var notification = new Notification("An error occured", {
         lang: "en",
-        body: error.stack,
+        body: error ? error.stack : "undefined",
         icon: icon
       });
 
@@ -5154,12 +5156,12 @@
         errorExposureInDocument = _ref$errorExposureInD === void 0 ? true : _ref$errorExposureInD;
     var error = executionResult.error;
 
-    if (error.code === "NETWORK_FAILURE") {
+    if (error && error.code === "NETWORK_FAILURE") {
       if (currentScript) {
         var errorEvent = new Event("error");
         currentScript.dispatchEvent(errorEvent);
       }
-    } else {
+    } else if (_typeof(error) === "object") {
       var parsingError = error.parsingError;
       var globalErrorEvent = new Event("error");
 
@@ -5263,4 +5265,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_f007a981.js.map
+//# sourceMappingURL=browser_runtime_f2e319bb.js.map
