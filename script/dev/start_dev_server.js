@@ -19,6 +19,7 @@ startDevServer({
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,
   port: 3456,
+  workers: ["./test/workers/worker_importmap/worker.js"],
   explorableConfig: {
     source: {
       "./index.html": false,

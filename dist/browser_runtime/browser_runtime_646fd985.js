@@ -4843,7 +4843,7 @@
       var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
 
-      var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
+      var importmapScript = document.querySelector("script[type=\"systemjs-importmap\"]");
       var importMap;
       var importMapUrl;
       return _invoke$1(function () {
@@ -5265,4 +5265,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_f2e319bb.js.map
+//# sourceMappingURL=browser_runtime_646fd985.js.map

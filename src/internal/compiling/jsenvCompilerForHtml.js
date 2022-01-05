@@ -177,7 +177,7 @@ export const compileHtml = async ({
     replaceHtmlNode(
       importmapInfo.script,
       `<script type="${
-        moduleOutFormat === "systemjs" ? "jsenv-importmap" : "importmap"
+        moduleOutFormat === "systemjs" ? "systemjs-importmap" : "importmap"
       }">${importmapAsText}</script>`,
       {
         attributesToIgnore: ["src"],
@@ -195,7 +195,7 @@ export const compileHtml = async ({
       scriptInjections: [
         {
           type:
-            moduleOutFormat === "systemjs" ? "jsenv-importmap" : "importmap",
+            moduleOutFormat === "systemjs" ? "systemjs-importmap" : "importmap",
           // in case there is no importmap, force the presence
           // so that '@jsenv/core/' are still remapped
           text: importmapAsText,

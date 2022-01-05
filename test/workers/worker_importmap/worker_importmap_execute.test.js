@@ -31,12 +31,14 @@ const actual = {
 }
 const expected = {
   namespace: {
-    "./main.html__inline__16.js": {
+    "./main.html__asset__22.js": {
       status: "completed",
       namespace: {
         namespace: {
-          value: 42,
-          pingResponse: 42,
+          worker: {
+            value: 42,
+            pingResponse: 42,
+          },
         },
       },
     },
