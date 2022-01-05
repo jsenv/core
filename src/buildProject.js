@@ -179,6 +179,8 @@ export const buildProject = async ({
     port,
     env,
     babelPluginMap,
+    workers,
+    serviceWorkers,
     runtimeSupport,
     customCompilers,
     compileServerCanReadFromFilesystem: filesystemCache,

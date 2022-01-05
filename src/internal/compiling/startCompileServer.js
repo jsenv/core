@@ -95,8 +95,8 @@ export const startCompileServer = async ({
   babelPluginMap,
   babelConfigFileUrl,
   customCompilers = {},
-  workers = {},
-  serviceWorkers = {},
+  workers = [],
+  serviceWorkers = [],
   importMapInWebWorkers = false,
   runtimeSupport,
 
@@ -142,10 +142,10 @@ export const startCompileServer = async ({
   )
   const logger = createLogger({ logLevel })
 
-  const workerUrls = Object.keys(workers).map((worker) =>
+  const workerUrls = workers.map((worker) =>
     resolveUrl(worker, projectDirectoryUrl),
   )
-  const serviceWorkerUrls = Object.keys(serviceWorkers).map((serviceWorker) =>
+  const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
     resolveUrl(serviceWorker, projectDirectoryUrl),
   )
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)

@@ -19,6 +19,7 @@ const test = async (params) => {
     fileRelativeUrl: `${testDirectoryRelativeUrl}main.html`,
     collectCompileServerInfo: true,
     importMapInWebWorkers: true,
+    workers: [`${testDirectoryRelativeUrl}worker.js`],
     ...params,
   })
   return { namespace, compileServerOrigin }

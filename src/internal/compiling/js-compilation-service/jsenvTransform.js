@@ -11,7 +11,7 @@ import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compiling/ba
 import { ansiToHTML } from "./ansiToHTML.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
-import { babelPluginSystemJsAsJsenvImport } from "./babel_plugin_systemjs_as_jsenv_import.js"
+import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
@@ -27,7 +27,7 @@ export const jsenvTransform = async ({
   topLevelAwait,
 
   babelHelpersInjectionAsImport,
-  systemJsInjectionAsImport,
+  prependSystemJs,
   transformGenerator,
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
@@ -155,10 +155,10 @@ export const jsenvTransform = async ({
       "transform-modules-systemjs": [transformModulesSystemJs],
     }
   }
-  if (systemJsInjectionAsImport) {
+  if (prependSystemJs) {
     babelPluginMap = {
       ...babelPluginMap,
-      "systemjs-as-jsenv-import": [babelPluginSystemJsAsJsenvImport],
+      "systemjs-prepend": [babelPluginSystemJsPrepend],
     }
   }
 

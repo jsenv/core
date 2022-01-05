@@ -28,7 +28,7 @@ export const compileJavascript = async ({
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
-    systemJsInjectionAsImport: Boolean(workerUrls[url]),
+    prependSystemJs: workerUrls.includes(url),
   })
 
   return transformResultToCompilationResult(
