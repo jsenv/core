@@ -171,6 +171,7 @@ export const buildProject = async ({
     moduleOutFormat: "esmodule", // rollup will transform into the right format
     importMetaFormat: "esmodule", // rollup will transform into the right format
     topLevelAwait: "ignore", // rollup will transform if needed
+    prependSystemJs: false,
 
     protocol,
     privateKey,

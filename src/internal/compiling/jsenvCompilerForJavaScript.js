@@ -13,6 +13,7 @@ export const compileJavascript = async ({
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
+  prependSystemJs = workerUrls.includes(url),
 
   sourcemapExcludeSources,
   sourcemapMethod,
@@ -28,7 +29,7 @@ export const compileJavascript = async ({
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
-    prependSystemJs: workerUrls.includes(url),
+    prependSystemJs,
   })
 
   return transformResultToCompilationResult(

@@ -44,6 +44,7 @@ export const createCompiledFileService = ({
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
+  prependSystemJs,
   groupMap,
   customCompilers,
   workerUrls,
@@ -200,6 +201,7 @@ export const createCompiledFileService = ({
               : moduleOutFormat,
           importMetaFormat,
           topLevelAwait,
+          prependSystemJs,
 
           sourcemapMethod,
           sourcemapExcludeSources,
