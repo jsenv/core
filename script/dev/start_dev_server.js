@@ -15,6 +15,7 @@ startDevServer({
   http2: true,
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
+  importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,
   port: 3456,

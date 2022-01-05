@@ -18,6 +18,7 @@ const test = async (params) => {
     stopAfterExecute: true,
     fileRelativeUrl: `${testDirectoryRelativeUrl}main.html`,
     collectCompileServerInfo: true,
+    importMapInWebWorkers: true,
     ...params,
   })
   return { namespace, compileServerOrigin }
