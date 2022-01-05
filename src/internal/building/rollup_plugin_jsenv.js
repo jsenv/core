@@ -1285,8 +1285,7 @@ export const createRollupPlugins = async ({
       }
 
       const url = asOriginalUrl(facadeModuleId)
-      const worker = workerUrls[url]
-      if (worker) {
+      if (workerUrls.includes(url)) {
         const magicString = new MagicString(code)
         const systemjsCode = await readFile(
           new URL("../runtime/s.js", import.meta.url),
@@ -1378,9 +1377,9 @@ export const createRollupPlugins = async ({
         if (jsRessource.isInline) {
           buildInlineFileContents[jsRessource.buildRelativeUrl] =
             jsRessource.bufferAfterBuild
-          if (format === "systemjs") {
-            ressourcesReferencedByJs.push(jsRessource.fileName)
-          }
+          // if (format === "systemjs") {
+          //   ressourcesReferencedByJs.push(jsRessource.fileName)
+          // }
         } else {
           const originalProjectUrl = asOriginalUrl(ressourceUrl)
           const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -1741,28 +1740,14 @@ const finalizeServiceWorkers = async ({
         )
       }
 
-      // module service worker
-      if (serviceWorkerUrls.includes(serviceWorkerUrl)) {
-        let code = buildFileContents[serviceWorkerBuildRelativeUrl]
-        code = await serviceWorkerFinalizer(code, {
-          serviceWorkerBuildRelativeUrl,
-          buildManifest,
-          buildFileContents,
-          lineBreakNormalization,
-        })
-        buildFileContents[serviceWorkerBuildRelativeUrl] = code
-      }
-      // "classic" service worker
-      else {
-        let code = buildFileContents[serviceWorkerBuildRelativeUrl]
-        code = await serviceWorkerFinalizer(code, {
-          serviceWorkerBuildRelativeUrl,
-          buildManifest,
-          buildFileContents,
-          lineBreakNormalization,
-        })
-        buildFileContents[serviceWorkerBuildRelativeUrl] = code
-      }
+      let code = buildFileContents[serviceWorkerBuildRelativeUrl]
+      code = await serviceWorkerFinalizer(code, {
+        serviceWorkerBuildRelativeUrl,
+        buildManifest,
+        buildFileContents,
+        lineBreakNormalization,
+      })
+      buildFileContents[serviceWorkerBuildRelativeUrl] = code
     }),
   )
 }

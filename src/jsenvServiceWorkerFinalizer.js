@@ -48,7 +48,8 @@ export const jsenvServiceWorkerFinalizer = (
           }),
     }
   })
-  // TODO: use magic string to prepend code
+  // TODO: ideally should use magic string to prepend code
+  // but it means composing 2 source maps, something not already available in jsenv codebase
 
   return `
 self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")}

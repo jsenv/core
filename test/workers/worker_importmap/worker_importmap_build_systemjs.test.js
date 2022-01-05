@@ -31,9 +31,7 @@ await buildProject({
   entryPoints: {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
-  workers: {
-    [`${testDirectoryRelativeUrl}worker.js`]: "worker_toto_[hash].js",
-  },
+  workers: [`${testDirectoryRelativeUrl}worker.js`],
 })
 
 const { namespace } = await browserImportEsModuleBuild({
