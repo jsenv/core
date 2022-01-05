@@ -7,29 +7,40 @@ import {
 
 export const createUrlVersioner = ({
   entryPointUrls,
-  workerUrls,
-  classicWorkerUrls,
-  serviceWorkerUrls,
-  classicServiceWorkerUrls,
   asOriginalUrl,
   lineBreakNormalization,
 }) => {
-  const computeBuildRelativeUrl = (ressource) => {
+  const names = []
+  const getFreeName = (name) => {
+    let nameCandidate = name
+    let integer = 1
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (!names.includes(nameCandidate)) {
+        names.push(nameCandidate)
+        return nameCandidate
+      }
+      integer++
+      nameCandidate = `${name}${integer}`
+    }
+  }
+
+  const computeBuildRelativeUrl = (ressource, precomputation) => {
     const pattern = getFilenamePattern({
       ressource,
       entryPointUrls,
-      workerUrls,
-      classicWorkerUrls,
-      serviceWorkerUrls,
-      classicServiceWorkerUrls,
       asOriginalUrl,
       precomputeBuildRelativeUrl,
     })
+
     const buildRelativeUrl = generateBuildRelativeUrl(
       ressource.url,
       ressource.bufferAfterBuild,
       {
         pattern,
+        getName: precomputation
+          ? () => urlToBasename(ressource.url)
+          : () => getFreeName(urlToBasename(ressource.url)),
         contentType: ressource.contentType,
         lineBreakNormalization,
       },
@@ -46,7 +57,7 @@ export const createUrlVersioner = ({
     }
 
     ressource.bufferAfterBuild = bufferAfterBuild
-    const precomputedBuildRelativeUrl = computeBuildRelativeUrl(ressource)
+    const precomputedBuildRelativeUrl = computeBuildRelativeUrl(ressource, true)
     ressource.bufferAfterBuild = undefined
     ressource.precomputedBuildRelativeUrl = precomputedBuildRelativeUrl
     return precomputedBuildRelativeUrl
@@ -61,10 +72,6 @@ export const createUrlVersioner = ({
 const getFilenamePattern = ({
   ressource,
   entryPointUrls,
-  workerUrls,
-  classicWorkerUrls,
-  serviceWorkerUrls,
-  classicServiceWorkerUrls,
   asOriginalUrl,
   precomputeBuildRelativeUrl,
 }) => {
@@ -72,30 +79,6 @@ const getFilenamePattern = ({
     const originalUrl = asOriginalUrl(ressource.url)
     const entryPointBuildRelativeUrl = entryPointUrls[originalUrl]
     return entryPointBuildRelativeUrl
-  }
-
-  // service worker:
-  // - MUST be at the root (same level than the HTML file)
-  //   otherwise it might be registered for the scope "/assets/" instead of "/"
-  // - MUST not be versioned
-  if (ressource.isServiceWorker) {
-    const originalUrl = asOriginalUrl(ressource.url)
-    const serviceWorkerBuildRelativeUrl = ressource.isJsModule
-      ? serviceWorkerUrls[originalUrl]
-      : classicServiceWorkerUrls[originalUrl]
-    // we could/should log a warning when service worker is not at the root
-    // we should also disable versioning for this file
-    // of the build directory
-    return serviceWorkerBuildRelativeUrl
-  }
-
-  // it's a module worker
-  if (ressource.isWorker) {
-    const originalUrl = asOriginalUrl(ressource.url)
-    const workerBuildRelativeUrl = ressource.isJsModule
-      ? workerUrls[originalUrl]
-      : classicWorkerUrls[originalUrl]
-    return workerBuildRelativeUrl
   }
 
   // inline ressource inherits location
@@ -119,8 +102,19 @@ const getFilenamePattern = ({
     return `${name}_[hash][extname]`
   }
 
+  // service worker:
+  // - MUST be at the root (same level than the HTML file)
+  //   otherwise it might be registered for the scope "/assets/" instead of "/"
+  // - MUST not be versioned
+  if (ressource.isServiceWorker) {
+    return "[name][extname]"
+  }
+
+  if (ressource.isWorker) {
+    return "[name]_[hash][extname]"
+  }
+
   if (ressource.isJsModule) {
-    // it's a js module
     return "[name]_[hash][extname]"
   }
 
@@ -133,8 +127,8 @@ const generateBuildRelativeUrl = (
   fileUrl,
   fileContent,
   {
-    name = urlToBasename(fileUrl),
-    pattern = "[name]-[hash][extname]",
+    getName,
+    pattern,
     contentType = "application/octet-stream",
     lineBreakNormalization = false,
   } = {},
@@ -143,7 +137,7 @@ const generateBuildRelativeUrl = (
   if (pattern.startsWith("./")) pattern = pattern.slice(2)
   const buildRelativeUrl = renderFileNamePattern(pattern, {
     dirname: () => urlToParentUrl(fileUrl),
-    name: () => name,
+    name: getName,
     hash: () =>
       generateContentHash(fileContent, {
         contentType,
