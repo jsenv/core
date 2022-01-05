@@ -221,15 +221,15 @@ const canAvoidSystemJs = ({
   importMapInWebWorkers,
 }) => {
   const runtimeCompatMap = createRuntimeCompat({
-    runtimeSupport,
     featureNames: [
       "module",
       "importmap",
       "import_assertion_type_json",
       "import_assertion_type_css",
-      ...(workerUrls.lenght > 0 ? ["worker"] : []),
+      ...(workerUrls.length > 0 ? ["worker_type_module"] : []),
       ...(importMapInWebWorkers ? ["worker_importmap"] : []),
     ],
+    runtimeSupport,
   })
   return runtimeCompatMap.missingFeatureNames.length === 0
 }

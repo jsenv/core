@@ -140,20 +140,14 @@ export const startCompileServer = async ({
     jsenvDirectoryUrl,
     projectDirectoryUrl,
   )
-
   const logger = createLogger({ logLevel })
 
-  const workerUrls = {}
-  Object.keys(workers).forEach((key) => {
-    const url = resolveUrl(key, projectDirectoryUrl)
-    workerUrls[url] = workers[key]
-  })
-  const serviceWorkerUrls = {}
-  Object.keys(serviceWorkers).forEach((key) => {
-    const url = resolveUrl(key, projectDirectoryUrl)
-    serviceWorkerUrls[url] = serviceWorkers[key]
-  })
-
+  const workerUrls = Object.keys(workers).map((worker) =>
+    resolveUrl(worker, projectDirectoryUrl),
+  )
+  const serviceWorkerUrls = Object.keys(serviceWorkers).map((serviceWorker) =>
+    resolveUrl(serviceWorker, projectDirectoryUrl),
+  )
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
@@ -190,7 +184,19 @@ export const startCompileServer = async ({
   const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
     extractSyntaxBabelPluginMap(babelPluginMap)
   const compileServerGroupMap = generateGroupMap({
-    babelPluginMap: babelPluginMapWithoutSyntax,
+    featureNames: [
+      ...(browser
+        ? [
+            "module",
+            "importmap",
+            "import_assertion_type_json",
+            "import_assertion_type_css",
+          ]
+        : []),
+      ...(browser && workerUrls.length > 0 ? ["worker_type_module"] : []),
+      ...(browser && importMapInWebWorkers ? ["worker_importmap"] : []),
+      ...Object.keys(babelPluginMapWithoutSyntax),
+    ],
     runtimeSupport,
   })
 
