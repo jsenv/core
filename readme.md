@@ -368,18 +368,17 @@ module.exports = {
 }
 ```
 
-## Configuring jsenv
-
-- [Configuring jsenv for react and JSX](./docs/config/react_and_jsx.md)
-- [Configuring jsenv for CommonJS](./docs/config/commonjs.md)
-- [Configuring jsenv for TypeScript (experimental)](./docs/config/typescript.md)
-
 # See also
 
-| Link                                                                                                                     | Description                                                         |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application        |
-| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                       |
-| [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | Test anything using one assertion                                   |
-| [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience             |
-| [Jsenv compile server](./docs/jsenv-compile-server.md)                                                                   | Documentation about progressive compilation with a filesystem cache |
+| Link                                                                                 | Description                                                               |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| [Browser support](./docs/config/browser_support.md)                                  | Document how to configure browser support                                 |
+| [Web workers](./docs/config/web_workers.md)                                          | Document how to use web workers                                           |
+| [React](./docs/config/react.md)                                                      | Document how to enable react/preact and JSX                               |
+| [CommonJS modules](./docs/config/commonjs.md)                                        | Document how to use code written in CommonJS                              |
+| [TypeScript (Experimental)](./docs/config/typescript.md)                             | Document how to enable TypeScript                                         |
+| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                   | GitHub repository template for a progressive web application              |
+| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package) | GitHub repository template for a node package                             |
+| [@jsenv/assert](https://github.com/jsenv/assert)                                     | NPM package to write assertions                                           |
+| [I am too lazy for a test framework](shorturl.at/rFY39)                              | Article presenting a straightforward testing experience                   |
+| [Jsenv compile server](./docs/jsenv-compile-server.md)                               | Documentation about jsenv progressive compilation with a filesystem cache |
