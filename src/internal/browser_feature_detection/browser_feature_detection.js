@@ -36,17 +36,14 @@ export const scanBrowserRuntimeFeatures = async ({
     failFastOnFeatureDetection,
     inlineImportMapIntoHTML,
   })
-  const pluginRequiredNameArray = await pluginRequiredNamesFromGroupInfo(
-    groupInfo,
-    {
-      featuresReport,
-      coverageHandledFromOutside,
-    },
-  )
+  const missingFeatureNames = await adjustMissingFeatureNames(groupInfo, {
+    featuresReport,
+    coverageHandledFromOutside,
+  })
 
   const canAvoidCompilation =
     customCompilerPatterns.length === 0 &&
-    pluginRequiredNameArray.length === 0 &&
+    missingFeatureNames.length === 0 &&
     featuresReport.importmap &&
     featuresReport.dynamicImport &&
     featuresReport.topLevelAwait
@@ -55,7 +52,7 @@ export const scanBrowserRuntimeFeatures = async ({
     canAvoidCompilation,
     featuresReport,
     customCompilerPatterns,
-    pluginRequiredNameArray,
+    missingFeatureNames,
     inlineImportMapIntoHTML,
     outDirectoryRelativeUrl,
     compileId,
@@ -63,27 +60,25 @@ export const scanBrowserRuntimeFeatures = async ({
   }
 }
 
-const pluginRequiredNamesFromGroupInfo = async (
+const adjustMissingFeatureNames = async (
   groupInfo,
   { featuresReport, coverageHandledFromOutside },
 ) => {
-  const { pluginRequiredNameArray } = groupInfo
-  const requiredPluginNames = pluginRequiredNameArray.slice()
-  const markPluginAsSupported = (name) => {
-    const index = requiredPluginNames.indexOf(name)
+  const { missingFeatureNames } = groupInfo
+  const missingFeatureNamesCopy = missingFeatureNames.slice()
+  const markAsSupported = (name) => {
+    const index = missingFeatureNamesCopy.indexOf(name)
     if (index > -1) {
-      requiredPluginNames.splice(index, 1)
+      missingFeatureNamesCopy.splice(index, 1)
     }
   }
-
   // When instrumentation CAN be handed by playwright
   // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
   // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
   if (coverageHandledFromOutside) {
-    markPluginAsSupported("transform-instrument")
+    markAsSupported("transform-instrument")
   }
-
-  if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+  if (missingFeatureNames.includes("transform-import-assertions")) {
     const jsonImportAssertions = await supportsJsonImportAssertions()
     featuresReport.jsonImportAssertions = jsonImportAssertions
 
@@ -91,17 +86,15 @@ const pluginRequiredNamesFromGroupInfo = async (
     featuresReport.cssImportAssertions = cssImportAssertions
 
     if (jsonImportAssertions && cssImportAssertions) {
-      markPluginAsSupported("transform-import-assertions")
+      markAsSupported("transform-import-assertions")
     }
   }
-
-  if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+  if (missingFeatureNames.includes("new-stylesheet-as-jsenv-import")) {
     const newStylesheet = supportsNewStylesheet()
     featuresReport.newStylesheet = newStylesheet
-    markPluginAsSupported("new-stylesheet-as-jsenv-import")
+    markAsSupported("new-stylesheet-as-jsenv-import")
   }
-
-  return requiredPluginNames
+  return missingFeatureNamesCopy
 }
 
 const detectSupportedFeatures = async ({

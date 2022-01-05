@@ -201,7 +201,7 @@ export const startCompileServer = async ({
     // It happens for module written in ESM but also using process.env.NODE_ENV
     // for example "react-redux"
     // This babel plugin won't force compilation because it's added after "generateGroupMap"
-    // however it will be used even if not part of "pluginRequiredNameArray"
+    // however it will be used even if not part of "missingFeatureNames"
     // as visible in "babelPluginMapFromCompileId"
     // This is a quick workaround to get things working because:
     // - If none of your code needs to be compiled but one of your dependency

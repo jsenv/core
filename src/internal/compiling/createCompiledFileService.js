@@ -6,7 +6,6 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
-import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
@@ -223,19 +222,16 @@ const canAvoidSystemJs = ({
 }) => {
   const runtimeCompatMap = createRuntimeCompat({
     runtimeSupport,
-    pluginMap: {
-      module: true,
-      importmap: true,
-      import_assertion_type_json: true,
-      import_assertion_type_css: true,
-      ...(Object.keys(workerUrls).length > 0
-        ? { worker_type_module: true }
-        : {}),
-      ...(importMapInWebWorkers ? { worker_importmap: true } : {}),
-    },
-    pluginCompatMap: featuresCompatMap,
+    featureNames: [
+      "module",
+      "importmap",
+      "import_assertion_type_json",
+      "import_assertion_type_css",
+      ...(workerUrls.lenght > 0 ? ["worker"] : []),
+      ...(importMapInWebWorkers ? ["worker_importmap"] : []),
+    ],
   })
-  return runtimeCompatMap.pluginRequiredNameArray.length === 0
+  return runtimeCompatMap.missingFeatureNames.length === 0
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {
@@ -315,10 +311,10 @@ const babelPluginMapFromCompileId = (
 ) => {
   const babelPluginMapForGroup = {}
 
-  groupMap[compileId].pluginRequiredNameArray.forEach((requiredPluginName) => {
-    const babelPlugin = babelPluginMap[requiredPluginName]
+  groupMap[compileId].missingFeatureNames.forEach((featureName) => {
+    const babelPlugin = babelPluginMap[featureName]
     if (babelPlugin) {
-      babelPluginMapForGroup[requiredPluginName] = babelPlugin
+      babelPluginMapForGroup[featureName] = babelPlugin
     }
   })
 

@@ -1,4 +1,4 @@
-// https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/native-modules.json#L1
+import { jsenvBabelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 export const featuresCompatMap = {
   module: {
@@ -33,4 +33,5 @@ export const featuresCompatMap = {
     android: "80",
   },
   worker_importmap: {},
+  ...jsenvBabelPluginCompatMap,
 }

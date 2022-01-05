@@ -31,7 +31,7 @@ const sortObjectKeys = (object) => {
 
 // export const composeRuntimeCompat = (...runtimeCompats) => {
 //   return runtimeCompats.reduce(runtimeCompatComposer, {
-//     pluginRequiredNameArray: [],
+//     missingFeatureNames: [],
 //     runtimeCompatMap: {},
 //   })
 // }
@@ -60,7 +60,7 @@ const sortObjectKeys = (object) => {
 // }
 
 // const runtimeCompatComposer = compositionMappingToStrictReducer({
-//   pluginRequiredNameArray: (
+//   missingFeatureNames: (
 //     babelPluginNamesPrevious,
 //     babelPluginNamesCurrent,
 //   ) => {

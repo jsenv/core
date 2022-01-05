@@ -17,7 +17,7 @@
 
 {
   "best": {
-    "pluginRequiredNameArray" : [
+    "missingFeatureNames" : [
       "transform-block-scoping",
     ],
     "minRuntimeVersions": {
@@ -33,40 +33,20 @@ Take chars below to update legends
 */
 
 import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "../CONSTANTS.js"
-import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
-import { jsenvPluginCompatMap } from "./jsenvPluginCompatMap.js"
 import { createRuntimeCompat } from "./runtime_compat.js"
 
-export const generateGroupMap = ({
-  babelPluginMap,
-  runtimeSupport,
-  babelPluginCompatMap = jsenvBabelPluginCompatMap,
-  // jsenv plugin are for later, for now, nothing is using them
-  jsenvPluginMap = {},
-}) => {
-  if (typeof babelPluginMap !== "object") {
-    throw new TypeError(
-      `babelPluginMap must be an object, got ${babelPluginMap}`,
-    )
-  }
-  if (typeof jsenvPluginMap !== "object") {
-    throw new TypeError(
-      `jsenvPluginMap must be an object, got ${jsenvPluginMap}`,
-    )
+export const generateGroupMap = ({ featureNames, runtimeSupport }) => {
+  if (!Array.isArray(featureNames)) {
+    throw new TypeError(`featureNames must be an array, got ${featureNames}`)
   }
   if (typeof runtimeSupport !== "object") {
     throw new TypeError(
       `runtimeSupport must be an object, got ${runtimeSupport}`,
     )
   }
-
   const runtimeNames = Object.keys(runtimeSupport)
-
   const groupWithoutFeature = {
-    pluginRequiredNameArray: [
-      ...Object.keys(babelPluginMap),
-      ...Object.keys(jsenvPluginMap),
-    ],
+    missingFeatureNames: featureNames,
     minRuntimeVersions: {},
   }
   if (runtimeNames.length === 0) {
@@ -74,19 +54,10 @@ export const generateGroupMap = ({
       [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
     }
   }
-
   const runtimeCompat = createRuntimeCompat({
     runtimeSupport,
-    pluginMap: {
-      ...babelPluginMap,
-      ...jsenvPluginMap,
-    },
-    pluginCompatMap: {
-      ...babelPluginCompatMap,
-      ...jsenvPluginCompatMap,
-    },
+    featureNames,
   })
-
   return {
     [COMPILE_ID_BEST]: runtimeCompat,
     [COMPILE_ID_OTHERWISE]: groupWithoutFeature,

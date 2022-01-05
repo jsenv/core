@@ -13,7 +13,6 @@ import {
   isNodePartOfSupportedRuntimes,
   isBrowserPartOfSupportedRuntimes,
 } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
-import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { createRollupPlugins } from "./rollup_plugin_jsenv.js"
 
@@ -70,21 +69,17 @@ export const buildUsingRollup = async ({
 
   const runtimeCompatMap = createRuntimeCompat({
     runtimeSupport,
-    pluginMap: {
-      import_assertion_type_json: true,
-      import_assertion_type_css: true,
-    },
-    pluginCompatMap: featuresCompatMap,
+    featureNames: ["import_assertion_type_json", "import_assertion_type_css"],
   })
   const importAssertionsSupport = {
     json:
       format === "esmodule" &&
-      !runtimeCompatMap.pluginRequiredNameArray.includes(
+      !runtimeCompatMap.missingFeatureNames.includes(
         "import_assertion_type_json",
       ),
     css:
       format === "esmodule" &&
-      !runtimeCompatMap.pluginRequiredNameArray.includes(
+      !runtimeCompatMap.missingFeatureNames.includes(
         "import_assertion_type_json",
       ),
   }
