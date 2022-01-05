@@ -4196,16 +4196,16 @@ html[data-toolbar-visible] #toolbar-trigger {
             failFastOnFeatureDetection: failFastOnFeatureDetection,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function () {
-            return _await(pluginRequiredNamesFromGroupInfo(groupInfo, {
+            return _await(adjustMissingFeatureNames(groupInfo, {
               featuresReport: featuresReport,
               coverageHandledFromOutside: coverageHandledFromOutside
-            }), function (pluginRequiredNameArray) {
-              var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
+            }), function (missingFeatureNames) {
+              var canAvoidCompilation = customCompilerPatterns.length === 0 && missingFeatureNames.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
               return {
                 canAvoidCompilation: canAvoidCompilation,
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML,
                 outDirectoryRelativeUrl: outDirectoryRelativeUrl,
                 compileId: compileId,
@@ -4216,17 +4216,17 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref3) {
+      var adjustMissingFeatureNames = _async$1(function (groupInfo, _ref3) {
         var featuresReport = _ref3.featuresReport,
             coverageHandledFromOutside = _ref3.coverageHandledFromOutside;
-        var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
-        var requiredPluginNames = pluginRequiredNameArray.slice();
+        var missingFeatureNames = groupInfo.missingFeatureNames;
+        var missingFeatureNamesCopy = missingFeatureNames.slice();
 
-        var markPluginAsSupported = function markPluginAsSupported(name) {
-          var index = requiredPluginNames.indexOf(name);
+        var markAsSupported = function markAsSupported(name) {
+          var index = missingFeatureNamesCopy.indexOf(name);
 
           if (index > -1) {
-            requiredPluginNames.splice(index, 1);
+            missingFeatureNamesCopy.splice(index, 1);
           }
         }; // When instrumentation CAN be handed by playwright
         // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
@@ -4234,30 +4234,30 @@ html[data-toolbar-visible] #toolbar-trigger {
 
 
         if (coverageHandledFromOutside) {
-          markPluginAsSupported("transform-instrument");
+          markAsSupported("transform-instrument");
         }
 
         return _invoke(function () {
-          if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+          if (missingFeatureNames.includes("transform-import-assertions")) {
             return _call$1(supportsJsonImportAssertions, function (jsonImportAssertions) {
               featuresReport.jsonImportAssertions = jsonImportAssertions;
               return _call$1(supportsCssImportAssertions, function (cssImportAssertions) {
                 featuresReport.cssImportAssertions = cssImportAssertions;
 
                 if (jsonImportAssertions && cssImportAssertions) {
-                  markPluginAsSupported("transform-import-assertions");
+                  markAsSupported("transform-import-assertions");
                 }
               });
             });
           }
         }, function () {
-          if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+          if (missingFeatureNames.includes("new-stylesheet-as-jsenv-import")) {
             var newStylesheet = supportsNewStylesheet();
             featuresReport.newStylesheet = newStylesheet;
-            markPluginAsSupported("new-stylesheet-as-jsenv-import");
+            markAsSupported("new-stylesheet-as-jsenv-import");
           }
 
-          return requiredPluginNames;
+          return missingFeatureNamesCopy;
         });
       });
 
@@ -4432,7 +4432,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           var canAvoidCompilation = _ref2.canAvoidCompilation,
               featuresReport = _ref2.featuresReport,
               customCompilerPatterns = _ref2.customCompilerPatterns,
-              pluginRequiredNameArray = _ref2.pluginRequiredNameArray,
+              missingFeatureNames = _ref2.missingFeatureNames,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
               outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
               compileId = _ref2.compileId;
@@ -4448,7 +4448,7 @@ html[data-toolbar-visible] #toolbar-trigger {
                 missingOnly: true,
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4458,7 +4458,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4468,7 +4468,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4506,7 +4506,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         var missingOnly = _ref3.missingOnly,
             featuresReport = _ref3.featuresReport,
             customCompilerPatterns = _ref3.customCompilerPatterns,
-            pluginRequiredNameArray = _ref3.pluginRequiredNameArray,
+            missingFeatureNames = _ref3.missingFeatureNames,
             inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
         var parts = [];
 
@@ -4538,14 +4538,14 @@ html[data-toolbar-visible] #toolbar-trigger {
           parts.push("top level await is not supported");
         }
 
-        var pluginRequiredCount = pluginRequiredNameArray.length;
+        var missingFeatureCount = missingFeatureNames.length;
 
-        if (pluginRequiredCount === 0) {
+        if (missingFeatureCount === 0) {
           if (!missingOnly) {
-            parts.push("all plugins are natively supported");
+            parts.push("all features are natively supported");
           }
         } else {
-          parts.push("".concat(pluginRequiredCount, " plugins are mandatory: ").concat(pluginRequiredNameArray));
+          parts.push("".concat(missingFeatureCount, " features are missing: ").concat(missingFeatureNames));
         }
 
         var customCompilerCount = customCompilerPatterns.length;
@@ -4986,7 +4986,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_a5ef2c60.js.map</script>
+//# sourceMappingURL=toolbar.main2_6c1b3d82.js.map</script>
   
 
 </body></html>
