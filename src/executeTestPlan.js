@@ -79,6 +79,9 @@ export const executeTestPlan = async ({
   compileServerCanWriteOnFilesystem,
   babelPluginMap,
   babelConfigFileUrl,
+  workers,
+  serviceWorkers,
+  importMapInWebWorkers,
   customCompilers,
   jsenvDirectoryClean,
 }) => {
@@ -179,6 +182,9 @@ export const executeTestPlan = async ({
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
     babelConfigFileUrl,
+    workers,
+    serviceWorkers,
+    importMapInWebWorkers,
     customCompilers,
   })
 

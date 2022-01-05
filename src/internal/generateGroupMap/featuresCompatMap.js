@@ -26,4 +26,11 @@ export const featuresCompatMap = {
     chrome: "93",
     edge: "93",
   },
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
 }

@@ -49,6 +49,7 @@ export const createCompiledFileService = ({
   customCompilers,
   workerUrls,
   serviceWorkerUrls,
+  importMapInWebWorkers,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -62,6 +63,8 @@ export const createCompiledFileService = ({
   Object.keys(groupMap).forEach((groupName) => {
     compileIdModuleFormats[groupName] = canAvoidSystemJs({
       runtimeSupport: groupMap[groupName].minRuntimeVersions,
+      workerUrls,
+      importMapInWebWorkers,
     })
       ? "esmodule"
       : "systemjs"
@@ -213,7 +216,11 @@ export const createCompiledFileService = ({
   }
 }
 
-const canAvoidSystemJs = ({ runtimeSupport }) => {
+const canAvoidSystemJs = ({
+  runtimeSupport,
+  workerUrls,
+  importMapInWebWorkers,
+}) => {
   const runtimeCompatMap = createRuntimeCompat({
     runtimeSupport,
     pluginMap: {
@@ -221,6 +228,10 @@ const canAvoidSystemJs = ({ runtimeSupport }) => {
       importmap: true,
       import_assertion_type_json: true,
       import_assertion_type_css: true,
+      ...(Object.keys(workerUrls).length > 0
+        ? { worker_type_module: true }
+        : {}),
+      ...(importMapInWebWorkers ? { worker_importmap: true } : {}),
     },
     pluginCompatMap: featuresCompatMap,
   })

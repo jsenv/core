@@ -48,6 +48,7 @@ export const execute = async ({
   customCompilers,
   workers,
   serviceWorkers,
+  importMapInWebWorkers,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
 
@@ -113,6 +114,7 @@ export const execute = async ({
       customCompilers,
       workers,
       serviceWorkers,
+      importMapInWebWorkers,
       compileServerCanReadFromFilesystem,
       compileServerCanWriteOnFilesystem,
     })

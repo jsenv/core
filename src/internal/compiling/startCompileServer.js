@@ -97,6 +97,7 @@ export const startCompileServer = async ({
   customCompilers = {},
   workers = {},
   serviceWorkers = {},
+  importMapInWebWorkers = false,
   runtimeSupport,
 
   // remaining options
@@ -328,6 +329,7 @@ export const startCompileServer = async ({
       customCompilers,
       workerUrls,
       serviceWorkerUrls,
+      importMapInWebWorkers,
       moduleOutFormat,
       importMetaFormat,
       jsenvEventSourceClientInjection,

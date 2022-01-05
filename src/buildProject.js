@@ -28,6 +28,7 @@ export const buildProject = async ({
   serviceWorkerFinalizer,
   classicWorkers = {},
   classicServiceWorkers = {},
+  importMapInWebWorkers = false,
   buildDirectoryRelativeUrl,
   buildDirectoryClean = true,
   assetManifestFile = false,
@@ -111,6 +112,11 @@ export const buildProject = async ({
   if (typeof runtimeSupport !== "object" || runtimeSupport === null) {
     throw new TypeError(
       `runtimeSupport must be an object, got ${runtimeSupport}`,
+    )
+  }
+  if (format !== "systemjs" && importMapInWebWorkers) {
+    throw new Error(
+      `format must be "systemjs" when importMapInWebWorkers is enabled`,
     )
   }
 
@@ -224,6 +230,7 @@ export const buildProject = async ({
       serviceWorkerFinalizer,
       classicWorkers,
       classicServiceWorkers,
+      importMapInWebWorkers,
 
       urlVersioning,
       lineBreakNormalization,

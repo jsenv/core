@@ -51,6 +51,9 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
     babelConfigFileUrl,
+    workers,
+    serviceWorkers,
+    importMapInWebWorkers,
     customCompilers,
   } = {},
 ) => {
@@ -123,6 +126,9 @@ export const executePlan = async (
       keepProcessAlive: true, // to be sure it stays alive
       babelPluginMap,
       babelConfigFileUrl,
+      workers,
+      serviceWorkers,
+      importMapInWebWorkers,
       customCompilers,
       runtimeSupport,
     })
