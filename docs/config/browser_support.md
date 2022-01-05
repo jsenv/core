@@ -1,0 +1,3 @@
+- explain during dev recommended browser is chrome (because less things needs to be transformed) but any browser works (even old ones)
+- during build you can specify the runtime you support using "runtimeSupport"
+- "runtimeSupport" is used to know what needs to be compiled for instance it's used to dynamically enable/disable babel plugins
