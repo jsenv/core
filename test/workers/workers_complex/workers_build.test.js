@@ -24,20 +24,12 @@ await buildProject({
   entryPoints: {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
-  workers: {
-    [`${testDirectoryRelativeUrl}worker/worker.js`]: "worker_toto_[hash].js",
-  },
-  serviceWorkers: {
-    [`${testDirectoryRelativeUrl}service_worker/sw.js`]: "sw.js",
-  },
-  classicWorkers: {
-    [`${testDirectoryRelativeUrl}classic_worker/worker.js`]:
-      "classic_worker_[hash].js",
-  },
-  classicServiceWorkers: {
-    [`${testDirectoryRelativeUrl}classic_service_worker/sw.js`]:
-      "classic_sw.js",
-  },
+  workers: [`${testDirectoryRelativeUrl}worker/worker.js`],
+  serviceWorkers: [`${testDirectoryRelativeUrl}service_worker/sw.js`],
+  classicWorkers: [`${testDirectoryRelativeUrl}classic_worker/worker.js`],
+  classicServiceWorkers: [
+    `${testDirectoryRelativeUrl}classic_service_worker/sw.js`,
+  ],
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
 
@@ -52,23 +44,23 @@ if (process.platform !== "win32") {
   const actual = namespace
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/worker_toto_4f2f33b3.js`,
+      url: `${serverOrigin}/dist/esmodule/worker2_e8d3de54.js`,
       pingResponse: "pong",
     },
     serviceWorker: {
-      url: `${serverOrigin}/dist/esmodule/sw.js`,
+      url: `${serverOrigin}/dist/esmodule/sw2.js`,
       inspectResponse: {
         order: [],
         generatedUrlsConfig: {
-          "worker_toto_4f2f33b3.js": {
+          "worker2_e8d3de54.js": {
             versioned: true,
           },
-          "classic_worker_a850e925.js": {
+          "worker_a850e925.js": {
             versioned: true,
           },
-          "classic_sw.js": {
+          "sw.js": {
             versioned: false,
-            version: "fd3205cd",
+            version: "f2a65f41",
           },
           "main.html": {
             versioned: false,
@@ -77,7 +69,7 @@ if (process.platform !== "win32") {
             // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
             // to include a hash for the html file.
             // -> when html file changes -> hash changes -> worker updates
-            version: "f20c59d8",
+            version: "86d6ec5a",
           },
           "assets/style_b126d686.css": {
             versioned: true,
@@ -86,27 +78,27 @@ if (process.platform !== "win32") {
       },
     },
     classicWorker: {
-      url: `${serverOrigin}/dist/esmodule/classic_worker_a850e925.js`,
+      url: `${serverOrigin}/dist/esmodule/worker_a850e925.js`,
       pingResponse: "pong",
     },
     classicServiceWorker: {
-      url: `${serverOrigin}/dist/esmodule/classic_sw.js`,
+      url: `${serverOrigin}/dist/esmodule/sw.js`,
       inspectResponse: {
         order: ["before-a", "before-b", "b", "after-b", "after-a"],
         generatedUrlsConfig: {
-          "worker_toto_4f2f33b3.js": {
+          "worker2_e8d3de54.js": {
             versioned: true,
           },
-          "sw.js": {
+          "sw2.js": {
             versioned: false,
-            version: "8c13ad75",
+            version: "7598e876",
           },
-          "classic_worker_a850e925.js": {
+          "worker_a850e925.js": {
             versioned: true,
           },
           "main.html": {
             versioned: false,
-            version: "f20c59d8",
+            version: "86d6ec5a",
           },
           "assets/style_b126d686.css": {
             versioned: true,

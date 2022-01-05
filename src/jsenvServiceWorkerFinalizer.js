@@ -48,6 +48,7 @@ export const jsenvServiceWorkerFinalizer = (
           }),
     }
   })
+  // TODO: use magic string to prepend code
 
   return `
 self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")}
