@@ -40,7 +40,6 @@ const testPlan = {
     },
   },
 }
-
 const test = async (options = {}) => {
   const result = await executeTestPlan({
     ...EXECUTE_TEST_PLAN_TEST_PARAMS,
@@ -71,9 +70,9 @@ const test = async (options = {}) => {
       ...actual[`./${testDirectoryRelativeUrl}file.js`],
       path: `./${testDirectoryRelativeUrl}file.js`,
       s: {
-        0: 3,
-        1: 3,
-        2: 1,
+        0: 2,
+        1: 2,
+        2: 0,
         3: 2,
         4: 2,
         5: 2,

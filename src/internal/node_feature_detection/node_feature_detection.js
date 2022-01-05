@@ -99,11 +99,19 @@ const adjustMissingFeatureNames = (
   if (coverageHandledFromOutside) {
     markAsSupported("transform-instrument")
   }
-  // CSS import assertions and constructable stylesheet are not supported by Node.js
-  // but we assume they are not used for code executed in Node.js
-  // Without this check code executed on Node.js would always be compiled
-  // because import assertions and constructable stylesheet are enabled by default
+  // Jsenv enable some features because they are standard and we can expect code to use them.
+  // At the time of writing this, these features are not available in latest Node.js.
+  // Some feature are also browser specific.
+  // To avoid compiling code for Node.js these feaure are marked as supported.
+  // It means code written to be execute in Node.js should not use these features
+  // because jsenv ignore them (it won't try to "polyfill" them)
+  markAsSupported("module")
+  markAsSupported("importmap")
   markAsSupported("transform-import-assertions")
+  markAsSupported("import_assertion_type_json")
+  markAsSupported("import_assertion_type_css")
   markAsSupported("new-stylesheet-as-jsenv-import")
+  markAsSupported("worker_type_module")
+  markAsSupported("worker_importmap")
   return missingFeatureNamesCopy
 }
