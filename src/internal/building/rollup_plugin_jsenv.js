@@ -324,6 +324,7 @@ export const createRollupPlugins = async ({
             : resolveUrl(chunk.fileName, buildDirectoryUrl),
           code,
           map,
+          module: format === 'esmodule',
           ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         })
 

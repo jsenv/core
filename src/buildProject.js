@@ -2,6 +2,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -226,7 +227,12 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap: compileServer.babelPluginMap,
+      babelPluginMap: shakeBabelPluginMap({
+        babelPluginMap: compileServer.babelPluginMap,
+        missingFeatureNames:
+          compileServer.compileServerGroupMap[COMPILE_ID_BEST]
+            .missingFeatureNames,
+      }),
       runtimeSupport,
       workers,
       serviceWorkers,

@@ -7,8 +7,9 @@ import {
 } from "@jsenv/filesystem"
 
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
-
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
+
 import { setUrlExtension } from "../url_utils.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -188,9 +189,9 @@ export const createCompiledFileService = ({
           outDirectoryRelativeUrl,
           compileId,
           request,
-          babelPluginMap: babelPluginMapFromCompileId(compileId, {
+          babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
-            groupMap,
+            missingFeatureNames: groupMap[compileId].missingFeatureNames,
           }),
           runtimeSupport,
           workerUrls,
@@ -305,31 +306,6 @@ const contentTypeExtensions = {
   "text/html": ".html",
   "application/importmap+json": ".importmap",
   // "text/css": ".css",
-}
-
-const babelPluginMapFromCompileId = (
-  compileId,
-  { babelPluginMap, groupMap },
-) => {
-  const babelPluginMapForGroup = {}
-
-  groupMap[compileId].missingFeatureNames.forEach((featureName) => {
-    const babelPlugin = babelPluginMap[featureName]
-    if (babelPlugin) {
-      babelPluginMapForGroup[featureName] = babelPlugin
-    }
-  })
-
-  Object.keys(babelPluginMap).forEach((key) => {
-    if (key.startsWith("syntax-")) {
-      babelPluginMapForGroup[key] = babelPluginMap[key]
-    }
-    if (key === "transform-replace-expressions") {
-      babelPluginMapForGroup[key] = babelPluginMap[key]
-    }
-  })
-
-  return babelPluginMapForGroup
 }
 
 const ressourceToPathname = (ressource) => {
