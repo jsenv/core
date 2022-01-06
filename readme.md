@@ -1,12 +1,8 @@
 # jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core) [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main) [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-_@jsenv/core_ was first created to write tests that could be executed in different browsers AND Node.js. In the end it became a tool covering the core needs of a JavaScript project:
+_@jsenv/core_ is a quick start pack to launch a js project.
 
-- A test runner to execute test files
-- A development server
-- A build tool to optimize files for production
-
-Jsenv integrates naturally with standard html, css and js. It can be configured to work with React and JSX.
+You don't have to pick a JavaScript framework: jsenv integrates naturally with standard HTML, CSS and JS. It provides what you need from the beginning: a dev server, a build tool and a test "framework", all in one.
 
 # Test runner overview
 
@@ -251,6 +247,12 @@ To read more about jsenv build tool, check [jsenv build documentation](./docs/bu
 
 # About
 
+Jsenv was first created to write tests that could be executed in different runtimes. It has naturally evolved to cover the core needs of a JavaScript project:
+
+- A development server
+- A test runner to execute test files
+- A build tool to optimize files for production
+
 Jsenv relies on standard web features. Each standard listed below is potentially supported natively by the browser. When browser supports all of them, jsenv will use source files without modification. Otherwise, the files are compiled to be executable in the browser.
 
 - `<script type="module">`
@@ -259,12 +261,6 @@ Jsenv relies on standard web features. Each standard listed below is potentially
 - import.meta.url
 - dynamic imports
 - import assertions
-
-## What is jsenv?
-
-Jsenv is a quick start pack to launch a js project.
-
-You don't have to pick a JavaScript framework. Moreover it provides everything you need from the beginning: a dev server, a build tool and a test "framework", all in one.
 
 ## When to use it?
 
@@ -292,7 +288,7 @@ An overview of the main dependencies used by _@jsenv/core_.
 
 ## Name
 
-The name "jsenv" stands for JavaScript environments. This is because the original purpose of jsenv was to bring closer two JavaScript runtimes: web browsers and Node.js. This aspect is not highlighted in the documentation but it exists.
+The name "jsenv" stands for JavaScript environments. This is because the original purpose of jsenv was to bring closer two JavaScript runtimes: web browsers and Node.js.
 
 Maybe "jsenv" should be written "JSEnv"? That makes typing the name too complex:
 
