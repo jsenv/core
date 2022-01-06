@@ -98,6 +98,7 @@ export const startCompileServer = async ({
   workers = [],
   serviceWorkers = [],
   importMapInWebWorkers = false,
+  prependSystemJs,
   runtimeSupport,
 
   // remaining options
@@ -336,6 +337,7 @@ export const startCompileServer = async ({
       workerUrls,
       serviceWorkerUrls,
       importMapInWebWorkers,
+      prependSystemJs,
       moduleOutFormat,
       importMetaFormat,
       jsenvEventSourceClientInjection,
