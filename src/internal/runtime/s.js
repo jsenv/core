@@ -784,14 +784,16 @@
   // worker or service worker
   if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
     var importMapFromParentPromise = new Promise((resolve) => {
-      var importmapResponseCallback = function (e) {
-        if (typeof e.data === "object" && e.data.__importmap_response__) {
-          self.removeEventListener("message", importmapResponseCallback)
-          resolve(e.data.__importmap_response__)
+      var importmapMessageCallback = function (e) {
+        if (e.data === "__importmap_init__") {
+          self.removeEventListener("message", importmapMessageCallback)
+          e.ports[0].onmessage = (message) => {
+            resolve(message.data)
+          }
+          e.ports[0].postMessage('__importmap_request__')         
         }
-      }
-      self.addEventListener("message", importmapResponseCallback)
-      self.postMessage('__importmap_request__')
+      };
+      self.addEventListener("message", importmapMessageCallback)
     })
     // var prepareImport = System.prepareImport
     System.prepareImport = function () {
@@ -823,18 +825,14 @@
     var WorkerConstructor = window.Worker;
     if (typeof WorkerConstructor === 'function') {
       window.Worker = function (url, options) {
-        var worker = new WorkerConstructor(url, options)
-        var importmapRequestCallback = function(e) {
-          if (e.data === '__importmap_request__') {
-            worker.removeEventListener('message', importmapRequestCallback)
-            System.prepareImport().then(function (importmap) {
-              e.target.postMessage({
-                __importmap_response__: importmap
-              });
-            });
-          }
+        var worker = new WorkerConstructor(url, options);
+        var importmapChannel = new MessageChannel();
+        importmapChannel.port1.onmessage = function (message) {
+          System.prepareImport().then(function (importmap) {
+            message.target.postMessage(importmap);
+          });
         }
-        worker.addEventListener('message', importmapRequestCallback)
+        worker.postMessage('__importmap_init__', [importmapChannel.port2]);
         return worker
       }
     }
@@ -843,24 +841,19 @@
     if (serviceWorker) {
       var register =  serviceWorker.register;
       serviceWorker.register = function(url, options) {
-        var registrationPromise = register.call(url, options)
+        var registrationPromise = register.call(this, url, options);
         registrationPromise.then(function(registration) {
           var installing = registration.installing;
           var waiting = registration.waiting;
-          var active = regitration.active;
+          var active = registration.active;
           var worker = installing || waiting || active;
-          var importmapRequestCallback = function(e) {
-            if (e.data === '__importmap_request__') {
-              worker.removeEventListener('message', importmapRequestCallback)
-              System.prepareImport().then(function (importmap) {
-                var messageChannel = new MessageChannel()
-                worker.postMessage({
-                  __importmap_response__: importmap
-                }, messageChannel.port2);
-              });
-            }
+          var importmapChannel = new MessageChannel();
+          importmapChannel.port1.onmessage = function (message) {
+            System.prepareImport().then(function (importmap) {
+              message.target.postMessage(importmap)
+            });
           }
-          worker.addEventListener('message', importmapRequestCallback)
+          worker.postMessage('__importmap_init__', [importmapChannel.port2]);
         })
         return registrationPromise
       }
