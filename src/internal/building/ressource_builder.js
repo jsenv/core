@@ -865,6 +865,7 @@ export const createRessourceBuilder = (
           // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
           referenceColumn: `${"//#"} sourceMappingURL=`.length + 1,
           isSourcemap: true,
+          isPlaceholder: true,
         })
         sourcemapReference.ressource.buildEnd(
           sourcemapAsString,
