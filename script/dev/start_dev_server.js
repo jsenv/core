@@ -20,6 +20,7 @@ startDevServer({
   // jsenvToolbar: false,
   port: 3456,
   workers: ["./test/workers/worker_importmap/worker.js"],
+  serviceWorkers: ["./test/workers/service_worker_importmap/service_worker.js"],
   explorableConfig: {
     source: {
       "./index.html": false,
