@@ -4264,22 +4264,24 @@
      */
 
 
-    if (hasSelf && typeof importScripts === 'function') systemJSPrototype.instantiate = function (url) {
-      var loader = this;
-      return self.fetch(url, {
-        credentials: 'same-origin'
-      }).then(function (response) {
-        if (!response.ok) {
-          throw Error(errMsg(7, [response.status, response.statusText, url].join(', ')));
-        }
+    if (hasSelf && typeof importScripts === 'function') {
+      systemJSPrototype.instantiate = function (url) {
+        var loader = this;
+        return self.fetch(url, {
+          credentials: 'same-origin'
+        }).then(function (response) {
+          if (!response.ok) {
+            throw Error(errMsg(7, [response.status, response.statusText, url].join(', ')));
+          }
 
-        return response.text();
-      }).then(function (source) {
-        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
-        (0, eval)(source);
-        return loader.getRegister(url);
-      });
-    };
+          return response.text();
+        }).then(function (source) {
+          if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+          (0, eval)(source);
+          return loader.getRegister(url);
+        });
+      };
+    }
   })();
 
   (function () {
@@ -4323,17 +4325,22 @@
   })();
 
   (function () {
+    // worker or service worker
     if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
       var importMapFromParentPromise = new Promise(function (resolve) {
-        var importmapResponseCallback = function importmapResponseCallback(e) {
-          if (_typeof(e.data) === "object" && e.data.__importmap_response__) {
-            self.removeEventListener("message", importmapResponseCallback);
-            resolve(e.data.__importmap_response__);
+        var importmapMessageCallback = function importmapMessageCallback(e) {
+          if (e.data === "__importmap_init__") {
+            self.removeEventListener("message", importmapMessageCallback);
+
+            e.ports[0].onmessage = function (message) {
+              resolve(message.data);
+            };
+
+            e.ports[0].postMessage('__importmap_request__');
           }
         };
 
-        self.addEventListener("message", importmapResponseCallback);
-        self.postMessage('__importmap_request__');
+        self.addEventListener("message", importmapMessageCallback);
       }); // var prepareImport = System.prepareImport
 
       System.prepareImport = function () {
@@ -4366,23 +4373,47 @@
     } else if ((typeof window === "undefined" ? "undefined" : _typeof(window)) === 'object') {
       var WorkerConstructor = window.Worker;
 
-      window.Worker = function (url, options) {
-        var worker = new WorkerConstructor(url, options);
+      if (typeof WorkerConstructor === 'function') {
+        window.Worker = function (url, options) {
+          var worker = new WorkerConstructor(url, options);
+          var importmapChannel = new MessageChannel();
 
-        var importmapRequestCallback = function importmapRequestCallback(e) {
-          if (e.data === '__importmap_request__') {
-            worker.removeEventListener('message', importmapRequestCallback);
+          importmapChannel.port1.onmessage = function (message) {
             System.prepareImport().then(function (importmap) {
-              e.target.postMessage({
-                __importmap_response__: importmap
-              });
+              message.target.postMessage(importmap);
             });
-          }
-        };
+          };
 
-        worker.addEventListener('message', importmapRequestCallback);
-        return worker;
-      };
+          worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+          return worker;
+        };
+      }
+
+      var serviceWorker = navigator.serviceWorker;
+
+      if (serviceWorker) {
+        var register = serviceWorker.register;
+
+        serviceWorker.register = function (url, options) {
+          var registrationPromise = register.call(this, url, options);
+          registrationPromise.then(function (registration) {
+            var installing = registration.installing;
+            var waiting = registration.waiting;
+            var active = registration.active;
+            var worker = installing || waiting || active;
+            var importmapChannel = new MessageChannel();
+
+            importmapChannel.port1.onmessage = function (message) {
+              System.prepareImport().then(function (importmap) {
+                message.target.postMessage(importmap);
+              });
+            };
+
+            worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+          });
+          return registrationPromise;
+        };
+      }
     }
   })();
 
@@ -5265,4 +5296,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_646fd985.js.map
+//# sourceMappingURL=browser_runtime_91c5a3b8.js.map
