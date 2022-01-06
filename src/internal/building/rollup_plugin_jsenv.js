@@ -324,7 +324,7 @@ export const createRollupPlugins = async ({
             : resolveUrl(chunk.fileName, buildDirectoryUrl),
           code,
           map,
-          module: format === 'esmodule',
+          module: format === "esmodule",
           ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         })
 
@@ -1286,7 +1286,7 @@ export const createRollupPlugins = async ({
       }
 
       const url = asOriginalUrl(facadeModuleId)
-      if (workerUrls.includes(url)) {
+      if (workerUrls.includes(url) || serviceWorkerUrls.includes(url)) {
         const magicString = new MagicString(code)
         const systemjsCode = await readFile(
           new URL("../runtime/s.js", import.meta.url),
@@ -1508,7 +1508,7 @@ export const createRollupPlugins = async ({
         }
       })
 
-      await finalizeServiceWorkers({
+      await visitServiceWorkers({
         projectDirectoryUrl,
         serviceWorkerUrls,
         classicServiceWorkerUrls,
@@ -1712,7 +1712,7 @@ const isReferencedByJs = ({ rollupFileInfo, jsConcatenation, jsRessource }) => {
   return false
 }
 
-const finalizeServiceWorkers = async ({
+const visitServiceWorkers = async ({
   projectDirectoryUrl,
   serviceWorkerUrls,
   classicServiceWorkerUrls,
@@ -1741,14 +1741,16 @@ const finalizeServiceWorkers = async ({
         )
       }
 
-      let code = buildFileContents[serviceWorkerBuildRelativeUrl]
-      code = await serviceWorkerFinalizer(code, {
-        serviceWorkerBuildRelativeUrl,
-        buildManifest,
-        buildFileContents,
-        lineBreakNormalization,
-      })
-      buildFileContents[serviceWorkerBuildRelativeUrl] = code
+      if (serviceWorkerFinalizer) {
+        let code = buildFileContents[serviceWorkerBuildRelativeUrl]
+        code = await serviceWorkerFinalizer(code, {
+          serviceWorkerBuildRelativeUrl,
+          buildManifest,
+          buildFileContents,
+          lineBreakNormalization,
+        })
+        buildFileContents[serviceWorkerBuildRelativeUrl] = code
+      }
     }),
   )
 }
