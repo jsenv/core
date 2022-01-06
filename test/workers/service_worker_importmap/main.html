@@ -1,1 +1,50 @@
-<!--  TODO -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "foo": "./bar.js"
+        }
+      }
+    </script>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      const namespace = {}
+
+      // eslint-disable-next-line import/no-unresolved
+      const { value } = await import("foo")
+
+      const serviceWorkerUrl = new URL("./service_worker.js", import.meta.url)
+      const serviceWorker = await window.navigator.serviceWorker
+        .register(serviceWorkerUrl, { type: "module" })
+        .then((registration) => {
+          const { installing, waiting, active } = registration
+          return installing || waiting || active
+        })
+      namespace.serviceWorker = {
+        value,
+        pingResponse: await new Promise((resolve) => {
+          const { port1, port2 } = new MessageChannel()
+          port1.onmessage = function (event) {
+            resolve(event.data)
+          }
+          serviceWorker.postMessage("inspect", [port2])
+        }),
+      }
+      window.resolveNamespacePromise(namespace)
+
+      export { namespace }
+    </script>
+  </body>
+</html>
