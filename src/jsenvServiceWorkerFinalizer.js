@@ -52,7 +52,7 @@ export const jsenvServiceWorkerFinalizer = (
   // but it means composing 2 source maps, something not already available in jsenv codebase
 
   return `
-self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")}
+self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")};
 ${code}
 `
 }

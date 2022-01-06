@@ -44,7 +44,7 @@ if (process.platform !== "win32") {
   const actual = namespace
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/worker2_c583f0d9.js`,
+      url: `${serverOrigin}/dist/esmodule/worker2_b7f114ee.js`,
       pingResponse: "pong",
     },
     serviceWorker: {
@@ -52,7 +52,7 @@ if (process.platform !== "win32") {
       inspectResponse: {
         order: [],
         generatedUrlsConfig: {
-          "worker2_c583f0d9.js": {
+          "worker2_b7f114ee.js": {
             versioned: true,
           },
           "worker_a850e925.js": {
@@ -69,7 +69,7 @@ if (process.platform !== "win32") {
             // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
             // to include a hash for the html file.
             // -> when html file changes -> hash changes -> worker updates
-            version: "9b5d2108",
+            version: "949f1d1f",
           },
           "assets/style_b126d686.css": {
             versioned: true,
@@ -86,19 +86,19 @@ if (process.platform !== "win32") {
       inspectResponse: {
         order: ["before-a", "before-b", "b", "after-b", "after-a"],
         generatedUrlsConfig: {
-          "worker2_c583f0d9.js": {
+          "worker2_b7f114ee.js": {
             versioned: true,
           },
           "sw2.js": {
             versioned: false,
-            version: "7598e876",
+            version: "9db29c46",
           },
           "worker_a850e925.js": {
             versioned: true,
           },
           "main.html": {
             versioned: false,
-            version: "9b5d2108",
+            version: "949f1d1f",
           },
           "assets/style_b126d686.css": {
             versioned: true,

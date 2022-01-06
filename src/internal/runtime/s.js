@@ -723,7 +723,7 @@
    * Supports loading System.register in workers
    */
 
-  if (hasSelf && typeof importScripts === 'function')
+  if (hasSelf && typeof importScripts === 'function') {
     systemJSPrototype.instantiate = function (url) {
       var loader = this;
       return self.fetch(url, {
@@ -739,6 +739,7 @@
         return loader.getRegister(url);
       })
     };
+  }
 
 }());
 
