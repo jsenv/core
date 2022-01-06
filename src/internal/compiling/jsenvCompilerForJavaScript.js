@@ -10,10 +10,11 @@ export const compileJavascript = async ({
 
   babelPluginMap,
   workerUrls,
+  serviceWorkerUrls,
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
-  prependSystemJs = workerUrls.includes(url),
+  prependSystemJs,
 
   sourcemapExcludeSources,
   sourcemapMethod,
@@ -29,7 +30,10 @@ export const compileJavascript = async ({
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
-    prependSystemJs,
+    prependSystemJs:
+      prependSystemJs === undefined
+        ? workerUrls.includes(url) || serviceWorkerUrls.includes(url)
+        : prependSystemJs,
   })
 
   return transformResultToCompilationResult(
