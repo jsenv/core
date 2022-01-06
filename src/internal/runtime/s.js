@@ -781,6 +781,7 @@
 }());
 
 (function () {
+  // worker or service worker
   if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
     var importMapFromParentPromise = new Promise((resolve) => {
       var importmapResponseCallback = function (e) {
@@ -820,20 +821,49 @@
   }
   else if (typeof window === 'object') {
     var WorkerConstructor = window.Worker;
-    window.Worker = function (url, options) {
-      var worker = new WorkerConstructor(url, options)
-      var importmapRequestCallback = function(e) {
-        if (e.data === '__importmap_request__') {
-          worker.removeEventListener('message', importmapRequestCallback)
-          System.prepareImport().then(function (importmap) {
-            e.target.postMessage({
-              __importmap_response__: importmap
+    if (typeof WorkerConstructor === 'function') {
+      window.Worker = function (url, options) {
+        var worker = new WorkerConstructor(url, options)
+        var importmapRequestCallback = function(e) {
+          if (e.data === '__importmap_request__') {
+            worker.removeEventListener('message', importmapRequestCallback)
+            System.prepareImport().then(function (importmap) {
+              e.target.postMessage({
+                __importmap_response__: importmap
+              });
             });
-          });
+          }
         }
+        worker.addEventListener('message', importmapRequestCallback)
+        return worker
       }
-      worker.addEventListener('message', importmapRequestCallback)
-      return worker
+    }
+
+    var serviceWorker = navigator.serviceWorker;
+    if (serviceWorker) {
+      var register =  serviceWorker.register;
+      serviceWorker.register = function(url, options) {
+        var registrationPromise = register.call(url, options)
+        registrationPromise.then(function(registration) {
+          var installing = registration.installing;
+          var waiting = registration.waiting;
+          var active = regitration.active;
+          var worker = installing || waiting || active;
+          var importmapRequestCallback = function(e) {
+            if (e.data === '__importmap_request__') {
+              worker.removeEventListener('message', importmapRequestCallback)
+              System.prepareImport().then(function (importmap) {
+                var messageChannel = new MessageChannel()
+                worker.postMessage({
+                  __importmap_response__: importmap
+                }, messageChannel.port2);
+              });
+            }
+          }
+          worker.addEventListener('message', importmapRequestCallback)
+        })
+        return registrationPromise
+      }
     }
   }
 }());
