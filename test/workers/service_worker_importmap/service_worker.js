@@ -1,10 +1,10 @@
 /* globals self */
 
 // eslint-disable-next-line import/no-unresolved
-import { value } from "./bar.js"
+import { value } from "foo"
 
 self.addEventListener("message", (e) => {
-  if (e.data === "ping") {
-    self.postMessage(value)
+  if (e.data === "inspect") {
+    e.ports[0].postMessage(value)
   }
 })

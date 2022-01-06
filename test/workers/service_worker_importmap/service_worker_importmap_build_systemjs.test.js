@@ -36,9 +36,9 @@ const { namespace } = await browserImportEsModuleBuild({
 
 const actual = namespace
 const expected = {
-  worker: {
+  serviceWorker: {
     value: 42,
-    pingResponse: 42,
+    inspectResponse: 42,
   },
 }
 assert({ actual, expected })

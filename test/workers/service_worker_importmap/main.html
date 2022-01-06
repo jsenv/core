@@ -34,7 +34,7 @@
         })
       namespace.serviceWorker = {
         value,
-        pingResponse: await new Promise((resolve) => {
+        inspectResponse: await new Promise((resolve) => {
           const { port1, port2 } = new MessageChannel()
           port1.onmessage = function (event) {
             resolve(event.data)
