@@ -2,6 +2,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -14,6 +15,15 @@ import {
   jsenvNodeRuntimeSupport,
 } from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
 
+/**
+ * Generate optimized version of source files into a directory
+ * @param {string|url} projectDirectoryUrl Root directory of the project
+ * @param {string|url} buildDirectoryRelativeUrl Directory where optimized files are written
+ * @param {object} entryPoints Describe entry point paths and control their names in the build directory
+ * @param {"esmodule" | "systemjs" | "commonjs" | "global"} format Code generated will use this module format
+ * @param {object} runtimeSupport Code generated will be compatible with these runtimes
+ * @param {boolean} [minify=false] Minify file content in the build directory (HTML, CSS, JS, JSON, SVG)
+ */
 export const buildProject = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -23,6 +33,12 @@ export const buildProject = async ({
 
   projectDirectoryUrl,
   entryPoints,
+  workers = [],
+  serviceWorkers = [],
+  serviceWorkerFinalizer,
+  classicWorkers = [],
+  classicServiceWorkers = [],
+  importMapInWebWorkers = false,
   buildDirectoryRelativeUrl,
   buildDirectoryClean = true,
   assetManifestFile = false,
@@ -77,12 +93,6 @@ export const buildProject = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
-  workers = {},
-  serviceWorkers = {},
-  serviceWorkerFinalizer,
-  classicWorkers = {},
-  classicServiceWorkers = {},
-
   env = {},
   protocol,
   privateKey,
@@ -112,6 +122,11 @@ export const buildProject = async ({
   if (typeof runtimeSupport !== "object" || runtimeSupport === null) {
     throw new TypeError(
       `runtimeSupport must be an object, got ${runtimeSupport}`,
+    )
+  }
+  if (format !== "systemjs" && importMapInWebWorkers) {
+    throw new Error(
+      `format must be "systemjs" when importMapInWebWorkers is enabled`,
     )
   }
 
@@ -166,6 +181,7 @@ export const buildProject = async ({
     moduleOutFormat: "esmodule", // rollup will transform into the right format
     importMetaFormat: "esmodule", // rollup will transform into the right format
     topLevelAwait: "ignore", // rollup will transform if needed
+    prependSystemJs: false,
 
     protocol,
     privateKey,
@@ -174,9 +190,10 @@ export const buildProject = async ({
     port,
     env,
     babelPluginMap,
-    customCompilers,
+    workers,
+    serviceWorkers,
     runtimeSupport,
-
+    customCompilers,
     compileServerCanReadFromFilesystem: filesystemCache,
     compileServerCanWriteOnFilesystem: filesystemCache,
     // keep source html untouched
@@ -219,8 +236,19 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap: compileServer.babelPluginMap,
+      babelPluginMap: shakeBabelPluginMap({
+        babelPluginMap: compileServer.babelPluginMap,
+        missingFeatureNames:
+          compileServer.compileServerGroupMap[COMPILE_ID_BEST]
+            .missingFeatureNames,
+      }),
       runtimeSupport,
+      workers,
+      serviceWorkers,
+      serviceWorkerFinalizer,
+      classicWorkers,
+      classicServiceWorkers,
+      importMapInWebWorkers,
 
       urlVersioning,
       lineBreakNormalization,
@@ -234,12 +262,6 @@ export const buildProject = async ({
       minifyHtmlOptions,
       minifyJsOptions,
       minifyCssOptions,
-
-      workers,
-      serviceWorkers,
-      serviceWorkerFinalizer,
-      classicWorkers,
-      classicServiceWorkers,
 
       writeOnFileSystem,
       sourcemapExcludeSources,

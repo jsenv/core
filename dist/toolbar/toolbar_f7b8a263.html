@@ -1290,6 +1290,8 @@ html[data-toolbar-visible] #toolbar-trigger {
 
   var importMapPromise = Promise.resolve();
   var importMap = { imports: {}, scopes: {}, depcache: {}, integrity: {} };
+  systemJSPrototype.importMap = importMap;
+  systemJSPrototype.baseUrl = baseUrl;
 
   // Scripts are processed immediately, on the first System.import, and on DOMReady.
   // Import map scripts are processed only once (by being marked) and in order for each phase.
@@ -1345,6 +1347,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           return fetchPromise;
         }).then(function (text) {
           extendImportMap(importMap, text, script.src || baseUrl);
+          return importMap
         });
       }
     });
@@ -1359,6 +1362,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     }
     resolveAndComposeImportMap(newMap, newMapUrl, importMap);
   }
+  System.extendImportMap = extendImportMap
 
   /*
    * Script instantiation loading
@@ -1512,23 +1516,33 @@ html[data-toolbar-visible] #toolbar-trigger {
    * Supports loading System.register in workers
    */
 
-  if (hasSelf && typeof importScripts === 'function')
+  if (hasSelf && typeof importScripts === 'function') {
     systemJSPrototype.instantiate = function (url) {
       var loader = this;
-      return Promise.resolve().then(function () {
-        importScripts(url);
+      return self.fetch(url, {
+        credentials: 'same-origin',
+      }).then(function (response) {
+        if (!response.ok) {
+          throw Error(errMsg(7,  [response.status, response.statusText, url].join(', ') ));
+        }
+        return response.text()
+      }).then(function (source) {
+        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+        (0, eval)(source);
         return loader.getRegister(url);
-      });
+      })
     };
+  }
 
 }());
 
 (function(){
   var envGlobal = typeof self !== 'undefined' ? self : global;
   var System = envGlobal.System;
-  var register = System.register;
-  var registerRegistry = Object.create(null)
 
+  var registerRegistry = Object.create(null)
+  var register = System.register;
+  System.registerRegistry = registerRegistry;
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
@@ -1558,6 +1572,87 @@ html[data-toolbar-visible] #toolbar-trigger {
     var result = registerRegistry[url] || register;
     return result;
   };
+}());
+
+(function () {
+  // worker or service worker
+  if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
+    var importMapFromParentPromise = new Promise((resolve) => {
+      var importmapMessageCallback = function (e) {
+        if (e.data === "__importmap_init__") {
+          self.removeEventListener("message", importmapMessageCallback)
+          e.ports[0].onmessage = (message) => {
+            resolve(message.data)
+          }
+          e.ports[0].postMessage('__importmap_request__')         
+        }
+      };
+      self.addEventListener("message", importmapMessageCallback)
+    })
+    // var prepareImport = System.prepareImport
+    System.prepareImport = function () {
+      return importMapFromParentPromise.then(function (importmap) {
+        System.extendImportMap(System.importMap, JSON.stringify(importmap), System.baseUrl)
+      })
+    }
+
+    // auto import first register
+    var messageEvents = []
+    var messageCallback = (event) => {
+      messageEvents.push(event)
+    }
+    self.addEventListener('message', messageCallback)
+    var register = System.register;
+    System.register = function(deps, declare) {
+      System.register = register;
+      System.registerRegistry[self.location.href] = [deps, declare];
+      System.import(self.location.href).then(() => {
+        self.removeEventListener('message', messageCallback)
+        messageEvents.forEach((messageEvent) => {
+          self.dispatchEvent(messageEvent)
+        })
+        messageEvents = null
+      })
+    }
+  }
+  else if (typeof window === 'object') {
+    var WorkerConstructor = window.Worker;
+    if (typeof WorkerConstructor === 'function') {
+      window.Worker = function (url, options) {
+        var worker = new WorkerConstructor(url, options);
+        var importmapChannel = new MessageChannel();
+        importmapChannel.port1.onmessage = function (message) {
+          System.prepareImport().then(function (importmap) {
+            message.target.postMessage(importmap);
+          });
+        }
+        worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+        return worker
+      }
+    }
+
+    var serviceWorker = navigator.serviceWorker;
+    if (serviceWorker) {
+      var register =  serviceWorker.register;
+      serviceWorker.register = function(url, options) {
+        var registrationPromise = register.call(this, url, options);
+        registrationPromise.then(function(registration) {
+          var installing = registration.installing;
+          var waiting = registration.waiting;
+          var active = registration.active;
+          var worker = installing || waiting || active;
+          var importmapChannel = new MessageChannel();
+          importmapChannel.port1.onmessage = function (message) {
+            System.prepareImport().then(function (importmap) {
+              message.target.postMessage(importmap)
+            });
+          }
+          worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+        })
+        return registrationPromise
+      }
+    }
+  }
 }());</script>
       </head>
   <body>
@@ -4125,16 +4220,16 @@ html[data-toolbar-visible] #toolbar-trigger {
             failFastOnFeatureDetection: failFastOnFeatureDetection,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function () {
-            return _await(pluginRequiredNamesFromGroupInfo(groupInfo, {
+            return _await(adjustMissingFeatureNames(groupInfo, {
               featuresReport: featuresReport,
               coverageHandledFromOutside: coverageHandledFromOutside
-            }), function (pluginRequiredNameArray) {
-              var canAvoidCompilation = customCompilerPatterns.length === 0 && pluginRequiredNameArray.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
+            }), function (missingFeatureNames) {
+              var canAvoidCompilation = customCompilerPatterns.length === 0 && missingFeatureNames.length === 0 && featuresReport.importmap && featuresReport.dynamicImport && featuresReport.topLevelAwait;
               return {
                 canAvoidCompilation: canAvoidCompilation,
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML,
                 outDirectoryRelativeUrl: outDirectoryRelativeUrl,
                 compileId: compileId,
@@ -4145,17 +4240,17 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      var pluginRequiredNamesFromGroupInfo = _async$1(function (groupInfo, _ref3) {
+      var adjustMissingFeatureNames = _async$1(function (groupInfo, _ref3) {
         var featuresReport = _ref3.featuresReport,
             coverageHandledFromOutside = _ref3.coverageHandledFromOutside;
-        var pluginRequiredNameArray = groupInfo.pluginRequiredNameArray;
-        var requiredPluginNames = pluginRequiredNameArray.slice();
+        var missingFeatureNames = groupInfo.missingFeatureNames;
+        var missingFeatureNamesCopy = missingFeatureNames.slice();
 
-        var markPluginAsSupported = function markPluginAsSupported(name) {
-          var index = requiredPluginNames.indexOf(name);
+        var markAsSupported = function markAsSupported(name) {
+          var index = missingFeatureNamesCopy.indexOf(name);
 
           if (index > -1) {
-            requiredPluginNames.splice(index, 1);
+            missingFeatureNamesCopy.splice(index, 1);
           }
         }; // When instrumentation CAN be handed by playwright
         // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
@@ -4163,30 +4258,30 @@ html[data-toolbar-visible] #toolbar-trigger {
 
 
         if (coverageHandledFromOutside) {
-          markPluginAsSupported("transform-instrument");
+          markAsSupported("transform-instrument");
         }
 
         return _invoke(function () {
-          if (pluginRequiredNameArray.includes("transform-import-assertions")) {
+          if (missingFeatureNames.includes("transform-import-assertions")) {
             return _call$1(supportsJsonImportAssertions, function (jsonImportAssertions) {
               featuresReport.jsonImportAssertions = jsonImportAssertions;
               return _call$1(supportsCssImportAssertions, function (cssImportAssertions) {
                 featuresReport.cssImportAssertions = cssImportAssertions;
 
                 if (jsonImportAssertions && cssImportAssertions) {
-                  markPluginAsSupported("transform-import-assertions");
+                  markAsSupported("transform-import-assertions");
                 }
               });
             });
           }
         }, function () {
-          if (pluginRequiredNameArray.includes("new-stylesheet-as-jsenv-import")) {
+          if (missingFeatureNames.includes("new-stylesheet-as-jsenv-import")) {
             var newStylesheet = supportsNewStylesheet();
             featuresReport.newStylesheet = newStylesheet;
-            markPluginAsSupported("new-stylesheet-as-jsenv-import");
+            markAsSupported("new-stylesheet-as-jsenv-import");
           }
 
-          return requiredPluginNames;
+          return missingFeatureNamesCopy;
         });
       });
 
@@ -4361,7 +4456,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           var canAvoidCompilation = _ref2.canAvoidCompilation,
               featuresReport = _ref2.featuresReport,
               customCompilerPatterns = _ref2.customCompilerPatterns,
-              pluginRequiredNameArray = _ref2.pluginRequiredNameArray,
+              missingFeatureNames = _ref2.missingFeatureNames,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
               outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
               compileId = _ref2.compileId;
@@ -4377,7 +4472,7 @@ html[data-toolbar-visible] #toolbar-trigger {
                 missingOnly: true,
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4387,7 +4482,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4397,7 +4492,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
                 featuresReport: featuresReport,
                 customCompilerPatterns: customCompilerPatterns,
-                pluginRequiredNameArray: pluginRequiredNameArray,
+                missingFeatureNames: missingFeatureNames,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4435,7 +4530,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         var missingOnly = _ref3.missingOnly,
             featuresReport = _ref3.featuresReport,
             customCompilerPatterns = _ref3.customCompilerPatterns,
-            pluginRequiredNameArray = _ref3.pluginRequiredNameArray,
+            missingFeatureNames = _ref3.missingFeatureNames,
             inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
         var parts = [];
 
@@ -4467,14 +4562,14 @@ html[data-toolbar-visible] #toolbar-trigger {
           parts.push("top level await is not supported");
         }
 
-        var pluginRequiredCount = pluginRequiredNameArray.length;
+        var missingFeatureCount = missingFeatureNames.length;
 
-        if (pluginRequiredCount === 0) {
+        if (missingFeatureCount === 0) {
           if (!missingOnly) {
-            parts.push("all plugins are natively supported");
+            parts.push("all features are natively supported");
           }
         } else {
-          parts.push("".concat(pluginRequiredCount, " plugins are mandatory: ").concat(pluginRequiredNameArray));
+          parts.push("".concat(missingFeatureCount, " features are missing: ").concat(missingFeatureNames));
         }
 
         var customCompilerCount = customCompilerPatterns.length;
@@ -4915,7 +5010,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_a5ef2c60.js.map</script>
+//# sourceMappingURL=toolbar.main_6c1b3d82.js.map</script>
   
 
 </body></html>

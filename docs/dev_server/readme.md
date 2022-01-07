@@ -187,7 +187,7 @@ Toolbar has a few animations, mostly when it's opened or closed. If animations b
 
 Toogle between dark theme and light theme. Use this to keep a good contrast between the toolbar and the website above.
 
-## Browser support
+## Browser support indicator
 
 When browser support is good enough and if he code you write is standard js, html and css, jsenv dev server will serve the source files **without compilation step**. The browser support section informs you if that is possible or not. You can click "Read more" to get more information in an alert dialog.
 
@@ -196,9 +196,9 @@ When browser support is good enough and if he code you write is standard js, htm
 | Excellent | ![Excellent browser support screenshot](./browser_support_excellent.png) | The browser support all features except remote importmap files             | ![No browser support excellent alert screenshot](./browser_support_excellent_alert.png) |
 | No        | ![No browser support screenshot](./browser_support_no.png)               | The browser is missing some/all important features such as top level await | ![No browser support alert screenshot](./browser_support_no_alert.png)                  |
 
-## Files compilation
+## Files compilation indicator
 
-As explained in [Browser support](#Browser-support) jsenv dev server might use source files directly. The files compilation section informs you if files are compiled and allows you to switch between source files and compiled files.
+As explained in [Browser support indicator](#Browser-support-indicator) jsenv dev server might use source files directly. The files compilation section informs you if files are compiled and allows you to switch between source files and compiled files.
 
 | Compiled? | Screenshot                                                         |
 | --------- | ------------------------------------------------------------------ |

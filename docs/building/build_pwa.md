@@ -26,9 +26,7 @@ import { buildProject } from "@jsenv/core"
 
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
-  serviceWorkers: {
-    "./sw.js": "./sw.js",
-  },
+  serviceWorkers: ["./sw.js"],
 })
 ```
 
@@ -58,9 +56,7 @@ When generating the build jsenv knows every file used by your frontend files. Th
 
 await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
-  serviceWorkers: {
-    "./sw.js": "./sw.js",
-  },
+  serviceWorkers: ["./sw.js"],
 + serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
 ```

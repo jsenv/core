@@ -32,6 +32,12 @@ const { namespace } = await browserImportSystemJsBuild({
   mainRelativeUrl: `./${mainJsRelativeUrl}`,
 })
 
-const actual = namespace
-const expected = { answer: 42 }
+const actual = {
+  namespace,
+}
+const expected = {
+  namespace: {
+    answer: 42,
+  },
+}
 assert({ actual, expected })

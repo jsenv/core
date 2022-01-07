@@ -19,7 +19,9 @@
       const testWorker = async (worker) => {
         const pingResponse = await new Promise((resolve, reject) => {
           worker.onmessage = (e) => {
-            resolve(e.data)
+            if (e.data !== "__importmap_request__") {
+              resolve(e.data)
+            }
           }
           worker.onerror = (e) => {
             reject(e.message)
@@ -36,15 +38,6 @@
         pingResponse: await testWorker(worker),
       }
 
-      const registerServiceWorker = async (url, options) => {
-        const serviceWorker = await window.navigator.serviceWorker
-          .register(url, options)
-          .then((registration) => {
-            const { installing, waiting, active } = registration
-            return installing || waiting || active
-          })
-        return serviceWorker
-      }
       const testServiceWorker = async (serviceWorker) => {
         const inspectResponse = await new Promise((resolve) => {
           const { port1, port2 } = new MessageChannel()
@@ -59,9 +52,12 @@
         "./service_worker/sw.js",
         import.meta.url,
       )
-      const serviceWorker = await registerServiceWorker(serviceWorkerUrl, {
-        type: "module",
-      })
+      const serviceWorker = await window.navigator.serviceWorker
+        .register(serviceWorkerUrl, { type: "module" })
+        .then((registration) => {
+          const { installing, waiting, active } = registration
+          return installing || waiting || active
+        })
       namespace.serviceWorker = {
         url: String(serviceWorkerUrl),
         inspectResponse: await testServiceWorker(serviceWorker),
@@ -80,9 +76,12 @@
         "/test/workers/workers_complex/classic_service_worker/sw.js",
         import.meta.url,
       )
-      const classicServiceWorker = await registerServiceWorker(
-        classicServiceWorkerUrl,
-      )
+      const classicServiceWorker = await window.navigator.serviceWorker
+        .register(classicServiceWorkerUrl)
+        .then((registration) => {
+          const { installing, waiting, active } = registration
+          return installing || waiting || active
+        })
       namespace.classicServiceWorker = {
         url: String(classicServiceWorkerUrl),
         inspectResponse: await testServiceWorker(classicServiceWorker),

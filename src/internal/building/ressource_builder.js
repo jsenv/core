@@ -114,6 +114,7 @@ export const createRessourceBuilder = (
     jsLine,
     jsColumn,
     isImportAssertion,
+    isJsModule,
 
     contentTypeExpected,
     ressourceSpecifier,
@@ -131,6 +132,7 @@ export const createRessourceBuilder = (
 
       contentType,
       bufferBeforeBuild,
+      isJsModule,
     })
     return reference
   }
@@ -772,64 +774,55 @@ export const createRessourceBuilder = (
   }
 
   const rollupBuildEnd = ({
-    rollupJsFileInfos,
-    rollupAssetFileInfos,
+    rollupResult,
     useImportMapToMaximizeCacheReuse,
   }) => {
     const jsRessources = {}
+
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
-      const jsModuleFileName = Object.keys(rollupJsFileInfos).find((key) => {
-        const rollupFileInfo = rollupJsFileInfos[key]
-        return rollupFileInfo.url === ressourceUrl
+      const rollupFileName = Object.keys(rollupResult).find((key) => {
+        const rollupFileInfo = rollupResult[key]
+        return (
+          rollupFileInfo.url === ressourceUrl ||
+          // asset
+          ressource.fileName === key ||
+          ressource.relativeUrl === key
+        )
       })
-      if (jsModuleFileName) {
-        const rollupFileInfo = rollupJsFileInfos[jsModuleFileName]
-        // We expect to find the ressource in the rollup build except when:
-        // - js was only preloaded/prefetched and never referenced afterwards
-        // - js was only referenced by other js
-        if (!rollupFileInfo) {
-          const referencedOnlyByRessourceHint = !ressource.firstStrongReference
-          if (referencedOnlyByRessourceHint) {
-            return
-          }
-          const referencedOnlyByRollup = ressource.references.every(
-            (ref) => ref.fromRollup,
-          )
-          if (referencedOnlyByRollup) {
-            // concatened by rollup
-            return
-          }
-          throw new Error(
-            `${shortenUrl(ressource.url)} cannot be found in the build info`,
-          )
+      if (rollupFileName) {
+        const rollupFileInfo = rollupResult[rollupFileName]
+        if (rollupFileInfo.type === "asset") {
+          ressource.fileName = rollupFileName
+          return
         }
-        applyBuildEndEffects(ressource, {
-          rollupFileInfo,
-          rollupAssetFileInfos,
-          useImportMapToMaximizeCacheReuse,
-        })
-        const { rollupBuildDoneCallbacks } = ressource
-        rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
-          rollupBuildDoneCallback()
-        })
-        jsRessources[ressourceUrl] = ressource
-        return
+        if (rollupFileInfo.type === "chunk") {
+          applyBuildEndEffects(ressource, {
+            rollupFileInfo,
+            rollupResult,
+            useImportMapToMaximizeCacheReuse,
+          })
+          const { rollupBuildDoneCallbacks } = ressource
+          rollupBuildDoneCallbacks.forEach((rollupBuildDoneCallback) => {
+            rollupBuildDoneCallback()
+          })
+          if (rollupFileInfo.type === "chunk") {
+            jsRessources[ressourceUrl] = ressource
+          }
+          return
+        }
       }
     })
-
     return { jsRessources }
   }
 
   const applyBuildEndEffects = (
     ressource,
-    { rollupFileInfo, rollupAssetFileInfos, useImportMapToMaximizeCacheReuse },
+    { rollupFileInfo, rollupResult, useImportMapToMaximizeCacheReuse },
   ) => {
     const fileName = rollupFileInfo.fileName
     let code = rollupFileInfo.code
-    if (rollupFileInfo.type === "chunk") {
-      ressource.contentType = "application/javascript"
-    }
+    ressource.contentType = "application/javascript"
 
     if (useImportMapToMaximizeCacheReuse) {
       ressource.fileName = fileName
@@ -842,8 +835,7 @@ export const createRessourceBuilder = (
     const map = rollupFileInfo.map
     if (map) {
       const sourcemapBuildRelativeUrl = `${ressource.buildRelativeUrl}.map`
-      const sourcemapRollupFileInfo =
-        rollupAssetFileInfos[sourcemapBuildRelativeUrl]
+      const sourcemapRollupFileInfo = rollupResult[sourcemapBuildRelativeUrl]
       if (!sourcemapRollupFileInfo) {
         const ressourceBuildUrl = resolveUrl(
           ressource.buildRelativeUrl,
@@ -873,6 +865,7 @@ export const createRessourceBuilder = (
           // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
           referenceColumn: `${"//#"} sourceMappingURL=`.length + 1,
           isSourcemap: true,
+          isPlaceholder: true,
         })
         sourcemapReference.ressource.buildEnd(
           sourcemapAsString,

@@ -11,6 +11,7 @@ import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compiling/ba
 import { ansiToHTML } from "./ansiToHTML.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
+import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
@@ -26,6 +27,7 @@ export const jsenvTransform = async ({
   topLevelAwait,
 
   babelHelpersInjectionAsImport,
+  prependSystemJs,
   transformGenerator,
   regeneratorRuntimeImportPath,
   sourcemapEnabled,
@@ -77,7 +79,6 @@ export const jsenvTransform = async ({
       ],
     }
   }
-
   babelPluginMap = {
     ...getMinimalBabelPluginMap(),
     "transform-import-meta": [
@@ -147,6 +148,19 @@ export const jsenvTransform = async ({
       : {}),
     "import-metadata": [babelPluginImportMetadata],
   }
+  if (moduleOutFormat === "systemjs") {
+    babelPluginMap = {
+      ...babelPluginMap,
+      "proposal-dynamic-import": [proposalDynamicImport],
+      "transform-modules-systemjs": [transformModulesSystemJs],
+    }
+  }
+  if (prependSystemJs) {
+    babelPluginMap = {
+      ...babelPluginMap,
+      "systemjs-prepend": [babelPluginSystemJsPrepend],
+    }
+  }
 
   const asyncToPromise = babelPluginMap["transform-async-to-promises"]
   if (topLevelAwait && asyncToPromise) {
@@ -158,17 +172,7 @@ export const jsenvTransform = async ({
     code,
     options: {
       ...options,
-      plugins: babelPluginsFromBabelPluginMap({
-        ...babelPluginMap,
-        ...(moduleOutFormat === "systemjs"
-          ? {
-              "proposal-dynamic-import": [proposalDynamicImport],
-              ...(moduleOutFormat === "systemjs"
-                ? { "transform-modules-systemjs": [transformModulesSystemJs] }
-                : {}),
-            }
-          : {}),
-      }),
+      plugins: babelPluginsFromBabelPluginMap(babelPluginMap),
     },
   })
   code = babelTransformReturnValue.code

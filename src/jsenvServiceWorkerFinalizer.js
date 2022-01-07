@@ -4,20 +4,14 @@ import { generateContentHash } from "./internal/building/url_versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (
   code,
-  {
-    serviceWorkerBuildRelativeUrl,
-    buildManifest,
-    buildFileContents,
-    lineBreakNormalization,
-  },
+  { serviceWorkerBuildRelativeUrl, buildFileContents, lineBreakNormalization },
 ) => {
   const generatedUrlsConfig = {}
-  Object.keys(buildManifest).forEach((projectRelativeUrl) => {
-    if (projectRelativeUrl.endsWith(".map")) {
+  Object.keys(buildFileContents).forEach((buildRelativeUrl) => {
+    if (buildRelativeUrl.endsWith(".map")) {
       return
     }
 
-    const buildRelativeUrl = buildManifest[projectRelativeUrl]
     const buildUrl = resolveUrl(buildRelativeUrl, "file://")
     const serviceWorkerBuildUrl = resolveUrl(
       serviceWorkerBuildRelativeUrl,
@@ -48,9 +42,11 @@ export const jsenvServiceWorkerFinalizer = (
           }),
     }
   })
+  // TODO: ideally should use magic string to prepend code
+  // but it means composing 2 source maps, something not already available in jsenv codebase
 
   return `
-self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")}
+self.generatedUrlsConfig = ${JSON.stringify(generatedUrlsConfig, null, "  ")};
 ${code}
 `
 }

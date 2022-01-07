@@ -200,37 +200,6 @@ buildProject({
 })
 ```
 
-## workers
-
-_workers_ is an object used to declare files written for [web workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
-
-_workers_ is optional.
-
-If your source file references a worker file as below:
-
-```js
-const workerUrl = new URL("./worker.js", import.meta.url)
-
-const worker = new Worker(workerUrl, { type: "module" })
-```
-
-Then you should tell jsenv this is a worker using _workers_ parameter.
-
-```diff
-import { buildProject } from "@jsenv/core"
-
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "./dist/",
-  format: "systemjs",
-  workers: {
-+   "./worker.js": "./worker.js",
-  }
-})
-```
-
-Thanks to this, jsenv knows "worker.js" is not a classic js file but a worker module.
-
 ## urlVersioning
 
 _urlVersioning_ is a boolean controlling the file written in the build directory will be versioned. When enabled, the files written in the build directory have dynamic names computed from the source file content. This allows to enable [long term caching](#long-term-caching) of your files.

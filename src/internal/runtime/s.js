@@ -497,6 +497,8 @@
 
   var importMapPromise = Promise.resolve();
   var importMap = { imports: {}, scopes: {}, depcache: {}, integrity: {} };
+  systemJSPrototype.importMap = importMap;
+  systemJSPrototype.baseUrl = baseUrl;
 
   // Scripts are processed immediately, on the first System.import, and on DOMReady.
   // Import map scripts are processed only once (by being marked) and in order for each phase.
@@ -552,6 +554,7 @@
           return fetchPromise;
         }).then(function (text) {
           extendImportMap(importMap, text, script.src || baseUrl);
+          return importMap
         });
       }
     });
@@ -566,6 +569,7 @@
     }
     resolveAndComposeImportMap(newMap, newMapUrl, importMap);
   }
+  System.extendImportMap = extendImportMap
 
   /*
    * Script instantiation loading
@@ -719,23 +723,33 @@
    * Supports loading System.register in workers
    */
 
-  if (hasSelf && typeof importScripts === 'function')
+  if (hasSelf && typeof importScripts === 'function') {
     systemJSPrototype.instantiate = function (url) {
       var loader = this;
-      return Promise.resolve().then(function () {
-        importScripts(url);
+      return self.fetch(url, {
+        credentials: 'same-origin',
+      }).then(function (response) {
+        if (!response.ok) {
+          throw Error(errMsg(7,  [response.status, response.statusText, url].join(', ') ));
+        }
+        return response.text()
+      }).then(function (source) {
+        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+        (0, eval)(source);
         return loader.getRegister(url);
-      });
+      })
     };
+  }
 
 }());
 
 (function(){
   var envGlobal = typeof self !== 'undefined' ? self : global;
   var System = envGlobal.System;
-  var register = System.register;
-  var registerRegistry = Object.create(null)
 
+  var registerRegistry = Object.create(null)
+  var register = System.register;
+  System.registerRegistry = registerRegistry;
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
@@ -765,4 +779,85 @@
     var result = registerRegistry[url] || register;
     return result;
   };
+}());
+
+(function () {
+  // worker or service worker
+  if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
+    var importMapFromParentPromise = new Promise((resolve) => {
+      var importmapMessageCallback = function (e) {
+        if (e.data === "__importmap_init__") {
+          self.removeEventListener("message", importmapMessageCallback)
+          e.ports[0].onmessage = (message) => {
+            resolve(message.data)
+          }
+          e.ports[0].postMessage('__importmap_request__')         
+        }
+      };
+      self.addEventListener("message", importmapMessageCallback)
+    })
+    // var prepareImport = System.prepareImport
+    System.prepareImport = function () {
+      return importMapFromParentPromise.then(function (importmap) {
+        System.extendImportMap(System.importMap, JSON.stringify(importmap), System.baseUrl)
+      })
+    }
+
+    // auto import first register
+    var messageEvents = []
+    var messageCallback = (event) => {
+      messageEvents.push(event)
+    }
+    self.addEventListener('message', messageCallback)
+    var register = System.register;
+    System.register = function(deps, declare) {
+      System.register = register;
+      System.registerRegistry[self.location.href] = [deps, declare];
+      System.import(self.location.href).then(() => {
+        self.removeEventListener('message', messageCallback)
+        messageEvents.forEach((messageEvent) => {
+          self.dispatchEvent(messageEvent)
+        })
+        messageEvents = null
+      })
+    }
+  }
+  else if (typeof window === 'object') {
+    var WorkerConstructor = window.Worker;
+    if (typeof WorkerConstructor === 'function') {
+      window.Worker = function (url, options) {
+        var worker = new WorkerConstructor(url, options);
+        var importmapChannel = new MessageChannel();
+        importmapChannel.port1.onmessage = function (message) {
+          System.prepareImport().then(function (importmap) {
+            message.target.postMessage(importmap);
+          });
+        }
+        worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+        return worker
+      }
+    }
+
+    var serviceWorker = navigator.serviceWorker;
+    if (serviceWorker) {
+      var register =  serviceWorker.register;
+      serviceWorker.register = function(url, options) {
+        var registrationPromise = register.call(this, url, options);
+        registrationPromise.then(function(registration) {
+          var installing = registration.installing;
+          var waiting = registration.waiting;
+          var active = registration.active;
+          var worker = installing || waiting || active;
+          var importmapChannel = new MessageChannel();
+          importmapChannel.port1.onmessage = function (message) {
+            System.prepareImport().then(function (importmap) {
+              message.target.postMessage(importmap)
+            });
+          }
+          worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+        })
+        return registrationPromise
+      }
+    }
+  }
 }());

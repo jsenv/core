@@ -15,9 +15,12 @@ startDevServer({
   http2: true,
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
+  importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,
   port: 3456,
+  workers: ["./test/workers/worker_importmap/worker.js"],
+  serviceWorkers: ["./test/workers/service_worker_importmap/service_worker.js"],
   explorableConfig: {
     source: {
       "./index.html": false,
@@ -30,6 +33,7 @@ startDevServer({
       "./test/**/*.html": false,
       "./**/docs/**/*.html": false,
       "./test-manual/**/*.html": true,
+      "./test/workers/**/*.html": true,
       "./**/.jsenv/": false,
       "./**/node_modules/": false,
     },

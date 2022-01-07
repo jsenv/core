@@ -18,7 +18,7 @@ import {
   urlToFilename,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
-import { moveImportMap } from "@jsenv/importmap"
+import { composeTwoImportMaps, moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import {
@@ -28,6 +28,8 @@ import {
 } from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
+
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -155,14 +157,13 @@ const transformHTMLSourceFile = async ({
   fileUrl = urlWithoutSearch(fileUrl)
 
   const htmlAst = parseHtmlString(fileContent)
-  if (inlineImportMapIntoHTML) {
-    await inlineImportmapScripts({
-      logger,
-      htmlAst,
-      htmlFileUrl: fileUrl,
-      projectDirectoryUrl,
-    })
-  }
+  await visitImportmapScripts({
+    logger,
+    htmlAst,
+    inlineImportMapIntoHTML,
+    htmlFileUrl: fileUrl,
+    projectDirectoryUrl,
+  })
 
   const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
     BROWSER_RUNTIME_BUILD_URL,
@@ -277,59 +278,73 @@ const transformHTMLSourceFile = async ({
   return stringifyHtmlAst(htmlAst)
 }
 
-const inlineImportmapScripts = async ({ logger, htmlAst, htmlFileUrl }) => {
+const visitImportmapScripts = async ({
+  logger,
+  inlineImportMapIntoHTML,
+  htmlAst,
+  htmlFileUrl,
+  projectDirectoryUrl,
+}) => {
   const { scripts } = parseHtmlAstRessources(htmlAst)
-  const remoteImportmapScripts = scripts.filter((script) => {
+  const importmapScripts = scripts.filter((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-    const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-    if (typeAttribute && typeAttribute.value === "importmap" && srcAttribute) {
+    if (typeAttribute && typeAttribute.value === "importmap") {
       return true
     }
     return false
   })
 
   await Promise.all(
-    remoteImportmapScripts.map(async (remoteImportmapScript) => {
-      const srcAttribute = getHtmlNodeAttributeByName(
-        remoteImportmapScript,
-        "src",
-      )
-      const importMapUrl = resolveUrl(srcAttribute.value, htmlFileUrl)
-      const importMapResponse = await fetchUrl(importMapUrl)
-      if (importMapResponse.status !== 200) {
-        logger.warn(
-          createDetailedMessage(
-            importMapResponse.status === 404
-              ? `Cannot inline importmap script because file cannot be found.`
-              : `Cannot inline importmap script due to unexpected response status (${importMapResponse.status}).`,
-            {
-              "importmap script src": srcAttribute.value,
-              "importmap url": importMapUrl,
-              "html url": htmlFileUrl,
-            },
-          ),
+    importmapScripts.map(async (importmapScript) => {
+      const srcAttribute = getHtmlNodeAttributeByName(importmapScript, "src")
+      if (srcAttribute && inlineImportMapIntoHTML) {
+        const importMapUrl = resolveUrl(srcAttribute.value, htmlFileUrl)
+        const importMapResponse = await fetchUrl(importMapUrl)
+        if (importMapResponse.status !== 200) {
+          logger.warn(
+            createDetailedMessage(
+              importMapResponse.status === 404
+                ? `Cannot inline importmap script because file cannot be found.`
+                : `Cannot inline importmap script due to unexpected response status (${importMapResponse.status}).`,
+              {
+                "importmap script src": srcAttribute.value,
+                "importmap url": importMapUrl,
+                "html url": htmlFileUrl,
+              },
+            ),
+          )
+          return
+        }
+
+        const importMapContent = await importMapResponse.json()
+        const importMapInlined = moveImportMap(
+          importMapContent,
+          importMapUrl,
+          htmlFileUrl,
         )
-        return
+
+        replaceHtmlNode(
+          importmapScript,
+          `<script type="importmap">${JSON.stringify(
+            importMapInlined,
+            null,
+            "  ",
+          )}</script>`,
+          {
+            attributesToIgnore: ["src"],
+          },
+        )
       }
 
-      const importMapContent = await importMapResponse.json()
-      const importMapInlined = moveImportMap(
-        importMapContent,
-        importMapUrl,
-        htmlFileUrl,
-      )
-
-      replaceHtmlNode(
-        remoteImportmapScript,
-        `<script type="importmap">${JSON.stringify(
-          importMapInlined,
-          null,
-          "  ",
-        )}</script>`,
-        {
-          attributesToIgnore: ["src"],
-        },
-      )
+      const textNode = getHtmlNodeTextNode(importmapScript)
+      if (!srcAttribute && textNode) {
+        const jsenvImportmap = getDefaultImportmap(htmlFileUrl, {
+          projectDirectoryUrl,
+        })
+        const htmlImportmap = JSON.parse(textNode.value)
+        const importmap = composeTwoImportMaps(jsenvImportmap, htmlImportmap)
+        textNode.value = JSON.stringify(importmap, null, "  ")
+      }
     }),
   )
 }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "25.0.0-alpha.0",
+  "version": "25.0.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -34,11 +34,13 @@
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
     "test-with-coverage": "npm run test -- --coverage",
     "dev": "node ./script/dev/start_dev_server.js",
+    "start_file_server": "node ./script/dev/start_file_server.js",
     "performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
     "file-size": "node ./script/file_size/file_size.mjs --log",
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "packages-install": "node ./script/packages/packages_install.js",
+    "certificate-install": "node ./script/dev/install_certificate_authority.mjs",
     "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {

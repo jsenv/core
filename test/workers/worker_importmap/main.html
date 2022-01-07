@@ -31,7 +31,9 @@
         value,
         pingResponse: await new Promise((resolve, reject) => {
           worker.onmessage = (e) => {
-            resolve(e.data)
+            if (typeof e.data === "number") {
+              resolve(e.data)
+            }
           }
           worker.onerror = (e) => {
             reject(e.message)
@@ -39,7 +41,6 @@
           worker.postMessage("ping")
         }),
       }
-
       window.resolveNamespacePromise(namespace)
 
       export { namespace }

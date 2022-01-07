@@ -9,13 +9,21 @@ export const compileJavascript = async ({
   projectDirectoryUrl,
 
   babelPluginMap,
+  workerUrls,
+  serviceWorkerUrls,
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
+  prependSystemJs,
 
   sourcemapExcludeSources,
   sourcemapMethod,
 }) => {
+  if (prependSystemJs === undefined) {
+    prependSystemJs =
+      workerUrls.includes(url) || serviceWorkerUrls.includes(url)
+  }
+
   const transformResult = await transformJs({
     code,
     map,
@@ -27,6 +35,7 @@ export const compileJavascript = async ({
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
+    prependSystemJs,
   })
 
   return transformResultToCompilationResult(

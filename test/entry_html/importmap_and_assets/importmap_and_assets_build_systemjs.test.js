@@ -43,7 +43,6 @@ const buildDirectoryUrl = resolveUrl(
 const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}style.css`]
-const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // check importmap content
 {
@@ -53,12 +52,14 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const importmapTextNode = getHtmlNodeTextNode(importmapHtmlNode)
   const importmapString = importmapTextNode.value
   const importmap = JSON.parse(importmapString)
+  const imgRemapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
 
   const actual = importmap
   const expected = {
     imports: {
       // the importmap for img-remap is available
-      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img.png": `./${imgBuildRelativeUrl}`,
+      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -67,6 +68,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // assert asset url is correct for css (hashed)
 {
+  const imgBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
@@ -79,6 +82,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
+  const imgRemapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -90,7 +95,7 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const expected = {
     imgUrlIsInstanceOfUrl: true,
     imgUrlString: resolveUrl(
-      `dist/systemjs/${imgBuildRelativeUrl}`,
+      `dist/systemjs/${imgRemapBuildRelativeUrl}`,
       serverOrigin,
     ),
   }

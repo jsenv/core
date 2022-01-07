@@ -1,6 +1,16 @@
 (function () {
   'use strict';
 
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return typeof obj;
+  };
+
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+  };
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
   var _defineProperty = (function (obj, key, value) {
     // Shortcircuit the slow defineProperty path when possible.
     // We are trying to avoid issues where setters defined on the
@@ -117,16 +127,6 @@
     }).join("");
     return "".concat(name, ": ").concat(message).concat(stackString);
   };
-
-  var nativeTypeOf = function nativeTypeOf(obj) {
-    return typeof obj;
-  };
-
-  var customTypeOf = function customTypeOf(obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-  };
-
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
 
   /* eslint-env browser, node */
   var parseDataUrl = function parseDataUrl(dataUrl) {
@@ -2500,7 +2500,7 @@
   };
 
   var unevalException = function unevalException(value) {
-    if (value.hasOwnProperty("toString")) {
+    if (value && value.hasOwnProperty("toString")) {
       delete value.toString;
     }
 
@@ -2576,6 +2576,8 @@
       }
     } else if (typeof error === "string") {
       html = error;
+    } else if (error === undefined) {
+      html = "undefined";
     } else {
       html = JSON.stringify(error);
     }
@@ -2721,7 +2723,7 @@
     if (Notification.permission === "granted") {
       var notification = new Notification("An error occured", {
         lang: "en",
-        body: error.stack,
+        body: error ? error.stack : "undefined",
         icon: icon
       });
 
@@ -4029,7 +4031,9 @@
       scopes: {},
       depcache: {},
       integrity: {}
-    }; // Scripts are processed immediately, on the first System.import, and on DOMReady.
+    };
+    systemJSPrototype.importMap = importMap;
+    systemJSPrototype.baseUrl = baseUrl; // Scripts are processed immediately, on the first System.import, and on DOMReady.
     // Import map scripts are processed only once (by being marked) and in order for each phase.
     // This is to avoid using DOM mutation observers in core, although that would be an alternative.
 
@@ -4089,6 +4093,7 @@
             return fetchPromise;
           }).then(function (text) {
             extendImportMap(importMap, text, script.src || baseUrl);
+            return importMap;
           });
         }
       });
@@ -4105,10 +4110,11 @@
 
       resolveAndComposeImportMap(newMap, newMapUrl, importMap);
     }
+
+    System.extendImportMap = extendImportMap;
     /*
      * Script instantiation loading
      */
-
 
     if (hasDocument) {
       window.addEventListener('error', function (evt) {
@@ -4258,20 +4264,32 @@
      */
 
 
-    if (hasSelf && typeof importScripts === 'function') systemJSPrototype.instantiate = function (url) {
-      var loader = this;
-      return Promise.resolve().then(function () {
-        importScripts(url);
-        return loader.getRegister(url);
-      });
-    };
+    if (hasSelf && typeof importScripts === 'function') {
+      systemJSPrototype.instantiate = function (url) {
+        var loader = this;
+        return self.fetch(url, {
+          credentials: 'same-origin'
+        }).then(function (response) {
+          if (!response.ok) {
+            throw Error(errMsg(7, [response.status, response.statusText, url].join(', ')));
+          }
+
+          return response.text();
+        }).then(function (source) {
+          if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+          (0, eval)(source);
+          return loader.getRegister(url);
+        });
+      };
+    }
   })();
 
   (function () {
     var envGlobal = typeof self !== 'undefined' ? self : global;
     var System = envGlobal.System;
-    var register = System.register;
     var registerRegistry = Object.create(null);
+    var register = System.register;
+    System.registerRegistry = registerRegistry;
 
     System.register = function (name, deps, declare) {
       if (typeof name !== 'string') return register.apply(this, arguments);
@@ -4304,6 +4322,99 @@
       var result = registerRegistry[url] || register;
       return result;
     };
+  })();
+
+  (function () {
+    // worker or service worker
+    if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
+      var importMapFromParentPromise = new Promise(function (resolve) {
+        var importmapMessageCallback = function importmapMessageCallback(e) {
+          if (e.data === "__importmap_init__") {
+            self.removeEventListener("message", importmapMessageCallback);
+
+            e.ports[0].onmessage = function (message) {
+              resolve(message.data);
+            };
+
+            e.ports[0].postMessage('__importmap_request__');
+          }
+        };
+
+        self.addEventListener("message", importmapMessageCallback);
+      }); // var prepareImport = System.prepareImport
+
+      System.prepareImport = function () {
+        return importMapFromParentPromise.then(function (importmap) {
+          System.extendImportMap(System.importMap, JSON.stringify(importmap), System.baseUrl);
+        });
+      }; // auto import first register
+
+
+      var messageEvents = [];
+
+      var messageCallback = function messageCallback(event) {
+        messageEvents.push(event);
+      };
+
+      self.addEventListener('message', messageCallback);
+      var register = System.register;
+
+      System.register = function (deps, declare) {
+        System.register = register;
+        System.registerRegistry[self.location.href] = [deps, declare];
+        System.import(self.location.href).then(function () {
+          self.removeEventListener('message', messageCallback);
+          messageEvents.forEach(function (messageEvent) {
+            self.dispatchEvent(messageEvent);
+          });
+          messageEvents = null;
+        });
+      };
+    } else if ((typeof window === "undefined" ? "undefined" : _typeof(window)) === 'object') {
+      var WorkerConstructor = window.Worker;
+
+      if (typeof WorkerConstructor === 'function') {
+        window.Worker = function (url, options) {
+          var worker = new WorkerConstructor(url, options);
+          var importmapChannel = new MessageChannel();
+
+          importmapChannel.port1.onmessage = function (message) {
+            System.prepareImport().then(function (importmap) {
+              message.target.postMessage(importmap);
+            });
+          };
+
+          worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+          return worker;
+        };
+      }
+
+      var serviceWorker = navigator.serviceWorker;
+
+      if (serviceWorker) {
+        var register = serviceWorker.register;
+
+        serviceWorker.register = function (url, options) {
+          var registrationPromise = register.call(this, url, options);
+          registrationPromise.then(function (registration) {
+            var installing = registration.installing;
+            var waiting = registration.waiting;
+            var active = registration.active;
+            var worker = installing || waiting || active;
+            var importmapChannel = new MessageChannel();
+
+            importmapChannel.port1.onmessage = function (message) {
+              System.prepareImport().then(function (importmap) {
+                message.target.postMessage(importmap);
+              });
+            };
+
+            worker.postMessage('__importmap_init__', [importmapChannel.port2]);
+          });
+          return registrationPromise;
+        };
+      }
+    }
   })();
 
   /* eslint-env browser */
@@ -4763,7 +4874,7 @@
       var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
 
-      var importmapScript = document.querySelector("script[type=\"jsenv-importmap\"]");
+      var importmapScript = document.querySelector("script[type=\"systemjs-importmap\"]");
       var importMap;
       var importMapUrl;
       return _invoke$1(function () {
@@ -5076,12 +5187,12 @@
         errorExposureInDocument = _ref$errorExposureInD === void 0 ? true : _ref$errorExposureInD;
     var error = executionResult.error;
 
-    if (error.code === "NETWORK_FAILURE") {
+    if (error && error.code === "NETWORK_FAILURE") {
       if (currentScript) {
         var errorEvent = new Event("error");
         currentScript.dispatchEvent(errorEvent);
       }
-    } else {
+    } else if (_typeof(error) === "object") {
       var parsingError = error.parsingError;
       var globalErrorEvent = new Event("error");
 
@@ -5185,4 +5296,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_a8097085.js.map
+//# sourceMappingURL=browser_runtime_91c5a3b8.js.map

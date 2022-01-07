@@ -95,10 +95,13 @@ export const startCompileServer = async ({
   babelPluginMap,
   babelConfigFileUrl,
   customCompilers = {},
-
-  // remaining options
+  workers = [],
+  serviceWorkers = [],
+  importMapInWebWorkers = false,
+  prependSystemJs,
   runtimeSupport,
 
+  // remaining options
   livereloadWatchConfig = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
@@ -138,9 +141,14 @@ export const startCompileServer = async ({
     jsenvDirectoryUrl,
     projectDirectoryUrl,
   )
-
   const logger = createLogger({ logLevel })
 
+  const workerUrls = workers.map((worker) =>
+    resolveUrl(worker, projectDirectoryUrl),
+  )
+  const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
+    resolveUrl(serviceWorker, projectDirectoryUrl),
+  )
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
@@ -177,7 +185,19 @@ export const startCompileServer = async ({
   const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
     extractSyntaxBabelPluginMap(babelPluginMap)
   const compileServerGroupMap = generateGroupMap({
-    babelPluginMap: babelPluginMapWithoutSyntax,
+    featureNames: [
+      ...(browser
+        ? [
+            "module",
+            "importmap",
+            "import_assertion_type_json",
+            "import_assertion_type_css",
+          ]
+        : []),
+      ...(browser && workerUrls.length > 0 ? ["worker_type_module"] : []),
+      ...(browser && importMapInWebWorkers ? ["worker_importmap"] : []),
+      ...Object.keys(babelPluginMapWithoutSyntax),
+    ],
     runtimeSupport,
   })
 
@@ -188,7 +208,7 @@ export const startCompileServer = async ({
     // It happens for module written in ESM but also using process.env.NODE_ENV
     // for example "react-redux"
     // This babel plugin won't force compilation because it's added after "generateGroupMap"
-    // however it will be used even if not part of "pluginRequiredNameArray"
+    // however it will be used even if not part of "missingFeatureNames"
     // as visible in "babelPluginMapFromCompileId"
     // This is a quick workaround to get things working because:
     // - If none of your code needs to be compiled but one of your dependency
@@ -314,6 +334,10 @@ export const startCompileServer = async ({
       groupMap: compileServerGroupMap,
       babelPluginMap,
       customCompilers,
+      workerUrls,
+      serviceWorkerUrls,
+      importMapInWebWorkers,
+      prependSystemJs,
       moduleOutFormat,
       importMetaFormat,
       jsenvEventSourceClientInjection,

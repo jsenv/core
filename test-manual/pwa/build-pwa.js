@@ -13,9 +13,7 @@ buildProject({
   entryPoints: {
     [`${pwaDirectoryRelativeUrl}main.html`]: "main.html",
   },
-  serviceWorkers: {
-    [`${pwaDirectoryRelativeUrl}sw.js`]: "sw.js",
-  },
+  serviceWorkers: [`${pwaDirectoryRelativeUrl}sw.js`],
   buildDirectoryClean: true,
   minify: false,
 })

@@ -17,11 +17,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}importing_react.html`
 const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   customCompilers: {
     "./node_modules/react/index.js": commonJsToJavaScriptModule,
     "./node_modules/react-dom/index.js": async (options) => {
@@ -39,7 +37,7 @@ const { status, namespace } = await execute({
   },
   runtime: chromiumRuntime,
   stopAfterExecute: true,
-  fileRelativeUrl: htmlFileRelativeUrl,
+  fileRelativeUrl: `${testDirectoryRelativeUrl}importing_react.html`,
 })
 
 const actual = {

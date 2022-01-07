@@ -102,6 +102,8 @@ const errorToHTML = (error) => {
     }
   } else if (typeof error === "string") {
     html = error
+  } else if (error === undefined) {
+    html = "undefined"
   } else {
     html = JSON.stringify(error)
   }

@@ -3,18 +3,16 @@ import { findHighestVersion } from "../semantic_versioning/index.js"
 export const createOneRuntimeCompat = ({
   runtimeName,
   runtimeVersion,
-
-  pluginMap,
-  pluginCompatMap,
+  featureNames,
+  featuresCompatMap,
 }) => {
-  const pluginRequiredNameArray = []
+  const missingFeatureNames = []
   // will be the first runtime version compatible with all features not listed in
-  // pluginRequiredNameArray
+  // missingFeatureNames
   let minRuntimeVersion
-
-  Object.keys(pluginMap).forEach((pluginName) => {
-    const pluginCompat = pluginCompatMap[pluginName] || {}
-    const runtimeVersionCompatible = pluginCompat[runtimeName] || "Infinity"
+  featureNames.forEach((featureName) => {
+    const featureCompat = featuresCompatMap[featureName] || {}
+    const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity"
 
     const highestVersion = findHighestVersion(
       runtimeVersion,
@@ -22,7 +20,7 @@ export const createOneRuntimeCompat = ({
     )
     const compatible = highestVersion === runtimeVersion
     if (!compatible) {
-      pluginRequiredNameArray.push(pluginName)
+      missingFeatureNames.push(featureName)
     }
 
     if (compatible && runtimeVersionCompatible !== "Infinity") {
@@ -33,9 +31,8 @@ export const createOneRuntimeCompat = ({
       )
     }
   })
-
   return {
-    pluginRequiredNameArray,
+    missingFeatureNames,
     minRuntimeVersion: minRuntimeVersion || runtimeVersion,
   }
 }

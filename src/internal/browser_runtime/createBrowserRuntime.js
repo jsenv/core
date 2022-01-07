@@ -40,7 +40,7 @@ export const createBrowserRuntime = async ({
   // if there is an importmap in the document we use it instead of fetching.
   // systemjs style with systemjs-importmap
   const importmapScript = document.querySelector(
-    `script[type="jsenv-importmap"]`,
+    `script[type="systemjs-importmap"]`,
   )
   let importMap
   let importMapUrl

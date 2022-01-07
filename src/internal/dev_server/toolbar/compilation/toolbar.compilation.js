@@ -14,7 +14,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
       canAvoidCompilation,
       featuresReport,
       customCompilerPatterns,
-      pluginRequiredNameArray,
+      missingFeatureNames,
       inlineImportMapIntoHTML,
       outDirectoryRelativeUrl,
       compileId,
@@ -38,7 +38,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
                 missingOnly: true,
                 featuresReport,
                 customCompilerPatterns,
-                pluginRequiredNameArray,
+                missingFeatureNames,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -54,7 +54,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
               {
                 featuresReport,
                 customCompilerPatterns,
-                pluginRequiredNameArray,
+                missingFeatureNames,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -70,7 +70,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
               {
                 featuresReport,
                 customCompilerPatterns,
-                pluginRequiredNameArray,
+                missingFeatureNames,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -128,7 +128,7 @@ const getBrowserSupportMessage = ({
   missingOnly,
   featuresReport,
   customCompilerPatterns,
-  pluginRequiredNameArray,
+  missingFeatureNames,
   inlineImportMapIntoHTML,
 }) => {
   const parts = []
@@ -161,14 +161,14 @@ const getBrowserSupportMessage = ({
     parts.push(`top level await is not supported`)
   }
 
-  const pluginRequiredCount = pluginRequiredNameArray.length
-  if (pluginRequiredCount === 0) {
+  const missingFeatureCount = missingFeatureNames.length
+  if (missingFeatureCount === 0) {
     if (!missingOnly) {
-      parts.push(`all plugins are natively supported`)
+      parts.push(`all features are natively supported`)
     }
   } else {
     parts.push(
-      `${pluginRequiredCount} plugins are mandatory: ${pluginRequiredNameArray}`,
+      `${missingFeatureCount} features are missing: ${missingFeatureNames}`,
     )
   }
 

@@ -26,7 +26,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const { buildMappings } = await buildProject({
+const { buildMappings, buildManifest } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -36,6 +36,25 @@ const { buildMappings } = await buildProject({
   // minify: true,
   // logLevel: "debug",
 })
+
+if (process.platform !== "win32") {
+  const actual = {
+    buildManifest,
+  }
+  const expected = {
+    buildManifest: {
+      "assets/img.png": "assets/img_25e95a00.png",
+      "assets/img-remap.png": "assets/img-remap_25e95a00.png",
+      "assets/style.css": "assets/style_bb497274.css",
+      "assets/style.css.map": "assets/style.css_1c41eaf0.map",
+      "main.js": "main_9dd4a4eb.js",
+      "main.js.map": "main_9dd4a4eb.js.map",
+      "main.html": "main.html",
+    },
+  }
+  assert({ actual, expected })
+}
+
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
@@ -43,10 +62,11 @@ const buildDirectoryUrl = resolveUrl(
 const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}style.css`]
-const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // check importmap content
 {
+  const imgRemapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
   const htmlBuildFileUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlBuildFileContent = await readFile(htmlBuildFileUrl)
   const importmapHtmlNode = findHtmlNodeById(htmlBuildFileContent, "importmap")
@@ -59,7 +79,7 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const expected = {
     imports: {
       // the importmap for img-remap is available
-      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img.png": `./${imgBuildRelativeUrl}`,
+      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -68,6 +88,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // assert asset url is correct for css (hashed)
 {
+  const imgBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
@@ -80,6 +102,8 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
+  const imgRemapBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -91,7 +115,7 @@ const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const expected = {
     imgUrlIsInstanceOfUrl: true,
     imgUrlString: resolveUrl(
-      `dist/esmodule/${imgBuildRelativeUrl}`,
+      `dist/esmodule/${imgRemapBuildRelativeUrl}`,
       serverOrigin,
     ),
   }

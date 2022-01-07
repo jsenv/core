@@ -45,17 +45,20 @@ export const startDevServer = async ({
   keepProcessAlive = true,
 
   babelPluginMap,
+  workers,
+  serviceWorkers,
+  importMapInWebWorkers,
+  customCompilers,
   runtimeSupportDuringDev = {
     // this allows to compile nothing or almost nothing when opening files
     // with a recent chrome. Without this we would compile all the things not yet unsupported
     // by Firefox and Safari such as top level await, importmap, etc
-    chrome: "93",
+    chrome: "96",
   },
   logLevel,
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
   sourcemapMethod,
-  customCompilers,
   livereloadWatchConfig,
   livereloadLogLevel,
   jsenvDirectoryClean,
@@ -124,6 +127,9 @@ export const startDevServer = async ({
     customCompilers,
     sourcemapMethod,
     babelPluginMap,
+    workers,
+    serviceWorkers,
+    importMapInWebWorkers,
     runtimeSupport: runtimeSupportDuringDev,
     livereloadWatchConfig,
     livereloadLogLevel,

@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
 export const isLivereloadEnabled = () => {
-  const value = window.localStorage.hasOwnProperty("livereload")
+  const value = window.localStorage.getItem("livereload")
   if (value === "0") {
     return false
   }

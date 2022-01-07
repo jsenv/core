@@ -1,4 +1,4 @@
-// https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/native-modules.json#L1
+import { jsenvBabelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 export const featuresCompatMap = {
   module: {
@@ -26,4 +26,12 @@ export const featuresCompatMap = {
     chrome: "93",
     edge: "93",
   },
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
+  ...jsenvBabelPluginCompatMap,
 }

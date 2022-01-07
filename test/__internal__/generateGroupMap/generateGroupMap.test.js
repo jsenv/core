@@ -7,22 +7,20 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // supporting all node versions ("0.0.0")
 {
   const actual = generateGroupMap({
-    babelPluginMap: {
-      "transform-block-scoping": true,
-    },
+    featureNames: ["transform-block-scoping"],
     runtimeSupport: {
       node: "0.0.0",
     },
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: ["transform-block-scoping"],
+      missingFeatureNames: ["transform-block-scoping"],
       minRuntimeVersions: {
         node: "0.0.0",
       },
     },
     otherwise: {
-      pluginRequiredNameArray: ["transform-block-scoping"],
+      missingFeatureNames: ["transform-block-scoping"],
       minRuntimeVersions: {},
     },
   }
@@ -32,20 +30,18 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // supporting node 14.17
 {
   const actual = generateGroupMap({
-    babelPluginMap: {
-      "transform-block-scoping": true,
-    },
+    featureNames: ["transform-block-scoping"],
     runtimeSupport: {
       node: "14.17",
     },
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: [],
+      missingFeatureNames: [],
       minRuntimeVersions: { node: "6" },
     },
     otherwise: {
-      pluginRequiredNameArray: ["transform-block-scoping"],
+      missingFeatureNames: ["transform-block-scoping"],
       minRuntimeVersions: {},
     },
   }
@@ -55,10 +51,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // supporting chrome and firefox
 {
   const actual = generateGroupMap({
-    babelPluginMap: {
-      "transform-block-scoping": true,
-      "transform-modules-systemjs": true,
-    },
+    featureNames: ["transform-block-scoping", "transform-modules-systemjs"],
     runtimeSupport: {
       chrome: "60",
       firefox: "51",
@@ -66,14 +59,14 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: ["transform-modules-systemjs"],
+      missingFeatureNames: ["transform-modules-systemjs"],
       minRuntimeVersions: {
         chrome: "49",
         firefox: "51",
       },
     },
     otherwise: {
-      pluginRequiredNameArray: [
+      missingFeatureNames: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
@@ -86,9 +79,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // supporting chrome + firefox + webkit
 {
   const actual = generateGroupMap({
-    babelPluginMap: {
-      "transform-block-scoping": true,
-    },
+    featureNames: ["transform-block-scoping"],
     runtimeSupport: {
       chrome: "49",
       firefox: "51.0.0",
@@ -97,7 +88,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: [],
+      missingFeatureNames: [],
       minRuntimeVersions: {
         chrome: "49",
         firefox: "51",
@@ -105,7 +96,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      pluginRequiredNameArray: ["transform-block-scoping"],
+      missingFeatureNames: ["transform-block-scoping"],
       minRuntimeVersions: {},
     },
   }
@@ -115,10 +106,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // supporting any chrome + firefox + webkit
 {
   const actual = generateGroupMap({
-    babelPluginMap: {
-      "transform-block-scoping": true,
-      "transform-modules-systemjs": true,
-    },
+    featureNames: ["transform-block-scoping", "transform-modules-systemjs"],
     runtimeSupport: {
       chrome: "0.0.0",
       firefox: "0.0.0",
@@ -127,7 +115,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: [
+      missingFeatureNames: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
@@ -138,7 +126,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      pluginRequiredNameArray: [
+      missingFeatureNames: [
         "transform-block-scoping",
         "transform-modules-systemjs",
       ],
@@ -151,7 +139,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // close to reality (supporting recent runtimes and all jsenv babel plugins enabled)
 {
   const actual = generateGroupMap({
-    babelPluginMap: jsenvBabelPluginMap,
+    featureNames: Object.keys(jsenvBabelPluginMap),
     runtimeSupport: {
       chrome: "67.0.0",
       firefox: "59.0.0",
@@ -161,7 +149,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: [
+      missingFeatureNames: [
         "proposal-numeric-separator",
         "proposal-optional-chaining",
         "proposal-json-strings",
@@ -176,7 +164,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      pluginRequiredNameArray: [
+      missingFeatureNames: [
         "proposal-numeric-separator",
         "proposal-json-strings",
         "proposal-object-rest-spread",
@@ -216,12 +204,12 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 // during dev
 {
   const actual = generateGroupMap({
-    babelPluginMap: jsenvBabelPluginMap,
+    featureNames: Object.keys(jsenvBabelPluginMap),
     runtimeSupport: jsenvRuntimeSupportDuringDev,
   })
   const expected = {
     best: {
-      pluginRequiredNameArray: [],
+      missingFeatureNames: [],
       minRuntimeVersions: {
         chrome: "80",
         firefox: "78",
@@ -230,7 +218,7 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
       },
     },
     otherwise: {
-      pluginRequiredNameArray: [
+      missingFeatureNames: [
         "proposal-numeric-separator",
         "proposal-json-strings",
         "proposal-object-rest-spread",

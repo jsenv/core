@@ -34,7 +34,7 @@ export const scanNodeRuntimeFeatures = async ({
     featuresReport,
     failFastOnFeatureDetection: true,
   })
-  const pluginRequiredNameArray = pluginRequiredNamesFromGroupInfo(groupInfo, {
+  const missingFeatureNames = adjustMissingFeatureNames(groupInfo, {
     featuresReport,
     coverageHandledFromOutside,
   })
@@ -43,14 +43,14 @@ export const scanNodeRuntimeFeatures = async ({
     // node native resolution will not auto add extension
     !importDefaultExtension &&
     customCompilerPatterns.length === 0 &&
-    pluginRequiredNameArray.length === 0 &&
+    missingFeatureNames.length === 0 &&
     featuresReport.dynamicImport &&
     featuresReport.topLevelAwait
 
   return {
     canAvoidCompilation,
     featuresReport,
-    pluginRequiredNameArray,
+    missingFeatureNames,
     compileId,
     importDefaultExtension,
     node,
@@ -84,28 +84,34 @@ const importJson = async (url) => {
   return object
 }
 
-const pluginRequiredNamesFromGroupInfo = (
+const adjustMissingFeatureNames = (
   groupInfo,
   { coverageHandledFromOutside },
 ) => {
-  const { pluginRequiredNameArray } = groupInfo
-  const requiredPluginNames = pluginRequiredNameArray.slice()
-  const markPluginAsSupported = (name) => {
-    const index = requiredPluginNames.indexOf(name)
+  const { missingFeatureNames } = groupInfo
+  const missingFeatureNamesCopy = missingFeatureNames.slice()
+  const markAsSupported = (name) => {
+    const index = missingFeatureNamesCopy.indexOf(name)
     if (index > -1) {
-      requiredPluginNames.splice(index, 1)
+      missingFeatureNamesCopy.splice(index, 1)
     }
   }
-
   if (coverageHandledFromOutside) {
-    markPluginAsSupported("transform-instrument")
+    markAsSupported("transform-instrument")
   }
-  // CSS import assertions and constructable stylesheet are not supported by Node.js
-  // but we assume they are not used for code executed in Node.js
-  // Without this check code executed on Node.js would always be compiled
-  // because import assertions and constructable stylesheet are enabled by default
-  markPluginAsSupported("transform-import-assertions")
-  markPluginAsSupported("new-stylesheet-as-jsenv-import")
-
-  return requiredPluginNames
+  // Jsenv enable some features because they are standard and we can expect code to use them.
+  // At the time of writing this, these features are not available in latest Node.js.
+  // Some feature are also browser specific.
+  // To avoid compiling code for Node.js these feaure are marked as supported.
+  // It means code written to be execute in Node.js should not use these features
+  // because jsenv ignore them (it won't try to "polyfill" them)
+  markAsSupported("module")
+  markAsSupported("importmap")
+  markAsSupported("transform-import-assertions")
+  markAsSupported("import_assertion_type_json")
+  markAsSupported("import_assertion_type_css")
+  markAsSupported("new-stylesheet-as-jsenv-import")
+  markAsSupported("worker_type_module")
+  markAsSupported("worker_importmap")
+  return missingFeatureNamesCopy
 }

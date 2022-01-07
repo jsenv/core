@@ -127,12 +127,12 @@ const onExecutionError = (
   },
 ) => {
   const error = executionResult.error
-  if (error.code === "NETWORK_FAILURE") {
+  if (error && error.code === "NETWORK_FAILURE") {
     if (currentScript) {
       const errorEvent = new Event("error")
       currentScript.dispatchEvent(errorEvent)
     }
-  } else {
+  } else if (typeof error === "object") {
     const { parsingError } = error
     const globalErrorEvent = new Event("error")
     if (parsingError) {

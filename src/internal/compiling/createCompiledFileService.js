@@ -6,10 +6,10 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
-import { featuresCompatMap } from "@jsenv/core/src/internal/generateGroupMap/featuresCompatMap.js"
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
-
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
+
 import { setUrlExtension } from "../url_utils.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -45,8 +45,12 @@ export const createCompiledFileService = ({
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
+  prependSystemJs,
   groupMap,
   customCompilers,
+  workerUrls,
+  serviceWorkerUrls,
+  importMapInWebWorkers,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -60,6 +64,8 @@ export const createCompiledFileService = ({
   Object.keys(groupMap).forEach((groupName) => {
     compileIdModuleFormats[groupName] = canAvoidSystemJs({
       runtimeSupport: groupMap[groupName].minRuntimeVersions,
+      workerUrls,
+      importMapInWebWorkers,
     })
       ? "esmodule"
       : "systemjs"
@@ -183,18 +189,20 @@ export const createCompiledFileService = ({
           outDirectoryRelativeUrl,
           compileId,
           request,
-
-          runtimeSupport,
-          babelPluginMap: babelPluginMapFromCompileId(compileId, {
+          babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
-            groupMap,
+            missingFeatureNames: groupMap[compileId].missingFeatureNames,
           }),
+          runtimeSupport,
+          workerUrls,
+          serviceWorkerUrls,
           moduleOutFormat:
             moduleOutFormat === undefined
               ? compileIdModuleFormats[compileId]
               : moduleOutFormat,
           importMetaFormat,
           topLevelAwait,
+          prependSystemJs,
 
           sourcemapMethod,
           sourcemapExcludeSources,
@@ -210,18 +218,23 @@ export const createCompiledFileService = ({
   }
 }
 
-const canAvoidSystemJs = ({ runtimeSupport }) => {
+const canAvoidSystemJs = ({
+  runtimeSupport,
+  workerUrls,
+  importMapInWebWorkers,
+}) => {
   const runtimeCompatMap = createRuntimeCompat({
+    featureNames: [
+      "module",
+      "importmap",
+      "import_assertion_type_json",
+      "import_assertion_type_css",
+      ...(workerUrls.length > 0 ? ["worker_type_module"] : []),
+      ...(importMapInWebWorkers ? ["worker_importmap"] : []),
+    ],
     runtimeSupport,
-    pluginMap: {
-      module: true,
-      importmap: true,
-      import_assertion_type_json: true,
-      import_assertion_type_css: true,
-    },
-    pluginCompatMap: featuresCompatMap,
   })
-  return runtimeCompatMap.pluginRequiredNameArray.length === 0
+  return runtimeCompatMap.missingFeatureNames.length === 0
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {
@@ -293,31 +306,6 @@ const contentTypeExtensions = {
   "text/html": ".html",
   "application/importmap+json": ".importmap",
   // "text/css": ".css",
-}
-
-const babelPluginMapFromCompileId = (
-  compileId,
-  { babelPluginMap, groupMap },
-) => {
-  const babelPluginMapForGroup = {}
-
-  groupMap[compileId].pluginRequiredNameArray.forEach((requiredPluginName) => {
-    const babelPlugin = babelPluginMap[requiredPluginName]
-    if (babelPlugin) {
-      babelPluginMapForGroup[requiredPluginName] = babelPlugin
-    }
-  })
-
-  Object.keys(babelPluginMap).forEach((key) => {
-    if (key.startsWith("syntax-")) {
-      babelPluginMapForGroup[key] = babelPluginMap[key]
-    }
-    if (key === "transform-replace-expressions") {
-      babelPluginMapForGroup[key] = babelPluginMap[key]
-    }
-  })
-
-  return babelPluginMapForGroup
 }
 
 const ressourceToPathname = (ressource) => {

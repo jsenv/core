@@ -13,18 +13,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `global_this.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-
 const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv`,
   runtime: chromiumRuntime,
   runtimeParams: {
     ...LAUNCH_TEST_PARAMS,
   },
-  fileRelativeUrl,
+  fileRelativeUrl: `${testDirectoryRelativeUrl}global_this.html`,
 })
 const actual = {
   status,
