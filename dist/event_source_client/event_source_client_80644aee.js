@@ -215,7 +215,7 @@
 
   /* eslint-env browser */
   var isLivereloadEnabled = function isLivereloadEnabled() {
-    var value = window.localStorage.hasOwnProperty("livereload");
+    var value = window.localStorage.getItem("livereload");
 
     if (value === "0") {
       return false;
@@ -353,4 +353,4 @@
 
 })();
 
-//# sourceMappingURL=event_source_client_620fbc2c.js.map
+//# sourceMappingURL=event_source_client_80644aee.js.map
