@@ -25,7 +25,7 @@ const entryPoints = {
   [`./${testDirectoryRelativeUrl}${testDirectoryname}.html`]: "./main.html",
 }
 
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -36,7 +36,7 @@ const { projectBuildMappings } = await buildProject({
 
 {
   const mainJsFileBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
+    buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

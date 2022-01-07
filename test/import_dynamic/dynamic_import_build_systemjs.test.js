@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `dynamic_import.html`
 
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   useImportMapToMaximizeCacheReuse: false,
   jsenvDirectoryRelativeUrl,
@@ -28,7 +28,7 @@ const { projectBuildMappings } = await buildProject({
   },
 })
 const mainBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
+  buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,

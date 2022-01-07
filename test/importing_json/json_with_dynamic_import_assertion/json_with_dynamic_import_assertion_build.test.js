@@ -26,7 +26,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -39,7 +39,7 @@ const { projectBuildMappings } = await buildProject({
 // check sourcemap content
 {
   const sourcemapBuildRelativeUrl = `${
-    projectBuildMappings[`${testDirectoryRelativeUrl}data.js?import_type=json`]
+    buildMappings[`${testDirectoryRelativeUrl}data.js?import_type=json`]
   }.map`
   const sourcemapBuildUrl = resolveUrl(
     sourcemapBuildRelativeUrl,
@@ -69,8 +69,7 @@ const { projectBuildMappings } = await buildProject({
 }
 
 {
-  const jsBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

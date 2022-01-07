@@ -195,7 +195,7 @@ export const buildUsingRollup = async ({
   const {
     rollupBuild,
     urlResponseBodyMap,
-    projectBuildMappings,
+    buildMappings,
     buildManifest,
     buildImportMap,
     buildFileContents,
@@ -231,7 +231,7 @@ export const buildUsingRollup = async ({
   return {
     rollupBuild,
     urlResponseBodyMap,
-    projectBuildMappings,
+    buildMappings,
     buildManifest,
     buildImportMap,
     buildFileContents,

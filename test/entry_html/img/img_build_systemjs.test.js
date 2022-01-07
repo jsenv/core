@@ -24,7 +24,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `img.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -45,7 +45,7 @@ const img = findNodeByTagName(htmlString, "img")
 {
   const srcAttribute = getHtmlNodeAttributeByName(img, "src")
   const imgABuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img-a.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img-a.png`]
 
   const actual = srcAttribute.value
   const expected = imgABuildRelativeUrl
@@ -60,9 +60,9 @@ const img = findNodeByTagName(htmlString, "img")
 {
   const srcsetAttribute = getHtmlNodeAttributeByName(img, "srcset")
   const imgBBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img-b.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img-b.png`]
   const imgCBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img-c.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img-c.png`]
 
   const actual = parseSrcset(srcsetAttribute.value)
   const expected = [

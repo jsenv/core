@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `importing_jquery_and_flight.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -26,9 +26,7 @@ const { projectBuildMappings } = await buildProject({
   },
 })
 const mainJsBuildRelativeUrl =
-  projectBuildMappings[
-    `${testDirectoryRelativeUrl}importing_jquery_and_flight.js`
-  ]
+  buildMappings[`${testDirectoryRelativeUrl}importing_jquery_and_flight.js`]
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,

@@ -27,7 +27,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `main.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -69,9 +69,7 @@ const htmlString = await readFile(htmlBuildUrl)
     srcAttribute: undefined,
     mappings: {
       imports: {
-        "./file.js": `./${
-          projectBuildMappings[`${testDirectoryRelativeUrl}file.js`]
-        }`,
+        "./file.js": `./${buildMappings[`${testDirectoryRelativeUrl}file.js`]}`,
       },
     },
   }

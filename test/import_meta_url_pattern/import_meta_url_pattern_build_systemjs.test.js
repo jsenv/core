@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `import_meta_url_pattern.html`
 
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -29,15 +29,12 @@ const { projectBuildMappings } = await buildProject({
 })
 
 const depFileBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}dep.js`]
-const fileBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}file.js`]
+  buildMappings[`${testDirectoryRelativeUrl}dep.js`]
+const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
 
 // assert build mappings does not contains dep.js (concatenation)
 {
-  const actual = Object.keys(projectBuildMappings).includes(
-    depFileBuildRelativeUrl,
-  )
+  const actual = Object.keys(buildMappings).includes(depFileBuildRelativeUrl)
   const expected = false
   assert({ actual, expected })
 }

@@ -22,7 +22,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `importing_preact.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   // logLevel: "debug",
@@ -38,7 +38,7 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const mainJsBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}importing_preact.js`]
+  buildMappings[`${testDirectoryRelativeUrl}importing_preact.js`]
 const sourcemapBuildRelativeUrl = `${mainJsBuildRelativeUrl}.map`
 
 // sourcemap

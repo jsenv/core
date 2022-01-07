@@ -37,7 +37,7 @@ const customCompilers = {
     })
   },
 }
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   // logLevel: "debug",
@@ -56,7 +56,7 @@ const { projectBuildMappings } = await buildProject({
   },
 })
 const mainJsBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}importing_react.jsx`]
+  buildMappings[`${testDirectoryRelativeUrl}importing_react.jsx`]
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,

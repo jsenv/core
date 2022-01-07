@@ -29,7 +29,7 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const test = async (params) => {
-  const { projectBuildMappings } = await buildProject({
+  const { buildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
@@ -37,8 +37,7 @@ const test = async (params) => {
     entryPoints,
     ...params,
   })
-  const jsBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
   return { jsBuildRelativeUrl }
 }
 

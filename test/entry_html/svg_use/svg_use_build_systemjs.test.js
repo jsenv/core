@@ -23,7 +23,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `svg_use.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -37,11 +37,9 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
-const svgBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}icon.svg`]
+const svgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}icon.svg`]
 const svgBuildUrl = resolveUrl(svgBuildRelativeUrl, buildDirectoryUrl)
-const pngBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}img.png`]
+const pngBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
 const pngBuildUrl = resolveUrl(pngBuildRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const [firstUseNodeInBuild, secondUseNodeInBuild] = findAllNodeByTagName(

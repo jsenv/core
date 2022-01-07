@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -39,7 +39,6 @@ const { projectBuildMappings } = await buildProject({
   const href = getHtmlNodeAttributeByName(linkPreload, "href").value
 
   const actual = href
-  const expected =
-    projectBuildMappings[`${testDirectoryRelativeUrl}src/main.css`]
+  const expected = buildMappings[`${testDirectoryRelativeUrl}src/main.css`]
   assert({ actual, expected })
 }

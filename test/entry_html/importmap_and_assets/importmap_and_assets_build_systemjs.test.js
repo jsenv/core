@@ -26,7 +26,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -40,10 +40,9 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const mainBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
+const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}style.css`]
+  buildMappings[`${testDirectoryRelativeUrl}style.css`]
 
 // check importmap content
 {
@@ -54,7 +53,7 @@ const cssBuildRelativeUrl =
   const importmapString = importmapTextNode.value
   const importmap = JSON.parse(importmapString)
   const imgRemapBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
 
   const actual = importmap
   const expected = {
@@ -70,7 +69,7 @@ const cssBuildRelativeUrl =
 // assert asset url is correct for css (hashed)
 {
   const imgBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img.png`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
@@ -84,7 +83,7 @@ const cssBuildRelativeUrl =
 // assert asset url is correct for javascript (remapped + hashed)
 {
   const imgRemapBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

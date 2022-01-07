@@ -22,7 +22,7 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `${testDirectoryname}.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -31,7 +31,7 @@ const { projectBuildMappings } = await buildProject({
   },
 })
 const jsFileBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}import_meta_url.js`]
+  buildMappings[`${testDirectoryRelativeUrl}import_meta_url.js`]
 const { namespace, serverOrigin } = await browserImportEsModuleBuild({
   ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,

@@ -23,7 +23,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `video_source.html`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -38,7 +38,7 @@ const buildDirectoryUrl = resolveUrl(
 )
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const videoBuildRelativeUrl =
-  projectBuildMappings[`${testDirectoryRelativeUrl}video.mp4`]
+  buildMappings[`${testDirectoryRelativeUrl}video.mp4`]
 const videoBuildUrl = resolveUrl(videoBuildRelativeUrl, buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const sourceNode = findNodeByTagName(htmlString, "source")

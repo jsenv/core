@@ -22,7 +22,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const { projectBuildMappings } = await buildProject({
+const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -43,7 +43,7 @@ const { projectBuildMappings } = await buildProject({
   const image = findNodeByTagName(htmlString, "image")
   const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
   const imgBuildRelativeUrl =
-    projectBuildMappings[`${testDirectoryRelativeUrl}img.png`]
+    buildMappings[`${testDirectoryRelativeUrl}img.png`]
 
   const actual = hrefAttribute.value
   const expected = imgBuildRelativeUrl
