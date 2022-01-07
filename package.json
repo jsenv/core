@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "25.0.0",
+  "version": "25.0.1",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "https://github.com/jsenv/jsenv-core"
   },
   "engines": {
-    "node": ">=14.9.0"
+    "node": ">=16.13.0"
   },
   "publishConfig": {
     "access": "public"
