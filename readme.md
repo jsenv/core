@@ -2,7 +2,7 @@
 
 _@jsenv/core_ is a quick start pack to launch a js project. It provides what you need from the beginning: a dev server, a build tool and a test "framework", all in one.
 
-Jsenv integrates naturally with standard HTML, CSS and JS: **you don't have to pick a JavaScript framework**.
+Jsenv integrates naturally with _standard_ HTML, CSS and JS: you don't have to pick a JavaScript framework.
 
 # Test runner overview
 
@@ -253,7 +253,7 @@ Jsenv was first created to write tests that could be executed in different runti
 - A test runner to execute test files
 - A build tool to optimize files for production
 
-Jsenv relies on standard web features. Each standard listed below is potentially supported natively by the browser. When browser supports all of them, jsenv will use source files without modification. Otherwise, the files are compiled to be executable in the browser.
+Jsenv relies on **standard web features**. Each standard listed below is potentially supported natively by the browser. When browser supports all of them, jsenv will use source files without modification. Otherwise, the files are compiled to be executable in the browser.
 
 - `<script type="module">`
 - `<script type="importmap">`
