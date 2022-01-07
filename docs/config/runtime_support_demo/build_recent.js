@@ -8,9 +8,9 @@ await buildProject({
   },
   format: "systemjs",
   runtimeSupport: {
-    chrome: "65",
-    edge: "17",
-    firefox: "72",
-    safari: "14",
+    chrome: "55",
+    edge: "15",
+    firefox: "52",
+    safari: "11",
   },
 })

@@ -133,7 +133,7 @@ const getFilenamePattern = ({
   }
 
   if (ressource.isJsModule) {
-    return "[name]_[hash][extname]"
+    return "[name]_[hash].js"
   }
 
   return ressource.urlVersioningDisabled
