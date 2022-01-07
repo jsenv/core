@@ -17,7 +17,7 @@ export const projectDirectoryUrl = new URL("./", import.meta.url)
 export const workers = ["./worker.js"]
 ```
 
-> Jsenv might infer "worker.js" is a worker module from source code but this could fail. For now, worker files must be explicitely declared as such using "workers".
+> Jsenv could infer "worker.js" is a worker module by scanning source code but it could fail. It is better to be explicit and declare worker files using "workers".
 
 # Using service worker
 
