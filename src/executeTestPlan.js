@@ -22,7 +22,7 @@ import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 /**
  * Execute a list of files and log how it goes
  * @param {object} testPlan Configure files to execute and their runtimes (browsers/node)
- * @param {string|url} projectDirectoryUrl Root directory of your files
+ * @param {string|url} projectDirectoryUrl Root directory of the project
  * @param {number} [maxExecutionsInParallel=1] Maximum amount of execution in parallel
  * @param {number} [defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {number} [cooldownBetweenExecutions=0] Millisecond to wait between each execution
