@@ -10,20 +10,7 @@ export const createUrlVersioner = ({
   asOriginalUrl,
   lineBreakNormalization,
 }) => {
-  const names = []
-  const getFreeName = (name) => {
-    let nameCandidate = name
-    let integer = 1
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      if (!names.includes(nameCandidate)) {
-        names.push(nameCandidate)
-        return nameCandidate
-      }
-      integer++
-      nameCandidate = `${name}${integer}`
-    }
-  }
+  const availableNameGenerator = createAvailableNameGenerator()
 
   const computeBuildRelativeUrl = (ressource, precomputation) => {
     const pattern = getFilenamePattern({
@@ -40,7 +27,11 @@ export const createUrlVersioner = ({
         pattern,
         getName: precomputation
           ? () => urlToBasename(ressource.url)
-          : () => getFreeName(urlToBasename(ressource.url)),
+          : () =>
+              availableNameGenerator.getAvailableNameForPattern(
+                urlToBasename(ressource.url),
+                pattern,
+              ),
         contentType: ressource.contentType,
         lineBreakNormalization,
       },
@@ -66,6 +57,33 @@ export const createUrlVersioner = ({
   return {
     computeBuildRelativeUrl,
     precomputeBuildRelativeUrl,
+  }
+}
+
+const createAvailableNameGenerator = () => {
+  const cache = {}
+  const getAvailableNameForPattern = (name, pattern) => {
+    let names = cache[pattern]
+    if (!names) {
+      cache[pattern] = []
+      names = []
+    }
+
+    let nameCandidate = name
+    let integer = 1
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (!names.includes(nameCandidate)) {
+        names.push(nameCandidate)
+        return nameCandidate
+      }
+      integer++
+      nameCandidate = `${name}${integer}`
+    }
+  }
+
+  return {
+    getAvailableNameForPattern,
   }
 }
 
