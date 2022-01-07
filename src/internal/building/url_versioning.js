@@ -65,8 +65,8 @@ const createAvailableNameGenerator = () => {
   const getAvailableNameForPattern = (name, pattern) => {
     let names = cache[pattern]
     if (!names) {
-      cache[pattern] = []
       names = []
+      cache[pattern] = names
     }
 
     let nameCandidate = name
