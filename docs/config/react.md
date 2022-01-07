@@ -93,7 +93,7 @@ The generated importmap will look as below.
 </script>
 ```
 
-If you use react-redux you must add the following to your importmap
+If you use a package depending on react (like react-redux) you must add the following to your importmap
 
 ```diff
 {
