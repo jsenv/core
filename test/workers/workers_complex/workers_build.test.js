@@ -52,15 +52,8 @@ if (process.platform !== "win32") {
       inspectResponse: {
         order: [],
         generatedUrlsConfig: {
-          "worker2_b7f114ee.js": {
+          "assets/style_b126d686.css": {
             versioned: true,
-          },
-          "worker_a850e925.js": {
-            versioned: true,
-          },
-          "sw.js": {
-            versioned: false,
-            version: "f2a65f41",
           },
           "main.html": {
             versioned: false,
@@ -71,7 +64,14 @@ if (process.platform !== "win32") {
             // -> when html file changes -> hash changes -> worker updates
             version: "949f1d1f",
           },
-          "assets/style_b126d686.css": {
+          "sw.js": {
+            versioned: false,
+            version: "f2a65f41",
+          },
+          "worker_a850e925.js": {
+            versioned: true,
+          },
+          "worker2_b7f114ee.js": {
             versioned: true,
           },
         },
@@ -86,8 +86,12 @@ if (process.platform !== "win32") {
       inspectResponse: {
         order: ["before-a", "before-b", "b", "after-b", "after-a"],
         generatedUrlsConfig: {
-          "worker2_b7f114ee.js": {
+          "assets/style_b126d686.css": {
             versioned: true,
+          },
+          "main.html": {
+            versioned: false,
+            version: "949f1d1f",
           },
           "sw2.js": {
             versioned: false,
@@ -96,11 +100,7 @@ if (process.platform !== "win32") {
           "worker_a850e925.js": {
             versioned: true,
           },
-          "main.html": {
-            versioned: false,
-            version: "949f1d1f",
-          },
-          "assets/style_b126d686.css": {
+          "worker2_b7f114ee.js": {
             versioned: true,
           },
         },

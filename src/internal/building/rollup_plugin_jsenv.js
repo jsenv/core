@@ -1503,6 +1503,8 @@ export const createRollupPlugins = async ({
         }
       })
 
+      ressourceMappings = sortObjectByPathnames(ressourceMappings)
+      buildMappings = sortObjectByPathnames(buildMappings)
       await visitServiceWorkers({
         projectDirectoryUrl,
         serviceWorkerUrls,
@@ -1513,9 +1515,6 @@ export const createRollupPlugins = async ({
         buildFileContents,
         lineBreakNormalization,
       })
-
-      ressourceMappings = sortObjectByPathnames(ressourceMappings)
-      buildMappings = sortObjectByPathnames(buildMappings)
       const buildDuration = Date.now() - buildStartMs
       buildStats = createBuildStats({
         buildFileContents,
