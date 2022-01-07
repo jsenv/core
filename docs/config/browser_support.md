@@ -26,7 +26,7 @@ await buildProject({
   format: "systemjs",
 +  runtimeSupport: {
 +    chrome: "55",
-+    edge: "14",
++    edge: "15",
 +    firefox: "52",
 +    safari: "11",
 +  },
