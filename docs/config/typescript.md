@@ -19,8 +19,3 @@ module.exports = {
   ],
 }
 ```
-
-See also
-
-- [babelPluginMap](../shared-parameters.md#babelPluginMap)
-- [transform-typescript on babel](https://babeljs.io/docs/en/next/babel-plugin-transform-typescript.html)
