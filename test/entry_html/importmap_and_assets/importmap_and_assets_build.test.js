@@ -37,7 +37,7 @@ const { buildMappings, buildManifest } = await buildProject({
   // logLevel: "debug",
 })
 
-{
+if (process.platform !== "win32") {
   const actual = {
     buildManifest,
   }
