@@ -4,20 +4,14 @@ import { generateContentHash } from "./internal/building/url_versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (
   code,
-  {
-    serviceWorkerBuildRelativeUrl,
-    buildManifest,
-    buildFileContents,
-    lineBreakNormalization,
-  },
+  { serviceWorkerBuildRelativeUrl, buildFileContents, lineBreakNormalization },
 ) => {
   const generatedUrlsConfig = {}
-  Object.keys(buildManifest).forEach((projectRelativeUrl) => {
-    if (projectRelativeUrl.endsWith(".map")) {
+  Object.keys(buildFileContents).forEach((buildRelativeUrl) => {
+    if (buildRelativeUrl.endsWith(".map")) {
       return
     }
 
-    const buildRelativeUrl = buildManifest[projectRelativeUrl]
     const buildUrl = resolveUrl(buildRelativeUrl, "file://")
     const serviceWorkerBuildUrl = resolveUrl(
       serviceWorkerBuildRelativeUrl,
