@@ -23,7 +23,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `preload_local_font.html`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -37,7 +37,7 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const cssFileBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}style.css`]
 const cssFileBuildUrl = resolveUrl(cssFileBuildRelativeUrl, buildDirectoryUrl)
 const cssString = await readFile(cssFileBuildUrl)
 

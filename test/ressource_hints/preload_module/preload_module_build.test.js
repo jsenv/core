@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `preload_module.html`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -39,6 +39,6 @@ const htmlString = await readFile(htmlBuildUrl, { as: "string" })
   const hrefAttribute = getHtmlNodeAttributeByName(preloadLinkNode, "href")
 
   const actual = hrefAttribute.value
-  const expected = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const expected = projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
   assert({ actual, expected })
 }

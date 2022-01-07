@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}with_js_concatenation.html`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -30,7 +30,7 @@ const { buildMappings } = await buildProject({
 
 // assert only 2 files, 1 html, 1 js, are generated even if there is two js file used
 {
-  const actual = Object.keys(buildMappings)
+  const actual = Object.keys(projectBuildMappings)
   const expected = [
     `${testDirectoryRelativeUrl}main.js`,
     `${testDirectoryRelativeUrl}with_js_concatenation.html`,
@@ -39,7 +39,8 @@ const { buildMappings } = await buildProject({
 }
 
 {
-  const mainJsRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const mainJsRelativeUrl =
+    projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

@@ -24,7 +24,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `link_stylesheet.html`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -41,9 +41,9 @@ const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const link = findNodeByTagName(htmlString, "link")
 const maincssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}style.css`]
 const depcssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}dir/dep.css`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}dir/dep.css`]
 const mainCssBuildUrl = resolveUrl(maincssBuildRelativeUrl, buildDirectoryUrl)
 const depCssBuildUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
 

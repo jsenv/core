@@ -16,7 +16,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -28,7 +28,7 @@ const { buildMappings } = await buildProject({
 })
 
 {
-  const actual = buildMappings
+  const actual = projectBuildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}main.css`]: assert.any(String),
     [`${testDirectoryRelativeUrl}main.html`]: "main.html",

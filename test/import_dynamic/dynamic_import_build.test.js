@@ -20,7 +20,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 
 {
-  const { buildMappings } = await buildProject({
+  const { projectBuildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
@@ -29,7 +29,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
     },
   })
   const mainJsFileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
   const { namespace } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
@@ -44,7 +44,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 
 // test importing with nodejs now
 {
-  const { buildMappings } = await buildProject({
+  const { projectBuildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     // logLevel: "debug",
     jsenvDirectoryRelativeUrl,
@@ -59,7 +59,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
     },
   })
   const mainJsFileBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
 
   const { namespace } = await nodeImportEsModuleBuild({
     ...NODE_IMPORT_BUILD_TEST_PARAMS,

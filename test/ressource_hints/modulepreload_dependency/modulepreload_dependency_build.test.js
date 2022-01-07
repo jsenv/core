@@ -22,7 +22,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `modulepreload_dependency.html`
 
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -37,9 +37,9 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const mainJsBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
 const dependencyJsBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}dependency.js`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}dependency.js`]
 
 // ensure link is updated and importing file works
 {

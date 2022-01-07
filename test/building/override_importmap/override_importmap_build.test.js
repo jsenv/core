@@ -16,7 +16,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -31,9 +31,9 @@ const { buildMappings } = await buildProject({
 })
 
 {
-  const actual = buildMappings
+  const actual = projectBuildMappings
   const expected = {
-    // the importmap is not in buildMappings as it was inlined by the build
+    // the importmap is not in projectBuildMappings as it was inlined by the build
     [`${testDirectoryRelativeUrl}main.js`]: "main_ca955363.js",
     [`${testDirectoryRelativeUrl}override_importmap.html`]: "main.html",
   }
@@ -45,7 +45,7 @@ const { buildMappings } = await buildProject({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     jsFileRelativeUrl: `./${
-      buildMappings[`${testDirectoryRelativeUrl}main.js`]
+      projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
     }`,
     // debug: true,
   })

@@ -25,7 +25,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -49,7 +49,8 @@ const buildDirectoryUrl = resolveUrl(
   const importmapTextNode = getHtmlNodeTextNode(importmapHtmlNode)
   const importmapString = importmapTextNode.value
   const importmap = JSON.parse(importmapString)
-  const fooBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}foo.js`]
+  const fooBuildRelativeUrl =
+    projectBuildMappings[`${testDirectoryRelativeUrl}foo.js`]
 
   const actual = importmap
   const expected = {
@@ -64,7 +65,8 @@ const buildDirectoryUrl = resolveUrl(
 
 // assert asset url is correct for javascript (remapped + hashed)
 {
-  const mainRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
+  const mainRelativeUrl =
+    projectBuildMappings[`${testDirectoryRelativeUrl}file.js`]
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

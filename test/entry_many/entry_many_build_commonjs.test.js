@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
 const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
-const { buildManifest, buildMappings } = await buildProject({
+const { buildManifest, projectBuildMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -31,7 +31,7 @@ const { buildManifest, buildMappings } = await buildProject({
 })
 
 {
-  const actual = buildMappings
+  const actual = projectBuildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}a.js`]: "a.cjs",
     [`${testDirectoryRelativeUrl}b.js`]: "b.cjs",

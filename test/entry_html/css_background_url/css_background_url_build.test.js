@@ -18,7 +18,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -33,8 +33,9 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const styleBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
-const imgBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}img.png`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}style.css`]
+const imgBuildRelativeUrl =
+  projectBuildMappings[`${testDirectoryRelativeUrl}img.png`]
 const styleBuildUrl = resolveUrl(styleBuildRelativeUrl, buildDirectoryUrl)
 const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 

@@ -26,7 +26,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `style_inline.html`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -43,7 +43,8 @@ const buildDirectoryUrl = resolveUrl(
 const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
 const htmlString = await readFile(htmlBuildUrl)
 const styleNode = findNodeByTagName(htmlString, "style")
-const depBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}dep.css`]
+const depBuildRelativeUrl =
+  projectBuildMappings[`${testDirectoryRelativeUrl}dep.css`]
 const depBuildUrl = resolveUrl(depBuildRelativeUrl, buildDirectoryUrl)
 const textNode = getHtmlNodeTextNode(styleNode)
 const text = textNode.value

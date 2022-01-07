@@ -22,7 +22,7 @@ const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -31,7 +31,7 @@ const { buildMappings } = await buildProject({
   },
 })
 const jsFileBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}import_meta_url.js`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}import_meta_url.js`]
 const { namespace, serverOrigin } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,

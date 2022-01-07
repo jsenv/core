@@ -184,9 +184,9 @@ export const createRollupPlugins = async ({
 
   // Object mapping project relative urls to build relative urls
   // should be renamed "projectBuildMappings"
-  let buildMappings = {}
+  let projectBuildMappings = {}
   // Object mapping ressource relative urls to build relative urls
-  // should be renamed "buildMappings" (we don't care if it comes from the project or not)
+  // should be renamed "projectBuildMappings" (we don't care if it comes from the project or not)
   let ressourceMappings = {}
 
   const ressourcesReferencedByJs = []
@@ -1385,7 +1385,7 @@ export const createRollupPlugins = async ({
             originalProjectUrl,
             projectDirectoryUrl,
           )
-          buildMappings[originalProjectRelativeUrl] =
+          projectBuildMappings[originalProjectRelativeUrl] =
             jsRessource.buildRelativeUrl
         }
         ressourceMappings[jsRessource.fileName] = jsRessource.buildRelativeUrl
@@ -1461,7 +1461,7 @@ export const createRollupPlugins = async ({
               originalProjectUrl,
               projectDirectoryUrl,
             )
-            buildMappings[originalProjectRelativeUrl] = buildRelativeUrl
+            projectBuildMappings[originalProjectRelativeUrl] = buildRelativeUrl
           }
           return
         }
@@ -1472,7 +1472,7 @@ export const createRollupPlugins = async ({
       }
       rollupBuild = sortObjectByPathnames(rollupBuild)
       // fill "buildFileContents", "buildInlineFilesContents"
-      // and update "buildMappings"
+      // and update "projectBuildMappings"
       // in case some ressource where inlined by ressourceBuilder.rollupBuildEnd
       Object.keys(rollupBuild).forEach((buildRelativeUrl) => {
         const rollupFileInfo = rollupBuild[buildRelativeUrl]
@@ -1496,7 +1496,7 @@ export const createRollupPlugins = async ({
             originalProjectUrl,
             projectDirectoryUrl,
           )
-          delete buildMappings[originalRelativeUrl]
+          delete projectBuildMappings[originalRelativeUrl]
           buildInlineFileContents[ressource.buildRelativeUrl] =
             ressource.bufferAfterBuild
         } else {
@@ -1510,14 +1510,14 @@ export const createRollupPlugins = async ({
         serviceWorkerUrls,
         classicServiceWorkerUrls,
         serviceWorkerFinalizer,
-        buildMappings,
+        projectBuildMappings,
         ressourceMappings,
         buildFileContents,
         lineBreakNormalization,
       })
 
       ressourceMappings = sortObjectByPathnames(ressourceMappings)
-      buildMappings = sortObjectByPathnames(buildMappings)
+      projectBuildMappings = sortObjectByPathnames(projectBuildMappings)
       const buildDuration = Date.now() - buildStartMs
       buildStats = createBuildStats({
         buildFileContents,
@@ -1556,7 +1556,7 @@ export const createRollupPlugins = async ({
       return {
         rollupBuild,
         urlResponseBodyMap: urlLoader.getUrlResponseBodyMap(),
-        buildMappings,
+        projectBuildMappings,
         // Object mapping build relative urls without hash to build relative urls
         buildManifest: createBuildManifest({
           buildFileContents,
@@ -1732,7 +1732,7 @@ const visitServiceWorkers = async ({
   serviceWorkerUrls,
   classicServiceWorkerUrls,
   serviceWorkerFinalizer,
-  buildMappings,
+  projectBuildMappings,
   buildFileContents,
   lineBreakNormalization,
 }) => {
@@ -1748,7 +1748,7 @@ const visitServiceWorkers = async ({
         projectDirectoryUrl,
       )
       const serviceWorkerBuildRelativeUrl =
-        buildMappings[serviceWorkerRelativeUrl]
+        projectBuildMappings[serviceWorkerRelativeUrl]
       if (!serviceWorkerBuildRelativeUrl) {
         throw new Error(
           `"${serviceWorkerRelativeUrl}" service worker file missing in the build`,

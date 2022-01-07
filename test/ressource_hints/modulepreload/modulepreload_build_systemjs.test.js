@@ -16,7 +16,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -45,7 +45,7 @@ const { buildMappings } = await buildProject({
   }
   const expected = {
     rel: "preload",
-    href: buildMappings[`${testDirectoryRelativeUrl}main.js`],
+    href: projectBuildMappings[`${testDirectoryRelativeUrl}main.js`],
   }
   assert({ actual, expected })
 }

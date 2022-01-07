@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -30,7 +30,7 @@ const { buildMappings } = await buildProject({
 })
 
 {
-  const actual = buildMappings
+  const actual = projectBuildMappings
   const expected = {
     [`${testDirectoryRelativeUrl}main.mjs`]: "main.cjs",
   }

@@ -19,7 +19,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const entryPoints = {
   [`./${testDirectoryRelativeUrl}top_level_await.html`]: "main.html",
 }
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -27,7 +27,7 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
 })
 const mainJsBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}top_level_await.js`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}top_level_await.js`]
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,

@@ -40,7 +40,7 @@ _buildProject_ is an async function reading project files, transforming them and
 ```js
 import { buildProject } from "@jsenv/core"
 
-const { buildMappings, buildManifest } = await buildProject({
+const { projectBuildMappings, buildManifest } = await buildProject({
   projectDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "./dist/",
   entryPoints: {
@@ -263,7 +263,7 @@ _buildProject_ return a value with the following shape
 ```js
 {
   buildManifest,
-  buildMappings,
+  projectBuildMappings,
 }
 ```
 
@@ -287,13 +287,13 @@ The value above can be translated into the following sentence where build direct
 
 > "Three files where written in `dist/`: `main.html`, `assets/main.css` and `main.js`. <br /> `main.html` was not versioned but `assets/main.css` and `main.js` are versioned."
 
-### buildMappings
+### projectBuildMappings
 
 _buildMappings_ is part of _buildProject_ return value. This object will contain a key/value pair for each file written in the build directory.
 
 Keys and values are strings, both are file path, keys are relative to project directory while values are relative to the build directory.
 
-_Example of a buildMappings value:_
+_Example of a projectBuildMappings value:_
 
 ```js
 {

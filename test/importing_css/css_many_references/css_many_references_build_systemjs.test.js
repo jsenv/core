@@ -16,7 +16,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -26,9 +26,10 @@ const { buildMappings } = await buildProject({
   // logLevel: "debug",
   // minify: true,
 })
-const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const jsBuildRelativeUrl =
+  projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}style.css`]
 
 const { namespace, serverOrigin } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,

@@ -17,7 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const mainFilename = `import_meta_url_pattern.html`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -32,7 +32,8 @@ const { namespace, serverOrigin } = await browserImportEsModuleBuild({
   codeToRunInBrowser: `window.namespace`,
   // debug: true,
 })
-const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
+const fileBuildRelativeUrl =
+  projectBuildMappings[`${testDirectoryRelativeUrl}file.js`]
 
 const actual = namespace
 const expected = {

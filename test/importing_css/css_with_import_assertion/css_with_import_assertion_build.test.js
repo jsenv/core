@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const mainFilename = `main.html`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const testBuild = async (params) => {
-  const { buildMappings } = await buildProject({
+  const { projectBuildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
@@ -27,7 +27,7 @@ const testBuild = async (params) => {
     },
     ...params,
   })
-  return { buildMappings }
+  return { projectBuildMappings }
 }
 
 const testExecution = async () => {
@@ -42,10 +42,10 @@ const testExecution = async () => {
 
 // default (no runtime support + concatenation)
 {
-  const { buildMappings } = await testBuild()
+  const { projectBuildMappings } = await testBuild()
   const { namespace, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
   const actual = namespace
   const expected = {
@@ -57,12 +57,12 @@ const testExecution = async () => {
 
 // runtime support
 {
-  const { buildMappings } = await testBuild({
+  const { projectBuildMappings } = await testBuild({
     runtimeSupport: { chrome: "96" },
   })
   const { namespace, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
   const actual = namespace
   const expected = {
@@ -74,13 +74,13 @@ const testExecution = async () => {
 
 // no concatenation + runtime support
 {
-  const { buildMappings } = await testBuild({
+  const { projectBuildMappings } = await testBuild({
     jsConcatenation: false,
     runtimeSupport: { chrome: "96" },
   })
   const { namespace, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
   const actual = namespace
   const expected = {

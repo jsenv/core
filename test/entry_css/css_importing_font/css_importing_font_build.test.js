@@ -19,7 +19,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -39,7 +39,7 @@ const cssString = await readFile(cssBuildUrl)
 const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
 const fontSpecifier = cssUrls.urlDeclarations[0].specifier
 const fontBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}roboto_thin.ttf`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}roboto_thin.ttf`]
 const fontBuildUrl = resolveUrl(fontBuildRelativeUrl, buildDirectoryUrl)
 
 const actual = fontSpecifier

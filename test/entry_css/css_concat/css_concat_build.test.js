@@ -20,7 +20,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/`
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -42,7 +42,7 @@ const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
 const imgSpecifier = cssUrls.urlDeclarations[0].specifier
 const filterSpecifier = cssUrls.urlDeclarations[1].specifier
 const imgBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}jsenv.png`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}jsenv.png`]
 const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
 const actual = {

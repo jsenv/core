@@ -38,7 +38,7 @@ const buildDirectoryUrl = resolveUrl(
   jsenvCoreDirectoryUrl,
 )
 const test = async (params) => {
-  const { buildMappings } = await buildProject({
+  const { projectBuildMappings } = await buildProject({
     ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
     // logLevel: "info",
     jsenvDirectoryRelativeUrl,
@@ -49,9 +49,9 @@ const test = async (params) => {
     ...params,
   })
   const scriptBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}index.es5.js`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}index.es5.js`]
   const sourcemapBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}index.es5.js.map`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}index.es5.js.map`]
 
   return {
     scriptBuildRelativeUrl,

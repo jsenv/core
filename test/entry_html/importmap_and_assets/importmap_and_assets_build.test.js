@@ -26,7 +26,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const { buildMappings, buildManifest } = await buildProject({
+const { projectBuildMappings, buildManifest } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
@@ -59,14 +59,15 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const mainBuildRelativeUrl =
+  projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  projectBuildMappings[`${testDirectoryRelativeUrl}style.css`]
 
 // check importmap content
 {
   const imgRemapBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
   const htmlBuildFileUrl = resolveUrl("main.html", buildDirectoryUrl)
   const htmlBuildFileContent = await readFile(htmlBuildFileUrl)
   const importmapHtmlNode = findHtmlNodeById(htmlBuildFileContent, "importmap")
@@ -89,7 +90,7 @@ const cssBuildRelativeUrl =
 // assert asset url is correct for css (hashed)
 {
   const imgBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}img.png`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}img.png`]
   const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
   const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
   const cssString = await readFile(cssBuildUrl)
@@ -103,7 +104,7 @@ const cssBuildRelativeUrl =
 // assert asset url is correct for javascript (remapped + hashed)
 {
   const imgRemapBuildRelativeUrl =
-    buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
+    projectBuildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
   const { namespace, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,

@@ -28,7 +28,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const { buildMappings } = await buildProject({
+const { projectBuildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
@@ -36,7 +36,8 @@ const { buildMappings } = await buildProject({
   entryPoints,
   minify: true,
 })
-const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const jsBuildRelativeUrl =
+  projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
 
 // sourcemap looks good
 {
@@ -61,7 +62,8 @@ const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 
 // execution works
 {
-  const mainJsRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+  const mainJsRelativeUrl =
+    projectBuildMappings[`${testDirectoryRelativeUrl}main.js`]
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
