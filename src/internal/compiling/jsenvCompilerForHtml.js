@@ -1,5 +1,6 @@
 import {
   resolveUrl,
+  urlToFilename,
   urlToBasename,
   urlToRelativeUrl,
   urlIsInsideOf,
@@ -193,6 +194,7 @@ export const compileHtml = async ({
     url,
     compiledUrl,
     scripts,
+    addHtmlSourceFile,
     addHtmlAssetGenerator,
     addHtmlMutation,
     addHtmlDependency,
@@ -326,7 +328,7 @@ const visitScripts = async ({
   url,
   compiledUrl,
   scripts,
-  // addHtmlSourceFile,
+  addHtmlSourceFile,
   addHtmlAssetGenerator,
   addHtmlMutation,
   addHtmlDependency,
@@ -431,7 +433,7 @@ const visitScripts = async ({
 
         const scriptCompiledUrl = generateCompiledFileAssetUrl(
           compiledUrl,
-          urlToBasename(scriptOriginalUrl),
+          urlToFilename(scriptOriginalUrl),
         )
         addHtmlAssetGenerator(async () => {
           // we fetch scriptOriginalUrl on purpose because we do
@@ -454,6 +456,10 @@ const visitScripts = async ({
             return []
           }
           const scriptAsText = await scriptResponse.text()
+          addHtmlSourceFile({
+            url: scriptOriginalUrl,
+            content: scriptAsText,
+          })
           return transformHtmlScript({
             projectDirectoryUrl,
             url: scriptOriginalUrl,
@@ -550,33 +556,30 @@ const transformHtmlScript = async ({
     throw e
   }
 
-  code = transformResult
-  let map = transformResult
-  const sourcemapFileUrl = resolveUrl(
+  code = transformResult.code
+  let map = transformResult.map
+  const sourcemapUrl = resolveUrl(
     `${urlToBasename(compiledUrl)}.map`,
-    compiledUrl,
-  )
-  const sourcemapFileRelativePathForModule = urlToRelativeUrl(
-    sourcemapFileUrl,
     compiledUrl,
   )
   if (sourcemapMethod === "inline") {
     code = setJavaScriptSourceMappingUrl(code, sourcemapToBase64Url(map))
     return [
       {
-        url,
+        url: compiledUrl,
         content: code,
       },
     ]
   }
-  code = setJavaScriptSourceMappingUrl(code, sourcemapFileRelativePathForModule)
+  const sourcemapSpecifier = urlToRelativeUrl(sourcemapUrl, compiledUrl)
+  code = setJavaScriptSourceMappingUrl(code, sourcemapSpecifier)
   return [
     {
-      url,
+      url: compiledUrl,
       content: code,
     },
     {
-      url: sourcemapFileUrl,
+      url: sourcemapUrl,
       content: JSON.stringify(map, null, "  "),
     },
   ]
