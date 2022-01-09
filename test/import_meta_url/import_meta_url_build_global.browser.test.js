@@ -30,6 +30,7 @@ const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
     jsenvCoreDirectoryUrl,
   ),
   jsFileRelativeUrl: "./main.js",
+  globalName: "__namespace__",
 })
 
 const actual = globalValue

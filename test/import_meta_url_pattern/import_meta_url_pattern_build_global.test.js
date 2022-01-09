@@ -31,6 +31,8 @@ const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   ),
+  jsFileRelativeUrl: "./main.js",
+  globalName: "__namespace__",
 })
 
 const jsUrlInstanceOfUrl = globalValue.jsUrlInstanceOfUrl
