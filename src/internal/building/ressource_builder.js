@@ -948,8 +948,14 @@ export const createRessourceBuilder = (
     }
     return {
       ...htmlUrlSite,
-      line: htmlUrlSite.line + urlSite.line,
-      column: htmlUrlSite.column + urlSite.column,
+      line:
+        typeof urlSite.line === "number"
+          ? htmlUrlSite.line + urlSite.line
+          : htmlUrlSite.line,
+      column:
+        typeof urlSite.column === "number"
+          ? htmlUrlSite.column + urlSite.column
+          : htmlUrlSite.column,
     }
   }
 
