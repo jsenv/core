@@ -50,17 +50,13 @@ await launchBrowsers(
     }
     const expected = {
       status: "completed",
-      namespace: {
-        [browserRuntime === chromiumRuntime
-          ? `./script_module_inline.html__inline__script_module_inline.js`
-          : `./script_module_inline.html__asset__script_module_inline.js`]: {
-          status: "completed",
-          namespace: {
-            answer: 42,
-          },
+      namespace: {},
+      consoleCalls: [
+        {
+          type: "log",
+          text: "42\n",
         },
-      },
-      consoleCalls: [],
+      ],
     }
     assert({ actual, expected })
   },

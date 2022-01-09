@@ -8,11 +8,8 @@ import {
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { executeFileUsingBrowserScript } from "@jsenv/core/test/execution_with_browser_script.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -57,23 +54,21 @@ const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
     names: assert.any(Array),
     mappings: assert.any(String),
     sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
-    file: "main_70c5b913.js",
+    file: "main.js",
   }
   assert({ actual, expected })
 }
 
 // execution works
 {
-  const result = await browserImportEsModuleBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
+  const result = await executeFileUsingBrowserScript({
+    rootDirectoryUrl: buildDirectoryUrl,
     jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
+    globalName: "value",
     // debug: true,
   })
 
-  const actual = result.namespace
-  const expected = {
-    value: 42,
-  }
+  const actual = result.globalValue
+  const expected = 42
   assert({ actual, expected })
 }

@@ -13,12 +13,12 @@ export const GENERATE_GLOBAL_BUILD_TEST_PARAMS = {
 
 export const SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativeUrl: "./main.js",
+  jsFileRelativeUrl: "./main.js",
   globalName: "__namespace__",
 }
 
 export const REQUIRE_GLOBAL_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativeUrl: "./main.js",
+  jsFileRelativeUrl: "./main.js",
   globalName: "__namespace__",
 }
