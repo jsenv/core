@@ -54,7 +54,7 @@ const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
     names: assert.any(Array),
     mappings: assert.any(String),
     sourcesContent: [await readFile(new URL("./main.js", import.meta.url))],
-    file: "main.js",
+    file: "main_be0d5e99.js",
   }
   assert({ actual, expected })
 }

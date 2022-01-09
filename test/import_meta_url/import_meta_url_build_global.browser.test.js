@@ -25,7 +25,7 @@ await buildProject({
   },
 })
 const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
-  buildDirectoryUrl: resolveUrl(
+  rootDirectoryUrl: resolveUrl(
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   ),
