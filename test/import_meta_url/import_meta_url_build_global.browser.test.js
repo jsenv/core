@@ -1,34 +1,34 @@
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  GENERATE_GLOBAL_BUILD_TEST_PARAMS,
-  SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_GLOBAL.js"
-import { scriptLoadGlobalBuild } from "@jsenv/core/test/scriptLoadGlobalBuild.js"
+  resolveDirectoryUrl,
+  urlToRelativeUrl,
+  resolveUrl,
+} from "@jsenv/filesystem"
+
 import { buildProject } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { GENERATE_GLOBAL_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_GLOBAL.js"
+import { executeFileUsingBrowserScript } from "@jsenv/core/test/execution_with_browser_script.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryname = basename(testDirectoryRelativeUrl)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
-const mainFilename = `${testDirectoryname}.js`
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   buildDirectoryRelativeUrl,
   entryPoints: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
+    [`./${testDirectoryRelativeUrl}import_meta_url.js`]: "main.js",
   },
 })
-const { globalValue, serverOrigin } = await scriptLoadGlobalBuild({
-  ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
-  buildDirectoryRelativeUrl,
+const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
+  buildDirectoryUrl: resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  ),
 })
 
 const actual = globalValue
