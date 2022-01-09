@@ -1,6 +1,6 @@
 # Importing code written in CommonJS
 
-CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript.
+CommonJS module format rely on `module.exports` and `require`. It was invented by Node.js and is not standard JavaScript. Let's assume you want to import "file.js" written in CommonJS:
 
 _file.js_:
 
@@ -18,7 +18,7 @@ console.log(value)
 
 The code in "file.js" must be converted to esmodule. You can do this using "commonJsToJavaScriptModule".
 
-_jsenv.config.mjs converting commonjs to esm_:
+In _jsenv.config.mjs_:
 
 ```js
 import { commonJsToJavaScriptModule } from "@jsenv/core"

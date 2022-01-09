@@ -81,12 +81,23 @@ module.exports = {
 }
 ```
 
-# Using preact
+## Using preact
 
-```js
-import { h, render } from "preact"
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script type="module">
+      import { h, render } from "preact"
 
-render(h("span", {}, "Hello world"), document.querySelector("#root"))
+      render(h("span", {}, "Hello world"), document.querySelector("#root"))
+    </script>
+  </body>
+</html>
 ```
 
 The code above is using preact, it cannot be runned directly by the browser. To make it possible follow the steps below.
@@ -99,35 +110,68 @@ npm i preact
 
 2 - Remap preact imports using an importmap
 
-Add the following import mappings to your HTML file.
+Preact needs many mappings to work because the source code contains import omitting file extension. So here it's recommended to generate import mappings programmatically.
 
-```html
-<script type="importmap">
-  {
-    "imports": {
-      "preact": "../node_modules/preact/dist/preact.module.js"
-    },
-    "scopes": {
-      "../node_modules/preact/": {
-        "../node_modules/preact/compat/src/PureComponent": "../node_modules/preact/compat/src/PureComponent.js",
-        "../node_modules/preact/compat/src/suspense-list": "../node_modules/preact/compat/src/suspense-list.js",
-        "../node_modules/preact/compat/src/forwardRef": "../node_modules/preact/compat/src/forwardRef.js",
-        "../node_modules/preact/compat/src/Children": "../node_modules/preact/compat/src/Children.js",
-        "../node_modules/preact/compat/src/suspense": "../node_modules/preact/compat/src/suspense.js",
-        "../node_modules/preact/compat/src/portals": "../node_modules/preact/compat/src/portals.js",
-        "../node_modules/preact/compat/src/render": "../node_modules/preact/compat/src/render.js",
-        "../node_modules/preact/compat/src/memo": "../node_modules/preact/compat/src/memo.js",
-        "../node_modules/preact/compat/src/util": "../node_modules/preact/compat/src/util.js",
-        "preact/devtools": "../node_modules/preact/devtools/dist/devtools.module.js"
-      }
-    }
-  }
-</script>
+```console
+npm i --save-dev @jsenv/importmap-node-module
 ```
 
-Read more about importmap and how to generate it programmatically in [Using a NPM package](./npm_package.md).
+Create a file _importmap.mjs_:
 
-3 - Configure "pragma" for preact
+```js
+import { writeImportMapFiles } from "@jsenv/importmap-node-module"
+
+await writeImportMapFiles({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  importMapFiles: {
+    "./project.importmap": {
+      runtime: "browser",
+      mappingsForNodeResolution: true,
+      manualImportMap: {
+        scopes: {
+          // can be removed if you don't use redux: remap "react" to "preact" for "react-redux"
+          "./node_modules/react-redux/": {
+            "react": "./node_modules/preact/compat/src/index.js",
+            "react-dom": "./node_modules/preact/compat/src/index.js",
+          },
+        },
+      },
+      entryPointsToCheck: ["./main.html"],
+      extensionlessAutomapping: true,
+      magicExtensions: [".js"],
+      packageUserConditions: ["development"],
+      removeUnusedMappings: true,
+    },
+  },
+  // can be removed if you don't use redux: fix the "react-redux" and "redux" exports field
+  packagesManualOverrides: {
+    "react-redux": {
+      exports: {
+        import: "./es/index.js",
+      },
+    },
+    "redux": {
+      exports: {
+        import: "es/redux.js",
+      },
+    },
+  },
+})
+```
+
+Gneerate "project.importmap"
+
+```console
+node ./importmap.mjs
+```
+
+Finally add "project.importmap" to the HTML file.
+
+```diff
++ <script type="importmap" src="./project.importmap"></script>
+```
+
+3 - Configure "pragma" for preact (if you use JSX)
 
 In _babel.config.cjs_:
 
@@ -140,24 +184,4 @@ module.exports = {
       {
 -       pragma: "React.createElement",
 +       pragma: "h"
-```
-
-# Using preact + react-redux
-
-If you use a package depending on react (like react-redux) you must add the following to your importmap
-
-```diff
-{
-  "imports": {
-    "react": "./node_modules/react/index.js",
-    "react-dom": "./node_modules/react-dom/index.js"
-- }
-+ },
-+ "scopes": {
-+    "./node_modules/react-redux/": {
-+      react: "./node_modules/preact/compat/src/index.js",
-+      "react-dom": "./node_modules/preact/compat/src/index.js",
-+    }
-+  }
-}
 ```
