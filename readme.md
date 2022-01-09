@@ -2,7 +2,7 @@
 
 _@jsenv/core_ is a quick start pack to launch a js project. It provides what you need from the beginning: develoment, testing and building all in one.
 
-Jsenv **integrates naturally with standard** HTML, CSS and JS: you don't have to pick a JavaScript framework.
+Jsenv integrates naturally with standard HTML, CSS and JS: you don't have to pick a JavaScript framework.
 
 # Overview
 
