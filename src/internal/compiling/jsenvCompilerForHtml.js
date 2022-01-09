@@ -541,6 +541,7 @@ const transformHtmlScript = async ({
       moduleOutFormat: type === "module" ? moduleOutFormat : "global",
       importMetaFormat,
       topLevelAwait: type === "module" ? topLevelAwait : false,
+      babelHelpersInjectionAsImport: type === "module" ? undefined : false,
     })
   } catch (e) {
     // If there is a syntax error in inline script
