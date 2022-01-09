@@ -1,23 +1,17 @@
 import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
-import { resolveDirectoryUrl } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 
 const { chromium } = require("playwright")
 
-export const scriptLoadGlobalBuild = async ({
-  projectDirectoryUrl,
-  buildDirectoryRelativeUrl,
-  mainRelativeUrl,
+export const executeFileUsingBrowserScript = async ({
+  rootDirectoryUrl,
+  jsFileRelativeUrl,
   globalName,
   debug = false,
 }) => {
-  const buildDirectoryUrl = resolveDirectoryUrl(
-    buildDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
   const [server, browser] = await Promise.all([
-    startTestServer({ buildDirectoryUrl }),
+    startTestServer({ rootDirectoryUrl }),
     chromium.launch({
       headless: !debug,
     }),
@@ -27,7 +21,7 @@ export const scriptLoadGlobalBuild = async ({
   await page.goto(`${server.origin}/`)
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
   await page.addScriptTag({
-    url: mainRelativeUrl,
+    url: jsFileRelativeUrl,
   })
 
   try {
@@ -48,14 +42,17 @@ export const scriptLoadGlobalBuild = async ({
   }
 }
 
-const startTestServer = ({ buildDirectoryUrl }) => {
+const startTestServer = ({ rootDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "http",
     requestToResponse: composeServices({
       index: (request) => serveIndexPage({ request }),
-      build_static: (request) =>
-        serveBuildDirectory({ buildDirectoryUrl, request }),
+      static: (request) =>
+        fetchFileSystem(new URL(request.ressource.slice(1), rootDirectoryUrl), {
+          headers: request.headers,
+          rootDirectoryUrl,
+        }),
     }),
   })
 }
@@ -89,8 +86,3 @@ const generateIndexPage = () => `<!doctype html>
 </body>
 
 </html>`
-
-const serveBuildDirectory = ({ buildDirectoryUrl, request }) =>
-  fetchFileSystem(new URL(request.ressource.slice(1), buildDirectoryUrl), {
-    headers: request.headers,
-  })

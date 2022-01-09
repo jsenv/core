@@ -14,8 +14,8 @@ export const parseJsRessource = async (
   const jsUrl = jsRessource.url
   const jsString = String(jsRessource.bufferBeforeBuild)
   const jsSourcemapUrl = getJavaScriptSourceMappingUrl(jsString)
-  let sourcemapReference
 
+  let sourcemapReference
   if (jsSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
       referenceLabel: "js sourcemapping comment",
@@ -76,13 +76,10 @@ export const parseJsRessource = async (
       code = result.code
       map = result.map
     }
-
     jsRessource.buildEnd(code)
-
     if (!map) {
       return
     }
-
     // In theory code should never be modified once buildEnd() is called
     // because buildRelativeUrl might be versioned based on file content
     // There is an exception for sourcemap because we want to update sourcemap.file
@@ -99,7 +96,6 @@ export const parseJsRessource = async (
       `${urlToFilename(jsBuildUrl)}.map`,
       jsBuildUrl,
     )
-
     map.file = urlToFilename(jsBuildUrl)
     if (map.sources) {
       map.sources = map.sources.map((source) => {
@@ -114,7 +110,6 @@ export const parseJsRessource = async (
     }
     const mapAsText = JSON.stringify(map, null, "  ")
     sourcemapRessource.buildEnd(mapAsText)
-
     const sourcemapBuildUrl = resolveUrl(
       sourcemapRessource.buildRelativeUrl,
       buildDirectoryUrl,

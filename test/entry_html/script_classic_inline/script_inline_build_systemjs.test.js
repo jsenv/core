@@ -23,13 +23,12 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `script_inline.html`
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  // logLevel: "info",
-  jsenvDirectoryRelativeUrl,
+  // logLevel: "debug",
+  jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   buildDirectoryRelativeUrl,
   entryPoints: {
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",

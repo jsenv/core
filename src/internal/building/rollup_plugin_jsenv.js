@@ -690,6 +690,9 @@ export const createRollupPlugins = async ({
                     // we compile for rollup, let top level await untouched
                     // it will be converted, if needed, during "renderChunk" hook
                     topLevelAwait: "ignore",
+                    // if we put babel helpers, rollup might try to share them and a file
+                    // might try to import from an inline script resulting in 404.
+                    babelHelpersInjectionAsImport: false,
                   })
                   let code = transformResult.code
                   let map = transformResult.map

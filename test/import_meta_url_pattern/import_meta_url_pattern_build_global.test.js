@@ -8,31 +8,29 @@ import {
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_GLOBAL_BUILD_TEST_PARAMS,
-  SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_GLOBAL.js"
-import { scriptLoadGlobalBuild } from "@jsenv/core/test/scriptLoadGlobalBuild.js"
+import { GENERATE_GLOBAL_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_GLOBAL.js"
+import { executeFileUsingBrowserScript } from "@jsenv/core/test/execution_with_browser_script.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   // logLevel: "debug",
-  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   buildDirectoryRelativeUrl,
   entryPoints: {
     [`./${testDirectoryRelativeUrl}index.js`]: "main.js",
   },
 })
-const { globalValue, serverOrigin } = await scriptLoadGlobalBuild({
-  ...SCRIPT_LOAD_GLOBAL_BUILD_TEST_PARAMS,
-  buildDirectoryRelativeUrl,
+const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
+  rootDirectoryUrl: resolveUrl(
+    buildDirectoryRelativeUrl,
+    jsenvCoreDirectoryUrl,
+  ),
 })
 
 const jsUrlInstanceOfUrl = globalValue.jsUrlInstanceOfUrl

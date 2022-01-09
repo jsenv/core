@@ -1,10 +1,20 @@
 # jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core) [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main) [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-_@jsenv/core_ is a quick start pack to launch a js project. It provides what you need from the beginning: a dev server, a build tool and a test "framework", all in one.
+_@jsenv/core_ is a quick start pack to launch a js project. It provides what you need from the beginning: develoment, testing and building all in one.
 
-Jsenv integrates naturally with **standard** HTML, CSS and JS: you don't have to pick a JavaScript framework.
+Jsenv **integrates naturally with standard** HTML, CSS and JS: you don't have to pick a JavaScript framework.
 
-# Test runner overview
+# Overview
+
+This section demos 3 things jsenv provides:
+
+1. A test runner
+2. A dev server
+3. A build script
+
+Don't be fooled by the apparent simplicity of the following demos, jsenv can be used on more complex scenarios as well.
+
+## Test runner overview
 
 Let's assume you want to test `countDogs` exported by _animals.js_ file.
 
@@ -94,7 +104,7 @@ total duration: 1.2 seconds
 
 To read more about testing in jsenv, check [jsenv test runner documentation](./docs/testing/readme.md#jsenv-test-runner).
 
-# Dev server overview
+## Dev server overview
 
 You want to execute the following _main.html_ file in a browser.
 
@@ -155,7 +165,7 @@ Browser navigates to _main.html_ and execute the file. Hello world is displayed 
 
 To read more about jsenv dev server, check [jsenv dev server documentation](./docs/dev_server/readme.md#jsenv-dev-server).
 
-# Build overview
+## Build overview
 
 Following the steps below turns a `main.html` into an optimized `dist/main.prod.html`.
 Only the content of html files is shown below because the content of non-html files is trivial.
