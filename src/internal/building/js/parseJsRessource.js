@@ -96,7 +96,7 @@ export const parseJsRessource = async (
       `${urlToFilename(jsBuildUrl)}.map`,
       jsBuildUrl,
     )
-    map.file = urlToFilename(jsOriginalUrl)
+    map.file = urlToFilename(jsBuildUrl)
     if (map.sources) {
       map.sources = map.sources.map((source) => {
         const sourceUrl = resolveUrl(source, jsUrl)

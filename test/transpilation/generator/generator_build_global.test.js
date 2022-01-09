@@ -30,6 +30,7 @@ const { globalValue } = await executeFileUsingBrowserScript({
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   ),
+  jsFileRelativeUrl: "./main.js",
 })
 
 const actual = globalValue
