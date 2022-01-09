@@ -6,7 +6,7 @@ In order to be compatible with as much browsers as possible you need to declare 
 
 If your code can run without modification, the dev server behaves like a file server for your source files. Otherwise it transforms source code applying as little modification as possible. Read more in [browser support indicator](../dev_server/readme.md#browser-support-indicator).
 
-Jsenv relies on web features [listed in the main documentation](../../readme.md#about). At the time of writing this, only Google chrome supports all of them. For this reason it is recommended to use it during development. Using an other browser means dev server applies more transformation to make your code compatible with this browser.
+Jsenv relies on web features [listed in the main documentation](../../readme.md#about). At the time of writing this, only Google chrome supports all of them. For this reason it is recommended to use it during development. Using an other browser means jsenv dev server applies more transformation to make your code compatible with this browser.
 
 ## Browser support during build
 

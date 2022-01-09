@@ -1,9 +1,44 @@
 # Using react
 
+> If you want to use preact instead check [Using preact](#Using-preact)
+
+```js
+import React from "react"
+import ReactDOM from "react-dom"
+
+ReactDOM.render(
+  React.createElement("span", {}, "Hello world"),
+  document.querySelector("#root"),
+)
+```
+
+The code above is using react, it cannot be runned directly by the browser. To make it possible follow the steps below.
+
+1 - Install "react" and "react-dom"
+
 ```console
 npm i react
 npm i react-dom
 ```
+
+2 - Remap react imports using an importmap
+
+The following import mappings must be added to your HTML file.
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "react": "./node_modules/react/index.js",
+      "react-dom": "./node_modules/react-dom/index.js"
+    }
+  }
+</script>
+```
+
+Read more about importmap and how to generate it programmatically in [Using a NPM package](./npm_package.md).
+
+3 - Convert react from CommonJS to JS modules
 
 ```js
 import { commonJsToJavaScriptModule } from "@jsenv/core"
@@ -19,20 +54,7 @@ export const customCompilers = {
 }
 ```
 
-You must also add an [importmap](https://github.com/WICG/import-maps#import-maps) file in your html to remap react imports. It`s recommended to use [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map) for this task.
-
-The generated importmap will look as below.
-
-```html
-<script type="importmap">
-  {
-    "imports": {
-      "react": "./node_modules/react/index.js",
-      "react-dom": "./node_modules/react-dom/index.js"
-    }
-  }
-</script>
-```
+Read more in [Importing code written in CommonJS](./commonjs.md)
 
 # Using JSX
 
@@ -61,13 +83,23 @@ module.exports = {
 
 # Using preact
 
+```js
+import { h, render } from "preact"
+
+render(h("span", {}, "Hello world"), document.querySelector("#root"))
+```
+
+The code above is using preact, it cannot be runned directly by the browser. To make it possible follow the steps below.
+
+1 - Install preact
+
 ```console
 npm i preact
 ```
 
-You must also add an [importmap](https://github.com/WICG/import-maps#import-maps) file in your html to remap preact imports. It`s recommended to use [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map) for this task.
+2 - Remap preact imports using an importmap
 
-The generated importmap will look as below.
+Add the following import mappings to your HTML file.
 
 ```html
 <script type="importmap">
@@ -92,6 +124,25 @@ The generated importmap will look as below.
   }
 </script>
 ```
+
+Read more about importmap and how to generate it programmatically in [Using a NPM package](./npm_package.md).
+
+3 - Configure "pragma" for preact
+
+In _babel.config.cjs_:
+
+```diff
+module.exports = {
+  presets: ["@jsenv/babel-preset"],
+  plugins: [
+    [
+      "@babel/transform-react-jsx",
+      {
+-       pragma: "React.createElement",
++       pragma: "h"
+```
+
+# Using preact + react-redux
 
 If you use a package depending on react (like react-redux) you must add the following to your importmap
 
