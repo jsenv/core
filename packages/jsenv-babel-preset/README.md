@@ -4,7 +4,7 @@
 
 1 - Prefer [transform-async-to-promises](https://www.npmjs.com/package/babel-plugin-transform-async-to-promises) over [transform-async-to-generator](https://babeljs.io/docs/en/babel-plugin-transform-async-to-generator) [^1]
 
-2 - List only babel plugins with at least one browser supporting the feature natively
+2 - List only babel plugins with at least one browser implementing the feature
 
 [^1]: This is because generator are more verbose and slow than promises. See https://github.com/babel/babel/issues/8121
 

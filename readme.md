@@ -357,9 +357,12 @@ This file helps to see jsenv configuration quickly and share it between files. T
 
 ## babel.config.cjs
 
-When code needs to be transformed, the project must contain a [babel config file](https://babeljs.io/docs/en/config-files).
+You need a babel config file when:
 
-It's recommended to use the following _babel.config.cjs_
+- Your code use non standard concepts. Examples: JSX, TypeScript.
+- You need to be compatible with browsers where some features used by your codebase are not available. Examples: `async/await`, destructuring.
+
+It's recommended to start with the following _babel.config.cjs_
 
 ```js
 /*
@@ -373,6 +376,8 @@ module.exports = {
   presets: ["@jsenv/babel-preset"],
 }
 ```
+
+The next section contain link to documentation explaining how to configure babel for JSX and TypeScript.
 
 # See also
 
