@@ -42,7 +42,10 @@ import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "../jsenvInternalFiles.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import {
+  jsenvCoreDirectoryUrl,
+  jsenvDistDirectoryUrl,
+} from "../jsenvCoreDirectoryUrl.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
@@ -945,7 +948,7 @@ const createSourceFileService = ({
       .href
     const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
       fileUrl,
-      new URL("./dist/", jsenvCoreDirectoryUrl),
+      jsenvDistDirectoryUrl,
     )
 
     const responsePromise = fetchFileSystem(fileUrl, {

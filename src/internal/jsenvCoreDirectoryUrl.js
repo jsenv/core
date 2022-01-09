@@ -17,4 +17,6 @@ if (typeof __filename === "string") {
   )
 }
 
+export const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl)
+
 export { jsenvCoreDirectoryUrl }
