@@ -377,7 +377,7 @@ module.exports = {
 }
 ```
 
-The next section contain link to documentation explaining how to configure babel for JSX and TypeScript.
+This babel config file will be used as explained in [Browser support](./docs/config/browser_support.md). It can also be used to enable [JSX](./docs/config/react.md#Using-JSX) and [TypeScript](./docs/config/typescript.md).
 
 # See also
 

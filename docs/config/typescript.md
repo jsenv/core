@@ -1,4 +1,4 @@
-## Configuring jsenv for TypeScript (experimental)
+## Using TypeScript (experimental)
 
 ```console
 npm i --save-dev @babel/plugin-transform-typescript
