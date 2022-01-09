@@ -27,7 +27,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `script_inline.html`
 await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  logLevel: "debug",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   buildDirectoryRelativeUrl,
   entryPoints: {
