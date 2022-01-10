@@ -10,4 +10,5 @@ export const EXECUTE_TEST_PLAN_TEST_PARAMS = {
   coverageTextLog: false,
   coverageJsonFile: false,
   coverageHtmlDirectory: false,
+  windowsProcessExitFix: false,
 }

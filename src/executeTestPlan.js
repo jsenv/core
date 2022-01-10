@@ -49,6 +49,7 @@ export const executeTestPlan = async ({
   completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
+  windowsProcessExitFix = true,
 
   maxExecutionsInParallel = 1,
   defaultMsAllocatedPerExecution = 30000,
@@ -259,7 +260,7 @@ export const executeTestPlan = async ({
   // because not properly killed for some reason.
   // (It can be reproduced on @jsenv/importmap-node-module where playwright is not involved)
   // The hotfix for now is to manually call process.exit() in on windows
-  if (process.platform === "win32") {
+  if (process.platform === "win32" && windowsProcessExitFix) {
     setTimeout(() => {
       process.exit()
     }, 2000).unref()
