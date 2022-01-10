@@ -23,7 +23,7 @@ npm i react-dom
 
 2 - Remap react imports using an importmap
 
-The following import mappings must be added to your HTML file.
+As documented in [2. Remap package with importmap](./npm_package.md#2-remap-package-with-importmap), remap "react" and "react-dom" using an importmap.
 
 ```html
 <script type="importmap">
@@ -36,9 +36,9 @@ The following import mappings must be added to your HTML file.
 </script>
 ```
 
-Read more about importmap and how to generate it programmatically in [Using a NPM package](./npm_package.md).
-
 3 - Convert react from CommonJS to JS modules
+
+As documented in [3. Adapt to the module format](./npm_package.md#3-adapt-to-module-format), convert "react" and "react-dom" to import/export.
 
 ```js
 import { commonJsToJavaScriptModule } from "@jsenv/core"
@@ -79,7 +79,7 @@ module.exports = {
 }
 ```
 
-## Using preact
+# Using preact
 
 ```html
 <!DOCTYPE html>

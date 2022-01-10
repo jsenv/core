@@ -1,13 +1,6 @@
 # Using a NPM package
 
-The way to use a NPM package depend how it's written, especially what is exported by this package.
-
-There is two things to do:
-
-1 - Remap "bare specifier" to an actual file using an importmap
-2 - Eventually adapt to the module format used by the package
-
-## Mapping bare specifier
+Let's say you want to execute the following HTML using a package called "amazing-package".
 
 ```html
 <!DOCTYPE html>
@@ -18,21 +11,43 @@ There is two things to do:
   </head>
   <body>
     <script type="module">
-      import { v4 as uuidv4 } from "uuid"
+      import { doSomethingAmazing } from "amazing-package"
 
-      uuidv4()
+      doSomethingAmazing()
     </script>
   </body>
 </html>
 ```
 
-The code above uses the "uuid" node module. If browser execute the HTML file as it is it would fail because "uuid" does not lead to a file. This can be fixed using an importmap script to remap "uuid" to an actual file.
+You need to do the following:
+
+1. Check package exports
+2. Remap package with importmap
+3. Adapt to the module format
+
+## 1. Check package exports
+
+The way to use a NPM package depends on how it's written. Especially the file you will import from this package.
+
+Check the files exported by the package, how they are written and deduce the module format.
+
+| Code found in the file      | Module format |
+| --------------------------- | ------------- |
+| `import`, `export`          | ESModule      |
+| `require`, `module.exports` | CommonJS      |
+| `window.name = value`       | Global        |
+
+If several format are available, choose the one you want to use.
+
+## 2. Remap package with importmap
+
+If browser executes the HTML file as it is, it would fail because "amazing-package" is not a file. This can be fixed using an importmap script to remap "amazing-package" to the file you want to use.
 
 ```diff
 + <script type="importmap">
 +  {
 +    "imports": {
-+      "uuid": "./dist/esm-browser/index.js"
++      "amazing-package": "./index.js"
 +    }
 +  }
 +</script>
@@ -42,41 +57,37 @@ These mappings can be generated automatically using [@jsenv/node-module-import-m
 
 Read more about importmap at https://github.com/WICG/import-maps#import-maps.
 
-## Use package written with import/export
+## 3. Adapt to the module format
 
-In theory you're good to go.
+According to module format deduced at step 1, do one of the following:
 
-But, if the NPM package omit import extensions use [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map) to generate mappings for these imports.
+- ESModule
 
-## Use package written in CommonJS
+  For most cases you're good to go.
 
-Assuming you import code from a package written in CommonJS.
+  But, if the NPM package contains import without file extensions, use [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map)
+  with "magicExtensions" enabled.
 
-```html
-<script type="module">
-  import something from "package-written-in-commonjs"
+- CommonJS
 
-  console.log(something)
-</script>
-```
+  A browser cannot execute code written in CommonJS, it was invented by and for Node.js. You need to convert code to import/export.
 
-A browser cannot execute code written in CommonJS, it was invented by and for Node.js. You need to use "customCompilers" and "commonJsToJavaScriptModule" to convert code to js modules.
+  In _jsenv.config.mjs_:
 
-In _jsenv.config.mjs_:
+  ```js
+  import { commonJsToJavaScriptModule } from "@jsenv/core"
 
-```js
-import { commonJsToJavaScriptModule } from "@jsenv/core"
+  export const customCompilers = {
+    "./node_modules/amazing-package/**/*.js": commonJsToJavaScriptModule,
+  }
+  ```
 
-export const customCompilers = {
-  "./node_modules/package-written-in-commonjs/**/*.js":
-    commonJsToJavaScriptModule,
-}
-```
+- Global
 
-## Use package written in UMD
+  Import and simply read what was written on `window`. See the example below applied to jQuery.
 
-```js
-import "jquery"
+  ```js
+  import "jquery"
 
-const jquery = window.$
-```
+  const jquery = window.$
+  ```
