@@ -254,6 +254,17 @@ export const executeTestPlan = async ({
     await Promise.all(promises)
   }
 
+  // Sometimes on windows test plan scripts never ends
+  // I suspect it's some node process keeping the process alive
+  // because not properly killed for some reason.
+  // (It can be reproduced on @jsenv/importmap-node-module where playwright is not involved)
+  // The hotfix for now is to manually call process.exit() in on windows
+  if (process.platform === "win32") {
+    setTimeout(() => {
+      process.exit()
+    }, 2000).unref()
+  }
+
   return {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
