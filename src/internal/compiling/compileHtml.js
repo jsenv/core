@@ -495,35 +495,22 @@ export const createInlineScriptHash = (script) => {
   return hash.digest("hex").slice(0, 8)
 }
 
-export const getUniqueNameForInlineHtmlNode = (node, nodes, pattern) => {
-  return renderNamePattern(pattern, {
-    id: () => {
-      const idAttribute = getHtmlNodeAttributeByName(node, "id")
-      if (idAttribute) {
-        return idAttribute.value
-      }
-
-      const { line, column } = getHtmlNodeLocation(node) || {}
-      const lineTaken = nodes.some((nodeCandidate) => {
-        if (nodeCandidate === node) return false
-        const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
-        if (!htmlNodeLocation) return false
-        return htmlNodeLocation.line === line
-      })
-      if (lineTaken) {
-        return `${line}.${column}`
-      }
-
-      return line
-    },
+export const getIdForInlineHtmlNode = (node, nodes) => {
+  const idAttribute = getHtmlNodeAttributeByName(node, "id")
+  if (idAttribute) {
+    return idAttribute.value
+  }
+  const { line, column } = getHtmlNodeLocation(node) || {}
+  const lineTaken = nodes.some((nodeCandidate) => {
+    if (nodeCandidate === node) return false
+    const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
+    if (!htmlNodeLocation) return false
+    return htmlNodeLocation.line === line
   })
-}
-
-const renderNamePattern = (pattern, replacements) => {
-  return pattern.replace(/\[(\w+)\]/g, (_match, type) => {
-    const replacement = replacements[type]()
-    return replacement
-  })
+  if (lineTaken) {
+    return `${line}.${column}`
+  }
+  return line
 }
 
 const parseHtmlAsSingleElement = (html) => {

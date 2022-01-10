@@ -41,7 +41,7 @@ import {
   removeHtmlNodeAttribute,
   getHtmlNodeTextNode,
   setHtmlNodeText,
-  getUniqueNameForInlineHtmlNode,
+  getIdForInlineHtmlNode,
 } from "./compileHtml.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
@@ -121,8 +121,8 @@ export const createTransformHtmlSourceFileService = ({
       jsenvScriptInjection,
       jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
-      onInlineModuleScript: ({ scriptContent, scriptIdentifier }) => {
-        const inlineScriptUrl = resolveUrl(scriptIdentifier, fileUrl)
+      onInlineModuleScript: ({ scriptContent, scriptSpecifier }) => {
+        const inlineScriptUrl = resolveUrl(scriptSpecifier, fileUrl)
         htmlInlineScriptMap.set(inlineScriptUrl, {
           htmlFileUrl: fileUrl,
           scriptContent,
@@ -248,19 +248,18 @@ const transformHTMLSourceFile = async ({
       // inline
       const textNode = getHtmlNodeTextNode(script)
       if (typeAttribute && typeAttribute.value === "module" && textNode) {
-        const scriptIdentifier = getUniqueNameForInlineHtmlNode(
-          script,
-          scripts,
-          `${urlToFilename(fileUrl)}__inline__[id].js`,
-        )
+        const scriptId = getIdForInlineHtmlNode(script, scripts)
+        const scriptSpecifier = `${urlToFilename(
+          fileUrl,
+        )}__inline__${scriptId}.js`
         onInlineModuleScript({
           scriptContent: textNode.value,
-          scriptIdentifier,
+          scriptSpecifier,
         })
         setHtmlNodeText(
           script,
           `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(
-            `./${scriptIdentifier}`,
+            `./${scriptSpecifier}`,
           )})`,
         )
         return

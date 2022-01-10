@@ -30,7 +30,7 @@ import {
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-  getUniqueNameForInlineHtmlNode,
+  getIdForInlineHtmlNode,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   visitHtmlAst,
@@ -365,11 +365,8 @@ const visitScripts = async ({
         return
       }
 
-      const inlineScriptName = getUniqueNameForInlineHtmlNode(
-        script,
-        scripts,
-        `[id].js`,
-      )
+      const scriptId = getIdForInlineHtmlNode(script, scripts)
+      const inlineScriptName = `${scriptId}.js`
       const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
       const scriptCompiledUrl = generateCompiledFileAssetUrl(
         compiledUrl,
@@ -482,11 +479,8 @@ const visitScripts = async ({
         })
         return
       }
-      const inlineScriptName = getUniqueNameForInlineHtmlNode(
-        script,
-        scripts,
-        `[id].js`,
-      )
+      const scriptId = getIdForInlineHtmlNode(script, scripts)
+      const inlineScriptName = `${scriptId}.js`
       const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
       const scriptCompiledUrl = generateCompiledFileAssetUrl(
         compiledUrl,

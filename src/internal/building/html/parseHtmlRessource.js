@@ -24,7 +24,7 @@ import {
   replaceHtmlNode,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
-  getUniqueNameForInlineHtmlNode,
+  getIdForInlineHtmlNode,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
@@ -234,11 +234,10 @@ const regularScriptTextNodeVisitor = (
     return null
   }
 
-  const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
-    script,
-    scripts,
-    `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
-  )
+  const scriptId = getIdForInlineHtmlNode(script, scripts)
+  const ressourceSpecifier = `${urlToFilename(
+    htmlRessource.url,
+  )}__inline__${scriptId}.js`
   const jsReference = notifyReferenceFound({
     referenceLabel: "html inline script",
     contentTypeExpected: "application/javascript",
@@ -333,11 +332,10 @@ const moduleScriptTextNodeVisitor = (
     return null
   }
 
-  const ressourceSpecifier = getUniqueNameForInlineHtmlNode(
-    script,
-    scripts,
-    `${urlToFilename(htmlRessource.url)}__inline__[id].js`,
-  )
+  const scriptId = getIdForInlineHtmlNode(script, scripts)
+  const ressourceSpecifier = `${urlToFilename(
+    htmlRessource.url,
+  )}__inline__${scriptId}.js`
   const jsReference = notifyReferenceFound({
     referenceLabel: "html inline module script",
     contentTypeExpected: "application/javascript",
@@ -445,16 +443,14 @@ const importmapScriptTextNodeVisitor = (
     return null
   }
 
+  const importmapScriptId = getIdForInlineHtmlNode(script, scripts)
   const importmapReference = notifyReferenceFound({
     referenceLabel: "html inline importmap",
     contentTypeExpected: "application/importmap+json",
-    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
-      script,
-      scripts,
-      `${urlToFilename(htmlRessource.url)}__inline__[id].importmap`,
-    ),
+    ressourceSpecifier: `${urlToFilename(
+      htmlRessource.url,
+    )}__inline__${importmapScriptId}.importmap`,
     ...referenceLocationFromHtmlNode(script),
-
     contentType: "application/importmap+json",
     bufferBeforeBuild: Buffer.from(textNode.value),
     isInline: true,
@@ -648,16 +644,14 @@ const styleTextNodeVisitor = (
     return null
   }
 
+  const styleId = getIdForInlineHtmlNode(style, styles)
   const inlineStyleReference = notifyReferenceFound({
     referenceLabel: "html style",
     contentTypeExpected: "text/css",
-    ressourceSpecifier: getUniqueNameForInlineHtmlNode(
-      style,
-      styles,
-      `${urlToFilename(htmlRessource.url)}__inline__[id].css`,
-    ),
+    ressourceSpecifier: `${urlToFilename(
+      htmlRessource.url,
+    )}__inline__${styleId}.css`,
     ...referenceLocationFromHtmlNode(style),
-
     contentType: "text/css",
     bufferBeforeBuild: Buffer.from(textNode.value),
     isInline: true,
