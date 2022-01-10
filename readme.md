@@ -386,7 +386,6 @@ This babel config file will be used as explained in [Browser support](./docs/con
 | [Browser support](./docs/config/browser_support.md)                                  | Document how to configure browser support                                 |
 | [Web workers](./docs/config/web_workers.md)                                          | Document how to use web workers                                           |
 | [NPM package](./docs/config/npm_package.md)                                          | Document how to use a NPM package                                         |
-| [CommonJS modules](./docs/config/commonjs.md)                                        | Document how to use code written in CommonJS                              |
 | [React](./docs/config/react.md)                                                      | Document how to enable react/preact and JSX                               |
 | [TypeScript (Experimental)](./docs/config/typescript.md)                             | Document how to enable TypeScript                                         |
 | [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                   | GitHub repository template for a progressive web application              |

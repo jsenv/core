@@ -37,7 +37,28 @@ This works if the package you want to use provide a js module export. Otherwise 
 
 ## Using a package written in CommonJS
 
-See [Importing code written in CommonJS](./commonjs.md)
+CommonJS is a module format using `module.exports` and `require`. A browser cannot execute code written in CommonJS, it was invented by and for Node.js.
+
+If you import code from a package written in CommonJS you need to use "customCompilers" and "commonJsToJavaScriptModule" to convert it.
+
+```html
+<script type="module">
+  import something from "package-written-in-commonjs"
+
+  console.log(something)
+</script>
+```
+
+In _jsenv.config.mjs_:
+
+```js
+import { commonJsToJavaScriptModule } from "@jsenv/core"
+
+export const customCompilers = {
+  "./node_modules/package-written-in-commonjs/**/*.js":
+    commonJsToJavaScriptModule,
+}
+```
 
 ## Using a package written in UMD
 

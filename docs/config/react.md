@@ -54,8 +54,6 @@ export const customCompilers = {
 }
 ```
 
-Read more in [Importing code written in CommonJS](./commonjs.md)
-
 # Using JSX
 
 If you want to use JSX, you need [@babel/plugin-transform-react-jsx](https://babeljs.io/docs/en/next/babel-plugin-transform-react-jsx.html) in your babel config file.
