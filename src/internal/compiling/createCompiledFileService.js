@@ -1,15 +1,19 @@
-import { fetchFileSystem } from "@jsenv/server"
+import { fetchUrl, fetchFileSystem } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
+  urlToOrigin,
+  urlToPathname,
+  writeFile,
 } from "@jsenv/filesystem"
 
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 
+import { originAsDirectoryName } from "./origin_as_directory_name.js"
 import { setUrlExtension } from "../url_utils.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -89,12 +93,9 @@ export const createCompiledFileService = ({
 
   const importmapInfos = {}
 
-  return (request, { pushResponse, redirectRequest }) => {
+  return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
-    // we use "ressourceToPathname" to remove eventual query param from the url
-    // Without this a pattern like "**/*.js" would not match "file.js?t=1"
-    // This would result in file not being compiled when they should
-    const requestUrl = `${origin}${ressourceToPathname(ressource)}`
+    const requestUrl = `${origin}${ressource}`
 
     const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
       outDirectoryRelativeUrl,
@@ -139,10 +140,47 @@ export const createCompiledFileService = ({
       return null
     }
 
-    const originalFileRelativeUrl = afterCompileId
-    projectFileRequestedCallback(originalFileRelativeUrl, request)
-
-    const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+    // ici
+    const urlObject = new URL(requestUrl)
+    const { search } = urlObject
+    const searchParams = new URLSearchParams(search)
+    const externalUrl = searchParams.get("external_url")
+    let originalFileRelativeUrl
+    let originalFileUrl
+    let responseHeaders
+    if (externalUrl) {
+      // TODO: forward response headers + handle cache
+      const requestHeadersToForward = {
+        ...request.headers,
+      }
+      delete requestHeadersToForward.host
+      const response = await fetchUrl(externalUrl, {
+        mode: "cors",
+        headers: requestHeadersToForward,
+      })
+      const { status } = response
+      if (status !== 200) {
+        throw new Error(`not 200`)
+      }
+      responseHeaders = Object.fromEntries(response.headers.entries())
+      delete responseHeaders["connection"]
+      delete responseHeaders["keep-alive"]
+      delete responseHeaders["cache-control"]
+      delete responseHeaders["content-length"]
+      delete responseHeaders["content-type"]
+      delete responseHeaders["content-encoding"]
+      const responseBodyAsArrayBuffer = await response.arrayBuffer()
+      const responseBodyAsBuffer = Buffer.from(responseBodyAsArrayBuffer)
+      const directoryName = originAsDirectoryName(urlToOrigin(requestUrl))
+      originalFileRelativeUrl = `${outDirectoryRelativeUrl}external/${directoryName}${urlToPathname(
+        requestUrl,
+      )}`
+      originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+      await writeFile(originalFileUrl, responseBodyAsBuffer)
+    } else {
+      originalFileRelativeUrl = afterCompileId
+      originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+    }
     const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
     const compileDirectoryUrl = resolveDirectoryUrl(
       compileDirectoryRelativeUrl,
@@ -152,17 +190,15 @@ export const createCompiledFileService = ({
       originalFileRelativeUrl,
       compileDirectoryUrl,
     )
-
     const compiler = getCompiler({ originalFileUrl, compileMeta })
     // no compiler -> serve original file
-    // we don't redirect otherwise it complexify ressource tracking
-    // and url resolution
+    // we redirect "internally" (we dont send 304 to the browser)
+    // to keep ressource tracking and url resolution simple
     if (!compiler) {
       return redirectRequest({
         pathname: `/${originalFileRelativeUrl}`,
       })
     }
-
     // compile this if needed
     const compileResponsePromise = compileFile({
       compileServerOperation,
@@ -238,6 +274,14 @@ const canAvoidSystemJs = ({
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {
+  // we remove eventual query param from the url
+  // Without this a pattern like "**/*.js" would not match "file.js?t=1"
+  // This would result in file not being compiled when they should
+  // Ideally we would do a first pass with the query param and a second without
+  const urlObject = new URL(originalFileUrl)
+  urlObject.search = ""
+  originalFileUrl = urlObject.href
+
   const { jsenvCompiler, customCompiler } = urlToMeta({
     url: originalFileUrl,
     structuredMetaMap: compileMeta,
@@ -306,13 +350,4 @@ const contentTypeExtensions = {
   "text/html": ".html",
   "application/importmap+json": ".importmap",
   // "text/css": ".css",
-}
-
-const ressourceToPathname = (ressource) => {
-  const searchSeparatorIndex = ressource.indexOf("?")
-  const pathname =
-    searchSeparatorIndex === -1
-      ? ressource
-      : ressource.slice(0, searchSeparatorIndex)
-  return pathname
 }

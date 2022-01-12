@@ -18,6 +18,7 @@ export const compileFile = async ({
   compiledFileUrl,
   projectFileRequestedCallback = () => {},
   request,
+  responseHeaders = {},
   pushResponse,
   importmapInfos,
   compile,
@@ -34,6 +35,11 @@ export const compileFile = async ({
       `compileCacheStrategy must be "etag", "mtime" or "none", got ${compileCacheStrategy}`,
     )
   }
+
+  projectFileRequestedCallback(
+    urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
+    request,
+  )
 
   const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
 
@@ -78,13 +84,15 @@ export const compileFile = async ({
       compileResult.compiledMtime = Date.now()
     }
 
-    const {
-      contentType,
-      compiledEtag,
-      compiledMtime,
-      compiledSource,
-      responseHeaders = {},
-    } = compileResult
+    const { contentType, compiledEtag, compiledMtime, compiledSource } =
+      compileResult
+
+    if (compileResult.responseHeaders) {
+      responseHeaders = {
+        ...responseHeaders,
+        ...compileResult.responseHeaders,
+      }
+    }
 
     if (compileResultStatus !== "cached" && compileCacheStrategy !== "none") {
       // we MUST await updateMeta otherwise we might get 404

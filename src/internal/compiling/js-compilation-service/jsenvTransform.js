@@ -6,6 +6,7 @@ import {
   getMinimalBabelPluginMap,
   babelPluginsFromBabelPluginMap,
 } from "@jsenv/core/src/internal/compiling/babel_plugins.js"
+import { babelPluginProxyExternalImports } from "@jsenv/core/src/internal/compiling/babel_plugin_proxy_external_imports.js"
 import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compiling/babel_plugin_import_metadata.js"
 
 import { ansiToHTML } from "./ansiToHTML.js"
@@ -146,6 +147,7 @@ export const jsenvTransform = async ({
           ],
         }
       : {}),
+    "proxy-external-imports": [babelPluginProxyExternalImports],
     "import-metadata": [babelPluginImportMetadata],
   }
   if (moduleOutFormat === "systemjs") {

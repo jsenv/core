@@ -15,31 +15,57 @@ try {
     testDirectoryUrl,
     jsenvCoreDirectoryUrl,
   )
-  const { status, namespace } = await execute({
-    ...EXECUTE_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv`,
-    runtime: chromiumRuntime,
-    runtimeParams: {
-      ...LAUNCH_TEST_PARAMS,
-    },
-    fileRelativeUrl: `${testDirectoryRelativeUrl}main.html`,
-  })
-  const actual = {
-    status,
-    namespace,
+  const test = async ({ forceCompilation } = {}) => {
+    const result = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv`,
+      runtime: chromiumRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        forceCompilation,
+      },
+      fileRelativeUrl: `${testDirectoryRelativeUrl}main.html`,
+    })
+    return result
   }
-  const expected = {
-    status: "completed",
-    namespace: {
-      [`./main.js`]: {
-        status: "completed",
-        namespace: {
-          value: 42,
+
+  {
+    const { namespace } = await test({
+      forceCompilation: true,
+    })
+    const actual = {
+      namespace,
+    }
+    const expected = {
+      namespace: {
+        "./main.js": {
+          status: "completed",
+          namespace: {
+            value: 42,
+          },
         },
       },
-    },
+    }
+    assert({ actual, expected })
   }
-  assert({ actual, expected })
+
+  {
+    const { namespace } = await test()
+    const actual = {
+      namespace,
+    }
+    const expected = {
+      namespace: {
+        "./main.js": {
+          status: "completed",
+          namespace: {
+            value: 42,
+          },
+        },
+      },
+    }
+    assert({ actual, expected })
+  }
 } finally {
   server.stop()
 }
