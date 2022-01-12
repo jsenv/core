@@ -24,6 +24,7 @@ export const buildUsingRollup = async ({
   entryPoints,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   buildDirectoryUrl,
   buildDirectoryClean,
   assetManifestFile = false,
@@ -98,6 +99,7 @@ export const buildUsingRollup = async ({
     entryPoints,
     compileServerOrigin,
     compileDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     buildDirectoryUrl,
 
     format,

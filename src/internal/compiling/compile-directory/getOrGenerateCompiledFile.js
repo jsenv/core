@@ -1,7 +1,14 @@
-import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
+import { timeStart, timeFunction, fetchUrl } from "@jsenv/server"
+import {
+  urlToFileSystemPath,
+  readFile,
+  urlIsInsideOf,
+  writeFile,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
-import { timeStart, timeFunction } from "@jsenv/server"
 
+import { externalUrlConverter } from "../external_url_converter.js"
 import { validateCache } from "./validateCache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { createLockRegistry } from "./createLockRegistry.js"
@@ -12,6 +19,7 @@ export const getOrGenerateCompiledFile = async ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
   compileCacheStrategy,
@@ -61,6 +69,8 @@ export const getOrGenerateCompiledFile = async ({
       const lockTiming = lockTimeEnd()
       const { meta, compileResult, compileResultStatus, timing } =
         await computeCompileReport({
+          projectDirectoryUrl,
+          jsenvHttpDirectoryUrl: `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}.http/`,
           originalFileUrl,
           compiledFileUrl,
           compile,
@@ -89,6 +99,8 @@ export const getOrGenerateCompiledFile = async ({
 }
 
 const computeCompileReport = async ({
+  // projectDirectoryUrl,
+  jsenvHttpDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
   compile,
@@ -128,10 +140,57 @@ const computeCompileReport = async ({
     }
 
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
+
+    const fetchOriginalFile = async () => {
+      // The original file might be behind an http url.
+      // In that case jsenv try first to read file from filesystem
+      // in ".jsenv/.http/" directory. If not found, the url
+      // is fetched and file is written in that ".jsenv/.http/" directory.
+      // After that the only way to re-fetch this ressource is
+      // to delete the content of ".jsenv/.http/"
+      try {
+        const code = await readFile(originalFileUrl)
+        return { code }
+      } catch (e) {
+        // when file is not found and the file is referenced with an http url
+        if (
+          e &&
+          e.code === "ENOENT" &&
+          urlIsInsideOf(originalFileUrl, jsenvHttpDirectoryUrl)
+        ) {
+          const fileRelativeUrl = urlToRelativeUrl(
+            originalFileUrl,
+            jsenvHttpDirectoryUrl,
+          )
+          const { search } = new URL(originalFileUrl)
+          const urlAsHttp = `${externalUrlConverter.fromFileRelativeUrl(
+            fileRelativeUrl,
+          )}${search}`
+          const requestHeadersToForward = { ...request.headers }
+          delete requestHeadersToForward.host
+          const response = await fetchUrl(urlAsHttp, {
+            mode: "cors",
+            headers: requestHeadersToForward,
+          })
+          const { status } = response
+          if (status !== 200) {
+            throw new Error(`not 200`)
+          }
+          const responseBodyAsArrayBuffer = await response.arrayBuffer()
+          const responseBodyAsBuffer = Buffer.from(responseBodyAsArrayBuffer)
+          await writeFile(originalFileUrl, responseBodyAsBuffer)
+          const code = String(responseBodyAsBuffer)
+          return { code }
+        }
+        throw e
+      }
+    }
+    const { code } = await fetchOriginalFile()
     const [compileTiming, compileResult] = await timeFunction("compile", () =>
       callCompile({
         logger,
         originalFileUrl,
+        code,
         compile,
       }),
     )
@@ -169,12 +228,9 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, compile }) => {
+const callCompile = async ({ logger, code, originalFileUrl, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
-
-  const compileReturnValue = await compile({
-    code: await readFile(originalFileUrl),
-  })
+  const compileReturnValue = await compile({ code })
   if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
     throw new TypeError(
       `compile must return an object, got ${compileReturnValue}`,
@@ -200,7 +256,6 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
       `compile must return a compiledSource string, got ${compiledSource}`,
     )
   }
-
   return {
     contentType,
     compiledSource,

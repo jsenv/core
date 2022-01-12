@@ -219,6 +219,7 @@ export const buildProject = async ({
       projectDirectoryUrl,
       compileServerOrigin,
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
+      jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
       buildDirectoryUrl,
       buildDirectoryClean,
       assetManifestFile,

@@ -7,6 +7,7 @@ export const compileJavascript = async ({
   url,
   compiledUrl,
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
 
   babelPluginMap,
   workerUrls,
@@ -30,6 +31,7 @@ export const compileJavascript = async ({
     url,
     compiledUrl,
     projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
 
     babelPluginMap,
     moduleOutFormat,

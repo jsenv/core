@@ -58,6 +58,7 @@ export const createRollupPlugins = async ({
   entryPoints,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   buildDirectoryUrl,
 
   urlMappings,
@@ -685,6 +686,7 @@ export const createRollupPlugins = async ({
                     ),
                     url: asOriginalUrl(jsModuleUrl), // transformJs expect a file:// url
                     projectDirectoryUrl,
+                    jsenvDirectoryRelativeUrl,
                     babelPluginMap,
                     // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
                     // we compile for rollup, let top level await untouched

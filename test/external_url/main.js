@@ -1,5 +1,5 @@
-import { value } from "https://localhost:9999/file.js"
+import { url } from "https://localhost:9999/file.js"
 
-console.log(value)
+console.log(url)
 
-export { value }
+export { url }

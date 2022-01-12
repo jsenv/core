@@ -21,6 +21,8 @@ export const jsenvTransform = async ({
   ast, // optional
   url,
   relativeUrl, // optional
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
 
   babelPluginMap,
   moduleOutFormat,
@@ -147,7 +149,10 @@ export const jsenvTransform = async ({
           ],
         }
       : {}),
-    "proxy-external-imports": [babelPluginProxyExternalImports],
+    "proxy-external-imports": [
+      babelPluginProxyExternalImports,
+      { projectDirectoryUrl, jsenvDirectoryRelativeUrl },
+    ],
     "import-metadata": [babelPluginImportMetadata],
   }
   if (moduleOutFormat === "systemjs") {

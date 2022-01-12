@@ -1,19 +1,15 @@
-import { fetchUrl, fetchFileSystem } from "@jsenv/server"
+import { fetchFileSystem } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
-  urlToOrigin,
-  urlToPathname,
-  writeFile,
 } from "@jsenv/filesystem"
 
 import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 
-import { originAsDirectoryName } from "./origin_as_directory_name.js"
 import { setUrlExtension } from "../url_utils.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
@@ -42,6 +38,7 @@ export const createCompiledFileService = ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
 
   runtimeSupport,
@@ -140,47 +137,8 @@ export const createCompiledFileService = ({
       return null
     }
 
-    // ici
-    const urlObject = new URL(requestUrl)
-    const { search } = urlObject
-    const searchParams = new URLSearchParams(search)
-    const externalUrl = searchParams.get("external_url")
-    let originalFileRelativeUrl
-    let originalFileUrl
-    let responseHeaders
-    if (externalUrl) {
-      // TODO: forward response headers + handle cache
-      const requestHeadersToForward = {
-        ...request.headers,
-      }
-      delete requestHeadersToForward.host
-      const response = await fetchUrl(externalUrl, {
-        mode: "cors",
-        headers: requestHeadersToForward,
-      })
-      const { status } = response
-      if (status !== 200) {
-        throw new Error(`not 200`)
-      }
-      responseHeaders = Object.fromEntries(response.headers.entries())
-      delete responseHeaders["connection"]
-      delete responseHeaders["keep-alive"]
-      delete responseHeaders["cache-control"]
-      delete responseHeaders["content-length"]
-      delete responseHeaders["content-type"]
-      delete responseHeaders["content-encoding"]
-      const responseBodyAsArrayBuffer = await response.arrayBuffer()
-      const responseBodyAsBuffer = Buffer.from(responseBodyAsArrayBuffer)
-      const directoryName = originAsDirectoryName(urlToOrigin(requestUrl))
-      originalFileRelativeUrl = `${outDirectoryRelativeUrl}external/${directoryName}${urlToPathname(
-        requestUrl,
-      )}`
-      originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-      await writeFile(originalFileUrl, responseBodyAsBuffer)
-    } else {
-      originalFileRelativeUrl = afterCompileId
-      originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-    }
+    const originalFileRelativeUrl = afterCompileId
+    const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
     const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
     const compileDirectoryUrl = resolveDirectoryUrl(
       compileDirectoryRelativeUrl,
@@ -205,6 +163,7 @@ export const createCompiledFileService = ({
       logger,
 
       projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
       originalFileUrl,
       compiledFileUrl,
 
@@ -222,6 +181,7 @@ export const createCompiledFileService = ({
           compiledUrl: compiledFileUrl,
           projectDirectoryUrl,
           compileServerOrigin: request.origin,
+          jsenvDirectoryRelativeUrl,
           outDirectoryRelativeUrl,
           compileId,
           request,

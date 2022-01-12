@@ -328,6 +328,7 @@ export const startCompileServer = async ({
       logger,
 
       projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
 
       importDefaultExtension,

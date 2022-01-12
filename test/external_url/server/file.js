@@ -1,1 +1,1 @@
-export { value } from "./constants.js"
+export { url } from "./constants.js?foo=bar"

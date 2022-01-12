@@ -47,6 +47,7 @@ export const compileHtml = async ({
   compiledUrl,
   projectDirectoryUrl,
   compileServerOrigin,
+  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   compileId,
 
@@ -191,6 +192,7 @@ export const compileHtml = async ({
     logger,
     projectDirectoryUrl,
     compileServerOrigin,
+    jsenvDirectoryRelativeUrl,
     url,
     compiledUrl,
     scripts,
@@ -325,6 +327,7 @@ const visitScripts = async ({
   logger,
   projectDirectoryUrl,
   compileServerOrigin,
+  jsenvDirectoryRelativeUrl,
   url,
   compiledUrl,
   scripts,
@@ -375,6 +378,7 @@ const visitScripts = async ({
       addHtmlAssetGenerator(async () => {
         return transformHtmlScript({
           projectDirectoryUrl,
+          jsenvDirectoryRelativeUrl,
           url: scriptOriginalUrl,
           compiledUrl: scriptCompiledUrl,
           code: textNode.value,
@@ -459,6 +463,7 @@ const visitScripts = async ({
           })
           return transformHtmlScript({
             projectDirectoryUrl,
+            jsenvDirectoryRelativeUrl,
             url: scriptOriginalUrl,
             compiledUrl: scriptCompiledUrl,
             code: scriptAsText,
@@ -489,6 +494,7 @@ const visitScripts = async ({
       addHtmlAssetGenerator(async () => {
         const htmlAssets = await transformHtmlScript({
           projectDirectoryUrl,
+          jsenvDirectoryRelativeUrl,
           url: scriptOriginalUrl,
           compiledUrl: scriptCompiledUrl,
           code: textNode.value,
@@ -512,6 +518,7 @@ const visitScripts = async ({
 
 const transformHtmlScript = async ({
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   url,
   compiledUrl,
   code,
@@ -530,6 +537,7 @@ const transformHtmlScript = async ({
       url,
       compiledUrl,
       projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
 
       babelPluginMap,
       moduleOutFormat: type === "module" ? moduleOutFormat : "global",

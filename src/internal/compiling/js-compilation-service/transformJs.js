@@ -7,6 +7,7 @@ export const transformJs = async ({
   map,
   url,
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
 
   babelPluginMap,
   moduleOutFormat = "esmodule",
@@ -46,6 +47,8 @@ export const transformJs = async ({
     relativeUrl: url.startsWith(projectDirectoryUrl)
       ? urlToRelativeUrl(url, projectDirectoryUrl)
       : undefined,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
 
     babelPluginMap,
     moduleOutFormat,

@@ -34,7 +34,7 @@ startDevServer({
       "./test-manual/**/*.html": true,
       "./test/workers/**/*.html": true,
       "./test/entry_html/**/*.html": true,
-      "./test/http_url/**/*.html": true,
+      "./test/external_url/**/*.html": true,
       "./**/.jsenv/": false,
       "./**/dist/": false,
       "./**/node_modules/": false,

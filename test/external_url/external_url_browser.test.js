@@ -25,12 +25,13 @@ try {
         forceCompilation,
       },
       fileRelativeUrl: `${testDirectoryRelativeUrl}main.html`,
+      collectCompileServerInfo: true,
     })
     return result
   }
 
   {
-    const { namespace } = await test({
+    const { namespace, compileServerOrigin } = await test({
       forceCompilation: true,
     })
     const actual = {
@@ -41,7 +42,7 @@ try {
         "./main.js": {
           status: "completed",
           namespace: {
-            value: 42,
+            url: `${compileServerOrigin}/test/external_url/.jsenv/dev/best/test/external_url/.jsenv/.http/https$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
           },
         },
       },
@@ -59,7 +60,7 @@ try {
         "./main.js": {
           status: "completed",
           namespace: {
-            value: 42,
+            url: "https://localhost:9999/constants.js?foo=bar",
           },
         },
       },
