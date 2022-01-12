@@ -108,65 +108,17 @@ npm i preact
 
 2 - Remap preact imports using an importmap
 
-Preact needs many mappings to work because the source code contains import omitting file extension. So here it's recommended to generate import mappings programmatically.
+As documented in [2. Remap package with importmap](./npm_package.md#2-remap-package-with-importmap), remap "preact" using an importmap.
 
-```console
-npm i --save-dev @jsenv/importmap-node-module
-```
-
-Create a file _importmap.mjs_:
-
-```js
-import { writeImportMapFiles } from "@jsenv/importmap-node-module"
-
-await writeImportMapFiles({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  importMapFiles: {
-    "./project.importmap": {
-      runtime: "browser",
-      mappingsForNodeResolution: true,
-      manualImportMap: {
-        scopes: {
-          // can be removed if you don't use redux: remap "react" to "preact" for "react-redux"
-          "./node_modules/react-redux/": {
-            "react": "./node_modules/preact/compat/src/index.js",
-            "react-dom": "./node_modules/preact/compat/src/index.js",
-          },
-        },
-      },
-      entryPointsToCheck: ["./main.html"],
-      extensionlessAutomapping: true,
-      magicExtensions: [".js"],
-      packageUserConditions: ["development"],
-      removeUnusedMappings: true,
-    },
-  },
-  // can be removed if you don't use redux: fix the "react-redux" and "redux" exports field
-  packagesManualOverrides: {
-    "react-redux": {
-      exports: {
-        import: "./es/index.js",
-      },
-    },
-    "redux": {
-      exports: {
-        import: "es/redux.js",
-      },
-    },
-  },
-})
-```
-
-Gneerate "project.importmap"
-
-```console
-node ./importmap.mjs
-```
-
-Finally add "project.importmap" to the HTML file.
-
-```diff
-+ <script type="importmap" src="./project.importmap"></script>
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "preact": "./node_modules/preact/dist/preact.module.js",
+      "preact/hooks": "./node_modules/preact/hooks/dist/hooks.module.js"
+    }
+  }
+</script>
 ```
 
 3 - Configure "pragma" for preact (if you use JSX)
