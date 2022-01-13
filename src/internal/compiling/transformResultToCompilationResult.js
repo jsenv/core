@@ -34,8 +34,11 @@ export const transformResultToCompilationResult = async (
     // it also means client have to fetch source from server (additional http request)
     // some client ignore sourcesContent property such as vscode-chrome-debugger
     // Because it's the most complex scenario and we want to ensure client is always able
-    // to find source from the sourcemap, we remove map.sourcesContent by default to test this.
-    sourcemapExcludeSources = true,
+    // to find source from the sourcemap, it's a good idea
+    // to exclude sourcesContent from sourcemap.
+    // However some ressource are abstract and it means additional http request for the browser.
+    // For these reasons it's simpler to keep source content in sourcemap.
+    sourcemapExcludeSources = false,
     sourcemapMethod = "comment", // "comment", "inline"
     originalFileContent,
   },
@@ -121,27 +124,24 @@ export const transformResultToCompilationResult = async (
           content: originalFileContent,
         })
       }
-      if (!sourcemapExcludeSources) {
-        await Promise.all(
-          sources.map(async (sourceUrl, index) => {
-            const contentFromSourcemap = map.sourcesContent
-              ? map.sourcesContent[index]
-              : null
-            if (contentFromSourcemap) {
-              sourcesContent[index] = contentFromSourcemap
-            } else {
-              const contentFromFile = await readFile(sourceUrl)
-              sourcesContent[index] = contentFromFile
-            }
-          }),
-        )
-      }
+      await Promise.all(
+        sources.map(async (sourceUrl, index) => {
+          const contentFromSourcemap = map.sourcesContent
+            ? map.sourcesContent[index]
+            : null
+          if (contentFromSourcemap) {
+            sourcesContent[index] = contentFromSourcemap
+          } else {
+            const contentFromFile = await readFile(sourceUrl)
+            sourcesContent[index] = contentFromFile
+          }
+        }),
+      )
     }
 
     if (sourcemapExcludeSources) {
       delete map.sourcesContent
     }
-
     // we don't need sourceRoot because our path are relative or absolute to the current location
     // we could comment this line because it is not set by babel because not passed during transform
     delete map.sourceRoot

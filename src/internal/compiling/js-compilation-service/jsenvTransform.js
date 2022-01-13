@@ -148,10 +148,14 @@ export const jsenvTransform = async ({
           ],
         }
       : {}),
-    "proxy-external-imports": [
-      babelPluginProxyExternalImports,
-      { jsenvRemoteDirectory },
-    ],
+    ...(jsenvRemoteDirectory
+      ? {
+          "proxy-external-imports": [
+            babelPluginProxyExternalImports,
+            { jsenvRemoteDirectory },
+          ],
+        }
+      : {}),
     "import-metadata": [babelPluginImportMetadata],
   }
   if (moduleOutFormat === "systemjs") {

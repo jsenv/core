@@ -11,8 +11,6 @@ export const commonJsToJavaScriptModule = async ({
   url,
   compiledUrl,
 
-  sourcemapExcludeSources,
-
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -23,6 +21,7 @@ export const commonJsToJavaScriptModule = async ({
   replaceMap = {},
   convertBuiltinsToBrowser = true,
   external = [],
+  sourcemapExcludeSources,
 } = {}) => {
   if (!url.startsWith("file:///")) {
     // it's possible to make rollup compatible with http:// for instance
@@ -148,7 +147,7 @@ export const commonJsToJavaScriptModule = async ({
     // entryFileNames: `./[name].js`,
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
-    sourcemapExcludeSources: true,
+    sourcemapExcludeSources,
     exports: "named",
     ...(compiledUrl
       ? { dir: urlToFileSystemPath(resolveUrl("./", compiledUrl)) }
