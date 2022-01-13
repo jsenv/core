@@ -1,11 +1,3 @@
-/*
- * TODO:
- * - rename "externalImportUrlPatterns" -> "ignoredUrlPatterns"
- * - test that when url is specified in "ignoredUrlPatterns" the url is kept intact
- * (meaning the code generated after build still perform the http request)
- * - remote url should be fetched too in ressource_builder (again except if specified in "ignoredUrlPatterns")
- */
-
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 

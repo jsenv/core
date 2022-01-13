@@ -63,7 +63,7 @@ export const buildProject = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
-  externalImportUrlPatterns = format === "commonjs"
+  externalUrlPatterns = format === "commonjs"
     ? {
         "node_modules/": true,
       }
@@ -231,7 +231,7 @@ export const buildProject = async ({
       importMapFileRelativeUrl,
       importDefaultExtension,
       externalImportSpecifiers,
-      externalImportUrlPatterns,
+      externalUrlPatterns,
       importPaths,
 
       format,

@@ -65,7 +65,7 @@ export const createRollupPlugins = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
-  externalImportUrlPatterns,
+  externalUrlPatterns,
   importPaths,
   workers,
   serviceWorkers,
@@ -182,10 +182,11 @@ export const createRollupPlugins = async ({
     urlFetcher,
   })
 
-  const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
-    externalImportUrlPatterns,
+  const urlMetaGetter = createUrlMetaGetter({
+    externalUrlPatterns,
     projectDirectoryUrl,
-  )
+    jsenvRemoteDirectory,
+  })
 
   // Object mapping project relative urls to build relative urls
   let buildMappings = {}
@@ -829,13 +830,13 @@ export const createRollupPlugins = async ({
         return asRollupUrl(specifier)
       }
 
-      const importUrl = await importResolver.resolveImport(
+      const specifierUrl = await importResolver.resolveImport(
         specifier,
         importerUrl,
       )
-      const existingImporter = urlImporterMap[importUrl]
+      const existingImporter = urlImporterMap[specifierUrl]
       if (!existingImporter) {
-        urlImporterMap[importUrl] = importAssertionInfo
+        urlImporterMap[specifierUrl] = importAssertionInfo
           ? {
               url: importerUrl,
               column: importAssertionInfo.column,
@@ -851,8 +852,8 @@ export const createRollupPlugins = async ({
       }
 
       // keep external url intact
-      const importProjectUrl = asProjectUrl(importUrl)
-      if (!importProjectUrl) {
+      const specifierProjectUrl = asProjectUrl(specifierUrl)
+      if (!specifierProjectUrl) {
         onExternal({
           specifier,
           reason: `outside project directory`,
@@ -860,17 +861,23 @@ export const createRollupPlugins = async ({
         return { id: specifier, external: true }
       }
 
-      if (externalUrlPredicate(asOriginalUrl(importProjectUrl))) {
+      const specifierOriginalUrl = asOriginalUrl(specifierProjectUrl)
+      const urlMeta = urlMetaGetter(specifierOriginalUrl)
+      if (urlMeta.external) {
+        if (urlMeta.remote) {
+          specifier =
+            jsenvRemoteDirectory.remoteUrlFromFileUrl(specifierOriginalUrl)
+        }
         onExternal({
           specifier,
-          reason: `matches "externalUrlPredicate"`,
+          reason: `matches "externalUrlPatterns`,
         })
         return { id: specifier, external: true }
       }
 
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       // logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
-      return asRollupUrl(importUrl)
+      return asRollupUrl(specifierUrl)
     },
 
     resolveFileUrl: ({ referenceId, fileName }) => {
@@ -1684,16 +1691,28 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
   return resolveReturnValue
 }
 
-const externalImportUrlPatternsToExternalUrlPredicate = (
-  externalImportUrlPatterns,
+const createUrlMetaGetter = ({
+  externalUrlPatterns,
   projectDirectoryUrl,
-) => {
+  jsenvRemoteDirectory,
+}) => {
+  const fileUrlPatternsForRemoteUrls = {}
+  Object.keys(externalUrlPatterns).forEach((pattern) => {
+    if (jsenvRemoteDirectory.isRemoteUrl(pattern)) {
+      const fileUrlPattern = jsenvRemoteDirectory.fileUrlFromRemoteUrl(pattern)
+      fileUrlPatternsForRemoteUrls[fileUrlPattern] =
+        externalUrlPatterns[pattern]
+    }
+  })
+
   const externalImportUrlStructuredMetaMap = normalizeStructuredMetaMap(
     {
       external: {
-        ...externalImportUrlPatterns,
+        ...externalUrlPatterns,
+        ...fileUrlPatternsForRemoteUrls,
         "node_modules/@jsenv/core/helpers/": false,
       },
+      remote: fileUrlPatternsForRemoteUrls,
     },
     projectDirectoryUrl,
   )
@@ -1702,7 +1721,7 @@ const externalImportUrlPatternsToExternalUrlPredicate = (
       url,
       structuredMetaMap: externalImportUrlStructuredMetaMap,
     })
-    return Boolean(meta.external)
+    return meta
   }
 }
 
