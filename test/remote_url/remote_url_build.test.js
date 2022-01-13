@@ -1,14 +1,10 @@
 /*
  * TODO:
- * http url are not external by default anymore
- * we'll try to fetch them except if passed in "externalImportSpecifiers"
- *
- * We must ensure the file is properly transformed
- * We should check sourcemap (ideally they point to the http url)
- *
- * We could do the same for img, fonts, etc: fetch the http url by default
- * except if in "externalImportSpecifiers"
- * that should be renamed to ignoredUrls for example
+ * - test with systemjs
+ * - rename "externalImportSpecifiers" -> "ignoredUrls"
+ * - test that when url is specified in  "ignoredUrls" the url is kept intact
+ * (meaning the code generated after build still perform the http request)
+ * - remote url should be fetched too in ressource_builder (again except if specified in "ignoredUrls")
  */
 
 import { assert } from "@jsenv/assert"

@@ -15,10 +15,11 @@ try {
     testDirectoryUrl,
     jsenvCoreDirectoryUrl,
   )
+  const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
   const test = async ({ forceCompilation } = {}) => {
     const result = await execute({
       ...EXECUTE_TEST_PARAMS,
-      jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv`,
+      jsenvDirectoryRelativeUrl,
       runtime: chromiumRuntime,
       runtimeParams: {
         ...LAUNCH_TEST_PARAMS,
@@ -42,7 +43,7 @@ try {
         "./main.js": {
           status: "completed",
           namespace: {
-            url: `${compileServerOrigin}/test/external_url/.jsenv/dev/best/test/external_url/.jsenv/.remote/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
+            url: `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}dev/best/${jsenvDirectoryRelativeUrl}.remote/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
           },
         },
       },
