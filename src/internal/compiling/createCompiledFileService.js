@@ -11,6 +11,7 @@ import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/s
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 
 import { setUrlExtension } from "../url_utils.js"
+import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
   COMPILE_ID_BUILD_GLOBAL_FILES,
@@ -90,6 +91,11 @@ export const createCompiledFileService = ({
 
   const importmapInfos = {}
 
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+  })
+
   return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
@@ -163,7 +169,7 @@ export const createCompiledFileService = ({
       logger,
 
       projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
+      jsenvRemoteDirectory,
       originalFileUrl,
       compiledFileUrl,
 
@@ -176,15 +182,16 @@ export const createCompiledFileService = ({
         return compiler({
           logger,
 
-          code,
-          url: originalFileUrl,
-          compiledUrl: compiledFileUrl,
           projectDirectoryUrl,
+          jsenvRemoteDirectory,
           compileServerOrigin: request.origin,
           jsenvDirectoryRelativeUrl,
           outDirectoryRelativeUrl,
-          compileId,
+          url: originalFileUrl,
+          compiledUrl: compiledFileUrl,
           request,
+
+          compileId,
           babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
             missingFeatureNames: groupMap[compileId].missingFeatureNames,
@@ -200,6 +207,7 @@ export const createCompiledFileService = ({
           topLevelAwait,
           prependSystemJs,
 
+          code,
           sourcemapMethod,
           sourcemapExcludeSources,
           jsenvEventSourceClientInjection,

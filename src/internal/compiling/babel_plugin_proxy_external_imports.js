@@ -1,31 +1,24 @@
 import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { externalUrlConverter } from "./external_url_converter.js"
 import { babelPluginImportVisitor } from "./babel_plugin_import_visitor.js"
 
 export const babelPluginProxyExternalImports = (
   babel,
-  { projectDirectoryUrl, jsenvDirectoryRelativeUrl },
+  { jsenvRemoteDirectory },
 ) => {
-  const jsenvHttpDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}.http/`
-
   return {
     ...babelPluginImportVisitor(babel, ({ specifierPath, state }) => {
       const specifierNode = specifierPath.node
       if (specifierNode.type === "StringLiteral") {
         const specifier = specifierNode.value
-        if (specifier.startsWith("http:") || specifier.startsWith("https:")) {
-          const fileRelativeUrl =
-            externalUrlConverter.toFileRelativeUrl(specifier)
-          const { search } = new URL(specifier)
-          const urlAsFile = `${jsenvHttpDirectoryUrl}${fileRelativeUrl}`
+        if (jsenvRemoteDirectory.isRemoteUrl(specifier)) {
+          const fileUrl = jsenvRemoteDirectory.fileUrlFromRemoteUrl(specifier)
           const importerFileUrl = fileSystemPathToUrl(state.filename)
-          // c'est pas relative to project qu'il faut mais relative au fichier actuel
           const urlRelativeToProject = urlToRelativeUrl(
-            urlAsFile,
+            fileUrl,
             importerFileUrl,
           )
-          const specifierProxy = `./${urlRelativeToProject}${search}`
+          const specifierProxy = `./${urlRelativeToProject}`
           specifierPath.replaceWith(babel.types.stringLiteral(specifierProxy))
         }
       }

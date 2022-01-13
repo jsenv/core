@@ -4,12 +4,10 @@ import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
 
 export const compileJavascript = async ({
-  code,
-  map,
+  projectDirectoryUrl,
+  jsenvRemoteDirectory,
   url,
   compiledUrl,
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
 
   babelPluginMap,
   workerUrls,
@@ -19,6 +17,8 @@ export const compileJavascript = async ({
   topLevelAwait,
   prependSystemJs,
 
+  code,
+  map,
   sourcemapExcludeSources,
   sourcemapMethod,
 }) => {
@@ -27,29 +27,30 @@ export const compileJavascript = async ({
       workerUrls.includes(url) || serviceWorkerUrls.includes(url)
   }
   const transformResult = await transformJs({
-    code,
-    map,
+    projectDirectoryUrl,
+    jsenvRemoteDirectory,
     url,
     compiledUrl,
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
 
     babelPluginMap,
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
     prependSystemJs,
+
+    code,
+    map,
   })
   return transformResultToCompilationResult(
     {
       contentType: "application/javascript",
+      metadata: transformResult.metadata,
       code: transformResult.code,
       map: transformResult.map,
-      metadata: transformResult.metadata,
     },
     {
       projectDirectoryUrl,
-      originalFileContent: code,
+      jsenvRemoteDirectory,
       originalFileUrl: url,
       compiledFileUrl: compiledUrl,
       // sourcemap are not inside the asset folder because
@@ -57,6 +58,7 @@ export const compileJavascript = async ({
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
       sourcemapMethod,
+      originalFileContent: code,
     },
   )
 }

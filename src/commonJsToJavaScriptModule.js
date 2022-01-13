@@ -6,10 +6,10 @@ import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compi
 
 export const commonJsToJavaScriptModule = async ({
   logger,
-
+  projectDirectoryUrl,
+  jsenvRemoteDirectory,
   url,
   compiledUrl,
-  projectDirectoryUrl,
 
   sourcemapExcludeSources,
 
@@ -166,11 +166,12 @@ export const commonJsToJavaScriptModule = async ({
     },
     {
       projectDirectoryUrl,
-      originalFileContent: code,
+      jsenvRemoteDirectory,
       originalFileUrl: url,
       compiledFileUrl: compiledUrl,
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
+      originalFileContent: code,
     },
   )
 }

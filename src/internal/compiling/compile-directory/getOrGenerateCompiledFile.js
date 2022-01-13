@@ -1,14 +1,7 @@
 import { timeStart, timeFunction, fetchUrl } from "@jsenv/server"
-import {
-  urlToFileSystemPath,
-  readFile,
-  urlIsInsideOf,
-  writeFile,
-  urlToRelativeUrl,
-} from "@jsenv/filesystem"
+import { urlToFileSystemPath, readFile, writeFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { externalUrlConverter } from "../external_url_converter.js"
 import { validateCache } from "./validateCache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
 import { createLockRegistry } from "./createLockRegistry.js"
@@ -19,9 +12,10 @@ export const getOrGenerateCompiledFile = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
+  jsenvRemoteDirectory,
+
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
@@ -70,9 +64,10 @@ export const getOrGenerateCompiledFile = async ({
       const { meta, compileResult, compileResultStatus, timing } =
         await computeCompileReport({
           projectDirectoryUrl,
-          jsenvHttpDirectoryUrl: `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}.http/`,
           originalFileUrl,
           compiledFileUrl,
+          jsenvRemoteDirectory,
+
           compile,
           compileCacheStrategy,
           compileCacheSourcesValidation,
@@ -100,15 +95,16 @@ export const getOrGenerateCompiledFile = async ({
 
 const computeCompileReport = async ({
   // projectDirectoryUrl,
-  jsenvHttpDirectoryUrl,
+  logger,
   originalFileUrl,
   compiledFileUrl,
+  jsenvRemoteDirectory,
+
   compile,
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
   request,
-  logger,
 }) => {
   const [readCacheTiming, cacheValidity] = await timeFunction(
     "read cache",
@@ -156,19 +152,13 @@ const computeCompileReport = async ({
         if (
           e &&
           e.code === "ENOENT" &&
-          urlIsInsideOf(originalFileUrl, jsenvHttpDirectoryUrl)
+          jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalFileUrl)
         ) {
-          const fileRelativeUrl = urlToRelativeUrl(
-            originalFileUrl,
-            jsenvHttpDirectoryUrl,
-          )
-          const { search } = new URL(originalFileUrl)
-          const urlAsHttp = `${externalUrlConverter.fromFileRelativeUrl(
-            fileRelativeUrl,
-          )}${search}`
+          const remoteUrl =
+            jsenvRemoteDirectory.remoteUrlFromFileUrl(originalFileUrl)
           const requestHeadersToForward = { ...request.headers }
           delete requestHeadersToForward.host
-          const response = await fetchUrl(urlAsHttp, {
+          const response = await fetchUrl(remoteUrl, {
             mode: "cors",
             headers: requestHeadersToForward,
           })

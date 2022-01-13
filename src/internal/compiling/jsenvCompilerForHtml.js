@@ -41,27 +41,25 @@ import { generateCompilationAssetUrl } from "./compile-directory/compile-asset.j
 export const compileHtml = async ({
   // cancellationToken,
   logger,
-  // request,
-  code,
   url,
   compiledUrl,
   projectDirectoryUrl,
+  jsenvRemoteDirectory,
   compileServerOrigin,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
-  compileId,
 
+  compileId,
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
-
-  sourcemapMethod,
-
   jsenvScriptInjection = true,
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
   onHtmlImportmapInfo,
+
+  sourcemapMethod,
+  code,
 }) => {
   const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
     BROWSER_RUNTIME_BUILD_URL,
@@ -191,21 +189,22 @@ export const compileHtml = async ({
   await visitScripts({
     logger,
     projectDirectoryUrl,
+    jsenvRemoteDirectory,
     compileServerOrigin,
-    jsenvDirectoryRelativeUrl,
     url,
     compiledUrl,
-    scripts,
-    addHtmlSourceFile,
-    addHtmlAssetGenerator,
-    addHtmlMutation,
-    addHtmlDependency,
 
     babelPluginMap,
     moduleOutFormat,
     importMetaFormat,
     topLevelAwait,
     sourcemapMethod,
+
+    scripts,
+    addHtmlSourceFile,
+    addHtmlAssetGenerator,
+    addHtmlMutation,
+    addHtmlDependency,
   })
   await Promise.all(
     htmlAssetGenerators.map(async (htmlAssetGenerator) => {
@@ -327,20 +326,21 @@ const visitScripts = async ({
   logger,
   projectDirectoryUrl,
   compileServerOrigin,
-  jsenvDirectoryRelativeUrl,
+  jsenvRemoteDirectory,
   url,
   compiledUrl,
-  scripts,
-  addHtmlSourceFile,
-  addHtmlAssetGenerator,
-  addHtmlMutation,
-  addHtmlDependency,
 
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
   sourcemapMethod,
+
+  scripts,
+  addHtmlSourceFile,
+  addHtmlAssetGenerator,
+  addHtmlMutation,
+  addHtmlDependency,
 }) => {
   scripts.forEach((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -378,17 +378,18 @@ const visitScripts = async ({
       addHtmlAssetGenerator(async () => {
         return transformHtmlScript({
           projectDirectoryUrl,
-          jsenvDirectoryRelativeUrl,
+          jsenvRemoteDirectory,
           url: scriptOriginalUrl,
           compiledUrl: scriptCompiledUrl,
-          code: textNode.value,
 
           type: "module",
           babelPluginMap,
           moduleOutFormat,
           importMetaFormat,
           topLevelAwait,
+
           sourcemapMethod,
+          code: textNode.value,
         })
       })
       const specifier = `./${urlToRelativeUrl(scriptCompiledUrl, compiledUrl)}`
@@ -463,17 +464,18 @@ const visitScripts = async ({
           })
           return transformHtmlScript({
             projectDirectoryUrl,
-            jsenvDirectoryRelativeUrl,
+            jsenvRemoteDirectory,
             url: scriptOriginalUrl,
             compiledUrl: scriptCompiledUrl,
-            code: scriptAsText,
 
             type: "classic",
             babelPluginMap,
             moduleOutFormat,
             importMetaFormat,
             topLevelAwait,
+
             sourcemapMethod,
+            code: scriptAsText,
           })
         })
         addHtmlMutation(() => {
@@ -494,16 +496,17 @@ const visitScripts = async ({
       addHtmlAssetGenerator(async () => {
         const htmlAssets = await transformHtmlScript({
           projectDirectoryUrl,
-          jsenvDirectoryRelativeUrl,
+          jsenvRemoteDirectory,
           url: scriptOriginalUrl,
           compiledUrl: scriptCompiledUrl,
-          code: textNode.value,
 
           type: "classic",
           babelPluginMap,
           moduleOutFormat,
           importMetaFormat,
           topLevelAwait,
+
+          code: textNode.value,
           sourcemapMethod,
         })
         addHtmlMutation(() => {
@@ -518,32 +521,34 @@ const visitScripts = async ({
 
 const transformHtmlScript = async ({
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  jsenvRemoteDirectory,
   url,
   compiledUrl,
-  code,
-  type,
 
+  type,
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
+
+  code,
   sourcemapMethod,
 }) => {
   let transformResult
   try {
     transformResult = await transformJs({
-      code,
+      projectDirectoryUrl,
+      jsenvRemoteDirectory,
       url,
       compiledUrl,
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
 
       babelPluginMap,
       moduleOutFormat: type === "module" ? moduleOutFormat : "global",
       importMetaFormat,
       topLevelAwait: type === "module" ? topLevelAwait : false,
       babelHelpersInjectionAsImport: type === "module" ? undefined : false,
+
+      code,
     })
   } catch (e) {
     // If there is a syntax error in inline script

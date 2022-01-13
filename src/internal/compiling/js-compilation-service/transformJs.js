@@ -3,11 +3,9 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { jsenvTransform } from "./jsenvTransform.js"
 
 export const transformJs = async ({
-  code,
-  map,
-  url,
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  jsenvRemoteDirectory,
+  url,
 
   babelPluginMap,
   moduleOutFormat = "esmodule",
@@ -17,6 +15,9 @@ export const transformJs = async ({
   topLevelAwait,
   transformGenerator = true,
   sourcemapEnabled = true,
+
+  map,
+  code,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -41,14 +42,14 @@ export const transformJs = async ({
   }
 
   const transformResult = await jsenvTransform({
-    code,
-    map,
     url,
     relativeUrl: url.startsWith(projectDirectoryUrl)
       ? urlToRelativeUrl(url, projectDirectoryUrl)
       : undefined,
     projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
+    jsenvRemoteDirectory,
+    code,
+    map,
 
     babelPluginMap,
     moduleOutFormat,

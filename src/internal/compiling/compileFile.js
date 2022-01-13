@@ -14,9 +14,10 @@ export const compileFile = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  jsenvRemoteDirectory,
   originalFileUrl,
   compiledFileUrl,
+
   projectFileRequestedCallback = () => {},
   request,
   responseHeaders = {},
@@ -49,9 +50,10 @@ export const compileFile = async ({
       await getOrGenerateCompiledFile({
         logger,
         projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl,
         originalFileUrl,
         compiledFileUrl,
+        jsenvRemoteDirectory,
+
         request,
         compileCacheStrategy,
         compileCacheSourcesValidation,

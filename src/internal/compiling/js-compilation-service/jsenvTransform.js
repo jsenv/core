@@ -16,24 +16,23 @@ import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
-  code,
-  map, // optional
-  ast, // optional
+  jsenvRemoteDirectory,
   url,
   relativeUrl, // optional
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
 
   babelPluginMap,
   moduleOutFormat,
   importMetaFormat = moduleOutFormat,
   topLevelAwait,
-
   babelHelpersInjectionAsImport,
   prependSystemJs,
   transformGenerator,
   regeneratorRuntimeImportPath,
+
   sourcemapEnabled,
+  ast, // optional
+  map, // optional
+  code,
 }) => {
   const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
   const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
@@ -151,7 +150,7 @@ export const jsenvTransform = async ({
       : {}),
     "proxy-external-imports": [
       babelPluginProxyExternalImports,
-      { projectDirectoryUrl, jsenvDirectoryRelativeUrl },
+      { jsenvRemoteDirectory },
     ],
     "import-metadata": [babelPluginImportMetadata],
   }

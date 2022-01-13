@@ -30,6 +30,7 @@ import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInterna
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import-resolution/import-resolver-importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
+import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
 
 import {
   formatBuildStartLog,
@@ -44,10 +45,8 @@ import {
   createRessourceBuilder,
   referenceToCodeForRollup,
 } from "./ressource_builder.js"
-
 import { createUrlVersioner } from "./url_versioning.js"
 import { visitImportReferences } from "./import_references.js"
-
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -91,6 +90,11 @@ export const createRollupPlugins = async ({
   minifyCssOptions,
   minifyHtmlOptions,
 }) => {
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+  })
+
   const urlImporterMap = {}
   const inlineModuleScripts = {}
   const jsModulesFromEntry = {}
@@ -257,11 +261,12 @@ export const createRollupPlugins = async ({
       async renderChunk(code, chunk) {
         let map = chunk.map
         const result = await transformJs({
-          code,
+          projectDirectoryUrl,
+          jsenvRemoteDirectory,
           url: chunk.facadeModuleId
             ? asOriginalUrl(chunk.facadeModuleId)
             : resolveUrl(chunk.fileName, buildDirectoryUrl),
-          projectDirectoryUrl,
+          code,
           babelPluginMap: {
             "transform-async-to-promises":
               babelPluginMap["transform-async-to-promises"],
@@ -681,12 +686,12 @@ export const createRollupPlugins = async ({
                 inlineModuleScripts[jsModuleUrl] = ressource
                 urlCustomLoaders[jsModuleUrl] = async () => {
                   const transformResult = await transformJs({
+                    projectDirectoryUrl,
+                    jsenvRemoteDirectory,
+                    url: asOriginalUrl(jsModuleUrl), // transformJs expect a file:// url
                     code: String(
                       inlineModuleScripts[jsModuleUrl].bufferBeforeBuild,
                     ),
-                    url: asOriginalUrl(jsModuleUrl), // transformJs expect a file:// url
-                    projectDirectoryUrl,
-                    jsenvDirectoryRelativeUrl,
                     babelPluginMap,
                     // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
                     // we compile for rollup, let top level await untouched

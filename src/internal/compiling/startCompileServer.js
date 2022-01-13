@@ -971,6 +971,7 @@ const createCompileServerMetaFileInfo = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
+
   importDefaultExtension,
   compileServerGroupMap,
   babelPluginMap,
