@@ -1,5 +1,6 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
+import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compiling/rollup_plugin_commonjs_named_exports.js"
 
@@ -168,7 +169,7 @@ export const commonJsToJavaScriptModule = async ({
       originalFileContent: code,
       originalFileUrl: url,
       compiledFileUrl: compiledUrl,
-      sourcemapFileUrl: `${compiledUrl}.map`,
+      sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
     },
   )

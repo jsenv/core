@@ -1,7 +1,6 @@
 import {
   resolveUrl,
   urlToFilename,
-  urlToBasename,
   urlToRelativeUrl,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
@@ -18,6 +17,7 @@ import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
 
 import {
+  generateSourcemapUrl,
   setJavaScriptSourceMappingUrl,
   sourcemapToBase64Url,
 } from "../sourceMappingURLUtils.js"
@@ -36,7 +36,7 @@ import {
   visitHtmlAst,
   replaceHtmlNode,
 } from "./compileHtml.js"
-import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
+import { generateCompilationAssetUrl } from "./compile-directory/compile-asset.js"
 
 export const compileHtml = async ({
   // cancellationToken,
@@ -371,7 +371,7 @@ const visitScripts = async ({
       const scriptId = getIdForInlineHtmlNode(script, scripts)
       const inlineScriptName = `${scriptId}.js`
       const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
-      const scriptCompiledUrl = generateCompiledFileAssetUrl(
+      const scriptCompiledUrl = generateCompilationAssetUrl(
         compiledUrl,
         inlineScriptName,
       )
@@ -432,7 +432,7 @@ const visitScripts = async ({
           return
         }
 
-        const scriptCompiledUrl = generateCompiledFileAssetUrl(
+        const scriptCompiledUrl = generateCompilationAssetUrl(
           compiledUrl,
           urlToFilename(scriptOriginalUrl),
         )
@@ -487,7 +487,7 @@ const visitScripts = async ({
       const scriptId = getIdForInlineHtmlNode(script, scripts)
       const inlineScriptName = `${scriptId}.js`
       const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
-      const scriptCompiledUrl = generateCompiledFileAssetUrl(
+      const scriptCompiledUrl = generateCompilationAssetUrl(
         compiledUrl,
         inlineScriptName,
       )
@@ -561,10 +561,7 @@ const transformHtmlScript = async ({
 
   code = transformResult.code
   let map = transformResult.map
-  const sourcemapUrl = resolveUrl(
-    `${urlToBasename(compiledUrl)}.map`,
-    compiledUrl,
-  )
+  const sourcemapUrl = generateSourcemapUrl(compiledUrl)
   if (sourcemapMethod === "inline") {
     code = setJavaScriptSourceMappingUrl(code, sourcemapToBase64Url(map))
     return [

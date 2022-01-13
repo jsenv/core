@@ -6,6 +6,7 @@ import {
 } from "@jsenv/filesystem"
 
 import {
+  generateSourcemapUrl,
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
@@ -21,7 +22,7 @@ export const parseCssRessource = async (
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
-  const url = cssRessource.url
+  const cssUrl = cssRessource.url
   let code = cssString
   let map
   let sourcemapReference
@@ -42,7 +43,10 @@ export const parseCssRessource = async (
     sourcemapReference = notifyReferenceFound({
       referenceLabel: "css sourcemaping comment",
       contentType: "application/octet-stream",
-      ressourceSpecifier: `${urlToFilename(cssRessource.url)}.map`,
+      ressourceSpecifier: urlToRelativeUrl(
+        generateSourcemapUrl(cssUrl),
+        cssUrl,
+      ),
       isPlaceholder: true,
       isSourcemap: true,
     })
@@ -50,7 +54,7 @@ export const parseCssRessource = async (
 
   const { atImports, urlDeclarations } = await parseCssUrls({
     code,
-    url,
+    url: cssUrl,
   })
   const urlNodeReferenceMapping = new Map()
   const atImportReferences = []
@@ -168,11 +172,7 @@ export const parseCssRessource = async (
       cssRessource.buildRelativeUrl,
       buildDirectoryUrl,
     )
-    const sourcemapPrecomputedBuildUrl = resolveUrl(
-      `${urlToFilename(cssBuildUrl)}.map`,
-      cssBuildUrl,
-    )
-
+    const sourcemapPrecomputedBuildUrl = generateSourcemapUrl(cssBuildUrl)
     map.file = urlToFilename(cssBuildUrl)
     if (map.sources) {
       map.sources = map.sources.map((source) => {

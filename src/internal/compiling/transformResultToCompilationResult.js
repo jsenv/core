@@ -15,7 +15,7 @@ import {
   setCssSourceMappingUrl,
   sourcemapToBase64Url,
 } from "../sourceMappingURLUtils.js"
-import { generateCompiledFileAssetUrl } from "./compile-directory/compile-asset.js"
+import { generateCompilationAssetUrl } from "./compile-directory/compile-asset.js"
 import { testFilePresence } from "./compile-directory/fs-optimized-for-cache.js"
 
 const isWindows = process.platform === "win32"
@@ -149,7 +149,7 @@ export const transformResultToCompilationResult = async (
 
   const { coverage } = metadata
   if (coverage) {
-    const coverageAssetFileUrl = generateCompiledFileAssetUrl(
+    const coverageAssetFileUrl = generateCompilationAssetUrl(
       compiledFileUrl,
       "coverage.json",
     )

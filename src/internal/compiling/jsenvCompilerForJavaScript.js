@@ -1,3 +1,5 @@
+import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
 
@@ -24,7 +26,6 @@ export const compileJavascript = async ({
     prependSystemJs =
       workerUrls.includes(url) || serviceWorkerUrls.includes(url)
   }
-
   const transformResult = await transformJs({
     code,
     map,
@@ -39,7 +40,6 @@ export const compileJavascript = async ({
     topLevelAwait,
     prependSystemJs,
   })
-
   return transformResultToCompilationResult(
     {
       contentType: "application/javascript",
@@ -54,7 +54,7 @@ export const compileJavascript = async ({
       compiledFileUrl: compiledUrl,
       // sourcemap are not inside the asset folder because
       // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
-      sourcemapFileUrl: `${compiledUrl}.map`,
+      sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
       sourcemapMethod,
     },
