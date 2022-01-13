@@ -1,9 +1,9 @@
-import { urlToOrigin, urlToPathname } from "@jsenv/filesystem"
-
 export const generateSourcemapUrl = (url) => {
   // we want to remove eventual search params from url
-  const origin = urlToOrigin(url)
-  const pathname = urlToPathname(url)
+  const urlString = String(url)
+  const urlObject = new URL(url)
+  const origin = urlString.startsWith("file://") ? "file://" : urlObject.origin
+  const pathname = urlObject.pathname
   const sourcemapUrl = `${origin}${pathname}.map`
   return sourcemapUrl
 }
