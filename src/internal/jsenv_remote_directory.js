@@ -1,8 +1,11 @@
-// TODO: internalize external url converter
+import {
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  urlToOrigin,
+  urlToRessource,
+} from "@jsenv/filesystem"
 
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
-
-import { externalUrlConverter } from "./compiling/external_url_converter.js"
+import { originDirectoryConverter } from "./origin_directory_converter.js"
 
 export const createJsenvRemoteDirectory = ({
   projectDirectoryUrl,
@@ -20,7 +23,11 @@ export const createJsenvRemoteDirectory = ({
     },
 
     fileUrlFromRemoteUrl: (remoteUrl) => {
-      const fileRelativeUrl = externalUrlConverter.toFileRelativeUrl(remoteUrl)
+      const origin = urlToOrigin(remoteUrl)
+      const ressource = urlToRessource(remoteUrl)
+      const [pathname] = ressource.split("?")
+      const directoryName = originDirectoryConverter.toDirectoryName(origin)
+      const fileRelativeUrl = `${directoryName}${pathname}`
       const { search } = new URL(remoteUrl)
       const fileUrl = `${jsenvRemoteDirectoryUrl}${fileRelativeUrl}${search}`
       return fileUrl
@@ -29,9 +36,11 @@ export const createJsenvRemoteDirectory = ({
     remoteUrlFromFileUrl: (fileUrl) => {
       const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvRemoteDirectoryUrl)
       const { search } = new URL(fileUrl)
-      const remoteUrl = `${externalUrlConverter.fromFileRelativeUrl(
-        fileRelativeUrl,
-      )}${search}`
+      const firstSlashIndex = fileRelativeUrl.indexOf("/")
+      const directoryName = fileRelativeUrl.slice(0, firstSlashIndex)
+      const origin = originDirectoryConverter.fromDirectoryName(directoryName)
+      const pathname = fileRelativeUrl.slice(firstSlashIndex)
+      const remoteUrl = `${origin}${pathname}${search}`
       return remoteUrl
     },
   }
