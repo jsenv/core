@@ -42,7 +42,7 @@ try {
         "./main.js": {
           status: "completed",
           namespace: {
-            url: `${compileServerOrigin}/test/external_url/.jsenv/dev/best/test/external_url/.jsenv/.http/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
+            url: `${compileServerOrigin}/test/external_url/.jsenv/dev/best/test/external_url/.jsenv/.remote/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
           },
         },
       },
