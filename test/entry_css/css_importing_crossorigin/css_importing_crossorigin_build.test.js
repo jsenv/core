@@ -1,3 +1,11 @@
+/*
+ * TODO:
+ * - Do not rely on google CDN for this test (start a local server)
+ *   but keep a comment to show that in practice it's what we would use
+ * - By default the remote url must be fetched and ends up in the build
+ * - An other test where "externalUrlPatterns" is used and remote url is kept in the build
+ */
+
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
