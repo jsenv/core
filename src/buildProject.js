@@ -68,6 +68,7 @@ export const buildProject = async ({
         "node_modules/": true,
       }
     : {},
+  // https://rollupjs.org/guide/en/#outputpaths
   importPaths = {},
 
   urlVersioning = format === "systemjs" ||
