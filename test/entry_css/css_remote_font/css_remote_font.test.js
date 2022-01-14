@@ -1,7 +1,5 @@
 /*
  * TODO:
- * - Do not rely on google CDN for this test (start a local server)
- *   but keep a comment to show that in practice it's what we would use
  * - By default the remote url must be fetched and ends up in the build
  * - An other test where "externalUrlPatterns" is used and remote url is kept in the build
  */
@@ -25,30 +23,64 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `style.css`
-const { buildMappings } = await buildProject({
-  ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "debug",
-  jsenvDirectoryRelativeUrl,
-  buildDirectoryRelativeUrl,
-  entryPoints: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "style.css",
-  },
-})
+const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
+const entryPoints = {
+  [`./${testDirectoryRelativeUrl}style.css`]: "style.css",
+}
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const cssBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}style.css`]
-const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
-const cssString = await readFile(cssBuildUrl)
 
-// ensure font urls properly updated in css file
-const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
-const fontSpecifier = cssUrls.atImports[0].specifier
+// remote url ends up as a build file
+{
+  const { buildMappings } = await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    // logLevel: "debug",
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPoints,
+  })
+  const cssBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
+  const cssString = await readFile(cssBuildUrl)
+  const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
+  const fontSpecifier = cssUrls.atImports[0].specifier
 
-const actual = fontSpecifier
-const expected = "https://fonts.googleapis.com/css2?family=Roboto"
-assert({ actual, expected })
+  const actual = {
+    fontSpecifier,
+  }
+  const expected = {
+    fontSpecifier: "assets/roboto_hash.css",
+  }
+  assert({ actual, expected })
+}
+
+// TODO: remote url stays remote
+{
+  const { buildMappings } = await buildProject({
+    ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+    // logLevel: "debug",
+    jsenvDirectoryRelativeUrl,
+    buildDirectoryRelativeUrl,
+    entryPoints,
+    externalUrlPatterns: {
+      "http://localhost:9999/": true,
+    },
+  })
+  const cssBuildRelativeUrl =
+    buildMappings[`${testDirectoryRelativeUrl}style.css`]
+  const cssBuildUrl = resolveUrl(cssBuildRelativeUrl, buildDirectoryUrl)
+  const cssString = await readFile(cssBuildUrl)
+  const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
+  const fontSpecifier = cssUrls.atImports[0].specifier
+
+  const actual = {
+    fontSpecifier,
+  }
+  const expected = {
+    fontSpecifier: "http://localhost:9999/roboto.css",
+  }
+  assert({ actual, expected })
+}
