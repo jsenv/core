@@ -1287,11 +1287,13 @@ export const createRollupPlugins = async ({
         // here relativePath contains a protocol
         // because rollup don't work with url but with filesystem paths
         // let fix it below
-        const sourceRollupUrlStrange = resolveUrl(relativePath, sourcemapUrl)
+        const sourceRollupUrlRaw = resolveUrl(relativePath, sourcemapUrl)
         const afterOrigin =
-          getStringAfter(sourceRollupUrlStrange, "http:/jsenv.com") ||
-          getStringAfter(sourceRollupUrlStrange, "https:/jsenv.com")
-        const sourceRollupUrl = `${compileServerOriginForRollup}${afterOrigin}`
+          getStringAfter(sourceRollupUrlRaw, "http:/jsenv.com") ||
+          getStringAfter(sourceRollupUrlRaw, "https:/jsenv.com")
+        const sourceRollupUrl = afterOrigin
+          ? `${compileServerOriginForRollup}${afterOrigin}`
+          : sourceRollupUrlRaw
 
         const sourceServerUrl = asServerUrl(sourceRollupUrl)
         const sourceUrl =
