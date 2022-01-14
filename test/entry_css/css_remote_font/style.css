@@ -1,0 +1,6 @@
+/* 
+ * We don't want to depend on google CDN in the test so the font is served locally
+ * In practice "http://localhost:9999/roboto.css"
+ * would be "https://fonts.googleapis.com/css2?family=Roboto"
+ */
+@import url("http://localhost:9999/roboto.css");
