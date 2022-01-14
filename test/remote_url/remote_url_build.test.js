@@ -18,22 +18,15 @@ try {
   const entryPoints = {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   }
-  const test = async (params) => {
-    const build = await buildProject({
-      ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-      // logLevel: "debug",
-      jsenvDirectoryRelativeUrl,
-      entryPoints,
-      ...params,
-    })
-    return build
-  }
 
   // esmodule
   {
-    const { buildMappings } = await test({
-      format: "esmodule",
+    const { buildMappings } = await buildProject({
+      ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      entryPoints,
       buildDirectoryRelativeUrl: `${testDirectoryRelativeUrl}dist/esmodule/`,
+      format: "esmodule",
     })
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
@@ -56,9 +49,12 @@ try {
 
   // systemjs
   {
-    const { buildMappings } = await test({
-      format: "systemjs",
+    const { buildMappings } = await buildProject({
+      ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      entryPoints,
       buildDirectoryRelativeUrl: `${testDirectoryRelativeUrl}dist/systemjs/`,
+      format: "systemjs",
     })
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
