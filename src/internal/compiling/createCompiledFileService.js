@@ -50,6 +50,7 @@ export const createCompiledFileService = ({
   prependSystemJs,
   groupMap,
   customCompilers,
+  preservedUrls,
   workerUrls,
   serviceWorkerUrls,
   importMapInWebWorkers,
@@ -94,6 +95,7 @@ export const createCompiledFileService = ({
   const jsenvRemoteDirectory = createJsenvRemoteDirectory({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
+    preservedUrls,
   })
 
   return async (request, { pushResponse, redirectRequest }) => {

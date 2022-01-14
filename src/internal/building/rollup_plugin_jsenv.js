@@ -65,8 +65,8 @@ export const createRollupPlugins = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
-  externalUrlPatterns,
   importPaths,
+  preservedUrls,
   workers,
   serviceWorkers,
   serviceWorkerFinalizer,
@@ -93,6 +93,7 @@ export const createRollupPlugins = async ({
   const jsenvRemoteDirectory = createJsenvRemoteDirectory({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
+    preservedUrls,
   })
 
   const urlImporterMap = {}
@@ -184,9 +185,9 @@ export const createRollupPlugins = async ({
   })
 
   const urlMetaGetter = createUrlMetaGetter({
-    externalUrlPatterns,
     projectDirectoryUrl,
     jsenvRemoteDirectory,
+    preservedUrls,
   })
 
   // Object mapping project relative urls to build relative urls
@@ -581,87 +582,80 @@ export const createRollupPlugins = async ({
             // isRessourceHint,
             ressourceImporter,
           }) => {
-            // Entry point is not a JS module and references a js module (html referencing js)
-            if (
-              ressourceImporter.isEntryPoint &&
-              !ressourceImporter.isJsModule &&
-              isJsModule
-            ) {
-              const importerCompiledUrl = asCompiledServerUrl(
-                ressourceImporter.url,
-              )
-              const jsModuleUrl = resolveUrl(
-                ressourceSpecifier,
-                importerCompiledUrl,
-              )
-              return jsModuleUrl
-            }
-
-            let ressourceUrl
-            if (
-              ressourceImporter.isEntryPoint &&
-              !ressourceImporter.isJsModule
-            ) {
-              // Entry point (likely html, unlikely css) is referecing a ressource
-              // when importmap, parse the original importmap ressource
-              if (ressourceSpecifier.endsWith(".importmap")) {
-                ressourceUrl = resolveUrl(
-                  ressourceSpecifier,
+            const getRessourceUrl = () => {
+              // Entry point is not a JS module and references a js module (html referencing js)
+              if (
+                ressourceImporter.isEntryPoint &&
+                !ressourceImporter.isJsModule &&
+                isJsModule
+              ) {
+                const importerCompiledUrl = asCompiledServerUrl(
                   ressourceImporter.url,
                 )
-              } else {
+                const jsModuleUrl = resolveUrl(
+                  ressourceSpecifier,
+                  importerCompiledUrl,
+                )
+                return jsModuleUrl
+              }
+              // Entry point (likely html, unlikely css) is referecing a ressource
+              // In this situation:
+              // - when importmap is referenced: parse the original importmap ressource
+              // - other ressource: force compilation (because the HTML url is the original url)
+              if (
+                ressourceImporter.isEntryPoint &&
+                !ressourceImporter.isJsModule
+              ) {
+                if (ressourceSpecifier.endsWith(".importmap")) {
+                  const importmapUrl = resolveUrl(
+                    ressourceSpecifier,
+                    ressourceImporter.url,
+                  )
+                  return importmapUrl
+                }
                 const importerCompiled = asCompiledServerUrl(
                   ressourceImporter.url,
                 )
-                ressourceUrl = resolveUrl(ressourceSpecifier, importerCompiled)
+                const ressourceCompiledUrl = resolveUrl(
+                  ressourceSpecifier,
+                  importerCompiled,
+                )
+                return ressourceCompiledUrl
               }
-            } else {
-              ressourceUrl = resolveUrl(
+              const ressourceCompiledUrl = resolveUrl(
                 ressourceSpecifier,
                 ressourceImporter.url,
               )
+              return ressourceCompiledUrl
             }
-
+            const ressourceUrl = getRessourceUrl()
+            const ressourceProjectUrl = asProjectUrl(ressourceUrl)
+            const ressourceOriginalUrl = asOriginalUrl(ressourceUrl)
+            const resolutionResult = { url: ressourceUrl }
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
-            const projectUrl = asProjectUrl(ressourceUrl)
-            if (!projectUrl) {
-              return {
-                isExternal: true,
-                url: ressourceUrl,
-              }
+            // TODO: handle remote url here
+            // we should allow remote url instead of considering them external
+            // (except if inside "urlIgnoreConfig" but this is for later)
+            // and we should ensure url fetcher will perform the http request
+            if (!ressourceProjectUrl) {
+              resolutionResult.isExternal = true
             }
-
-            const originalUrl = asOriginalUrl(projectUrl)
-            if (workerUrls.includes(originalUrl)) {
-              return {
-                isWorker: true,
-                isJsModule: true,
-                url: ressourceUrl,
-              }
+            if (workerUrls.includes(ressourceOriginalUrl)) {
+              resolutionResult.isWorker = true
+              resolutionResult.isJsModule = true
+            } else if (serviceWorkerUrls.includes(ressourceOriginalUrl)) {
+              resolutionResult.isServiceWorker = true
+              resolutionResult.isJsModule = true
+            } else if (classicWorkerUrls.includes(ressourceOriginalUrl)) {
+              resolutionResult.isWorker = true
+            } else if (
+              classicServiceWorkerUrls.includes(ressourceOriginalUrl)
+            ) {
+              resolutionResult.isServiceWorker = true
             }
-            if (serviceWorkerUrls.includes(originalUrl)) {
-              return {
-                isServiceWorker: true,
-                isJsModule: true,
-                url: ressourceUrl,
-              }
-            }
-            if (classicWorkerUrls.includes(originalUrl)) {
-              return {
-                isWorker: true,
-                url: ressourceUrl,
-              }
-            }
-            if (classicServiceWorkerUrls.includes(originalUrl)) {
-              return {
-                isServiceWorker: true,
-                url: ressourceUrl,
-              }
-            }
-
-            return ressourceUrl
+            return resolutionResult
           },
           onJsModule: ({ ressource, jsModuleUrl, jsModuleIsInline }) => {
             // we want to emit chunk only when ressource is referenced by something else than rollup
@@ -864,14 +858,14 @@ export const createRollupPlugins = async ({
 
       const specifierOriginalUrl = asOriginalUrl(specifierProjectUrl)
       const urlMeta = urlMetaGetter(specifierOriginalUrl)
-      if (urlMeta.external) {
+      if (urlMeta.preserve) {
         if (urlMeta.remote) {
           specifier =
             jsenvRemoteDirectory.remoteUrlFromFileUrl(specifierOriginalUrl)
         }
         onExternal({
           specifier,
-          reason: `matches "externalUrlPatterns`,
+          reason: `matches "ignoreUrlConfig`,
         })
         return { id: specifier, external: true }
       }
@@ -1696,34 +1690,33 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
 }
 
 const createUrlMetaGetter = ({
-  externalUrlPatterns,
   projectDirectoryUrl,
   jsenvRemoteDirectory,
+  preservedUrls,
 }) => {
-  const fileUrlPatternsForRemoteUrls = {}
-  Object.keys(externalUrlPatterns).forEach((pattern) => {
+  const perservedFileUrls = {}
+  const remoteFileUrls = {}
+  Object.keys(preservedUrls).forEach((pattern) => {
     if (jsenvRemoteDirectory.isRemoteUrl(pattern)) {
       const fileUrlPattern = jsenvRemoteDirectory.fileUrlFromRemoteUrl(pattern)
-      fileUrlPatternsForRemoteUrls[fileUrlPattern] =
-        externalUrlPatterns[pattern]
+      perservedFileUrls[fileUrlPattern] = preservedUrls[pattern]
+      remoteFileUrls[fileUrlPattern] = true
     }
   })
-
-  const externalImportUrlStructuredMetaMap = normalizeStructuredMetaMap(
+  const structuredMetaMap = normalizeStructuredMetaMap(
     {
-      external: {
-        ...externalUrlPatterns,
-        ...fileUrlPatternsForRemoteUrls,
-        "node_modules/@jsenv/core/helpers/": false,
+      preserve: {
+        ...preservedUrls,
+        ...perservedFileUrls,
       },
-      remote: fileUrlPatternsForRemoteUrls,
+      remote: remoteFileUrls,
     },
     projectDirectoryUrl,
   )
   return (url) => {
     const meta = urlToMeta({
       url,
-      structuredMetaMap: externalImportUrlStructuredMetaMap,
+      structuredMetaMap,
     })
     return meta
   }

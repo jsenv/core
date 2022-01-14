@@ -11,7 +11,10 @@ export const babelPluginProxyExternalImports = (
       const specifierNode = specifierPath.node
       if (specifierNode.type === "StringLiteral") {
         const specifier = specifierNode.value
-        if (jsenvRemoteDirectory.isRemoteUrl(specifier)) {
+        if (
+          jsenvRemoteDirectory.isRemoteUrl(specifier) &&
+          !jsenvRemoteDirectory.isPreservedUrl(specifier)
+        ) {
           const fileUrl = jsenvRemoteDirectory.fileUrlFromRemoteUrl(specifier)
           const importerFileUrl = fileSystemPathToUrl(state.filename)
           const urlRelativeToProject = urlToRelativeUrl(

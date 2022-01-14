@@ -57,7 +57,6 @@ const buildDirectoryUrl = resolveUrl(
   assert({ actual, expected })
 }
 
-// TODO: remote url stays remote
 {
   const { buildMappings } = await buildProject({
     ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -65,9 +64,9 @@ const buildDirectoryUrl = resolveUrl(
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPoints,
-    externalUrlPatterns: {
-      "http://localhost:9999/": true,
-    },
+    // preservedUrls: {
+    //   "http://localhost:9999/": true,
+    // },
   })
   const cssBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}style.css`]

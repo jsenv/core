@@ -51,6 +51,7 @@ export const executePlan = async (
     compileServerCanWriteOnFilesystem,
     babelPluginMap,
     babelConfigFileUrl,
+    preservedUrls,
     workers,
     serviceWorkers,
     importMapInWebWorkers,
@@ -126,6 +127,7 @@ export const executePlan = async (
       keepProcessAlive: true, // to be sure it stays alive
       babelPluginMap,
       babelConfigFileUrl,
+      preservedUrls,
       workers,
       serviceWorkers,
       importMapInWebWorkers,

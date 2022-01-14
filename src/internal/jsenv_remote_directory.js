@@ -3,6 +3,8 @@ import {
   urlToRelativeUrl,
   urlToOrigin,
   urlToRessource,
+  normalizeStructuredMetaMap,
+  urlToMeta,
 } from "@jsenv/filesystem"
 
 import { originDirectoryConverter } from "./origin_directory_converter.js"
@@ -10,10 +12,21 @@ import { originDirectoryConverter } from "./origin_directory_converter.js"
 export const createJsenvRemoteDirectory = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
+  preservedUrls,
 }) => {
   const jsenvRemoteDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}.remote/`
+  const structuredMetaMap = normalizeStructuredMetaMap(
+    { preserved: preservedUrls },
+    projectDirectoryUrl,
+  )
+  const isPreservedUrl = (url) => {
+    const meta = urlToMeta({ url, structuredMetaMap })
+    return Boolean(meta.preserved)
+  }
 
   return {
+    isPreservedUrl,
+
     isRemoteUrl: (url) => {
       return url.startsWith("http://") || url.startsWith("https://")
     },

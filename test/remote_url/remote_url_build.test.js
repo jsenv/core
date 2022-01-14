@@ -19,7 +19,36 @@ try {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   }
 
-  // esmodule
+  // esmodule default (http url preserved)
+  {
+    const { buildMappings } = await buildProject({
+      ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      entryPoints,
+      format: "esmodule",
+      buildDirectoryRelativeUrl: `${testDirectoryRelativeUrl}dist/esmodule/`,
+    })
+    const jsBuildRelativeUrl =
+      buildMappings[`${testDirectoryRelativeUrl}main.js`]
+    const { namespace } = await browserImportEsModuleBuild({
+      projectDirectoryUrl: jsenvCoreDirectoryUrl,
+      testDirectoryRelativeUrl,
+      jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
+      // debug: true,
+    })
+
+    const actual = {
+      namespace,
+    }
+    const expected = {
+      namespace: {
+        url: `${server.origin}/constants.js?foo=bar`,
+      },
+    }
+    assert({ actual, expected })
+  }
+
+  // esmodule + http url not preserved
   {
     const { buildMappings } = await buildProject({
       ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -27,6 +56,9 @@ try {
       entryPoints,
       buildDirectoryRelativeUrl: `${testDirectoryRelativeUrl}dist/esmodule/`,
       format: "esmodule",
+      preservedUrls: {
+        "http://localhost:9999/": false,
+      },
     })
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
@@ -47,7 +79,9 @@ try {
     assert({ actual, expected })
   }
 
-  // systemjs
+  // TODO: systemjs url preserved (this will fail because server returns esm not systemjs)
+
+  // systemjs + http url not preserved
   {
     const { buildMappings } = await buildProject({
       ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -55,6 +89,9 @@ try {
       entryPoints,
       buildDirectoryRelativeUrl: `${testDirectoryRelativeUrl}dist/systemjs/`,
       format: "systemjs",
+      preservedUrls: {
+        "http://localhost:9999/": false,
+      },
     })
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
