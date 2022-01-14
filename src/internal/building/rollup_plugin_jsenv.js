@@ -138,6 +138,7 @@ export const createRollupPlugins = async ({
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
   const {
+    compileServerOriginForRollup,
     asRollupUrl,
     asProjectUrl,
     asServerUrl,
@@ -877,7 +878,8 @@ export const createRollupPlugins = async ({
 
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       // logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
-      return asRollupUrl(specifierUrl)
+      const specifierRollupUrl = asRollupUrl(specifierUrl)
+      return specifierRollupUrl
     },
 
     resolveFileUrl: ({ referenceId, fileName }) => {
@@ -919,7 +921,6 @@ export const createRollupPlugins = async ({
       }
 
       let url = asServerUrl(rollupUrl)
-
       const loadResult = await buildOperation.withSignal((signal) => {
         return urlLoader.loadUrl(rollupUrl, {
           signal,
@@ -934,7 +935,21 @@ export const createRollupPlugins = async ({
       // Jsenv helpers are injected as import statements to provide code like babel helpers
       // For now we just compute the information that the target file is a jsenv helper
       // without doing anything special with "targetIsJsenvHelperFile" information
+      const projectUrl = asProjectUrl(rollupUrl)
       const originalUrl = asOriginalUrl(rollupUrl)
+      if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)) {
+        map.sources.forEach((source, index) => {
+          if (jsenvRemoteDirectory.isRemoteUrl(source)) {
+            const sourceFileUrl =
+              jsenvRemoteDirectory.fileUrlFromRemoteUrl(source)
+            const sourceRelativeUrl = urlToRelativeUrl(
+              sourceFileUrl,
+              projectUrl,
+            )
+            map.sources[index] = sourceRelativeUrl
+          }
+        })
+      }
       const isJsenvHelperFile = urlIsInsideOf(
         originalUrl,
         jsenvHelpersDirectoryInfo.url,
@@ -977,7 +992,6 @@ export const createRollupPlugins = async ({
       })
       // const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
-
       const mutations = []
       await visitImportReferences({
         ast,
@@ -1217,7 +1231,6 @@ export const createRollupPlugins = async ({
         code = magicString.toString()
         map = magicString.generateMap({ hires: true })
       }
-
       return { code, map }
     },
 
@@ -1262,30 +1275,39 @@ export const createRollupPlugins = async ({
           : `[name]${outputExtension}`
       }
 
+      const getStringAfter = (string, substring) => {
+        const index = string.indexOf(substring)
+        if (index === -1) return ""
+        return string.slice(index + substring.length)
+      }
+
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
-        const url = relativePathToUrl(relativePath, sourcemapUrl)
-        const serverUrl = asServerUrl(url)
-        const finalUrl =
-          urlFetcher.getUrlBeforeRedirection(serverUrl) || serverUrl
-        const projectUrl = asProjectUrl(finalUrl)
-
-        if (projectUrl) {
-          relativePath = urlToRelativeUrl(projectUrl, sourcemapUrl)
-          return relativePath
-        }
-
-        return finalUrl
-      }
-
-      const relativePathToUrl = (relativePath, sourcemapUrl) => {
-        const rollupUrl = resolveUrl(relativePath, sourcemapUrl)
         // here relativePath contains a protocol
         // because rollup don't work with url but with filesystem paths
         // let fix it below
-        const url = fixRollupUrl(rollupUrl)
-        return url
+        const sourceRollupUrlStrange = resolveUrl(relativePath, sourcemapUrl)
+        const afterOrigin =
+          getStringAfter(sourceRollupUrlStrange, "http:/jsenv.com") ||
+          getStringAfter(sourceRollupUrlStrange, "https:/jsenv.com")
+        const sourceRollupUrl = `${compileServerOriginForRollup}${afterOrigin}`
+
+        const sourceServerUrl = asServerUrl(sourceRollupUrl)
+        const sourceUrl =
+          urlFetcher.getUrlBeforeRedirection(sourceServerUrl) || sourceServerUrl
+        const sourceProjectUrl = asProjectUrl(sourceUrl)
+
+        if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceProjectUrl)) {
+          const remoteUrl =
+            jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceProjectUrl)
+          return remoteUrl
+        }
+        if (sourceProjectUrl) {
+          relativePath = urlToRelativeUrl(sourceProjectUrl, sourcemapUrl)
+          return relativePath
+        }
+        return sourceUrl
       }
 
       return outputOptions
@@ -1658,26 +1680,6 @@ const prepareEntryPoints = async (
   }, Promise.resolve())
 
   return entryPointsPrepared
-}
-
-const fixRollupUrl = (rollupUrl) => {
-  // fix rollup not supporting source being http
-  const httpIndex = rollupUrl.indexOf(`http:/`, 1)
-  if (httpIndex > -1) {
-    return `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
-  }
-
-  const httpsIndex = rollupUrl.indexOf("https:/", 1)
-  if (httpsIndex > -1) {
-    return `https://${rollupUrl.slice(httpsIndex + `https:/`.length)}`
-  }
-
-  const fileIndex = rollupUrl.indexOf("file:", 1)
-  if (fileIndex > -1) {
-    return `file://${rollupUrl.slice(fileIndex + `file:`.length)}`
-  }
-
-  return rollupUrl
 }
 
 const normalizeRollupResolveReturnValue = (resolveReturnValue) => {

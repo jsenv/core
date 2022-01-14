@@ -124,6 +124,7 @@ export const createUrlConverter = ({
   }
 
   return {
+    compileServerOriginForRollup,
     asRollupUrl,
     asProjectUrl,
     asServerUrl,
