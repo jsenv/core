@@ -79,7 +79,34 @@ try {
     assert({ actual, expected })
   }
 
-  // TODO: systemjs url preserved (this will fail because server returns esm not systemjs)
+  // Systemjs url preserved
+  {
+    const { buildMappings } = await buildProject({
+      ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      entryPoints,
+      format: "systemjs",
+      buildDirectoryRelativeUrl: `${testDirectoryRelativeUrl}dist/systemjs/`,
+    })
+    const jsBuildRelativeUrl =
+      buildMappings[`${testDirectoryRelativeUrl}main.js`]
+    try {
+      await browserImportEsModuleBuild({
+        projectDirectoryUrl: jsenvCoreDirectoryUrl,
+        testDirectoryRelativeUrl,
+        jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
+        // debug: true,
+      })
+      throw new Error("should throw")
+    } catch (e) {
+      const messageIncludesFetchError = e.message.includes(
+        `Failed to fetch dynamically imported module`,
+      )
+      const actual = { messageIncludesFetchError }
+      const expected = { messageIncludesFetchError: true }
+      assert({ actual, expected })
+    }
+  }
 
   // systemjs + http url not preserved
   {

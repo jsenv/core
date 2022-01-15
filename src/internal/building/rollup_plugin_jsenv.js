@@ -1694,12 +1694,12 @@ const createUrlMetaGetter = ({
   jsenvRemoteDirectory,
   preservedUrls,
 }) => {
-  const perservedFileUrls = {}
+  const preservedFileUrls = {}
   const remoteFileUrls = {}
   Object.keys(preservedUrls).forEach((pattern) => {
     if (jsenvRemoteDirectory.isRemoteUrl(pattern)) {
       const fileUrlPattern = jsenvRemoteDirectory.fileUrlFromRemoteUrl(pattern)
-      perservedFileUrls[fileUrlPattern] = preservedUrls[pattern]
+      preservedFileUrls[fileUrlPattern] = preservedUrls[pattern]
       remoteFileUrls[fileUrlPattern] = true
     }
   })
@@ -1707,7 +1707,7 @@ const createUrlMetaGetter = ({
     {
       preserve: {
         ...preservedUrls,
-        ...perservedFileUrls,
+        ...preservedFileUrls,
       },
       remote: remoteFileUrls,
     },

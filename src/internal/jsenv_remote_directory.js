@@ -1,7 +1,6 @@
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
-  urlToOrigin,
   urlToRessource,
   normalizeStructuredMetaMap,
   urlToMeta,
@@ -36,12 +35,13 @@ export const createJsenvRemoteDirectory = ({
     },
 
     fileUrlFromRemoteUrl: (remoteUrl) => {
-      const origin = urlToOrigin(remoteUrl)
+      const origin = originFromUrlOrUrlPattern(remoteUrl)
       const ressource = urlToRessource(remoteUrl)
-      const [pathname] = ressource.split("?")
+      const [pathname, search = ""] = ressource.split("?")
       const directoryName = originDirectoryConverter.toDirectoryName(origin)
-      const fileRelativeUrl = `${directoryName}${pathname}`
-      const { search } = new URL(remoteUrl)
+      const fileRelativeUrl = `${directoryName}${
+        pathname === "" ? "/" : pathname
+      }`
       const fileUrl = `${jsenvRemoteDirectoryUrl}${fileRelativeUrl}${search}`
       return fileUrl
     },
@@ -57,4 +57,27 @@ export const createJsenvRemoteDirectory = ({
       return remoteUrl
     },
   }
+}
+
+const originFromUrlOrUrlPattern = (url) => {
+  if (url.startsWith("http://")) {
+    const slashAfterProtocol = url.indexOf("/", "http://".length + 1)
+    if (slashAfterProtocol === -1) {
+      return url
+    }
+    const origin = url.slice(0, slashAfterProtocol)
+    return origin
+  }
+  if (url.startsWith("https://")) {
+    const slashAfterProtocol = url.indexOf("/", "https://".length + 1)
+    if (slashAfterProtocol === -1) {
+      return url
+    }
+    const origin = url.slice(0, slashAfterProtocol)
+    return origin
+  }
+  if (url.startsWith("file://")) {
+    return "file://"
+  }
+  return new URL(url).origin
 }
