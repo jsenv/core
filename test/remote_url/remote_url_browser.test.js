@@ -16,24 +16,78 @@ try {
     jsenvCoreDirectoryUrl,
   )
   const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-  const test = async ({ forceCompilation } = {}) => {
-    const result = await execute({
+  const fileRelativeUrl = `${testDirectoryRelativeUrl}main.html`
+
+  // http url preserved by default
+  {
+    const { namespace } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       runtime: chromiumRuntime,
       runtimeParams: {
         ...LAUNCH_TEST_PARAMS,
-        forceCompilation,
       },
-      fileRelativeUrl: `${testDirectoryRelativeUrl}main.html`,
-      collectCompileServerInfo: true,
+      fileRelativeUrl,
     })
-    return result
+    const actual = {
+      namespace,
+    }
+    const expected = {
+      namespace: {
+        "./main.js": {
+          status: "completed",
+          namespace: {
+            url: "http://localhost:9999/constants.js?foo=bar",
+          },
+        },
+      },
+    }
+    assert({ actual, expected })
   }
 
+  // http url preserved by default, even when code needs to be compiled
   {
-    const { namespace, compileServerOrigin } = await test({
-      forceCompilation: true,
+    const { namespace } = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      runtime: chromiumRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        forceCompilation: true,
+      },
+      fileRelativeUrl,
+    })
+    const actual = {
+      namespace,
+    }
+    const expected = {
+      namespace: {
+        "./main.js": {
+          status: "completed",
+          namespace: {
+            url: "http://localhost:9999/constants.js?foo=bar",
+          },
+        },
+      },
+    }
+    assert({ actual, expected })
+  }
+
+  // http url not preserved
+  {
+    const { namespace, compileServerOrigin } = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      runtime: chromiumRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        forceCompilation: true,
+      },
+      fileRelativeUrl,
+      preservedUrls: {
+        "http://localhost:9999/": false,
+      },
+      collectCompileServerInfo: true,
     })
     const actual = {
       namespace,
@@ -44,24 +98,6 @@ try {
           status: "completed",
           namespace: {
             url: `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}dev/best/${jsenvDirectoryRelativeUrl}.remote/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
-          },
-        },
-      },
-    }
-    assert({ actual, expected })
-  }
-
-  {
-    const { namespace } = await test()
-    const actual = {
-      namespace,
-    }
-    const expected = {
-      namespace: {
-        "./main.js": {
-          status: "completed",
-          namespace: {
-            url: "http://localhost:9999/constants.js?foo=bar",
           },
         },
       },
