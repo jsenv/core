@@ -629,17 +629,17 @@ export const createRollupPlugins = async ({
               return ressourceCompiledUrl
             }
             const ressourceUrl = getRessourceUrl()
-            const ressourceProjectUrl = asProjectUrl(ressourceUrl)
-            const ressourceOriginalUrl = asOriginalUrl(ressourceUrl)
+            const ressourceOriginalUrl =
+              asOriginalUrl(ressourceUrl) || ressourceUrl
             const resolutionResult = { url: ressourceUrl }
             // ignore url outside project directory
             // a better version would console.warn about file url outside projectDirectoryUrl
             // and ignore them and console.info/debug about remote url (https, http, ...)
             // TODO: handle remote url here
             // we should allow remote url instead of considering them external
-            // (except if inside "urlIgnoreConfig" but this is for later)
             // and we should ensure url fetcher will perform the http request
-            if (!ressourceProjectUrl) {
+            const urlMeta = urlMetaGetter(ressourceOriginalUrl)
+            if (urlMeta.preserve) {
               resolutionResult.isExternal = true
             }
             if (!urlIsInsideOf(ressourceUrl, compileServerOrigin)) {
