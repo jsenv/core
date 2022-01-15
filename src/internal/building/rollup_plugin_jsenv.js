@@ -642,6 +642,10 @@ export const createRollupPlugins = async ({
             if (!ressourceProjectUrl) {
               resolutionResult.isExternal = true
             }
+            if (!urlIsInsideOf(ressourceUrl, compileServerOrigin)) {
+              resolutionResult.isCrossOrigin = true
+            }
+
             if (workerUrls.includes(ressourceOriginalUrl)) {
               resolutionResult.isWorker = true
               resolutionResult.isJsModule = true

@@ -244,7 +244,12 @@ export const createRessourceBuilder = (
     let isExternal = false
     let isWorker = false
     let isServiceWorker = false
+    let isCrossOrigin = false
     if (typeof ressourceUrlResolution === "object") {
+      ressourceUrl = ressourceUrlResolution.url
+      if (ressourceUrlResolution.isCrossOrigin) {
+        isCrossOrigin = true
+      }
       if (ressourceUrlResolution.isExternal) {
         isExternal = true
       }
@@ -257,7 +262,6 @@ export const createRessourceBuilder = (
       if (ressourceUrlResolution.isJsModule) {
         isJsModule = true
       }
-      ressourceUrl = ressourceUrlResolution.url
     } else {
       ressourceUrl = ressourceUrlResolution
     }
@@ -297,6 +301,7 @@ export const createRessourceBuilder = (
         isEntryPoint,
         isJsModule,
         isSourcemap,
+        isCrossOrigin,
         isExternal,
         isInline,
         isPlaceholder,
@@ -373,6 +378,7 @@ export const createRessourceBuilder = (
     isEntryPoint = false,
     isJsModule = false,
     isSourcemap = false,
+    isCrossOrigin = false,
     isExternal = false,
     isInline = false,
     isPlaceholder = false,
@@ -394,6 +400,7 @@ export const createRessourceBuilder = (
       isJsModule,
       isSourcemap,
       isInline,
+      isCrossOrigin,
       isExternal,
       isPlaceholder,
       isWorker,
