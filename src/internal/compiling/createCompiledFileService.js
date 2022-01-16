@@ -11,7 +11,6 @@ import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/s
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 
 import { setUrlExtension } from "../url_utils.js"
-import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import {
   COMPILE_ID_BUILD_GLOBAL,
   COMPILE_ID_BUILD_GLOBAL_FILES,
@@ -41,6 +40,7 @@ export const createCompiledFileService = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
+  jsenvRemoteDirectory,
 
   runtimeSupport,
   babelPluginMap,
@@ -50,7 +50,6 @@ export const createCompiledFileService = ({
   prependSystemJs,
   groupMap,
   customCompilers,
-  preservedUrls,
   workerUrls,
   serviceWorkerUrls,
   importMapInWebWorkers,
@@ -91,12 +90,6 @@ export const createCompiledFileService = ({
   )
 
   const importmapInfos = {}
-
-  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    preservedUrls,
-  })
 
   return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request

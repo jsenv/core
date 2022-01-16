@@ -18,7 +18,14 @@ import { moveCssUrls } from "./moveCssUrls.js"
 export const parseCssRessource = async (
   cssRessource,
   { notifyReferenceFound },
-  { asProjectUrl, asOriginalUrl, minify, minifyCssOptions, cssConcatenation },
+  {
+    jsenvRemoteDirectory,
+    asProjectUrl,
+    asOriginalUrl,
+    minify,
+    minifyCssOptions,
+    cssConcatenation,
+  },
 ) => {
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
@@ -79,11 +86,7 @@ export const parseCssRessource = async (
     urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)
   })
 
-  return async ({
-    getUrlRelativeToImporter,
-    precomputeBuildRelativeUrl,
-    buildDirectoryUrl,
-  }) => {
+  return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
     const cssCompiledUrl = cssRessource.url
     const cssOriginalUrl = asOriginalUrl(cssCompiledUrl)
@@ -100,16 +103,13 @@ export const parseCssRessource = async (
         if (!urlNodeFound) {
           return urlNode.value
         }
-
         // url node nous dit quel référence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
         const cssUrlRessource = urlNodeReference.ressource
-
         const { isExternal } = cssUrlRessource
         if (isExternal) {
           return urlNode.value
         }
-
         const { isInline } = cssUrlRessource
         if (isInline) {
           return getRessourceAsBase64Url(cssUrlRessource)
@@ -130,16 +130,18 @@ export const parseCssRessource = async (
         )
         atImportReference.inlinedCallback()
         let code = String(atImportReference.ressource.bufferAfterBuild)
+        const from = resolveUrl(
+          atImportReference.ressource.buildRelativeUrl,
+          buildDirectoryUrl,
+        )
+        const to = resolveUrl(
+          cssRessource.buildRelativeUrlWithoutHash,
+          buildDirectoryUrl,
+        )
         const moveResult = await moveCssUrls({
           code,
-          from: resolveUrl(
-            atImportReference.ressource.buildRelativeUrl,
-            buildDirectoryUrl,
-          ),
-          to: resolveUrl(
-            precomputeBuildRelativeUrl(cssRessource),
-            buildDirectoryUrl,
-          ),
+          from,
+          to,
           // moveCssUrls will change the css source code
           // Ideally we should update the sourcemap referenced by css
           // to target the one after css urls are moved.
@@ -157,7 +159,6 @@ export const parseCssRessource = async (
     })
     code = replaceCssResult.code
     map = replaceCssResult.map
-
     cssRessource.buildEnd(code)
 
     // In theory code should never be modified once buildEnd() is called
@@ -177,6 +178,11 @@ export const parseCssRessource = async (
     if (map.sources) {
       map.sources = map.sources.map((source) => {
         const sourceUrl = resolveUrl(source, cssOriginalUrl)
+        if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceUrl)) {
+          const sourceRemoteUrl =
+            jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceUrl)
+          return sourceRemoteUrl
+        }
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
           sourceUrl,
           sourcemapPrecomputedBuildUrl,

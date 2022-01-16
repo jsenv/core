@@ -37,6 +37,7 @@ import {
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 
+import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
@@ -167,6 +168,11 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    preservedUrls,
+  })
   const workerUrls = workers.map((worker) =>
     resolveUrl(worker, projectDirectoryUrl),
   )
@@ -311,6 +317,7 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
+    jsenvRemoteDirectory,
     importDefaultExtension,
 
     preservedUrls,
@@ -357,6 +364,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
+      jsenvRemoteDirectory,
 
       importDefaultExtension,
 
@@ -365,7 +373,6 @@ export const startCompileServer = async ({
       groupMap: compileServerGroupMap,
       babelPluginMap,
       customCompilers,
-      preservedUrls,
       workerUrls,
       serviceWorkerUrls,
       importMapInWebWorkers,
@@ -398,6 +405,7 @@ export const startCompileServer = async ({
       : {}),
     "service:source file": createSourceFileService({
       projectDirectoryUrl,
+      jsenvRemoteDirectory,
       projectFileRequestedCallback,
       projectFileCacheStrategy,
     }),
@@ -969,30 +977,46 @@ const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileCacheStrategy,
+  jsenvRemoteDirectory,
 }) => {
   return async (request) => {
     const relativeUrl = request.pathname.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
-
     const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
       .href
     const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
       fileUrl,
       jsenvDistDirectoryUrl,
     )
-
-    const responsePromise = fetchFileSystem(fileUrl, {
-      headers: request.headers,
-      etagEnabled: projectFileCacheStrategy === "etag",
-      mtimeEnabled: projectFileCacheStrategy === "mtime",
-      ...(fileIsInsideJsenvDistDirectory
-        ? {
-            cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
-          }
-        : {}),
-    })
-
-    return responsePromise
+    const fromFileSystem = () =>
+      fetchFileSystem(fileUrl, {
+        headers: request.headers,
+        etagEnabled: projectFileCacheStrategy === "etag",
+        mtimeEnabled: projectFileCacheStrategy === "mtime",
+        ...(fileIsInsideJsenvDistDirectory
+          ? {
+              cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
+            }
+          : {}),
+      })
+    const filesystemResponse = await fromFileSystem()
+    if (
+      filesystemResponse.status === 404 &&
+      jsenvRemoteDirectory.isFileUrlForRemoteUrl(fileUrl)
+    ) {
+      const remoteResponse = await jsenvRemoteDirectory.fetchFileUrlAsRemote(
+        fileUrl,
+        request,
+      )
+      if (remoteResponse.status !== 200) {
+        return remoteResponse
+      }
+      const responseBodyAsArrayBuffer = await remoteResponse.arrayBuffer()
+      await writeFile(fileUrl, Buffer.from(responseBodyAsArrayBuffer))
+      // re-fetch filesystem instead to ensure response headers are correct
+      return fromFileSystem()
+    }
+    return filesystemResponse
   }
 }
 

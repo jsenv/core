@@ -45,7 +45,7 @@ import {
   createRessourceBuilder,
   referenceToCodeForRollup,
 } from "./ressource_builder.js"
-import { createUrlVersioner } from "./url_versioning.js"
+import { createBuildUrlGenerator } from "./build_url_generator.js"
 import { visitImportReferences } from "./import_references.js"
 import { createBuildStats } from "./build_stats.js"
 
@@ -154,7 +154,7 @@ export const createRollupPlugins = async ({
     urlMappings,
   })
 
-  const urlVersioner = createUrlVersioner({
+  const buildUrlGenerator = createBuildUrlGenerator({
     entryPointUrls,
     asOriginalUrl,
     lineBreakNormalization,
@@ -539,6 +539,7 @@ export const createRollupPlugins = async ({
               format,
               systemJsUrl,
               projectDirectoryUrl,
+              jsenvRemoteDirectory,
               asProjectUrl,
               asOriginalUrl,
               asOriginalServerUrl,
@@ -629,21 +630,22 @@ export const createRollupPlugins = async ({
               return ressourceCompiledUrl
             }
             const ressourceUrl = getRessourceUrl()
+            const resolutionResult = { url: ressourceUrl }
             const ressourceOriginalUrl =
               asOriginalUrl(ressourceUrl) || ressourceUrl
-            const resolutionResult = { url: ressourceUrl }
-            // ignore url outside project directory
-            // a better version would console.warn about file url outside projectDirectoryUrl
-            // and ignore them and console.info/debug about remote url (https, http, ...)
-            // TODO: handle remote url here
-            // we should allow remote url instead of considering them external
-            // and we should ensure url fetcher will perform the http request
+
+            if (!urlIsInsideOf(ressourceUrl, compileServerOrigin)) {
+              resolutionResult.isCrossOrigin = true
+            }
+
             const urlMeta = urlMetaGetter(ressourceOriginalUrl)
             if (urlMeta.preserve) {
               resolutionResult.isExternal = true
-            }
-            if (!urlIsInsideOf(ressourceUrl, compileServerOrigin)) {
-              resolutionResult.isCrossOrigin = true
+            } else if (jsenvRemoteDirectory.isRemoteUrl(ressourceOriginalUrl)) {
+              const fileUrl =
+                jsenvRemoteDirectory.fileUrlFromRemoteUrl(ressourceOriginalUrl)
+              const compiledFileUrl = asCompiledServerUrl(fileUrl)
+              resolutionResult.url = compiledFileUrl
             }
 
             if (workerUrls.includes(ressourceOriginalUrl)) {
@@ -711,10 +713,10 @@ export const createRollupPlugins = async ({
               }
             }
 
-            const fileName = ressource.relativeUrl
+            const fileName = ressource.buildRelativeUrlWithoutHash
             const rollupReferenceId = emitChunk({
               id: jsModuleUrl,
-              name: urlToBasename(jsModuleUrl),
+              name: fileName,
             })
             return {
               rollupReferenceId,
@@ -722,7 +724,7 @@ export const createRollupPlugins = async ({
             }
           },
           onAsset: ({ ressource }) => {
-            const fileName = ressource.relativeUrl
+            const fileName = ressource.buildRelativeUrlWithoutHash
             const rollupReferenceId = emitAsset({
               fileName,
             })
@@ -737,7 +739,7 @@ export const createRollupPlugins = async ({
               ressource.bufferAfterBuild,
             )
           },
-          urlVersioner,
+          buildUrlGenerator,
         },
       )
 
@@ -882,11 +884,11 @@ export const createRollupPlugins = async ({
 
     resolveFileUrl: ({ referenceId, fileName }) => {
       ressourcesReferencedByJs.push(fileName)
-      const getBuildRelativeUrl = () => {
+      const getAssetRelativeUrl = () => {
         const ressource = ressourceBuilder.findRessource((ressource) => {
           return ressource.rollupReferenceId === referenceId
         })
-        ressource.fileName = fileName
+        ressource.buildRelativeUrlWithoutHash = fileName
         const buildRelativeUrl = ressource.buildRelativeUrl
         return buildRelativeUrl
       }
@@ -894,16 +896,16 @@ export const createRollupPlugins = async ({
         if (!node && useImportMapToMaximizeCacheReuse && urlVersioning) {
           return `window.__resolveImportUrl__("./${fileName}", import.meta.url)`
         }
-        return `new URL("${getBuildRelativeUrl()}", import.meta.url)`
+        return `new URL("${getAssetRelativeUrl()}", import.meta.url)`
       }
       if (format === "systemjs") {
         return `new URL(System.resolve("./${fileName}", module.meta.url))`
       }
       if (format === "global") {
-        return `new URL("${getBuildRelativeUrl()}", document.currentScript && document.currentScript.src || document.baseURI)`
+        return `new URL("${getAssetRelativeUrl()}", document.currentScript && document.currentScript.src || document.baseURI)`
       }
       if (format === "commonjs") {
-        return `new URL("${getBuildRelativeUrl()}", "file:///" + __filename.replace(/\\/g, "/"))`
+        return `new URL("${getAssetRelativeUrl()}", "file:///" + __filename.replace(/\\/g, "/"))`
       }
       return null
     },
@@ -1425,19 +1427,21 @@ export const createRollupPlugins = async ({
           buildMappings[originalProjectRelativeUrl] =
             jsRessource.buildRelativeUrl
         }
-        ressourceMappings[jsRessource.fileName] = jsRessource.buildRelativeUrl
+        ressourceMappings[jsRessource.buildRelativeUrlWithoutHash] =
+          jsRessource.buildRelativeUrl
       })
       // wait for asset build relative urls
       // to ensure the importmap will contain remappings for them
       // (not sure this is required anymore)
       await Promise.all(
-        ressourcesReferencedByJs.map(async (ressourceName) => {
+        ressourcesReferencedByJs.map(async (ressourceFileName) => {
           const ressource = ressourceBuilder.findRessource((ressource) => {
-            return ressource.relativeUrl === ressourceName
+            return ressource.buildRelativeUrlWithoutHash === ressourceFileName
           })
           if (ressource && !ressource.isJsModule) {
             await ressource.getReadyPromise()
-            ressourceMappings[ressourceName] = ressource.buildRelativeUrl
+            ressourceMappings[ressource.buildRelativeUrlWithoutHash] =
+              ressource.buildRelativeUrl
           }
         }),
       )
@@ -1462,7 +1466,7 @@ export const createRollupPlugins = async ({
           const assetRessource = ressourceBuilder.findRessource(
             (ressource) =>
               // happens for import.meta.url pattern
-              ressource.fileName === fileName ||
+              ressource.buildRelativeUrlWithoutHash === fileName ||
               // happens for sourcemap
               ressource.relativeUrl === fileName,
           )
@@ -1491,7 +1495,8 @@ export const createRollupPlugins = async ({
           // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
           rollupFileInfo.source = assetRessource.bufferAfterBuild
           assetBuild[buildRelativeUrl] = rollupFileInfo
-          ressourceMappings[assetRessource.fileName] = buildRelativeUrl
+          ressourceMappings[assetRessource.buildRelativeUrlWithoutHash] =
+            buildRelativeUrl
           if (assetRessource.bufferBeforeBuild) {
             const originalProjectUrl = asOriginalUrl(assetRessource.url)
             const originalProjectRelativeUrl = urlToRelativeUrl(

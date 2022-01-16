@@ -1,3 +1,4 @@
+import { fetchUrl } from "@jsenv/server"
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
@@ -23,7 +24,7 @@ export const createJsenvRemoteDirectory = ({
     return Boolean(meta.preserved)
   }
 
-  return {
+  const jsenvRemoteDirectory = {
     isPreservedUrl,
 
     isRemoteUrl: (url) => {
@@ -56,7 +57,20 @@ export const createJsenvRemoteDirectory = ({
       const remoteUrl = `${origin}${pathname}${search}`
       return remoteUrl
     },
+
+    fetchFileUrlAsRemote: async (url, request) => {
+      const remoteUrl = jsenvRemoteDirectory.remoteUrlFromFileUrl(url)
+      const requestHeadersToForward = { ...request.headers }
+      delete requestHeadersToForward.host
+      const response = await fetchUrl(remoteUrl, {
+        mode: "cors",
+        headers: requestHeadersToForward,
+      })
+      return response
+    },
   }
+
+  return jsenvRemoteDirectory
 }
 
 const originFromUrlOrUrlPattern = (url) => {

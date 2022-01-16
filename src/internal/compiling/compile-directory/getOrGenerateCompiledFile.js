@@ -1,4 +1,4 @@
-import { timeStart, timeFunction, fetchUrl } from "@jsenv/server"
+import { timeStart, timeFunction } from "@jsenv/server"
 import { urlToFileSystemPath, readFile, writeFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
@@ -154,16 +154,12 @@ const computeCompileReport = async ({
           e.code === "ENOENT" &&
           jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalFileUrl)
         ) {
-          const remoteUrl =
-            jsenvRemoteDirectory.remoteUrlFromFileUrl(originalFileUrl)
-          const requestHeadersToForward = { ...request.headers }
-          delete requestHeadersToForward.host
-          const response = await fetchUrl(remoteUrl, {
-            mode: "cors",
-            headers: requestHeadersToForward,
-          })
-          const { status } = response
-          if (status !== 200) {
+          const response = await jsenvRemoteDirectory.fetchFileUrlAsRemote(
+            originalFileUrl,
+            request,
+          )
+          if (response.status !== 200) {
+            // TODO: improve this error
             throw new Error(`not 200`)
           }
           const responseBodyAsArrayBuffer = await response.arrayBuffer()

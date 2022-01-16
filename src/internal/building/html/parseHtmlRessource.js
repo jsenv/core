@@ -488,11 +488,7 @@ const linkStylesheetHrefVisitor = (
     ressourceSpecifier: hrefAttribute.value,
     ...referenceLocationFromHtmlNode(link, "href"),
   })
-  return async ({
-    getUrlRelativeToImporter,
-    precomputeBuildRelativeUrl,
-    buildDirectoryUrl,
-  }) => {
+  return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const { ressource } = cssReference
 
     if (ressource.isExternal) {
@@ -504,15 +500,15 @@ const linkStylesheetHrefVisitor = (
       let code = String(bufferAfterBuild)
       const { buildRelativeUrl } = ressource
       const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
-      const htmlUrl = resolveUrl(
-        precomputeBuildRelativeUrl(htmlRessource),
+      const htmlBuildUrl = resolveUrl(
+        htmlRessource.buildRelativeUrlWithoutHash,
         buildDirectoryUrl,
       )
 
       const moveResult = await moveCssUrls({
         code,
         from: cssBuildUrl,
-        to: htmlUrl,
+        to: htmlBuildUrl,
         // moveCssUrls will change the css source code
         // Ideally we should update the sourcemap referenced by css
         // to target the one after css urls are moved.

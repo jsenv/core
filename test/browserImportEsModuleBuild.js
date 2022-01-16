@@ -32,14 +32,17 @@ export const browserImportEsModuleBuild = async ({
   await page.goto(resolveUrl(htmlFileRelativeUrl, server.origin))
 
   try {
+    if (codeToRunInBrowser) {
+      const value = await page.evaluate(codeToRunInBrowser)
+      return {
+        value,
+        serverOrigin: server.origin,
+      }
+    }
+
     const namespace = await page.evaluate(
       /* istanbul ignore next */
-      ({ debug, jsFileRelativeUrl, codeToRunInBrowser, awaitNamespace }) => {
-        if (codeToRunInBrowser) {
-          // eslint-disable-next-line no-eval
-          return window.eval(codeToRunInBrowser)
-        }
-
+      ({ debug, jsFileRelativeUrl, awaitNamespace }) => {
         /* globals window */
         const run = async () => {
           const namespace = await import(jsFileRelativeUrl)
@@ -69,7 +72,6 @@ export const browserImportEsModuleBuild = async ({
       {
         debug,
         jsFileRelativeUrl,
-        codeToRunInBrowser,
         awaitNamespace,
       },
     )
