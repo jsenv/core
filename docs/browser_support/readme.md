@@ -1,6 +1,26 @@
 # Browser support
 
-In order to be compatible with as much browsers as possible you need to declare a babel config file as explained in [babel.config.cjs](../../readme.md#babelconfigcjs). This makes your code compatible with the vast majority of web browsers even very old versions of Chrome and Firefox.
+When your code cannot be runned directly by one of the browser you want to support you need a babel configuration file.
+
+It's recommended to start with the following _babel.config.cjs_
+
+```console
+npm i --save-dev @jsenv/babel-preset
+```
+
+```js
+/*
+ * This file configure the babel plugins required for this codebase
+ *
+ * Read more at https://github.com/jsenv/jsenv-core/tree/master/packages/jsenv-babel-preset
+ */
+
+module.exports = {
+  presets: ["@jsenv/babel-preset"],
+}
+```
+
+This babel configuration file enable babel plugins corresponding to web standards. You can enable more babel plugins as documented in [Using JSX](../config/react.md#Using-JSX) or [Using TypeScript](../config/typescript.md).
 
 ## Browser support during development
 

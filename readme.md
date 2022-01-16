@@ -334,60 +334,54 @@ _@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.13.0. Other operati
 
 # Configuration
 
-Jsenv configuration is done in [jsenv.config.mjs](#jsenvconfigmjs) and [babel.config.cjs](#babelconfigcjs).
+We recommend to put some jsenv configuration in a top level file named _jsenv.config.mjs_.
 
-## jsenv.config.mjs
-
-We recommend to put configuration in a top level file named _jsenv.config.mjs_ like the one below:
+The presence of a jsenv configuration file is **optional**.
 
 ```js
 /*
- * This file exports configuration reused by jsenv scripts such as
+ * This file exports configuration reused by other files such as
  *
  * script/test/test.mjs
  * script/build/build.mjs
  *
- * Read more at https://github.com/jsenv/jsenv-core#jsenvconfigmjs
+ * Read more at https://github.com/jsenv/jsenv-core#configuration
  */
 
 export const projectDirectoryUrl = new URL("./", import.meta.url)
 ```
 
-This file helps to see jsenv configuration quickly and share it between files. That being said you are free to organize your configuration as you want.
+_jsenv.config.mjs_ is meant to share configuration, other files will simply import what they need.
 
-## babel.config.cjs
+```diff
+import { buildProject } from '@jsenv/core'
 
-You need a babel config file when:
++ import { projectDirectoryUrl } from "./jsenv.config.mjs"
 
-- Your code use non standard concepts. Examples: JSX, TypeScript.
-- You need to be compatible with browsers where some features used by your codebase are not available. Examples: `async/await`, destructuring.
-
-It's recommended to start with the following _babel.config.cjs_
-
-```js
-/*
- * This file configure the list of babel plugins enabled
- * in this codebase
- *
- * Read more at https://github.com/jsenv/jsenv-core/tree/master/packages/jsenv-babel-preset
- */
-
-module.exports = {
-  presets: ["@jsenv/babel-preset"],
-}
+await buildProject({
+-  projectDirectoryUrl: new URL('./', import.meta.url)
++  projectDirectoryUrl
+})
 ```
 
-This babel config file will be used as explained in [Browser support](./docs/config/browser_support.md). It can also be used to enable [JSX](./docs/config/react.md#Using-JSX) and [TypeScript](./docs/config/typescript.md).
+> We recommend to use ".mjs" extension when a file is written for Node.js but you can name the file as you want, "jsenv.config.js" is fine too.
+
+# Documentation
+
+| Link                                                     | Description                                |
+| -------------------------------------------------------- | ------------------------------------------ |
+| [Browser support](./docs/browser_support/readme.md)      | Documentation around browser support       |
+| [Assets](./docs/assets/readme.md)                        | How to use assets (CSS, JSON, images, ...) |
+| [CDN](./docs/cdn/readme.md)                              | How to use ressources from CDN             |
+| [Web workers](./docs/web_workers/readme.md)              | How to use web workers                     |
+| [NPM package](./docs/npm_package/readme.md)              | How to use a NPM package                   |
+| [React](./docs/react/readme.md)                          | How to enable react (or preact) and JSX    |
+| [TypeScript (Experimental)](./docs/typescript/readme.md) | How to enable TypeScript                   |
 
 # See also
 
 | Link                                                                                                                     | Description                                                               |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| [Browser support](./docs/config/browser_support.md)                                                                      | Document how to configure browser support                                 |
-| [Web workers](./docs/config/web_workers.md)                                                                              | Document how to use web workers                                           |
-| [NPM package](./docs/config/npm_package.md)                                                                              | Document how to use a NPM package                                         |
-| [React](./docs/config/react.md)                                                                                          | Document how to enable react/preact and JSX                               |
-| [TypeScript (Experimental)](./docs/config/typescript.md)                                                                 | Document how to enable TypeScript                                         |
 | [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application              |
 | [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                             |
 | [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | NPM package to write assertions                                           |
