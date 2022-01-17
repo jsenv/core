@@ -31,7 +31,7 @@ try {
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   )
-  const readHtmlHrefAndFontFamily = async () => {
+  const readLinkHrefAndFontFamily = async () => {
     const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
     const htmlString = await readFile(htmlBuildUrl)
     const linkNode = findHtmlNodeById(htmlString, "roboto_link")
@@ -64,7 +64,7 @@ try {
         "http://localhost:9999/": false,
       },
     })
-    const { href, fontFamily } = await readHtmlHrefAndFontFamily()
+    const { href, fontFamily } = await readLinkHrefAndFontFamily()
 
     const actual = {
       href,
@@ -87,7 +87,7 @@ try {
       buildDirectoryRelativeUrl,
       format: "esmodule",
     })
-    const { href, fontFamily } = await readHtmlHrefAndFontFamily()
+    const { href, fontFamily } = await readLinkHrefAndFontFamily()
 
     const actual = {
       href,

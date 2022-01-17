@@ -158,6 +158,7 @@ export const parseRessource = async (
   ) {
     return parseJsRessource(ressource, notifiers, {
       projectDirectoryUrl,
+      jsenvRemoteDirectory,
       asProjectUrl,
       asOriginalUrl,
       asOriginalServerUrl,

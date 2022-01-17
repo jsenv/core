@@ -31,27 +31,25 @@ try {
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   )
-  const readHtmlHrefAndFontFamily = async () => {
+  const readScriptSrcAndWindowAnswer = async () => {
     const htmlBuildUrl = resolveUrl("main.html", buildDirectoryUrl)
     const htmlString = await readFile(htmlBuildUrl)
-    const linkNode = findHtmlNodeById(htmlString, "roboto_link")
-    const hrefAttribute = getHtmlNodeAttributeByName(linkNode, "href")
-    const href = hrefAttribute ? hrefAttribute.value : ""
+    const scriptNode = findHtmlNodeById(htmlString, "script")
+    const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")
+    const src = srcAttribute ? srcAttribute.value : ""
     const result = await browserImportEsModuleBuild({
       projectDirectoryUrl: jsenvCoreDirectoryUrl,
       testDirectoryRelativeUrl,
       /* eslint-disable no-undef */
       codeToRunInBrowser: async () => {
-        await document.fonts.ready
-        return window.getComputedStyle(document.querySelector("body"))
-          .fontFamily
+        return window.answer
       },
       /* eslint-enable no-undef */
     })
-    return { href, fontFamily: result.value }
+    return { src, windowAnswer: result.value }
   }
 
-  // remote css fetched during build
+  // remote js fetched during build
   {
     await buildProject({
       ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -64,20 +62,20 @@ try {
         "http://localhost:9999/": false,
       },
     })
-    const { href, fontFamily } = await readHtmlHrefAndFontFamily()
+    const { src, windowAnswer } = await readScriptSrcAndWindowAnswer()
 
     const actual = {
-      href,
-      fontFamily,
+      src,
+      windowAnswer,
     }
     const expected = {
-      href: "assets/roboto_2f520b36.css",
-      fontFamily: "Roboto",
+      src: "assets/file_2ddb6eef.js",
+      windowAnswer: 42,
     }
     assert({ actual, expected })
   }
 
-  // remote css preserved
+  // remote js preserved
   {
     await buildProject({
       ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
@@ -87,15 +85,15 @@ try {
       buildDirectoryRelativeUrl,
       format: "esmodule",
     })
-    const { href, fontFamily } = await readHtmlHrefAndFontFamily()
+    const { src, windowAnswer } = await readScriptSrcAndWindowAnswer()
 
     const actual = {
-      href,
-      fontFamily,
+      src,
+      windowAnswer,
     }
     const expected = {
-      href: `${server.origin}/roboto.css`,
-      fontFamily: "Roboto",
+      src: `${server.origin}/file.js`,
+      windowAnswer: 42,
     }
     assert({ actual, expected })
   }

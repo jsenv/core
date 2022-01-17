@@ -41,7 +41,6 @@ export const parseJsRessource = async (
 
   return async ({ buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
-
     let code
     let map
     if (!sourcemapRessource.isPlaceholder) {
@@ -98,7 +97,7 @@ export const parseJsRessource = async (
     if (map.sources) {
       map.sources = map.sources.map((source) => {
         const sourceUrl = resolveUrl(source, jsUrl)
-        const sourceOriginalUrl = asOriginalUrl(sourceUrl)
+        const sourceOriginalUrl = asOriginalUrl(sourceUrl) || sourceUrl
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
           sourceOriginalUrl,
           sourcemapPrecomputedBuildUrl,
