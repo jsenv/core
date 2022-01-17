@@ -232,22 +232,23 @@ const transformHTMLSourceFile = async ({
     const { scripts } = parseHtmlAstRessources(htmlAst)
     scripts.forEach((script) => {
       const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+      const type = typeAttribute ? typeAttribute.value : ""
       const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-
-      // remote
-      if (typeAttribute && typeAttribute.value === "module" && srcAttribute) {
+      const src = srcAttribute ? srcAttribute.value : ""
+      if (type === "module" && src) {
         removeHtmlNodeAttribute(script, srcAttribute)
+        // Ideally jsenv should take into account eventual
+        // "integrity" and "crossorigin" attribute during "executeFileUsingDynamicImport"
         setHtmlNodeText(
           script,
           `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(
-            srcAttribute.value,
+            src,
           )})`,
         )
         return
       }
-      // inline
       const textNode = getHtmlNodeTextNode(script)
-      if (typeAttribute && typeAttribute.value === "module" && textNode) {
+      if (type === "module" && textNode) {
         const scriptId = getIdForInlineHtmlNode(script, scripts)
         const scriptSpecifier = `${urlToFilename(
           fileUrl,
@@ -274,7 +275,8 @@ const transformHTMLSourceFile = async ({
     projectDirectoryUrl,
   })
 
-  return stringifyHtmlAst(htmlAst)
+  const htmlTransformed = stringifyHtmlAst(htmlAst)
+  return htmlTransformed
 }
 
 const visitImportmapScripts = async ({
@@ -314,14 +316,12 @@ const visitImportmapScripts = async ({
           )
           return
         }
-
         const importMapContent = await importMapResponse.json()
         const importMapInlined = moveImportMap(
           importMapContent,
           importMapUrl,
           htmlFileUrl,
         )
-
         replaceHtmlNode(
           importmapScript,
           `<script type="importmap">${JSON.stringify(

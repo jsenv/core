@@ -61,16 +61,15 @@ export const compileHtml = async ({
   sourcemapMethod,
   code,
 }) => {
+  const compileDirectoryUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/`
   const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
     BROWSER_RUNTIME_BUILD_URL,
     projectDirectoryUrl,
   )
-
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
     EVENT_SOURCE_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
-
   const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
     TOOLBAR_INJECTOR_BUILD_URL,
     projectDirectoryUrl,
@@ -145,8 +144,7 @@ export const compileHtml = async ({
     url,
     compiledUrl,
     projectDirectoryUrl,
-    compileId,
-    outDirectoryRelativeUrl,
+    compileDirectoryUrl,
     scripts,
     addHtmlSourceFile,
   })
@@ -241,8 +239,7 @@ const visitImportmapScript = async ({
   url,
   compiledUrl,
   projectDirectoryUrl,
-  compileId,
-  outDirectoryRelativeUrl,
+  compileDirectoryUrl,
   scripts,
   addHtmlSourceFile,
 }) => {
@@ -258,7 +255,7 @@ const visitImportmapScript = async ({
       load: () => {
         const defaultImportMap = getDefaultImportmap(compiledUrl, {
           projectDirectoryUrl,
-          compileDirectoryUrl: `${projectDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/`,
+          compileDirectoryUrl,
         })
         return defaultImportMap
       },
@@ -310,7 +307,7 @@ const visitImportmapScript = async ({
     load: () => {
       const jsenvImportmap = getDefaultImportmap(compiledUrl, {
         projectDirectoryUrl,
-        compileDirectoryUrl: `${projectDirectoryUrl}${compileId}/${outDirectoryRelativeUrl}`,
+        compileDirectoryUrl,
       })
       const htmlImportmap = JSON.parse(
         getHtmlNodeTextNode(firstImportmapScript).value,
@@ -360,9 +357,20 @@ const visitScripts = async ({
             moduleOutFormat === "systemjs"
               ? "executeFileUsingSystemJs"
               : "executeFileUsingDynamicImport"
+          let specifier
+          if (
+            jsenvRemoteDirectory.isRemoteUrl(src) &&
+            !jsenvRemoteDirectory.isPreservedUrl(src)
+          ) {
+            const fileUrl = jsenvRemoteDirectory.fileUrlFromRemoteUrl(src)
+            const fileUrlRelativeToHtml = urlToRelativeUrl(fileUrl, url)
+            specifier = `./${fileUrlRelativeToHtml}`
+          } else {
+            specifier = src
+          }
           setHtmlNodeText(
             script,
-            `window.__jsenv__.${jsenvMethod}(${JSON.stringify(src)})`,
+            `window.__jsenv__.${jsenvMethod}(${JSON.stringify(specifier)})`,
           )
         })
         return
