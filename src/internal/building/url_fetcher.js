@@ -13,15 +13,22 @@ export const createUrlFetcher = ({
 }) => {
   const urlRedirectionMap = {}
 
-  const fetchUrl = async (url, { signal, urlTrace, contentTypeExpected }) => {
+  const fetchUrl = async (
+    url,
+    { signal, urlTrace, contentTypeExpected, crossorigin },
+  ) => {
     const urlToFetch = applyUrlMappings(url)
-
     const response = await jsenvFetchUrl(urlToFetch, {
       signal,
       ignoreHttpsError: true,
+      credentials:
+        crossorigin === "anonymous" || crossorigin === ""
+          ? "same-origin"
+          : crossorigin === "use-credentials"
+          ? "include"
+          : undefined,
     })
     const responseUrl = response.url
-
     const responseValidity = await validateResponse(response, {
       originalUrl:
         asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
@@ -56,11 +63,9 @@ export const createUrlFetcher = ({
       beforeThrowingResponseValidationError(responseValidationError)
       throw responseValidationError
     }
-
     if (url !== responseUrl) {
       urlRedirectionMap[url] = responseUrl
     }
-
     return response
   }
 

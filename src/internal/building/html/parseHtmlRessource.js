@@ -177,6 +177,8 @@ const regularScriptSrcVisitor = (
     referenceLabel: "html script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
+    ...integrityFromHtmlNode(script),
+    ...crossoriginFromHtmlNode(script),
     ...referenceLocationFromHtmlNode(script, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
@@ -270,6 +272,8 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
     referenceLabel: "html module script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
+    ...integrityFromHtmlNode(script),
+    ...crossoriginFromHtmlNode(script),
     ...referenceLocationFromHtmlNode(script, "src"),
     isJsModule: true,
   })
@@ -376,6 +380,8 @@ const importmapScriptSrcVisitor = (
     referenceLabel: "html importmap",
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
+    ...integrityFromHtmlNode(script),
+    ...crossoriginFromHtmlNode(script),
     ...referenceLocationFromHtmlNode(script, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
@@ -486,6 +492,8 @@ const linkStylesheetHrefVisitor = (
     referenceLabel: "html stylesheet link",
     contentTypeExpected: "text/css",
     ressourceSpecifier: hrefAttribute.value,
+    ...integrityFromHtmlNode(link),
+    ...crossoriginFromHtmlNode(link),
     ...referenceLocationFromHtmlNode(link, "href"),
   })
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
@@ -581,6 +589,8 @@ const linkHrefVisitor = (
     isRessourceHint,
     contentTypeExpected,
     ressourceSpecifier: href,
+    ...integrityFromHtmlNode(link),
+    ...crossoriginFromHtmlNode(link),
     ...referenceLocationFromHtmlNode(link, "href"),
     urlVersioningDisabled: contentTypeExpected === "application/manifest+json",
     isJsModule,
@@ -670,6 +680,7 @@ const imgSrcVisitor = (img, { notifyReferenceFound }) => {
   const srcReference = notifyReferenceFound({
     referenceLabel: "html img src",
     ressourceSpecifier: srcAttribute.value,
+    ...crossoriginFromHtmlNode(img),
     ...referenceLocationFromHtmlNode(img, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
@@ -693,6 +704,7 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
     notifyReferenceFound({
       referenceLabel: `html srcset ${index}`,
       ressourceSpecifier: specifier,
+      ...crossoriginFromHtmlNode(htmlNode),
       ...referenceLocationFromHtmlNode(htmlNode, "srcset"),
     }),
   )
@@ -726,6 +738,7 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
     referenceLabel: "html source",
     contentTypeExpected: typeAttribute ? typeAttribute.value : undefined,
     ressourceSpecifier: srcAttribute.value,
+    ...crossoriginFromHtmlNode(source),
     ...referenceLocationFromHtmlNode(source, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
@@ -748,6 +761,21 @@ const referenceToUrl = ({ reference, htmlNode, getUrlRelativeToImporter }) => {
     return getRessourceAsBase64Url(ressource)
   }
   return getUrlRelativeToImporter(ressource)
+}
+
+const integrityFromHtmlNode = (htmlNode) => {
+  const integrityAttribute = getHtmlNodeAttributeByName(htmlNode, "integrity")
+  const integrity = integrityAttribute ? integrityAttribute.value : ""
+  return { integrity }
+}
+
+const crossoriginFromHtmlNode = (htmlNode) => {
+  const crossOriginAttribute = getHtmlNodeAttributeByName(
+    htmlNode,
+    "crossorigin",
+  )
+  const crossorigin = crossOriginAttribute ? crossOriginAttribute.value : ""
+  return { crossorigin }
 }
 
 const referenceLocationFromHtmlNode = (htmlNode, htmlAttributeName) => {

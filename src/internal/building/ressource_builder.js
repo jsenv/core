@@ -464,6 +464,8 @@ export const createRessourceBuilder = (
       const ressourceUrl = ressource.url
       const response = await urlFetcher.fetchUrl(ressourceUrl, {
         contentTypeExpected: ressource.firstStrongReference.contentTypeExpected,
+        crossorigin: ressource.firstStrongReference.crossorigin,
+        integrity: ressource.firstStrongReference.integrity,
         urlTrace: () => {
           return createRessourceTrace({
             ressource,
@@ -502,6 +504,8 @@ export const createRessourceBuilder = (
       const notifyReferenceFound = ({
         isRessourceHint,
         contentTypeExpected,
+        crossorigin,
+        integrity,
         ressourceSpecifier,
         referenceLabel,
         referenceLine,
@@ -529,6 +533,8 @@ export const createRessourceBuilder = (
           referenceColumn,
           isRessourceHint,
           contentTypeExpected,
+          crossorigin,
+          integrity,
 
           contentType,
           bufferBeforeBuild,
