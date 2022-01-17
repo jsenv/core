@@ -524,7 +524,10 @@ const linkStylesheetHrefVisitor = (
       if (sourcemapRelativeUrl) {
         const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
-        const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
+        const sourcemapInlineUrl = urlToRelativeUrl(
+          sourcemapBuildUrl,
+          htmlBuildUrl,
+        )
         code = setCssSourceMappingUrl(code, sourcemapInlineUrl)
       }
 
