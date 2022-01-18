@@ -27,7 +27,7 @@ The following HTML file is loading the roboto font from google CDNs.
 
 Cross origin urls like this can be used in HTML, CSS and JavaScript.
 
-By default jsenv keep cross origin urls untouched. There is 2 circumstances where it makes sense to change this behaviour:
+By default jsenv keeps cross origin urls untouched. There is 2 circumstances where it makes sense to change this behaviour:
 
 1. You want to remove dependency to external urls in your build files
 2. You want to transform code served by the CDN before it gets executed by the browser
@@ -70,7 +70,7 @@ For this use case let's assume you want to execute JavaScript from a CDN but cod
 import { h, render } from "https://cdn.skypack.dev/preact@10.6.4"
 ```
 
-Here you need to tell jsenv it is allowed to transform code behind "`https://cdn.skypack.dev/preact@10.6.4`". You can do this using "preservedUrls".
+To make this happen, tell jsenv it can transform code behind "`https://cdn.skypack.dev/preact@10.6.4`" using "preservedUrls":
 
 ```diff
 import { buildProject } from "@jsenv/core"
