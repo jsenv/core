@@ -970,7 +970,7 @@ export const createRollupPlugins = async ({
           logger,
         })
       })
-      if (loadResult.url) url = loadResult.url
+      // if (loadResult.url) url = loadResult.url
       const code = loadResult.code
       const map = loadResult.map
       if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)) {
