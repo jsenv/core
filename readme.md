@@ -255,6 +255,60 @@ build duration: 1.85 seconds
 
 To read more about jsenv build tool, check [jsenv build documentation](./docs/building/readme.md#jsenv-build).
 
+# Installation
+
+```console
+npm install --save-dev @jsenv/core
+```
+
+_@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.13.0. Other operating systems and Node.js versions are not tested.
+
+# Configuration
+
+We recommend to put some jsenv configuration in a top level file named _jsenv.config.mjs_.
+
+The presence of a jsenv configuration file is **optional**.
+
+```js
+/*
+ * This file exports configuration reused by other files such as
+ *
+ * script/test/test.mjs
+ * script/build/build.mjs
+ *
+ * Read more at https://github.com/jsenv/jsenv-core#configuration
+ */
+
+export const projectDirectoryUrl = new URL("./", import.meta.url)
+```
+
+_jsenv.config.mjs_ is meant to share configuration, other files will simply import what they need.
+
+```diff
+import { buildProject } from '@jsenv/core'
+
++ import { projectDirectoryUrl } from "./jsenv.config.mjs"
+
+await buildProject({
+-  projectDirectoryUrl: new URL('./', import.meta.url)
++  projectDirectoryUrl
+})
+```
+
+> We recommend to use ".mjs" extension when a file is written for Node.js but you can name the file as you want, "jsenv.config.js" is fine too.
+
+# Documentation
+
+| Link                                                     | Description                                |
+| -------------------------------------------------------- | ------------------------------------------ |
+| [Browser support](./docs/browser_support/readme.md)      | Documentation around browser support       |
+| [Assets](./docs/assets/readme.md)                        | How to use assets (CSS, JSON, images, ...) |
+| [CDN](./docs/cdn/readme.md)                              | How to use ressources from CDN             |
+| [Web workers](./docs/web_workers/readme.md)              | How to use web workers                     |
+| [NPM package](./docs/npm_package/readme.md)              | How to use a NPM package                   |
+| [React](./docs/react/readme.md)                          | How to enable react (or preact) and JSX    |
+| [TypeScript (Experimental)](./docs/typescript/readme.md) | How to enable TypeScript                   |
+
 # About
 
 Jsenv was first created to write tests that could be executed in different runtimes. It has naturally evolved to cover the core needs of a JavaScript project:
@@ -323,60 +377,6 @@ The logo is composed by the name at the center and two circles orbiting around i
 > This is a joke
 
 </details>
-
-# Installation
-
-```console
-npm install --save-dev @jsenv/core
-```
-
-_@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.13.0. Other operating systems and Node.js versions are not tested.
-
-# Configuration
-
-We recommend to put some jsenv configuration in a top level file named _jsenv.config.mjs_.
-
-The presence of a jsenv configuration file is **optional**.
-
-```js
-/*
- * This file exports configuration reused by other files such as
- *
- * script/test/test.mjs
- * script/build/build.mjs
- *
- * Read more at https://github.com/jsenv/jsenv-core#configuration
- */
-
-export const projectDirectoryUrl = new URL("./", import.meta.url)
-```
-
-_jsenv.config.mjs_ is meant to share configuration, other files will simply import what they need.
-
-```diff
-import { buildProject } from '@jsenv/core'
-
-+ import { projectDirectoryUrl } from "./jsenv.config.mjs"
-
-await buildProject({
--  projectDirectoryUrl: new URL('./', import.meta.url)
-+  projectDirectoryUrl
-})
-```
-
-> We recommend to use ".mjs" extension when a file is written for Node.js but you can name the file as you want, "jsenv.config.js" is fine too.
-
-# Documentation
-
-| Link                                                     | Description                                |
-| -------------------------------------------------------- | ------------------------------------------ |
-| [Browser support](./docs/browser_support/readme.md)      | Documentation around browser support       |
-| [Assets](./docs/assets/readme.md)                        | How to use assets (CSS, JSON, images, ...) |
-| [CDN](./docs/cdn/readme.md)                              | How to use ressources from CDN             |
-| [Web workers](./docs/web_workers/readme.md)              | How to use web workers                     |
-| [NPM package](./docs/npm_package/readme.md)              | How to use a NPM package                   |
-| [React](./docs/react/readme.md)                          | How to enable react (or preact) and JSX    |
-| [TypeScript (Experimental)](./docs/typescript/readme.md) | How to enable TypeScript                   |
 
 # See also
 
