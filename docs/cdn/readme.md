@@ -64,16 +64,13 @@ Each url associated to false using "preservedUrls" will be fetched and turned in
 
 ## Transform code served by CDN
 
-For this use case let's assume you want to execute JavaScript from a CDN.
+For this use case let's assume you want to execute JavaScript from a CDN but code served by the CDN cannot be executed as it is. For example if you need to support old browsers where import/export is not supported.
 
 ```js
 import { h, render } from "https://cdn.skypack.dev/preact@10.6.4"
 ```
 
-And that you need to support old browsers once your files are built.
-Here you cannot let the dependency to "https://cdn.skypack.dev/preact@10.6.4" because it would fail to execute in old browsers.
-
-Pass "preservedUrls" to "buildProject".
+Here you need to allow jsenv to transform the code behind "`https://cdn.skypack.dev/preact@10.6.4`". You can do this using "preservedUrls".
 
 ```diff
 import { buildProject } from "@jsenv/core"
