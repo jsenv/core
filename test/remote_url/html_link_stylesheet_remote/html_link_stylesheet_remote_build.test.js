@@ -16,7 +16,7 @@ import {
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
-const { server } = await import("./script/serve.js")
+const { server } = await import("./server/serve.js")
 try {
   const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
   const testDirectoryRelativeUrl = urlToRelativeUrl(

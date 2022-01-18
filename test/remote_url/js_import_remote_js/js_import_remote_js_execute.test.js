@@ -8,7 +8,7 @@ import {
   LAUNCH_TEST_PARAMS,
 } from "@jsenv/core/test/TEST_PARAMS_LAUNCH_BROWSER.js"
 
-const { server } = await import("./script/serve.js")
+const { server } = await import("./server/serve.js")
 try {
   const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
   const testDirectoryRelativeUrl = urlToRelativeUrl(
