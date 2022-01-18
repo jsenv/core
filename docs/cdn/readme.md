@@ -70,7 +70,7 @@ For this use case let's assume you want to execute JavaScript from a CDN but cod
 import { h, render } from "https://cdn.skypack.dev/preact@10.6.4"
 ```
 
-Here you need to allow jsenv to transform the code behind "`https://cdn.skypack.dev/preact@10.6.4`". You can do this using "preservedUrls".
+Here you need to tell jsenv it is allowed to transform code behind "`https://cdn.skypack.dev/preact@10.6.4`". You can do this using "preservedUrls".
 
 ```diff
 import { buildProject } from "@jsenv/core"
