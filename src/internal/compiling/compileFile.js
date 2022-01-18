@@ -219,7 +219,6 @@ export const compileFile = async ({
       }
       // on the correspondig file
       const json = JSON.stringify(data)
-
       return {
         status: 500,
         statusText: "parse error",
@@ -231,13 +230,14 @@ export const compileFile = async ({
         body: json,
       }
     }
-
+    if (error && error.asResponse) {
+      return error.asResponse()
+    }
     if (error && error.statusText === "Unexpected directory operation") {
       return {
         status: 403,
       }
     }
-
     return convertFileSystemErrorToResponseProperties(error)
   }
 }

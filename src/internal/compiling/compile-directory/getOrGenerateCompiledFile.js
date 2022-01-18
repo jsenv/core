@@ -158,10 +158,6 @@ const computeCompileReport = async ({
             originalFileUrl,
             request,
           )
-          if (response.status !== 200) {
-            // TODO: improve this error
-            throw new Error(`not 200`)
-          }
           const responseBodyAsArrayBuffer = await response.arrayBuffer()
           const responseBodyAsBuffer = Buffer.from(responseBodyAsArrayBuffer)
           await writeFile(originalFileUrl, responseBodyAsBuffer)

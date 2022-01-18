@@ -31,6 +31,7 @@ import { createImportResolverForNode } from "@jsenv/core/src/internal/import-res
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import-resolution/import-resolver-importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
+import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 
 import {
   formatBuildStartLog,
@@ -177,7 +178,6 @@ export const createRollupPlugins = async ({
     urlImporterMap,
     jsConcatenation,
 
-    asServerUrl,
     asProjectUrl,
     asOriginalUrl,
 
@@ -851,7 +851,6 @@ export const createRollupPlugins = async ({
               line: undefined,
             }
       }
-
       // keep external url intact
       const specifierProjectUrl = asProjectUrl(specifierUrl)
       if (!specifierProjectUrl) {
@@ -861,7 +860,6 @@ export const createRollupPlugins = async ({
         })
         return { id: specifier, external: true }
       }
-
       const specifierOriginalUrl = asOriginalUrl(specifierProjectUrl)
       const urlMeta = urlMetaGetter(specifierOriginalUrl)
       if (urlMeta.preserve) {
@@ -875,7 +873,6 @@ export const createRollupPlugins = async ({
         })
         return { id: specifier, external: true }
       }
-
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       // logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
       const specifierRollupUrl = asRollupUrl(specifierUrl)
@@ -919,24 +916,53 @@ export const createRollupPlugins = async ({
       if (rollupUrl === EMPTY_CHUNK_URL) {
         return ""
       }
-
       let url = asServerUrl(rollupUrl)
-      const loadResult = await buildOperation.withSignal((signal) => {
-        return urlLoader.loadUrl(rollupUrl, {
-          signal,
-          logger,
-        })
-      })
-
-      if (loadResult.url) url = loadResult.url
-      const code = loadResult.code
-      const map = loadResult.map
-
       // Jsenv helpers are injected as import statements to provide code like babel helpers
       // For now we just compute the information that the target file is a jsenv helper
       // without doing anything special with "targetIsJsenvHelperFile" information
       const projectUrl = asProjectUrl(rollupUrl)
       const originalUrl = asOriginalUrl(rollupUrl)
+      const isJsenvHelperFile = urlIsInsideOf(
+        originalUrl,
+        jsenvHelpersDirectoryInfo.url,
+      )
+      // const isEntryPoint = entryPointUrls[originalUrl]
+      const importer = urlImporterMap[url]
+      // Inform ressource builder that this js module exists
+      // It can only be a js module and happens when:
+      // - entry point (html) references js
+      // - js is referenced by static or dynamic imports
+      // For import assertions, the imported ressource (css,json,...)
+      // is arelady converted to a js module
+      const jsModuleReference = ressourceBuilder.createReferenceFoundByRollup({
+        contentTypeExpected: "application/javascript",
+        referenceLabel: "static or dynamic import",
+        referenceUrl: importer.url,
+        referenceColumn: importer.column,
+        referenceLine: importer.line,
+        ressourceSpecifier: url,
+        isJsenvHelperFile,
+        contentType: "application/javascript",
+        isJsModule: true,
+      })
+      const loadResult = await buildOperation.withSignal((signal) => {
+        const integrity =
+          jsModuleReference.ressource.firstStrongReference.integrity
+        let urlToLoad
+        if (integrity) {
+          urlToLoad = setUrlSearchParamsDescriptor(url, { integrity })
+          urlImporterMap[urlToLoad] = urlImporterMap[url]
+        } else {
+          urlToLoad = url
+        }
+        return urlLoader.loadUrl(url, {
+          signal,
+          logger,
+        })
+      })
+      if (loadResult.url) url = loadResult.url
+      const code = loadResult.code
+      const map = loadResult.map
       if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)) {
         map.sources.forEach((source, index) => {
           if (jsenvRemoteDirectory.isRemoteUrl(source)) {
@@ -950,32 +976,7 @@ export const createRollupPlugins = async ({
           }
         })
       }
-      const isJsenvHelperFile = urlIsInsideOf(
-        originalUrl,
-        jsenvHelpersDirectoryInfo.url,
-      )
-      // const isEntryPoint = entryPointUrls[originalUrl]
-
-      const importer = urlImporterMap[url]
-      // Inform ressource builder that this js module exists
-      // It can only be a js module and happens when:
-      // - entry point (html) references js
-      // - js is referenced by static or dynamic imports
-      // For import assertions, the imported ressource (css,json,...)
-      // is arelady converted to a js module
-      ressourceBuilder.createReferenceFoundByRollup({
-        contentTypeExpected: "application/javascript",
-        referenceLabel: "static or dynamic import",
-        referenceUrl: importer.url,
-        referenceColumn: importer.column,
-        referenceLine: importer.line,
-        ressourceSpecifier: url,
-        isJsenvHelperFile,
-        contentType: "application/javascript",
-        bufferBeforeBuild: Buffer.from(code),
-        isJsModule: true,
-      })
-
+      jsModuleReference.ressource.setBufferBeforeBuild(code)
       return {
         code,
         map,

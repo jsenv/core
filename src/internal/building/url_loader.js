@@ -8,7 +8,6 @@ export const createUrlLoader = ({
   allowJson,
   urlImporterMap,
 
-  asServerUrl,
   asProjectUrl,
   asOriginalUrl,
 
@@ -16,15 +15,12 @@ export const createUrlLoader = ({
 }) => {
   const urlResponseBodyMap = {}
 
-  const loadUrl = async (rollupUrl, { signal, logger }) => {
-    let url = asServerUrl(rollupUrl)
-
+  const loadUrl = async (url, { signal, logger }) => {
     const customLoader = urlCustomLoaders[url]
     if (customLoader) {
       const result = await customLoader()
       return result
     }
-
     const response = await urlFetcher.fetchUrl(url, {
       signal,
       contentTypeExpected: [

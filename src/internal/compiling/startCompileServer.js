@@ -1004,17 +1004,21 @@ const createSourceFileService = ({
       filesystemResponse.status === 404 &&
       jsenvRemoteDirectory.isFileUrlForRemoteUrl(fileUrl)
     ) {
-      const remoteResponse = await jsenvRemoteDirectory.fetchFileUrlAsRemote(
-        fileUrl,
-        request,
-      )
-      if (remoteResponse.status !== 200) {
-        return remoteResponse
+      try {
+        const remoteResponse = await jsenvRemoteDirectory.fetchFileUrlAsRemote(
+          fileUrl,
+          request,
+        )
+        const responseBodyAsArrayBuffer = await remoteResponse.arrayBuffer()
+        await writeFile(fileUrl, Buffer.from(responseBodyAsArrayBuffer))
+        // re-fetch filesystem instead to ensure response headers are correct
+        return fromFileSystem()
+      } catch (e) {
+        if (e && e.asResponse) {
+          return e.asResponse()
+        }
+        throw e
       }
-      const responseBodyAsArrayBuffer = await remoteResponse.arrayBuffer()
-      await writeFile(fileUrl, Buffer.from(responseBodyAsArrayBuffer))
-      // re-fetch filesystem instead to ensure response headers are correct
-      return fromFileSystem()
     }
     return filesystemResponse
   }

@@ -1,4 +1,3 @@
-import { fetchUrl } from "@jsenv/server"
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
@@ -6,6 +5,9 @@ import {
   normalizeStructuredMetaMap,
   urlToMeta,
 } from "@jsenv/filesystem"
+
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { validateResponseIntegrity } from "@jsenv/core/src/internal/integrity/integrity_validation.js"
 
 import { originDirectoryConverter } from "./origin_directory_converter.js"
 
@@ -59,18 +61,64 @@ export const createJsenvRemoteDirectory = ({
     },
 
     fetchFileUrlAsRemote: async (url, request) => {
-      const remoteUrl = jsenvRemoteDirectory.remoteUrlFromFileUrl(url)
+      const urlObject = new URL(url)
+      const integrity = urlObject.searchParams.get("integrity")
+      if (integrity) {
+        urlObject.searchParams.delete("integrity")
+      }
+      const remoteUrl = jsenvRemoteDirectory.remoteUrlFromFileUrl(
+        urlObject.href,
+      )
       const requestHeadersToForward = { ...request.headers }
       delete requestHeadersToForward.host
       const response = await fetchUrl(remoteUrl, {
         mode: "cors",
         headers: requestHeadersToForward,
       })
+      if (response.status !== 200) {
+        throw createRemoteFetchError({
+          code: "UNEXPECTED_STATUS",
+          message: `unexpected status for ressource "${remoteUrl}", received ${response.status}`,
+        })
+      }
+      if (integrity) {
+        try {
+          await validateResponseIntegrity(response, integrity)
+        } catch (e) {
+          throw createRemoteFetchError({
+            code: e.code,
+            message: e.message,
+          })
+        }
+      }
       return response
     },
   }
 
   return jsenvRemoteDirectory
+}
+
+const createRemoteFetchError = ({ message, code }) => {
+  const error = new Error(message)
+  error.code = "UNEXPECTED_REMOTE_URL_RESPONSE"
+  error.asResponse = () => {
+    const data = {
+      code,
+      message,
+    }
+    const json = JSON.stringify(data)
+    return {
+      status: 502,
+      statusText: "Bad Gateway",
+      headers: {
+        "cache-control": "no-store",
+        "content-length": Buffer.byteLength(json),
+        "content-type": "application/json",
+      },
+      body: json,
+    }
+  }
+  return error
 }
 
 const originFromUrlOrUrlPattern = (url) => {

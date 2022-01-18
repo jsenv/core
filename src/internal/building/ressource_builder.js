@@ -100,7 +100,7 @@ export const createRessourceBuilder = (
     )
   }
 
-  const createReferenceFoundByRollup = async (params) => {
+  const createReferenceFoundByRollup = (params) => {
     return createReference({
       fromRollup: true,
       ...params,
@@ -182,12 +182,14 @@ export const createRessourceBuilder = (
   const createReference = ({
     isRessourceHint,
     isImportAssertion,
-    contentTypeExpected,
     ressourceSpecifier,
     referenceLabel,
     referenceUrl,
     referenceColumn,
     referenceLine,
+    contentTypeExpected,
+    crossorigin,
+    integrity,
 
     contentType,
     bufferBeforeBuild,
@@ -322,11 +324,13 @@ export const createRessourceBuilder = (
       fromRollup,
       isRessourceHint,
       isImportAssertion,
-      contentTypeExpected,
       referenceLabel,
       referenceUrl,
       referenceColumn,
       referenceLine,
+      contentTypeExpected,
+      crossorigin,
+      integrity,
 
       isInline,
       inlinedCallback: () => {
@@ -486,7 +490,9 @@ export const createRessourceBuilder = (
       ressource.bufferBeforeBuild = Buffer.from(responseBodyAsArrayBuffer)
       // TODO here: integrity check
     })
-    if (bufferBeforeBuild !== undefined) {
+
+    const setBufferBeforeBuild = (bufferBeforeBuild) => {
+      ressource.bufferBeforeBuild = bufferBeforeBuild
       getBufferAvailablePromise.forceMemoization(Promise.resolve())
     }
 
@@ -689,19 +695,20 @@ export const createRessourceBuilder = (
 
     const applyReferenceEffects = (reference, infoFromReference) => {
       const effects = []
+      if (reference.fromRollup) {
+        return effects
+      }
       if (ressource.isEntryPoint) {
         if (ressource.contentType === "text/html") {
           effects.push(`parse html to find references`)
         }
       }
-
       if (reference.isRessourceHint) {
         // do not try to load or fetch this file
         // we'll wait for something to reference it
         // if nothing references it a warning will be logged
         return effects
       }
-
       ressource.getBufferAvailablePromise().then(
         () => {
           if (ressource.firstStrongReference) {
@@ -710,13 +717,11 @@ export const createRessourceBuilder = (
         },
         () => {},
       )
-
       if (ressource.firstStrongReference) {
         // this ressource was already strongly referenced by something
         // don't try to load it twice
         return effects
       }
-
       ressource.firstStrongReference = reference
       // the first strong reference is allowed to transform a reference where we did not know if it was
       // a js module to a js module
@@ -727,14 +732,11 @@ export const createRessourceBuilder = (
         effects.push(`mark ${urlToHumanUrl(ressource.url)} as js module`)
         ressource.isJsModule = infoFromReference.isJsModule
       }
-
       ressource.usedCallback()
-
       if (ressource.isExternal) {
         // nothing to do
         return effects
       }
-
       if (ressource.isJsModule) {
         const jsModuleUrl = ressource.url
         const rollupChunk = onJsModule({
@@ -753,12 +755,10 @@ export const createRessourceBuilder = (
         }
         return effects
       }
-
       if (ressource.isInline) {
         // nothing to do
         return effects
       }
-
       const rollupAsset = onAsset({
         ressource,
       })
@@ -769,15 +769,18 @@ export const createRessourceBuilder = (
       return effects
     }
 
+    if (bufferBeforeBuild !== undefined) {
+      setBufferBeforeBuild(bufferBeforeBuild)
+    }
     Object.assign(ressource, {
       applyReferenceEffects,
       getBufferAvailablePromise,
       getDependenciesAvailablePromise,
       getReadyPromise,
       remove,
+      setBufferBeforeBuild,
       buildEnd,
     })
-
     return ressource
   }
 

@@ -10,7 +10,6 @@ export const validateResponse = async (
   } = {},
 ) => {
   const validity = { isValid: true }
-
   if (statusValidation) {
     const statusValidity = await checkStatus(response, {
       originalUrl,
@@ -21,7 +20,6 @@ export const validateResponse = async (
       return validity
     }
   }
-
   if (contentTypeExpected) {
     const contentTypeValidity = await checkContentType(response, {
       originalUrl,
@@ -33,7 +31,6 @@ export const validateResponse = async (
       return validity
     }
   }
-
   return validity
 }
 
@@ -86,11 +83,9 @@ const checkContentType = async (
 ) => {
   const url = originalUrl || response.url
   const responseContentType = response.headers["content-type"] || ""
-
   const isOk = Array.isArray(contentTypeExpected)
     ? contentTypeExpected.includes(responseContentType)
     : responseContentType === contentTypeExpected
-
   if (!isOk) {
     return {
       isValid: false,
