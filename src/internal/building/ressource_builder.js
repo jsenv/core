@@ -291,7 +291,11 @@ export const createRessourceBuilder = (
     let ressource
     if (existingRessource) {
       ressource = existingRessource
+      // allow to update the bufferBeforeBuild on existingRessource
+      // this happens when rollup loads a js file and communicates to this code
+      // what was loaded
       if (fromRollup) {
+        ressource.bufferBeforeBuild = bufferBeforeBuild
         ressource.contentType = contentType
       }
     } else {

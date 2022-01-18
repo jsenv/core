@@ -3,11 +3,8 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -30,14 +27,17 @@ const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}style.css`]
 
-const { namespace, serverOrigin } = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
+const { returnValue, serverOrigin } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
   htmlFileRelativeUrl: "./dist/systemjs/main.prod.html",
-  jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
+  /* eslint-disable no-undef */
+  pageFunction: (jsBuildRelativeUrl) => {
+    return window.System.import(`./${jsBuildRelativeUrl}`)
+  },
+  /* eslint-enable no-undef */
+  pageArguments: [jsBuildRelativeUrl],
 })
-
-const actual = namespace
+const actual = returnValue
 const expected = {
   cssInstanceOfStylesheet: true,
   cssUrlString: `${serverOrigin}/dist/systemjs/${cssBuildRelativeUrl}`,

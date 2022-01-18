@@ -3,11 +3,8 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -27,15 +24,19 @@ const { buildMappings } = await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
 })
-const mainBuildRelativeUrl =
+const jsBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
-const { namespace } = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  jsFileRelativeUrl: `./${mainBuildRelativeUrl}`,
+const { returnValue } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/systemjs/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: (jsBuildRelativeUrl) => {
+    return window.System.import(`./${jsBuildRelativeUrl}`)
+  },
+  /* eslint-enable no-undef */
+  pageArguments: [jsBuildRelativeUrl],
 })
-
-const actual = namespace
+const actual = returnValue
 const expected = {
   default: 42,
 }
