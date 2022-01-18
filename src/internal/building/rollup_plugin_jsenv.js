@@ -727,11 +727,15 @@ export const createRollupPlugins = async ({
                 }
               }
             }
-            const fileName = ressource.buildRelativeUrlWithoutHash
+            const fileName = urlToBasename(
+              resolveUrl(ressource.buildRelativeUrlWithoutHash, "file://"),
+            )
             const rollupReferenceId = emitChunk({
               id: jsModuleUrl,
               name: fileName,
-              ...(useImportMapToMaximizeCacheReuse ? { fileName } : {}),
+              ...(useImportMapToMaximizeCacheReuse && !ressource.isInline
+                ? { fileName }
+                : {}),
             })
             return {
               rollupReferenceId,
@@ -884,7 +888,7 @@ export const createRollupPlugins = async ({
         }
         onExternal({
           specifier,
-          reason: `matches "ignoreUrlConfig`,
+          reason: `matches "preservedUrls"`,
         })
         return { id: specifier, external: true }
       }
