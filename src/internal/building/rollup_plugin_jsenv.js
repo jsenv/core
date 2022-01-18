@@ -567,7 +567,10 @@ export const createRollupPlugins = async ({
           urlToCompiledServerUrl: (url) => {
             return asCompiledServerUrl(url)
           },
-          urlToHumanUrl: (url, { showCompiledHint = false } = {}) => {
+          urlToHumanUrl: (
+            url,
+            { showCompiledHint = false, preferRelativeUrls = false } = {},
+          ) => {
             if (
               !url.startsWith("http:") &&
               !url.startsWith("https:") &&
@@ -582,9 +585,15 @@ export const createRollupPlugins = async ({
               projectDirectoryUrl,
             )
             if (showCompiledHint && isCompiled) {
-              return `${originalRelativeUrl}[compiled]`
+              if (preferRelativeUrls) {
+                return `${originalRelativeUrl}[compiled]`
+              }
+              return `${originalUrl}[compiled]`
             }
-            return originalRelativeUrl
+            if (preferRelativeUrls) {
+              return originalRelativeUrl
+            }
+            return originalUrl
           },
           resolveRessourceUrl: ({
             ressourceSpecifier,

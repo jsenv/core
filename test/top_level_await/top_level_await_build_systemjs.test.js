@@ -44,6 +44,6 @@ const actual = {
 }
 const expected = {
   containsAsync: false,
-  namespace: { default: 42 },
+  returnValue: { default: 42 },
 }
 assert({ actual, expected })

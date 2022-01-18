@@ -32,7 +32,7 @@ await buildProject({
 })
 const { returnValue } = await executeInBrowser({
   directoryUrl: new URL("./", import.meta.url),
-  htmlFileRelativeUrl: "./dist/esmodule/main.html",
+  htmlFileRelativeUrl: "./dist/systemjs/main.html",
   /* eslint-disable no-undef */
   pageFunction: async () => {
     return window.namespacePromise

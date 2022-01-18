@@ -40,7 +40,7 @@ const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
     htmlFileRelativeUrl: "./dist/systemjs/main.html",
     /* eslint-disable no-undef */
     pageFunction: () => {
-      return window.namespace
+      return window.namespacePromise
     },
     /* eslint-enable no-undef */
   })

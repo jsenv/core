@@ -55,7 +55,7 @@ try {
       return {
         importMetaUrl: returnValue.url,
         serverOrigin,
-        jsFileRelativeUrl,
+        jsBuildRelativeUrl,
       }
     }
     const { returnValue, serverOrigin } = await executeInBrowser({
@@ -72,7 +72,7 @@ try {
     return {
       importMetaUrl: returnValue.url,
       serverOrigin,
-      jsFileRelativeUrl,
+      jsBuildRelativeUrl,
     }
   }
 
@@ -92,7 +92,7 @@ try {
 
   // remote js fetched during build
   {
-    const { importMetaUrl, serverOrigin, jsFileRelativeUrl } =
+    const { importMetaUrl, serverOrigin, jsBuildRelativeUrl } =
       await getImportMetaUrl({
         preserve: false,
       })
@@ -100,7 +100,7 @@ try {
       importMetaUrl,
     }
     const expected = {
-      importMetaUrl: `${serverOrigin}/dist/esmodule/${jsFileRelativeUrl.slice(
+      importMetaUrl: `${serverOrigin}/dist/esmodule/${jsBuildRelativeUrl.slice(
         2,
       )}`,
     }
@@ -108,7 +108,7 @@ try {
   }
 
   // systemjs + remote fetched during build
-  const { importMetaUrl, serverOrigin, jsFileRelativeUrl } =
+  const { importMetaUrl, serverOrigin, jsBuildRelativeUrl } =
     await getImportMetaUrl({
       format: "systemjs",
       preserve: false,
@@ -117,7 +117,7 @@ try {
     importMetaUrl,
   }
   const expected = {
-    importMetaUrl: `${serverOrigin}/dist/systemjs/${jsFileRelativeUrl.slice(
+    importMetaUrl: `${serverOrigin}/dist/systemjs/${jsBuildRelativeUrl.slice(
       2,
     )}`,
   }

@@ -144,7 +144,7 @@ Create placeholder for ${showReferenceSourceLocation(reference)}${appendEffects(
     ? `Found "${referenceLabel}"`
     : `Found ${referenceLabel} referencing "${urlToHumanUrl(
         reference.ressource.url,
-        { showCompiledHint: true },
+        { showCompiledHint: true, preferRelativeUrls: true },
       )}"`
   return `
 ${message}
@@ -169,11 +169,13 @@ export const formatDependenciesCollectedMessage = ({
     `
 Dependencies collected for ${urlToHumanUrl(ressource.url, {
       showCompiledHint: true,
+      preferRelativeUrls: true,
     })}`,
     {
       dependencies: ressource.dependencies.map((dependencyReference) =>
         urlToHumanUrl(dependencyReference.ressource.url, {
           showCompiledHint: true,
+          preferRelativeUrls: true,
         }),
       ),
     },

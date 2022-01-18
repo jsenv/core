@@ -6,7 +6,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
-const { server } = await import("./script/serve.js")
+const { server } = await import("./server/serve.js")
 try {
   const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
   const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -149,7 +149,7 @@ try {
       returnValue,
     }
     const expected = {
-      namespace: {
+      returnValue: {
         url: `${serverOrigin}/dist/systemjs/${jsBuildRelativeUrl}`,
       },
     }
