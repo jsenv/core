@@ -290,7 +290,6 @@ const visitImportmapScript = async ({
     })
     return
   }
-
   if (importmapScripts.length > 1) {
     logger.error("HTML file must contain max 1 importmap")
   }
@@ -330,6 +329,7 @@ const visitImportmapScript = async ({
     })
     addHtmlMutation(() => {
       removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
+      setHtmlNodeText(firstImportmapScript, importmapAsText)
       if (moduleOutFormat === "systemjs") {
         const typeAttribute = getHtmlNodeAttributeByName(
           firstImportmapScript,
@@ -356,6 +356,7 @@ const visitImportmapScript = async ({
   })
   addHtmlMutation(() => {
     removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
+    setHtmlNodeText(firstImportmapScript, importmapAsText)
     if (moduleOutFormat === "systemjs") {
       const typeAttribute = getHtmlNodeAttributeByName(
         firstImportmapScript,
@@ -394,7 +395,6 @@ const visitScripts = async ({
     const src = srcAttribute ? srcAttribute.value : ""
     const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
     const textNode = getHtmlNodeTextNode(script)
-
     if (type === "module") {
       if (src) {
         addHtmlMutation(() => {
@@ -473,7 +473,6 @@ const visitScripts = async ({
       })
       return
     }
-
     if (type === "application/javascript" || type === "text/javascript") {
       if (src) {
         const htmlServerUrl = url.replace(

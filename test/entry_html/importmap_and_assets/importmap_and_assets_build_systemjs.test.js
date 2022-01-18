@@ -59,7 +59,7 @@ const cssBuildRelativeUrl =
   const expected = {
     imports: {
       // the importmap for img-remap is available
-      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
+      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }

@@ -47,8 +47,8 @@ if (process.platform !== "win32") {
       "assets/img-remap.png": "assets/img-remap_25e95a00.png",
       "assets/style.css": "assets/style_bb497274.css",
       "assets/style.css.map": "assets/style.css_1c41eaf0.map",
-      "main.js": "main_9dd4a4eb.js",
-      "main.js.map": "main_9dd4a4eb.js.map",
+      "main.js": "main_d92f2faf.js",
+      "main.js.map": "main_d92f2faf.js.map",
       "main.html": "main.html",
     },
   }
@@ -79,7 +79,7 @@ const cssBuildRelativeUrl =
   const expected = {
     imports: {
       // the importmap for img-remap is available
-      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
+      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
