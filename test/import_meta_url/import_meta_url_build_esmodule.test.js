@@ -38,7 +38,7 @@ const { returnValue, serverOrigin } = await executeInBrowser({
     return namespace
   },
   /* eslint-enable no-undef */
-  pageArguments: [jsBuildRelativeUrl],
+  pageArguments: [`./${jsBuildRelativeUrl}`],
 })
 const actual = returnValue
 const expected = {

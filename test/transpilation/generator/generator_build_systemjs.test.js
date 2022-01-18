@@ -27,10 +27,10 @@ const { returnValue } = await executeInBrowser({
   htmlFileRelativeUrl: "./dist/systemjs/main.html",
   /* eslint-disable no-undef */
   pageFunction: (jsBuildRelativeUrl) => {
-    return window.System.import(`./${jsBuildRelativeUrl}`)
+    return window.System.import(jsBuildRelativeUrl)
   },
   /* eslint-enable no-undef */
-  pageArguments: [jsBuildRelativeUrl],
+  pageArguments: [`./${jsBuildRelativeUrl}`],
 })
 const actual = returnValue
 const expected = { value: [0, 1] }

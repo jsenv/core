@@ -110,7 +110,7 @@ const cssBuildRelativeUrl =
       return namespace
     },
     /* eslint-enable no-undef */
-    pageArguments: [jsBuildRelativeUrl],
+    pageArguments: [`./${jsBuildRelativeUrl}`],
   })
   const actual = returnValue
   const expected = {

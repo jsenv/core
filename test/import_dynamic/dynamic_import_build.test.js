@@ -39,7 +39,7 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
       return namespace
     },
     /* eslint-enable no-undef */
-    pageArguments: [jsBuildRelativeUrl],
+    pageArguments: [`./${jsBuildRelativeUrl}`],
   })
   const actual = returnValue
   const expected = { default: 42 }
