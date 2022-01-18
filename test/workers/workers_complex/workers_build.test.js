@@ -34,7 +34,7 @@ const { returnValue, serverOrigin } = await executeInBrowser({
   htmlFileRelativeUrl: "./dist/esmodule/main.html",
   /* eslint-disable no-undef */
   pageFunction: async () => {
-    return window.nameespacePromise
+    return window.namespacePromise
   },
   /* eslint-enable no-undef */
 })
@@ -42,11 +42,11 @@ if (process.platform !== "win32") {
   const actual = returnValue
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/worker2_b7f114ee.js`,
+      url: `${serverOrigin}/dist/esmodule/worker_b7f114ee.js`,
       pingResponse: "pong",
     },
     serviceWorker: {
-      url: `${serverOrigin}/dist/esmodule/sw2.js`,
+      url: `${serverOrigin}/dist/esmodule/sw.js`,
       inspectResponse: {
         order: [],
         generatedUrlsConfig: {
@@ -60,27 +60,27 @@ if (process.platform !== "win32") {
             // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
             // to include a hash for the html file.
             // -> when html file changes -> hash changes -> worker updates
-            version: "949f1d1f",
+            version: "73ff05a9",
           },
-          "sw.js": {
+          "sw2.js": {
             versioned: false,
-            version: "f2a65f41",
+            version: "148f0aa7",
           },
-          "worker_a850e925.js": {
+          "worker_b7f114ee.js": {
             versioned: true,
           },
-          "worker2_b7f114ee.js": {
+          "worker2_a850e925.js": {
             versioned: true,
           },
         },
       },
     },
     classicWorker: {
-      url: `${serverOrigin}/dist/esmodule/worker_a850e925.js`,
+      url: `${serverOrigin}/dist/esmodule/worker2_a850e925.js`,
       pingResponse: "pong",
     },
     classicServiceWorker: {
-      url: `${serverOrigin}/dist/esmodule/sw.js`,
+      url: `${serverOrigin}/dist/esmodule/sw2.js`,
       inspectResponse: {
         order: ["before-a", "before-b", "b", "after-b", "after-a"],
         generatedUrlsConfig: {
@@ -89,16 +89,16 @@ if (process.platform !== "win32") {
           },
           "main.html": {
             versioned: false,
-            version: "949f1d1f",
+            version: "73ff05a9",
           },
-          "sw2.js": {
+          "sw.js": {
             versioned: false,
-            version: "9db29c46",
+            version: "f157fc56",
           },
-          "worker_a850e925.js": {
+          "worker_b7f114ee.js": {
             versioned: true,
           },
-          "worker2_b7f114ee.js": {
+          "worker2_a850e925.js": {
             versioned: true,
           },
         },
