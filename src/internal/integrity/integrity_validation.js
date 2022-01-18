@@ -32,13 +32,13 @@ export const validateResponseIntegrity = async (response, integrity) => {
   if (someIsMatching) {
     return true
   }
+
   const error = new Error(
-    `Integrity checksum failed for ${response.url} using "${strongestAlgo}" algorithm`,
+    `Integrity validation failed for ressource "${response.url}". The integrity found for this ressource is "${strongestAlgo}-${actualBase64Value}"`,
   )
   error.code = "EINTEGRITY"
-  error.found = actualBase64Value
-  error.expected = acceptedBase64Values
   error.algorithm = strongestAlgo
+  error.found = actualBase64Value
   throw error
 }
 
