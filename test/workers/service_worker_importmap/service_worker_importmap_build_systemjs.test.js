@@ -27,14 +27,14 @@ await buildProject({
   serviceWorkers: [`${testDirectoryRelativeUrl}service_worker.js`],
 })
 
-const { namespace } = await browserImportEsModuleBuild({
+const { value } = await browserImportEsModuleBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   codeToRunInBrowser: "window.namespacePromise",
   // debug: true,
 })
 
-const actual = namespace
+const actual = value
 const expected = {
   serviceWorker: {
     value: 42,

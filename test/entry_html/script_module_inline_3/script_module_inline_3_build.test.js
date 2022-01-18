@@ -26,16 +26,16 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
 })
-const { namespace } = await browserImportSystemJsBuild({
+const { value } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   codeToRunInBrowser: `window.namespacePromise`,
   // debug: true,
 })
 const actual = {
-  namespace,
+  value,
 }
 const expected = {
-  namespace: { answer: 42 },
+  value: { answer: 42 },
 }
 assert({ actual, expected })

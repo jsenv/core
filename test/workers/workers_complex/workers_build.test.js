@@ -33,7 +33,7 @@ await buildProject({
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
 
-const { namespace, serverOrigin } = await browserImportEsModuleBuild({
+const { value, serverOrigin } = await browserImportEsModuleBuild({
   ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   codeToRunInBrowser: "window.namespacePromise",
@@ -41,7 +41,7 @@ const { namespace, serverOrigin } = await browserImportEsModuleBuild({
 })
 
 if (process.platform !== "win32") {
-  const actual = namespace
+  const actual = value
   const expected = {
     worker: {
       url: `${serverOrigin}/dist/esmodule/worker2_b7f114ee.js`,

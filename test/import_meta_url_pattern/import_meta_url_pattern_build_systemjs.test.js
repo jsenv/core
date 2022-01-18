@@ -16,15 +16,13 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
-const mainFilename = `import_meta_url_pattern.html`
-
 const { buildMappings } = await buildProject({
   ...GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPoints: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+    [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
 })
 
@@ -40,14 +38,14 @@ const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
 }
 
 {
-  const { namespace, serverOrigin } = await browserImportSystemJsBuild({
+  const { value, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     codeToRunInBrowser: `window.namespace`,
     // debug: true,
   })
 
-  const actual = namespace
+  const actual = value
   const expected = {
     jsUrlInstanceOfUrl: true,
     jsUrlString: String(

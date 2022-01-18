@@ -38,15 +38,17 @@ export const browserImportSystemJsBuild = async ({
   await page.goto(resolveUrl(htmlFileRelativeUrl, server.origin))
 
   try {
+    if (codeToRunInBrowser) {
+      const value = await page.evaluate(codeToRunInBrowser)
+      return {
+        value,
+        serverOrigin: server.origin,
+      }
+    }
     const namespace = await page.evaluate(
       /* istanbul ignore next */
-      ({ codeToRunInBrowser, debug, specifier }) => {
+      ({ debug, specifier }) => {
         /* globals window */
-
-        if (codeToRunInBrowser) {
-          // eslint-disable-next-line no-eval
-          return window.eval(codeToRunInBrowser)
-        }
 
         if (debug) {
           window.run = () => window.System.import(specifier)
@@ -55,7 +57,6 @@ export const browserImportSystemJsBuild = async ({
         return window.System.import(specifier)
       },
       {
-        codeToRunInBrowser,
         debug,
         specifier: jsFileRelativeUrl,
       },

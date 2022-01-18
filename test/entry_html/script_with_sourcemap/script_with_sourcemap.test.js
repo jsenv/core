@@ -104,14 +104,14 @@ const test = async (params) => {
 
   // execution works
   {
-    const { namespace } = await browserImportSystemJsBuild({
+    const { value } = await browserImportSystemJsBuild({
       ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
       testDirectoryRelativeUrl,
       codeToRunInBrowser: "window.whatever",
       jsFileRelativeUrl: `./${scriptBuildUrl}`,
       // debug: true,
     })
-    const actual = namespace
+    const actual = value
     const expected = 42
     assert({ actual, expected })
   }

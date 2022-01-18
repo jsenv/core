@@ -28,13 +28,13 @@ await buildProject({
   // minify: true,
 })
 
-const { namespace } = await browserImportSystemJsBuild({
+const { value } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   codeToRunInBrowser: `window.namespace`,
   // debug: true,
 })
 
-const actual = namespace
+const actual = value
 const expected = { answer: 42 }
 assert({ actual, expected })

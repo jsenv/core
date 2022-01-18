@@ -7,6 +7,11 @@
   </head>
 
   <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
     <script type="module">
       const jsUrl = new URL("./file.js", import.meta.url)
 
@@ -14,12 +19,10 @@
 
       const jsUrlString = String(jsUrl)
 
-      window.namespace = {
+      window.resolveNamespacePromise({
         jsUrlInstanceOfUrl,
         jsUrlString,
-      }
-
-      export { jsUrlInstanceOfUrl, jsUrlString }
+      })
     </script>
   </body>
 </html>

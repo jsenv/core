@@ -31,23 +31,23 @@ const testBuild = async (params) => {
 }
 
 const testExecution = async () => {
-  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
+  const { value, serverOrigin } = await browserImportEsModuleBuild({
     ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
     htmlFileRelativeUrl: "./dist/esmodule/main.prod.html",
     codeToRunInBrowser: `window.namespace`,
   })
-  return { namespace, serverOrigin }
+  return { value, serverOrigin }
 }
 
 // default (no runtime support + concatenation)
 {
   const { buildMappings } = await testBuild()
-  const { namespace, serverOrigin } = await testExecution()
+  const { value, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
-  const actual = namespace
+  const actual = value
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
@@ -60,11 +60,11 @@ const testExecution = async () => {
   const { buildMappings } = await testBuild({
     runtimeSupport: { chrome: "96" },
   })
-  const { namespace, serverOrigin } = await testExecution()
+  const { value, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
-  const actual = namespace
+  const actual = value
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
@@ -78,11 +78,11 @@ const testExecution = async () => {
     jsConcatenation: false,
     runtimeSupport: { chrome: "96" },
   })
-  const { namespace, serverOrigin } = await testExecution()
+  const { value, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
 
-  const actual = namespace
+  const actual = value
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
