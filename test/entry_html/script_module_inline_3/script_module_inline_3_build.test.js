@@ -26,14 +26,12 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
 })
-
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   codeToRunInBrowser: `window.namespacePromise`,
   // debug: true,
 })
-
 const actual = {
   namespace,
 }

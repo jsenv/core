@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
@@ -154,7 +154,7 @@ export const createRessourceBuilder = (
       if (
         ressource.isExternal ||
         ressource.isJsModule ||
-        ressource.buildFileName
+        ressource.buildFileNameWithoutHash
       ) {
         return
       }
@@ -171,7 +171,7 @@ export const createRessourceBuilder = (
           return
         }
       }
-      ressource.buildFileName = asFileNameWithoutHash(
+      ressource.buildFileNameWithoutHash = asFileNameWithoutHash(
         ressource.buildRelativeUrl,
       )
     })
@@ -365,7 +365,7 @@ export const createRessourceBuilder = (
           reference,
           referenceEffects: effects,
           showReferenceSourceLocation,
-          shortenUrl,
+          urlToHumanUrl,
         }),
       )
     }
@@ -691,6 +691,9 @@ export const createRessourceBuilder = (
 
     const applyReferenceEffects = (reference, infoFromReference) => {
       const effects = []
+      if (reference.fromRollup && ressource.isJsModule && ressource.isInline) {
+        return effects
+      }
       if (ressource.isEntryPoint) {
         if (ressource.contentType === "text/html") {
           effects.push(`parse html to find references`)
@@ -782,7 +785,6 @@ export const createRessourceBuilder = (
     useImportMapToMaximizeCacheReuse,
   }) => {
     const jsRessources = {}
-
     Object.keys(ressourceMap).forEach((ressourceUrl) => {
       const ressource = ressourceMap[ressourceUrl]
       const rollupFileName = Object.keys(rollupResult).find((key) => {
@@ -790,14 +792,14 @@ export const createRessourceBuilder = (
         return (
           rollupFileInfo.url === ressourceUrl ||
           // asset
-          ressource.buildFileName === key ||
+          ressource.buildFileNameWithoutHash === key ||
           ressource.relativeUrl === key
         )
       })
       if (rollupFileName) {
         const rollupFileInfo = rollupResult[rollupFileName]
         if (rollupFileInfo.type === "asset") {
-          ressource.buildFileName = rollupFileName
+          ressource.buildFileNameWithoutHash = rollupFileName
           return
         }
         if (rollupFileInfo.type === "chunk") {
@@ -827,15 +829,13 @@ export const createRessourceBuilder = (
     const fileName = rollupFileInfo.fileName
     let code = rollupFileInfo.code
     ressource.contentType = "application/javascript"
-
     if (useImportMapToMaximizeCacheReuse) {
-      ressource.buildFileName = fileName
+      ressource.buildFileNameWithoutHash = fileName
       ressource.buildEnd(code)
     } else {
-      ressource.buildFileName = asFileNameWithoutHash(fileName)
+      ressource.buildFileNameWithoutHash = asFileNameWithoutHash(fileName)
       ressource.buildEnd(code, fileName)
     }
-
     const map = rollupFileInfo.map
     if (map) {
       const sourcemapBuildRelativeUrl = `${ressource.buildRelativeUrl}.map`
@@ -900,12 +900,6 @@ export const createRessourceBuilder = (
       return false
     })
     return ressourceFound
-  }
-
-  const shortenUrl = (url) => {
-    return urlIsInsideOf(url, compileServerOrigin)
-      ? urlToRelativeUrl(url, compileServerOrigin)
-      : url
   }
 
   const createUrlSiteFromReference = (reference) => {

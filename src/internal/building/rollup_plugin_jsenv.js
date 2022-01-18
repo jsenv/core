@@ -567,7 +567,7 @@ export const createRollupPlugins = async ({
           urlToCompiledServerUrl: (url) => {
             return asCompiledServerUrl(url)
           },
-          urlToHumanUrl: (url) => {
+          urlToHumanUrl: (url, { showCompiledHint = false } = {}) => {
             if (
               !url.startsWith("http:") &&
               !url.startsWith("https:") &&
@@ -575,7 +575,16 @@ export const createRollupPlugins = async ({
             ) {
               return url
             }
-            return asOriginalUrl(url) || url
+            const originalUrl = asOriginalUrl(url)
+            const isCompiled = urlIsInsideOf(url, compileServerOrigin)
+            const originalRelativeUrl = urlToRelativeUrl(
+              originalUrl,
+              projectDirectoryUrl,
+            )
+            if (showCompiledHint && isCompiled) {
+              return `${originalRelativeUrl}[compiled]`
+            }
+            return originalRelativeUrl
           },
           resolveRessourceUrl: ({
             ressourceSpecifier,
@@ -924,33 +933,19 @@ export const createRollupPlugins = async ({
         jsenvHelpersDirectoryInfo.url,
       )
       // const isEntryPoint = entryPointUrls[originalUrl]
-      const importer = urlImporterMap[url]
-      // Inform ressource builder that this js module exists
-      // It can only be a js module and happens when:
-      // - entry point (html) references js
-      // - js is referenced by static or dynamic imports
-      // For import assertions, the imported ressource (css,json,...)
-      // is arelady converted to a js module
-      const jsModuleReference = ressourceBuilder.createReferenceFoundByRollup({
-        contentTypeExpected: "application/javascript",
-        referenceLabel: "static or dynamic import",
-        referenceUrl: importer.url,
-        referenceColumn: importer.column,
-        referenceLine: importer.line,
-        ressourceSpecifier: url,
-        isJsenvHelperFile,
-        contentType: "application/javascript",
-        isJsModule: true,
-        bufferBeforeBuild: "", // to prevent trying to fetch while rollup is fetching
-      })
       const loadResult = await buildOperation.withSignal((signal) => {
-        const { firstStrongReference } = jsModuleReference.ressource
-        const integrity = firstStrongReference
-          ? firstStrongReference.integrity
-          : null
         let urlToLoad
-        if (integrity) {
-          urlToLoad = setUrlSearchParamsDescriptor(url, { integrity })
+        const jsModuleRessource = ressourceBuilder.findRessource(
+          (ressource) => ressource.url === url,
+        )
+        if (
+          jsModuleRessource &&
+          jsModuleRessource.firstStrongReference &&
+          jsModuleRessource.firstStrongReference.integrity
+        ) {
+          urlToLoad = setUrlSearchParamsDescriptor(url, {
+            integrity: jsModuleRessource.firstStrongReference.integrity,
+          })
           urlImporterMap[urlToLoad] = urlImporterMap[url]
         } else {
           urlToLoad = url
@@ -976,7 +971,25 @@ export const createRollupPlugins = async ({
           }
         })
       }
-      jsModuleReference.ressource.setBufferBeforeBuild(code)
+      const importer = urlImporterMap[url]
+      // Inform ressource builder that this js module exists
+      // It can only be a js module and happens when:
+      // - entry point (html) references js
+      // - js is referenced by static or dynamic imports
+      // For import assertions, the imported ressource (css,json,...)
+      // is already converted to a js module
+      ressourceBuilder.createReferenceFoundByRollup({
+        contentTypeExpected: "application/javascript",
+        referenceLabel: "static or dynamic import",
+        referenceUrl: importer.url,
+        referenceColumn: importer.column,
+        referenceLine: importer.line,
+        ressourceSpecifier: url,
+        isJsenvHelperFile,
+        contentType: "application/javascript",
+        isJsModule: true,
+        bufferBeforeBuild: Buffer.from(code),
+      })
       return {
         code,
         map,
