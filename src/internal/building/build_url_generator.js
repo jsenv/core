@@ -27,13 +27,17 @@ export const createBuildUrlGenerator = ({
   }
 
   const computeBuildRelativeUrl = (ressource) => {
-    return renderFileNamePattern(ressource.buildRelativeUrlPattern, {
-      hash: () =>
-        generateContentHash(ressource.bufferAfterBuild, {
-          contentType: ressource.contentType,
-          lineBreakNormalization,
-        }),
-    })
+    const buildRelativeUrl = renderFileNamePattern(
+      ressource.buildRelativeUrlPattern,
+      {
+        hash: () =>
+          generateContentHash(ressource.bufferAfterBuild, {
+            contentType: ressource.contentType,
+            lineBreakNormalization,
+          }),
+      },
+    )
+    return buildRelativeUrl
   }
 
   return { prepareBuildUrlForRessource, computeBuildRelativeUrl }

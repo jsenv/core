@@ -695,9 +695,6 @@ export const createRessourceBuilder = (
 
     const applyReferenceEffects = (reference, infoFromReference) => {
       const effects = []
-      if (reference.fromRollup) {
-        return effects
-      }
       if (ressource.isEntryPoint) {
         if (ressource.contentType === "text/html") {
           effects.push(`parse html to find references`)

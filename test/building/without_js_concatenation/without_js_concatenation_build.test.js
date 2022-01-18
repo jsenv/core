@@ -28,7 +28,6 @@ const { buildMappings } = await buildProject({
   jsConcatenation: false,
   // logLevel: "debug",
 })
-
 {
   const actual = buildMappings
   const expected = {
@@ -38,7 +37,6 @@ const { buildMappings } = await buildProject({
   }
   assert({ actual, expected })
 }
-
 {
   const mainJsFileRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}main.js`]

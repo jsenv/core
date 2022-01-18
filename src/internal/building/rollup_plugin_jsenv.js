@@ -177,7 +177,6 @@ export const createRollupPlugins = async ({
     urlCustomLoaders,
     allowJson: acceptsJsonContentType({ node, format }),
     urlImporterMap,
-    jsConcatenation,
 
     asProjectUrl,
     asOriginalUrl,
@@ -672,7 +671,6 @@ export const createRollupPlugins = async ({
             ) {
               return null
             }
-
             if (ressource.isEntryPoint) {
             } else {
               const importerUrl = resolveUrl(
@@ -713,11 +711,11 @@ export const createRollupPlugins = async ({
                 }
               }
             }
-
             const fileName = ressource.buildRelativeUrlWithoutHash
             const rollupReferenceId = emitChunk({
               id: jsModuleUrl,
               name: fileName,
+              ...(useImportMapToMaximizeCacheReuse ? { fileName } : {}),
             })
             return {
               rollupReferenceId,
@@ -945,10 +943,13 @@ export const createRollupPlugins = async ({
         isJsenvHelperFile,
         contentType: "application/javascript",
         isJsModule: true,
+        bufferBeforeBuild: "", // to prevent trying to fetch while rollup is fetching
       })
       const loadResult = await buildOperation.withSignal((signal) => {
-        const integrity =
-          jsModuleReference.ressource.firstStrongReference.integrity
+        const { firstStrongReference } = jsModuleReference.ressource
+        const integrity = firstStrongReference
+          ? firstStrongReference.integrity
+          : null
         let urlToLoad
         if (integrity) {
           urlToLoad = setUrlSearchParamsDescriptor(url, { integrity })
@@ -1260,6 +1261,9 @@ export const createRollupPlugins = async ({
         return entryPoints
       }
       outputOptions.chunkFileNames = (chunkInfo) => {
+        // maybe we should find ressource from ressource builder and return
+        // the buildRelativeUrlPattern?
+
         // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
         // const basename = urlToBasename(originalUrl)
         if (useImportMapToMaximizeCacheReuse) {
