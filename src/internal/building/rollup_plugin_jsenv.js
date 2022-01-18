@@ -1420,12 +1420,18 @@ export const createRollupPlugins = async ({
           // }
         } else {
           const originalProjectUrl = asOriginalUrl(ressourceUrl)
-          const originalProjectRelativeUrl = urlToRelativeUrl(
-            originalProjectUrl,
-            projectDirectoryUrl,
-          )
-          buildMappings[originalProjectRelativeUrl] =
-            jsRessource.buildRelativeUrl
+          if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalProjectUrl)) {
+            const remoteUrl =
+              jsenvRemoteDirectory.remoteUrlFromFileUrl(originalProjectUrl)
+            buildMappings[remoteUrl] = jsRessource.buildRelativeUrl
+          } else {
+            const originalProjectRelativeUrl = urlToRelativeUrl(
+              originalProjectUrl,
+              projectDirectoryUrl,
+            )
+            buildMappings[originalProjectRelativeUrl] =
+              jsRessource.buildRelativeUrl
+          }
         }
         ressourceMappings[jsRessource.buildRelativeUrlWithoutHash] =
           jsRessource.buildRelativeUrl

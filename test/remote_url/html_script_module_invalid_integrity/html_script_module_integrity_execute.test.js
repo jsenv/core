@@ -1,8 +1,8 @@
 /*
-local script module + integrity
--> source code must properly execute 
--> compiled code must properly execute (because integrity is removed)
--> build code must properly execute (because integrity is updated)
+remote script module + invalid integrity
+-> ensure error is thrown during source code exec
+-> compiled code exec will likely ignore the integrity failure (see if this can be fixed)
+-> build code should throw too
 */
 
 import { assert } from "@jsenv/assert"

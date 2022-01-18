@@ -32,6 +32,7 @@ import {
   stringifySrcset,
   getHtmlNodeLocation,
   removeHtmlNode,
+  addHtmlNodeAttribute,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 import {
   getJavaScriptSourceMappingUrl,
@@ -47,6 +48,7 @@ import { collectNodesMutations } from "../parsing.utils.js"
 
 import { collectSvgMutations } from "../svg/parseSvgRessource.js"
 import { moveCssUrls } from "../css/moveCssUrls.js"
+import { applyAlgoToRepresentationData } from "../../integrity/integrity_algorithms.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,
@@ -172,22 +174,21 @@ const regularScriptSrcVisitor = (
   if (!srcAttribute) {
     return null
   }
-
+  const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+  const integrity = integrityAttribute ? integrityAttribute.value : ""
   const remoteScriptReference = notifyReferenceFound({
     referenceLabel: "html script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
-    ...integrityFromHtmlNode(script),
+    integrity,
     ...crossoriginFromHtmlNode(script),
     ...referenceLocationFromHtmlNode(script, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const ressource = remoteScriptReference.ressource
-
     if (ressource.isExternal) {
       return
     }
-
     if (shouldInline({ ressource, htmlNode: script })) {
       removeHtmlNodeAttribute(script, srcAttribute)
       const { bufferAfterBuild } = ressource
@@ -202,14 +203,19 @@ const regularScriptSrcVisitor = (
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
       }
-
       setHtmlNodeText(script, jsString)
       remoteScriptReference.inlinedCallback()
       return
     }
-
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     srcAttribute.value = urlRelativeToImporter
+    if (integrityAttribute) {
+      const base64Value = applyAlgoToRepresentationData(
+        "sha256",
+        ressource.bufferAfterBuild,
+      )
+      integrityAttribute.value = `sha256-${base64Value}`
+    }
   }
 }
 
@@ -235,7 +241,6 @@ const regularScriptTextNodeVisitor = (
   if (!textNode) {
     return null
   }
-
   const scriptId = getIdForInlineHtmlNode(script, scripts)
   const ressourceSpecifier = `${urlToFilename(
     htmlRessource.url,
@@ -267,27 +272,25 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
   if (!srcAttribute) {
     return null
   }
-
+  const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+  const integrity = integrityAttribute ? integrityAttribute.value : ""
   const remoteScriptReference = notifyReferenceFound({
     referenceLabel: "html module script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
-    ...integrityFromHtmlNode(script),
+    integrity,
     ...crossoriginFromHtmlNode(script),
     ...referenceLocationFromHtmlNode(script, "src"),
     isJsModule: true,
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = remoteScriptReference
-
     if (format === "systemjs") {
       removeHtmlNodeAttribute(script, typeAttribute)
     }
-
     if (ressource.isExternal) {
       return
     }
-
     if (shouldInline({ ressource, htmlNode: script })) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
@@ -302,15 +305,20 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // with these assumptions we can force the sourcemap url
       const sourcemapUrl = `${ressource.buildRelativeUrl}.map`
       jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
-
       setHtmlNodeText(script, jsString)
       remoteScriptReference.inlinedCallback()
       return
     }
-
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     const relativeUrlNotation = ensureRelativeUrlNotation(urlRelativeToImporter)
     srcAttribute.value = relativeUrlNotation
+    if (integrityAttribute) {
+      const base64Value = applyAlgoToRepresentationData(
+        "sha256",
+        ressource.bufferAfterBuild,
+      )
+      integrityAttribute.value = `sha256-${base64Value}`
+    }
   }
 }
 
@@ -335,7 +343,6 @@ const moduleScriptTextNodeVisitor = (
   if (!textNode) {
     return null
   }
-
   const scriptId = getIdForInlineHtmlNode(script, scripts)
   const ressourceSpecifier = `${urlToFilename(
     htmlRessource.url,
@@ -375,26 +382,24 @@ const importmapScriptSrcVisitor = (
   if (!srcAttribute) {
     return null
   }
-
+  const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+  const integrity = integrityAttribute ? integrityAttribute.value : ""
   const importmapReference = notifyReferenceFound({
     referenceLabel: "html importmap",
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
-    ...integrityFromHtmlNode(script),
+    integrity,
     ...crossoriginFromHtmlNode(script),
     ...referenceLocationFromHtmlNode(script, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = importmapReference
-
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-
     if (ressource.isExternal) {
       return
     }
-
     if (
       // for esmodule we always inline the importmap
       // as it's the only thing supported by Chrome
@@ -408,22 +413,22 @@ const importmapScriptSrcVisitor = (
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       const { bufferAfterBuild } = ressource
-
       const importmapString = String(bufferAfterBuild)
-      replaceHtmlNode(
-        script,
-        `<script>
-${importmapString}</script>`,
-        {
-          attributesToIgnore: ["src"],
-        },
-      )
+      removeHtmlNodeAttribute(script, srcAttribute)
+      setHtmlNodeText(script, importmapString)
+      removeHtmlNodeAttribute(script, integrityAttribute)
       importmapReference.inlinedCallback()
       return
     }
-
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     srcAttribute.value = urlRelativeToImporter
+    if (integrityAttribute) {
+      const base64Value = applyAlgoToRepresentationData(
+        "sha256",
+        ressource.bufferAfterBuild,
+      )
+      integrityAttribute.value = `sha256-${base64Value}`
+    }
   }
 }
 
@@ -448,7 +453,6 @@ const importmapScriptTextNodeVisitor = (
   if (!textNode) {
     return null
   }
-
   const importmapScriptId = getIdForInlineHtmlNode(script, scripts)
   const importmapReference = notifyReferenceFound({
     referenceLabel: "html inline importmap",
@@ -465,7 +469,6 @@ const importmapScriptTextNodeVisitor = (
     if (format === "systemjs") {
       typeAttribute.value = "systemjs-importmap"
     }
-
     const { bufferAfterBuild } = importmapReference.ressource
     textNode.value = bufferAfterBuild
   }
@@ -487,22 +490,21 @@ const linkStylesheetHrefVisitor = (
   if (relAttribute.value !== "stylesheet") {
     return null
   }
-
+  const integrityAttribute = getHtmlNodeAttributeByName(link, "integrity")
+  const integrity = integrityAttribute ? integrityAttribute.value : ""
   const cssReference = notifyReferenceFound({
     referenceLabel: "html stylesheet link",
     contentTypeExpected: "text/css",
     ressourceSpecifier: hrefAttribute.value,
-    ...integrityFromHtmlNode(link),
+    integrity,
     ...crossoriginFromHtmlNode(link),
     ...referenceLocationFromHtmlNode(link, "href"),
   })
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const { ressource } = cssReference
-
     if (ressource.isExternal) {
       return
     }
-
     if (shouldInline({ ressource, htmlNode: link })) {
       const { bufferAfterBuild } = ressource
       let code = String(bufferAfterBuild)
@@ -512,7 +514,6 @@ const linkStylesheetHrefVisitor = (
         htmlRessource.buildRelativeUrlWithoutHash,
         buildDirectoryUrl,
       )
-
       const moveResult = await moveCssUrls({
         code,
         from: cssBuildUrl,
@@ -527,7 +528,6 @@ const linkStylesheetHrefVisitor = (
         sourcemapMethod: null,
       })
       code = moveResult.code
-
       const sourcemapRelativeUrl = getCssSourceMappingUrl(code)
       if (sourcemapRelativeUrl) {
         const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
@@ -538,16 +538,28 @@ const linkStylesheetHrefVisitor = (
         )
         code = setCssSourceMappingUrl(code, sourcemapInlineUrl)
       }
-
       replaceHtmlNode(link, `<style>${code}</style>`, {
-        attributesToIgnore: ["href", "rel", "as", "crossorigin", "type"],
+        attributesToIgnore: [
+          "href",
+          "rel",
+          "as",
+          "crossorigin",
+          "type",
+          "integrity",
+        ],
       })
       cssReference.inlinedCallback()
       return
     }
-
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
+    if (integrityAttribute) {
+      const base64Value = applyAlgoToRepresentationData(
+        "sha256",
+        ressource.bufferAfterBuild,
+      )
+      integrityAttribute.value = `sha256-${base64Value}`
+    }
   }
 }
 
@@ -559,7 +571,6 @@ const linkHrefVisitor = (
   if (!hrefAttribute) {
     return null
   }
-
   const href = hrefAttribute.value
   const relAttribute = getHtmlNodeAttributeByName(link, "rel")
   const rel = relAttribute ? relAttribute.value : undefined
@@ -570,7 +581,6 @@ const linkHrefVisitor = (
     "preload",
     "modulepreload",
   ].includes(rel)
-
   let contentTypeExpected
   const typeAttribute = getHtmlNodeAttributeByName(link, "type")
   const type = typeAttribute ? typeAttribute.value : ""
@@ -583,13 +593,14 @@ const linkHrefVisitor = (
     contentTypeExpected = "application/javascript"
     isJsModule = true
   }
-
+  const integrityAttribute = getHtmlNodeAttributeByName(link, "integrity")
+  const integrity = integrityAttribute ? integrityAttribute.value : ""
   const linkReference = notifyReferenceFound({
     referenceLabel: rel ? `html ${rel} link href` : `html link href`,
     isRessourceHint,
     contentTypeExpected,
     ressourceSpecifier: href,
-    ...integrityFromHtmlNode(link),
+    integrity,
     ...crossoriginFromHtmlNode(link),
     ...referenceLocationFromHtmlNode(link, "href"),
     urlVersioningDisabled: contentTypeExpected === "application/manifest+json",
@@ -597,7 +608,6 @@ const linkHrefVisitor = (
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = linkReference
-
     if (isRessourceHint) {
       if (isReferencedOnlyByRessourceHint(ressource)) {
         ressourceHintNeverUsedCallback({
@@ -609,36 +619,34 @@ const linkHrefVisitor = (
         // we could remove the HTML node but better keep it untouched and let user decide what to do
         return
       }
-
       ressource.inlinedCallbacks.push(() => {
         removeHtmlNode(link)
       })
     }
-
     if (ressource.isExternal) {
       return
     }
-
     if (format === "systemjs" && rel === "modulepreload") {
       const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
-      replaceHtmlNode(
-        link,
-        `<link rel="preload" href="${urlRelativeToImporter}" as="script" />`,
-      )
+      relAttribute.value = "preload"
+      hrefAttribute.value = urlRelativeToImporter
+      addHtmlNodeAttribute(link, { name: "as", value: "script" })
       return
     }
-
     if (shouldInline({ ressource, htmlNode: link })) {
-      replaceHtmlNode(
-        link,
-        `<link href="${getRessourceAsBase64Url(ressource)}" />`,
-      )
+      removeHtmlNode(link)
       linkReference.inlinedCallback()
       return
     }
-
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
+    if (integrityAttribute) {
+      const base64Value = applyAlgoToRepresentationData(
+        "sha256",
+        ressource.bufferAfterBuild,
+      )
+      integrityAttribute.value = `sha256-${base64Value}`
+    }
   }
 }
 
@@ -652,7 +660,6 @@ const styleTextNodeVisitor = (
   if (!textNode) {
     return null
   }
-
   const styleId = getIdForInlineHtmlNode(style, styles)
   const inlineStyleReference = notifyReferenceFound({
     referenceLabel: "html style",
@@ -676,7 +683,6 @@ const imgSrcVisitor = (img, { notifyReferenceFound }) => {
   if (!srcAttribute) {
     return null
   }
-
   const srcReference = notifyReferenceFound({
     referenceLabel: "html img src",
     ressourceSpecifier: srcAttribute.value,
@@ -698,7 +704,6 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
   if (!srcsetAttribute) {
     return null
   }
-
   const srcsetParts = parseSrcset(srcsetAttribute.value)
   const srcsetPartsReferences = srcsetParts.map(({ specifier }, index) =>
     notifyReferenceFound({
@@ -711,7 +716,6 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
   if (srcsetParts.length === 0) {
     return null
   }
-
   return ({ getUrlRelativeToImporter }) => {
     srcsetParts.forEach((srcsetPart, index) => {
       const reference = srcsetPartsReferences[index]
@@ -732,7 +736,6 @@ const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
   if (!srcAttribute) {
     return null
   }
-
   const typeAttribute = getHtmlNodeAttributeByName(source, "type")
   const srcReference = notifyReferenceFound({
     referenceLabel: "html source",
@@ -761,12 +764,6 @@ const referenceToUrl = ({ reference, htmlNode, getUrlRelativeToImporter }) => {
     return getRessourceAsBase64Url(ressource)
   }
   return getUrlRelativeToImporter(ressource)
-}
-
-const integrityFromHtmlNode = (htmlNode) => {
-  const integrityAttribute = getHtmlNodeAttributeByName(htmlNode, "integrity")
-  const integrity = integrityAttribute ? integrityAttribute.value : ""
-  return { integrity }
 }
 
 const crossoriginFromHtmlNode = (htmlNode) => {
