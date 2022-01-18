@@ -178,7 +178,7 @@ Only the content of html files is shown below because the content of non-html fi
     <meta charset="utf-8" />
     <link rel="modulepreload" href="./main.js" />
     <link rel="icon" href="./favicon.ico" />
-    <script type="importmap" src="./import_map.importmap"></script>
+    <script type="importmap" src="./project.importmap"></script>
     <link rel="stylesheet" type="text/css" href="./main.css" />
   </head>
 
@@ -217,14 +217,14 @@ await buildProject({
 
 building ./main.html...
 --- files in the build: 5 ---
-dist/assets/favicon-25e95a00.png (6.67 KB)
-dist/assets/main-feec3a1b.css (62 B)
-dist/main-63252261.js (50 Kb)
+dist/assets/favicon_5340s4789a.ico (6.67 KB)
+dist/assets/main_3b329ff0.css (62 B)
+dist/main-f7379e10.js (50 Kb)
 dist/main.prod.html (392 B)
-dist/project-d2192ffe.importmap (29 B)
+dist/project_b237a334.importmap (29 B)
 --- sourcemap files in the build: 2 ---
-dist/assets/main-feec3a1b.css.map (198 B)
-dist/main-63252261.js.map (55Kb B)
+dist/assets/main_3b329ff0.css.map (198 B)
+dist/main_3b329ff0.js.map (55Kb B)
 ------- build summary -------
 project files: 27 (70.38 KB)
 build files: 5 (45.2 KB)
@@ -241,14 +241,14 @@ build duration: 1.85 seconds
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
-    <link rel="modulepreload" href="main-f7379e10.js" />
-    <link rel="icon" href="assets/favicon-5340s4789a.ico" />
-    <script type="importmap" src="import-map-b237a334.importmap"></script>
-    <link rel="stylesheet" type="text/css" href="assets/main-3b329ff0.css" />
+    <link rel="modulepreload" href="main_f7379e10.js" />
+    <link rel="icon" href="assets/favicon_5340s4789a.ico" />
+    <script type="importmap" src="project_b237a334.importmap"></script>
+    <link rel="stylesheet" type="text/css" href="assets/main_3b329ff0.css" />
   </head>
 
   <body>
-    <script type="module" src="./main-f7379e10.js"></script>
+    <script type="module" src="./main_f7379e10.js"></script>
   </body>
 </html>
 ```
