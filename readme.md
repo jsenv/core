@@ -303,9 +303,9 @@ await buildProject({
 | -------------------------------------------------------- | ------------------------------------------ |
 | [Browser support](./docs/browser_support/readme.md)      | Documentation around browser support       |
 | [Assets](./docs/assets/readme.md)                        | How to use assets (CSS, JSON, images, ...) |
-| [CDN](./docs/cdn/readme.md)                              | How to use ressources from CDN             |
 | [Web workers](./docs/web_workers/readme.md)              | How to use web workers                     |
 | [NPM package](./docs/npm_package/readme.md)              | How to use a NPM package                   |
+| [CDN](./docs/cdn/readme.md)                              | How to use ressources from CDN             |
 | [React](./docs/react/readme.md)                          | How to enable react (or preact) and JSX    |
 | [TypeScript (Experimental)](./docs/typescript/readme.md) | How to enable TypeScript                   |
 

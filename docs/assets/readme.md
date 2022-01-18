@@ -1,10 +1,6 @@
 # Using asset ressources
 
-This documentation explains how jsenv expects you to reference non-js ressources.
-
-## Using import assertions
-
-Import assertions can be used to import JSON and CSS ressources.
+Import assertions can be used to on JSON and CSS ressources.
 
 ```js
 import json from "./data.json" assert { type: "json" }
@@ -18,7 +14,7 @@ import sheet from "./style.css" assert { type: "css" }
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
 
-Dynamic import assertion are also supported
+Dynamic import assertion can be used too.
 
 ```js
 const jsonModule = await import("./data.json", {
@@ -27,9 +23,7 @@ const jsonModule = await import("./data.json", {
 console.log(jsonModule.default)
 ```
 
-## Using import.meta.url
-
-A ressource url can be referenced using `new URL() + import meta url`.
+You can also use `new URL() + import meta url` to obtain a ressource url.
 
 ```js
 const imageUrl = new URL("./img.png", import.meta.url)
