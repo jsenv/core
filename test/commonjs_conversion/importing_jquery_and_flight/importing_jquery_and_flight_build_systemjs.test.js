@@ -33,6 +33,7 @@ const { returnValue } = await executeInBrowser({
   },
   /* eslint-enable no-undef */
   pageArguments: [`./${jsBuildRelativeUrl}`],
+  // debug: true,
 })
 const actual = returnValue
 const expected = {

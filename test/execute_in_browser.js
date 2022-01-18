@@ -28,7 +28,7 @@ export const executeInBrowser = async ({
   }
 
   try {
-    const returnValue = await page.evaluate(pageFunction, pageArguments)
+    const returnValue = await page.evaluate(pageFunction, ...pageArguments)
     return {
       returnValue,
       serverOrigin: server.origin,
