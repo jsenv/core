@@ -427,7 +427,6 @@ const visitScripts = async ({
         })
         return
       }
-
       const scriptId = getIdForInlineHtmlNode(script, scripts)
       const inlineScriptName = `${scriptId}.js`
       const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
@@ -491,7 +490,10 @@ const visitScripts = async ({
         if (fileIsInsideJsenvDistDirectory) {
           return
         }
-
+        const isRemoteUrl = jsenvRemoteDirectory.isRemoteUrl(src)
+        if (isRemoteUrl && jsenvRemoteDirectory.isPreservedUrl(src)) {
+          return
+        }
         const scriptCompiledUrl = generateCompilationAssetUrl(
           compiledUrl,
           urlToFilename(scriptOriginalUrl),
@@ -501,6 +503,7 @@ const visitScripts = async ({
           // the transformation here and not in compile server
           // (because compile server would think it's a module script
           // and add things like systemjs)
+          // we could take into account the integrity her
           const scriptResponse = await fetchUrl(scriptOriginalUrl)
           if (scriptResponse.status !== 200) {
             logger.warn(

@@ -13,6 +13,7 @@ export const openBrowserPage = async (
     collectErrors = true,
     debug = false,
     headless = !debug,
+    pageFunction,
   } = {},
 ) => {
   const browser = await chromium.launch({
@@ -45,32 +46,12 @@ export const openBrowserPage = async (
   })
 
   const executionResult = await Promise.race([
-    getHtmlExecutionResult(page),
+    pageFunction
+      ? page.evaluate(pageFunction)
+      : getHtmlExecutionResult(page, { inheritCoverage }),
     errorPromise,
   ])
   removeErrorListener()
-
-  if (executionResult.status === "errored") {
-    executionResult.error = evalSource(executionResult.exceptionSource)
-    delete executionResult.exceptionSource
-  }
-
-  if (inheritCoverage) {
-    const { coverage } = executionResult
-    global.__indirectCoverage__ = composeTwoFileByFileIstanbulCoverages(
-      global.__indirectCoverage__ || {},
-      coverage || {},
-    )
-  }
-
-  delete executionResult.coverage
-  const { fileExecutionResultMap } = executionResult
-  Object.keys(fileExecutionResultMap).forEach((file) => {
-    const fileExecutionResult = fileExecutionResultMap[file]
-    delete fileExecutionResult.coverage
-  })
-
-  delete executionResult.performance
 
   return {
     browser,
@@ -81,12 +62,34 @@ export const openBrowserPage = async (
   }
 }
 
-export const getHtmlExecutionResult = async (page) => {
-  return page.evaluate(
+export const getHtmlExecutionResult = async (
+  page,
+  { inheritCoverage = false } = {},
+) => {
+  const executionResult = await page.evaluate(
     /* istanbul ignore next */
     () => {
       // eslint-disable-next-line no-undef
       return window.__jsenv__.executionResultPromise
     },
   )
+  if (executionResult.status === "errored") {
+    executionResult.error = evalSource(executionResult.exceptionSource)
+    delete executionResult.exceptionSource
+  }
+  if (inheritCoverage) {
+    const { coverage } = executionResult
+    global.__indirectCoverage__ = composeTwoFileByFileIstanbulCoverages(
+      global.__indirectCoverage__ || {},
+      coverage || {},
+    )
+  }
+  delete executionResult.coverage
+  const { fileExecutionResultMap } = executionResult
+  Object.keys(fileExecutionResultMap).forEach((file) => {
+    const fileExecutionResult = fileExecutionResultMap[file]
+    delete fileExecutionResult.coverage
+  })
+  delete executionResult.performance
+  return executionResult
 }

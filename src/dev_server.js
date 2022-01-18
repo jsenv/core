@@ -49,6 +49,7 @@ export const startDevServer = async ({
   serviceWorkers,
   importMapInWebWorkers,
   customCompilers,
+  preservedUrls,
   runtimeSupportDuringDev = {
     // this allows to compile nothing or almost nothing when opening files
     // with a recent chrome. Without this we would compile all the things not yet unsupported
@@ -125,6 +126,7 @@ export const startDevServer = async ({
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
     customCompilers,
+    preservedUrls,
     sourcemapMethod,
     babelPluginMap,
     workers,

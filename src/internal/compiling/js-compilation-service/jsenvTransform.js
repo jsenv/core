@@ -13,7 +13,7 @@ import { ansiToHTML } from "./ansiToHTML.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
-import { filePathToBabelHelperName } from "./babelHelper.js"
+import { babelHelperNameFromUrl } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
   jsenvRemoteDirectory,
@@ -36,7 +36,6 @@ export const jsenvTransform = async ({
 }) => {
   const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
   const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
-
   const inputPath = computeInputPath(url)
 
   // https://babeljs.io/docs/en/options
@@ -62,7 +61,7 @@ export const jsenvTransform = async ({
     },
   }
 
-  const babelHelperName = filePathToBabelHelperName(inputPath)
+  const babelHelperName = babelHelperNameFromUrl(url)
   // to prevent typeof circular dependency
   if (babelHelperName === "typeof") {
     const babelPluginMapWithoutTransformTypeOf = { ...babelPluginMap }

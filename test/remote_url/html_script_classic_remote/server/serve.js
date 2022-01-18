@@ -1,6 +1,6 @@
 import { startServer, fetchFileSystem, pluginCORS } from "@jsenv/server"
 
-const serverDirectoryUrl = new URL("../server/", import.meta.url)
+const serverDirectoryUrl = new URL("./client/", import.meta.url)
 
 export const server = await startServer({
   logLevel: "warn",

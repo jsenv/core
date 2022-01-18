@@ -16,7 +16,7 @@ import {
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
 
-const { server } = await import("./script/serve.js")
+const { server } = await import("./server/serve.js")
 try {
   const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
   const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -60,7 +60,7 @@ try {
       buildDirectoryRelativeUrl,
       format: "esmodule",
       preservedUrls: {
-        "http://localhost:9999/": false,
+        "http://127.0.0.1:9999/": false,
       },
     })
     const { src, windowAnswer } = await readScriptSrcAndWindowAnswer()
@@ -93,7 +93,7 @@ try {
       windowAnswer,
     }
     const expected = {
-      src: `${server.origin}/file.js`,
+      src: `http://127.0.0.1:9999/file.js`,
       windowAnswer: 42,
     }
     assert({ actual, expected })

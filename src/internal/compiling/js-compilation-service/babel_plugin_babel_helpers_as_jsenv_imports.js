@@ -1,6 +1,8 @@
+import { fileSystemPathToUrl } from "@jsenv/filesystem"
+
 import { require } from "../../require.js"
 import {
-  filePathToBabelHelperName,
+  babelHelperNameFromUrl,
   babelHelperNameToImportSpecifier,
 } from "./babelHelper.js"
 
@@ -37,7 +39,7 @@ export const babelPluginBabelHelpersAsJsenvImports = (api) => {
         const babelHelperImportSpecifier =
           babelHelperNameToImportSpecifier(name)
 
-        if (filePathToBabelHelperName(filePath) === name) {
+        if (babelHelperNameFromUrl(fileSystemPathToUrl(filePath)) === name) {
           return undefined
         }
 

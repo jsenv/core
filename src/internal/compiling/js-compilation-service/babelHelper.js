@@ -1,7 +1,6 @@
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
 // the list of possible helpers:
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-import { fileSystemPathToUrl } from "@jsenv/filesystem"
 import { require } from "../../require.js"
 
 const babelHelperNameInsideJsenvCoreArray = [
@@ -113,13 +112,14 @@ export const babelHelperNameToImportSpecifier = (babelHelperName) => {
   return `${babelHelperAbstractScope}${babelHelperName}/${babelHelperName}.js`
 }
 
-export const filePathToBabelHelperName = (filePath) => {
-  const fileUrl = fileSystemPathToUrl(filePath)
-
+export const babelHelperNameFromUrl = (url) => {
+  if (!url.startsWith("file://")) {
+    return null
+  }
   const babelHelperPrefix = "core/helpers/babel/"
-  if (fileUrl.includes(babelHelperPrefix)) {
-    const afterBabelHelper = fileUrl.slice(
-      fileUrl.indexOf(babelHelperPrefix) + babelHelperPrefix.length,
+  if (url.includes(babelHelperPrefix)) {
+    const afterBabelHelper = url.slice(
+      url.indexOf(babelHelperPrefix) + babelHelperPrefix.length,
     )
     const babelHelperName = afterBabelHelper.slice(
       0,
@@ -127,11 +127,9 @@ export const filePathToBabelHelperName = (filePath) => {
     )
     return babelHelperName
   }
-
-  if (fileUrl.includes(babelHelperAbstractScope)) {
-    const afterBabelHelper = fileUrl.slice(
-      fileUrl.indexOf(babelHelperAbstractScope) +
-        babelHelperAbstractScope.length,
+  if (url.includes(babelHelperAbstractScope)) {
+    const afterBabelHelper = url.slice(
+      url.indexOf(babelHelperAbstractScope) + babelHelperAbstractScope.length,
     )
     const babelHelperName = afterBabelHelper.slice(
       0,
@@ -139,7 +137,6 @@ export const filePathToBabelHelperName = (filePath) => {
     )
     return babelHelperName
   }
-
   return null
 }
 
