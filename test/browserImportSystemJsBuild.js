@@ -11,15 +11,15 @@ export const browserImportSystemJsBuild = async ({
   projectDirectoryUrl,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl = "./dist/systemjs/main.html",
-  mainRelativeUrl,
+  jsFileRelativeUrl,
   debug = false,
   codeToRunInBrowser = undefined,
   headless = !debug,
   autoStop = !debug,
 }) => {
-  if (!mainRelativeUrl && !codeToRunInBrowser) {
+  if (!jsFileRelativeUrl && !codeToRunInBrowser) {
     throw new TypeError(
-      `mainRelativeUrl must be a string, received ${mainRelativeUrl}`,
+      `jsFileRelativeUrl must be a string, received ${jsFileRelativeUrl}`,
     )
   }
 
@@ -57,7 +57,7 @@ export const browserImportSystemJsBuild = async ({
       {
         codeToRunInBrowser,
         debug,
-        specifier: mainRelativeUrl,
+        specifier: jsFileRelativeUrl,
       },
     )
     return {

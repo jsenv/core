@@ -21,9 +21,7 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
 {
   const response = {
     type: "cors",
-    arrayBuffer: async () => {
-      return new Uint8Array(Buffer.from("Hello world"))
-    },
+    dataRepresentation: Buffer.from("Hello world"),
   }
   const actual = await validateResponseIntegrity(response, integrity)
   const expected = true
@@ -34,9 +32,7 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
 {
   const response = {
     type: "cors",
-    arrayBuffer: async () => {
-      return new Uint8Array(Buffer.from("Hello"))
-    },
+    dataRepresentation: Buffer.from("Hello"),
   }
   const actual = await validateResponseIntegrity(response, integrity)
   const expected = true
@@ -48,9 +44,7 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
   const response = {
     url: "http://example.com/file.txt",
     type: "cors",
-    arrayBuffer: async () => {
-      return new Uint8Array(Buffer.from("Hellow"))
-    },
+    dataRepresentation: Buffer.from("Hellow"),
   }
   try {
     await validateResponseIntegrity(response, integrity)

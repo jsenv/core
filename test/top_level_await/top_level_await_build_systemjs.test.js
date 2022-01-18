@@ -31,7 +31,7 @@ const mainJsBuildRelativeUrl =
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${mainJsBuildRelativeUrl}`,
+  jsFileRelativeUrl: `./${mainJsBuildRelativeUrl}`,
 })
 const fileContent = await readFile(
   new URL(`./dist/systemjs/${mainJsBuildRelativeUrl}`, import.meta.url),

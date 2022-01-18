@@ -53,7 +53,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     compileServerOrigin,
     compileDirectoryRelativeUrl,
-    mainRelativeUrl: fileRelativeUrl,
+    jsFileRelativeUrl: fileRelativeUrl,
   })
   const expected = {
     namespace: {

@@ -1005,12 +1005,7 @@ const createSourceFileService = ({
       jsenvRemoteDirectory.isFileUrlForRemoteUrl(fileUrl)
     ) {
       try {
-        const remoteResponse = await jsenvRemoteDirectory.fetchFileUrlAsRemote(
-          fileUrl,
-          request,
-        )
-        const responseBodyAsArrayBuffer = await remoteResponse.arrayBuffer()
-        await writeFile(fileUrl, Buffer.from(responseBodyAsArrayBuffer))
+        await jsenvRemoteDirectory.loadFileUrlFromRemote(fileUrl, request)
         // re-fetch filesystem instead to ensure response headers are correct
         return fromFileSystem()
       } catch (e) {

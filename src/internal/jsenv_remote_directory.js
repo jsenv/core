@@ -4,6 +4,7 @@ import {
   urlToRessource,
   normalizeStructuredMetaMap,
   urlToMeta,
+  writeFile,
 } from "@jsenv/filesystem"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
@@ -51,16 +52,17 @@ export const createJsenvRemoteDirectory = ({
 
     remoteUrlFromFileUrl: (fileUrl) => {
       const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvRemoteDirectoryUrl)
-      const { search } = new URL(fileUrl)
       const firstSlashIndex = fileRelativeUrl.indexOf("/")
       const directoryName = fileRelativeUrl.slice(0, firstSlashIndex)
       const origin = originDirectoryConverter.fromDirectoryName(directoryName)
-      const pathname = fileRelativeUrl.slice(firstSlashIndex)
-      const remoteUrl = `${origin}${pathname}${search}`
+      const ressource = fileRelativeUrl.slice(firstSlashIndex)
+      const remoteUrlObject = new URL(ressource, origin)
+      remoteUrlObject.searchParams.delete("integrity")
+      const remoteUrl = remoteUrlObject.href
       return remoteUrl
     },
 
-    fetchFileUrlAsRemote: async (url, request) => {
+    loadFileUrlFromRemote: async (url, request) => {
       const urlObject = new URL(url)
       const integrity = urlObject.searchParams.get("integrity")
       if (integrity) {
@@ -81,9 +83,17 @@ export const createJsenvRemoteDirectory = ({
           message: `unexpected status for ressource "${remoteUrl}", received ${response.status}`,
         })
       }
+      const responseBodyAsBuffer = Buffer.from(await response.arrayBuffer())
       if (integrity) {
         try {
-          await validateResponseIntegrity(response, integrity)
+          validateResponseIntegrity(
+            {
+              url: response.url,
+              type: response.type,
+              dataRepresentation: responseBodyAsBuffer,
+            },
+            integrity,
+          )
         } catch (e) {
           throw createRemoteFetchError({
             code: e.code,
@@ -91,7 +101,8 @@ export const createJsenvRemoteDirectory = ({
           })
         }
       }
-      return response
+      await writeFile(url, responseBodyAsBuffer)
+      return responseBodyAsBuffer
     },
   }
 

@@ -1,10 +1,3 @@
-/*
-local script module + integrity
--> source code must properly execute 
--> compiled code must properly execute (because integrity is removed)
--> build code must properly execute (because integrity is updated)
-*/
-
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 

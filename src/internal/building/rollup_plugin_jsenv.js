@@ -162,6 +162,7 @@ export const createRollupPlugins = async ({
   })
 
   const urlFetcher = createUrlFetcher({
+    jsenvRemoteDirectory,
     asOriginalUrl,
     asProjectUrl,
     applyUrlMappings,
@@ -955,7 +956,7 @@ export const createRollupPlugins = async ({
         } else {
           urlToLoad = url
         }
-        return urlLoader.loadUrl(url, {
+        return urlLoader.loadUrl(urlToLoad, {
           signal,
           logger,
         })

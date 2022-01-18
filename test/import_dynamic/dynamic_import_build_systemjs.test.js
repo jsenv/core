@@ -32,7 +32,7 @@ const mainBuildRelativeUrl =
 const { namespace } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${mainBuildRelativeUrl}`,
+  jsFileRelativeUrl: `./${mainBuildRelativeUrl}`,
 })
 
 const actual = namespace

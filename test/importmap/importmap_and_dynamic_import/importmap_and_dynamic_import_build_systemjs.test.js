@@ -68,7 +68,7 @@ const buildDirectoryUrl = resolveUrl(
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${mainRelativeUrl}`,
+    jsFileRelativeUrl: `./${mainRelativeUrl}`,
     // debug: true,
   })
   const actual = namespace

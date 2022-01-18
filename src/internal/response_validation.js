@@ -44,36 +44,28 @@ const mergeValidity = (parentValidity, childValidityName, childValidity) => {
 const checkStatus = async (response, { originalUrl, urlTrace }) => {
   const url = originalUrl || response.url
   const { status } = response
-
-  if (status === 500) {
-    if (response.headers["content-type"] === "application/json") {
-      return {
-        isValid: false,
-        message: `error 500 on url`,
-        details: {
-          "response status": status,
-          "response json": JSON.stringify(await response.json(), null, "  "),
-          url,
-          ...formatUrlTrace(urlTrace),
-        },
-      }
-    }
-  }
-
   if (status < 200 || status > 299) {
-    const responseText = await response.text()
     return {
       isValid: false,
       message: `invalid response status on url`,
       details: {
         "response status": status,
-        ...(responseText ? { "response text": responseText } : {}),
+        ...(response.headers["content-type"] === "application/json"
+          ? {
+              "response text": JSON.stringify(
+                await response.json(),
+                null,
+                "  ",
+              ),
+            }
+          : {
+              "response text": await response.text(),
+            }),
         url,
         ...formatUrlTrace(urlTrace),
       },
     }
   }
-
   return { isValid: true }
 }
 

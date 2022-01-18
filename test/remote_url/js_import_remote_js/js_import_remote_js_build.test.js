@@ -125,7 +125,7 @@ try {
     const { namespace, serverOrigin } = await browserImportSystemJsBuild({
       projectDirectoryUrl: jsenvCoreDirectoryUrl,
       testDirectoryRelativeUrl,
-      mainRelativeUrl: `./${jsBuildRelativeUrl}`,
+      jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
       // debug: true,
     })
     const actual = {

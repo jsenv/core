@@ -87,7 +87,7 @@ const cssBuildRelativeUrl =
   const { namespace, serverOrigin } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${mainBuildRelativeUrl}`,
+    jsFileRelativeUrl: `./${mainBuildRelativeUrl}`,
     // debug: true,
   })
 

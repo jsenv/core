@@ -77,7 +77,7 @@ const sourcemapBuildRelativeUrl = `${mainJsBuildRelativeUrl}.map`
   const { namespace } = await browserImportSystemJsBuild({
     ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
     testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${mainJsBuildRelativeUrl}`,
+    jsFileRelativeUrl: `./${mainJsBuildRelativeUrl}`,
     // headless: false,
     // autoStop: false,
   })

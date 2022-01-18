@@ -1,5 +1,5 @@
 import { timeStart, timeFunction } from "@jsenv/server"
-import { urlToFileSystemPath, readFile, writeFile } from "@jsenv/filesystem"
+import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { validateCache } from "./validateCache.js"
@@ -154,13 +154,11 @@ const computeCompileReport = async ({
           e.code === "ENOENT" &&
           jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalFileUrl)
         ) {
-          const response = await jsenvRemoteDirectory.fetchFileUrlAsRemote(
-            originalFileUrl,
-            request,
-          )
-          const responseBodyAsArrayBuffer = await response.arrayBuffer()
-          const responseBodyAsBuffer = Buffer.from(responseBodyAsArrayBuffer)
-          await writeFile(originalFileUrl, responseBodyAsBuffer)
+          const responseBodyAsBuffer =
+            await jsenvRemoteDirectory.loadFileUrlFromRemote(
+              originalFileUrl,
+              request,
+            )
           const code = String(responseBodyAsBuffer)
           return { code }
         }

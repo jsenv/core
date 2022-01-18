@@ -108,7 +108,7 @@ const test = async (params) => {
       ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
       testDirectoryRelativeUrl,
       codeToRunInBrowser: "window.whatever",
-      mainRelativeUrl: `./${scriptBuildUrl}`,
+      jsFileRelativeUrl: `./${scriptBuildUrl}`,
       // debug: true,
     })
     const actual = namespace

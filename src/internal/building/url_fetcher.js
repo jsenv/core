@@ -5,6 +5,7 @@ import { fetchUrl as jsenvFetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
 export const createUrlFetcher = ({
+  jsenvRemoteDirectory,
   asOriginalUrl,
   asProjectUrl,
   applyUrlMappings,
@@ -29,9 +30,12 @@ export const createUrlFetcher = ({
           : undefined,
     })
     const responseUrl = response.url
+    const originalUrl =
+      asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl
     const responseValidity = await validateResponse(response, {
-      originalUrl:
-        asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
+      originalUrl: jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)
+        ? jsenvRemoteDirectory.remoteUrlFromFileUrl(originalUrl)
+        : originalUrl,
       urlTrace,
       contentTypeExpected,
     })

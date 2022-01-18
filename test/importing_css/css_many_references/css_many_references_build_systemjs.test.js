@@ -34,7 +34,7 @@ const { namespace, serverOrigin } = await browserImportSystemJsBuild({
   ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
   testDirectoryRelativeUrl,
   htmlFileRelativeUrl: "./dist/systemjs/main.prod.html",
-  mainRelativeUrl: `./${jsBuildRelativeUrl}`,
+  jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
 })
 
 const actual = namespace

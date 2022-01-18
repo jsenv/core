@@ -5,8 +5,11 @@ import {
 } from "./integrity_algorithms.js"
 
 // https://www.w3.org/TR/SRI/#does-response-match-metadatalist
-export const validateResponseIntegrity = async (response, integrity) => {
-  if (!isResponseEligibleForIntegrityValidation(response)) {
+export const validateResponseIntegrity = (
+  { url, type, dataRepresentation },
+  integrity,
+) => {
+  if (!isResponseEligibleForIntegrityValidation({ type })) {
     return false
   }
   const integrityMetadata = parseIntegrity(integrity)
@@ -20,7 +23,6 @@ export const validateResponseIntegrity = async (response, integrity) => {
       getPrioritizedHashFunction(strongestAlgo, algoCandidate) || strongestAlgo
   })
   const metadataList = integrityMetadata[strongestAlgo]
-  const dataRepresentation = Buffer.from(await response.arrayBuffer())
   const actualBase64Value = applyAlgoToRepresentationData(
     strongestAlgo,
     dataRepresentation,
@@ -32,9 +34,8 @@ export const validateResponseIntegrity = async (response, integrity) => {
   if (someIsMatching) {
     return true
   }
-
   const error = new Error(
-    `Integrity validation failed for ressource "${response.url}". The integrity found for this ressource is "${strongestAlgo}-${actualBase64Value}"`,
+    `Integrity validation failed for ressource "${url}". The integrity found for this ressource is "${strongestAlgo}-${actualBase64Value}"`,
   )
   error.code = "EINTEGRITY"
   error.algorithm = strongestAlgo
