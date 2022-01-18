@@ -686,13 +686,12 @@ export const createRollupPlugins = async ({
               if (jsModuleIsInline) {
                 inlineModuleScripts[jsModuleUrl] = ressource
                 urlCustomLoaders[jsModuleUrl] = async () => {
+                  const url = asOriginalUrl(jsModuleUrl) // transformJs expect a file:// url
+                  let code = String(ressource.bufferBeforeBuild)
                   const transformResult = await transformJs({
                     projectDirectoryUrl,
                     jsenvRemoteDirectory,
-                    url: asOriginalUrl(jsModuleUrl), // transformJs expect a file:// url
-                    code: String(
-                      inlineModuleScripts[jsModuleUrl].bufferBeforeBuild,
-                    ),
+                    url,
                     babelPluginMap,
                     // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
                     // we compile for rollup, let top level await untouched
@@ -701,12 +700,11 @@ export const createRollupPlugins = async ({
                     // if we put babel helpers, rollup might try to share them and a file
                     // might try to import from an inline script resulting in 404.
                     babelHelpersInjectionAsImport: false,
-                  })
-                  let code = transformResult.code
-                  let map = transformResult.map
-                  return {
                     code,
-                    map,
+                  })
+                  return {
+                    code: transformResult.code,
+                    map: transformResult.map,
                   }
                 }
               }
