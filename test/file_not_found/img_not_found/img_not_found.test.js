@@ -41,6 +41,8 @@ ${urlToFileSystemPath(htmlFileUrl)}:9:10
   8  |   <body>
 > 9  |     <img src="./img.png" />
                 ^
-  10 |   </body>`
+  10 |   </body>
+--- response text ---
+`
   assert({ actual, expected })
 }

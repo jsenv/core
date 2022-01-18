@@ -50,6 +50,8 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
       message: `invalid response status on url`,
       details: {
         "response status": status,
+        url,
+        ...formatUrlTrace(urlTrace),
         ...(response.headers["content-type"] === "application/json"
           ? {
               "response text": JSON.stringify(
@@ -61,8 +63,6 @@ const checkStatus = async (response, { originalUrl, urlTrace }) => {
           : {
               "response text": await response.text(),
             }),
-        url,
-        ...formatUrlTrace(urlTrace),
       },
     }
   }

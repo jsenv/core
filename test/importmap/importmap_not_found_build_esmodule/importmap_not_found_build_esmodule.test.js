@@ -40,6 +40,8 @@ try {
 --- url ---
 ${importMapFileUrl}
 --- url trace ---
-importMapFileRelativeUrl parameter`
+importMapFileRelativeUrl parameter
+--- response text ---
+`
   assert({ actual, expected })
 }

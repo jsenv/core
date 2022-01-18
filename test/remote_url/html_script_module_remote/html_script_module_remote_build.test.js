@@ -124,17 +124,17 @@ try {
       errorMessage: `invalid response status on url
 --- response status ---
 502
---- response text ---
-{
-  "code": "EINTEGRITY",
-  "message": "Integrity validation failed for ressource \\"http://127.0.0.1:9999/file.js\\". The integrity found for this ressource is \\"sha256-em3IiVT86dm2XSXRvIEfZ3vLW1qG2k/MgUvBCcX3bGs=\\""
-}
 --- url ---
 http://127.0.0.1:9999/file.js
 --- url trace ---
 ${urlToFileSystemPath(
   new URL("./main_integrity_invalid.html", import.meta.url),
-)}`,
+)}
+--- response text ---
+{
+  "code": "EINTEGRITY",
+  "message": "Integrity validation failed for ressource \\"http://127.0.0.1:9999/file.js\\". The integrity found for this ressource is \\"sha256-em3IiVT86dm2XSXRvIEfZ3vLW1qG2k/MgUvBCcX3bGs=\\""
+}`,
     }
     assert({ actual, expected })
   }

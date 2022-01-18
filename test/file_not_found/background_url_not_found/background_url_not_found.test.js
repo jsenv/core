@@ -45,6 +45,8 @@ ${urlToFileSystemPath(cssFileUrl)}:2:3
         ^
   3 | }
   imported by ${urlToFileSystemPath(jsFileUrl)}:1:13
-  referenced by ${urlToFileSystemPath(htmlFileUrl)}:10:27`
+  referenced by ${urlToFileSystemPath(htmlFileUrl)}:10:27
+--- response text ---
+`
   assert({ actual, expected })
 }

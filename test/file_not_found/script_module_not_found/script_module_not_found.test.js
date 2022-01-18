@@ -40,6 +40,8 @@ try {
 --- url ---
 ${jsFileUrl}
 --- url trace ---
-${urlToFileSystemPath(htmlFileUrl)}`
+${urlToFileSystemPath(htmlFileUrl)}
+--- response text ---
+`
   assert({ actual, expected })
 }
