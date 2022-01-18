@@ -38,7 +38,9 @@ export const createCompiledFileService = ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
+  jsenvRemoteDirectory,
 
   runtimeSupport,
   babelPluginMap,
@@ -89,12 +91,9 @@ export const createCompiledFileService = ({
 
   const importmapInfos = {}
 
-  return (request, { pushResponse, redirectRequest }) => {
+  return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
-    // we use "ressourceToPathname" to remove eventual query param from the url
-    // Without this a pattern like "**/*.js" would not match "file.js?t=1"
-    // This would result in file not being compiled when they should
-    const requestUrl = `${origin}${ressourceToPathname(ressource)}`
+    const requestUrl = `${origin}${ressource}`
 
     const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
       outDirectoryRelativeUrl,
@@ -140,8 +139,6 @@ export const createCompiledFileService = ({
     }
 
     const originalFileRelativeUrl = afterCompileId
-    projectFileRequestedCallback(originalFileRelativeUrl, request)
-
     const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
     const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
     const compileDirectoryUrl = resolveDirectoryUrl(
@@ -152,23 +149,22 @@ export const createCompiledFileService = ({
       originalFileRelativeUrl,
       compileDirectoryUrl,
     )
-
     const compiler = getCompiler({ originalFileUrl, compileMeta })
     // no compiler -> serve original file
-    // we don't redirect otherwise it complexify ressource tracking
-    // and url resolution
+    // we redirect "internally" (we dont send 304 to the browser)
+    // to keep ressource tracking and url resolution simple
     if (!compiler) {
       return redirectRequest({
         pathname: `/${originalFileRelativeUrl}`,
       })
     }
-
     // compile this if needed
     const compileResponsePromise = compileFile({
       compileServerOperation,
       logger,
 
       projectDirectoryUrl,
+      jsenvRemoteDirectory,
       originalFileUrl,
       compiledFileUrl,
 
@@ -181,14 +177,16 @@ export const createCompiledFileService = ({
         return compiler({
           logger,
 
-          code,
+          projectDirectoryUrl,
+          jsenvRemoteDirectory,
+          compileServerOrigin: request.origin,
+          jsenvDirectoryRelativeUrl,
+          outDirectoryRelativeUrl,
           url: originalFileUrl,
           compiledUrl: compiledFileUrl,
-          projectDirectoryUrl,
-          compileServerOrigin: request.origin,
-          outDirectoryRelativeUrl,
-          compileId,
           request,
+
+          compileId,
           babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
             missingFeatureNames: groupMap[compileId].missingFeatureNames,
@@ -204,6 +202,7 @@ export const createCompiledFileService = ({
           topLevelAwait,
           prependSystemJs,
 
+          code,
           sourcemapMethod,
           sourcemapExcludeSources,
           jsenvEventSourceClientInjection,
@@ -238,6 +237,14 @@ const canAvoidSystemJs = ({
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {
+  // we remove eventual query param from the url
+  // Without this a pattern like "**/*.js" would not match "file.js?t=1"
+  // This would result in file not being compiled when they should
+  // Ideally we would do a first pass with the query param and a second without
+  const urlObject = new URL(originalFileUrl)
+  urlObject.search = ""
+  originalFileUrl = urlObject.href
+
   const { jsenvCompiler, customCompiler } = urlToMeta({
     url: originalFileUrl,
     structuredMetaMap: compileMeta,
@@ -306,13 +313,4 @@ const contentTypeExtensions = {
   "text/html": ".html",
   "application/importmap+json": ".importmap",
   // "text/css": ".css",
-}
-
-const ressourceToPathname = (ressource) => {
-  const searchSeparatorIndex = ressource.indexOf("?")
-  const pathname =
-    searchSeparatorIndex === -1
-      ? ressource
-      : ressource.slice(0, searchSeparatorIndex)
-  return pathname
 }

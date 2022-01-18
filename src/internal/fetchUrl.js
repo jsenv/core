@@ -13,9 +13,9 @@ export const fetchUrl = async (
     ignoreHttpsError,
     ...rest,
   })
-
-  return {
+  const responseObject = {
     url: response.url,
+    type: "default",
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
@@ -24,4 +24,5 @@ export const fetchUrl = async (
     blob: response.blob.bind(response),
     arrayBuffer: response.arrayBuffer.bind(response),
   }
+  return responseObject
 }

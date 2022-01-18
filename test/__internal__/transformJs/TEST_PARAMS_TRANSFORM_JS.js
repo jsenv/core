@@ -8,4 +8,5 @@ export const TRANSFORM_JS_TEST_PARAMS = {
 
 export const TRANSFORM_RESULT_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  sourcemapExcludeSources: true,
 }

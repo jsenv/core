@@ -3,11 +3,8 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -26,18 +23,19 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
 })
-
-const { namespace } = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  codeToRunInBrowser: `window.namespacePromise`,
-  // debug: true,
+const { returnValue } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/systemjs/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: () => {
+    return window.namespacePromise
+  },
+  /* eslint-enable no-undef */
 })
-
 const actual = {
-  namespace,
+  returnValue,
 }
 const expected = {
-  namespace: { answer: 42 },
+  returnValue: { answer: 42 },
 }
 assert({ actual, expected })

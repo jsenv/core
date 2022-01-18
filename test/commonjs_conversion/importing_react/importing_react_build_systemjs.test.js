@@ -4,11 +4,8 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
@@ -55,16 +52,19 @@ const { buildMappings } = await buildProject({
     ],
   },
 })
-const mainJsBuildRelativeUrl =
+const jsBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}importing_react.jsx`]
-const { namespace } = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${mainJsBuildRelativeUrl}`,
-  // debug: true,
+const { returnValue } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/systemjs/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: (jsBuildRelativeUrl) => {
+    return window.System.import(jsBuildRelativeUrl)
+  },
+  /* eslint-enable no-undef */
+  pageArguments: [`./${jsBuildRelativeUrl}`],
 })
-
-const actual = namespace
+const actual = returnValue
 const expected = {
   ready: 42,
   reactExportNames: [

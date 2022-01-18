@@ -3,15 +3,12 @@ import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -36,8 +33,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const mainJsBuildRelativeUrl =
-  buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const dependencyJsBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}dependency.js`]
 
@@ -50,21 +46,24 @@ const dependencyJsBuildRelativeUrl =
     preloadLinkNode,
     "href",
   ).value
-
-  const { namespace } = await browserImportEsModuleBuild({
-    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${mainJsBuildRelativeUrl}`,
-    // debug: true,
+  const { returnValue } = await executeInBrowser({
+    directoryUrl: new URL("./", import.meta.url),
+    htmlFileRelativeUrl: "./dist/esmodule/main.html",
+    /* eslint-disable no-undef */
+    pageFunction: async (jsBuildRelativeUrl) => {
+      const namespace = await import(jsBuildRelativeUrl)
+      return namespace
+    },
+    /* eslint-enable no-undef */
+    pageArguments: [`./${jsBuildRelativeUrl}`],
   })
-
   const actual = {
     preloadLinkHref,
-    namespace,
+    returnValue,
   }
   const expected = {
     preloadLinkHref: dependencyJsBuildRelativeUrl,
-    namespace: { value: 42 },
+    returnValue: { value: 42 },
   }
   assert({ actual, expected })
 }

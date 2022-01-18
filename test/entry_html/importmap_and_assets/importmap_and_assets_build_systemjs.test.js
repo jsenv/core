@@ -9,15 +9,12 @@ import {
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -40,7 +37,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}style.css`]
 
@@ -59,7 +56,7 @@ const cssBuildRelativeUrl =
   const expected = {
     imports: {
       // the importmap for img-remap is available
-      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
+      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -84,14 +81,17 @@ const cssBuildRelativeUrl =
 {
   const imgRemapBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
-  const { namespace, serverOrigin } = await browserImportSystemJsBuild({
-    ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    mainRelativeUrl: `./${mainBuildRelativeUrl}`,
-    // debug: true,
+  const { returnValue, serverOrigin } = await executeInBrowser({
+    directoryUrl: new URL("./", import.meta.url),
+    htmlFileRelativeUrl: "./dist/systemjs/main.html",
+    /* eslint-disable no-undef */
+    pageFunction: (jsBuildRelativeUrl) => {
+      return window.System.import(jsBuildRelativeUrl)
+    },
+    /* eslint-enable no-undef */
+    pageArguments: [`./${jsBuildRelativeUrl}`],
   })
-
-  const actual = namespace
+  const actual = returnValue
   const expected = {
     imgUrlIsInstanceOfUrl: true,
     imgUrlString: resolveUrl(

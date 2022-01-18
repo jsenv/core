@@ -3,11 +3,8 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -31,23 +28,25 @@ const testBuild = async (params) => {
 }
 
 const testExecution = async () => {
-  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
-    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
+  const { returnValue, serverOrigin } = await executeInBrowser({
+    directoryUrl: new URL("./", import.meta.url),
     htmlFileRelativeUrl: "./dist/esmodule/main.prod.html",
-    codeToRunInBrowser: `window.namespace`,
+    /* eslint-disable no-undef */
+    pageFunction: async () => {
+      return window.namespace
+    },
+    /* eslint-enable no-undef */
   })
-  return { namespace, serverOrigin }
+  return { returnValue, serverOrigin }
 }
 
 // default (no runtime support + concatenation)
 {
   const { buildMappings } = await testBuild()
-  const { namespace, serverOrigin } = await testExecution()
+  const { returnValue, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
-
-  const actual = namespace
+  const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
@@ -60,11 +59,10 @@ const testExecution = async () => {
   const { buildMappings } = await testBuild({
     runtimeSupport: { chrome: "96" },
   })
-  const { namespace, serverOrigin } = await testExecution()
+  const { returnValue, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
-
-  const actual = namespace
+  const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,
@@ -78,11 +76,10 @@ const testExecution = async () => {
     jsConcatenation: false,
     runtimeSupport: { chrome: "96" },
   })
-  const { namespace, serverOrigin } = await testExecution()
+  const { returnValue, serverOrigin } = await testExecution()
   const imgBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}src/jsenv.png`]
-
-  const actual = namespace
+  const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${serverOrigin}/dist/esmodule/${imgBuildRelativeUrl}")`,

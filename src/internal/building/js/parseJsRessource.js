@@ -1,6 +1,7 @@
 import { urlToFilename, resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
+  generateSourcemapUrl,
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
@@ -32,7 +33,7 @@ export const parseJsRessource = async (
     sourcemapReference = notifyReferenceFound({
       referenceLabel: "js sourcemapping comment",
       contentType: "application/octet-stream",
-      ressourceSpecifier: `${urlToFilename(jsUrl)}.map`,
+      ressourceSpecifier: urlToRelativeUrl(generateSourcemapUrl(jsUrl), jsUrl),
       isPlaceholder: true,
       isSourcemap: true,
     })
@@ -40,7 +41,6 @@ export const parseJsRessource = async (
 
   return async ({ buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
-
     let code
     let map
     if (!sourcemapRessource.isPlaceholder) {
@@ -92,15 +92,12 @@ export const parseJsRessource = async (
       jsRessource.buildRelativeUrl,
       buildDirectoryUrl,
     )
-    const sourcemapPrecomputedBuildUrl = resolveUrl(
-      `${urlToFilename(jsBuildUrl)}.map`,
-      jsBuildUrl,
-    )
+    const sourcemapPrecomputedBuildUrl = generateSourcemapUrl(jsBuildUrl)
     map.file = urlToFilename(jsBuildUrl)
     if (map.sources) {
       map.sources = map.sources.map((source) => {
         const sourceUrl = resolveUrl(source, jsUrl)
-        const sourceOriginalUrl = asOriginalUrl(sourceUrl)
+        const sourceOriginalUrl = asOriginalUrl(sourceUrl) || sourceUrl
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(
           sourceOriginalUrl,
           sourcemapPrecomputedBuildUrl,

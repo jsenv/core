@@ -30,14 +30,8 @@ export const updateMeta = async ({
   const promises = []
   if (isNew || isUpdated) {
     // ensure source that does not leads to concrete files are not capable to invalidate the cache
-    const sourcesToRemove = []
-    sources.forEach((sourceFileUrl) => {
-      const sourceFileExists = testFilePresence(sourceFileUrl)
-      if (sourceFileExists) {
-        return
-      }
-
-      sourcesToRemove.push(sourceFileUrl)
+    const sourcesToRemove = sources.filter((sourceFileUrl) => {
+      return !testFilePresence(sourceFileUrl)
     })
     const sourceNotFoundCount = sourcesToRemove.length
     if (sourceNotFoundCount > 0) {

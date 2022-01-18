@@ -1,6 +1,6 @@
+import { timeStart, timeFunction } from "@jsenv/server"
 import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
-import { timeStart, timeFunction } from "@jsenv/server"
 
 import { validateCache } from "./validateCache.js"
 import { getMetaJsonFileUrl } from "./compile-asset.js"
@@ -14,6 +14,8 @@ export const getOrGenerateCompiledFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
+  jsenvRemoteDirectory,
+
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
@@ -61,8 +63,11 @@ export const getOrGenerateCompiledFile = async ({
       const lockTiming = lockTimeEnd()
       const { meta, compileResult, compileResultStatus, timing } =
         await computeCompileReport({
+          projectDirectoryUrl,
           originalFileUrl,
           compiledFileUrl,
+          jsenvRemoteDirectory,
+
           compile,
           compileCacheStrategy,
           compileCacheSourcesValidation,
@@ -89,14 +94,17 @@ export const getOrGenerateCompiledFile = async ({
 }
 
 const computeCompileReport = async ({
+  // projectDirectoryUrl,
+  logger,
   originalFileUrl,
   compiledFileUrl,
+  jsenvRemoteDirectory,
+
   compile,
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
   request,
-  logger,
 }) => {
   const [readCacheTiming, cacheValidity] = await timeFunction(
     "read cache",
@@ -128,10 +136,41 @@ const computeCompileReport = async ({
     }
 
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
+
+    const fetchOriginalFile = async () => {
+      // The original file might be behind an http url.
+      // In that case jsenv try first to read file from filesystem
+      // in ".jsenv/.http/" directory. If not found, the url
+      // is fetched and file is written in that ".jsenv/.http/" directory.
+      // After that the only way to re-fetch this ressource is
+      // to delete the content of ".jsenv/.http/"
+      try {
+        const code = await readFile(originalFileUrl)
+        return { code }
+      } catch (e) {
+        // when file is not found and the file is referenced with an http url
+        if (
+          e &&
+          e.code === "ENOENT" &&
+          jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalFileUrl)
+        ) {
+          const responseBodyAsBuffer =
+            await jsenvRemoteDirectory.loadFileUrlFromRemote(
+              originalFileUrl,
+              request,
+            )
+          const code = String(responseBodyAsBuffer)
+          return { code }
+        }
+        throw e
+      }
+    }
+    const { code } = await fetchOriginalFile()
     const [compileTiming, compileResult] = await timeFunction("compile", () =>
       callCompile({
         logger,
         originalFileUrl,
+        code,
         compile,
       }),
     )
@@ -169,12 +208,9 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, compile }) => {
+const callCompile = async ({ logger, code, originalFileUrl, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
-
-  const compileReturnValue = await compile({
-    code: await readFile(originalFileUrl),
-  })
+  const compileReturnValue = await compile({ code })
   if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
     throw new TypeError(
       `compile must return an object, got ${compileReturnValue}`,
@@ -200,7 +236,6 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
       `compile must return a compiledSource string, got ${compiledSource}`,
     )
   }
-
   return {
     contentType,
     compiledSource,

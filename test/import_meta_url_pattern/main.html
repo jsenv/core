@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      const jsUrl = new URL("./file.js", import.meta.url)
+
+      const jsUrlInstanceOfUrl = jsUrl instanceof URL
+
+      const jsUrlString = String(jsUrl)
+
+      window.resolveNamespacePromise({
+        jsUrlInstanceOfUrl,
+        jsUrlString,
+      })
+    </script>
+  </body>
+</html>

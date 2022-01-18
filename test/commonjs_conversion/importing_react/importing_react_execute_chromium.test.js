@@ -37,6 +37,7 @@ const { status, namespace } = await execute({
   },
   runtime: chromiumRuntime,
   stopAfterExecute: true,
+  mirrorConsole: false, // avoid "donwload react dev tools" log
   fileRelativeUrl: `${testDirectoryRelativeUrl}importing_react.html`,
 })
 

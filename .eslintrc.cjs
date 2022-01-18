@@ -59,7 +59,8 @@ const eslintConfig = composeEslintConfig(
     rules: {
       ...jsenvEslintRules,
       // Example of code changing the ESLint configuration to enable a rule:
-      camelcase: ["off"],
+      "camelcase": ["off"],
+      "dot-notation": ["off"],
     },
   },
 

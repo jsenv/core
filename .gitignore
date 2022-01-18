@@ -16,3 +16,4 @@
 /secrets.json
 /jsconfig.json
 /yarn.lock
+.DS_STORE

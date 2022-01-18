@@ -1,4 +1,4 @@
-import { urlToFilename } from "@jsenv/filesystem"
+import { urlToFilename, urlToOrigin, urlToPathname } from "@jsenv/filesystem"
 
 export const urlIsCompilationAsset = (url) => {
   const filename = urlToFilename(url)
@@ -13,8 +13,12 @@ export const urlIsCompilationAsset = (url) => {
 }
 
 export const getMetaJsonFileUrl = (compileFileUrl) =>
-  generateCompiledFileAssetUrl(compileFileUrl, "meta.json")
+  generateCompilationAssetUrl(compileFileUrl, "meta.json")
 
-export const generateCompiledFileAssetUrl = (compiledFileUrl, assetName) => {
-  return `${compiledFileUrl}__asset__${assetName}`
+export const generateCompilationAssetUrl = (compiledFileUrl, assetName) => {
+  // we want to remove eventual search params from url
+  const origin = urlToOrigin(compiledFileUrl)
+  const pathname = urlToPathname(compiledFileUrl)
+  const compilationAssetUrl = `${origin}${pathname}__asset__${assetName}`
+  return compilationAssetUrl
 }

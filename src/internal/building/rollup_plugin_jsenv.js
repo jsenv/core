@@ -30,6 +30,8 @@ import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInterna
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import-resolution/import-resolver-importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
+import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
+import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 
 import {
   formatBuildStartLog,
@@ -44,10 +46,8 @@ import {
   createRessourceBuilder,
   referenceToCodeForRollup,
 } from "./ressource_builder.js"
-
-import { createUrlVersioner } from "./url_versioning.js"
+import { createBuildUrlGenerator } from "./build_url_generator.js"
 import { visitImportReferences } from "./import_references.js"
-
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -58,6 +58,7 @@ export const createRollupPlugins = async ({
   entryPoints,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   buildDirectoryUrl,
 
   urlMappings,
@@ -65,8 +66,8 @@ export const createRollupPlugins = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
-  externalImportUrlPatterns,
   importPaths,
+  preservedUrls,
   workers,
   serviceWorkers,
   serviceWorkerFinalizer,
@@ -90,6 +91,12 @@ export const createRollupPlugins = async ({
   minifyCssOptions,
   minifyHtmlOptions,
 }) => {
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    preservedUrls,
+  })
+
   const urlImporterMap = {}
   const inlineModuleScripts = {}
   const jsModulesFromEntry = {}
@@ -133,6 +140,7 @@ export const createRollupPlugins = async ({
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
   const {
+    compileServerOriginForRollup,
     asRollupUrl,
     asProjectUrl,
     asServerUrl,
@@ -147,13 +155,14 @@ export const createRollupPlugins = async ({
     urlMappings,
   })
 
-  const urlVersioner = createUrlVersioner({
+  const buildUrlGenerator = createBuildUrlGenerator({
     entryPointUrls,
     asOriginalUrl,
     lineBreakNormalization,
   })
 
   const urlFetcher = createUrlFetcher({
+    jsenvRemoteDirectory,
     asOriginalUrl,
     asProjectUrl,
     applyUrlMappings,
@@ -168,19 +177,18 @@ export const createRollupPlugins = async ({
     urlCustomLoaders,
     allowJson: acceptsJsonContentType({ node, format }),
     urlImporterMap,
-    jsConcatenation,
 
-    asServerUrl,
     asProjectUrl,
     asOriginalUrl,
 
     urlFetcher,
   })
 
-  const externalUrlPredicate = externalImportUrlPatternsToExternalUrlPredicate(
-    externalImportUrlPatterns,
+  const urlMetaGetter = createUrlMetaGetter({
     projectDirectoryUrl,
-  )
+    jsenvRemoteDirectory,
+    preservedUrls,
+  })
 
   // Object mapping project relative urls to build relative urls
   let buildMappings = {}
@@ -256,11 +264,12 @@ export const createRollupPlugins = async ({
       async renderChunk(code, chunk) {
         let map = chunk.map
         const result = await transformJs({
-          code,
+          projectDirectoryUrl,
+          jsenvRemoteDirectory,
           url: chunk.facadeModuleId
             ? asOriginalUrl(chunk.facadeModuleId)
             : resolveUrl(chunk.fileName, buildDirectoryUrl),
-          projectDirectoryUrl,
+          code,
           babelPluginMap: {
             "transform-async-to-promises":
               babelPluginMap["transform-async-to-promises"],
@@ -530,6 +539,7 @@ export const createRollupPlugins = async ({
               format,
               systemJsUrl,
               projectDirectoryUrl,
+              jsenvRemoteDirectory,
               asProjectUrl,
               asOriginalUrl,
               asOriginalServerUrl,
@@ -557,7 +567,10 @@ export const createRollupPlugins = async ({
           urlToCompiledServerUrl: (url) => {
             return asCompiledServerUrl(url)
           },
-          urlToHumanUrl: (url) => {
+          urlToHumanUrl: (
+            url,
+            { showCompiledHint = false, preferRelativeUrls = false } = {},
+          ) => {
             if (
               !url.startsWith("http:") &&
               !url.startsWith("https:") &&
@@ -565,7 +578,22 @@ export const createRollupPlugins = async ({
             ) {
               return url
             }
-            return asOriginalUrl(url) || url
+            const originalUrl = asOriginalUrl(url)
+            const isCompiled = urlIsInsideOf(url, compileServerOrigin)
+            const originalRelativeUrl = urlToRelativeUrl(
+              originalUrl,
+              projectDirectoryUrl,
+            )
+            if (showCompiledHint && isCompiled) {
+              if (preferRelativeUrls) {
+                return `${originalRelativeUrl}[compiled]`
+              }
+              return `${originalUrl}[compiled]`
+            }
+            if (preferRelativeUrls) {
+              return originalRelativeUrl
+            }
+            return originalUrl
           },
           resolveRessourceUrl: ({
             ressourceSpecifier,
@@ -573,87 +601,85 @@ export const createRollupPlugins = async ({
             // isRessourceHint,
             ressourceImporter,
           }) => {
-            // Entry point is not a JS module and references a js module (html referencing js)
-            if (
-              ressourceImporter.isEntryPoint &&
-              !ressourceImporter.isJsModule &&
-              isJsModule
-            ) {
-              const importerCompiledUrl = asCompiledServerUrl(
-                ressourceImporter.url,
-              )
-              const jsModuleUrl = resolveUrl(
-                ressourceSpecifier,
-                importerCompiledUrl,
-              )
-              return jsModuleUrl
-            }
-
-            let ressourceUrl
-            if (
-              ressourceImporter.isEntryPoint &&
-              !ressourceImporter.isJsModule
-            ) {
-              // Entry point (likely html, unlikely css) is referecing a ressource
-              // when importmap, parse the original importmap ressource
-              if (ressourceSpecifier.endsWith(".importmap")) {
-                ressourceUrl = resolveUrl(
-                  ressourceSpecifier,
+            const getRessourceUrl = () => {
+              // Entry point is not a JS module and references a js module (html referencing js)
+              if (
+                ressourceImporter.isEntryPoint &&
+                !ressourceImporter.isJsModule &&
+                isJsModule
+              ) {
+                const importerCompiledUrl = asCompiledServerUrl(
                   ressourceImporter.url,
                 )
-              } else {
+                const jsModuleUrl = resolveUrl(
+                  ressourceSpecifier,
+                  importerCompiledUrl,
+                )
+                return jsModuleUrl
+              }
+              // Entry point (likely html, unlikely css) is referecing a ressource
+              // In this situation:
+              // - when importmap is referenced: parse the original importmap ressource
+              // - other ressource: force compilation (because the HTML url is the original url)
+              if (
+                ressourceImporter.isEntryPoint &&
+                !ressourceImporter.isJsModule
+              ) {
+                if (ressourceSpecifier.endsWith(".importmap")) {
+                  const importmapUrl = resolveUrl(
+                    ressourceSpecifier,
+                    ressourceImporter.url,
+                  )
+                  return importmapUrl
+                }
                 const importerCompiled = asCompiledServerUrl(
                   ressourceImporter.url,
                 )
-                ressourceUrl = resolveUrl(ressourceSpecifier, importerCompiled)
+                const ressourceCompiledUrl = resolveUrl(
+                  ressourceSpecifier,
+                  importerCompiled,
+                )
+                return ressourceCompiledUrl
               }
-            } else {
-              ressourceUrl = resolveUrl(
+              const ressourceCompiledUrl = resolveUrl(
                 ressourceSpecifier,
                 ressourceImporter.url,
               )
+              return ressourceCompiledUrl
+            }
+            const ressourceUrl = getRessourceUrl()
+            const resolutionResult = { url: ressourceUrl }
+            const ressourceOriginalUrl =
+              asOriginalUrl(ressourceUrl) || ressourceUrl
+
+            if (!urlIsInsideOf(ressourceUrl, compileServerOrigin)) {
+              resolutionResult.isCrossOrigin = true
             }
 
-            // ignore url outside project directory
-            // a better version would console.warn about file url outside projectDirectoryUrl
-            // and ignore them and console.info/debug about remote url (https, http, ...)
-            const projectUrl = asProjectUrl(ressourceUrl)
-            if (!projectUrl) {
-              return {
-                isExternal: true,
-                url: ressourceUrl,
-              }
+            const urlMeta = urlMetaGetter(ressourceOriginalUrl)
+            if (urlMeta.preserve) {
+              resolutionResult.isExternal = true
+            } else if (jsenvRemoteDirectory.isRemoteUrl(ressourceOriginalUrl)) {
+              const fileUrl =
+                jsenvRemoteDirectory.fileUrlFromRemoteUrl(ressourceOriginalUrl)
+              const compiledFileUrl = asCompiledServerUrl(fileUrl)
+              resolutionResult.url = compiledFileUrl
             }
 
-            const originalUrl = asOriginalUrl(projectUrl)
-            if (workerUrls.includes(originalUrl)) {
-              return {
-                isWorker: true,
-                isJsModule: true,
-                url: ressourceUrl,
-              }
+            if (workerUrls.includes(ressourceOriginalUrl)) {
+              resolutionResult.isWorker = true
+              resolutionResult.isJsModule = true
+            } else if (serviceWorkerUrls.includes(ressourceOriginalUrl)) {
+              resolutionResult.isServiceWorker = true
+              resolutionResult.isJsModule = true
+            } else if (classicWorkerUrls.includes(ressourceOriginalUrl)) {
+              resolutionResult.isWorker = true
+            } else if (
+              classicServiceWorkerUrls.includes(ressourceOriginalUrl)
+            ) {
+              resolutionResult.isServiceWorker = true
             }
-            if (serviceWorkerUrls.includes(originalUrl)) {
-              return {
-                isServiceWorker: true,
-                isJsModule: true,
-                url: ressourceUrl,
-              }
-            }
-            if (classicWorkerUrls.includes(originalUrl)) {
-              return {
-                isWorker: true,
-                url: ressourceUrl,
-              }
-            }
-            if (classicServiceWorkerUrls.includes(originalUrl)) {
-              return {
-                isServiceWorker: true,
-                url: ressourceUrl,
-              }
-            }
-
-            return ressourceUrl
+            return resolutionResult
           },
           onJsModule: ({ ressource, jsModuleUrl, jsModuleIsInline }) => {
             // we want to emit chunk only when ressource is referenced by something else than rollup
@@ -663,7 +689,6 @@ export const createRollupPlugins = async ({
             ) {
               return null
             }
-
             if (ressource.isEntryPoint) {
             } else {
               const importerUrl = resolveUrl(
@@ -679,12 +704,12 @@ export const createRollupPlugins = async ({
               if (jsModuleIsInline) {
                 inlineModuleScripts[jsModuleUrl] = ressource
                 urlCustomLoaders[jsModuleUrl] = async () => {
+                  const url = asOriginalUrl(jsModuleUrl) // transformJs expect a file:// url
+                  let code = String(ressource.bufferBeforeBuild)
                   const transformResult = await transformJs({
-                    code: String(
-                      inlineModuleScripts[jsModuleUrl].bufferBeforeBuild,
-                    ),
-                    url: asOriginalUrl(jsModuleUrl), // transformJs expect a file:// url
                     projectDirectoryUrl,
+                    jsenvRemoteDirectory,
+                    url,
                     babelPluginMap,
                     // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
                     // we compile for rollup, let top level await untouched
@@ -693,29 +718,34 @@ export const createRollupPlugins = async ({
                     // if we put babel helpers, rollup might try to share them and a file
                     // might try to import from an inline script resulting in 404.
                     babelHelpersInjectionAsImport: false,
-                  })
-                  let code = transformResult.code
-                  let map = transformResult.map
-                  return {
                     code,
-                    map,
+                  })
+                  return {
+                    code: transformResult.code,
+                    map: transformResult.map,
                   }
                 }
               }
             }
-
-            const fileName = ressource.relativeUrl
+            const fileName = ressource.buildRelativeUrlWithoutHash
+            const name = urlToBasename(resolveUrl(fileName, "file://"))
             const rollupReferenceId = emitChunk({
               id: jsModuleUrl,
-              name: urlToBasename(jsModuleUrl),
+              name,
+              ...(useImportMapToMaximizeCacheReuse && !ressource.isInline
+                ? { fileName }
+                : {}),
             })
             return {
               rollupReferenceId,
-              fileName,
+              fileName:
+                useImportMapToMaximizeCacheReuse && !ressource.isInline
+                  ? fileName
+                  : name,
             }
           },
           onAsset: ({ ressource }) => {
-            const fileName = ressource.relativeUrl
+            const fileName = ressource.buildRelativeUrlWithoutHash
             const rollupReferenceId = emitAsset({
               fileName,
             })
@@ -730,7 +760,7 @@ export const createRollupPlugins = async ({
               ressource.bufferAfterBuild,
             )
           },
-          urlVersioner,
+          buildUrlGenerator,
         },
       )
 
@@ -822,13 +852,13 @@ export const createRollupPlugins = async ({
         return asRollupUrl(specifier)
       }
 
-      const importUrl = await importResolver.resolveImport(
+      const specifierUrl = await importResolver.resolveImport(
         specifier,
         importerUrl,
       )
-      const existingImporter = urlImporterMap[importUrl]
+      const existingImporter = urlImporterMap[specifierUrl]
       if (!existingImporter) {
-        urlImporterMap[importUrl] = importAssertionInfo
+        urlImporterMap[specifierUrl] = importAssertionInfo
           ? {
               url: importerUrl,
               column: importAssertionInfo.column,
@@ -842,37 +872,41 @@ export const createRollupPlugins = async ({
               line: undefined,
             }
       }
-
       // keep external url intact
-      const importProjectUrl = asProjectUrl(importUrl)
-      if (!importProjectUrl) {
+      const specifierProjectUrl = asProjectUrl(specifierUrl)
+      if (!specifierProjectUrl) {
         onExternal({
           specifier,
           reason: `outside project directory`,
         })
         return { id: specifier, external: true }
       }
-
-      if (externalUrlPredicate(asOriginalUrl(importProjectUrl))) {
+      const specifierOriginalUrl = asOriginalUrl(specifierProjectUrl)
+      const urlMeta = urlMetaGetter(specifierOriginalUrl)
+      if (urlMeta.preserve) {
+        if (urlMeta.remote) {
+          specifier =
+            jsenvRemoteDirectory.remoteUrlFromFileUrl(specifierOriginalUrl)
+        }
         onExternal({
           specifier,
-          reason: `matches "externalUrlPredicate"`,
+          reason: `matches "preservedUrls"`,
         })
         return { id: specifier, external: true }
       }
-
       // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
       // logger.debug(`${specifier} imported by ${importer} resolved to ${importUrl}`)
-      return asRollupUrl(importUrl)
+      const specifierRollupUrl = asRollupUrl(specifierUrl)
+      return specifierRollupUrl
     },
 
     resolveFileUrl: ({ referenceId, fileName }) => {
       ressourcesReferencedByJs.push(fileName)
-      const getBuildRelativeUrl = () => {
+      const getAssetRelativeUrl = () => {
         const ressource = ressourceBuilder.findRessource((ressource) => {
           return ressource.rollupReferenceId === referenceId
         })
-        ressource.fileName = fileName
+        ressource.buildRelativeUrlWithoutHash = fileName
         const buildRelativeUrl = ressource.buildRelativeUrl
         return buildRelativeUrl
       }
@@ -880,16 +914,16 @@ export const createRollupPlugins = async ({
         if (!node && useImportMapToMaximizeCacheReuse && urlVersioning) {
           return `window.__resolveImportUrl__("./${fileName}", import.meta.url)`
         }
-        return `new URL("${getBuildRelativeUrl()}", import.meta.url)`
+        return `new URL("${getAssetRelativeUrl()}", import.meta.url)`
       }
       if (format === "systemjs") {
         return `new URL(System.resolve("./${fileName}", module.meta.url))`
       }
       if (format === "global") {
-        return `new URL("${getBuildRelativeUrl()}", document.currentScript && document.currentScript.src || document.baseURI)`
+        return `new URL("${getAssetRelativeUrl()}", document.currentScript && document.currentScript.src || document.baseURI)`
       }
       if (format === "commonjs") {
-        return `new URL("${getBuildRelativeUrl()}", "file:///" + __filename.replace(/\\/g, "/"))`
+        return `new URL("${getAssetRelativeUrl()}", "file:///" + __filename.replace(/\\/g, "/"))`
       }
       return null
     },
@@ -903,37 +937,62 @@ export const createRollupPlugins = async ({
       if (rollupUrl === EMPTY_CHUNK_URL) {
         return ""
       }
-
       let url = asServerUrl(rollupUrl)
-
-      const loadResult = await buildOperation.withSignal((signal) => {
-        return urlLoader.loadUrl(rollupUrl, {
-          signal,
-          logger,
-        })
-      })
-
-      if (loadResult.url) url = loadResult.url
-      const code = loadResult.code
-      const map = loadResult.map
-
       // Jsenv helpers are injected as import statements to provide code like babel helpers
       // For now we just compute the information that the target file is a jsenv helper
       // without doing anything special with "targetIsJsenvHelperFile" information
+      const projectUrl = asProjectUrl(rollupUrl)
       const originalUrl = asOriginalUrl(rollupUrl)
       const isJsenvHelperFile = urlIsInsideOf(
         originalUrl,
         jsenvHelpersDirectoryInfo.url,
       )
       // const isEntryPoint = entryPointUrls[originalUrl]
-
+      const loadResult = await buildOperation.withSignal((signal) => {
+        let urlToLoad
+        const jsModuleRessource = ressourceBuilder.findRessource(
+          (ressource) => ressource.url === url,
+        )
+        if (
+          jsModuleRessource &&
+          jsModuleRessource.firstStrongReference &&
+          jsModuleRessource.firstStrongReference.integrity
+        ) {
+          urlToLoad = setUrlSearchParamsDescriptor(url, {
+            integrity: jsModuleRessource.firstStrongReference.integrity,
+          })
+          urlImporterMap[urlToLoad] = urlImporterMap[url]
+        } else {
+          urlToLoad = url
+        }
+        return urlLoader.loadUrl(urlToLoad, {
+          signal,
+          logger,
+        })
+      })
+      // if (loadResult.url) url = loadResult.url
+      const code = loadResult.code
+      const map = loadResult.map
+      if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)) {
+        map.sources.forEach((source, index) => {
+          if (jsenvRemoteDirectory.isRemoteUrl(source)) {
+            const sourceFileUrl =
+              jsenvRemoteDirectory.fileUrlFromRemoteUrl(source)
+            const sourceRelativeUrl = urlToRelativeUrl(
+              sourceFileUrl,
+              projectUrl,
+            )
+            map.sources[index] = sourceRelativeUrl
+          }
+        })
+      }
       const importer = urlImporterMap[url]
       // Inform ressource builder that this js module exists
       // It can only be a js module and happens when:
       // - entry point (html) references js
       // - js is referenced by static or dynamic imports
       // For import assertions, the imported ressource (css,json,...)
-      // is arelady converted to a js module
+      // is already converted to a js module
       ressourceBuilder.createReferenceFoundByRollup({
         contentTypeExpected: "application/javascript",
         referenceLabel: "static or dynamic import",
@@ -943,10 +1002,9 @@ export const createRollupPlugins = async ({
         ressourceSpecifier: url,
         isJsenvHelperFile,
         contentType: "application/javascript",
-        bufferBeforeBuild: Buffer.from(code),
         isJsModule: true,
+        bufferBeforeBuild: Buffer.from(code),
       })
-
       return {
         code,
         map,
@@ -963,7 +1021,6 @@ export const createRollupPlugins = async ({
       })
       // const moduleInfo = this.getModuleInfo(id)
       const url = asServerUrl(id)
-
       const mutations = []
       await visitImportReferences({
         ast,
@@ -1203,7 +1260,6 @@ export const createRollupPlugins = async ({
         code = magicString.toString()
         map = magicString.generateMap({ hires: true })
       }
-
       return { code, map }
     },
 
@@ -1231,6 +1287,9 @@ export const createRollupPlugins = async ({
         return entryPoints
       }
       outputOptions.chunkFileNames = (chunkInfo) => {
+        // maybe we should find ressource from ressource builder and return
+        // the buildRelativeUrlPattern?
+
         // const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
         // const basename = urlToBasename(originalUrl)
         if (useImportMapToMaximizeCacheReuse) {
@@ -1248,30 +1307,41 @@ export const createRollupPlugins = async ({
           : `[name]${outputExtension}`
       }
 
+      const getStringAfter = (string, substring) => {
+        const index = string.indexOf(substring)
+        if (index === -1) return ""
+        return string.slice(index + substring.length)
+      }
+
       // rollup does not expects to have http dependency in the mix: fix them
       outputOptions.sourcemapPathTransform = (relativePath, sourcemapPath) => {
         const sourcemapUrl = fileSystemPathToUrl(sourcemapPath)
-        const url = relativePathToUrl(relativePath, sourcemapUrl)
-        const serverUrl = asServerUrl(url)
-        const finalUrl =
-          urlFetcher.getUrlBeforeRedirection(serverUrl) || serverUrl
-        const projectUrl = asProjectUrl(finalUrl)
-
-        if (projectUrl) {
-          relativePath = urlToRelativeUrl(projectUrl, sourcemapUrl)
-          return relativePath
-        }
-
-        return finalUrl
-      }
-
-      const relativePathToUrl = (relativePath, sourcemapUrl) => {
-        const rollupUrl = resolveUrl(relativePath, sourcemapUrl)
         // here relativePath contains a protocol
         // because rollup don't work with url but with filesystem paths
         // let fix it below
-        const url = fixRollupUrl(rollupUrl)
-        return url
+        const sourceRollupUrlRaw = resolveUrl(relativePath, sourcemapUrl)
+        const afterOrigin =
+          getStringAfter(sourceRollupUrlRaw, "http:/jsenv.com") ||
+          getStringAfter(sourceRollupUrlRaw, "https:/jsenv.com")
+        const sourceRollupUrl = afterOrigin
+          ? `${compileServerOriginForRollup}${afterOrigin}`
+          : sourceRollupUrlRaw
+
+        const sourceServerUrl = asServerUrl(sourceRollupUrl)
+        const sourceUrl =
+          urlFetcher.getUrlBeforeRedirection(sourceServerUrl) || sourceServerUrl
+        const sourceProjectUrl = asProjectUrl(sourceUrl)
+
+        if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceProjectUrl)) {
+          const remoteUrl =
+            jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceProjectUrl)
+          return remoteUrl
+        }
+        if (sourceProjectUrl) {
+          relativePath = urlToRelativeUrl(sourceProjectUrl, sourcemapUrl)
+          return relativePath
+        }
+        return sourceUrl
       }
 
       return outputOptions
@@ -1382,26 +1452,34 @@ export const createRollupPlugins = async ({
           // }
         } else {
           const originalProjectUrl = asOriginalUrl(ressourceUrl)
-          const originalProjectRelativeUrl = urlToRelativeUrl(
-            originalProjectUrl,
-            projectDirectoryUrl,
-          )
-          buildMappings[originalProjectRelativeUrl] =
-            jsRessource.buildRelativeUrl
+          if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalProjectUrl)) {
+            const remoteUrl =
+              jsenvRemoteDirectory.remoteUrlFromFileUrl(originalProjectUrl)
+            buildMappings[remoteUrl] = jsRessource.buildRelativeUrl
+          } else {
+            const originalProjectRelativeUrl = urlToRelativeUrl(
+              originalProjectUrl,
+              projectDirectoryUrl,
+            )
+            buildMappings[originalProjectRelativeUrl] =
+              jsRessource.buildRelativeUrl
+          }
         }
-        ressourceMappings[jsRessource.fileName] = jsRessource.buildRelativeUrl
+        ressourceMappings[jsRessource.buildRelativeUrlWithoutHash] =
+          jsRessource.buildRelativeUrl
       })
       // wait for asset build relative urls
       // to ensure the importmap will contain remappings for them
       // (not sure this is required anymore)
       await Promise.all(
-        ressourcesReferencedByJs.map(async (ressourceName) => {
+        ressourcesReferencedByJs.map(async (ressourceFileName) => {
           const ressource = ressourceBuilder.findRessource((ressource) => {
-            return ressource.relativeUrl === ressourceName
+            return ressource.buildRelativeUrlWithoutHash === ressourceFileName
           })
           if (ressource && !ressource.isJsModule) {
             await ressource.getReadyPromise()
-            ressourceMappings[ressourceName] = ressource.buildRelativeUrl
+            ressourceMappings[ressource.buildRelativeUrlWithoutHash] =
+              ressource.buildRelativeUrl
           }
         }),
       )
@@ -1426,7 +1504,7 @@ export const createRollupPlugins = async ({
           const assetRessource = ressourceBuilder.findRessource(
             (ressource) =>
               // happens for import.meta.url pattern
-              ressource.fileName === fileName ||
+              ressource.buildRelativeUrlWithoutHash === fileName ||
               // happens for sourcemap
               ressource.relativeUrl === fileName,
           )
@@ -1455,7 +1533,8 @@ export const createRollupPlugins = async ({
           // in case sourcemap is mutated, we must not trust rollup but the asset builder source instead
           rollupFileInfo.source = assetRessource.bufferAfterBuild
           assetBuild[buildRelativeUrl] = rollupFileInfo
-          ressourceMappings[assetRessource.fileName] = buildRelativeUrl
+          ressourceMappings[assetRessource.buildRelativeUrlWithoutHash] =
+            buildRelativeUrl
           if (assetRessource.bufferBeforeBuild) {
             const originalProjectUrl = asOriginalUrl(assetRessource.url)
             const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -1646,26 +1725,6 @@ const prepareEntryPoints = async (
   return entryPointsPrepared
 }
 
-const fixRollupUrl = (rollupUrl) => {
-  // fix rollup not supporting source being http
-  const httpIndex = rollupUrl.indexOf(`http:/`, 1)
-  if (httpIndex > -1) {
-    return `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
-  }
-
-  const httpsIndex = rollupUrl.indexOf("https:/", 1)
-  if (httpsIndex > -1) {
-    return `https://${rollupUrl.slice(httpsIndex + `https:/`.length)}`
-  }
-
-  const fileIndex = rollupUrl.indexOf("file:", 1)
-  if (fileIndex > -1) {
-    return `file://${rollupUrl.slice(fileIndex + `file:`.length)}`
-  }
-
-  return rollupUrl
-}
-
 const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
   if (resolveReturnValue === null) {
     return { id: null, external: true }
@@ -1677,25 +1736,36 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
   return resolveReturnValue
 }
 
-const externalImportUrlPatternsToExternalUrlPredicate = (
-  externalImportUrlPatterns,
+const createUrlMetaGetter = ({
   projectDirectoryUrl,
-) => {
-  const externalImportUrlStructuredMetaMap = normalizeStructuredMetaMap(
+  jsenvRemoteDirectory,
+  preservedUrls,
+}) => {
+  const preservedFileUrls = {}
+  const remoteFileUrls = {}
+  Object.keys(preservedUrls).forEach((pattern) => {
+    if (jsenvRemoteDirectory.isRemoteUrl(pattern)) {
+      const fileUrlPattern = jsenvRemoteDirectory.fileUrlFromRemoteUrl(pattern)
+      preservedFileUrls[fileUrlPattern] = preservedUrls[pattern]
+      remoteFileUrls[fileUrlPattern] = true
+    }
+  })
+  const structuredMetaMap = normalizeStructuredMetaMap(
     {
-      external: {
-        ...externalImportUrlPatterns,
-        "node_modules/@jsenv/core/helpers/": false,
+      preserve: {
+        ...preservedUrls,
+        ...preservedFileUrls,
       },
+      remote: remoteFileUrls,
     },
     projectDirectoryUrl,
   )
   return (url) => {
     const meta = urlToMeta({
       url,
-      structuredMetaMap: externalImportUrlStructuredMetaMap,
+      structuredMetaMap,
     })
-    return Boolean(meta.external)
+    return meta
   }
 }
 

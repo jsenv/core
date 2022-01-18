@@ -42,6 +42,8 @@ ${fooFileUrl}
 --- url trace ---
 ${urlToFileSystemPath(intermediateFileUrl)}
   imported by ${urlToFileSystemPath(mainFileUrl)}
-  imported by ${urlToFileSystemPath(jsenvCoreDirectoryUrl)}`
+  imported by ${urlToFileSystemPath(jsenvCoreDirectoryUrl)}
+--- response text ---
+`
   assert({ actual, expected })
 }

@@ -14,10 +14,13 @@ export const compileFile = async ({
   logger,
 
   projectDirectoryUrl,
+  jsenvRemoteDirectory,
   originalFileUrl,
   compiledFileUrl,
+
   projectFileRequestedCallback = () => {},
   request,
+  responseHeaders = {},
   pushResponse,
   importmapInfos,
   compile,
@@ -35,6 +38,11 @@ export const compileFile = async ({
     )
   }
 
+  projectFileRequestedCallback(
+    urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
+    request,
+  )
+
   const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
 
   try {
@@ -44,6 +52,8 @@ export const compileFile = async ({
         projectDirectoryUrl,
         originalFileUrl,
         compiledFileUrl,
+        jsenvRemoteDirectory,
+
         request,
         compileCacheStrategy,
         compileCacheSourcesValidation,
@@ -78,13 +88,15 @@ export const compileFile = async ({
       compileResult.compiledMtime = Date.now()
     }
 
-    const {
-      contentType,
-      compiledEtag,
-      compiledMtime,
-      compiledSource,
-      responseHeaders = {},
-    } = compileResult
+    const { contentType, compiledEtag, compiledMtime, compiledSource } =
+      compileResult
+
+    if (compileResult.responseHeaders) {
+      responseHeaders = {
+        ...responseHeaders,
+        ...compileResult.responseHeaders,
+      }
+    }
 
     if (compileResultStatus !== "cached" && compileCacheStrategy !== "none") {
       // we MUST await updateMeta otherwise we might get 404
@@ -207,7 +219,6 @@ export const compileFile = async ({
       }
       // on the correspondig file
       const json = JSON.stringify(data)
-
       return {
         status: 500,
         statusText: "parse error",
@@ -219,13 +230,14 @@ export const compileFile = async ({
         body: json,
       }
     }
-
+    if (error && error.asResponse) {
+      return error.asResponse()
+    }
     if (error && error.statusText === "Unexpected directory operation") {
       return {
         status: 403,
       }
     }
-
     return convertFileSystemErrorToResponseProperties(error)
   }
 }

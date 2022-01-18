@@ -3,11 +3,8 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -16,25 +13,25 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
-const mainFilename = `import_meta_url_pattern.html`
 const { buildMappings } = await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPoints: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
+    [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
 })
-
-const { namespace, serverOrigin } = await browserImportEsModuleBuild({
-  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  codeToRunInBrowser: `window.namespace`,
-  // debug: true,
+const { returnValue, serverOrigin } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/esmodule/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: async () => {
+    return window.namespacePromise
+  },
+  /* eslint-enable no-undef */
 })
 const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
-
-const actual = namespace
+const actual = returnValue
 const expected = {
   jsUrlInstanceOfUrl: true,
   jsUrlString: String(

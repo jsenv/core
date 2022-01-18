@@ -120,7 +120,7 @@ export const formatFoundReference = ({
   reference,
   showReferenceSourceLocation,
   referenceEffects,
-  shortenUrl,
+  urlToHumanUrl,
 }) => {
   const { ressource } = reference
   const { isEntryPoint } = ressource
@@ -140,8 +140,14 @@ Create placeholder for ${showReferenceSourceLocation(reference)}${appendEffects(
   }
 
   const { referenceLabel = "unlabelled reference" } = reference
+  const message = reference.ressource.isInline
+    ? `Found "${referenceLabel}"`
+    : `Found ${referenceLabel} referencing "${urlToHumanUrl(
+        reference.ressource.url,
+        { showCompiledHint: true, preferRelativeUrls: true },
+      )}"`
   return `
-Found "${referenceLabel}" referencing "${shortenUrl(reference.ressource.url)}"
+${message}
   in ${showReferenceSourceLocation(reference)}${appendEffects(
     referenceEffects,
   )}`
@@ -157,14 +163,20 @@ const appendEffects = (effects) => {
 
 export const formatDependenciesCollectedMessage = ({
   ressource,
-  shortenUrl,
+  urlToHumanUrl,
 }) => {
   return createDetailedMessage(
     `
-Dependencies collected for ${shortenUrl(ressource.url)}`,
+Dependencies collected for ${urlToHumanUrl(ressource.url, {
+      showCompiledHint: true,
+      preferRelativeUrls: true,
+    })}`,
     {
       dependencies: ressource.dependencies.map((dependencyReference) =>
-        shortenUrl(dependencyReference.ressource.url),
+        urlToHumanUrl(dependencyReference.ressource.url, {
+          showCompiledHint: true,
+          preferRelativeUrls: true,
+        }),
       ),
     },
   )

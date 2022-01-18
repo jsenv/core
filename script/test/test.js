@@ -39,6 +39,7 @@ await executeTestPlan({
       },
     },
   },
+  completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,
   // completedExecutionLogAbbreviation: false,

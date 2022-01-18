@@ -5,9 +5,9 @@ export const nodeImportSystemJsBuild = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
-  mainRelativeUrl,
+  jsFileRelativeUrl,
 }) => {
-  const mainFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${mainRelativeUrl}`
+  const mainFileUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}${jsFileRelativeUrl}`
   const nodeSystem = await createNodeSystem({
     fetchSource,
     projectDirectoryUrl,

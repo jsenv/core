@@ -7,11 +7,8 @@ import {
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -30,17 +27,22 @@ const { buildMappings } = await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.html",
   },
 })
-const jsFileBuildRelativeUrl =
+const jsBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}import_meta_url.js`]
-const { namespace, serverOrigin } = await browserImportEsModuleBuild({
-  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  jsFileRelativeUrl: `./${jsFileBuildRelativeUrl}`,
+const { returnValue, serverOrigin } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/esmodule/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: async (jsBuildRelativeUrl) => {
+    const namespace = await import(jsBuildRelativeUrl)
+    return namespace
+  },
+  /* eslint-enable no-undef */
+  pageArguments: [`./${jsBuildRelativeUrl}`],
 })
-
-const actual = namespace
+const actual = returnValue
 const expected = {
   isInstanceOfUrl: false,
-  urlString: `${serverOrigin}/dist/esmodule/${jsFileBuildRelativeUrl}`,
+  urlString: `${serverOrigin}/dist/esmodule/${jsBuildRelativeUrl}`,
 }
 assert({ actual, expected })

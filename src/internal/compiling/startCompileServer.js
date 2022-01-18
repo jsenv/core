@@ -36,17 +36,19 @@ import {
 } from "@jsenv/core/dist/build_manifest.js"
 import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
-import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
-import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
+
+import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "../jsenvInternalFiles.js"
+import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import {
   jsenvCoreDirectoryUrl,
   jsenvDistDirectoryUrl,
 } from "../jsenvCoreDirectoryUrl.js"
-import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
+import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
+import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
@@ -98,6 +100,7 @@ export const startCompileServer = async ({
   babelPluginMap,
   babelConfigFileUrl,
   customCompilers = {},
+  preservedUrls,
   workers = [],
   serviceWorkers = [],
   importMapInWebWorkers = false,
@@ -146,6 +149,30 @@ export const startCompileServer = async ({
   )
   const logger = createLogger({ logLevel })
 
+  preservedUrls = {
+    // Authorize jsenv to modify any file url
+    // because the goal is to build the files into chunks
+    "file://": false,
+    // Preserves http and https urls
+    // because if code specifiy a CDN url it's usually because code wants
+    // to keep the url intact and keep HTTP request to CDN (both in dev and prod)
+    "http://": true,
+    "https://": true,
+    /*
+     * It's possible to selectively overrides the behaviour above:
+     * 1. The CDN file needs to be transformed to be executable in dev, build or both
+     * preservedUrls: {"https://cdn.skypack.dev/preact@10.6.4": false}
+     * 2. No strong need to preserve the CDN dependency
+     * 3. Prevent concatenation of a file during build
+     * preservedUrls: {"./file.js": false}
+     */
+    ...preservedUrls,
+  }
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    preservedUrls,
+  })
   const workerUrls = workers.map((worker) =>
     resolveUrl(worker, projectDirectoryUrl),
   )
@@ -290,11 +317,18 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
+    jsenvRemoteDirectory,
     importDefaultExtension,
+
+    preservedUrls,
+    workers,
+    serviceWorkers,
     compileServerGroupMap,
+    babelPluginMap,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
     env,
     inlineImportMapIntoHTML,
-    babelPluginMap,
     customCompilers,
     jsenvToolbarInjection,
     sourcemapMethod,
@@ -328,7 +362,9 @@ export const startCompileServer = async ({
       logger,
 
       projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
+      jsenvRemoteDirectory,
 
       importDefaultExtension,
 
@@ -369,6 +405,7 @@ export const startCompileServer = async ({
       : {}),
     "service:source file": createSourceFileService({
       projectDirectoryUrl,
+      jsenvRemoteDirectory,
       projectFileRequestedCallback,
       projectFileCacheStrategy,
     }),
@@ -424,6 +461,7 @@ export const startCompileServer = async ({
     ...compileServer,
     compileServerGroupMap,
     babelPluginMap,
+    preservedUrls,
     projectFileRequestedCallback,
   }
 }
@@ -939,30 +977,45 @@ const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileRequestedCallback,
   projectFileCacheStrategy,
+  jsenvRemoteDirectory,
 }) => {
   return async (request) => {
     const relativeUrl = request.pathname.slice(1)
     projectFileRequestedCallback(relativeUrl, request)
-
     const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
       .href
     const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
       fileUrl,
       jsenvDistDirectoryUrl,
     )
-
-    const responsePromise = fetchFileSystem(fileUrl, {
-      headers: request.headers,
-      etagEnabled: projectFileCacheStrategy === "etag",
-      mtimeEnabled: projectFileCacheStrategy === "mtime",
-      ...(fileIsInsideJsenvDistDirectory
-        ? {
-            cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
-          }
-        : {}),
-    })
-
-    return responsePromise
+    const fromFileSystem = () =>
+      fetchFileSystem(fileUrl, {
+        headers: request.headers,
+        etagEnabled: projectFileCacheStrategy === "etag",
+        mtimeEnabled: projectFileCacheStrategy === "mtime",
+        ...(fileIsInsideJsenvDistDirectory
+          ? {
+              cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
+            }
+          : {}),
+      })
+    const filesystemResponse = await fromFileSystem()
+    if (
+      filesystemResponse.status === 404 &&
+      jsenvRemoteDirectory.isFileUrlForRemoteUrl(fileUrl)
+    ) {
+      try {
+        await jsenvRemoteDirectory.loadFileUrlFromRemote(fileUrl, request)
+        // re-fetch filesystem instead to ensure response headers are correct
+        return fromFileSystem()
+      } catch (e) {
+        if (e && e.asResponse) {
+          return e.asResponse()
+        }
+        throw e
+      }
+    }
+    return filesystemResponse
   }
 }
 
@@ -971,6 +1024,10 @@ const createCompileServerMetaFileInfo = ({
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   importDefaultExtension,
+
+  preservedUrls,
+  workers,
+  serviceWorkers,
   compileServerGroupMap,
   babelPluginMap,
   replaceProcessEnvNodeEnv,
@@ -1016,6 +1073,9 @@ const createCompileServerMetaFileInfo = ({
     outDirectoryRelativeUrl,
     importDefaultExtension,
 
+    preservedUrls,
+    workers,
+    serviceWorkers,
     babelPluginMap: babelPluginMapAsData(babelPluginMap),
     compileServerGroupMap,
     customCompilerPatterns,
@@ -1029,7 +1089,7 @@ const createCompileServerMetaFileInfo = ({
     sourcemapMappingFileRelativeUrl,
     errorStackRemapping: true,
 
-    // used to consider the logic generating files may have changed
+    // used to consider logic generating files may have changed
     jsenvCorePackageVersion,
 
     // impact only HTML files

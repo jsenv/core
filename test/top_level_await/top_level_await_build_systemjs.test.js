@@ -3,11 +3,8 @@ import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_SYSTEMJS_BUILD_TEST_PARAMS,
-  IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
-import { browserImportSystemJsBuild } from "@jsenv/core/test/browserImportSystemJsBuild.js"
+import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -26,25 +23,27 @@ const { buildMappings } = await buildProject({
   entryPoints,
   // logLevel: "debug",
 })
-const mainJsBuildRelativeUrl =
+const jsBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}top_level_await.js`]
-const { namespace } = await browserImportSystemJsBuild({
-  ...IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  mainRelativeUrl: `./${mainJsBuildRelativeUrl}`,
-})
 const fileContent = await readFile(
-  new URL(`./dist/systemjs/${mainJsBuildRelativeUrl}`, import.meta.url),
+  new URL(`./dist/systemjs/${jsBuildRelativeUrl}`, import.meta.url),
 )
-
-{
-  const actual = {
-    containsAsync: fileContent.includes("async function"),
-    namespace,
-  }
-  const expected = {
-    containsAsync: false,
-    namespace: { default: 42 },
-  }
-  assert({ actual, expected })
+const { returnValue } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/systemjs/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: (jsBuildRelativeUrl) => {
+    return window.System.import(jsBuildRelativeUrl)
+  },
+  /* eslint-enable no-undef */
+  pageArguments: [`./${jsBuildRelativeUrl}`],
+})
+const actual = {
+  containsAsync: fileContent.includes("async function"),
+  returnValue,
 }
+const expected = {
+  containsAsync: false,
+  returnValue: { default: 42 },
+}
+assert({ actual, expected })

@@ -4,7 +4,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -25,14 +25,18 @@ await buildProject({
     "**/*.cjs": commonJsToJavaScriptModule,
   },
 })
-const { namespace } = await browserImportEsModuleBuild({
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  testDirectoryRelativeUrl,
+const { returnValue } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
   htmlFileRelativeUrl: "./index.html",
-  jsFileRelativeUrl: "./dist/esmodule/main.js",
+  /* eslint-disable no-undef */
+  pageFunction: async (jsBuildRelativeUrl) => {
+    const namespace = await import(jsBuildRelativeUrl)
+    return namespace
+  },
+  /* eslint-enable no-undef */
+  pageArguments: ["./dist/esmodule/main.js"],
 })
-
-const actual = namespace
+const actual = returnValue
 const expected = {
   platform: "browser",
 }

@@ -1,16 +1,15 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
+import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
 import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compiling/rollup_plugin_commonjs_named_exports.js"
 
 export const commonJsToJavaScriptModule = async ({
   logger,
-
+  projectDirectoryUrl,
+  jsenvRemoteDirectory,
   url,
   compiledUrl,
-  projectDirectoryUrl,
-
-  sourcemapExcludeSources,
 
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
@@ -22,6 +21,7 @@ export const commonJsToJavaScriptModule = async ({
   replaceMap = {},
   convertBuiltinsToBrowser = true,
   external = [],
+  sourcemapExcludeSources,
 } = {}) => {
   if (!url.startsWith("file:///")) {
     // it's possible to make rollup compatible with http:// for instance
@@ -147,7 +147,7 @@ export const commonJsToJavaScriptModule = async ({
     // entryFileNames: `./[name].js`,
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
-    sourcemapExcludeSources: true,
+    sourcemapExcludeSources,
     exports: "named",
     ...(compiledUrl
       ? { dir: urlToFileSystemPath(resolveUrl("./", compiledUrl)) }
@@ -165,11 +165,12 @@ export const commonJsToJavaScriptModule = async ({
     },
     {
       projectDirectoryUrl,
-      originalFileContent: code,
+      jsenvRemoteDirectory,
       originalFileUrl: url,
       compiledFileUrl: compiledUrl,
-      sourcemapFileUrl: `${compiledUrl}.map`,
+      sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
+      originalFileContent: code,
     },
   )
 }

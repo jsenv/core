@@ -6,6 +6,7 @@ import {
   getMinimalBabelPluginMap,
   babelPluginsFromBabelPluginMap,
 } from "@jsenv/core/src/internal/compiling/babel_plugins.js"
+import { babelPluginProxyExternalImports } from "@jsenv/core/src/internal/compiling/babel_plugin_proxy_external_imports.js"
 import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compiling/babel_plugin_import_metadata.js"
 
 import { ansiToHTML } from "./ansiToHTML.js"
@@ -15,9 +16,7 @@ import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
 export const jsenvTransform = async ({
-  code,
-  map, // optional
-  ast, // optional
+  jsenvRemoteDirectory,
   url,
   relativeUrl, // optional
 
@@ -25,12 +24,15 @@ export const jsenvTransform = async ({
   moduleOutFormat,
   importMetaFormat = moduleOutFormat,
   topLevelAwait,
-
   babelHelpersInjectionAsImport,
   prependSystemJs,
   transformGenerator,
   regeneratorRuntimeImportPath,
+
   sourcemapEnabled,
+  ast, // optional
+  map, // optional
+  code,
 }) => {
   const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
   const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
@@ -143,6 +145,14 @@ export const jsenvTransform = async ({
       ? {
           "babel-helpers-as-jsenv-imports": [
             babelPluginBabelHelpersAsJsenvImports,
+          ],
+        }
+      : {}),
+    ...(jsenvRemoteDirectory
+      ? {
+          "proxy-external-imports": [
+            babelPluginProxyExternalImports,
+            { jsenvRemoteDirectory },
           ],
         }
       : {}),

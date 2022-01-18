@@ -3,17 +3,17 @@ import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
-import { COMPILE_ID_BEST } from "./internal/CONSTANTS.js"
+import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
-} from "./internal/argUtils.js"
-import { startCompileServer } from "./internal/compiling/startCompileServer.js"
-import { buildUsingRollup } from "./internal/building/buildUsingRollup.js"
+} from "@jsenv/core/src/internal/argUtils.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRollup.js"
 import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,
-} from "./internal/generateGroupMap/jsenvRuntimeSupport.js"
+} from "@jsenv/core/src/internal/generateGroupMap/jsenvRuntimeSupport.js"
 
 /**
  * Generate optimized version of source files into a directory
@@ -63,11 +63,8 @@ export const buildProject = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers = [],
-  externalImportUrlPatterns = format === "commonjs"
-    ? {
-        "node_modules/": true,
-      }
-    : {},
+  preservedUrls = {},
+  // https://rollupjs.org/guide/en/#outputpaths
   importPaths = {},
 
   urlVersioning = format === "systemjs" ||
@@ -189,19 +186,29 @@ export const buildProject = async ({
     ip,
     port,
     env,
+
     babelPluginMap,
     workers,
     serviceWorkers,
     runtimeSupport,
     customCompilers,
-    compileServerCanReadFromFilesystem: filesystemCache,
-    compileServerCanWriteOnFilesystem: filesystemCache,
+    preservedUrls: {
+      // when format is commonjs preserve node_modules files
+      // because code generated expects to be installed alongside its dependencies and require them
+      "./node_modules/": format === "commonjs",
+      "./node_modules/@jsenv/core/helpers/": false,
+      // However it's possible to pass http url in there to "handle" a remote url (http(s)://*)
+      // In that case the remote url is fetched and becomes a file in the build directory
+      ...preservedUrls,
+    },
     // keep source html untouched
     // here we don't need to inline importmap
     // nor to inject jsenv script
     transformHtmlSourceFiles: false,
     jsenvScriptInjection: false,
     jsenvEventSourceClientInjection: false,
+    compileServerCanReadFromFilesystem: filesystemCache,
+    compileServerCanWriteOnFilesystem: filesystemCache,
   })
 
   buildOperation.addEndCallback(async () => {
@@ -219,6 +226,7 @@ export const buildProject = async ({
       projectDirectoryUrl,
       compileServerOrigin,
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
+      jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
       buildDirectoryUrl,
       buildDirectoryClean,
       assetManifestFile,
@@ -229,7 +237,7 @@ export const buildProject = async ({
       importMapFileRelativeUrl,
       importDefaultExtension,
       externalImportSpecifiers,
-      externalImportUrlPatterns,
+      preservedUrls: compileServer.preservedUrls,
       importPaths,
 
       format,

@@ -9,15 +9,12 @@ import {
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -47,8 +44,8 @@ if (process.platform !== "win32") {
       "assets/img-remap.png": "assets/img-remap_25e95a00.png",
       "assets/style.css": "assets/style_bb497274.css",
       "assets/style.css.map": "assets/style.css_1c41eaf0.map",
-      "main.js": "main_9dd4a4eb.js",
-      "main.js.map": "main_9dd4a4eb.js.map",
+      "main.js": "main_d92f2faf.js",
+      "main.js.map": "main_d92f2faf.js.map",
       "main.html": "main.html",
     },
   }
@@ -59,7 +56,7 @@ const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
-const mainBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
+const jsBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}main.js`]
 const cssBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}style.css`]
 
@@ -79,7 +76,7 @@ const cssBuildRelativeUrl =
   const expected = {
     imports: {
       // the importmap for img-remap is available
-      "./test/entry_html/importmap_and_assets/.jsenv/build/best/test/entry_html/importmap_and_assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
+      "./assets/img-remap.png": `./${imgRemapBuildRelativeUrl}`,
       // and nothing more because js is referencing only img-remap
     },
   }
@@ -104,14 +101,18 @@ const cssBuildRelativeUrl =
 {
   const imgRemapBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}img-remap.png`]
-  const { namespace, serverOrigin } = await browserImportEsModuleBuild({
-    ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./${mainBuildRelativeUrl}`,
-    // debug: true,
+  const { returnValue, serverOrigin } = await executeInBrowser({
+    directoryUrl: new URL("./", import.meta.url),
+    htmlFileRelativeUrl: "./dist/esmodule/main.html",
+    /* eslint-disable no-undef */
+    pageFunction: async (jsBuildRelativeUrl) => {
+      const namespace = await import(jsBuildRelativeUrl)
+      return namespace
+    },
+    /* eslint-enable no-undef */
+    pageArguments: [`./${jsBuildRelativeUrl}`],
   })
-
-  const actual = namespace
+  const actual = returnValue
   const expected = {
     imgUrlIsInstanceOfUrl: true,
     imgUrlString: resolveUrl(

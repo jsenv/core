@@ -44,6 +44,8 @@ ${urlToFileSystemPath(jsFileUrl)}:1:13
 > 1 | var cssUrl = new URL("./style.css", import.meta.url);
                   ^
   2 | console.log(cssUrl);
-  referenced by ${urlToFileSystemPath(htmlFileUrl)}:10:27`
+  referenced by ${urlToFileSystemPath(htmlFileUrl)}:10:27
+--- response text ---
+`
   assert({ actual, expected })
 }

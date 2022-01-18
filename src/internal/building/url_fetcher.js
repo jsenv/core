@@ -5,6 +5,7 @@ import { fetchUrl as jsenvFetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
 export const createUrlFetcher = ({
+  jsenvRemoteDirectory,
   asOriginalUrl,
   asProjectUrl,
   applyUrlMappings,
@@ -13,18 +14,28 @@ export const createUrlFetcher = ({
 }) => {
   const urlRedirectionMap = {}
 
-  const fetchUrl = async (url, { signal, urlTrace, contentTypeExpected }) => {
+  const fetchUrl = async (
+    url,
+    { signal, urlTrace, contentTypeExpected, crossorigin },
+  ) => {
     const urlToFetch = applyUrlMappings(url)
-
     const response = await jsenvFetchUrl(urlToFetch, {
       signal,
       ignoreHttpsError: true,
+      credentials:
+        crossorigin === "anonymous" || crossorigin === ""
+          ? "same-origin"
+          : crossorigin === "use-credentials"
+          ? "include"
+          : undefined,
     })
     const responseUrl = response.url
-
+    const originalUrl =
+      asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl
     const responseValidity = await validateResponse(response, {
-      originalUrl:
-        asOriginalUrl(responseUrl) || asProjectUrl(responseUrl) || responseUrl,
+      originalUrl: jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)
+        ? jsenvRemoteDirectory.remoteUrlFromFileUrl(originalUrl)
+        : originalUrl,
       urlTrace,
       contentTypeExpected,
     })
@@ -56,11 +67,9 @@ export const createUrlFetcher = ({
       beforeThrowingResponseValidationError(responseValidationError)
       throw responseValidationError
     }
-
     if (url !== responseUrl) {
       urlRedirectionMap[url] = responseUrl
     }
-
     return response
   }
 
