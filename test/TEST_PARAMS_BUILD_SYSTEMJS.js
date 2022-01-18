@@ -10,9 +10,3 @@ export const GENERATE_SYSTEMJS_BUILD_TEST_PARAMS = {
   logLevel: "warn",
   throwUnhandled: false,
 }
-
-export const IMPORT_SYSTEM_JS_BUILD_TEST_PARAMS = {
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  htmlFileRelativeUrl: "./dist/systemjs/main.html",
-  jsFileRelativeUrl: "./dist/systemjs/main.js",
-}

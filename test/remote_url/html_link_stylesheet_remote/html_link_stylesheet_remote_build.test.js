@@ -9,7 +9,8 @@ import {
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
+
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
@@ -37,18 +38,20 @@ try {
     const linkNode = findHtmlNodeById(htmlString, "roboto_link")
     const hrefAttribute = getHtmlNodeAttributeByName(linkNode, "href")
     const href = hrefAttribute ? hrefAttribute.value : ""
-    const result = await browserImportEsModuleBuild({
-      projectDirectoryUrl: jsenvCoreDirectoryUrl,
-      testDirectoryRelativeUrl,
+    const { returnValue } = await executeInBrowser({
+      directoryUrl: new URL("./", import.meta.url),
+      htmlFileRelativeUrl: "./dist/esmodule/main.html",
       /* eslint-disable no-undef */
-      codeToRunInBrowser: async () => {
+      pageFunction: async () => {
         await document.fonts.ready
-        return window.getComputedStyle(document.querySelector("body"))
-          .fontFamily
+        const fontFamily = window.getComputedStyle(
+          document.querySelector("body"),
+        ).fontFamily
+        return fontFamily
       },
       /* eslint-enable no-undef */
     })
-    return { href, fontFamily: result.value }
+    return { href, fontFamily: returnValue }
   }
 
   // remote css fetched during build

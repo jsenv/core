@@ -4,7 +4,6 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const { server } = await import("./script/serve.js")
@@ -30,18 +29,22 @@ try {
     })
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
-    const { namespace } = await browserImportEsModuleBuild({
-      projectDirectoryUrl: jsenvCoreDirectoryUrl,
-      testDirectoryRelativeUrl,
-      jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
-      // debug: true,
+    const { returnValue } = await executeInBrowser({
+      directoryUrl: new URL("./", import.meta.url),
+      htmlFileRelativeUrl: "./dist/esmodule/main.html",
+      /* eslint-disable no-undef */
+      pageFunction: async (jsBuildRelativeUrl) => {
+        const namespace = await import(jsBuildRelativeUrl)
+        return namespace
+      },
+      /* eslint-enable no-undef */
+      pageArguments: [jsBuildRelativeUrl],
     })
-
     const actual = {
-      namespace,
+      returnValue,
     }
     const expected = {
-      namespace: {
+      returnValue: {
         url: `${server.origin}/constants.js?foo=bar`,
       },
     }
@@ -62,17 +65,22 @@ try {
     })
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
-    const { namespace, serverOrigin } = await browserImportEsModuleBuild({
-      projectDirectoryUrl: jsenvCoreDirectoryUrl,
-      testDirectoryRelativeUrl,
-      jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
-      // debug: true,
+    const { returnValue, serverOrigin } = await executeInBrowser({
+      directoryUrl: new URL("./", import.meta.url),
+      htmlFileRelativeUrl: "./dist/esmodule/main.html",
+      /* eslint-disable no-undef */
+      pageFunction: async (jsBuildRelativeUrl) => {
+        const namespace = await import(jsBuildRelativeUrl)
+        return namespace
+      },
+      /* eslint-enable no-undef */
+      pageArguments: [jsBuildRelativeUrl],
     })
     const actual = {
-      namespace,
+      returnValue,
     }
     const expected = {
-      namespace: {
+      returnValue: {
         url: `${serverOrigin}/dist/esmodule/${jsBuildRelativeUrl}`,
       },
     }
@@ -91,11 +99,16 @@ try {
     const jsBuildRelativeUrl =
       buildMappings[`${testDirectoryRelativeUrl}main.js`]
     try {
-      await browserImportEsModuleBuild({
-        projectDirectoryUrl: jsenvCoreDirectoryUrl,
-        testDirectoryRelativeUrl,
-        jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
-        // debug: true,
+      await executeInBrowser({
+        directoryUrl: new URL("./", import.meta.url),
+        htmlFileRelativeUrl: "./dist/esmodule/main.html",
+        /* eslint-disable no-undef */
+        pageFunction: async (jsBuildRelativeUrl) => {
+          const namespace = await import(jsBuildRelativeUrl)
+          return namespace
+        },
+        /* eslint-enable no-undef */
+        pageArguments: [jsBuildRelativeUrl],
       })
       throw new Error("should throw")
     } catch (e) {

@@ -8,7 +8,6 @@ import {
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const { server } = await import("./server/serve.js")
@@ -39,21 +38,39 @@ try {
       },
       ...rest,
     })
-    const jsFileRelativeUrl = preserve
+    const jsBuildRelativeUrl = preserve
       ? "http://127.0.0.1:9999/file.js"
       : `./${buildMappings[`http://127.0.0.1:9999/file.js`]}`
-    const browserImport =
-      format === "systemjs"
-        ? browserImportSystemJsBuild
-        : browserImportEsModuleBuild
-    const { namespace, serverOrigin } = await browserImport({
-      projectDirectoryUrl: jsenvCoreDirectoryUrl,
-      testDirectoryRelativeUrl,
-      htmlFileRelativeUrl: `./dist/${format}/main.html`,
-      jsFileRelativeUrl,
+    if (format === "systemjs") {
+      const { returnValue, serverOrigin } = await executeInBrowser({
+        directoryUrl: new URL("./", import.meta.url),
+        htmlFileRelativeUrl: `./dist/systemjs/main.html`,
+        /* eslint-disable no-undef */
+        pageFunction: async (jsBuildRelativeUrl) => {
+          return window.System.import(jsBuildRelativeUrl)
+        },
+        /* eslint-enable no-undef */
+        pageArguments: [jsBuildRelativeUrl],
+      })
+      return {
+        importMetaUrl: returnValue.url,
+        serverOrigin,
+        jsFileRelativeUrl,
+      }
+    }
+    const { returnValue, serverOrigin } = await executeInBrowser({
+      directoryUrl: new URL("./", import.meta.url),
+      htmlFileRelativeUrl: `./dist/esmodule/main.html`,
+      /* eslint-disable no-undef */
+      pageFunction: async (jsBuildRelativeUrl) => {
+        const namespace = await import(jsBuildRelativeUrl)
+        return namespace
+      },
+      /* eslint-enable no-undef */
+      pageArguments: [jsBuildRelativeUrl],
     })
     return {
-      importMetaUrl: namespace.url,
+      importMetaUrl: returnValue.url,
       serverOrigin,
       jsFileRelativeUrl,
     }

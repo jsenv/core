@@ -5,6 +5,7 @@ import { resolveUrl } from "@jsenv/filesystem"
 export const executeInBrowser = async ({
   directoryUrl,
   htmlFileRelativeUrl,
+  headScriptUrl,
   pageFunction,
   pageArguments = [],
   debug = false,
@@ -19,6 +20,13 @@ export const executeInBrowser = async ({
   ])
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
   await page.goto(resolveUrl(htmlFileRelativeUrl, server.origin))
+  if (headScriptUrl) {
+    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
+    await page.addScriptTag({
+      url: headScriptUrl,
+    })
+  }
+
   try {
     const returnValue = await page.evaluate(pageFunction, pageArguments)
     return {

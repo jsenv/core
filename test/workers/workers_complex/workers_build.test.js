@@ -3,11 +3,8 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { buildProject, jsenvServiceWorkerFinalizer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  BROWSER_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -32,16 +29,17 @@ await buildProject({
   ],
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
-
-const { value, serverOrigin } = await browserImportEsModuleBuild({
-  ...BROWSER_IMPORT_BUILD_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-  codeToRunInBrowser: "window.namespacePromise",
-  // debug: true,
+const { returnValue, serverOrigin } = await executeInBrowser({
+  directoryUrl: new URL("./", import.meta.url),
+  htmlFileRelativeUrl: "./dist/esmodule/main.html",
+  /* eslint-disable no-undef */
+  pageFunction: async () => {
+    return window.nameespacePromise
+  },
+  /* eslint-enable no-undef */
 })
-
 if (process.platform !== "win32") {
-  const actual = value
+  const actual = returnValue
   const expected = {
     worker: {
       url: `${serverOrigin}/dist/esmodule/worker2_b7f114ee.js`,

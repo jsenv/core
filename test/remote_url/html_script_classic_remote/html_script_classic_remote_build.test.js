@@ -9,7 +9,8 @@ import {
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
-import { browserImportEsModuleBuild } from "@jsenv/core/test/browserImportEsModuleBuild.js"
+import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
+
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
@@ -37,16 +38,16 @@ try {
     const scriptNode = findHtmlNodeById(htmlString, "script")
     const srcAttribute = getHtmlNodeAttributeByName(scriptNode, "src")
     const src = srcAttribute ? srcAttribute.value : ""
-    const result = await browserImportEsModuleBuild({
-      projectDirectoryUrl: jsenvCoreDirectoryUrl,
-      testDirectoryRelativeUrl,
+    const { returnValue } = await executeInBrowser({
+      directoryUrl: new URL("./", import.meta.url),
+      htmlFileRelativeUrl: "./dist/esmodule/main.html",
       /* eslint-disable no-undef */
-      codeToRunInBrowser: async () => {
+      pageFunction: async () => {
         return window.answer
       },
       /* eslint-enable no-undef */
     })
-    return { src, windowAnswer: result.value }
+    return { src, windowAnswer: returnValue }
   }
 
   // remote js fetched during build

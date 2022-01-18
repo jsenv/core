@@ -10,11 +10,6 @@ export const GENERATE_ESMODULE_BUILD_TEST_PARAMS = {
   babelPluginMap: testBabelPluginMap,
 }
 
-export const BROWSER_IMPORT_BUILD_TEST_PARAMS = {
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  jsFileRelativeUrl: "./main.js",
-}
-
 export const NODE_IMPORT_BUILD_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsFileRelativeUrl: "./dist/esmodule/main.js",

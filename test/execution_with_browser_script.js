@@ -1,8 +1,5 @@
+import { chromium } from "playwright"
 import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
-
-import { require } from "@jsenv/core/src/internal/require.js"
-
-const { chromium } = require("playwright")
 
 export const executeFileUsingBrowserScript = async ({
   rootDirectoryUrl,
@@ -11,7 +8,7 @@ export const executeFileUsingBrowserScript = async ({
   debug = false,
 }) => {
   const [server, browser] = await Promise.all([
-    startTestServer({ rootDirectoryUrl }),
+    startFileServer({ rootDirectoryUrl }),
     chromium.launch({
       headless: !debug,
     }),
@@ -42,7 +39,7 @@ export const executeFileUsingBrowserScript = async ({
   }
 }
 
-const startTestServer = ({ rootDirectoryUrl }) => {
+const startFileServer = ({ rootDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
     protocol: "http",
