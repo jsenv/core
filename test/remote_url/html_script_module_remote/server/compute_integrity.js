@@ -1,5 +1,5 @@
 import { readFile } from "@jsenv/filesystem"
-import { applyAlgoToRepresentationData } from "@jsenv/core/src/internal/integrity/integrity_algorithms.js"
+import { applyAlgoToRepresentationData } from "@jsenv/integrity"
 
 console.log(
   applyAlgoToRepresentationData(

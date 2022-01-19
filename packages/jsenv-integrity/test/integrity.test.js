@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 
-import { applyAlgoToRepresentationData } from "@jsenv/core/src/internal/integrity/integrity_algorithms.js"
-import { validateResponseIntegrity } from "@jsenv/core/src/internal/integrity/integrity_validation.js"
+import { applyAlgoToRepresentationData } from "@jsenv/integrity/src/integrity_algorithms.js"
+import { validateResponseIntegrity } from "@jsenv/integrity/src/integrity_validation.js"
 
 const helloWorldAsSha256AndBase64 = applyAlgoToRepresentationData(
   "sha256",

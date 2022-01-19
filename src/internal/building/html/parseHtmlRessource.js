@@ -17,6 +17,8 @@ Or be sure to also reference this url somewhere in the html file like
 */
 
 import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
+import { applyAlgoToRepresentationData } from "@jsenv/integrity"
+
 
 import {
   parseHtmlString,
@@ -48,7 +50,6 @@ import { collectNodesMutations } from "../parsing.utils.js"
 
 import { collectSvgMutations } from "../svg/parseSvgRessource.js"
 import { moveCssUrls } from "../css/moveCssUrls.js"
-import { applyAlgoToRepresentationData } from "../../integrity/integrity_algorithms.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,

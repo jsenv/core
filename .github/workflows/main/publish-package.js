@@ -14,7 +14,18 @@ await publishPackage({
     "../../../packages/jsenv-babel-preset",
     import.meta.url,
   ),
-  logLevel: "debug",
+  registriesConfig: {
+    "https://registry.npmjs.org": {
+      token: process.env.NPM_TOKEN,
+    },
+  },
+})
+
+await publishPackage({
+  projectDirectoryUrl: new URL(
+    "../../../packages/jsenv-integrity",
+    import.meta.url,
+  ),
   registriesConfig: {
     "https://registry.npmjs.org": {
       token: process.env.NPM_TOKEN,

@@ -6,9 +6,9 @@ import {
   urlToMeta,
   writeFile,
 } from "@jsenv/filesystem"
+import { validateResponseIntegrity } from "@jsenv/integrity"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { validateResponseIntegrity } from "@jsenv/core/src/internal/integrity/integrity_validation.js"
 
 import { originDirectoryConverter } from "./origin_directory_converter.js"
 
