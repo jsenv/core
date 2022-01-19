@@ -121,7 +121,7 @@
     "@jsenv/file-size-impact": "12.1.1",
     "@jsenv/github-release-package": "1.2.3",
     "@jsenv/https-local": "1.0.3",
-    "@jsenv/importmap-eslint-resolver": "5.2.3",
+    "@jsenv/importmap-eslint-resolver": "5.2.5",
     "@jsenv/importmap-node-module": "5.1.0",
     "@jsenv/package-publish": "1.6.2",
     "@jsenv/performance-impact": "2.2.1",
