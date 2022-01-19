@@ -50,14 +50,14 @@ jobs:
         run: npm install
       - name: Generate importmap
         run: npm run importmap
-      - name: Install packages
-        run: npm run packages-install
       - name: Install playwright
         run: npm run playwright-install
       - name: Run ESLint
         run: npm run eslint
       - name: Run tests
-        run: npm run test-with-coverage
+        run: |
+          npm run test-with-coverage
+          npm run test-workspaces
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
@@ -82,8 +82,6 @@ jobs:
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
-      - name: Install packages
-        run: npm run packages-install
       - name: Generate importmap
         run: npm run importmap
       - name: publish package

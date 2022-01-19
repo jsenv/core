@@ -27,19 +27,22 @@
     "/src/",
     "/main.js"
   ],
+  "workspaces": [
+    "./packages/*"
+  ],
   "scripts": {
     "eslint": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.cjs,.html",
     "importmap": "node ./script/importmap/importmap.js",
     "build": "node ./script/build/build.js",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
     "test-with-coverage": "npm run test -- --coverage",
+    "test-workspaces": "npm run test --workspaces --if-present",
     "dev": "node ./script/dev/start_dev_server.js",
     "start_file_server": "node ./script/dev/start_file_server.js",
     "performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
     "file-size": "node ./script/file_size/file_size.mjs --log",
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
-    "packages-install": "node ./script/packages/packages_install.js",
     "certificate-install": "node ./script/dev/install_certificate_authority.mjs",
     "prepublishOnly": "npm run build"
   },
@@ -112,7 +115,7 @@
     "@babel/plugin-transform-typescript": "7.16.1",
     "@babel/preset-env": "7.16.5",
     "@jsenv/assert": "2.4.1",
-    "@jsenv/babel-preset": "./packages/jsenv-babel-preset",
+    "@jsenv/babel-preset": "*",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/file-size-impact": "12.1.1",
     "@jsenv/github-release-package": "1.2.3",
