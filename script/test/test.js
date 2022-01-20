@@ -7,12 +7,12 @@ await executeTestPlan({
   runtimeSupport,
   logLevel: "debug",
   testPlan: {
-    "test/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 30 * 1000,
-      },
-    },
+    // "test/**/*.test.js": {
+    //   node: {
+    //     runtime: nodeRuntime,
+    //     allocatedMs: 30 * 1000,
+    //   },
+    // },
     // give more time to some tests
     "test/coverage/**/*.test.js": {
       node: {

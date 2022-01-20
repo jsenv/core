@@ -10,4 +10,5 @@ await executeTestPlan({
     },
   },
   completedExecutionLogMerging: true,
+  coverage: process.argv.includes("--coverage"),
 })

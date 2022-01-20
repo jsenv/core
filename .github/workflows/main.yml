@@ -57,12 +57,12 @@ jobs:
       - name: Run tests
         run: |
           npm run test-with-coverage
-          npm run test-workspaces
+          npm run test --workspaces --if-present -- --coverage
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage.json
+          files: ./coverage/coverage.json,./packages/**/coverage/coverage.json
           verbose: true
 
   release:
