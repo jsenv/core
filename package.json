@@ -36,7 +36,6 @@
     "build": "node ./script/build/build.js",
     "test": "node --experimental-import-meta-resolve ./script/test/test.js",
     "test-with-coverage": "npm run test -- --coverage",
-    "test-workspaces": "npm run test --workspaces --if-present",
     "dev": "node ./script/dev/start_dev_server.js",
     "start_file_server": "node ./script/dev/start_file_server.js",
     "performances": "node --expose-gc ./script/performance/generate_performance_report.js --log --once",
@@ -44,6 +43,7 @@
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "certificate-install": "node ./script/dev/install_certificate_authority.mjs",
+    "sync-workspace-versions": "node ./script/dev/sync_workspace_versions.mjs",
     "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {
@@ -64,7 +64,7 @@
     "@jsenv/abort": "4.1.2",
     "@jsenv/filesystem": "2.7.0",
     "@jsenv/importmap": "1.2.0",
-    "@jsenv/integrity": "*",
+    "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "1.5.0",
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.3.2",
@@ -116,7 +116,7 @@
     "@babel/plugin-transform-typescript": "7.16.1",
     "@babel/preset-env": "7.16.5",
     "@jsenv/assert": "2.4.1",
-    "@jsenv/babel-preset": "*",
+    "@jsenv/babel-preset": "1.1.2",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/file-size-impact": "12.1.1",
     "@jsenv/github-release-package": "1.2.3",
