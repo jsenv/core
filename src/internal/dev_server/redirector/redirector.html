@@ -22,7 +22,6 @@
         const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures({
           failFastOnFeatureDetection: true,
         })
-
         const href = `${getDirectoryUrl(
           browserRuntimeFeaturesReport,
         )}${redirectTarget}`
@@ -31,15 +30,11 @@
         window.location.replace(href)
       }
 
-      const getDirectoryUrl = ({
-        canAvoidCompilation,
-        outDirectoryRelativeUrl,
-        compileId,
-      }) => {
-        if (canAvoidCompilation) {
-          return `/`
+      const getDirectoryUrl = ({ outDirectoryRelativeUrl, compileId }) => {
+        if (compileId) {
+          return `/${outDirectoryRelativeUrl}${compileId}/`
         }
-        return `/${outDirectoryRelativeUrl}${compileId}/`
+        return `/`
       }
 
       redirect()

@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
 const fetchNative = async (url, { mode = "cors", ...options } = {}) => {

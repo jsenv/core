@@ -11,7 +11,6 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
 
   scanBrowserRuntimeFeatures().then(
     ({
-      canAvoidCompilation,
       featuresReport,
       customCompilerPatterns,
       missingFeatureNames,
@@ -19,11 +18,11 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
       outDirectoryRelativeUrl,
       compileId,
     }) => {
-      const browserSupport = canAvoidCompilation
-        ? inlineImportMapIntoHTML
-          ? "partial"
-          : "full"
-        : "no"
+      const browserSupport = compileId
+        ? "no"
+        : inlineImportMapIntoHTML
+        ? "partial"
+        : "full"
       enableVariant(browserSupportRootNode, {
         browserSupport,
       })

@@ -65,9 +65,9 @@ export const executeHtmlFile = async (
 
   try {
     let executionResult
-    const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
+    const { compileId } = browserRuntimeFeaturesReport
     executeOperation.throwIfAborted()
-    if (canAvoidCompilation && !forceCompilation) {
+    if (!compileId && !forceCompilation) {
       executionResult = await executeSource({
         projectDirectoryUrl,
         compileServerOrigin,

@@ -14,17 +14,16 @@ export const getBrowserRuntimeReport = async ({
     return entry
   }
   const browserRuntimeFeaturesReport = await page.evaluate(
+    /* eslint-disable no-undef */
     /* istanbul ignore next */
     async ({ coverageHandledFromOutside }) => {
-      // eslint-disable-next-line no-undef
       await window.readyPromise
-
-      // eslint-disable-next-line no-undef
       return window.scanBrowserRuntimeFeatures({
         coverageHandledFromOutside,
         failFastOnFeatureDetection: true,
       })
     },
+    /* eslint-enable no-undef */
     { coverageHandledFromOutside },
   )
   cache.write(browserRuntimeFeaturesReport)

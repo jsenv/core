@@ -2,7 +2,7 @@
 
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { fetchUrl } from "./fetch-browser.js"
+import { fetchUrl } from "./fetch_browser.js"
 
 export const fetchAndEvalUsingFetch = async (url) => {
   const response = await fetchUrl(url)

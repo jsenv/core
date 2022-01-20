@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchUrl } from "../browser_utils/fetch-browser.js"
+import { fetchUrl } from "../browser_utils/fetch_browser.js"
 import { fetchAndEvalUsingFetch } from "../browser_utils/fetchAndEvalUsingFetch.js"
 import { unevalException } from "../unevalException.js"
 import { memoize } from "../memoize.js"
