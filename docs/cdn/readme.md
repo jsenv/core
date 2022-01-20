@@ -1,6 +1,6 @@
 # Using ressources from CDN
 
-The following HTML file is loading the roboto font from google CDNs.
+This documentation explains what happens if you use ressources from a CDN. Let's start with the following HTML file loading the roboto font from google CDNs.
 
 ```html
 <!DOCTYPE html>
@@ -11,6 +11,7 @@ The following HTML file is loading the roboto font from google CDNs.
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Roboto"
+      crossorigin="anonymous"
     />
     <style>
       body {
@@ -24,8 +25,6 @@ The following HTML file is loading the roboto font from google CDNs.
   </body>
 </html>
 ```
-
-Cross origin urls like this can be used in HTML, CSS and JavaScript.
 
 By default jsenv keeps cross origin urls untouched. There is 2 circumstances where it makes sense to change this behaviour:
 
