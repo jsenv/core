@@ -1,4 +1,4 @@
-import { createOneRuntimeCompat } from "./one_runtime_compat.js"
+import { featuresCompatFromRuntime } from "./features_compat_from_runtime.js"
 
 export const getOrCreateCompileDirectory = ({
   featureNames,
@@ -7,7 +7,7 @@ export const getOrCreateCompileDirectory = ({
 }) => {
   const runtimeName = runtimeReport.runtime.name
   const runtimeVersion = runtimeReport.runtime.version
-  const { availableFeatureNames } = createOneRuntimeCompat({
+  const { availableFeatureNames } = featuresCompatFromRuntime({
     runtimeName,
     runtimeVersion,
     featureNames,

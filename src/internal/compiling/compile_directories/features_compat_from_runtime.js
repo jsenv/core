@@ -2,7 +2,7 @@ import { findHighestVersion } from "@jsenv/core/src/internal/semantic_versioning
 
 import { featuresCompatMap } from "./features_compatibility.js"
 
-export const createOneRuntimeCompat = ({
+export const featuresCompatFromRuntime = ({
   runtimeName,
   runtimeVersion,
   featureNames,

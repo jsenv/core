@@ -458,6 +458,7 @@ export const startCompileServer = async ({
     ...compileServer,
     featureNames,
     babelPluginMap,
+    compileDirectories,
     preservedUrls,
     projectFileRequestedCallback,
   }

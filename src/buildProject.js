@@ -1,9 +1,10 @@
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
+import { fetchUrl } from "@jsenv/server"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/runtime_compat/shake_babel_plugin_map.js"
-import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
+import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/compile_directories/features_compat_from_runtime_support.js"
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compiling/compile_directories/shake_babel_plugin_map.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -13,7 +14,7 @@ import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRo
 import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,
-} from "@jsenv/core/src/internal/runtime_compat/jsenv_runtime_support.js"
+} from "@jsenv/core/src/internal/runtime_support/jsenv_runtime_support.js"
 
 /**
  * Generate optimized version of source files into a directory
@@ -126,19 +127,15 @@ export const buildProject = async ({
       `format must be "systemjs" when importMapInWebWorkers is enabled`,
     )
   }
-
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-  assertentryPoints({ entryPoints })
-
+  assertEntryPoints({ entryPoints })
   if (Object.keys(entryPoints).length === 0) {
     logger.error(`entryPoints is an empty object`)
     return {
       rollupBuilds: {},
     }
   }
-
   assertBuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
   const buildDirectoryUrl = resolveDirectoryUrl(
     buildDirectoryRelativeUrl,
@@ -151,7 +148,6 @@ export const buildProject = async ({
 
   const buildOperation = Abort.startOperation()
   buildOperation.addAbortSignal(signal)
-
   if (handleSIGINT) {
     buildOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -162,7 +158,6 @@ export const buildProject = async ({
       )
     })
   }
-
   const compileServer = await startCompileServer({
     signal: buildOperation.signal,
     logLevel: compileServerLogLevel,
@@ -210,12 +205,34 @@ export const buildProject = async ({
     compileServerCanReadFromFilesystem: filesystemCache,
     compileServerCanWriteOnFilesystem: filesystemCache,
   })
-
   buildOperation.addEndCallback(async () => {
     await compileServer.stop(`build cleanup`)
   })
-
-  const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
+  const featuresCompat = featuresCompatFromRuntimeSupport({
+    runtimeSupport,
+    featureNames: compileServer.featureNames,
+  })
+  const featuresReport = {}
+  featuresCompat.availableFeatureNames.forEach((availableFeatureName) => {
+    featuresReport[availableFeatureName] = true
+  })
+  const { compileId } = await fetchUrl(
+    `${compileServer.origin}/.jsenv/build/__compile_meta__.json"`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        runtime: {
+          name: "jsenv_build",
+          version: "1",
+        },
+        featuresReport,
+      }),
+    },
+  )
+  const compileDirectory = compileServer.compileDirectories[compileId]
 
   try {
     const result = await buildUsingRollup({
@@ -224,8 +241,8 @@ export const buildProject = async ({
 
       entryPoints,
       projectDirectoryUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
+      compileServerOrigin: compileServer.origin,
+      compileDirectoryRelativeUrl: `${compileServer.outDirectoryRelativeUrl}${compileId}/`,
       jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
       buildDirectoryUrl,
       buildDirectoryClean,
@@ -246,9 +263,7 @@ export const buildProject = async ({
       globals,
       babelPluginMap: shakeBabelPluginMap({
         babelPluginMap: compileServer.babelPluginMap,
-        missingFeatureNames:
-          compileServer.compileServerGroupMap[COMPILE_ID_BEST]
-            .missingFeatureNames,
+        compileDirectory,
       }),
       runtimeSupport,
       workers,
@@ -287,7 +302,7 @@ export const buildProject = async ({
   }
 }
 
-const assertentryPoints = ({ entryPoints }) => {
+const assertEntryPoints = ({ entryPoints }) => {
   if (typeof entryPoints !== "object") {
     throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
   }
