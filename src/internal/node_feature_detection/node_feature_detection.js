@@ -1,6 +1,4 @@
-import { resolveGroup } from "@jsenv/core/src/internal/runtime/resolveGroup.js"
 import { detectNode } from "@jsenv/core/src/internal/node_runtime/detectNode.js"
-import { computeCompileIdFromGroupId } from "@jsenv/core/src/internal/runtime/computeCompileIdFromGroupId.js"
 import { nodeSupportsDynamicImport } from "@jsenv/core/src/internal/node_feature_detection/nodeSupportsDynamicImport.js"
 import { nodeSupportsTopLevelAwait } from "@jsenv/core/src/internal/node_feature_detection/nodeSupportsTopLevelAwait.js"
 import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
@@ -11,18 +9,11 @@ export const scanNodeRuntimeFeatures = async ({
   coverageHandledFromOutside = false,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const {
-    importDefaultExtension,
-    customCompilerPatterns,
-    compileServerGroupMap,
-  } = await importJson(new URL("__compile_meta__.json", outDirectoryServerUrl))
+  const { importDefaultExtension, customCompilerPatterns } = await importJson(
+    new URL("__compile_meta__.json", outDirectoryServerUrl),
+  )
 
   const node = detectNode()
-  const compileId = computeCompileIdFromGroupId({
-    groupId: resolveGroup(node, compileServerGroupMap),
-    groupMap: compileServerGroupMap,
-  })
-  const groupInfo = compileServerGroupMap[compileId]
 
   const featuresReport = {
     dynamicImport: undefined,
@@ -48,7 +39,6 @@ export const scanNodeRuntimeFeatures = async ({
     canAvoidCompilation,
     featuresReport,
     missingFeatureNames,
-    compileId,
     importDefaultExtension,
     node,
   }

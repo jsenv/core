@@ -12,8 +12,8 @@ import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
 import {
   isNodePartOfSupportedRuntimes,
   isBrowserPartOfSupportedRuntimes,
-} from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
-import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
+} from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
+
 import { createRollupPlugins } from "./rollup_plugin_jsenv.js"
 
 export const buildUsingRollup = async ({
@@ -38,6 +38,7 @@ export const buildUsingRollup = async ({
   globals,
   babelPluginMap,
   runtimeSupport,
+  featuresReport,
 
   urlMappings,
   importResolutionMethod,
@@ -67,24 +68,10 @@ export const buildUsingRollup = async ({
 }) => {
   const node = isNodePartOfSupportedRuntimes(runtimeSupport)
   const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
-
-  const runtimeCompatMap = createRuntimeCompat({
-    runtimeSupport,
-    featureNames: ["import_assertion_type_json", "import_assertion_type_css"],
-  })
   const importAssertionsSupport = {
-    json:
-      format === "esmodule" &&
-      !runtimeCompatMap.missingFeatureNames.includes(
-        "import_assertion_type_json",
-      ),
-    css:
-      format === "esmodule" &&
-      !runtimeCompatMap.missingFeatureNames.includes(
-        "import_assertion_type_json",
-      ),
+    json: format === "esmodule" && featuresReport.import_assertion_type_json,
+    css: format === "esmodule" && featuresReport.import_assertion_type_css,
   }
-
   const {
     rollupPlugins,
     getLastErrorMessage,

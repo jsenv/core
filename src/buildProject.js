@@ -3,8 +3,8 @@ import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/compile_directories/features_compat_from_runtime_support.js"
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compiling/compile_directories/shake_babel_plugin_map.js"
+import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/out_directory/features_compat_from_runtime_support.js"
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compiling/out_directory/shake_babel_plugin_map.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -210,29 +210,44 @@ export const buildProject = async ({
   })
   const featuresCompat = featuresCompatFromRuntimeSupport({
     runtimeSupport,
-    featureNames: compileServer.featureNames,
+    featureNames: [
+      compileServer.featureNames,
+      // "rollup_plugin_jsenv.js" expects to hit the compile server
+      // so we force compilation by adding a fake feature called "force_compilation"
+      // one day we'll test how code behaves if zero transformations is required during
+      // the build and update code as needed
+      "force_compilation",
+    ],
   })
   const featuresReport = {}
   featuresCompat.availableFeatureNames.forEach((availableFeatureName) => {
     featuresReport[availableFeatureName] = true
   })
-  const { compileId } = await fetchUrl(
-    `${compileServer.origin}/.jsenv/build/__compile_meta__.json"`,
+  const body = JSON.stringify({
+    runtime: {
+      name: "jsenv_build",
+      version: "1",
+    },
+    featuresReport,
+  })
+  const compileServerResponse = await fetchUrl(
+    `${compileServer.origin}/.jsenv/__out_meta__.json`,
     {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "content-length": Buffer.byteLength(body),
       },
-      body: JSON.stringify({
-        runtime: {
-          name: "jsenv_build",
-          version: "1",
-        },
-        featuresReport,
-      }),
+      body,
     },
   )
+  const { compileId } = await compileServerResponse.json()
+  babelPluginMap = compileServer.babelPluginMap
   const compileDirectory = compileServer.compileDirectories[compileId]
+  babelPluginMap = shakeBabelPluginMap({
+    babelPluginMap,
+    compileDirectory,
+  })
 
   try {
     const result = await buildUsingRollup({
@@ -261,11 +276,9 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap: shakeBabelPluginMap({
-        babelPluginMap: compileServer.babelPluginMap,
-        compileDirectory,
-      }),
+      babelPluginMap,
       runtimeSupport,
+      featuresReport,
       workers,
       serviceWorkers,
       serviceWorkerFinalizer,

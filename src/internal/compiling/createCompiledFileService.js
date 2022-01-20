@@ -9,7 +9,7 @@ import {
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 
-import { shakeBabelPluginMap } from "./compile_directories/shake_babel_plugin_map.js"
+import { shakeBabelPluginMap } from "./out_directory/shake_babel_plugin_map.js"
 import { compileFile } from "./compileFile.js"
 import { compileHtml } from "./jsenvCompilerForHtml.js"
 import { compileImportmap } from "./jsenvCompilerForImportmap.js"

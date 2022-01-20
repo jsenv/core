@@ -67,7 +67,7 @@
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "1.5.0",
     "@jsenv/logger": "4.0.1",
-    "@jsenv/server": "12.3.2",
+    "@jsenv/server": "12.3.3",
     "@jsenv/uneval": "1.6.0",
     "@rollup/plugin-commonjs": "21.0.1",
     "@rollup/plugin-json": "4.1.0",

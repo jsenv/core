@@ -1,60 +1,43 @@
-import { readFileSync } from "node:fs"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
   fetchFileSystem,
   createSSERoom,
   composeServices,
-  urlToContentType,
   pluginServerTiming,
   pluginRequestWaitingCheck,
   pluginCORS,
   readRequestBody,
 } from "@jsenv/server"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   resolveUrl,
-  urlToFileSystemPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-  readFile,
-  writeFile,
-  ensureEmptyDirectory,
   registerDirectoryLifecycle,
   urlIsInsideOf,
-  urlToBasename,
   urlToExtension,
+  ensureEmptyDirectory,
 } from "@jsenv/filesystem"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   createCallbackList,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 
-import {
-  TOOLBAR_INJECTOR_BUILD_URL,
-  EVENT_SOURCE_CLIENT_BUILD_URL,
-  BROWSER_RUNTIME_BUILD_URL,
-} from "@jsenv/core/dist/build_manifest.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
-import {
-  sourcemapMainFileInfo,
-  sourcemapMappingFileInfo,
-} from "../jsenvInternalFiles.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
-import {
-  jsenvCoreDirectoryUrl,
-  jsenvDistDirectoryUrl,
-} from "../jsenvCoreDirectoryUrl.js"
+import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { createOutDirectoryMeta } from "./out_directory/out_directory_meta.js"
+import { createOutDirectory } from "./out_directory/out_directory.js"
+import { urlIsCompilationAsset } from "./out_directory/compile_asset.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { getOrCreateCompileDirectory } from "./compile_directories/get_or_create_compile_directory.js"
-import { urlIsCompilationAsset } from "./compile_directories/compile_asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 let compileServerId = 0
@@ -77,7 +60,7 @@ export const startCompileServer = async ({
   importDefaultExtension,
 
   jsenvDirectoryRelativeUrl = ".jsenv",
-  jsenvDirectoryClean = false,
+  outDirectoryClean = false,
   outDirectoryName = "out",
 
   sourcemapMethod = "comment", // "inline" is also possible
@@ -91,7 +74,6 @@ export const startCompileServer = async ({
   moduleOutFormat,
   importMetaFormat,
   topLevelAwait,
-  env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
   replaceGlobalObject = false,
@@ -130,24 +112,16 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
+  const logger = createLogger({ logLevel })
   const jsenvDirectoryUrl = resolveDirectoryUrl(
     jsenvDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-  const outDirectoryUrl = resolveDirectoryUrl(
-    outDirectoryName,
-    jsenvDirectoryUrl,
-  )
-  const outDirectoryRelativeUrl = urlToRelativeUrl(
-    outDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  // normalization
+  // normalizing "jsenvDirectoryRelativeUrl"
   jsenvDirectoryRelativeUrl = urlToRelativeUrl(
     jsenvDirectoryUrl,
     projectDirectoryUrl,
   )
-  const logger = createLogger({ logLevel })
   preservedUrls = {
     // Authorize jsenv to modify any file url
     // because the goal is to build the files into chunks
@@ -268,24 +242,94 @@ export const startCompileServer = async ({
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
+  const outDirectoryUrl = resolveUrl(outDirectoryName, jsenvDirectoryUrl)
+  const outDirectoryRelativeUrl = urlToRelativeUrl(
+    outDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  const outDirectoryMetaFileName = "__out_meta__.json"
+  const outDirectoryMetaFileUrl = resolveUrl(
+    outDirectoryMetaFileName,
+    jsenvDirectoryUrl,
+  )
+  const outDirectory = await createOutDirectory({
+    outDirectoryUrl,
+    outDirectoryMetaFileName,
+    featureNames,
+  })
+  const outDirectoryMeta = await createOutDirectoryMeta({
+    logger,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+    outDirectoryMetaFileUrl,
+
+    importDefaultExtension,
+    preservedUrls,
+    workers,
+    serviceWorkers,
+    featureNames,
+    babelPluginMap,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
+    inlineImportMapIntoHTML,
+    customCompilers,
+    jsenvToolbarInjection,
+    sourcemapMethod,
+    sourcemapExcludeSources,
+  })
+  const cleanWholeFileSystemCache = async ({ reason, details }) => {
+    logger.debug(
+      createDetailedMessage(
+        `Cleaning ${outDirectoryUrl} directory because ${reason}`,
+        details,
+      ),
+    )
+    await ensureEmptyDirectory(outDirectoryUrl)
+  }
+  if (compileServerCanWriteOnFilesystem) {
+    if (outDirectoryClean) {
+      await cleanWholeFileSystemCache({
+        reason: "outDirectoryClean parameter enabled",
+      })
+    } else {
+      const outDirectoryMetaPrevious =
+        await outDirectoryMeta.readFromFileSystem()
+      if (outDirectoryMetaPrevious) {
+        const outChanges = outDirectoryMeta.compare(outDirectoryMetaPrevious)
+        if (outChanges.length) {
+          await cleanWholeFileSystemCache({
+            reason: "compile server configuration has changed",
+            details: {
+              changes: outChanges.namedChanges
+                ? outChanges.namedChanges
+                : `something`,
+            },
+          })
+        }
+      }
+    }
+
+    await outDirectoryMeta.writeOnFileSystem()
+    logger.debug(`-> ${outDirectoryMetaFileUrl}`)
+  }
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-
   let projectFileRequestedCallback = () => {}
   if (livereloadSSE) {
     const sseSetup = setupServerSentEventsForLivereload({
-      serverStopCallbackList,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
+      outDirectory,
+
+      serverStopCallbackList,
       livereloadLogLevel,
       livereloadWatchConfig,
     })
-
     projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
     const serveSSEForLivereload = createSSEForLivereloadService({
+      outDirectory,
       serverStopCallbackList,
-      outDirectoryRelativeUrl,
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
     customServices = {
@@ -307,61 +351,65 @@ export const startCompileServer = async ({
     }
   }
 
-  const compileMetaFileInfo = createCompileMetaFileInfo({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    jsenvRemoteDirectory,
-    importDefaultExtension,
-
-    preservedUrls,
-    workers,
-    serviceWorkers,
-    featureNames,
-    babelPluginMap,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    env,
-    inlineImportMapIntoHTML,
-    customCompilers,
-    jsenvToolbarInjection,
-    sourcemapMethod,
-    sourcemapExcludeSources,
-  })
-  if (compileServerCanWriteOnFilesystem) {
-    await cleanOutDirectoryIfNeeded({
-      logger,
-      outDirectoryUrl,
-      jsenvDirectoryUrl,
-      jsenvDirectoryClean,
-      compileMetaFileInfo,
-    })
-    await writeFile(
-      compileMetaFileInfo.url,
-      JSON.stringify(compileMetaFileInfo.data, null, "  "),
-    )
-    logger.debug(`-> ${compileMetaFileInfo.url}`)
-  }
-
-  const compileDirectories = {}
-
   const jsenvServices = {
+    "service:compile directories": async (request) => {
+      const requestFileUrl = resolveUrl(
+        request.ressource.slice(1),
+        projectDirectoryUrl,
+      )
+      if (
+        requestFileUrl !== outDirectoryMetaFileUrl &&
+        // allow to request it directly from .jsenv
+        request.ressource !== `/.jsenv/${outDirectoryMetaFileName}`
+      ) {
+        return null
+      }
+      if (request.method === "GET") {
+        const body = JSON.stringify(outDirectoryMeta, null, "  ")
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      }
+      if (request.method === "POST") {
+        const runtimeReport = await readRequestBody(request, {
+          as: "json",
+        })
+        const compileDirectoryId = outDirectory.getOrCreateCompileDirectoryId({
+          runtimeReport,
+        })
+        const responseBodyAsObject = {
+          compileDirectoryId,
+        }
+        const responseBodyAsString = JSON.stringify(
+          responseBodyAsObject,
+          null,
+          "  ",
+        )
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(responseBodyAsString),
+          },
+          body: responseBodyAsString,
+        }
+      }
+      return null
+    },
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
-    }),
-    "service:compile meta": createCompileMetaService({
-      projectDirectoryUrl,
-      outDirectoryUrl,
-      featureNames,
-      compileMetaFileInfo,
-      compileDirectories,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
+      outDirectory,
       jsenvRemoteDirectory,
 
       importDefaultExtension,
@@ -454,11 +502,10 @@ export const startCompileServer = async ({
   return {
     id: compileServerId++,
     jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
+    outDirectory,
     ...compileServer,
     featureNames,
     babelPluginMap,
-    compileDirectories,
     preservedUrls,
     projectFileRequestedCallback,
   }
@@ -481,7 +528,6 @@ export const computeOutDirectoryRelativeUrl = ({
     outDirectoryUrl,
     projectDirectoryUrl,
   )
-
   return outDirectoryRelativeUrl
 }
 
@@ -525,95 +571,6 @@ const assertArguments = ({
   }
 }
 
-const cleanOutDirectoryIfNeeded = async ({
-  logger,
-  outDirectoryUrl,
-  jsenvDirectoryClean,
-  jsenvDirectoryUrl,
-  compileMetaFileInfo,
-}) => {
-  if (jsenvDirectoryClean) {
-    logger.debug(
-      `Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`,
-    )
-    await ensureEmptyDirectory(jsenvDirectoryUrl)
-  }
-
-  let previousCompileMeta
-  try {
-    const source = await readFile(compileMetaFileInfo.url)
-    if (source === "") {
-      previousCompileMeta = null
-      logger.debug(
-        `compiler server meta file is empty ${compileMetaFileInfo.url}`,
-      )
-    } else {
-      previousCompileMeta = JSON.parse(source)
-    }
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      previousCompileMeta = null
-    } else if (e.name === "SyntaxError") {
-      previousCompileMeta = null
-      logger.warn(`Syntax error while parsing ${compileMetaFileInfo.url}`)
-    } else {
-      throw e
-    }
-  }
-
-  if (previousCompileMeta !== null) {
-    const outDirectoryChanges = getOutDirectoryChanges(
-      previousCompileMeta,
-      compileMetaFileInfo.data,
-    )
-    if (outDirectoryChanges) {
-      if (!jsenvDirectoryClean) {
-        logger.debug(
-          createDetailedMessage(
-            `Cleaning jsenv ${urlToBasename(
-              outDirectoryUrl.slice(0, -1),
-            )} directory because configuration has changed.`,
-            {
-              "changes": outDirectoryChanges.namedChanges
-                ? outDirectoryChanges.namedChanges
-                : `something`,
-              "out directory": urlToFileSystemPath(outDirectoryUrl),
-            },
-          ),
-        )
-      }
-      await ensureEmptyDirectory(outDirectoryUrl)
-    }
-  }
-}
-
-const getOutDirectoryChanges = (previousCompileMeta, compileMeta) => {
-  const changes = []
-
-  Object.keys(compileMeta).forEach((key) => {
-    const now = compileMeta[key]
-    const previous = previousCompileMeta[key]
-    if (!compareValueJson(now, previous)) {
-      changes.push(key)
-    }
-  })
-
-  if (changes.length > 0) {
-    return { namedChanges: changes }
-  }
-
-  // in case basic comparison from above is not enough
-  if (!compareValueJson(previousCompileMeta, compileMeta)) {
-    return { somethingChanged: true }
-  }
-
-  return null
-}
-
-const compareValueJson = (left, right) => {
-  return JSON.stringify(left) === JSON.stringify(right)
-}
-
 /**
  * We need to get two things:
  * { projectFileRequestedCallback, trackMainAndDependencies }
@@ -635,10 +592,11 @@ const compareValueJson = (left, right) => {
  *
  */
 const setupServerSentEventsForLivereload = ({
-  serverStopCallbackList,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
+  outDirectory,
+
+  serverStopCallbackList,
   livereloadLogLevel,
   livereloadWatchConfig,
 }) => {
@@ -835,7 +793,7 @@ const setupServerSentEventsForLivereload = ({
       // here we know the referer is inside compileServer
       const refererRelativeUrl = urlToOriginalRelativeUrl(
         referer,
-        resolveUrl(outDirectoryRelativeUrl, request.origin),
+        resolveUrl(outDirectory.relativeUrl, request.origin),
       )
       if (refererRelativeUrl) {
         // search if referer (file requesting this one) is tracked as being a dependency of main file
@@ -868,8 +826,8 @@ const setupServerSentEventsForLivereload = ({
 }
 
 const createSSEForLivereloadService = ({
+  outDirectory,
   serverStopCallbackList,
-  outDirectoryRelativeUrl,
   trackMainAndDependencies,
 }) => {
   const cache = []
@@ -922,18 +880,15 @@ const createSSEForLivereloadService = ({
     }
     return sseRoom
   }
-
   return (request) => {
     const { accept } = request.headers
     if (!accept || !accept.includes("text/event-stream")) {
       return null
     }
-
     const fileRelativeUrl = urlToOriginalRelativeUrl(
       resolveUrl(request.ressource, request.origin),
-      resolveUrl(outDirectoryRelativeUrl, request.origin),
+      resolveUrl(outDirectory.relativeUrl, request.origin),
     )
-
     const room = getOrCreateSSERoom(fileRelativeUrl)
     return room.join(request)
   }
@@ -1011,190 +966,6 @@ const createSourceFileService = ({
     }
     return filesystemResponse
   }
-}
-
-const createCompileMetaFileInfo = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  importDefaultExtension,
-
-  preservedUrls,
-  workers,
-  serviceWorkers,
-  featureNames,
-  babelPluginMap,
-  replaceProcessEnvNodeEnv,
-  processEnvNodeEnv,
-  env,
-  inlineImportMapIntoHTML,
-  customCompilers,
-  jsenvToolbarInjection,
-  sourcemapMethod,
-  sourcemapExcludeSources,
-}) => {
-  const outDirectoryUrl = resolveUrl(
-    outDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const compileMetaFileUrl = resolveUrl(
-    "./__compile_meta__.json",
-    outDirectoryUrl,
-  )
-  const jsenvCorePackageFileUrl = resolveUrl(
-    "./package.json",
-    jsenvCoreDirectoryUrl,
-  )
-  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
-  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
-  const customCompilerPatterns = Object.keys(customCompilers)
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMainFileInfo.url,
-    projectDirectoryUrl,
-  )
-  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileInfo.url,
-    projectDirectoryUrl,
-  )
-  // The object below must list everything that can influence how the
-  // compiled files are generated. So that the cahce for those generated files is
-  // not reused when it should not
-  // In some cases the parameters influences only a subset of files and ideally
-  // this parameter should somehow invalidate a subset of the cache
-  // To keep things simple these parameters currently invalidates the whole cache
-  const compileMeta = {
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importDefaultExtension,
-
-    preservedUrls,
-    workers,
-    serviceWorkers,
-    babelPluginMap: babelPluginMapAsData(babelPluginMap),
-    featureNames,
-    customCompilerPatterns,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    inlineImportMapIntoHTML,
-
-    sourcemapMethod,
-    sourcemapExcludeSources,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-    errorStackRemapping: true,
-
-    // used to consider logic generating files may have changed
-    jsenvCorePackageVersion,
-
-    // impact only HTML files
-    jsenvToolbarInjection,
-    TOOLBAR_INJECTOR_BUILD_URL,
-    EVENT_SOURCE_CLIENT_BUILD_URL,
-    BROWSER_RUNTIME_BUILD_URL,
-
-    env,
-  }
-  return {
-    url: compileMetaFileUrl,
-    data: compileMeta,
-  }
-}
-
-const babelPluginMapAsData = (babelPluginMap) => {
-  const data = {}
-  Object.keys(babelPluginMap).forEach((key) => {
-    const value = babelPluginMap[key]
-    if (Array.isArray(value)) {
-      data[key] = value
-      return
-    }
-    if (typeof value === "object") {
-      data[key] = {
-        options: value.options,
-      }
-      return
-    }
-    data[key] = value
-  })
-  return data
-}
-
-const createCompileMetaService = ({
-  projectDirectoryUrl,
-  outDirectoryUrl,
-  featureNames,
-  compileMetaFileInfo,
-  compileDirectories,
-}) => {
-  const isCompileMetaFile = (url) => {
-    if (!urlIsInsideOf(url, outDirectoryUrl)) {
-      return false
-    }
-    const afterOutDirectory = url.slice(outDirectoryUrl.length)
-    if (afterOutDirectory.indexOf("/") > -1) {
-      return false
-    }
-    return true
-  }
-  return async (request) => {
-    const requestUrl = resolveUrl(
-      request.ressource.slice(1),
-      projectDirectoryUrl,
-    )
-    if (
-      !isCompileMetaFile(requestUrl) &&
-      // allow to request it directly from .jsenv
-      request.ressource !== "/.jsenv/__compile_meta__.json"
-    ) {
-      return null
-    }
-    if (request.method === "GET") {
-      // serve from memory
-      const body = JSON.stringify(compileMetaFileInfo.data, null, "  ")
-      return {
-        status: 200,
-        headers: {
-          "content-type": urlToContentType(requestUrl),
-          "content-length": Buffer.byteLength(body),
-        },
-        body,
-      }
-    }
-    if (request.method === "POST") {
-      const runtimeReport = await readRequestBody(request, {
-        as: "json",
-      })
-      const compileId = getOrCreateCompileDirectory({
-        featureNames,
-        runtimeReport,
-        compileDirectories,
-      })
-      const responseBodyAsObject = {
-        compileId,
-      }
-      const responseBodyAsString = JSON.stringify(
-        responseBodyAsObject,
-        null,
-        "  ",
-      )
-      return {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(responseBodyAsString),
-        },
-        body: responseBodyAsString,
-      }
-    }
-    return null
-  }
-}
-
-const readPackage = (packagePath) => {
-  const buffer = readFileSync(packagePath)
-  const string = String(buffer)
-  const packageObject = JSON.parse(string)
-  return packageObject
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

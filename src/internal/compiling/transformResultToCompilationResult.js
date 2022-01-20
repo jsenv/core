@@ -16,8 +16,8 @@ import {
   setCssSourceMappingUrl,
   sourcemapToBase64Url,
 } from "../sourceMappingURLUtils.js"
-import { generateCompilationAssetUrl } from "./compile_directories/compile_asset.js"
-import { testFilePresence } from "./compile_directories/fs-optimized-for-cache.js"
+import { generateCompilationAssetUrl } from "./out_directory/compile_asset.js"
+import { testFilePresence } from "./out_directory/fs-optimized-for-cache.js"
 
 const isWindows = process.platform === "win32"
 
