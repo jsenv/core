@@ -7,8 +7,8 @@ import {
 } from "@jsenv/filesystem"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
-import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
-import { updateMeta } from "./compile-directory/updateMeta.js"
+import { getOrGenerateCompiledFile } from "./compile_directories/getOrGenerateCompiledFile.js"
+import { updateMeta } from "./compile_directories/updateMeta.js"
 
 export const compileFile = async ({
   logger,

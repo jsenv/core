@@ -1,7 +1,7 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { mergeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
+import { mergeRuntimeSupport } from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"

@@ -36,7 +36,7 @@ import {
   visitHtmlAst,
   addHtmlNodeAttribute,
 } from "./compileHtml.js"
-import { generateCompilationAssetUrl } from "./compile-directory/compile-asset.js"
+import { generateCompilationAssetUrl } from "./compile_directories/compile_asset.js"
 
 export const compileHtml = async ({
   // cancellationToken,

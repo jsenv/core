@@ -1,6 +1,6 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
+import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
