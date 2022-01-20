@@ -53,7 +53,7 @@ import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_a
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { createOneRuntimeCompat } from "./compile_directories/one_runtime_compat.js"
+import { getOrCreateCompileDirectory } from "./compile_directories/get_or_create_compile_directory.js"
 import { urlIsCompilationAsset } from "./compile_directories/compile_asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
@@ -1163,21 +1163,13 @@ const createCompileMetaService = ({
       const runtimeReport = await readRequestBody(request, {
         as: "json",
       })
-      const { availableFeatureNames } = createOneRuntimeCompat({
-        runtimeName: runtimeReport.runtime.name,
-        runtimeVersion: runtimeReport.runtime.version,
+      const compileId = getOrCreateCompileDirectory({
         featureNames,
+        runtimeReport,
+        compileDirectories,
       })
-      const featuresReport = {}
-      availableFeatureNames.forEach((availableFeatureName) => {
-        featuresReport[availableFeatureName] = true
-      })
-      Object.assign(featuresReport, runtimeReport.featuresReport)
-      // we have the features report
-
-      // depending what the runtime tells us, assign a compileId
       const responseBodyAsObject = {
-        compileId: null,
+        compileId,
       }
       const responseBodyAsString = JSON.stringify(
         responseBodyAsObject,
