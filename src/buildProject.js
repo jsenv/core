@@ -241,9 +241,9 @@ export const buildProject = async ({
       body,
     },
   )
-  const { compileId } = await compileServerResponse.json()
+  const { compileDirectoryId } = await compileServerResponse.json()
   babelPluginMap = compileServer.babelPluginMap
-  const compileDirectory = compileServer.compileDirectories[compileId]
+  const compileDirectory = compileServer.compileDirectories[compileDirectoryId]
   babelPluginMap = shakeBabelPluginMap({
     babelPluginMap,
     compileDirectory,
@@ -257,7 +257,7 @@ export const buildProject = async ({
       entryPoints,
       projectDirectoryUrl,
       compileServerOrigin: compileServer.origin,
-      compileDirectoryRelativeUrl: `${compileServer.outDirectoryRelativeUrl}${compileId}/`,
+      compileDirectoryRelativeUrl: `${compileServer.outDirectoryRelativeUrl}${compileDirectoryId}/`,
       jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
       buildDirectoryUrl,
       buildDirectoryClean,

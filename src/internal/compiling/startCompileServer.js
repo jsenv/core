@@ -29,8 +29,7 @@ import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/runti
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { createOutDirectoryMeta } from "./out_directory/out_directory_meta.js"
-import { createOutDirectory } from "./out_directory/out_directory.js"
+import { setupOutDirectory } from "./out_directory/out_directory.js"
 import { urlIsCompilationAsset } from "./out_directory/compile_asset.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
@@ -247,20 +246,22 @@ export const startCompileServer = async ({
     outDirectoryUrl,
     projectDirectoryUrl,
   )
-  const outDirectoryMetaFileName = "__out_meta__.json"
   const outDirectoryMetaFileUrl = resolveUrl(
-    outDirectoryMetaFileName,
+    "__out_meta__.json",
     jsenvDirectoryUrl,
   )
-  const outDirectory = await createOutDirectory({
-    outDirectoryUrl,
-    outDirectoryMetaFileName,
-    featureNames,
-  })
-  const outDirectoryMeta = await createOutDirectoryMeta({
+  if (outDirectoryClean) {
+    await ensureEmptyDirectory(outDirectoryUrl)
+  }
+  const {
+    compileDirectories,
+    outDirectoryMeta,
+    getOrCreateCompileDirectoryId,
+  } = await setupOutDirectory({
     logger,
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
+    outDirectoryUrl,
     outDirectoryRelativeUrl,
     outDirectoryMetaFileUrl,
 
@@ -277,42 +278,9 @@ export const startCompileServer = async ({
     jsenvToolbarInjection,
     sourcemapMethod,
     sourcemapExcludeSources,
-  })
-  const cleanWholeFileSystemCache = async ({ reason, details }) => {
-    logger.debug(
-      createDetailedMessage(
-        `Cleaning ${outDirectoryUrl} directory because ${reason}`,
-        details,
-      ),
-    )
-    await ensureEmptyDirectory(outDirectoryUrl)
-  }
-  if (compileServerCanWriteOnFilesystem) {
-    if (outDirectoryClean) {
-      await cleanWholeFileSystemCache({
-        reason: "outDirectoryClean parameter enabled",
-      })
-    } else {
-      const outDirectoryMetaPrevious =
-        await outDirectoryMeta.readFromFileSystem()
-      if (outDirectoryMetaPrevious) {
-        const outChanges = outDirectoryMeta.compare(outDirectoryMetaPrevious)
-        if (outChanges.length) {
-          await cleanWholeFileSystemCache({
-            reason: "compile server configuration has changed",
-            details: {
-              changes: outChanges.namedChanges
-                ? outChanges.namedChanges
-                : `something`,
-            },
-          })
-        }
-      }
-    }
 
-    await outDirectoryMeta.writeOnFileSystem()
-    logger.debug(`-> ${outDirectoryMetaFileUrl}`)
-  }
+    compileServerCanWriteOnFilesystem,
+  })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   let projectFileRequestedCallback = () => {}
@@ -320,7 +288,7 @@ export const startCompileServer = async ({
     const sseSetup = setupServerSentEventsForLivereload({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectory,
+      outDirectoryRelativeUrl,
 
       serverStopCallbackList,
       livereloadLogLevel,
@@ -328,7 +296,7 @@ export const startCompileServer = async ({
     })
     projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
     const serveSSEForLivereload = createSSEForLivereloadService({
-      outDirectory,
+      outDirectoryRelativeUrl,
       serverStopCallbackList,
       trackMainAndDependencies: sseSetup.trackMainAndDependencies,
     })
@@ -360,7 +328,7 @@ export const startCompileServer = async ({
       if (
         requestFileUrl !== outDirectoryMetaFileUrl &&
         // allow to request it directly from .jsenv
-        request.ressource !== `/.jsenv/${outDirectoryMetaFileName}`
+        request.ressource !== `/.jsenv/__out_meta__.json`
       ) {
         return null
       }
@@ -379,7 +347,7 @@ export const startCompileServer = async ({
         const runtimeReport = await readRequestBody(request, {
           as: "json",
         })
-        const compileDirectoryId = outDirectory.getOrCreateCompileDirectoryId({
+        const compileDirectoryId = getOrCreateCompileDirectoryId({
           runtimeReport,
         })
         const responseBodyAsObject = {
@@ -409,7 +377,7 @@ export const startCompileServer = async ({
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectory,
+      compileDirectories,
       jsenvRemoteDirectory,
 
       importDefaultExtension,
@@ -502,7 +470,7 @@ export const startCompileServer = async ({
   return {
     id: compileServerId++,
     jsenvDirectoryRelativeUrl,
-    outDirectory,
+    compileDirectories,
     ...compileServer,
     featureNames,
     babelPluginMap,
@@ -594,7 +562,7 @@ const assertArguments = ({
 const setupServerSentEventsForLivereload = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectory,
+  outDirectoryRelativeUrl,
 
   serverStopCallbackList,
   livereloadLogLevel,
@@ -793,7 +761,7 @@ const setupServerSentEventsForLivereload = ({
       // here we know the referer is inside compileServer
       const refererRelativeUrl = urlToOriginalRelativeUrl(
         referer,
-        resolveUrl(outDirectory.relativeUrl, request.origin),
+        resolveUrl(outDirectoryRelativeUrl, request.origin),
       )
       if (refererRelativeUrl) {
         // search if referer (file requesting this one) is tracked as being a dependency of main file
@@ -826,7 +794,7 @@ const setupServerSentEventsForLivereload = ({
 }
 
 const createSSEForLivereloadService = ({
-  outDirectory,
+  outDirectoryRelativeUrl,
   serverStopCallbackList,
   trackMainAndDependencies,
 }) => {
@@ -887,7 +855,7 @@ const createSSEForLivereloadService = ({
     }
     const fileRelativeUrl = urlToOriginalRelativeUrl(
       resolveUrl(request.ressource, request.origin),
-      resolveUrl(outDirectory.relativeUrl, request.origin),
+      resolveUrl(outDirectoryRelativeUrl, request.origin),
     )
     const room = getOrCreateSSERoom(fileRelativeUrl)
     return room.join(request)
