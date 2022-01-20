@@ -1,0 +1,32 @@
+{
+  "name": "@jsenv/integrity",
+  "version": "0.0.1",
+  "description": "Sub ressource integrity helpers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-integrity"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./main.js",
+  "files": [
+    "/src/",
+    "/main.js"
+  ],
+  "scripts": {
+    "test": "node ./script/test/test.mjs"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "*",
+    "@jsenv/core": "*",
+    "@jsenv/eslint-config": "16.0.9",
+    "eslint": "8.7.0"
+  }
+}

@@ -6,6 +6,8 @@
 /helpers/babel/
 /helpers/regenerator-runtime/
 /node_modules/
+/packages/*/coverage/
+/packages/*/node_modules/
 
 **/s.js
 /src/**/system.js
