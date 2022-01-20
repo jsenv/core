@@ -85,10 +85,10 @@ jobs:
       - name: Generate importmap
         run: npm run importmap
       - name: publish package
-        run: node ./.github/workflows/main/publish-package.js
+        run: node ./.github/workflows/main/publish_package.mjs
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: ensure github release
-        run: node ./.github/workflows/main/ensure-github-release-for-package.js
+        run: node ./.github/workflows/main/github_release.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
