@@ -62,7 +62,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./packages/jsenv-integrity/coverage/coverage.json
+          files: ./coverage/coverage.json,./packages/jsenv-integrity/coverage/coverage.json
           verbose: true
 
   release:
