@@ -1,6 +1,6 @@
 # Using ressources from CDN
 
-This documentation explains what happens if you use ressources from a CDN. Let's start with the following HTML file loading the roboto font from google CDNs.
+This documentation explains what happens if you use ressources from a CDN. For example in the following HTML roboto font is loaded from google CDNs.
 
 ```html
 <!DOCTYPE html>
@@ -26,7 +26,7 @@ This documentation explains what happens if you use ressources from a CDN. Let's
 </html>
 ```
 
-By default jsenv keeps cross origin urls untouched. There is 2 circumstances where it makes sense to change this behaviour:
+By default jsenv preserves cross origin urls: they are left untouched in the build files for instance. There is 2 circumstances where you might want to change this default behaviour:
 
 1. You want to remove dependency to external urls in your build files
 2. You want to transform code served by the CDN before it gets executed by the browser
