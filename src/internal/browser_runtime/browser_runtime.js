@@ -166,7 +166,7 @@ const onExecutionError = (
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
   const compileMetaResponse = await fetchUrl(
-    `${compileServerOrigin}/.jsenv/__compile_server_meta__.json`,
+    `${compileServerOrigin}/.jsenv/__compile_meta__.json`,
   )
   const compileMeta = await compileMetaResponse.json()
   const { outDirectoryRelativeUrl, errorStackRemapping } = compileMeta

@@ -15,9 +15,7 @@ export const scanNodeRuntimeFeatures = async ({
     importDefaultExtension,
     customCompilerPatterns,
     compileServerGroupMap,
-  } = await importJson(
-    new URL("__compile_server_meta__.json", outDirectoryServerUrl),
-  )
+  } = await importJson(new URL("__compile_meta__.json", outDirectoryServerUrl))
 
   const node = detectNode()
   const compileId = computeCompileIdFromGroupId({

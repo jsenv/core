@@ -313,7 +313,7 @@ export const startCompileServer = async ({
     }
   }
 
-  const compileServerMetaFileInfo = createCompileServerMetaFileInfo({
+  const compileMetaFileInfo = createCompileMetaFileInfo({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
@@ -340,23 +340,23 @@ export const startCompileServer = async ({
       outDirectoryUrl,
       jsenvDirectoryUrl,
       jsenvDirectoryClean,
-      compileServerMetaFileInfo,
+      compileMetaFileInfo,
     })
     await writeFile(
-      compileServerMetaFileInfo.url,
-      JSON.stringify(compileServerMetaFileInfo.data, null, "  "),
+      compileMetaFileInfo.url,
+      JSON.stringify(compileMetaFileInfo.data, null, "  "),
     )
-    logger.debug(`-> ${compileServerMetaFileInfo.url}`)
+    logger.debug(`-> ${compileMetaFileInfo.url}`)
   }
 
   const jsenvServices = {
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
     }),
-    "service:compile server meta": createCompileServerMetaService({
+    "service:compile meta": createCompileMetaService({
       projectDirectoryUrl,
       outDirectoryUrl,
-      compileServerMetaFileInfo,
+      compileMetaFileInfo,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
@@ -532,7 +532,7 @@ const cleanOutDirectoryIfNeeded = async ({
   outDirectoryUrl,
   jsenvDirectoryClean,
   jsenvDirectoryUrl,
-  compileServerMetaFileInfo,
+  compileMetaFileInfo,
 }) => {
   if (jsenvDirectoryClean) {
     logger.debug(
@@ -541,32 +541,32 @@ const cleanOutDirectoryIfNeeded = async ({
     await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
 
-  let previousCompileServerMeta
+  let previousCompileMeta
   try {
-    const source = await readFile(compileServerMetaFileInfo.url)
+    const source = await readFile(compileMetaFileInfo.url)
     if (source === "") {
-      previousCompileServerMeta = null
+      previousCompileMeta = null
       logger.debug(
-        `compiler server meta file is empty ${compileServerMetaFileInfo.url}`,
+        `compiler server meta file is empty ${compileMetaFileInfo.url}`,
       )
     } else {
-      previousCompileServerMeta = JSON.parse(source)
+      previousCompileMeta = JSON.parse(source)
     }
   } catch (e) {
     if (e.code === "ENOENT") {
-      previousCompileServerMeta = null
+      previousCompileMeta = null
     } else if (e.name === "SyntaxError") {
-      previousCompileServerMeta = null
-      logger.warn(`Syntax error while parsing ${compileServerMetaFileInfo.url}`)
+      previousCompileMeta = null
+      logger.warn(`Syntax error while parsing ${compileMetaFileInfo.url}`)
     } else {
       throw e
     }
   }
 
-  if (previousCompileServerMeta !== null) {
+  if (previousCompileMeta !== null) {
     const outDirectoryChanges = getOutDirectoryChanges(
-      previousCompileServerMeta,
-      compileServerMetaFileInfo.data,
+      previousCompileMeta,
+      compileMetaFileInfo.data,
     )
 
     if (outDirectoryChanges) {
@@ -590,15 +590,12 @@ const cleanOutDirectoryIfNeeded = async ({
   }
 }
 
-const getOutDirectoryChanges = (
-  previousCompileServerMeta,
-  compileServerMeta,
-) => {
+const getOutDirectoryChanges = (previousCompileMeta, compileMeta) => {
   const changes = []
 
-  Object.keys(compileServerMeta).forEach((key) => {
-    const now = compileServerMeta[key]
-    const previous = previousCompileServerMeta[key]
+  Object.keys(compileMeta).forEach((key) => {
+    const now = compileMeta[key]
+    const previous = previousCompileMeta[key]
     if (!compareValueJson(now, previous)) {
       changes.push(key)
     }
@@ -609,7 +606,7 @@ const getOutDirectoryChanges = (
   }
 
   // in case basic comparison from above is not enough
-  if (!compareValueJson(previousCompileServerMeta, compileServerMeta)) {
+  if (!compareValueJson(previousCompileMeta, compileMeta)) {
     return { somethingChanged: true }
   }
 
@@ -1019,7 +1016,7 @@ const createSourceFileService = ({
   }
 }
 
-const createCompileServerMetaFileInfo = ({
+const createCompileMetaFileInfo = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
@@ -1043,8 +1040,8 @@ const createCompileServerMetaFileInfo = ({
     outDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-  const compileServerMetaFileUrl = resolveUrl(
-    "./__compile_server_meta__.json",
+  const compileMetaFileUrl = resolveUrl(
+    "./__compile_meta__.json",
     outDirectoryUrl,
   )
   const jsenvCorePackageFileUrl = resolveUrl(
@@ -1068,7 +1065,7 @@ const createCompileServerMetaFileInfo = ({
   // In some cases the parameters influences only a subset of files and ideally
   // this parameter should somehow invalidate a subset of the cache
   // To keep things simple these parameters currently invalidates the whole cache
-  const compileServerMeta = {
+  const compileMeta = {
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     importDefaultExtension,
@@ -1101,8 +1098,8 @@ const createCompileServerMetaFileInfo = ({
     env,
   }
   return {
-    url: compileServerMetaFileUrl,
-    data: compileServerMeta,
+    url: compileMetaFileUrl,
+    data: compileMeta,
   }
 }
 
@@ -1125,12 +1122,12 @@ const babelPluginMapAsData = (babelPluginMap) => {
   return data
 }
 
-const createCompileServerMetaService = ({
+const createCompileMetaService = ({
   projectDirectoryUrl,
   outDirectoryUrl,
-  compileServerMetaFileInfo,
+  compileMetaFileInfo,
 }) => {
-  const isCompileServerMetaFile = (url) => {
+  const isCompileMetaFile = (url) => {
     if (!urlIsInsideOf(url, outDirectoryUrl)) {
       return false
     }
@@ -1148,11 +1145,11 @@ const createCompileServerMetaService = ({
       projectDirectoryUrl,
     )
     if (
-      isCompileServerMetaFile(requestUrl) ||
+      isCompileMetaFile(requestUrl) ||
       // allow to request it directly from .jsenv
-      request.ressource === "/.jsenv/__compile_server_meta__.json"
+      request.ressource === "/.jsenv/__compile_meta__.json"
     ) {
-      const body = JSON.stringify(compileServerMetaFileInfo.data, null, "  ")
+      const body = JSON.stringify(compileMetaFileInfo.data, null, "  ")
       return {
         status: 200,
         headers: {

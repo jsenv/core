@@ -14,7 +14,7 @@ export const scanBrowserRuntimeFeatures = async ({
     inlineImportMapIntoHTML,
     customCompilerPatterns,
     compileServerGroupMap,
-  } = await fetchJson("/.jsenv/__compile_server_meta__.json")
+  } = await fetchJson("/.jsenv/__compile_meta__.json")
 
   const browser = detectBrowser()
   const compileId = computeCompileIdFromGroupId({
