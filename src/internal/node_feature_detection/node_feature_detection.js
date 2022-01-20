@@ -30,7 +30,6 @@ export const scanNodeRuntimeFeatures = async ({
   }
   await detectSupportedFeatures({
     featuresReport,
-    failFastOnFeatureDetection: true,
   })
   const missingFeatureNames = adjustMissingFeatureNames(groupInfo, {
     featuresReport,
@@ -55,21 +54,12 @@ export const scanNodeRuntimeFeatures = async ({
   }
 }
 
-const detectSupportedFeatures = async ({
-  featuresReport,
-  failFastOnFeatureDetection,
-}) => {
+const detectSupportedFeatures = async ({ featuresReport }) => {
   const dynamicImport = await nodeSupportsDynamicImport()
   featuresReport.dynamicImport = dynamicImport
-  if (failFastOnFeatureDetection && !dynamicImport) {
-    return
-  }
 
   const topLevelAwait = await nodeSupportsTopLevelAwait()
   featuresReport.topLevelAwait = topLevelAwait
-  if (failFastOnFeatureDetection && !topLevelAwait) {
-    return
-  }
 }
 
 const importJson = async (url) => {

@@ -6,17 +6,10 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
-import { createRuntimeCompat } from "@jsenv/core/src/internal/generateGroupMap/runtime_compat.js"
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 
 import { setUrlExtension } from "../url_utils.js"
-import {
-  COMPILE_ID_BUILD_GLOBAL,
-  COMPILE_ID_BUILD_GLOBAL_FILES,
-  COMPILE_ID_BUILD_COMMONJS,
-  COMPILE_ID_BUILD_COMMONJS_FILES,
-} from "../CONSTANTS.js"
 import { compileFile } from "./compileFile.js"
 import { compileHtml } from "./jsenvCompilerForHtml.js"
 import { compileImportmap } from "./jsenvCompilerForImportmap.js"
@@ -48,11 +41,11 @@ export const createCompiledFileService = ({
   importMetaFormat,
   topLevelAwait,
   prependSystemJs,
-  groupMap,
   customCompilers,
   workerUrls,
   serviceWorkerUrls,
   importMapInWebWorkers,
+  compileProfiles,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -62,17 +55,6 @@ export const createCompiledFileService = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 }) => {
-  const compileIdModuleFormats = {}
-  Object.keys(groupMap).forEach((groupName) => {
-    compileIdModuleFormats[groupName] = canAvoidSystemJs({
-      runtimeSupport: groupMap[groupName].minRuntimeVersions,
-      workerUrls,
-      importMapInWebWorkers,
-    })
-      ? "esmodule"
-      : "systemjs"
-  })
-
   Object.keys(customCompilers).forEach((key) => {
     const value = customCompilers[key]
     if (typeof value !== "function") {
@@ -88,23 +70,18 @@ export const createCompiledFileService = ({
     },
     projectDirectoryUrl,
   )
-
   const importmapInfos = {}
-
   return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
-
     const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
       outDirectoryRelativeUrl,
       compileServerOrigin: origin,
     })
-
     // not inside compile directory -> nothing to compile
     if (!requestCompileInfo.insideCompileDirectory) {
       return null
     }
-
     const { compileId, afterCompileId } = requestCompileInfo
     // serve files inside /.jsenv/* directly without compilation
     // this is just to allow some files to be written inside outDirectory and read directly
@@ -118,26 +95,18 @@ export const createCompiledFileService = ({
         },
       )
     }
-
-    const allowedCompileIds = [
-      ...Object.keys(groupMap),
-      COMPILE_ID_BUILD_GLOBAL,
-      COMPILE_ID_BUILD_GLOBAL_FILES,
-      COMPILE_ID_BUILD_COMMONJS,
-      COMPILE_ID_BUILD_COMMONJS_FILES,
-    ]
-    if (!allowedCompileIds.includes(compileId)) {
+    const compileProfile = compileProfiles[compileId]
+    if (!compileProfile) {
+      const knownCompileIds = Object.keys(compileProfiles)
       return {
         status: 400,
-        statusText: `compileId must be one of ${allowedCompileIds}, received ${compileId}`,
+        statusText: `Unexpected compileId in url, found ${compileId} but only one of compileId must be one of ${knownCompileIds} is allowed`,
       }
     }
-
     // nothing after compileId, we don't know what to compile (not supposed to happen)
     if (afterCompileId === "") {
       return null
     }
-
     const originalFileRelativeUrl = afterCompileId
     const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
     const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
@@ -189,14 +158,17 @@ export const createCompiledFileService = ({
           compileId,
           babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
-            missingFeatureNames: groupMap[compileId].missingFeatureNames,
+            compileProfile,
           }),
           runtimeSupport,
           workerUrls,
           serviceWorkerUrls,
           moduleOutFormat:
             moduleOutFormat === undefined
-              ? compileIdModuleFormats[compileId]
+              ? moduleFormatFromCompileProfile(compileProfile, {
+                  workerUrls,
+                  importMapInWebWorkers,
+                })
               : moduleOutFormat,
           importMetaFormat,
           topLevelAwait,
@@ -217,23 +189,22 @@ export const createCompiledFileService = ({
   }
 }
 
-const canAvoidSystemJs = ({
-  runtimeSupport,
-  workerUrls,
-  importMapInWebWorkers,
-}) => {
-  const runtimeCompatMap = createRuntimeCompat({
-    featureNames: [
-      "module",
-      "importmap",
-      "import_assertion_type_json",
-      "import_assertion_type_css",
-      ...(workerUrls.length > 0 ? ["worker_type_module"] : []),
-      ...(importMapInWebWorkers ? ["worker_importmap"] : []),
-    ],
-    runtimeSupport,
-  })
-  return runtimeCompatMap.missingFeatureNames.length === 0
+const moduleFormatFromCompileProfile = (
+  compileProfile,
+  { workerUrls, importMapInWebWorkers },
+) => {
+  const featuresRequired = [
+    "module",
+    "importmap",
+    "import_assertion_type_json",
+    "import_assertion_type_css",
+    ...(workerUrls.length > 0 ? ["worker_type_module"] : []),
+    ...(importMapInWebWorkers ? ["worker_importmap"] : []),
+  ]
+  const allSupported = featuresRequired.every((featureName) =>
+    Boolean(compileProfile.featuresReport[featureName]),
+  )
+  return allSupported ? "esmodule" : "systemjs"
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {

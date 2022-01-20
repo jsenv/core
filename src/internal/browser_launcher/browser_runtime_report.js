@@ -20,7 +20,6 @@ export const getBrowserRuntimeReport = async ({
       await window.readyPromise
       return window.scanBrowserRuntimeFeatures({
         coverageHandledFromOutside,
-        failFastOnFeatureDetection: true,
       })
     },
     /* eslint-enable no-undef */

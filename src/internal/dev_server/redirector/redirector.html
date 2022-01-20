@@ -19,9 +19,7 @@
         const redirectTarget = new URLSearchParams(window.location.search).get(
           "redirect",
         )
-        const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures({
-          failFastOnFeatureDetection: true,
-        })
+        const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures()
         const href = `${getDirectoryUrl(
           browserRuntimeFeaturesReport,
         )}${redirectTarget}`

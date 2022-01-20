@@ -2,7 +2,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/runtime_compat/shake_babel_plugin_map.js"
 import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
@@ -13,7 +13,7 @@ import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRo
 import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,
-} from "@jsenv/core/src/internal/generateGroupMap/jsenvRuntimeSupport.js"
+} from "@jsenv/core/src/internal/runtime_compat/jsenv_runtime_support.js"
 
 /**
  * Generate optimized version of source files into a directory

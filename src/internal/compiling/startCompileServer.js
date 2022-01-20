@@ -9,6 +9,7 @@ import {
   pluginServerTiming,
   pluginRequestWaitingCheck,
   pluginCORS,
+  readRequestBody,
 } from "@jsenv/server"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
@@ -34,7 +35,6 @@ import {
   EVENT_SOURCE_CLIENT_BUILD_URL,
   BROWSER_RUNTIME_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
-import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
 import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
 
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
@@ -129,7 +129,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
-
   const jsenvDirectoryUrl = resolveDirectoryUrl(
     jsenvDirectoryRelativeUrl,
     projectDirectoryUrl,
@@ -148,7 +147,6 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
   )
   const logger = createLogger({ logLevel })
-
   preservedUrls = {
     // Authorize jsenv to modify any file url
     // because the goal is to build the files into chunks
@@ -211,33 +209,28 @@ export const startCompileServer = async ({
       delete babelPluginMap[key]
     }
   })
-
   const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
     extractSyntaxBabelPluginMap(babelPluginMap)
-  const compileServerGroupMap = generateGroupMap({
-    featureNames: [
-      ...(browser
-        ? [
-            "module",
-            "importmap",
-            "import_assertion_type_json",
-            "import_assertion_type_css",
-          ]
-        : []),
-      ...(browser && workerUrls.length > 0 ? ["worker_type_module"] : []),
-      ...(browser && importMapInWebWorkers ? ["worker_importmap"] : []),
-      ...Object.keys(babelPluginMapWithoutSyntax),
-    ],
-    runtimeSupport,
-  })
-
+  const featureNames = [
+    ...(browser
+      ? [
+          "module",
+          "importmap",
+          "import_assertion_type_json",
+          "import_assertion_type_css",
+        ]
+      : []),
+    ...(browser && workerUrls.length > 0 ? ["worker_type_module"] : []),
+    ...(browser && importMapInWebWorkers ? ["worker_importmap"] : []),
+    ...Object.keys(babelPluginMapWithoutSyntax),
+  ]
   babelPluginMap = {
     // When code should be compatible with browsers, ensure
     // process.env.NODE_ENV is replaced to be executable in a browser by forcing
     // "transform-replace-expressions" babel plugin.
     // It happens for module written in ESM but also using process.env.NODE_ENV
     // for example "react-redux"
-    // This babel plugin won't force compilation because it's added after "generateGroupMap"
+    // This babel plugin won't force compilation because it's added after "featureNames"
     // however it will be used even if not part of "missingFeatureNames"
     // as visible in "babelPluginMapFromCompileId"
     // This is a quick workaround to get things working because:
@@ -323,7 +316,7 @@ export const startCompileServer = async ({
     preservedUrls,
     workers,
     serviceWorkers,
-    compileServerGroupMap,
+    featureNames,
     babelPluginMap,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -349,6 +342,11 @@ export const startCompileServer = async ({
     logger.debug(`-> ${compileMetaFileInfo.url}`)
   }
 
+  // map "compileId" to compilation profiles
+  // a compilation profile contains the result of performing feature detection
+  // on a runtime
+  const compileProfiles = {}
+
   const jsenvServices = {
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
@@ -357,6 +355,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       outDirectoryUrl,
       compileMetaFileInfo,
+      compileProfiles,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
@@ -370,7 +369,6 @@ export const startCompileServer = async ({
 
       runtimeSupport,
       topLevelAwait,
-      groupMap: compileServerGroupMap,
       babelPluginMap,
       customCompilers,
       workerUrls,
@@ -459,7 +457,7 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     ...compileServer,
-    compileServerGroupMap,
+    featureNames,
     babelPluginMap,
     preservedUrls,
     projectFileRequestedCallback,
@@ -568,7 +566,6 @@ const cleanOutDirectoryIfNeeded = async ({
       previousCompileMeta,
       compileMetaFileInfo.data,
     )
-
     if (outDirectoryChanges) {
       if (!jsenvDirectoryClean) {
         logger.debug(
@@ -1025,7 +1022,7 @@ const createCompileMetaFileInfo = ({
   preservedUrls,
   workers,
   serviceWorkers,
-  compileServerGroupMap,
+  featureNames,
   babelPluginMap,
   replaceProcessEnvNodeEnv,
   processEnvNodeEnv,
@@ -1074,7 +1071,7 @@ const createCompileMetaFileInfo = ({
     workers,
     serviceWorkers,
     babelPluginMap: babelPluginMapAsData(babelPluginMap),
-    compileServerGroupMap,
+    featureNames,
     customCompilerPatterns,
     replaceProcessEnvNodeEnv,
     processEnvNodeEnv,
@@ -1126,6 +1123,7 @@ const createCompileMetaService = ({
   projectDirectoryUrl,
   outDirectoryUrl,
   compileMetaFileInfo,
+  compileProfiles,
 }) => {
   const isCompileMetaFile = (url) => {
     if (!urlIsInsideOf(url, outDirectoryUrl)) {
@@ -1137,18 +1135,20 @@ const createCompileMetaService = ({
     }
     return true
   }
-
-  // serve from memory
-  return (request) => {
+  return async (request) => {
     const requestUrl = resolveUrl(
       request.ressource.slice(1),
       projectDirectoryUrl,
     )
     if (
-      isCompileMetaFile(requestUrl) ||
+      !isCompileMetaFile(requestUrl) &&
       // allow to request it directly from .jsenv
-      request.ressource === "/.jsenv/__compile_meta__.json"
+      request.ressource !== "/.jsenv/__compile_meta__.json"
     ) {
+      return null
+    }
+    if (request.method === "GET") {
+      // serve from memory
       const body = JSON.stringify(compileMetaFileInfo.data, null, "  ")
       return {
         status: 200,
@@ -1159,7 +1159,31 @@ const createCompileMetaService = ({
         body,
       }
     }
+    if (request.method === "POST") {
+      const { runtime, featuresReport } = await readRequestBody(request, {
+        as: "json",
+      })
+      // we must apply the runtime to the supported runtime + babel pluginmap
+      // to augment the featureReport with the supported babel plugins
 
+      // depending what the runtime tells us, assign a compileId
+      const responseBodyAsObject = {
+        compileId: null,
+      }
+      const responseBodyAsString = JSON.stringify(
+        responseBodyAsObject,
+        null,
+        "  ",
+      )
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(responseBodyAsString),
+        },
+        body: responseBodyAsString,
+      }
+    }
     return null
   }
 }
