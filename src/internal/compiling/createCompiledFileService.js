@@ -6,10 +6,10 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
-
 import { setUrlExtension } from "../url_utils.js"
+
+import { shakeBabelPluginMap } from "./compile_directories/shake_babel_plugin_map.js"
 import { compileFile } from "./compileFile.js"
 import { compileHtml } from "./jsenvCompilerForHtml.js"
 import { compileImportmap } from "./jsenvCompilerForImportmap.js"
@@ -45,7 +45,7 @@ export const createCompiledFileService = ({
   workerUrls,
   serviceWorkerUrls,
   importMapInWebWorkers,
-  compileProfiles,
+  compileDirectories,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -95,9 +95,9 @@ export const createCompiledFileService = ({
         },
       )
     }
-    const compileProfile = compileProfiles[compileId]
-    if (!compileProfile) {
-      const knownCompileIds = Object.keys(compileProfiles)
+    const compileDirectory = compileDirectories[compileId]
+    if (!compileDirectory) {
+      const knownCompileIds = Object.keys(compileDirectories)
       return {
         status: 400,
         statusText: `Unexpected compileId in url, found ${compileId} but only one of compileId must be one of ${knownCompileIds} is allowed`,
@@ -158,14 +158,14 @@ export const createCompiledFileService = ({
           compileId,
           babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
-            compileProfile,
+            compileDirectory,
           }),
           runtimeSupport,
           workerUrls,
           serviceWorkerUrls,
           moduleOutFormat:
             moduleOutFormat === undefined
-              ? moduleFormatFromCompileProfile(compileProfile, {
+              ? moduleFormatFromCompileDirectory(compileDirectory, {
                   workerUrls,
                   importMapInWebWorkers,
                 })
@@ -189,8 +189,8 @@ export const createCompiledFileService = ({
   }
 }
 
-const moduleFormatFromCompileProfile = (
-  compileProfile,
+const moduleFormatFromCompileDirectory = (
+  compileDirectory,
   { workerUrls, importMapInWebWorkers },
 ) => {
   const featuresRequired = [
@@ -202,7 +202,7 @@ const moduleFormatFromCompileProfile = (
     ...(importMapInWebWorkers ? ["worker_importmap"] : []),
   ]
   const allSupported = featuresRequired.every((featureName) =>
-    Boolean(compileProfile.featuresReport[featureName]),
+    Boolean(compileDirectory.featuresReport[featureName]),
   )
   return allSupported ? "esmodule" : "systemjs"
 }

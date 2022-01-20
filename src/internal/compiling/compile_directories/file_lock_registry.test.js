@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert"
-import { createLockRegistry } from "./createLockRegistry.js"
+
+import { createLockRegistry } from "./file_lock_registry.js"
 
 // a second lock on same ressource await first one to be unlocked
 {

@@ -3,8 +3,8 @@ import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { validateCache } from "./validateCache.js"
-import { getMetaJsonFileUrl } from "./compile-asset.js"
-import { createLockRegistry } from "./createLockRegistry.js"
+import { getMetaJsonFileUrl } from "./compile_asset.js"
+import { createLockRegistry } from "./file_lock_registry.js"
 
 const { lockForRessource } = createLockRegistry()
 

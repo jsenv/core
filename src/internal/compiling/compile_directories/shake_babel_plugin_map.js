@@ -1,7 +1,7 @@
-export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
+export const shakeBabelPluginMap = ({ babelPluginMap, compileDirectory }) => {
   const babelPluginMapShaked = {}
   Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    if (!compileProfile.featuresReport[babelPluginName]) {
+    if (!compileDirectory.featuresReport[babelPluginName]) {
       babelPluginMapShaked[babelPluginName] = babelPluginMap[babelPluginName]
     }
   })

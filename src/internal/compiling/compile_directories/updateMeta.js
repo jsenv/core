@@ -6,7 +6,7 @@ import {
 import { utimesSync } from "node:fs"
 
 import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
-import { getMetaJsonFileUrl } from "./compile-asset.js"
+import { getMetaJsonFileUrl } from "./compile_asset.js"
 
 export const updateMeta = async ({
   logger,

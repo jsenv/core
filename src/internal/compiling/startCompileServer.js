@@ -35,7 +35,7 @@ import {
   EVENT_SOURCE_CLIENT_BUILD_URL,
   BROWSER_RUNTIME_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
-import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
+import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import {
@@ -53,7 +53,8 @@ import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_a
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
+import { createOneRuntimeCompat } from "./compile_directories/one_runtime_compat.js"
+import { urlIsCompilationAsset } from "./compile_directories/compile_asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 let compileServerId = 0
@@ -342,10 +343,7 @@ export const startCompileServer = async ({
     logger.debug(`-> ${compileMetaFileInfo.url}`)
   }
 
-  // map "compileId" to compilation profiles
-  // a compilation profile contains the result of performing feature detection
-  // on a runtime
-  const compileProfiles = {}
+  const compileDirectories = {}
 
   const jsenvServices = {
     "service:compilation asset": createCompilationAssetFileService({
@@ -354,8 +352,9 @@ export const startCompileServer = async ({
     "service:compile meta": createCompileMetaService({
       projectDirectoryUrl,
       outDirectoryUrl,
+      featureNames,
       compileMetaFileInfo,
-      compileProfiles,
+      compileDirectories,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
@@ -1122,8 +1121,9 @@ const babelPluginMapAsData = (babelPluginMap) => {
 const createCompileMetaService = ({
   projectDirectoryUrl,
   outDirectoryUrl,
+  featureNames,
   compileMetaFileInfo,
-  compileProfiles,
+  compileDirectories,
 }) => {
   const isCompileMetaFile = (url) => {
     if (!urlIsInsideOf(url, outDirectoryUrl)) {
@@ -1160,11 +1160,20 @@ const createCompileMetaService = ({
       }
     }
     if (request.method === "POST") {
-      const { runtime, featuresReport } = await readRequestBody(request, {
+      const runtimeReport = await readRequestBody(request, {
         as: "json",
       })
-      // we must apply the runtime to the supported runtime + babel pluginmap
-      // to augment the featureReport with the supported babel plugins
+      const { availableFeatureNames } = createOneRuntimeCompat({
+        runtimeName: runtimeReport.runtime.name,
+        runtimeVersion: runtimeReport.runtime.version,
+        featureNames,
+      })
+      const featuresReport = {}
+      availableFeatureNames.forEach((availableFeatureName) => {
+        featuresReport[availableFeatureName] = true
+      })
+      Object.assign(featuresReport, runtimeReport.featuresReport)
+      // we have the features report
 
       // depending what the runtime tells us, assign a compileId
       const responseBodyAsObject = {
