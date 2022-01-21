@@ -4309,30 +4309,38 @@ html[data-toolbar-visible] #toolbar-trigger {
       }
 
       var scanBrowserRuntimeFeatures = _async$1(function () {
-        var outMetaUrl = "/.jsenv/__out_meta__.json";
-        return _await(fetchJson(outMetaUrl), function (_ref) {
+        var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
+        return _await(fetchJson(jsenvCompileProfileUrl), function (_ref) {
           var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
-              compileContext = _ref.compileContext;
-          var browserRuntime = detectBrowser();
+              inlineImportMapIntoHTML = _ref.inlineImportMapIntoHTML;
+
+          var _detectBrowser = detectBrowser(),
+              name = _detectBrowser.name,
+              version = _detectBrowser.version;
+
           return _await(detectSupportedFeatures({
-            compileContext: compileContext
+            inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function (featuresReport) {
-            return _await(fetchJson(outMetaUrl, {
+            var runtimeReport = {
+              env: {
+                browser: true
+              },
+              name: name,
+              version: version,
+              featuresReport: featuresReport
+            };
+            return _await(fetchJson(jsenvCompileProfileUrl, {
               method: "POST",
               headers: {
                 "content-type": "application/json"
               },
-              body: JSON.stringify({
-                runtime: browserRuntime,
-                featuresReport: featuresReport
-              })
+              body: JSON.stringify(runtimeReport)
             }), function (_ref2) {
-              var compileId = _ref2.compileId;
+              var compileProfile = _ref2.compileProfile,
+                  compileId = _ref2.compileId;
               return {
                 jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
-                compileContext: compileContext,
-                runtime: browserRuntime,
-                featuresReport: featuresReport,
+                compileProfile: compileProfile,
                 compileId: compileId
               };
             });
@@ -4934,7 +4942,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_3e80d522.js.map</script>
+//# sourceMappingURL=toolbar.main_b15a5165.js.map</script>
   
 
 </body></html>
