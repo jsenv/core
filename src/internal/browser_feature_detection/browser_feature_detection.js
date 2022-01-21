@@ -26,6 +26,7 @@ export const scanBrowserRuntimeFeatures = async () => {
   })
   return {
     jsenvDirectoryRelativeUrl,
+    compileContext,
     runtime: browserRuntime,
     featuresReport,
     compileId,

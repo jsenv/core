@@ -6,18 +6,14 @@ import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.j
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
-  coverageHandledFromOutside = false,
 }) => {
   const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
   const outMetaServerUrl = new URL("__out_meta__.json", jsenvDirectoryServerUrl)
     .href
-  const { importDefaultExtension, featureNames, customCompilerPatterns } =
-    await fetchJson(outMetaServerUrl)
+  const { compileContext } = await fetchJson(outMetaServerUrl)
   const nodeRuntime = detectNode()
   const featuresReport = await detectSupportedFeatures({
-    coverageHandledFromOutside,
-    importDefaultExtension,
-    featureNames,
+    compileContext,
   })
   const { compileId } = await fetchJson(outMetaServerUrl, {
     method: "POST",
@@ -30,9 +26,7 @@ export const scanNodeRuntimeFeatures = async ({
     }),
   })
   return {
-    featureNames,
-    customCompilerPatterns,
-    importDefaultExtension,
+    compileContext,
     runtime: nodeRuntime,
     featuresReport,
     compileId,

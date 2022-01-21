@@ -100,7 +100,7 @@ nodeRuntime.launch = async ({
     }
 
     // the computation of runtime features can be cached
-    const nodeFeatures = await getNodeRuntimeReport({
+    const nodeRuntimeReport = await getNodeRuntimeReport({
       runtime: nodeRuntime,
       compileServerId,
       compileServerOrigin,
@@ -111,11 +111,14 @@ nodeRuntime.launch = async ({
       coverageHandledFromOutside:
         !coverageForceIstanbul && process.env.NODE_V8_COVERAGE,
     })
-    const { canAvoidCompilation, compileId, importDefaultExtension } =
-      nodeFeatures
+    if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
+      nodeRuntimeReport.featuresReport.jsCoverage = true
+    }
+    const { compileId } = nodeRuntimeReport
+    const { importDefaultExtension } = nodeRuntimeReport.compileContext
 
     let executionResult
-    if (canAvoidCompilation && !forceSystemJs) {
+    if (!compileId && !forceSystemJs) {
       executionResult = await requestActionOnChildProcess({
         signal,
         actionType: "execute-using-dynamic-import",
@@ -132,12 +135,10 @@ nodeRuntime.launch = async ({
         },
       })
     }
-
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,
       projectDirectoryUrl,
     })
-
     return executionResult
   }
 
