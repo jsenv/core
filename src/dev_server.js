@@ -13,7 +13,7 @@ import {
 } from "./internal/argUtils.js"
 import {
   startCompileServer,
-  computeOutDirectoryUrls,
+  assertAndNormalizeJsenvDirectoryRelativeUrl,
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
@@ -38,7 +38,6 @@ export const startDevServer = async ({
   explorableConfig = jsenvExplorableConfig,
   mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryName = "dev",
   jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,
@@ -75,10 +74,9 @@ export const startDevServer = async ({
       projectDirectoryUrl,
     )
   }
-  const { outDirectoryRelativeUrl } = computeOutDirectoryUrls({
+  jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
-    outDirectoryName,
   })
   const compileServer = await startCompileServer({
     signal,
@@ -100,14 +98,14 @@ export const startDevServer = async ({
       }),
       "jsenv:exploring_json": createExploringJsonService({
         projectDirectoryUrl,
-        outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl,
         mainFileRelativeUrl,
         explorableConfig,
         livereloading,
       }),
       "jsenv:explorables_json": createExplorableJsonService({
         projectDirectoryUrl,
-        outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl,
         explorableConfig,
       }),
     },
@@ -117,7 +115,6 @@ export const startDevServer = async ({
     jsenvEventSourceClientInjection: true,
     jsenvToolbarInjection: jsenvToolbar,
     jsenvDirectoryRelativeUrl,
-    outDirectoryName,
     inlineImportMapIntoHTML,
 
     compileServerCanReadFromFilesystem,
@@ -174,7 +171,7 @@ const createRedirectorService = async ({
 
 const createExploringJsonService = ({
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   explorableConfig,
   livereloading,
   mainFileRelativeUrl,
@@ -186,11 +183,7 @@ const createExploringJsonService = ({
     ) {
       const data = {
         projectDirectoryUrl,
-        outDirectoryRelativeUrl,
-        jsenvDirectoryRelativeUrl: urlToRelativeUrl(
-          jsenvCoreDirectoryUrl,
-          projectDirectoryUrl,
-        ),
+        jsenvDirectoryRelativeUrl,
         exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
         sourcemapMainFileRelativeUrl: urlToRelativeUrl(
           sourcemapMainFileInfo.url,
@@ -220,7 +213,7 @@ const createExploringJsonService = ({
 
 const createExplorableJsonService = ({
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   explorableConfig,
 }) => {
   return async (request) => {
@@ -234,7 +227,7 @@ const createExplorableJsonService = ({
         structuredMetaMapRelativeForExplorable[explorableGroup] = {
           "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
           ...explorableGroupConfig,
-          [outDirectoryRelativeUrl]: false,
+          [jsenvDirectoryRelativeUrl]: false,
         }
       })
       const structuredMetaMapForExplorable = normalizeStructuredMetaMap(

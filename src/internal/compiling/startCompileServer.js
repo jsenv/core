@@ -221,7 +221,7 @@ export const startCompileServer = async ({
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
-  const jsenvDirectoryUrls = computeJsenvDirectoryUrls({
+  jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
   })
@@ -236,8 +236,6 @@ export const startCompileServer = async ({
     inlineImportMapIntoHTML,
     jsenvToolbarInjection,
   })
-  // updating "jsenvDirectoryRelativeUrl" normalizes it (ensure it has trailing "/")
-  jsenvDirectoryRelativeUrl = jsenvDirectoryUrls.jsenvDirectoryRelativeUrl
   const { jsenvDirectoryMeta, getOrCreateCompileId } =
     await setupJsenvDirectory({
       logger,
@@ -429,7 +427,8 @@ export const startCompileServer = async ({
   }
 }
 
-export const computeJsenvDirectoryUrls = ({
+// updating "jsenvDirectoryRelativeUrl" normalizes it (ensure it has trailing "/")
+export const assertAndNormalizeJsenvDirectoryRelativeUrl = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl = ".jsenv",
 }) => {
@@ -453,15 +452,11 @@ export const computeJsenvDirectoryUrls = ({
       ),
     )
   }
-  // normalizing "jsenvDirectoryRelativeUrl"
   jsenvDirectoryRelativeUrl = urlToRelativeUrl(
     jsenvDirectoryUrl,
     projectDirectoryUrl,
   )
-  return {
-    jsenvDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-  }
+  return jsenvDirectoryRelativeUrl
 }
 
 const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
