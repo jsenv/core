@@ -1,6 +1,7 @@
 import { featuresCompatFromRuntime } from "./features_compat_from_runtime.js"
 
 export const createCompileProfile = ({
+  moduleOutFormat,
   featureNames,
   babelPluginMap,
   sourcemapMethod,
@@ -31,13 +32,36 @@ export const createCompileProfile = ({
   const requiredFeatureNames = featureNames.filter((featureName) => {
     return !featuresReport[featureName]
   })
+
+  if (moduleOutFormat === undefined) {
+    const systemJsIsRequired = featuresRelatedToSystemJs.some((featureName) => {
+      return (
+        // feature is used
+        featureNames.includes(featureName) &&
+        // and not supported
+        !featuresReport[featureName]
+      )
+    })
+    moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
+  }
+
   return {
+    moduleOutFormat,
     requiredFeatureNames,
     requiredBabelPluginDescription,
     sourcemapMethod,
     sourcemapExcludeSources,
   }
 }
+
+const featuresRelatedToSystemJs = [
+  "module",
+  "importmap",
+  "import_assertion_type_json",
+  "import_assertion_type_css",
+  "worker_type_module",
+  "worker_importmap",
+]
 
 const babelPluginValueAsJSON = (babelPluginValue) => {
   if (Array.isArray(babelPluginValue)) {
@@ -50,6 +74,7 @@ const babelPluginValueAsJSON = (babelPluginValue) => {
 }
 
 const COMPARERS = {
+  moduleOutFormat: (a, b) => a === b,
   requiredFeatureNames: (a, b) => valueInArrayAreTheSame(a, b),
   requiredBabelPluginDescription: () => true, // TODO
   sourcemapMethod: (a, b) => a === b,

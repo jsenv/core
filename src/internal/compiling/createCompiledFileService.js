@@ -9,7 +9,7 @@ import {
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 
-import { shakeBabelPluginMap } from "./out_directory/shake_babel_plugin_map.js"
+import { shakeBabelPluginMap } from "./jsenv_directory/shake_babel_plugin_map.js"
 import { compileFile } from "./compileFile.js"
 import { compileHtml } from "./jsenvCompilerForHtml.js"
 import { compileImportmap } from "./jsenvCompilerForImportmap.js"
@@ -38,13 +38,11 @@ export const createCompiledFileService = ({
   runtimeSupport,
   babelPluginMap,
   moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
   prependSystemJs,
   customCompilers,
   workerUrls,
   serviceWorkerUrls,
-  importMapInWebWorkers,
   compileDirectories,
 
   jsenvEventSourceClientInjection,
@@ -163,14 +161,7 @@ export const createCompiledFileService = ({
           runtimeSupport,
           workerUrls,
           serviceWorkerUrls,
-          moduleOutFormat:
-            moduleOutFormat === undefined
-              ? moduleFormatFromCompileDirectory(compileDirectory, {
-                  workerUrls,
-                  importMapInWebWorkers,
-                })
-              : moduleOutFormat,
-          importMetaFormat,
+          moduleOutFormat,
           topLevelAwait,
           prependSystemJs,
 
@@ -187,24 +178,6 @@ export const createCompiledFileService = ({
     })
     return compileResponsePromise
   }
-}
-
-const moduleFormatFromCompileDirectory = (
-  compileDirectory,
-  { workerUrls, importMapInWebWorkers },
-) => {
-  const featuresRequired = [
-    "module",
-    "importmap",
-    "import_assertion_type_json",
-    "import_assertion_type_css",
-    ...(workerUrls.length > 0 ? ["worker_type_module"] : []),
-    ...(importMapInWebWorkers ? ["worker_importmap"] : []),
-  ]
-  const allSupported = featuresRequired.every((featureName) =>
-    Boolean(compileDirectory.featuresReport[featureName]),
-  )
-  return allSupported ? "esmodule" : "systemjs"
 }
 
 const getCompiler = ({ originalFileUrl, compileMeta }) => {

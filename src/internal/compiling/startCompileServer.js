@@ -66,7 +66,6 @@ export const startCompileServer = async ({
 
   // js compile options
   moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
@@ -295,7 +294,6 @@ export const startCompileServer = async ({
         })
         const compileProfile = createCompileProfile({
           moduleOutFormat,
-          importMetaFormat,
           babelPluginMap,
           featureNames,
           sourcemapMethod,
@@ -343,10 +341,7 @@ export const startCompileServer = async ({
       customCompilers,
       workerUrls,
       serviceWorkerUrls,
-      importMapInWebWorkers,
       prependSystemJs,
-      moduleOutFormat,
-      importMetaFormat,
       jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 
