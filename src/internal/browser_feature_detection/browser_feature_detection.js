@@ -10,19 +10,20 @@ import { supportsNewStylesheet } from "./browser_feature_detect_new_stylesheet.j
 export const scanBrowserRuntimeFeatures = async ({
   coverageHandledFromOutside = false,
 } = {}) => {
+  const compileMetaUrl = "/.jsenv/__compile_meta__.json"
   const {
     outDirectoryRelativeUrl,
     inlineImportMapIntoHTML,
     featureNames,
     customCompilerPatterns,
-  } = await fetchJson("/.jsenv/__compile_meta__.json")
+  } = await fetchJson(compileMetaUrl)
   const browserRuntime = detectBrowser()
   const featuresReport = await detectSupportedFeatures({
     coverageHandledFromOutside,
     inlineImportMapIntoHTML,
     featureNames,
   })
-  const { compileId } = await fetchJson("/.jsenv/__compile_meta__.json", {
+  const { compileId } = await fetchJson(compileMetaUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",

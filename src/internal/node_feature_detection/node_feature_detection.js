@@ -9,87 +9,70 @@ export const scanNodeRuntimeFeatures = async ({
   coverageHandledFromOutside = false,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const { importDefaultExtension, customCompilerPatterns } = await importJson(
-    new URL("__compile_meta__.json", outDirectoryServerUrl),
+  const compileMetaServerUrl = new URL(
+    "__compile_meta__.json",
+    outDirectoryServerUrl,
   )
-
-  const node = detectNode()
-
-  const featuresReport = {
-    dynamicImport: undefined,
-    topLevelAwait: undefined,
-  }
-  await detectSupportedFeatures({
-    featuresReport,
-  })
-  const missingFeatureNames = adjustMissingFeatureNames(groupInfo, {
-    featuresReport,
+  const { importDefaultExtension, featureNames, customCompilerPatterns } =
+    await fetchJson(compileMetaServerUrl)
+  const nodeRuntime = detectNode()
+  const featuresReport = await detectSupportedFeatures({
     coverageHandledFromOutside,
-  })
-
-  const canAvoidCompilation =
-    // node native resolution will not auto add extension
-    !importDefaultExtension &&
-    customCompilerPatterns.length === 0 &&
-    missingFeatureNames.length === 0 &&
-    featuresReport.dynamicImport &&
-    featuresReport.topLevelAwait
-
-  return {
-    canAvoidCompilation,
-    featuresReport,
-    missingFeatureNames,
     importDefaultExtension,
-    node,
+    featureNames,
+  })
+  const { compileId } = await fetchJson(compileMetaServerUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      runtime: nodeRuntime,
+      featuresReport,
+    }),
+  })
+  return {
+    featureNames,
+    customCompilerPatterns,
+    importDefaultExtension,
+    runtime: nodeRuntime,
+    featuresReport,
+    compileId,
   }
 }
 
-const detectSupportedFeatures = async ({ featuresReport }) => {
-  const dynamicImport = await nodeSupportsDynamicImport()
-  featuresReport.dynamicImport = dynamicImport
-
-  const topLevelAwait = await nodeSupportsTopLevelAwait()
-  featuresReport.topLevelAwait = topLevelAwait
+const detectSupportedFeatures = async ({
+  coverageHandledFromOutside,
+  featureNames,
+}) => {
+  const featuresReport = {}
+  featuresReport.dynamicImport = await nodeSupportsDynamicImport()
+  featuresReport.topLevelAwait = await nodeSupportsTopLevelAwait()
+  if (featureNames.includes("transform-instrument")) {
+    featuresReport.jsCoverage = coverageHandledFromOutside
+  }
+  // Jsenv enable some features because they are standard and we can expect code to use them.
+  // At the time of writing this, these features are not available in latest Node.js.
+  // Some feature are also browser specific.
+  // To avoid compiling code for Node.js these feaure are marked as supported.
+  // It means code written to be executed in Node.js should not use these features
+  // because jsenv ignore them (it won't try to "polyfill" them)
+  featuresReport.module = true
+  featuresReport.importmap = true
+  featuresReport.import_assertions_type_json = true
+  featuresReport.import_assertions_type_css = true
+  featuresReport.newStylesheet = true
+  featuresReport.worker_type_module = true
+  featuresReport.worker_importmap = true
+  return featuresReport
 }
 
-const importJson = async (url) => {
-  const response = await fetchSource(url)
+const fetchJson = async (url, options) => {
+  const response = await fetchSource(url, options)
   const status = response.status
   if (status !== 200) {
     throw new Error(`unexpected response status for ${url}, got ${status}`)
   }
   const object = await response.json()
   return object
-}
-
-const adjustMissingFeatureNames = (
-  groupInfo,
-  { coverageHandledFromOutside },
-) => {
-  const { missingFeatureNames } = groupInfo
-  const missingFeatureNamesCopy = missingFeatureNames.slice()
-  const markAsSupported = (name) => {
-    const index = missingFeatureNamesCopy.indexOf(name)
-    if (index > -1) {
-      missingFeatureNamesCopy.splice(index, 1)
-    }
-  }
-  if (coverageHandledFromOutside) {
-    markAsSupported("transform-instrument")
-  }
-  // Jsenv enable some features because they are standard and we can expect code to use them.
-  // At the time of writing this, these features are not available in latest Node.js.
-  // Some feature are also browser specific.
-  // To avoid compiling code for Node.js these feaure are marked as supported.
-  // It means code written to be execute in Node.js should not use these features
-  // because jsenv ignore them (it won't try to "polyfill" them)
-  markAsSupported("module")
-  markAsSupported("importmap")
-  markAsSupported("transform-import-assertions")
-  markAsSupported("import_assertion_type_json")
-  markAsSupported("import_assertion_type_css")
-  markAsSupported("new-stylesheet-as-jsenv-import")
-  markAsSupported("worker_type_module")
-  markAsSupported("worker_importmap")
-  return missingFeatureNamesCopy
 }
