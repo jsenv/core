@@ -9,10 +9,6 @@ import {
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { humanizeUrl } from "@jsenv/core/src/internal/building/url_trace.js"
-import {
-  isNodePartOfSupportedRuntimes,
-  isBrowserPartOfSupportedRuntimes,
-} from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 
 import { createRollupPlugins } from "./rollup_plugin_jsenv.js"
 
@@ -20,58 +16,53 @@ export const buildUsingRollup = async ({
   buildOperation,
   logger,
 
-  projectDirectoryUrl,
   entryPoints,
-  compileServerOrigin,
-  compileDirectoryRelativeUrl,
-  jsenvDirectoryRelativeUrl,
+  projectDirectoryUrl,
   buildDirectoryUrl,
   buildDirectoryClean,
-  assetManifestFile = false,
+  assetManifestFile,
   assetManifestFileRelativeUrl,
-  sourcemapExcludeSources,
-  writeOnFileSystem,
-
-  format,
-  systemJsUrl,
-  globalName,
-  globals,
-  babelPluginMap,
-  runtimeSupport,
-  featuresReport,
 
   urlMappings,
   importResolutionMethod,
   importMapFileRelativeUrl,
   importDefaultExtension,
   externalImportSpecifiers,
-  importPaths,
   preservedUrls,
+  importPaths,
+
+  format,
+  systemJsUrl,
+  globalName,
+  globals,
   workers,
   serviceWorkers,
   serviceWorkerFinalizer,
   classicWorkers,
   classicServiceWorkers,
 
+  node,
+  browser,
+  compileServer,
+  compileProfile,
+  compileId,
+
   urlVersioning,
   lineBreakNormalization,
-  jsConcatenation,
-  cssConcatenation,
   useImportMapToMaximizeCacheReuse,
   preserveEntrySignatures,
   treeshake,
+  jsConcatenation,
+  cssConcatenation,
 
   minify,
+  minifyHtmlOptions,
   minifyJsOptions,
   minifyCssOptions,
-  minifyHtmlOptions,
+
+  writeOnFileSystem,
+  sourcemapExcludeSources,
 }) => {
-  const node = isNodePartOfSupportedRuntimes(runtimeSupport)
-  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
-  const importAssertionsSupport = {
-    json: format === "esmodule" && featuresReport.import_assertion_type_json,
-    css: format === "esmodule" && featuresReport.import_assertion_type_css,
-  }
   const {
     rollupPlugins,
     getLastErrorMessage,
@@ -84,18 +75,10 @@ export const buildUsingRollup = async ({
 
     projectDirectoryUrl,
     entryPoints,
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
-    jsenvDirectoryRelativeUrl,
     buildDirectoryUrl,
 
     format,
     systemJsUrl,
-    babelPluginMap,
-    node,
-    browser,
-    importAssertionsSupport,
-
     urlMappings,
     importResolutionMethod,
     importMapFileRelativeUrl,
@@ -108,6 +91,12 @@ export const buildUsingRollup = async ({
     serviceWorkerFinalizer,
     classicWorkers,
     classicServiceWorkers,
+
+    node,
+    browser,
+    compileServer,
+    compileProfile,
+    compileId,
 
     urlVersioning,
     lineBreakNormalization,
@@ -127,7 +116,7 @@ export const buildUsingRollup = async ({
       logger,
 
       rollupPlugins,
-      babelPluginMap,
+      compileProfile,
       format,
       globals,
       globalName,
@@ -233,7 +222,7 @@ const useRollup = async ({
   buildOperation,
   logger,
   rollupPlugins,
-  babelPluginMap,
+  compileProfile,
   format,
   globals,
   globalName,
@@ -306,10 +295,26 @@ const useRollup = async ({
     // experimentalTopLevelAwait: true,
     // https://rollupjs.org/guide/en/#outputgeneratedcode
     generatedCode: {
-      arrowFunctions: !babelPluginMap["transform-arrow-functions"],
-      constBindings: !babelPluginMap["transform-block-scoping"],
-      objectShorthand: !babelPluginMap["transform-shorthand-properties"],
-      reservedNamesAsProps: !babelPluginMap["transform-reserved-words"],
+      arrowFunctions:
+        compileProfile &&
+        !compileProfile.requiredFeatureNames.includes(
+          "transform-arrow-functions",
+        ),
+      constBindings:
+        compileProfile &&
+        !compileProfile.requiredFeatureNames.includes(
+          "transform-block-scoping",
+        ),
+      objectShorthand:
+        compileProfile &&
+        !compileProfile.requiredFeatureNames.includes(
+          "transform-shorthand-properties",
+        ),
+      reservedNamesAsProps:
+        compileProfile &&
+        !compileProfile.requiredFeatureNames.includes(
+          '"transform-reserved-words',
+        ),
     },
     // https://rollupjs.org/guide/en#output-dir
     dir: urlToFileSystemPath(buildDirectoryUrl),

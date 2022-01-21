@@ -32,7 +32,6 @@ export const createCompileProfile = ({
   const requiredFeatureNames = featureNames.filter((featureName) => {
     return !featuresReport[featureName]
   })
-
   if (moduleOutFormat === undefined) {
     const systemJsIsRequired = featuresRelatedToSystemJs.some((featureName) => {
       return (
@@ -44,7 +43,6 @@ export const createCompileProfile = ({
     })
     moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
   }
-
   return {
     moduleOutFormat,
     requiredFeatureNames,
@@ -52,6 +50,25 @@ export const createCompileProfile = ({
     sourcemapMethod,
     sourcemapExcludeSources,
   }
+}
+
+export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
+  const babelPluginMapShaked = {}
+  const { requiredBabelPluginDescription } = compileProfile
+  Object.keys(babelPluginMap).forEach((babelPluginName) => {
+    if (!requiredBabelPluginDescription[babelPluginName]) {
+      babelPluginMapShaked[babelPluginName] = babelPluginMap[babelPluginName]
+    }
+  })
+  Object.keys(babelPluginMap).forEach((key) => {
+    if (key.startsWith("syntax-")) {
+      babelPluginMapShaked[key] = babelPluginMap[key]
+    }
+    if (key === "transform-replace-expressions") {
+      babelPluginMapShaked[key] = babelPluginMap[key]
+    }
+  })
+  return babelPluginMapShaked
 }
 
 const featuresRelatedToSystemJs = [

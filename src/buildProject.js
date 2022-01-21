@@ -4,7 +4,6 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/jsenv_directory/features_compat_from_runtime_support.js"
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compiling/jsenv_directory/shake_babel_plugin_map.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -15,6 +14,10 @@ import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,
 } from "@jsenv/core/src/internal/runtime_support/jsenv_runtime_support.js"
+import {
+  isNodePartOfSupportedRuntimes,
+  isBrowserPartOfSupportedRuntimes,
+} from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 
 /**
  * Generate optimized version of source files into a directory
@@ -242,12 +245,9 @@ export const buildProject = async ({
     },
   )
   const { compileId } = await compileServerResponse.json()
-  babelPluginMap = compileServer.babelPluginMap
-  const compileDirectory = compileServer.compileDirectories[compileId]
-  babelPluginMap = shakeBabelPluginMap({
-    babelPluginMap,
-    compileDirectory,
-  })
+  const compileProfile = compileId
+    ? compileServer.compileDirectories[compileId]
+    : null
 
   try {
     const result = await buildUsingRollup({
@@ -256,9 +256,6 @@ export const buildProject = async ({
 
       entryPoints,
       projectDirectoryUrl,
-      compileServerOrigin: compileServer.origin,
-      compileDirectoryRelativeUrl: `${compileServer.outDirectoryRelativeUrl}${compileId}/`,
-      jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
       buildDirectoryUrl,
       buildDirectoryClean,
       assetManifestFile,
@@ -276,15 +273,17 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap,
-      runtimeSupport,
-      featuresReport,
       workers,
       serviceWorkers,
       serviceWorkerFinalizer,
       classicWorkers,
       classicServiceWorkers,
-      importMapInWebWorkers,
+
+      node: isNodePartOfSupportedRuntimes(runtimeSupport),
+      browser: isBrowserPartOfSupportedRuntimes(runtimeSupport),
+      compileServer,
+      compileProfile,
+      compileId,
 
       urlVersioning,
       lineBreakNormalization,

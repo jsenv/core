@@ -32,6 +32,7 @@ import { createImportResolverForImportmap } from "@jsenv/core/src/internal/impor
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compiling/jsenv_directory/compile_profile.js"
 
 import {
   formatBuildStartLog,
@@ -56,9 +57,6 @@ export const createRollupPlugins = async ({
 
   projectDirectoryUrl,
   entryPoints,
-  compileServerOrigin,
-  compileDirectoryRelativeUrl,
-  jsenvDirectoryRelativeUrl,
   buildDirectoryUrl,
 
   urlMappings,
@@ -73,12 +71,13 @@ export const createRollupPlugins = async ({
   serviceWorkerFinalizer,
   classicWorkers,
   classicServiceWorkers,
-
   format,
   systemJsUrl,
-  babelPluginMap,
+
   node,
-  importAssertionsSupport,
+  compileServer,
+  compileProfile,
+  compileId,
 
   urlVersioning,
   lineBreakNormalization,
@@ -91,6 +90,33 @@ export const createRollupPlugins = async ({
   minifyCssOptions,
   minifyHtmlOptions,
 }) => {
+  const compileServerOrigin = compileServer.origin
+  // For now the compilation is forced during build because this plugin
+  // was coded assuming build always requires to be compiled.
+  // Ideally jsenv should also be able to build a project using source files
+  // and in that case compileProfile and compileId are null
+  // the babel plugin map is useless (we can just fetch the source file directly)
+  const jsenvDirectoryRelativeUrl = compileServer.jsenvDirectoryRelativeUrl
+  const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
+  const babelPluginMap = shakeBabelPluginMap({
+    babelPluginMap: compileServer.babelPluginMap,
+    compileProfile,
+  })
+  const importAssertionsSupport = {
+    json:
+      format === "esmodule" &&
+      compileProfile &&
+      !compileProfile.requiredFeatureNames.includes(
+        "import_assertion_type_json",
+      ),
+    css:
+      format === "esmodule" &&
+      compileProfile &&
+      !compileProfile.requiredFeatureNames.includes(
+        "import_assertion_type_css",
+      ),
+  }
+
   const jsenvRemoteDirectory = createJsenvRemoteDirectory({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
