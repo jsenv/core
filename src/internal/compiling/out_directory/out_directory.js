@@ -175,7 +175,7 @@ const applyFileSystemEffects = async ({
     logger,
     outDirectoryMetaFileUrl,
   })
-  if (outDirectoryMetaPrevious && outDirectoryMetaPrevious.compileInfo) {
+  if (outDirectoryMetaPrevious && outDirectoryMetaPrevious) {
     const diff = diffCompileInfo(
       outDirectoryMetaPrevious.compileInfo,
       outDirectoryMeta.compileInfo,
