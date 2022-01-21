@@ -102,7 +102,7 @@ export const setupJsenvDirectory = async ({
 }
 
 const generateCompileId = ({ compileProfile }) => {
-  if (compileProfile.missingFeatureNames["transform-instrument"]) {
+  if (compileProfile.missingFeatures["transform-instrument"]) {
     return `out_instrumented`
   }
   return `out`

@@ -283,8 +283,8 @@ export const startCompileServer = async ({
           runtimeReport,
         })
         const compileId = await getOrCreateCompileId({
-          runtimeName: runtimeReport.runtime.name,
-          runtimeVersion: runtimeReport.runtime.version,
+          runtimeName: runtimeReport.name,
+          runtimeVersion: runtimeReport.version,
           compileProfile,
         })
         const responseBodyAsObject = {

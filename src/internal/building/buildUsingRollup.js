@@ -297,24 +297,16 @@ const useRollup = async ({
     generatedCode: {
       arrowFunctions:
         compileProfile &&
-        !compileProfile.requiredFeatureNames.includes(
-          "transform-arrow-functions",
-        ),
+        !compileProfile.missingFeatures["transform-arrow-functions"],
       constBindings:
         compileProfile &&
-        !compileProfile.requiredFeatureNames.includes(
-          "transform-block-scoping",
-        ),
+        !compileProfile.missingFeatures["transform-block-scoping"],
       objectShorthand:
         compileProfile &&
-        !compileProfile.requiredFeatureNames.includes(
-          "transform-shorthand-properties",
-        ),
+        !compileProfile.missingFeatures["transform-shorthand-properties"],
       reservedNamesAsProps:
         compileProfile &&
-        !compileProfile.requiredFeatureNames.includes(
-          '"transform-reserved-words',
-        ),
+        !compileProfile.missingFeatures["transform-reserved-words"],
     },
     // https://rollupjs.org/guide/en#output-dir
     dir: urlToFileSystemPath(buildDirectoryUrl),

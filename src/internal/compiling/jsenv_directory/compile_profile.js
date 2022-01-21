@@ -22,22 +22,22 @@ export const createCompileProfile = ({
 
   runtimeReport,
 }) => {
-  const requiredFeatures = {}
+  const features = {}
   Object.keys(babelPluginMapWithoutSyntax).forEach((babelPluginName) => {
-    requiredFeatures[babelPluginName] = babelPluginValueAsJSON(
+    features[babelPluginName] = babelPluginValueAsJSON(
       babelPluginMapWithoutSyntax[babelPluginName],
     )
   })
   if (importDefaultExtension) {
-    requiredFeatures["import_default_extension"] = true
+    features["import_default_extension"] = true
   }
   if (runtimeReport.env.browser && workerUrls.length > 0) {
-    requiredFeatures["worker_type_module"] = true
+    features["worker_type_module"] = true
   }
   if (runtimeReport.env.browser && importMapInWebWorkers) {
-    requiredFeatures["worker_importmap"] = true
+    features["worker_importmap"] = true
   }
-  const requiredFeatureNames = Object.keys(requiredFeatures)
+  const featureNames = Object.keys(features)
 
   const supportedFeatureNames = []
   Object.keys(runtimeReport.featuresReport).forEach((featureName) => {
@@ -48,7 +48,7 @@ export const createCompileProfile = ({
   const { availableFeatureNames } = featuresCompatFromRuntime({
     runtimeName: runtimeReport.name,
     runtimeVersion: runtimeReport.version,
-    featureNames: requiredFeatureNames,
+    featureNames,
   })
   availableFeatureNames.forEach((featureName) => {
     const runtimeReportResult = runtimeReport.featuresReport[featureName]
@@ -58,12 +58,12 @@ export const createCompileProfile = ({
   })
 
   const missingFeatures = {}
-  Object.keys(requiredFeatures).forEach((featureName) => {
+  featureNames.forEach((featureName) => {
     const supported = supportedFeatureNames.includes(featureName)
     if (supported) {
       return
     }
-    missingFeatures[featureName] = requiredFeatures[featureName]
+    missingFeatures[featureName] = features[featureName]
   })
   if (moduleOutFormat === undefined) {
     const systemJsIsRequired = featuresRelatedToSystemJs.some((featureName) => {
