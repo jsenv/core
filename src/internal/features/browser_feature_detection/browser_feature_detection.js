@@ -1,5 +1,6 @@
-import { fetchJson } from "../browser_utils/fetchJson.js"
-import { detectBrowser } from "../browser_detection/browser_detection.js"
+import { fetchJson } from "../../browser_utils/fetchJson.js"
+import { detectBrowser } from "../../browser_detection/browser_detection.js"
+
 import { supportsImportmap } from "./browser_feature_detect_importmap.js"
 import { supportsDynamicImport } from "./browser_feature_detect_dynamic_import.js"
 import { supportsTopLevelAwait } from "./browser_feature_detect_top_level_await.js"

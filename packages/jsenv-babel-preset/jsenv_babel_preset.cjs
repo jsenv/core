@@ -24,7 +24,7 @@ module.exports = (
   const plugins = []
 
   // The default list of babel plugins MUST be in compatMap
-  // https://github.com/jsenv/jsenv-core/blob/master/src/internal/generateGroupMap/jsenvBabelPluginCompatMap.js#L11
+  // https://github.com/jsenv/jsenv-core/blob/master/src/internal/features/babel_plugin_compatibility.js#L11
   // Otherwise it means there is no runtime supporting the babel plugins
   // and the compilation is always required
   plugins.push(

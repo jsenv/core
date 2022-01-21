@@ -17,6 +17,7 @@ dist/
 !/**/*error_syntax*.test.js
 
 /test-manual/**/coverage/
+/packages/*/coverage/
 /**/*.es5.js
 /**/*.jsx
 !.eslintrc.js

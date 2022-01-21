@@ -1,4 +1,4 @@
-import { jsenvBabelPluginCompatMap } from "./babel_plugins_compatibility.js"
+import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 export const featuresCompatMap = {
   module: {
@@ -33,5 +33,5 @@ export const featuresCompatMap = {
     android: "80",
   },
   worker_importmap: {},
-  ...jsenvBabelPluginCompatMap,
+  ...babelPluginCompatMap,
 }

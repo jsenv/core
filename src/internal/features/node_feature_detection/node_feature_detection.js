@@ -1,21 +1,24 @@
 import { detectNode } from "@jsenv/core/src/internal/node_runtime/detectNode.js"
-import { nodeSupportsDynamicImport } from "@jsenv/core/src/internal/node_feature_detection/nodeSupportsDynamicImport.js"
-import { nodeSupportsTopLevelAwait } from "@jsenv/core/src/internal/node_feature_detection/nodeSupportsTopLevelAwait.js"
 import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
+
+import { nodeSupportsDynamicImport } from "./node_feature_detect_dynamic_import.js"
+import { nodeSupportsTopLevelAwait } from "./node_feature_detect_top_level_await.js"
 
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
 }) => {
   const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
-  const outMetaServerUrl = new URL("__out_meta__.json", jsenvDirectoryServerUrl)
-    .href
-  const { compileContext } = await fetchJson(outMetaServerUrl)
+  const jsenvDirectoryMetaServerUrl = new URL(
+    "__jsenv_meta__.json",
+    jsenvDirectoryServerUrl,
+  ).href
+  const { compileContext } = await fetchJson(jsenvDirectoryMetaServerUrl)
   const nodeRuntime = detectNode()
   const featuresReport = await detectSupportedFeatures({
     compileContext,
   })
-  const { compileId } = await fetchJson(outMetaServerUrl, {
+  const { compileId } = await fetchJson(jsenvDirectoryMetaServerUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -33,16 +36,10 @@ export const scanNodeRuntimeFeatures = async ({
   }
 }
 
-const detectSupportedFeatures = async ({
-  coverageHandledFromOutside,
-  featureNames,
-}) => {
+const detectSupportedFeatures = async () => {
   const featuresReport = {}
   featuresReport.dynamicImport = await nodeSupportsDynamicImport()
   featuresReport.topLevelAwait = await nodeSupportsTopLevelAwait()
-  if (featureNames.includes("transform-instrument")) {
-    featuresReport.jsCoverage = coverageHandledFromOutside
-  }
   // Jsenv enable some features because they are standard and we can expect code to use them.
   // At the time of writing this, these features are not available in latest Node.js.
   // Some feature are also browser specific.

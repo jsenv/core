@@ -3,7 +3,7 @@ import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/jsenv_directory/features_compat_from_runtime_support.js"
+import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,

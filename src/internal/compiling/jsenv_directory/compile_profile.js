@@ -1,8 +1,9 @@
+import { featuresCompatFromRuntime } from "@jsenv/core/src/internal/features/features_compat_from_runtime.js"
+
 import {
   sameValueInTwoObjects,
   sameValuesInTwoArrays,
 } from "./comparison_utils.js"
-import { featuresCompatFromRuntime } from "./features_compat_from_runtime.js"
 
 export const createCompileProfile = ({
   moduleOutFormat,

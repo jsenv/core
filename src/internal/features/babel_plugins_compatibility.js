@@ -8,7 +8,7 @@
 // than importing it from an undocumented location.
 // Ideally it would be documented or a separate module
 
-export const jsenvBabelPluginCompatMap = {
+export const babelPluginCompatMap = {
   "proposal-numeric-separator": {
     chrome: "75",
     opera: "62",
@@ -425,14 +425,14 @@ export const jsenvBabelPluginCompatMap = {
 
 // copy of transform-async-to-generator
 // so that async is not transpiled when supported
-jsenvBabelPluginCompatMap["transform-async-to-promises"] =
-  jsenvBabelPluginCompatMap["transform-async-to-generator"]
+babelPluginCompatMap["transform-async-to-promises"] =
+  babelPluginCompatMap["transform-async-to-generator"]
 
-jsenvBabelPluginCompatMap["regenerator-transform"] =
-  jsenvBabelPluginCompatMap["transform-regenerator"]
+babelPluginCompatMap["regenerator-transform"] =
+  babelPluginCompatMap["transform-regenerator"]
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
-jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
+babelPluginCompatMap["global-this-as-jsenv-import"] = {
   edge: "79",
   firefox: "65",
   chrome: "71",
@@ -444,12 +444,12 @@ jsenvBabelPluginCompatMap["global-this-as-jsenv-import"] = {
 }
 
 // needs support for both json and css
-jsenvBabelPluginCompatMap["transform-import-assertions"] = {
+babelPluginCompatMap["transform-import-assertions"] = {
   chrome: "93",
   edge: "93",
 }
 
-jsenvBabelPluginCompatMap["new-stylesheet-as-jsenv-import"] = {
+babelPluginCompatMap["new-stylesheet-as-jsenv-import"] = {
   chrome: "93",
   edge: "93",
 }

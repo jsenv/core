@@ -1,4 +1,4 @@
-import { scanNodeRuntimeFeatures } from "@jsenv/core/src/internal/node_feature_detection/node_feature_detection.js"
+import { scanNodeRuntimeFeatures } from "@jsenv/core/src/internal/features/node_feature_detection/node_feature_detection.js"
 
 export const getNodeRuntimeReport = async ({
   runtime,
