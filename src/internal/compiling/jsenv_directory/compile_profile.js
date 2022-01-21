@@ -22,12 +22,14 @@ export const createCompileProfile = ({
 
   runtimeReport,
 }) => {
+  const { env = {} } = runtimeReport
+
   const features = {}
   Object.keys(babelPluginMapWithoutSyntax).forEach((babelPluginName) => {
     // if we need to be compatible only with node
     // ignore "new-stylesheet-as-jsenv-import" and "transform-import-assertions"
     // (we consider they won't be used in the code we are about to execute)
-    if (runtimeReport.env.node && !runtimeReport.env.browser) {
+    if (env.node && !env.browser) {
       if (
         babelPluginName === "new-stylesheet-as-jsenv-import" ||
         babelPluginName === "transform-import-assertions"
@@ -42,31 +44,35 @@ export const createCompileProfile = ({
   if (importDefaultExtension) {
     features["import_default_extension"] = true
   }
-  if (runtimeReport.env.browser && workerUrls.length > 0) {
+  if (env.browser && workerUrls.length > 0) {
     features["worker_type_module"] = true
   }
-  if (runtimeReport.env.browser && importMapInWebWorkers) {
+  if (env.browser && importMapInWebWorkers) {
     features["worker_importmap"] = true
   }
   const featureNames = Object.keys(features)
 
   const supportedFeatureNames = []
-  Object.keys(runtimeReport.featuresReport).forEach((featureName) => {
-    if (runtimeReport.featuresReport[featureName]) {
+  const { featuresReport = {} } = runtimeReport
+  Object.keys(featuresReport).forEach((featureName) => {
+    if (featuresReport[featureName]) {
       supportedFeatureNames.push(featureName)
     }
   })
-  const { availableFeatureNames } = featuresCompatFromRuntime({
-    runtimeName: runtimeReport.name,
-    runtimeVersion: runtimeReport.version,
-    featureNames,
-  })
-  availableFeatureNames.forEach((featureName) => {
-    const runtimeReportResult = runtimeReport.featuresReport[featureName]
-    if (runtimeReportResult === undefined) {
-      supportedFeatureNames.push(featureName)
-    }
-  })
+  const { name, version } = runtimeReport
+  if (name && version) {
+    const { availableFeatureNames } = featuresCompatFromRuntime({
+      runtimeName: name,
+      runtimeVersion: version,
+      featureNames,
+    })
+    availableFeatureNames.forEach((featureName) => {
+      const runtimeReportResult = featuresReport[featureName]
+      if (runtimeReportResult === undefined) {
+        supportedFeatureNames.push(featureName)
+      }
+    })
+  }
 
   const missingFeatures = {}
   featureNames.forEach((featureName) => {

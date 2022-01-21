@@ -244,6 +244,27 @@ export const startCompileServer = async ({
   const projectFileRequestedCallback = (...args) =>
     projectFileRequestedSignal.onrequested(...args)
 
+  const createCompileIdFromRuntimeReport = async (runtimeReport) => {
+    const compileProfile = createCompileProfile({
+      workerUrls,
+      babelPluginMapWithoutSyntax,
+      importMapInWebWorkers,
+      importDefaultExtension,
+      moduleOutFormat,
+      sourcemapMethod,
+      sourcemapExcludeSources,
+      jsenvToolbarInjection,
+
+      runtimeReport,
+    })
+    const compileId = await getOrCreateCompileId({
+      runtimeName: runtimeReport.name,
+      runtimeVersion: runtimeReport.version,
+      compileProfile,
+    })
+    return { compileProfile, compileId }
+  }
+
   const jsenvServices = {
     "service:compile profile": async (request) => {
       if (request.ressource !== `/__jsenv_compile_profile__`) {
@@ -270,23 +291,8 @@ export const startCompileServer = async ({
         const runtimeReport = await readRequestBody(request, {
           as: "json",
         })
-        const compileProfile = createCompileProfile({
-          workerUrls,
-          babelPluginMapWithoutSyntax,
-          importMapInWebWorkers,
-          importDefaultExtension,
-          moduleOutFormat,
-          sourcemapMethod,
-          sourcemapExcludeSources,
-          jsenvToolbarInjection,
-
-          runtimeReport,
-        })
-        const compileId = await getOrCreateCompileId({
-          runtimeName: runtimeReport.name,
-          runtimeVersion: runtimeReport.version,
-          compileProfile,
-        })
+        const { compileProfile, compileId } =
+          await createCompileIdFromRuntimeReport(runtimeReport)
         const responseBodyAsObject = {
           compileProfile,
           compileId,
@@ -402,7 +408,7 @@ export const startCompileServer = async ({
   return {
     id: compileServerId++,
     jsenvDirectoryRelativeUrl,
-    compileDirectories,
+    createCompileIdFromRuntimeReport,
     ...compileServer,
     babelPluginMap,
     preservedUrls,

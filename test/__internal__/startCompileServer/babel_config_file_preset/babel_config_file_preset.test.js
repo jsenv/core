@@ -5,7 +5,6 @@ import { fetchUrl } from "@jsenv/server"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -13,8 +12,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `file.jsx`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}file.jsx`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
 // syntax error when syntax-jsx is not enabled
@@ -25,7 +23,8 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
     runtimeSupport: jsenvRuntimeSupportDuringDev,
     babelConfigFileUrl: undefined,
   })
-  const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+  const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
+  const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
   const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
   const response = await fetchUrl(fileServerUrl)
   const responseBodyAsJson = await response.json()
@@ -55,7 +54,8 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
     jsenvDirectoryRelativeUrl,
     runtimeSupport: jsenvRuntimeSupportDuringDev,
   })
-  const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+  const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
+  const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
   const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
   const response = await fetchUrl(fileServerUrl)
 
