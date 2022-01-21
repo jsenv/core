@@ -13,17 +13,17 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}out/best/${testDirectoryRelativeUrl}`
+const compileDirectoryRelativeUrlPattern = `${jsenvDirectoryRelativeUrl}*/${testDirectoryRelativeUrl}`
 
 let ressourceBeforeAlias
-const { origin: compileServerOrigin } = await startCompileServer({
+const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   compileCacheStrategy: "etag",
   runtimeSupport: jsenvRuntimeSupportDuringDev,
   plugins: {
     ...pluginRessourceAliases({
-      [`/${compileDirectoryRelativeUrl}dir/file.js`]: `/${compileDirectoryRelativeUrl}dir/*.js`,
+      [`/${compileDirectoryRelativeUrlPattern}dir/*.js`]: `/${compileDirectoryRelativeUrlPattern}dir/file.js`,
     }),
   },
   customCompilers: {
@@ -35,7 +35,9 @@ const { origin: compileServerOrigin } = await startCompileServer({
     },
   },
 })
-const fileServerUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}dir/34556.js`
+const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
+const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}dir/34556.js`
 const response = await fetchUrl(fileServerUrl, {
   ignoreHttpsError: true,
 })
