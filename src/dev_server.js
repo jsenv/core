@@ -13,7 +13,7 @@ import {
 } from "./internal/argUtils.js"
 import {
   startCompileServer,
-  computeOutDirectoryRelativeUrl,
+  computeOutDirectoryUrls,
 } from "./internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
@@ -66,7 +66,6 @@ export const startDevServer = async ({
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
   if (mainFileRelativeUrl === undefined) {
     mainFileRelativeUrl = urlToRelativeUrl(
       new URL(
@@ -76,13 +75,11 @@ export const startDevServer = async ({
       projectDirectoryUrl,
     )
   }
-
-  const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
+  const { outDirectoryRelativeUrl } = computeOutDirectoryUrls({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     outDirectoryName,
   })
-
   const compileServer = await startCompileServer({
     signal,
     handleSIGINT,

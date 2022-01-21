@@ -236,11 +236,11 @@ export const startCompileServer = async ({
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
-  const outDirectoryUrl = resolveUrl(outDirectoryName, jsenvDirectoryUrl)
-  const outDirectoryRelativeUrl = urlToRelativeUrl(
-    outDirectoryUrl,
+  const { outDirectoryUrl, outDirectoryRelativeUrl } = computeOutDirectoryUrls({
     projectDirectoryUrl,
-  )
+    jsenvDirectoryRelativeUrl,
+    outDirectoryName,
+  })
   const outDirectoryMetaFileUrl = resolveUrl(
     "__out_meta__.json",
     jsenvDirectoryUrl,
@@ -354,6 +354,7 @@ export const startCompileServer = async ({
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
       compileDirectories,
       jsenvRemoteDirectory,
 
@@ -457,7 +458,7 @@ export const startCompileServer = async ({
   }
 }
 
-export const computeOutDirectoryRelativeUrl = ({
+export const computeOutDirectoryUrls = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl = ".jsenv",
   outDirectoryName = "out",
@@ -474,7 +475,10 @@ export const computeOutDirectoryRelativeUrl = ({
     outDirectoryUrl,
     projectDirectoryUrl,
   )
-  return outDirectoryRelativeUrl
+  return {
+    outDirectoryUrl,
+    outDirectoryRelativeUrl,
+  }
 }
 
 const assertArguments = ({

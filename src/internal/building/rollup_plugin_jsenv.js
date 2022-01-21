@@ -433,7 +433,6 @@ export const createRollupPlugins = async ({
               asCompiledServerUrl(importMapInfoFromHtml.htmlUrl),
             )
             importMapUrl = applyUrlMappings(importMapUrl)
-
             if (!urlIsInsideOf(importMapUrl, compileDirectoryServerUrl)) {
               logger.warn(
                 formatImportmapOutsideCompileDirectory({
@@ -442,7 +441,6 @@ export const createRollupPlugins = async ({
                 }),
               )
             }
-
             fetchImportMap = () => {
               return fetchImportMapFromUrl(
                 importMapUrl,

@@ -5229,7 +5229,7 @@
 
   var getBrowserRuntime = memoize(_async(function () {
     var compileServerOrigin = document.location.origin;
-    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/__compile_server_meta__.json")), function (compileMetaResponse) {
+    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/__compile_meta__.json")), function (compileMetaResponse) {
       return _await(compileMetaResponse.json(), function (compileMeta) {
         var outDirectoryRelativeUrl = compileMeta.outDirectoryRelativeUrl,
             errorStackRemapping = compileMeta.errorStackRemapping;
@@ -5296,4 +5296,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_91c5a3b8.js.map
+//# sourceMappingURL=browser_runtime_01cff462.js.map
