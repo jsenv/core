@@ -34,7 +34,6 @@ export const createCompiledFileService = ({
   jsenvDirectoryRelativeUrl,
   jsenvRemoteDirectory,
 
-  runtimeSupport,
   babelPluginMap,
   topLevelAwait,
   prependSystemJs,
@@ -157,7 +156,6 @@ export const createCompiledFileService = ({
             babelPluginMap,
             compileProfile,
           }),
-          runtimeSupport,
           workerUrls,
           serviceWorkerUrls,
           topLevelAwait,

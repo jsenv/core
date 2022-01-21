@@ -1,4 +1,3 @@
-import { detectNode } from "@jsenv/core/src/internal/node_runtime/detectNode.js"
 import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
 
 import { nodeSupportsDynamicImport } from "./node_feature_detect_dynamic_import.js"
@@ -7,52 +6,45 @@ import { nodeSupportsTopLevelAwait } from "./node_feature_detect_top_level_await
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
+  coverageHandledFromOutside,
 }) => {
   const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
-  const jsenvDirectoryMetaServerUrl = new URL(
-    "__jsenv_meta__.json",
+  const jsenvCompileProfileServerUrl = new URL(
+    "__jsenv_compile_profile__",
     jsenvDirectoryServerUrl,
   ).href
-  const { compileContext } = await fetchJson(jsenvDirectoryMetaServerUrl)
-  const nodeRuntime = detectNode()
+  const { compileContext } = await fetchJson(jsenvCompileProfileServerUrl)
   const featuresReport = await detectSupportedFeatures({
     compileContext,
+    coverageHandledFromOutside,
   })
-  const { compileId } = await fetchJson(jsenvDirectoryMetaServerUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      runtime: nodeRuntime,
-      featuresReport,
-    }),
-  })
-  return {
-    compileContext,
-    runtime: nodeRuntime,
+  const runtimeReport = {
+    env: { node: true },
+    name: "node",
+    version: process.version.slice(1),
     featuresReport,
+  }
+  const { compileProfile, compileId } = await fetchJson(
+    jsenvCompileProfileServerUrl,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(runtimeReport),
+    },
+  )
+  return {
+    compileProfile,
     compileId,
   }
 }
 
-const detectSupportedFeatures = async () => {
+const detectSupportedFeatures = async ({ coverageHandledFromOutside }) => {
   const featuresReport = {}
+  featuresReport["transform-instrument"] = coverageHandledFromOutside
   featuresReport.dynamicImport = await nodeSupportsDynamicImport()
   featuresReport.topLevelAwait = await nodeSupportsTopLevelAwait()
-  // Jsenv enable some features because they are standard and we can expect code to use them.
-  // At the time of writing this, these features are not available in latest Node.js.
-  // Some feature are also browser specific.
-  // To avoid compiling code for Node.js these feaure are marked as supported.
-  // It means code written to be executed in Node.js should not use these features
-  // because jsenv ignore them (it won't try to "polyfill" them)
-  featuresReport.module = true
-  featuresReport.importmap = true
-  featuresReport.import_assertions_type_json = true
-  featuresReport.import_assertions_type_css = true
-  featuresReport.newStylesheet = true
-  featuresReport.worker_type_module = true
-  featuresReport.worker_importmap = true
   return featuresReport
 }
 

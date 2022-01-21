@@ -1,7 +1,7 @@
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 export const featuresCompatMap = {
-  module: {
+  script_type_module: {
     edge: "16",
     firefox: "60",
     chrome: "61",

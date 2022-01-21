@@ -9,27 +9,32 @@ import { supportsCssImportAssertions } from "./browser_feature_detect_import_ass
 import { supportsNewStylesheet } from "./browser_feature_detect_new_stylesheet.js"
 
 export const scanBrowserRuntimeFeatures = async () => {
-  const outMetaUrl = "/.jsenv/__out_meta__.json"
-  const { jsenvDirectoryRelativeUrl, compileContext } = await fetchJson(
-    outMetaUrl,
-  )
-  const browserRuntime = detectBrowser()
-  const featuresReport = await detectSupportedFeatures({ compileContext })
-  const { compileId } = await fetchJson(outMetaUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      runtime: browserRuntime,
-      featuresReport,
-    }),
+  const jsenvCompileProfileUrl = "/__jsenv_compile_profile__"
+  const { jsenvDirectoryRelativeUrl, inlineImportMapIntoHTML } =
+    await fetchJson(jsenvCompileProfileUrl)
+  const { name, version } = detectBrowser()
+  const featuresReport = await detectSupportedFeatures({
+    inlineImportMapIntoHTML,
   })
+  const runtimeReport = {
+    env: { browser: true },
+    name,
+    version,
+    featuresReport,
+  }
+  const { compileProfile, compileId } = await fetchJson(
+    jsenvCompileProfileUrl,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(runtimeReport),
+    },
+  )
   return {
     jsenvDirectoryRelativeUrl,
-    compileContext,
-    runtime: browserRuntime,
-    featuresReport,
+    compileProfile,
     compileId,
   }
 }

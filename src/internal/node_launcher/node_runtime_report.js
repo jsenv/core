@@ -5,12 +5,14 @@ export const getNodeRuntimeReport = async ({
   compileServerId,
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
+  coverageHandledFromOutside,
 }) => {
   const cache = cacheFromParams({
     runtime,
     compileServerId,
     compileServerOrigin,
     jsenvDirectoryRelativeUrl,
+    coverageHandledFromOutside,
   })
   const entry = cache.read()
   if (entry) {
@@ -19,6 +21,7 @@ export const getNodeRuntimeReport = async ({
   const nodeRuntimeFeaturesReport = await scanNodeRuntimeFeatures({
     compileServerOrigin,
     jsenvDirectoryRelativeUrl,
+    coverageHandledFromOutside,
   })
   cache.write(nodeRuntimeFeaturesReport)
   return nodeRuntimeFeaturesReport
@@ -30,11 +33,13 @@ const cacheFromParams = ({
   compileServerId,
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
+  coverageHandledFromOutside,
 }) => {
   const params = {
     compileServerId,
     compileServerOrigin,
     jsenvDirectoryRelativeUrl,
+    coverageHandledFromOutside,
   }
   if (!currentCacheParams) {
     currentCacheParams = params

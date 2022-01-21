@@ -226,15 +226,19 @@ export const buildProject = async ({
   featuresCompat.availableFeatureNames.forEach((availableFeatureName) => {
     featuresReport[availableFeatureName] = true
   })
+  const node = isNodePartOfSupportedRuntimes(runtimeSupport)
+  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const body = JSON.stringify({
-    runtime: {
-      name: "jsenv_build",
-      version: "1",
+    env: {
+      browser,
+      node,
     },
+    name: "jsenv_build",
+    version: "1",
     featuresReport,
   })
   const compileServerResponse = await fetchUrl(
-    `${compileServer.origin}/.jsenv/__jsenv_meta__.json`,
+    `${compileServer.origin}/__jsenv_compile_profile__`,
     {
       method: "POST",
       headers: {
@@ -244,10 +248,7 @@ export const buildProject = async ({
       body,
     },
   )
-  const { compileId } = await compileServerResponse.json()
-  const { compileProfile } = compileId
-    ? compileServer.compileDirectories[compileId]
-    : null
+  const { compileProfile, compileId } = await compileServerResponse.json()
 
   try {
     const result = await buildUsingRollup({
@@ -279,8 +280,8 @@ export const buildProject = async ({
       classicWorkers,
       classicServiceWorkers,
 
-      node: isNodePartOfSupportedRuntimes(runtimeSupport),
-      browser: isBrowserPartOfSupportedRuntimes(runtimeSupport),
+      node,
+      browser,
       compileServer,
       compileProfile,
       compileId,

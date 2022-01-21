@@ -59,8 +59,10 @@ export const setupJsenvDirectory = async ({
     runtimeVersion,
     compileProfile,
   }) => {
-    // TODO: decide when we can return null
-    // depending on the compileProfile
+    const missingFeatureNames = Object.keys(compileProfile.missingFeatures)
+    if (missingFeatureNames.length === 0) {
+      return null
+    }
     const existingCompileIds = Object.keys(compileDirectories)
     const existingCompileId = existingCompileIds.find((compileIdCandidate) => {
       const compileDirectoryCandidate = compileDirectories[compileIdCandidate]
@@ -100,7 +102,7 @@ export const setupJsenvDirectory = async ({
 }
 
 const generateCompileId = ({ compileProfile }) => {
-  if (compileProfile.requiredFeatureNames.includes("transform-instrument")) {
+  if (compileProfile.missingFeatureNames["transform-instrument"]) {
     return `out_instrumented`
   }
   return `out`

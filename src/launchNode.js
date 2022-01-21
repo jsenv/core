@@ -99,23 +99,19 @@ nodeRuntime.launch = async ({
       remap,
     }
 
-    // the computation of runtime features can be cached
+    // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
+    // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
+    // "transform-instrument" becomes non mandatory
+    const coverageHandledFromOutside =
+      !coverageForceIstanbul && process.env.NODE_V8_COVERAGE
     const nodeRuntimeReport = await getNodeRuntimeReport({
       runtime: nodeRuntime,
       compileServerId,
       compileServerOrigin,
       jsenvDirectoryRelativeUrl,
-      // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
-      // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
-      // "transform-instrument" becomes non mandatory
-      coverageHandledFromOutside:
-        !coverageForceIstanbul && process.env.NODE_V8_COVERAGE,
+      coverageHandledFromOutside,
     })
-    if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
-      nodeRuntimeReport.featuresReport.jsCoverage = true
-    }
-    const { compileId } = nodeRuntimeReport
-    const { importDefaultExtension } = nodeRuntimeReport.compileContext
+    const { compileProfile, compileId } = nodeRuntimeReport
 
     let executionResult
     if (!compileId && !forceSystemJs) {
@@ -130,7 +126,8 @@ nodeRuntime.launch = async ({
         actionType: "execute-using-systemjs",
         actionParams: {
           compileId,
-          importDefaultExtension,
+          importDefaultExtension:
+            compileProfile.missingFeatures["import_default_extension"],
           ...executeParams,
         },
       })

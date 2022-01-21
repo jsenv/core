@@ -1,67 +1,108 @@
 import { featuresCompatFromRuntime } from "@jsenv/core/src/internal/features/features_compat_from_runtime.js"
 
-import {
-  sameValueInTwoObjects,
-  sameValuesInTwoArrays,
-} from "./comparison_utils.js"
+import { sameValueInTwoObjects } from "./comparison_utils.js"
+
+const COMPARERS = {
+  missingFeatures: sameValueInTwoObjects,
+  moduleOutFormat: (a, b) => a === b,
+  sourcemapMethod: (a, b) => a === b,
+  sourcemapExcludeSources: (a, b) => a === b,
+  jsenvToolbarInjection: (a, b) => a === b,
+}
 
 export const createCompileProfile = ({
+  workerUrls,
+  babelPluginMapWithoutSyntax,
+  importMapInWebWorkers,
+  importDefaultExtension,
   moduleOutFormat,
-  featureNames,
-  babelPluginMap,
   sourcemapMethod,
   sourcemapExcludeSources,
+  jsenvToolbarInjection,
+
   runtimeReport,
 }) => {
-  const runtimeName = runtimeReport.runtime.name
-  const runtimeVersion = runtimeReport.runtime.version
-  const { availableFeatureNames } = featuresCompatFromRuntime({
-    runtimeName,
-    runtimeVersion,
-    featureNames,
+  const requiredFeatures = {}
+  Object.keys(babelPluginMapWithoutSyntax).forEach((babelPluginName) => {
+    requiredFeatures[babelPluginName] = babelPluginValueAsJSON(
+      babelPluginMapWithoutSyntax[babelPluginName],
+    )
   })
-  const featuresReport = {}
-  availableFeatureNames.forEach((availableFeatureName) => {
-    featuresReport[availableFeatureName] = true
-  })
-  Object.assign(featuresReport, runtimeReport.featuresReport)
-  const requiredBabelPluginDescription = {}
-  Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    const supported = featuresReport[babelPluginName]
-    if (!supported) {
-      requiredBabelPluginDescription[babelPluginName] = babelPluginValueAsJSON(
-        babelPluginMap[babelPluginName],
-      )
+  if (importDefaultExtension) {
+    requiredFeatures["import_default_extension"] = true
+  }
+  if (runtimeReport.env.browser && workerUrls.length > 0) {
+    requiredFeatures["worker_type_module"] = true
+  }
+  if (runtimeReport.env.browser && importMapInWebWorkers) {
+    requiredFeatures["worker_importmap"] = true
+  }
+  const requiredFeatureNames = Object.keys(requiredFeatures)
+
+  const supportedFeatureNames = []
+  Object.keys(runtimeReport.featuresReport).forEach((featureName) => {
+    if (runtimeReport.featuresReport[featureName]) {
+      supportedFeatureNames.push(featureName)
     }
   })
-  const requiredFeatureNames = featureNames.filter((featureName) => {
-    return !featuresReport[featureName]
+  const { availableFeatureNames } = featuresCompatFromRuntime({
+    runtimeName: runtimeReport.name,
+    runtimeVersion: runtimeReport.version,
+    featureNames: requiredFeatureNames,
+  })
+  availableFeatureNames.forEach((featureName) => {
+    const runtimeReportResult = runtimeReport.featuresReport[featureName]
+    if (runtimeReportResult === undefined) {
+      supportedFeatureNames.push(featureName)
+    }
+  })
+
+  const missingFeatures = {}
+  Object.keys(requiredFeatures).forEach((featureName) => {
+    const supported = supportedFeatureNames.includes(featureName)
+    if (supported) {
+      return
+    }
+    missingFeatures[featureName] = requiredFeatures[featureName]
   })
   if (moduleOutFormat === undefined) {
     const systemJsIsRequired = featuresRelatedToSystemJs.some((featureName) => {
-      return (
-        // feature is used
-        featureNames.includes(featureName) &&
-        // and not supported
-        !featuresReport[featureName]
-      )
+      return Boolean(missingFeatures[featureName])
     })
     moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
   }
   return {
+    missingFeatures,
     moduleOutFormat,
-    requiredFeatureNames,
-    requiredBabelPluginDescription,
     sourcemapMethod,
     sourcemapExcludeSources,
+    jsenvToolbarInjection,
   }
+}
+
+const featuresRelatedToSystemJs = [
+  "script_type_module",
+  "importmap",
+  "import_assertion_type_json",
+  "import_assertion_type_css",
+  "worker_type_module",
+  "worker_importmap",
+]
+
+export const compareCompileProfiles = (
+  compileProfile,
+  secondCompileProfile,
+) => {
+  return Object.keys(COMPARERS).every((key) => {
+    return COMPARERS[key](compileProfile[key], secondCompileProfile[key])
+  })
 }
 
 export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
   const babelPluginMapShaked = {}
-  const { requiredBabelPluginDescription } = compileProfile
+  const { missingFeatures } = compileProfile
   Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    if (requiredBabelPluginDescription[babelPluginName]) {
+    if (missingFeatures[babelPluginName]) {
       babelPluginMapShaked[babelPluginName] = babelPluginMap[babelPluginName]
     }
   })
@@ -75,15 +116,6 @@ export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
   })
   return babelPluginMapShaked
 }
-
-const featuresRelatedToSystemJs = [
-  "module",
-  "importmap",
-  "import_assertion_type_json",
-  "import_assertion_type_css",
-  "worker_type_module",
-  "worker_importmap",
-]
 
 const babelPluginValueAsJSON = (babelPluginValue) => {
   if (Array.isArray(babelPluginValue)) {
@@ -99,21 +131,4 @@ const babelPluginValueAsJSON = (babelPluginValue) => {
     return { options: babelPluginValue.options }
   }
   return {}
-}
-
-const COMPARERS = {
-  moduleOutFormat: (a, b) => a === b,
-  requiredFeatureNames: sameValuesInTwoArrays,
-  requiredBabelPluginDescription: sameValueInTwoObjects,
-  sourcemapMethod: (a, b) => a === b,
-  sourcemapExcludeSources: (a, b) => a === b,
-}
-
-export const compareCompileProfiles = (
-  compileProfile,
-  secondCompileProfile,
-) => {
-  return Object.keys(COMPARERS).every((key) => {
-    return COMPARERS[key](compileProfile[key], secondCompileProfile[key])
-  })
 }

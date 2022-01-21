@@ -28,9 +28,9 @@
         window.location.replace(href)
       }
 
-      const getDirectoryUrl = ({ outDirectoryRelativeUrl, compileId }) => {
+      const getDirectoryUrl = ({ jsenvDirectoryRelativeUrl, compileId }) => {
         if (compileId) {
-          return `/${outDirectoryRelativeUrl}${compileId}/`
+          return `/${jsenvDirectoryRelativeUrl}${compileId}/`
         }
         return `/`
       }

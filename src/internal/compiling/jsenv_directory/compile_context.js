@@ -13,7 +13,6 @@ import {
 } from "./comparison_utils.js"
 
 const COMPARERS = {
-  importDefaultExtension: (a, b) => a === b,
   preservedUrls: sameValueInTwoObjects,
   workers: sameValuesInTwoArrays,
   serviceWorkers: sameValuesInTwoArrays,
@@ -37,7 +36,6 @@ export const compareCompileContexts = (
 }
 
 export const createCompileContext = async ({
-  importDefaultExtension,
   preservedUrls,
   workers,
   serviceWorkers,
@@ -46,7 +44,6 @@ export const createCompileContext = async ({
   inlineImportMapIntoHTML,
 }) => {
   return {
-    importDefaultExtension,
     preservedUrls,
     workers,
     serviceWorkers,

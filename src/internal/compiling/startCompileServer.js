@@ -17,8 +17,6 @@ import {
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
-import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
-
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
@@ -81,7 +79,6 @@ export const startCompileServer = async ({
   serviceWorkers = [],
   importMapInWebWorkers = false,
   prependSystemJs,
-  runtimeSupport,
 
   // remaining options
   livereloadWatchConfig = {
@@ -131,7 +128,6 @@ export const startCompileServer = async ({
   const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
     resolveUrl(serviceWorker, projectDirectoryUrl),
   )
-  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
     babelConfigFileUrl,
@@ -165,19 +161,6 @@ export const startCompileServer = async ({
   })
   const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
     extractSyntaxBabelPluginMap(babelPluginMap)
-  const featureNames = [
-    ...(browser
-      ? [
-          "module",
-          "importmap",
-          "import_assertion_type_json",
-          "import_assertion_type_css",
-        ]
-      : []),
-    ...(browser && workerUrls.length > 0 ? ["worker_type_module"] : []),
-    ...(browser && importMapInWebWorkers ? ["worker_importmap"] : []),
-    ...Object.keys(babelPluginMapWithoutSyntax),
-  ]
   babelPluginMap = {
     // When code should be compatible with browsers, ensure
     // process.env.NODE_ENV is replaced to be executable in a browser by forcing
@@ -195,29 +178,23 @@ export const startCompileServer = async ({
     // Ideally this should be a custom compiler dedicated for this use case. It's not the case
     // for now because it was faster to do it this way and the use case is a bit blurry:
     // What should this custom compiler do? Just replace some node globals? How would it be named and documented?
-    ...(browser
-      ? {
-          "transform-replace-expressions": [
-            babelPluginReplaceExpressions,
-            {
-              replaceMap: {
-                ...(replaceProcessEnvNodeEnv
-                  ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
-                  : {}),
-                ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-                ...(replaceGlobalFilename
-                  ? { __filename: __filenameReplacement }
-                  : {}),
-                ...(replaceGlobalDirname
-                  ? { __dirname: __dirnameReplacement }
-                  : {}),
-                ...replaceMap,
-              },
-              allowConflictingReplacements: true,
-            },
-          ],
-        }
-      : {}),
+    "transform-replace-expressions": [
+      babelPluginReplaceExpressions,
+      {
+        replaceMap: {
+          ...(replaceProcessEnvNodeEnv
+            ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
+            : {}),
+          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+          ...(replaceGlobalFilename
+            ? { __filename: __filenameReplacement }
+            : {}),
+          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+          ...replaceMap,
+        },
+        allowConflictingReplacements: true,
+      },
+    ],
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
@@ -226,7 +203,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
   })
   const compileContext = await createCompileContext({
-    importDefaultExtension,
     preservedUrls,
     workers,
     serviceWorkers,
@@ -270,11 +246,17 @@ export const startCompileServer = async ({
 
   const jsenvServices = {
     "service:compile profile": async (request) => {
-      if (request.ressource !== `/.jsenv/__jsenv_meta__.json`) {
+      if (request.ressource !== `/__jsenv_compile_profile__`) {
         return null
       }
       if (request.method === "GET") {
-        const body = JSON.stringify(jsenvDirectoryMeta, null, "  ")
+        const body = JSON.stringify(
+          {
+            inlineImportMapIntoHTML,
+          },
+          null,
+          "  ",
+        )
         return {
           status: 200,
           headers: {
@@ -289,13 +271,16 @@ export const startCompileServer = async ({
           as: "json",
         })
         const compileProfile = createCompileProfile({
+          workerUrls,
+          babelPluginMapWithoutSyntax,
+          importMapInWebWorkers,
+          importDefaultExtension,
           moduleOutFormat,
-          babelPluginMap,
-          featureNames,
           sourcemapMethod,
           sourcemapExcludeSources,
-          runtimeReport,
           jsenvToolbarInjection,
+
+          runtimeReport,
         })
         const compileId = await getOrCreateCompileId({
           runtimeName: runtimeReport.runtime.name,
@@ -303,6 +288,7 @@ export const startCompileServer = async ({
           compileProfile,
         })
         const responseBodyAsObject = {
+          compileProfile,
           compileId,
         }
         const responseBodyAsString = JSON.stringify(
@@ -332,9 +318,6 @@ export const startCompileServer = async ({
       compileDirectories,
       jsenvRemoteDirectory,
 
-      importDefaultExtension,
-
-      runtimeSupport,
       topLevelAwait,
       babelPluginMap,
       customCompilers,
@@ -421,7 +404,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     compileDirectories,
     ...compileServer,
-    featureNames,
     babelPluginMap,
     preservedUrls,
     projectFileRequestedCallback,
