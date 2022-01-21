@@ -24,6 +24,17 @@ export const createCompileProfile = ({
 }) => {
   const features = {}
   Object.keys(babelPluginMapWithoutSyntax).forEach((babelPluginName) => {
+    // if we need to be compatible only with node
+    // ignore "new-stylesheet-as-jsenv-import" and "transform-import-assertions"
+    // (we consider they won't be used in the code we are about to execute)
+    if (runtimeReport.env.node && !runtimeReport.env.browser) {
+      if (
+        babelPluginName === "new-stylesheet-as-jsenv-import" ||
+        babelPluginName === "transform-import-assertions"
+      ) {
+        return
+      }
+    }
     features[babelPluginName] = babelPluginValueAsJSON(
       babelPluginMapWithoutSyntax[babelPluginName],
     )

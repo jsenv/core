@@ -5,13 +5,11 @@ import { nodeSupportsTopLevelAwait } from "./node_feature_detect_top_level_await
 
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,
-  jsenvDirectoryRelativeUrl,
   coverageHandledFromOutside,
 }) => {
-  const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
   const jsenvCompileProfileServerUrl = new URL(
     "__jsenv_compile_profile__",
-    jsenvDirectoryServerUrl,
+    compileServerOrigin,
   ).href
   const { compileContext } = await fetchJson(jsenvCompileProfileServerUrl)
   const featuresReport = await detectSupportedFeatures({

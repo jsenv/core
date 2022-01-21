@@ -108,7 +108,6 @@ nodeRuntime.launch = async ({
       runtime: nodeRuntime,
       compileServerId,
       compileServerOrigin,
-      jsenvDirectoryRelativeUrl,
       coverageHandledFromOutside,
     })
     const { compileProfile, compileId } = nodeRuntimeReport
