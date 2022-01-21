@@ -243,7 +243,7 @@ export const startCompileServer = async ({
   })
   const outDirectoryMetaFileUrl = resolveUrl(
     "__out_meta__.json",
-    jsenvDirectoryUrl,
+    outDirectoryUrl,
   )
   if (outDirectoryClean) {
     await ensureEmptyDirectory(outDirectoryUrl)

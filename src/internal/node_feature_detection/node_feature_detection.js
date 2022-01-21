@@ -9,19 +9,17 @@ export const scanNodeRuntimeFeatures = async ({
   coverageHandledFromOutside = false,
 }) => {
   const outDirectoryServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const compileMetaServerUrl = new URL(
-    "__compile_meta__.json",
-    outDirectoryServerUrl,
-  )
+  const outMetaServerUrl = new URL("__out_meta__.json", outDirectoryServerUrl)
+    .href
   const { importDefaultExtension, featureNames, customCompilerPatterns } =
-    await fetchJson(compileMetaServerUrl)
+    await fetchJson(outMetaServerUrl)
   const nodeRuntime = detectNode()
   const featuresReport = await detectSupportedFeatures({
     coverageHandledFromOutside,
     importDefaultExtension,
     featureNames,
   })
-  const { compileId } = await fetchJson(compileMetaServerUrl, {
+  const { compileId } = await fetchJson(outMetaServerUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",

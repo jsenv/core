@@ -165,11 +165,11 @@ const onExecutionError = (
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const compileMetaResponse = await fetchUrl(
-    `${compileServerOrigin}/.jsenv/__compile_meta__.json`,
+  const outMetaResponse = await fetchUrl(
+    `${compileServerOrigin}/.jsenv/__out_meta__.json`,
   )
-  const compileMeta = await compileMetaResponse.json()
-  const { outDirectoryRelativeUrl, errorStackRemapping } = compileMeta
+  const outMeta = await outMetaResponse.json()
+  const { outDirectoryRelativeUrl, errorStackRemapping } = outMeta
   const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
   const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
   const parts = afterOutDirectory.split("/")
@@ -183,8 +183,7 @@ const getBrowserRuntime = memoize(async () => {
 
   if (errorStackRemapping && Error.captureStackTrace) {
     const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } =
-      compileMeta
-
+      outMeta
     await fetchAndEvalUsingFetch(
       `${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`,
     )
@@ -195,7 +194,6 @@ const getBrowserRuntime = memoize(async () => {
     const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
       SourceMapConsumer,
     })
-
     const errorTransform = async (error) => {
       // code can throw something else than an error
       // in that case return it unchanged
@@ -204,13 +202,11 @@ const getBrowserRuntime = memoize(async () => {
       error.stack = originalStack
       return error
     }
-
     const executeFile = browserRuntime.executeFile
     browserRuntime.executeFile = (file, options = {}) => {
       return executeFile(file, { errorTransform, ...options })
     }
   }
-
   return browserRuntime
 })
 

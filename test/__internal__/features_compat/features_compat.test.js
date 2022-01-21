@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/compile_directories/features_compat_from_runtime_support.js"
+import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/compiling/out_directory/features_compat_from_runtime_support.js"
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 
