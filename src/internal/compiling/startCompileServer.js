@@ -294,8 +294,10 @@ export const startCompileServer = async ({
           as: "json",
         })
         const compileProfile = createCompileProfile({
-          featureNames,
+          moduleOutFormat,
+          importMetaFormat,
           babelPluginMap,
+          featureNames,
           sourcemapMethod,
           sourcemapExcludeSources,
           runtimeReport,
