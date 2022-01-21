@@ -20,7 +20,7 @@ export const executeHtmlFile = async (
     projectDirectoryUrl,
     compileServerOrigin,
     compileServerId,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     page,
 
     // measurePerformance,
@@ -83,7 +83,7 @@ export const executeHtmlFile = async (
         compileServerOrigin,
         fileRelativeUrl,
         page,
-        outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl,
         compileId,
         collectCoverage,
         transformErrorHook,
@@ -238,7 +238,7 @@ const executeCompiledVersion = async ({
   compileServerOrigin,
   fileRelativeUrl,
   page,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   compileId,
   collectCoverage,
   transformErrorHook,
@@ -259,7 +259,7 @@ const executeCompiledVersion = async ({
     })
   }
 
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
   const compileDirectoryRemoteUrl = resolveUrl(
     compileDirectoryRelativeUrl,
     compileServerOrigin,

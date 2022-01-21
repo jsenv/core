@@ -12,7 +12,7 @@ export const scanBrowserRuntimeFeatures = async ({
 } = {}) => {
   const outMetaUrl = "/.jsenv/__out_meta__.json"
   const {
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     inlineImportMapIntoHTML,
     featureNames,
     customCompilerPatterns,
@@ -34,7 +34,7 @@ export const scanBrowserRuntimeFeatures = async ({
     }),
   })
   return {
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     inlineImportMapIntoHTML,
     featureNames,
     customCompilerPatterns,

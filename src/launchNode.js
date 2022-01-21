@@ -18,7 +18,7 @@ nodeRuntime.launch = async ({
   projectDirectoryUrl,
   compileServerId,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
 
   measurePerformance,
   collectPerformance,
@@ -40,22 +40,6 @@ nodeRuntime.launch = async ({
 
   remap = true,
 }) => {
-  if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(
-      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
-    )
-  }
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(
-      `compileServerOrigin must be a string, got ${compileServerOrigin}`,
-    )
-  }
-  if (typeof outDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`,
-    )
-  }
-
   env = {
     ...env,
     COVERAGE_ENABLED: collectCoverage,
@@ -100,7 +84,7 @@ nodeRuntime.launch = async ({
     const executeParams = {
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
       jsenvCoreDirectoryUrl,
 
       fileRelativeUrl,
@@ -120,7 +104,7 @@ nodeRuntime.launch = async ({
       runtime: nodeRuntime,
       compileServerId,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
       // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
       // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
       // "transform-instrument" becomes non mandatory

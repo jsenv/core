@@ -7,12 +7,12 @@ export const compileImportmap = async ({
   url,
   compiledUrl,
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   compileId,
 }) => {
   const jsenvImportmap = getDefaultImportmap(compiledUrl, {
     projectDirectoryUrl,
-    compileDirectoryUrl: `${projectDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/`,
+    compileDirectoryUrl: `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`,
   })
   const projectImportmap = JSON.parse(code)
   const importmap = composeTwoImportMaps(jsenvImportmap, projectImportmap)

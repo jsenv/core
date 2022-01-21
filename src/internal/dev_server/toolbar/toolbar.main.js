@@ -30,10 +30,10 @@ const renderToolbar = async () => {
   const compileServerOrigin = window.parent.location.origin
   // this should not block the whole toolbar rendering + interactivity
   const exploringConfig = await fetchExploringJson()
-  const { outDirectoryRelativeUrl, livereloading } = exploringConfig
+  const { jsenvDirectoryRelativeUrl, livereloading } = exploringConfig
   const compileGroup = getCompileGroup({
     executedFileCompiledUrl,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     compileServerOrigin,
   })
   const executedFileRelativeUrl = compileGroup.fileRelativeUrl
@@ -165,11 +165,11 @@ const showToolbar = ({ animate = true } = {}) => {
 
 const getCompileGroup = ({
   executedFileCompiledUrl,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
   const outDirectoryServerUrl = String(
-    new URL(outDirectoryRelativeUrl, compileServerOrigin),
+    new URL(jsenvDirectoryRelativeUrl, compileServerOrigin),
   )
   if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
     const afterCompileDirectory = urlToRelativeUrl(
@@ -180,13 +180,13 @@ const getCompileGroup = ({
     const fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1)
     return {
       fileRelativeUrl,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
       compileId: afterCompileDirectory.slice(0, slashIndex),
     }
   }
   return {
     fileRelativeUrl: new URL(executedFileCompiledUrl).pathname.slice(1),
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     compileId: null,
   }
 }

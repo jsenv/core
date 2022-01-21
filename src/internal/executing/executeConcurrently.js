@@ -215,7 +215,7 @@ export const executeConcurrently = async (
             projectDirectoryUrl,
             compileServerOrigin: compileServer.origin,
             compileServerId: compileServer.id,
-            outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+            jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
 
             collectCoverage: coverage,
             coverageIgnorePredicate,

@@ -22,6 +22,7 @@ export const setupJsenvDirectory = async ({
   )
   const compileDirectories = {}
   const jsenvDirectoryMeta = {
+    jsenvDirectoryRelativeUrl,
     compileContext,
     compileDirectories,
   }

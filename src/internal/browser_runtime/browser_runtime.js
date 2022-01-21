@@ -169,15 +169,17 @@ const getBrowserRuntime = memoize(async () => {
     `${compileServerOrigin}/.jsenv/__out_meta__.json`,
   )
   const outMeta = await outMetaResponse.json()
-  const { outDirectoryRelativeUrl, errorStackRemapping } = outMeta
-  const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
-  const parts = afterOutDirectory.split("/")
+  const { jsenvDirectoryRelativeUrl, errorStackRemapping } = outMeta
+  const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
+  const afterJsenvDirectory = document.location.href.slice(
+    jsenvDirectoryServerUrl.length,
+  )
+  const parts = afterJsenvDirectory.split("/")
   const compileId = parts[0]
 
   const browserRuntime = await createBrowserRuntime({
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     compileId,
   })
 

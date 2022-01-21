@@ -133,7 +133,7 @@ export const execute = async ({
         projectDirectoryUrl,
         compileServerOrigin: compileServer.origin,
         compileServerId: compileServer.id,
-        outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
         ...runtimeParams,
       },
       executeParams: {
@@ -161,7 +161,7 @@ export const execute = async ({
 
     if (collectCompileServerInfo) {
       result.compileServerOrigin = compileServer.origin
-      result.outDirectoryRelativeUrl = compileServer.outDirectoryRelativeUrl
+      result.jsenvDirectoryRelativeUrl = compileServer.jsenvDirectoryRelativeUrl
     }
 
     if (result.status === "errored") {

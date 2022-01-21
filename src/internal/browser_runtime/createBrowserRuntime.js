@@ -15,7 +15,7 @@ const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
 export const createBrowserRuntime = async ({
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   compileId,
 }) => {
   const fetchSource = (url, { contentTypeExpected }) => {
@@ -33,10 +33,10 @@ export const createBrowserRuntime = async ({
     return json
   }
 
-  const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const envUrl = String(new URL("env.json", outDirectoryUrl))
+  const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
+  const envUrl = String(new URL("env.json", jsenvDirectoryServerUrl))
   const { importDefaultExtension } = await fetchJson(envUrl)
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
   // if there is an importmap in the document we use it instead of fetching.
   // systemjs style with systemjs-importmap
   const importmapScript = document.querySelector(

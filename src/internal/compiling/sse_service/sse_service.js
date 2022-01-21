@@ -14,7 +14,6 @@ import { urlIsCompilationAsset } from "@jsenv/core/src/internal/compiling/jsenv_
 export const createSSEService = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
   livereloadSSE,
   projectFileRequestedSignal,
 
@@ -27,7 +26,6 @@ export const createSSEService = ({
     handleSSEClientRequest = createSSEServiceWithLivereload({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
       projectFileRequestedSignal,
 
       serverStopCallbackList,
@@ -53,7 +51,6 @@ export const createSSEService = ({
 const createSSEServiceWithLivereload = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
 
   projectFileRequestedSignal,
   serverStopCallbackList,
@@ -268,7 +265,7 @@ const createSSEServiceWithLivereload = ({
       // here we know the referer is inside compileServer
       const refererRelativeUrl = urlToOriginalRelativeUrl(
         referer,
-        resolveUrl(outDirectoryRelativeUrl, request.origin),
+        resolveUrl(jsenvDirectoryRelativeUrl, request.origin),
       )
       if (refererRelativeUrl) {
         // search if referer (file requesting this one) is tracked as being a dependency of main file
@@ -348,7 +345,7 @@ const createSSEServiceWithLivereload = ({
   return (request) => {
     const requestUrl = resolveUrl(request.ressource, request.origin)
     const outDirectoryServerUrl = resolveUrl(
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
       request.origin,
     )
     const originalRelativeUrl = urlToOriginalRelativeUrl(

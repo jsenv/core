@@ -46,7 +46,7 @@ export const compileHtml = async ({
   projectDirectoryUrl,
   jsenvRemoteDirectory,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
 
   compileId,
   babelPluginMap,
@@ -61,7 +61,7 @@ export const compileHtml = async ({
   sourcemapMethod,
   code,
 }) => {
-  const compileDirectoryUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
   const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
     BROWSER_RUNTIME_BUILD_URL,
     projectDirectoryUrl,

@@ -15,7 +15,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
       customCompilerPatterns,
       missingFeatureNames,
       inlineImportMapIntoHTML,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
       compileId,
     }) => {
       const browserSupport = compileId
@@ -92,7 +92,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         }
       filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick =
         () => {
-          window.parent.location = `/${outDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
+          window.parent.location = `/${jsenvDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
         }
 
       const shouldCompile =

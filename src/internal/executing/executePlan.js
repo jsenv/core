@@ -146,7 +146,7 @@ export const executePlan = async (
       executionSteps = await generateExecutionSteps(
         {
           ...plan,
-          [compileServer.outDirectoryRelativeUrl]: null,
+          [compileServer.jsenvDirectoryRelativeUrl]: null,
         },
         {
           signal: multipleExecutionsOperation.signal,

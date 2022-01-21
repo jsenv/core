@@ -76,7 +76,7 @@ await new Promise((resolve) => setTimeout(resolve, 500))
 
 {
   const { appDisplayedDuration } = await measureAppDisplayed({
-    appUrl: `${devServer.origin}/${devServer.outDirectoryRelativeUrl}best/${directoryRelativeUrl}basic_app/main.html`,
+    appUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}.redirect/${directoryRelativeUrl}basic_app/main.html`,
   })
   devServerMetrics["time to display app using compiled files"] = {
     value: appDisplayedDuration,
@@ -87,7 +87,7 @@ await new Promise((resolve) => setTimeout(resolve, 500))
 
 {
   const { appDisplayedDuration } = await measureAppDisplayed({
-    appUrl: `${devServer.origin}/${devServer.outDirectoryRelativeUrl}best/${directoryRelativeUrl}basic_app/main.html`,
+    appUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}.redirect/${directoryRelativeUrl}basic_app/main.html`,
   })
   devServerMetrics["time to display app compiled and second visit"] = {
     value: appDisplayedDuration,
