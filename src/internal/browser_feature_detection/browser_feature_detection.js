@@ -7,22 +7,13 @@ import { supportsJsonImportAssertions } from "./browser_feature_detect_import_as
 import { supportsCssImportAssertions } from "./browser_feature_detect_import_assertions_css.js"
 import { supportsNewStylesheet } from "./browser_feature_detect_new_stylesheet.js"
 
-export const scanBrowserRuntimeFeatures = async ({
-  coverageHandledFromOutside = false,
-} = {}) => {
+export const scanBrowserRuntimeFeatures = async () => {
   const outMetaUrl = "/.jsenv/__out_meta__.json"
-  const {
-    jsenvDirectoryRelativeUrl,
-    inlineImportMapIntoHTML,
-    featureNames,
-    customCompilerPatterns,
-  } = await fetchJson(outMetaUrl)
+  const { jsenvDirectoryRelativeUrl, compileContext } = await fetchJson(
+    outMetaUrl,
+  )
   const browserRuntime = detectBrowser()
-  const featuresReport = await detectSupportedFeatures({
-    coverageHandledFromOutside,
-    inlineImportMapIntoHTML,
-    featureNames,
-  })
+  const featuresReport = await detectSupportedFeatures({ compileContext })
   const { compileId } = await fetchJson(outMetaUrl, {
     method: "POST",
     headers: {
@@ -35,32 +26,16 @@ export const scanBrowserRuntimeFeatures = async ({
   })
   return {
     jsenvDirectoryRelativeUrl,
-    inlineImportMapIntoHTML,
-    featureNames,
-    customCompilerPatterns,
     runtime: browserRuntime,
     featuresReport,
     compileId,
   }
 }
 
-const detectSupportedFeatures = async ({
-  coverageHandledFromOutside,
-  inlineImportMapIntoHTML,
-  featureNames,
-}) => {
+const detectSupportedFeatures = async ({ compileContext }) => {
   const featuresReport = {}
-  // js coverage
-  // When instrumentation CAN be handed by playwright
-  // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-  // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
-  if (featureNames.includes("transform-instrument")) {
-    featuresReport.jsCoverage = coverageHandledFromOutside
-  }
   // new CSSStyleSheet
-  if (featureNames.includes("new-stylesheet-as-jsenv-import")) {
-    featuresReport.newStylesheet = supportsNewStylesheet()
-  }
+  featuresReport.newStylesheet = supportsNewStylesheet()
   // importmap
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
@@ -74,15 +49,13 @@ const detectSupportedFeatures = async ({
     // But there exploring server can inline importmap by transforming html
     // and in that case we can test only the local importmap support
     // so we test importmap support and the remote one
-    remote: !inlineImportMapIntoHTML,
+    remote: !compileContext.inlineImportMapIntoHTML,
   })
   // dynamic import
   featuresReport.dynamicImport = await supportsDynamicImport()
   // top level await
   featuresReport.topLevelAwait = await supportsTopLevelAwait()
   // import assertions
-  if (featureNames.includes("transform-import-assertions")) {
-    featuresReport.jsonImportAssertions = await supportsJsonImportAssertions()
-    featuresReport.cssImportAssertions = await supportsCssImportAssertions()
-  }
+  featuresReport.jsonImportAssertions = await supportsJsonImportAssertions()
+  featuresReport.cssImportAssertions = await supportsCssImportAssertions()
 }
