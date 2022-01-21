@@ -4848,7 +4848,7 @@
 
   var createBrowserRuntime = _async$1(function (_ref) {
     var compileServerOrigin = _ref.compileServerOrigin,
-        outDirectoryRelativeUrl = _ref.outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
         compileId = _ref.compileId;
 
     var fetchSource = function fetchSource(url, _ref2) {
@@ -4867,11 +4867,11 @@
       });
     });
 
-    var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
-    var envUrl = String(new URL("env.json", outDirectoryUrl));
+    var jsenvDirectoryServerUrl = "".concat(compileServerOrigin, "/").concat(jsenvDirectoryRelativeUrl);
+    var envUrl = String(new URL("env.json", jsenvDirectoryServerUrl));
     return _await$1(fetchJson(envUrl), function (_ref3) {
       var importDefaultExtension = _ref3.importDefaultExtension;
-      var compileDirectoryRelativeUrl = "".concat(outDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
+      var compileDirectoryRelativeUrl = "".concat(jsenvDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
 
       var importmapScript = document.querySelector("script[type=\"systemjs-importmap\"]");
@@ -5231,15 +5231,15 @@
     var compileServerOrigin = document.location.origin;
     return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/__out_meta__.json")), function (outMetaResponse) {
       return _await(outMetaResponse.json(), function (outMeta) {
-        var outDirectoryRelativeUrl = outMeta.outDirectoryRelativeUrl,
+        var jsenvDirectoryRelativeUrl = outMeta.jsenvDirectoryRelativeUrl,
             errorStackRemapping = outMeta.errorStackRemapping;
-        var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
-        var afterOutDirectory = document.location.href.slice(outDirectoryUrl.length);
-        var parts = afterOutDirectory.split("/");
+        var jsenvDirectoryServerUrl = "".concat(compileServerOrigin, "/").concat(jsenvDirectoryRelativeUrl);
+        var afterJsenvDirectory = document.location.href.slice(jsenvDirectoryServerUrl.length);
+        var parts = afterJsenvDirectory.split("/");
         var compileId = parts[0];
         return _await(createBrowserRuntime({
           compileServerOrigin: compileServerOrigin,
-          outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+          jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
           compileId: compileId
         }), function (browserRuntime) {
           return _invoke(function () {
@@ -5296,4 +5296,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_6bfdc99e.js.map
+//# sourceMappingURL=browser_runtime_93a975f9.js.map

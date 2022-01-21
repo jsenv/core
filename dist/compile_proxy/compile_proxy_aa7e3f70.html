@@ -2134,32 +2134,14 @@
         }
       }
 
-      function _empty() {}
-
-      function _invokeIgnored(body) {
-        var result = body();
-
-        if (result && result.then) {
-          return result.then(_empty);
-        }
-      }
-
       var scanBrowserRuntimeFeatures = _async(function () {
-        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-            _ref$coverageHandledF = _ref.coverageHandledFromOutside,
-            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF;
-
         var outMetaUrl = "/.jsenv/__out_meta__.json";
-        return _await(fetchJson(outMetaUrl), function (_ref2) {
-          var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
-              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
-              featureNames = _ref2.featureNames,
-              customCompilerPatterns = _ref2.customCompilerPatterns;
+        return _await(fetchJson(outMetaUrl), function (_ref) {
+          var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
+              compileContext = _ref.compileContext;
           var browserRuntime = detectBrowser();
           return _await(detectSupportedFeatures({
-            coverageHandledFromOutside: coverageHandledFromOutside,
-            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-            featureNames: featureNames
+            compileContext: compileContext
           }), function (featuresReport) {
             return _await(fetchJson(outMetaUrl, {
               method: "POST",
@@ -2170,13 +2152,11 @@
                 runtime: browserRuntime,
                 featuresReport: featuresReport
               })
-            }), function (_ref3) {
-              var compileId = _ref3.compileId;
+            }), function (_ref2) {
+              var compileId = _ref2.compileId;
               return {
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-                inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-                featureNames: featureNames,
-                customCompilerPatterns: customCompilerPatterns,
+                jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+                compileContext: compileContext,
                 runtime: browserRuntime,
                 featuresReport: featuresReport,
                 compileId: compileId
@@ -2186,22 +2166,12 @@
         });
       });
 
-      var detectSupportedFeatures = _async(function (_ref4) {
-        _ref4.coverageHandledFromOutside;
-        var inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML,
-            featureNames = _ref4.featureNames; // When instrumentation CAN be handed by playwright
-        // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-        // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
-
-        if (featureNames.includes("transform-instrument")) ; // new CSSStyleSheet
-
-        if (featureNames.includes("new-stylesheet-as-jsenv-import")) {
-          supportsNewStylesheet();
-        } // importmap
+      var detectSupportedFeatures = _async(function (_ref3) {
+        var compileContext = _ref3.compileContext;
+        supportsNewStylesheet(); // importmap
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
-
 
         return _await(supportsImportmap({
           // chrome supports inline but not remote importmap
@@ -2212,19 +2182,15 @@
           // But there exploring server can inline importmap by transforming html
           // and in that case we can test only the local importmap support
           // so we test importmap support and the remote one
-          remote: !inlineImportMapIntoHTML
+          remote: !compileContext.inlineImportMapIntoHTML
         }), function (_supportsImportmap) {
           // dynamic import
           return _call(supportsDynamicImport, function (_supportsDynamicImpor) {
             // top level await
             return _call(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
               // import assertions
-              return _invokeIgnored(function () {
-                if (featureNames.includes("transform-import-assertions")) {
-                  return _call(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
-                    return _call(supportsCssImportAssertions, function (_supportsCssImportAss) {});
-                  });
-                }
+              return _call(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
+                return _call(supportsCssImportAssertions, function (_supportsCssImportAss) {});
               });
             });
           });
@@ -2237,7 +2203,7 @@
   };
 });
 
-//# sourceMappingURL=compile_proxy.html__inline__20_2e2d8abb.js.map</script>
+//# sourceMappingURL=compile_proxy.html__inline__20_14bf1113.js.map</script>
   
 
 </body></html>

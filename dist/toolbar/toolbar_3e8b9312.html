@@ -4308,32 +4308,14 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       }
 
-      function _empty() {}
-
-      function _invokeIgnored(body) {
-        var result = body();
-
-        if (result && result.then) {
-          return result.then(_empty);
-        }
-      }
-
       var scanBrowserRuntimeFeatures = _async$1(function () {
-        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-            _ref$coverageHandledF = _ref.coverageHandledFromOutside,
-            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF;
-
         var outMetaUrl = "/.jsenv/__out_meta__.json";
-        return _await(fetchJson(outMetaUrl), function (_ref2) {
-          var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
-              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
-              featureNames = _ref2.featureNames,
-              customCompilerPatterns = _ref2.customCompilerPatterns;
+        return _await(fetchJson(outMetaUrl), function (_ref) {
+          var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
+              compileContext = _ref.compileContext;
           var browserRuntime = detectBrowser();
           return _await(detectSupportedFeatures({
-            coverageHandledFromOutside: coverageHandledFromOutside,
-            inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-            featureNames: featureNames
+            compileContext: compileContext
           }), function (featuresReport) {
             return _await(fetchJson(outMetaUrl, {
               method: "POST",
@@ -4344,13 +4326,11 @@ html[data-toolbar-visible] #toolbar-trigger {
                 runtime: browserRuntime,
                 featuresReport: featuresReport
               })
-            }), function (_ref3) {
-              var compileId = _ref3.compileId;
+            }), function (_ref2) {
+              var compileId = _ref2.compileId;
               return {
-                outDirectoryRelativeUrl: outDirectoryRelativeUrl,
-                inlineImportMapIntoHTML: inlineImportMapIntoHTML,
-                featureNames: featureNames,
-                customCompilerPatterns: customCompilerPatterns,
+                jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+                compileContext: compileContext,
                 runtime: browserRuntime,
                 featuresReport: featuresReport,
                 compileId: compileId
@@ -4360,22 +4340,12 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      var detectSupportedFeatures = _async$1(function (_ref4) {
-        _ref4.coverageHandledFromOutside;
-        var inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML,
-            featureNames = _ref4.featureNames; // When instrumentation CAN be handed by playwright
-        // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
-        // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
-
-        if (featureNames.includes("transform-instrument")) ; // new CSSStyleSheet
-
-        if (featureNames.includes("new-stylesheet-as-jsenv-import")) {
-          supportsNewStylesheet();
-        } // importmap
+      var detectSupportedFeatures = _async$1(function (_ref3) {
+        var compileContext = _ref3.compileContext;
+        supportsNewStylesheet(); // importmap
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
-
 
         return _await(supportsImportmap({
           // chrome supports inline but not remote importmap
@@ -4386,19 +4356,15 @@ html[data-toolbar-visible] #toolbar-trigger {
           // But there exploring server can inline importmap by transforming html
           // and in that case we can test only the local importmap support
           // so we test importmap support and the remote one
-          remote: !inlineImportMapIntoHTML
+          remote: !compileContext.inlineImportMapIntoHTML
         }), function (_supportsImportmap) {
           // dynamic import
           return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
             // top level await
             return _call$1(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
               // import assertions
-              return _invokeIgnored(function () {
-                if (featureNames.includes("transform-import-assertions")) {
-                  return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
-                    return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {});
-                  });
-                }
+              return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
+                return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {});
               });
             });
           });
@@ -4416,7 +4382,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               customCompilerPatterns = _ref2.customCompilerPatterns,
               missingFeatureNames = _ref2.missingFeatureNames,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
-              outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
+              jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
               compileId = _ref2.compileId;
           var browserSupport = compileId ? "no" : inlineImportMapIntoHTML ? "partial" : "full";
           enableVariant(browserSupportRootNode, {
@@ -4467,7 +4433,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
 
           filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick = function () {
-            window.parent.location = "/".concat(outDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
+            window.parent.location = "/".concat(jsenvDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
           };
 
           var shouldCompile = filesCompilation !== "yes" && browserSupport === "no";
@@ -4743,11 +4709,11 @@ html[data-toolbar-visible] #toolbar-trigger {
         var compileServerOrigin = window.parent.location.origin; // this should not block the whole toolbar rendering + interactivity
 
         return _call(fetchExploringJson, function (exploringConfig) {
-          var outDirectoryRelativeUrl = exploringConfig.outDirectoryRelativeUrl,
+          var jsenvDirectoryRelativeUrl = exploringConfig.jsenvDirectoryRelativeUrl,
               livereloading = exploringConfig.livereloading;
           var compileGroup = getCompileGroup({
             executedFileCompiledUrl: executedFileCompiledUrl,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
             compileServerOrigin: compileServerOrigin
           });
           var executedFileRelativeUrl = compileGroup.fileRelativeUrl;
@@ -4889,9 +4855,9 @@ html[data-toolbar-visible] #toolbar-trigger {
 
       var getCompileGroup = function getCompileGroup(_ref3) {
         var executedFileCompiledUrl = _ref3.executedFileCompiledUrl,
-            outDirectoryRelativeUrl = _ref3.outDirectoryRelativeUrl,
+            jsenvDirectoryRelativeUrl = _ref3.jsenvDirectoryRelativeUrl,
             compileServerOrigin = _ref3.compileServerOrigin;
-        var outDirectoryServerUrl = String(new URL(outDirectoryRelativeUrl, compileServerOrigin));
+        var outDirectoryServerUrl = String(new URL(jsenvDirectoryRelativeUrl, compileServerOrigin));
 
         if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
           var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryServerUrl);
@@ -4899,14 +4865,14 @@ html[data-toolbar-visible] #toolbar-trigger {
           var fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
           return {
             fileRelativeUrl: fileRelativeUrl,
-            outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+            jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
             compileId: afterCompileDirectory.slice(0, slashIndex)
           };
         }
 
         return {
           fileRelativeUrl: new URL(executedFileCompiledUrl).pathname.slice(1),
-          outDirectoryRelativeUrl: outDirectoryRelativeUrl,
+          jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
           compileId: null
         };
       };
@@ -4968,7 +4934,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_2afbe255.js.map</script>
+//# sourceMappingURL=toolbar.main_3e80d522.js.map</script>
   
 
 </body></html>
