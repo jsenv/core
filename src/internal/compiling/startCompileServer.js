@@ -22,6 +22,8 @@ import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/runti
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { createCompileContext } from "./jsenv_directory/compile_context.js"
+import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
 import { setupJsenvDirectory } from "./jsenv_directory/jsenv_directory.js"
 import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { createSSEService } from "./sse_service/sse_service.js"
@@ -224,31 +226,29 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
   })
+  const compileContext = await createCompileContext({
+    importDefaultExtension,
+    preservedUrls,
+    workers,
+    serviceWorkers,
+    customCompilers,
+    replaceProcessEnvNodeEnv,
+    processEnvNodeEnv,
+    inlineImportMapIntoHTML,
+    jsenvToolbarInjection,
+  })
   // updating "jsenvDirectoryRelativeUrl" normalizes it (ensure it has trailing "/")
   jsenvDirectoryRelativeUrl = jsenvDirectoryUrls.jsenvDirectoryRelativeUrl
-  const { compileDirectories, jsenvDirectoryMeta, getOrCreateCompileId } =
+  const { jsenvDirectoryMeta, getOrCreateCompileId } =
     await setupJsenvDirectory({
       logger,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-
-      importDefaultExtension,
-      preservedUrls,
-      workers,
-      serviceWorkers,
-      featureNames,
-      babelPluginMap,
-      replaceProcessEnvNodeEnv,
-      processEnvNodeEnv,
-      inlineImportMapIntoHTML,
-      customCompilers,
-      jsenvToolbarInjection,
-      sourcemapMethod,
-      sourcemapExcludeSources,
-
       compileServerCanWriteOnFilesystem,
+      compileContext,
     })
+  const { compileDirectories } = jsenvDirectoryMeta
   const jsenvRemoteDirectory = createJsenvRemoteDirectory({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -293,8 +293,15 @@ export const startCompileServer = async ({
         const runtimeReport = await readRequestBody(request, {
           as: "json",
         })
-        const compileId = getOrCreateCompileId({
+        const compileProfile = createCompileProfile({
+          featureNames,
+          babelPluginMap,
+          sourcemapMethod,
+          sourcemapExcludeSources,
           runtimeReport,
+        })
+        const compileId = getOrCreateCompileId({
+          compileProfile,
         })
         const responseBodyAsObject = {
           compileId,

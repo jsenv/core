@@ -1,105 +1,28 @@
 import {
   resolveUrl,
   readFile,
-  urlToRelativeUrl,
   writeFile,
   ensureEmptyDirectory,
 } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
 
-import {
-  TOOLBAR_INJECTOR_BUILD_URL,
-  EVENT_SOURCE_CLIENT_BUILD_URL,
-  BROWSER_RUNTIME_BUILD_URL,
-} from "@jsenv/core/dist/build_manifest.js"
-import {
-  sourcemapMainFileInfo,
-  sourcemapMappingFileInfo,
-} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { compareCompileContexts } from "./compile_context.js"
+import { compareCompileProfiles } from "./compile_profile.js"
 
-import { featuresCompatFromRuntime } from "./features_compat_from_runtime.js"
-
-// Must list everything that can influence how the
-// compiled files are generated. So that the filesystem cache for those generated
-// files is not reused when it should not
-// In some cases the parameters influences only a subset of files and ideally
-// this parameter should somehow invalidate a subset of the cache
-// To keep things simple these parameters currently invalidates the whole cache
 export const setupJsenvDirectory = async ({
   logger,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-
-  importDefaultExtension,
-  preservedUrls,
-  workers,
-  serviceWorkers,
-  featureNames,
-  babelPluginMap,
-  replaceProcessEnvNodeEnv,
-  processEnvNodeEnv,
-  inlineImportMapIntoHTML,
-  customCompilers,
-  jsenvToolbarInjection,
-  sourcemapMethod,
-  sourcemapExcludeSources,
-
   compileServerCanWriteOnFilesystem,
+  compileContext,
 }) => {
   const jsenvDirectoryUrl = resolveUrl(
     jsenvDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-  const jsenvCorePackageFileUrl = resolveUrl(
-    "./package.json",
-    jsenvCoreDirectoryUrl,
-  )
-  const jsenvCorePackageVersion = await readFile(jsenvCorePackageFileUrl, {
-    as: "json",
-  }).version
-  const customCompilerPatterns = Object.keys(customCompilers)
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMainFileInfo.url,
-    projectDirectoryUrl,
-  )
-  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileInfo.url,
-    projectDirectoryUrl,
-  )
-  const compileInfo = {
-    jsenvDirectoryRelativeUrl,
-    importDefaultExtension,
-
-    preservedUrls,
-    workers,
-    serviceWorkers,
-    babelPluginMap: babelPluginMapAsData(babelPluginMap),
-    featureNames,
-    customCompilerPatterns,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    inlineImportMapIntoHTML,
-
-    sourcemapMethod,
-    sourcemapExcludeSources,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-    errorStackRemapping: true,
-
-    // used to consider logic generating files may have changed
-    jsenvCorePackageVersion,
-
-    // impact only HTML files
-    jsenvToolbarInjection,
-    TOOLBAR_INJECTOR_BUILD_URL,
-    EVENT_SOURCE_CLIENT_BUILD_URL,
-    BROWSER_RUNTIME_BUILD_URL,
-  }
   const compileDirectories = {}
   const jsenvDirectoryMeta = {
-    compileInfo,
+    compileContext,
     compileDirectories,
   }
   if (compileServerCanWriteOnFilesystem) {
@@ -113,42 +36,31 @@ export const setupJsenvDirectory = async ({
     })
   }
 
-  const getOrCreateCompileId = ({ runtimeReport }) => {
-    const runtimeName = runtimeReport.runtime.name
-    const runtimeVersion = runtimeReport.runtime.version
-    const { availableFeatureNames } = featuresCompatFromRuntime({
-      runtimeName,
-      runtimeVersion,
-      featureNames,
-    })
-    const featuresReport = {}
-    availableFeatureNames.forEach((availableFeatureName) => {
-      featuresReport[availableFeatureName] = true
-    })
-    Object.assign(featuresReport, runtimeReport.featuresReport)
-    const allFeaturesSupported = featureNames.every((featureName) =>
-      Boolean(featuresReport[featureName]),
-    )
-    if (allFeaturesSupported) {
-      return null
-    }
+  /*
+   * This function try to reuse existing compiled id
+   * (the goal being to reuse file that would be in a corresponding compile directory)
+   * To decide if we reuse a compile directory we need to know
+   * how the files inside that directory where generated
+   * and if what we want matches what we have, the compile id is reused
+   *
+   * Note: some parameters means only a subset of files would be invalid
+   * but to keep things simple the whole directory is ignored
+   */
+  const getOrCreateCompileId = ({ compileProfile }) => {
+    // TODO: decide when we can return null
+    // depending on the compileProfile
     const existingCompileIds = Object.keys(compileDirectories)
     const existingCompileId = existingCompileIds.find((compileIdCandidate) => {
       const compileDirectoryCandidate = compileDirectories[compileIdCandidate]
-      return Object.keys(featuresReport).every(
-        (featureName) =>
-          featuresReport[featureName] ===
-          compileDirectoryCandidate.featureReport[featureName],
+      return compareCompileProfiles(
+        compileDirectoryCandidate.compileProfile,
+        compileProfile,
       )
     })
     if (existingCompileId) {
       return existingCompileId
     }
-    const compileIdBase = generateCompileId({
-      runtimeName,
-      runtimeVersion,
-      featureNames,
-    })
+    const compileIdBase = generateCompileId({})
     let compileId = compileIdBase
     let integer = 1
     while (existingCompileIds.includes(compileId)) {
@@ -156,13 +68,12 @@ export const setupJsenvDirectory = async ({
       integer++
     }
     compileDirectories[compileId] = {
-      featuresReport,
+      compileProfile,
     }
     return compileId
   }
 
   return {
-    compileDirectories,
     jsenvDirectoryMeta,
     getOrCreateCompileId,
   }
@@ -177,77 +88,51 @@ const applyFileSystemEffects = async ({
     "__jsenv_meta__.json",
     jsenvDirectoryUrl,
   )
-  const jsenvDirectoryMetaPrevious = await readFromFileSystem({
-    logger,
-    jsenvDirectoryMetaFileUrl,
-  })
-  if (jsenvDirectoryMetaPrevious && jsenvDirectoryMetaPrevious) {
-    const diff = diffCompileInfo(
-      jsenvDirectoryMetaPrevious.compileInfo,
-      jsenvDirectoryMeta.compileInfo,
+  const writeOnFileSystem = async () => {
+    await ensureEmptyDirectory(jsenvDirectoryUrl)
+    await writeFile(
+      jsenvDirectoryMetaFileUrl,
+      JSON.stringify(jsenvDirectoryMeta, null, "  "),
     )
-    if (diff) {
-      logger.debug(
-        createDetailedMessage(
-          `Cleaning ${jsenvDirectoryUrl} directory because compile server configuration has changed`,
-          {
-            changes: diff.namedChanges ? diff.namedChanges : `something`,
-          },
-        ),
-      )
-      await ensureEmptyDirectory(jsenvDirectoryUrl)
-    } else {
-      jsenvDirectoryMeta.compileDirectories =
-        jsenvDirectoryMetaPrevious.compileDirectories
-    }
+    logger.debug(`-> ${jsenvDirectoryMetaFileUrl}`)
   }
-  await writeFile(
-    jsenvDirectoryMetaFileUrl,
-    JSON.stringify(jsenvDirectoryMeta, null, "  "),
-  )
-  logger.debug(`-> ${jsenvDirectoryMetaFileUrl}`)
-}
-
-const readFromFileSystem = async ({ logger, outDirectoryMetaFileUrl }) => {
   try {
-    const source = await readFile(outDirectoryMetaFileUrl)
+    const source = await readFile(jsenvDirectoryMetaFileUrl)
     if (source === "") {
-      logger.debug(
-        `out directory meta file is empty ${outDirectoryMetaFileUrl}`,
+      logger.warn(
+        `out directory meta file is empty ${jsenvDirectoryMetaFileUrl}`,
       )
-      return null
+      await writeOnFileSystem()
+      return
     }
-    const outDirectoryMetaOnFileSystem = JSON.parse(source)
-    return outDirectoryMetaOnFileSystem
+    const jsenvDirectoryMetaPrevious = JSON.parse(source)
+    if (
+      !compareCompileContexts(
+        jsenvDirectoryMetaPrevious.compileContext,
+        jsenvDirectoryMeta.compileContext,
+      )
+    ) {
+      logger.debug(
+        `Cleaning ${jsenvDirectoryUrl} directory because compile context has changed`,
+      )
+      await writeOnFileSystem()
+      return
+    }
+    // reuse existing compile directories
+    jsenvDirectoryMeta.compileDirectories =
+      jsenvDirectoryMetaPrevious.compileDirectories
   } catch (e) {
     if (e.code === "ENOENT") {
-      return null
+      await writeOnFileSystem()
+      return
     }
     if (e.name === "SyntaxError") {
-      logger.warn(`Syntax error while parsing ${outDirectoryMetaFileUrl}`)
-      return null
+      logger.warn(`Syntax error while parsing ${jsenvDirectoryMetaFileUrl}`)
+      await writeOnFileSystem()
+      return
     }
     throw e
   }
-}
-
-const diffCompileInfo = (previousCompileInfo, compileInfo) => {
-  const changes = []
-  Object.keys(compileInfo).forEach((key) => {
-    const now = compileInfo[key]
-    const previous = previousCompileInfo[key]
-    if (!compareValueJson(now, previous)) {
-      changes.push(key)
-    }
-  })
-  if (changes.length > 0) {
-    return { namedChanges: changes }
-  }
-  // in case basic comparison from above is not enough
-  if (!compareValueJson(previousCompileInfo, compileInfo)) {
-    return { somethingChanged: true }
-  }
-  return null
 }
 
 const generateCompileId = ({ runtimeName, runtimeVersion, featureNames }) => {
@@ -255,27 +140,4 @@ const generateCompileId = ({ runtimeName, runtimeVersion, featureNames }) => {
     return `${runtimeName}@${runtimeVersion}_cov`
   }
   return `${runtimeName}@${runtimeVersion}`
-}
-
-const babelPluginMapAsData = (babelPluginMap) => {
-  const data = {}
-  Object.keys(babelPluginMap).forEach((key) => {
-    const value = babelPluginMap[key]
-    if (Array.isArray(value)) {
-      data[key] = value
-      return
-    }
-    if (typeof value === "object") {
-      data[key] = {
-        options: value.options,
-      }
-      return
-    }
-    data[key] = value
-  })
-  return data
-}
-
-const compareValueJson = (left, right) => {
-  return JSON.stringify(left) === JSON.stringify(right)
 }
