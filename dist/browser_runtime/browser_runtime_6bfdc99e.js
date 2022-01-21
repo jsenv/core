@@ -5229,10 +5229,10 @@
 
   var getBrowserRuntime = memoize(_async(function () {
     var compileServerOrigin = document.location.origin;
-    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/__compile_meta__.json")), function (compileMetaResponse) {
-      return _await(compileMetaResponse.json(), function (compileMeta) {
-        var outDirectoryRelativeUrl = compileMeta.outDirectoryRelativeUrl,
-            errorStackRemapping = compileMeta.errorStackRemapping;
+    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/__out_meta__.json")), function (outMetaResponse) {
+      return _await(outMetaResponse.json(), function (outMeta) {
+        var outDirectoryRelativeUrl = outMeta.outDirectoryRelativeUrl,
+            errorStackRemapping = outMeta.errorStackRemapping;
         var outDirectoryUrl = "".concat(compileServerOrigin, "/").concat(outDirectoryRelativeUrl);
         var afterOutDirectory = document.location.href.slice(outDirectoryUrl.length);
         var parts = afterOutDirectory.split("/");
@@ -5244,8 +5244,8 @@
         }), function (browserRuntime) {
           return _invoke(function () {
             if (errorStackRemapping && Error.captureStackTrace) {
-              var sourcemapMainFileRelativeUrl = compileMeta.sourcemapMainFileRelativeUrl,
-                  sourcemapMappingFileRelativeUrl = compileMeta.sourcemapMappingFileRelativeUrl;
+              var sourcemapMainFileRelativeUrl = outMeta.sourcemapMainFileRelativeUrl,
+                  sourcemapMappingFileRelativeUrl = outMeta.sourcemapMappingFileRelativeUrl;
               return _await(fetchAndEvalUsingFetch("".concat(compileServerOrigin, "/").concat(sourcemapMainFileRelativeUrl)), function () {
                 var SourceMapConsumer = window.sourceMap.SourceMapConsumer;
                 SourceMapConsumer.initialize({
@@ -5296,4 +5296,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_01cff462.js.map
+//# sourceMappingURL=browser_runtime_6bfdc99e.js.map

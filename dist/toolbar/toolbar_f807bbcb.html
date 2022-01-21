@@ -4323,7 +4323,8 @@ html[data-toolbar-visible] #toolbar-trigger {
             _ref$coverageHandledF = _ref.coverageHandledFromOutside,
             coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF;
 
-        return _await(fetchJson("/.jsenv/__compile_meta__.json"), function (_ref2) {
+        var outMetaUrl = "/.jsenv/__out_meta__.json";
+        return _await(fetchJson(outMetaUrl), function (_ref2) {
           var outDirectoryRelativeUrl = _ref2.outDirectoryRelativeUrl,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
               featureNames = _ref2.featureNames,
@@ -4334,7 +4335,7 @@ html[data-toolbar-visible] #toolbar-trigger {
             inlineImportMapIntoHTML: inlineImportMapIntoHTML,
             featureNames: featureNames
           }), function (featuresReport) {
-            return _await(fetchJson("/.jsenv/__compile_meta__.json", {
+            return _await(fetchJson(outMetaUrl, {
               method: "POST",
               headers: {
                 "content-type": "application/json"
@@ -4967,7 +4968,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_6ed2f6f0.js.map</script>
+//# sourceMappingURL=toolbar.main_2afbe255.js.map</script>
   
 
 </body></html>

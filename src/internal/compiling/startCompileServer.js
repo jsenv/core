@@ -298,6 +298,8 @@ export const startCompileServer = async ({
           jsenvToolbarInjection,
         })
         const compileId = await getOrCreateCompileId({
+          runtimeName: runtimeReport.runtime.name,
+          runtimeVersion: runtimeReport.runtime.version,
           compileProfile,
         })
         const responseBodyAsObject = {

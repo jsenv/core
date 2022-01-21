@@ -18,12 +18,12 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
     const valueAst = parseExpression(jsValue, babelState.opts)
     return valueAst
   }
-  const replaceImportMeta = ({
-    metaPropertyName,
+  const visitImportMetaProperty = ({
+    importMetaPropertyName,
     replaceWithImport,
     replaceWithValue,
   }) => {
-    if (metaPropertyName === "url") {
+    if (importMetaPropertyName === "url") {
       if (importMetaFormat === "esmodule") {
         // keep native version
         return
@@ -46,7 +46,7 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
       }
       return
     }
-    if (metaPropertyName === "resolve") {
+    if (importMetaPropertyName === "resolve") {
       if (importMetaFormat === "esmodule") {
         // keep native version
         return
@@ -105,7 +105,6 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
     visitor: {
       Program(programPath) {
         const metaPropertyPathMap = {}
-
         programPath.traverse({
           MemberExpression(path) {
             const { node } = path
@@ -113,12 +112,10 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
             if (object.type !== "MetaProperty") {
               return
             }
-
             const { property: objectProperty } = object
             if (objectProperty.name !== "meta") {
               return
             }
-
             const { property } = node
             const { name } = property
             if (name in metaPropertyPathMap) {
@@ -128,9 +125,8 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
             }
           },
         })
-
         Object.keys(metaPropertyPathMap).forEach((importMetaPropertyName) => {
-          replaceImportMeta({
+          visitImportMetaProperty({
             importMetaPropertyName,
             replaceWithImport: ({ namespace, name, from, nameHint }) => {
               let importAst

@@ -36,6 +36,13 @@ export const setupJsenvDirectory = async ({
     })
   }
 
+  const updateJsenvDirectoryMetaFile = async () => {
+    await writeFile(
+      resolveUrl("__jsenv_meta__.json", jsenvDirectoryUrl),
+      JSON.stringify(jsenvDirectoryMeta, null, "  "),
+    )
+  }
+
   /*
    * This function try to reuse existing compiled id
    * (the goal being to reuse file that would be in a corresponding compile directory)
@@ -46,7 +53,11 @@ export const setupJsenvDirectory = async ({
    * Note: some parameters means only a subset of files would be invalid
    * but to keep things simple the whole directory is ignored
    */
-  const getOrCreateCompileId = async ({ compileProfile }) => {
+  const getOrCreateCompileId = async ({
+    runtimeName,
+    runtimeVersion,
+    compileProfile,
+  }) => {
     // TODO: decide when we can return null
     // depending on the compileProfile
     const existingCompileIds = Object.keys(compileDirectories)
@@ -57,7 +68,14 @@ export const setupJsenvDirectory = async ({
         compileProfile,
       )
     })
+    const runtime = `${runtimeName}@${runtimeVersion}`
     if (existingCompileId) {
+      const compileDirectory = compileDirectories[existingCompileId]
+      const { runtimes } = compileDirectory.runtimes
+      if (!runtimes.includes(runtime)) {
+        runtimes.push(runtime)
+        await updateJsenvDirectoryMetaFile()
+      }
       return existingCompileId
     }
     const compileIdBase = generateCompileId({ compileProfile })
@@ -69,14 +87,11 @@ export const setupJsenvDirectory = async ({
     }
     compileDirectories[compileId] = {
       compileProfile,
+      runtimes: [runtime],
     }
-    await writeFile(
-      resolveUrl("__jsenv_meta__.json", jsenvDirectoryUrl),
-      JSON.stringify(jsenvDirectoryMeta, null, "  "),
-    )
+    await updateJsenvDirectoryMetaFile()
     return compileId
   }
-
   return {
     jsenvDirectoryMeta,
     getOrCreateCompileId,

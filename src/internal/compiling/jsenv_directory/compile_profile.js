@@ -60,7 +60,7 @@ export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
   const babelPluginMapShaked = {}
   const { requiredBabelPluginDescription } = compileProfile
   Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    if (!requiredBabelPluginDescription[babelPluginName]) {
+    if (requiredBabelPluginDescription[babelPluginName]) {
       babelPluginMapShaked[babelPluginName] = babelPluginMap[babelPluginName]
     }
   })
