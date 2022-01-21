@@ -9,7 +9,7 @@ import {
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 
-import { shakeBabelPluginMap } from "./jsenv_directory/shake_babel_plugin_map.js"
+import { shakeBabelPluginMap } from "./jsenv_directory/compile_profile.js"
 import { compileFile } from "./compileFile.js"
 import { compileHtml } from "./jsenvCompilerForHtml.js"
 import { compileImportmap } from "./jsenvCompilerForImportmap.js"
@@ -32,12 +32,10 @@ export const createCompiledFileService = ({
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
   jsenvRemoteDirectory,
 
   runtimeSupport,
   babelPluginMap,
-  moduleOutFormat,
   topLevelAwait,
   prependSystemJs,
   customCompilers,
@@ -73,8 +71,8 @@ export const createCompiledFileService = ({
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
     const requestCompileInfo = serverUrlToCompileInfo(requestUrl, {
-      outDirectoryRelativeUrl,
       compileServerOrigin: origin,
+      jsenvDirectoryRelativeUrl,
     })
     // not inside compile directory -> nothing to compile
     if (!requestCompileInfo.insideCompileDirectory) {
@@ -105,9 +103,10 @@ export const createCompiledFileService = ({
     if (afterCompileId === "") {
       return null
     }
+    const { compileProfile } = compileDirectory
     const originalFileRelativeUrl = afterCompileId
     const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-    const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+    const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
     const compileDirectoryUrl = resolveDirectoryUrl(
       compileDirectoryRelativeUrl,
       projectDirectoryUrl,
@@ -148,20 +147,19 @@ export const createCompiledFileService = ({
           jsenvRemoteDirectory,
           compileServerOrigin: request.origin,
           jsenvDirectoryRelativeUrl,
-          outDirectoryRelativeUrl,
           url: originalFileUrl,
           compiledUrl: compiledFileUrl,
           request,
 
+          compileProfile,
           compileId,
           babelPluginMap: shakeBabelPluginMap({
             babelPluginMap,
-            compileDirectory,
+            compileProfile,
           }),
           runtimeSupport,
           workerUrls,
           serviceWorkerUrls,
-          moduleOutFormat,
           topLevelAwait,
           prependSystemJs,
 
