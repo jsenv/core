@@ -31,6 +31,7 @@ export const transformJs = async ({
   sourcemapEnabled = true,
 
   map,
+  ast,
   code,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -152,7 +153,7 @@ export const transformJs = async ({
   })
   code = babelTransformReturnValue.code
   map = babelTransformReturnValue.map
-  const ast = babelTransformReturnValue.ast
+  ast = babelTransformReturnValue.ast
   const { metadata } = babelTransformReturnValue
   return { code, map, metadata, ast }
 }

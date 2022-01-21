@@ -232,9 +232,7 @@ export const startCompileServer = async ({
     serviceWorkers,
     customCompilers,
     replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
     inlineImportMapIntoHTML,
-    jsenvToolbarInjection,
   })
   const { jsenvDirectoryMeta, getOrCreateCompileId } =
     await setupJsenvDirectory({
@@ -271,7 +269,7 @@ export const startCompileServer = async ({
     projectFileRequestedSignal.onrequested(...args)
 
   const jsenvServices = {
-    "service:compile directories": async (request) => {
+    "service:compile profile": async (request) => {
       if (request.ressource !== `/.jsenv/__jsenv_meta__.json`) {
         return null
       }
@@ -297,8 +295,9 @@ export const startCompileServer = async ({
           sourcemapMethod,
           sourcemapExcludeSources,
           runtimeReport,
+          jsenvToolbarInjection,
         })
-        const compileId = getOrCreateCompileId({
+        const compileId = await getOrCreateCompileId({
           compileProfile,
         })
         const responseBodyAsObject = {

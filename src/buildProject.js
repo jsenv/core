@@ -234,7 +234,7 @@ export const buildProject = async ({
     featuresReport,
   })
   const compileServerResponse = await fetchUrl(
-    `${compileServer.origin}/.jsenv/__out_meta__.json`,
+    `${compileServer.origin}/.jsenv/__jsenv_meta__.json`,
     {
       method: "POST",
       headers: {
@@ -245,7 +245,7 @@ export const buildProject = async ({
     },
   )
   const { compileId } = await compileServerResponse.json()
-  const compileProfile = compileId
+  const { compileProfile } = compileId
     ? compileServer.compileDirectories[compileId]
     : null
 

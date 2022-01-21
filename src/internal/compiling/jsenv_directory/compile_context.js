@@ -7,16 +7,19 @@ import {
 } from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
+import {
+  sameValuesInTwoArrays,
+  sameValueInTwoObjects,
+} from "./comparison_utils.js"
+
 const COMPARERS = {
   importDefaultExtension: (a, b) => a === b,
-  preservedUrls: (a, b) => valueInArrayAreTheSame(a, b),
-  workers: (a, b) => valueInArrayAreTheSame(a, b),
-  serviceWorkers: (a, b) => valueInArrayAreTheSame(a, b),
-  customCompilerPatterns: (a, b) => valueInArrayAreTheSame(a, b),
+  preservedUrls: sameValueInTwoObjects,
+  workers: sameValuesInTwoArrays,
+  serviceWorkers: sameValuesInTwoArrays,
+  customCompilerPatterns: sameValuesInTwoArrays,
   replaceProcessEnvNodeEnv: (a, b) => a === b,
-  processEnvNodeEnv: (a, b) => a === b,
   inlineImportMapIntoHTML: (a, b) => a === b,
-  jsenvToolbarInjection: (a, b) => a === b,
 
   jsenvCorePackageVersion: (a, b) => a === b,
   TOOLBAR_INJECTOR_BUILD_URL: (a, b) => a === b,
@@ -40,9 +43,7 @@ export const createCompileContext = async ({
   serviceWorkers,
   customCompilers,
   replaceProcessEnvNodeEnv,
-  processEnvNodeEnv,
   inlineImportMapIntoHTML,
-  jsenvToolbarInjection,
 }) => {
   return {
     importDefaultExtension,
@@ -51,9 +52,7 @@ export const createCompileContext = async ({
     serviceWorkers,
     customCompilerPatterns: Object.keys(customCompilers),
     replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
     inlineImportMapIntoHTML,
-    jsenvToolbarInjection,
 
     // when "jsenvCorePackageVersion" is different, it means compile logic may have changed
     jsenvCorePackageVersion: await readJsenvCoreVersionFromPackageFile(),
@@ -72,8 +71,4 @@ const readJsenvCoreVersionFromPackageFile = async () => {
     as: "json",
   }).version
   return jsenvCoreVersion
-}
-
-const valueInArrayAreTheSame = (array, secondArray) => {
-  return array.every((value) => secondArray.includes(value))
 }

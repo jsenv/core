@@ -1,3 +1,7 @@
+import {
+  sameValueInTwoObjects,
+  sameValuesInTwoArrays,
+} from "./comparison_utils.js"
 import { featuresCompatFromRuntime } from "./features_compat_from_runtime.js"
 
 export const createCompileProfile = ({
@@ -82,24 +86,26 @@ const featuresRelatedToSystemJs = [
 
 const babelPluginValueAsJSON = (babelPluginValue) => {
   if (Array.isArray(babelPluginValue)) {
-    return babelPluginValue
+    if (babelPluginValue.length === 1) {
+      return {}
+    }
+    if (babelPluginValue.length === 2) {
+      return babelPluginValue[1]
+    }
+    return {}
   }
   if (typeof babelPluginValue === "object") {
     return { options: babelPluginValue.options }
   }
-  return babelPluginValue
+  return {}
 }
 
 const COMPARERS = {
   moduleOutFormat: (a, b) => a === b,
-  requiredFeatureNames: (a, b) => valueInArrayAreTheSame(a, b),
-  requiredBabelPluginDescription: () => true, // TODO
+  requiredFeatureNames: sameValuesInTwoArrays,
+  requiredBabelPluginDescription: sameValueInTwoObjects,
   sourcemapMethod: (a, b) => a === b,
   sourcemapExcludeSources: (a, b) => a === b,
-}
-
-const valueInArrayAreTheSame = (array, secondArray) => {
-  return array.every((value) => secondArray.includes(value))
 }
 
 export const compareCompileProfiles = (

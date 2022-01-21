@@ -46,7 +46,7 @@ export const setupJsenvDirectory = async ({
    * Note: some parameters means only a subset of files would be invalid
    * but to keep things simple the whole directory is ignored
    */
-  const getOrCreateCompileId = ({ compileProfile }) => {
+  const getOrCreateCompileId = async ({ compileProfile }) => {
     // TODO: decide when we can return null
     // depending on the compileProfile
     const existingCompileIds = Object.keys(compileDirectories)
@@ -60,7 +60,7 @@ export const setupJsenvDirectory = async ({
     if (existingCompileId) {
       return existingCompileId
     }
-    const compileIdBase = generateCompileId({})
+    const compileIdBase = generateCompileId({ compileProfile })
     let compileId = compileIdBase
     let integer = 1
     while (existingCompileIds.includes(compileId)) {
@@ -70,6 +70,10 @@ export const setupJsenvDirectory = async ({
     compileDirectories[compileId] = {
       compileProfile,
     }
+    await writeFile(
+      resolveUrl("__jsenv_meta__.json", jsenvDirectoryUrl),
+      JSON.stringify(jsenvDirectoryMeta, null, "  "),
+    )
     return compileId
   }
 
@@ -77,6 +81,13 @@ export const setupJsenvDirectory = async ({
     jsenvDirectoryMeta,
     getOrCreateCompileId,
   }
+}
+
+const generateCompileId = ({ compileProfile }) => {
+  if (compileProfile.requiredFeatureNames.includes("transform-instrument")) {
+    return `out_instrumented`
+  }
+  return `out`
 }
 
 const applyFileSystemEffects = async ({
@@ -133,11 +144,4 @@ const applyFileSystemEffects = async ({
     }
     throw e
   }
-}
-
-const generateCompileId = ({ runtimeName, runtimeVersion, featureNames }) => {
-  if (featureNames.includes("transform-instrument")) {
-    return `${runtimeName}@${runtimeVersion}_cov`
-  }
-  return `${runtimeName}@${runtimeVersion}`
 }
