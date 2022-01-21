@@ -13,7 +13,6 @@ import {
   urlToRelativeUrl,
   resolveDirectoryUrl,
   urlIsInsideOf,
-  ensureEmptyDirectory,
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
@@ -23,8 +22,8 @@ import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/runti
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { setupOutDirectory } from "./out_directory/out_directory.js"
-import { urlIsCompilationAsset } from "./out_directory/compile_asset.js"
+import { setupJsenvDirectory } from "./jsenv_directory/jsenv_directory.js"
+import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { createSSEService } from "./sse_service/sse_service.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
@@ -54,8 +53,7 @@ export const startCompileServer = async ({
   importDefaultExtension,
 
   jsenvDirectoryRelativeUrl = ".jsenv",
-  outDirectoryClean = false,
-  outDirectoryName = "out",
+  jsenvDirectoryClean = false,
 
   sourcemapMethod = "comment", // "inline" is also possible
   sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
@@ -101,21 +99,12 @@ export const startCompileServer = async ({
   jsenvToolbarInjection = false,
   inlineImportMapIntoHTML = true,
 }) => {
-  assertArguments({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryName,
-  })
   const logger = createLogger({ logLevel })
-  const jsenvDirectoryUrl = resolveDirectoryUrl(
-    jsenvDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  // normalizing "jsenvDirectoryRelativeUrl"
-  jsenvDirectoryRelativeUrl = urlToRelativeUrl(
-    jsenvDirectoryUrl,
-    projectDirectoryUrl,
-  )
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(
+      `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
+    )
+  }
   preservedUrls = {
     // Authorize jsenv to modify any file url
     // because the goal is to build the files into chunks
@@ -135,11 +124,6 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
-  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    preservedUrls,
-  })
   const workerUrls = workers.map((worker) =>
     resolveUrl(worker, projectDirectoryUrl),
   )
@@ -236,45 +220,39 @@ export const startCompileServer = async ({
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
-  const { outDirectoryUrl, outDirectoryRelativeUrl } = computeOutDirectoryUrls({
+  const jsenvDirectoryUrls = computeJsenvDirectoryUrls({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
-    outDirectoryName,
   })
-  const outDirectoryMetaFileUrl = resolveUrl(
-    "__out_meta__.json",
-    outDirectoryUrl,
-  )
-  if (outDirectoryClean) {
-    await ensureEmptyDirectory(outDirectoryUrl)
-  }
-  const {
-    compileDirectories,
-    outDirectoryMeta,
-    getOrCreateCompileDirectoryId,
-  } = await setupOutDirectory({
-    logger,
+  // updating "jsenvDirectoryRelativeUrl" normalizes it (ensure it has trailing "/")
+  jsenvDirectoryRelativeUrl = jsenvDirectoryUrls.jsenvDirectoryRelativeUrl
+  const { compileDirectories, jsenvDirectoryMeta, getOrCreateCompileId } =
+    await setupJsenvDirectory({
+      logger,
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+
+      importDefaultExtension,
+      preservedUrls,
+      workers,
+      serviceWorkers,
+      featureNames,
+      babelPluginMap,
+      replaceProcessEnvNodeEnv,
+      processEnvNodeEnv,
+      inlineImportMapIntoHTML,
+      customCompilers,
+      jsenvToolbarInjection,
+      sourcemapMethod,
+      sourcemapExcludeSources,
+
+      compileServerCanWriteOnFilesystem,
+    })
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
-    outDirectoryUrl,
-    outDirectoryRelativeUrl,
-    outDirectoryMetaFileUrl,
-
-    importDefaultExtension,
     preservedUrls,
-    workers,
-    serviceWorkers,
-    featureNames,
-    babelPluginMap,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    inlineImportMapIntoHTML,
-    customCompilers,
-    jsenvToolbarInjection,
-    sourcemapMethod,
-    sourcemapExcludeSources,
-
-    compileServerCanWriteOnFilesystem,
   })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
@@ -284,7 +262,6 @@ export const startCompileServer = async ({
     "jsenv:sse": createSSEService({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
       livereloadSSE,
       projectFileRequestedSignal,
 
@@ -298,19 +275,11 @@ export const startCompileServer = async ({
 
   const jsenvServices = {
     "service:compile directories": async (request) => {
-      const requestFileUrl = resolveUrl(
-        request.ressource.slice(1),
-        projectDirectoryUrl,
-      )
-      if (
-        requestFileUrl !== outDirectoryMetaFileUrl &&
-        // allow to request it directly from .jsenv
-        request.ressource !== `/.jsenv/__out_meta__.json`
-      ) {
+      if (request.ressource !== `/.jsenv/__jsenv_meta__.json`) {
         return null
       }
       if (request.method === "GET") {
-        const body = JSON.stringify(outDirectoryMeta, null, "  ")
+        const body = JSON.stringify(jsenvDirectoryMeta, null, "  ")
         return {
           status: 200,
           headers: {
@@ -324,7 +293,7 @@ export const startCompileServer = async ({
         const runtimeReport = await readRequestBody(request, {
           as: "json",
         })
-        const compileId = getOrCreateCompileDirectoryId({
+        const compileId = getOrCreateCompileId({
           runtimeReport,
         })
         const responseBodyAsObject = {
@@ -354,7 +323,6 @@ export const startCompileServer = async ({
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
       compileDirectories,
       jsenvRemoteDirectory,
 
@@ -448,7 +416,6 @@ export const startCompileServer = async ({
   return {
     id: compileServerId++,
     jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
     compileDirectories,
     ...compileServer,
     featureNames,
@@ -458,40 +425,10 @@ export const startCompileServer = async ({
   }
 }
 
-export const computeOutDirectoryUrls = ({
+export const computeJsenvDirectoryUrls = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl = ".jsenv",
-  outDirectoryName = "out",
 }) => {
-  const jsenvDirectoryUrl = resolveDirectoryUrl(
-    jsenvDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const outDirectoryUrl = resolveDirectoryUrl(
-    outDirectoryName,
-    jsenvDirectoryUrl,
-  )
-  const outDirectoryRelativeUrl = urlToRelativeUrl(
-    outDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  return {
-    outDirectoryUrl,
-    outDirectoryRelativeUrl,
-  }
-}
-
-const assertArguments = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryName,
-}) => {
-  if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(
-      `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
-    )
-  }
-
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
       `jsenvDirectoryRelativeUrl must be a string. got ${jsenvDirectoryRelativeUrl}`,
@@ -501,7 +438,6 @@ const assertArguments = ({
     jsenvDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(
       createDetailedMessage(
@@ -513,11 +449,14 @@ const assertArguments = ({
       ),
     )
   }
-
-  if (typeof outDirectoryName !== "string") {
-    throw new TypeError(
-      `outDirectoryName must be a string. got ${outDirectoryName}`,
-    )
+  // normalizing "jsenvDirectoryRelativeUrl"
+  jsenvDirectoryRelativeUrl = urlToRelativeUrl(
+    jsenvDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  return {
+    jsenvDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
   }
 }
 

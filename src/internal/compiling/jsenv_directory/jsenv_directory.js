@@ -26,13 +26,11 @@ import { featuresCompatFromRuntime } from "./features_compat_from_runtime.js"
 // In some cases the parameters influences only a subset of files and ideally
 // this parameter should somehow invalidate a subset of the cache
 // To keep things simple these parameters currently invalidates the whole cache
-export const setupOutDirectory = async ({
+export const setupJsenvDirectory = async ({
   logger,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryUrl,
-  outDirectoryRelativeUrl,
-  outDirectoryMetaFileUrl,
+  jsenvDirectoryClean,
 
   importDefaultExtension,
   preservedUrls,
@@ -50,6 +48,10 @@ export const setupOutDirectory = async ({
 
   compileServerCanWriteOnFilesystem,
 }) => {
+  const jsenvDirectoryUrl = resolveUrl(
+    jsenvDirectoryRelativeUrl,
+    projectDirectoryUrl,
+  )
   const jsenvCorePackageFileUrl = resolveUrl(
     "./package.json",
     jsenvCoreDirectoryUrl,
@@ -68,7 +70,6 @@ export const setupOutDirectory = async ({
   )
   const compileInfo = {
     jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
     importDefaultExtension,
 
     preservedUrls,
@@ -97,20 +98,22 @@ export const setupOutDirectory = async ({
     BROWSER_RUNTIME_BUILD_URL,
   }
   const compileDirectories = {}
-  const outDirectoryMeta = {
+  const jsenvDirectoryMeta = {
     compileInfo,
     compileDirectories,
   }
   if (compileServerCanWriteOnFilesystem) {
+    if (jsenvDirectoryClean) {
+      await ensureEmptyDirectory(jsenvDirectoryUrl)
+    }
     await applyFileSystemEffects({
       logger,
-      outDirectoryUrl,
-      outDirectoryMetaFileUrl,
-      outDirectoryMeta,
+      jsenvDirectoryUrl,
+      jsenvDirectoryMeta,
     })
   }
 
-  const getOrCreateCompileDirectoryId = ({ runtimeReport }) => {
+  const getOrCreateCompileId = ({ runtimeReport }) => {
     const runtimeName = runtimeReport.runtime.name
     const runtimeVersion = runtimeReport.runtime.version
     const { availableFeatureNames } = featuresCompatFromRuntime({
@@ -160,46 +163,49 @@ export const setupOutDirectory = async ({
 
   return {
     compileDirectories,
-    outDirectoryMeta,
-    getOrCreateCompileDirectoryId,
+    jsenvDirectoryMeta,
+    getOrCreateCompileId,
   }
 }
 
 const applyFileSystemEffects = async ({
   logger,
-  outDirectoryUrl,
-  outDirectoryMetaFileUrl,
-  outDirectoryMeta,
+  jsenvDirectoryUrl,
+  jsenvDirectoryMeta,
 }) => {
-  const outDirectoryMetaPrevious = await readFromFileSystem({
+  const jsenvDirectoryMetaFileUrl = resolveUrl(
+    "__jsenv_meta__.json",
+    jsenvDirectoryUrl,
+  )
+  const jsenvDirectoryMetaPrevious = await readFromFileSystem({
     logger,
-    outDirectoryMetaFileUrl,
+    jsenvDirectoryMetaFileUrl,
   })
-  if (outDirectoryMetaPrevious && outDirectoryMetaPrevious) {
+  if (jsenvDirectoryMetaPrevious && jsenvDirectoryMetaPrevious) {
     const diff = diffCompileInfo(
-      outDirectoryMetaPrevious.compileInfo,
-      outDirectoryMeta.compileInfo,
+      jsenvDirectoryMetaPrevious.compileInfo,
+      jsenvDirectoryMeta.compileInfo,
     )
     if (diff) {
       logger.debug(
         createDetailedMessage(
-          `Cleaning ${outDirectoryUrl} directory because compile server configuration has changed`,
+          `Cleaning ${jsenvDirectoryUrl} directory because compile server configuration has changed`,
           {
             changes: diff.namedChanges ? diff.namedChanges : `something`,
           },
         ),
       )
-      await ensureEmptyDirectory(outDirectoryUrl)
+      await ensureEmptyDirectory(jsenvDirectoryUrl)
     } else {
-      outDirectoryMeta.compileDirectories =
-        outDirectoryMetaPrevious.compileDirectories
+      jsenvDirectoryMeta.compileDirectories =
+        jsenvDirectoryMetaPrevious.compileDirectories
     }
   }
   await writeFile(
-    outDirectoryMetaFileUrl,
-    JSON.stringify(outDirectoryMeta, null, "  "),
+    jsenvDirectoryMetaFileUrl,
+    JSON.stringify(jsenvDirectoryMeta, null, "  "),
   )
-  logger.debug(`-> ${outDirectoryMetaFileUrl}`)
+  logger.debug(`-> ${jsenvDirectoryMetaFileUrl}`)
 }
 
 const readFromFileSystem = async ({ logger, outDirectoryMetaFileUrl }) => {
