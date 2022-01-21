@@ -59,7 +59,7 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/compile_proxy/",
   entryPoints: {
-    "./src/internal/browser_feature_detection/compile_proxy.html":
+    "./src/internal/features/browser_feature_detection/compile_proxy.html":
       "compile_proxy_[hash].html",
   },
 })

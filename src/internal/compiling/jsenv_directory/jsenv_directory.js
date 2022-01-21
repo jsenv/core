@@ -72,7 +72,7 @@ export const setupJsenvDirectory = async ({
     const runtime = `${runtimeName}@${runtimeVersion}`
     if (existingCompileId) {
       const compileDirectory = compileDirectories[existingCompileId]
-      const { runtimes } = compileDirectory.runtimes
+      const { runtimes } = compileDirectory
       if (!runtimes.includes(runtime)) {
         runtimes.push(runtime)
         await updateJsenvDirectoryMetaFile()
@@ -146,8 +146,10 @@ const applyFileSystemEffects = async ({
       return
     }
     // reuse existing compile directories
-    jsenvDirectoryMeta.compileDirectories =
-      jsenvDirectoryMetaPrevious.compileDirectories
+    Object.assign(
+      jsenvDirectoryMeta.compileDirectories,
+      jsenvDirectoryMetaPrevious.compileDirectories,
+    )
   } catch (e) {
     if (e.code === "ENOENT") {
       await writeOnFileSystem()
