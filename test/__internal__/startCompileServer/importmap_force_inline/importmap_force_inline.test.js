@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl, urlToBasename } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
@@ -17,16 +17,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const testDirectoryname = urlToBasename(testDirectoryRelativeUrl)
-const filename = `${testDirectoryname}.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}importmap_force_inline.html`
 // const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 
-const { origin: compileServerOrigin } = await startCompileServer({
+const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServerOrigin}/${fileRelativeUrl}`
+const fileServerUrl = `${compileServer.origin}/${fileRelativeUrl}`
 const response = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const responseBodyAsText = await response.text()
 const importmapScriptNode = findNodeByTagName(responseBodyAsText, "script")
