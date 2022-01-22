@@ -26,7 +26,6 @@ export const executeInBrowser = async ({
       url: headScriptUrl,
     })
   }
-
   try {
     const returnValue = await page.evaluate(pageFunction, ...pageArguments)
     return {
