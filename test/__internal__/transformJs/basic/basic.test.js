@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
@@ -14,9 +14,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `basic.js`
-const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`
+const originalFileUrl = resolveUrl(`./basic.js`, testDirectoryUrl)
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/basic.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
 const originalFileContent = await readFile(originalFileUrl)
 
@@ -56,7 +55,7 @@ const compilationResult = await transformResultToCompilationResult(
   const actual = JSON.parse(compilationResult.assetsContent[0])
   const expected = {
     version: 3,
-    sources: [`../../${filename}`],
+    sources: [`../../basic.js`],
     names: actual.names,
     mappings: actual.mappings,
   }

@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
@@ -14,9 +14,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `class.js`
-const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`
+const originalFileUrl = resolveUrl(`./class.js`, testDirectoryUrl)
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/class.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
 const originalFileContent = await readFile(originalFileUrl)
 

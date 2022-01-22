@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { babelPluginInstrument } from "@jsenv/core/src/internal/executing/coverage/babel_plugin_instrument.js"
@@ -15,9 +15,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `instrument.js`
-const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`
+const originalFileUrl = resolveUrl(`./instrument.js`, testDirectoryUrl)
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/instrument.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
 const originalFileContent = await readFile(originalFileUrl)
 const transformResult = await transformJs({
