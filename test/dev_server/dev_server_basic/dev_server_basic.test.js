@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -12,16 +12,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `dev_server_basic.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}dev_server_basic.html`
 const devServer = await startDevServer({
   ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } =
   await openBrowserPage(
-    `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
-    // { headless: false },
+    `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}.redirect/${fileRelativeUrl}`,
+    // { debug: true },
   )
 
 const actual = { pageLogs, pageErrors, executionResult }
