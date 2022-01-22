@@ -4867,9 +4867,8 @@
       });
     });
 
-    var jsenvDirectoryServerUrl = "".concat(compileServerOrigin, "/").concat(jsenvDirectoryRelativeUrl);
-    var envUrl = String(new URL("env.json", jsenvDirectoryServerUrl));
-    return _await$1(fetchJson(envUrl), function (_ref3) {
+    var compileServerMetaUrl = String(new URL("__jsenv_compile_profile__", "".concat(compileServerOrigin, "/")));
+    return _await$1(fetchJson(compileServerMetaUrl), function (_ref3) {
       var importDefaultExtension = _ref3.importDefaultExtension;
       var compileDirectoryRelativeUrl = "".concat(jsenvDirectoryRelativeUrl).concat(compileId, "/"); // if there is an importmap in the document we use it instead of fetching.
       // systemjs style with systemjs-importmap
@@ -5229,10 +5228,10 @@
 
   var getBrowserRuntime = memoize(_async(function () {
     var compileServerOrigin = document.location.origin;
-    return _await(fetchUrl("".concat(compileServerOrigin, "/.jsenv/__out_meta__.json")), function (outMetaResponse) {
-      return _await(outMetaResponse.json(), function (outMeta) {
-        var jsenvDirectoryRelativeUrl = outMeta.jsenvDirectoryRelativeUrl,
-            errorStackRemapping = outMeta.errorStackRemapping;
+    return _await(fetchUrl("".concat(compileServerOrigin, "/__jsenv_compile_profile__")), function (compileServerResponse) {
+      return _await(compileServerResponse.json(), function (compileServerMeta) {
+        var jsenvDirectoryRelativeUrl = compileServerMeta.jsenvDirectoryRelativeUrl,
+            errorStackRemapping = compileServerMeta.errorStackRemapping;
         var jsenvDirectoryServerUrl = "".concat(compileServerOrigin, "/").concat(jsenvDirectoryRelativeUrl);
         var afterJsenvDirectory = document.location.href.slice(jsenvDirectoryServerUrl.length);
         var parts = afterJsenvDirectory.split("/");
@@ -5244,8 +5243,8 @@
         }), function (browserRuntime) {
           return _invoke(function () {
             if (errorStackRemapping && Error.captureStackTrace) {
-              var sourcemapMainFileRelativeUrl = outMeta.sourcemapMainFileRelativeUrl,
-                  sourcemapMappingFileRelativeUrl = outMeta.sourcemapMappingFileRelativeUrl;
+              var sourcemapMainFileRelativeUrl = compileServerMeta.sourcemapMainFileRelativeUrl,
+                  sourcemapMappingFileRelativeUrl = compileServerMeta.sourcemapMappingFileRelativeUrl;
               return _await(fetchAndEvalUsingFetch("".concat(compileServerOrigin, "/").concat(sourcemapMainFileRelativeUrl)), function () {
                 var SourceMapConsumer = window.sourceMap.SourceMapConsumer;
                 SourceMapConsumer.initialize({
@@ -5296,4 +5295,4 @@
 
 })();
 
-//# sourceMappingURL=browser_runtime_93a975f9.js.map
+//# sourceMappingURL=browser_runtime_0e3396a1.js.map

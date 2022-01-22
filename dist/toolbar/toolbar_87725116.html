@@ -4340,6 +4340,7 @@ html[data-toolbar-visible] #toolbar-trigger {
                   compileId = _ref2.compileId;
               return {
                 jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+                inlineImportMapIntoHTML: inlineImportMapIntoHTML,
                 compileProfile: compileProfile,
                 compileId: compileId
               };
@@ -4386,11 +4387,9 @@ html[data-toolbar-visible] #toolbar-trigger {
         removeForceHideElement(browserSupportRootNode);
         removeForceHideElement(filesCompilationRootNode);
         scanBrowserRuntimeFeatures().then(function (_ref2) {
-          var featuresReport = _ref2.featuresReport,
-              customCompilerPatterns = _ref2.customCompilerPatterns,
-              missingFeatureNames = _ref2.missingFeatureNames,
+          var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
-              jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
+              compileProfile = _ref2.compileProfile,
               compileId = _ref2.compileId;
           var browserSupport = compileId ? "no" : inlineImportMapIntoHTML ? "partial" : "full";
           enableVariant(browserSupportRootNode, {
@@ -4400,31 +4399,21 @@ html[data-toolbar-visible] #toolbar-trigger {
           if (browserSupport === "no") {
             browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
               // eslint-disable-next-line no-alert
-              window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(getBrowserSupportMessage({
-                missingOnly: true,
-                featuresReport: featuresReport,
-                customCompilerPatterns: customCompilerPatterns,
-                missingFeatureNames: missingFeatureNames,
-                inlineImportMapIntoHTML: inlineImportMapIntoHTML
+              window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(listWhatIsMissing({
+                compileProfile: compileProfile
               })));
             };
           } else if (browserSupport === "partial") {
             browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
               // eslint-disable-next-line no-alert
-              window.alert("Source files (except html) can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
-                featuresReport: featuresReport,
-                customCompilerPatterns: customCompilerPatterns,
-                missingFeatureNames: missingFeatureNames,
+              window.alert("Source files (except html) can be executed directly in this browser because: ".concat(listWhatIsSupported({
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
           } else if (browserSupport === "full") {
             browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
               // eslint-disable-next-line no-alert
-              window.alert("Source files can be executed directly in this browser because: ".concat(getBrowserSupportMessage({
-                featuresReport: featuresReport,
-                customCompilerPatterns: customCompilerPatterns,
-                missingFeatureNames: missingFeatureNames,
+              window.alert("Source files can be executed directly in this browser because: ".concat(listWhatIsSupported({
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML
               })));
             };
@@ -4458,56 +4447,54 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       };
 
-      var getBrowserSupportMessage = function getBrowserSupportMessage(_ref3) {
-        var missingOnly = _ref3.missingOnly,
-            featuresReport = _ref3.featuresReport,
-            customCompilerPatterns = _ref3.customCompilerPatterns,
-            missingFeatureNames = _ref3.missingFeatureNames,
-            inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
+      var listWhatIsSupported = function listWhatIsSupported(_ref3) {
+        var inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
         var parts = [];
 
-        if (featuresReport.importmap) {
-          if (!missingOnly) {
-            if (inlineImportMapIntoHTML) {
-              parts.push("importmaps are supported (only when inlined in html files)");
-            } else {
-              parts.push("importmaps are supported");
-            }
-          }
+        if (inlineImportMapIntoHTML) {
+          parts.push("importmaps are supported (only when inlined in html files)");
         } else {
+          parts.push("importmaps are supported");
+        }
+
+        parts.push("dynamic imports are supported");
+        parts.push("top level await is supported");
+        parts.push("all features are natively supported");
+        return "\n- ".concat(parts.join("\n- "));
+      };
+
+      var listWhatIsMissing = function listWhatIsMissing(_ref4) {
+        var compileProfile = _ref4.compileProfile;
+        var parts = [];
+        var missingFeatures = compileProfile.missingFeatures;
+
+        if (missingFeatures.importmap) {
           parts.push("importmaps are not supported");
         }
 
-        if (featuresReport.dynamicImport) {
-          if (!missingOnly) {
-            parts.push("dynamic imports are supported");
-          }
-        } else {
+        if (missingFeatures.dynamicImport) {
           parts.push("dynamic imports are not supported");
         }
 
-        if (featuresReport.topLevelAwait) {
-          if (!missingOnly) {
-            parts.push("top level await is supported");
-          }
-        } else {
+        if (missingFeatures.topLevelAwait) {
           parts.push("top level await is not supported");
         }
 
+        var missingFeatureNames = Object.keys(missingFeatures).filter(function (name) {
+          return name !== "importmap" && name !== "dynamicImport" && name !== "topLevelAwait" && name !== "custom_compiler_patterns";
+        });
         var missingFeatureCount = missingFeatureNames.length;
 
-        if (missingFeatureCount === 0) {
-          if (!missingOnly) {
-            parts.push("all features are natively supported");
-          }
-        } else {
+        if (missingFeatureCount > 0) {
           parts.push("".concat(missingFeatureCount, " features are missing: ").concat(missingFeatureNames));
         }
 
-        var customCompilerCount = customCompilerPatterns.length;
-        if (customCompilerCount === 0) ;else {
-          parts.push("".concat(customCompilerCount, " custom compilers enabled: ").concat(customCompilerPatterns));
+        var custom_compiler_patterns = missingFeatures.custom_compiler_patterns;
+
+        if (custom_compiler_patterns) {
+          parts.push("".concat(custom_compiler_patterns.length, " custom compilers enabled: ").concat(custom_compiler_patterns));
         }
+
         return "\n- ".concat(parts.join("\n- "));
       };
 
@@ -4942,7 +4929,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_17f65bfd.js.map</script>
+//# sourceMappingURL=toolbar.main_d6e98a08.js.map</script>
   
 
 </body></html>
