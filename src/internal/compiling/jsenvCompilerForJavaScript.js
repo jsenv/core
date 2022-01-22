@@ -9,11 +9,10 @@ export const compileJavascript = async ({
   url,
   compiledUrl,
 
+  compileProfile,
   babelPluginMap,
   workerUrls,
   serviceWorkerUrls,
-  moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
   prependSystemJs,
 
@@ -33,8 +32,7 @@ export const compileJavascript = async ({
     compiledUrl,
 
     babelPluginMap,
-    moduleOutFormat,
-    importMetaFormat,
+    moduleOutFormat: compileProfile.moduleOutFormat,
     topLevelAwait,
     prependSystemJs,
 

@@ -88,10 +88,16 @@ export const createCompileProfile = ({
     missingFeatures[featureName] = features[featureName]
   })
   if (moduleOutFormat === undefined) {
-    const systemJsIsRequired = featuresRelatedToSystemJs.some((featureName) => {
-      return Boolean(missingFeatures[featureName])
-    })
-    moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
+    if (runtimeReport.moduleOutFormat) {
+      moduleOutFormat = runtimeReport.moduleOutFormat
+    } else {
+      const systemJsIsRequired = featuresRelatedToSystemJs.some(
+        (featureName) => {
+          return Boolean(missingFeatures[featureName])
+        },
+      )
+      moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
+    }
   }
   return {
     missingFeatures,

@@ -1,7 +1,7 @@
 import { createNodeSystem } from "@jsenv/core/src/internal/node_runtime/node_system.js"
 import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
 
-export const nodeImportSystemJsBuild = async ({
+export const executeUsingNodeSystem = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   compileDirectoryRelativeUrl,
