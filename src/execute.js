@@ -61,14 +61,12 @@ export const execute = async ({
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(
       `fileRelativeUrl must be a string, got ${fileRelativeUrl}`,
     )
   }
   fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
-
   if (typeof runtime !== "object") {
     throw new TypeError(`runtime must be an object, got ${runtime}`)
   }
@@ -77,7 +75,6 @@ export const execute = async ({
       `runtime.launch must be a function, got ${runtime.launch}`,
     )
   }
-
   const executeOperation = Abort.startOperation()
   executeOperation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -90,7 +87,6 @@ export const execute = async ({
       )
     })
   }
-
   try {
     const compileServer = await startCompileServer({
       signal: executeOperation.signal,
@@ -99,7 +95,6 @@ export const execute = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      outDirectoryName: "dev",
 
       importDefaultExtension,
 

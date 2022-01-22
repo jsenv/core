@@ -1,9 +1,9 @@
+import { chromium } from "playwright"
 import {
   ensureEmptyDirectory,
   urlToRelativeUrl,
   resolveUrl,
 } from "@jsenv/filesystem"
-import { chromium } from "playwright"
 import { startMeasures } from "@jsenv/performance-impact"
 
 const devServerMetrics = {}
