@@ -4349,7 +4349,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       });
 
       var detectSupportedFeatures = _async$1(function (_ref3) {
-        var compileContext = _ref3.compileContext;
+        var inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
         supportsNewStylesheet(); // importmap
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
@@ -4364,7 +4364,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           // But there exploring server can inline importmap by transforming html
           // and in that case we can test only the local importmap support
           // so we test importmap support and the remote one
-          remote: !compileContext.inlineImportMapIntoHTML
+          remote: !inlineImportMapIntoHTML
         }), function (_supportsImportmap) {
           // dynamic import
           return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
@@ -4942,7 +4942,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_b15a5165.js.map</script>
+//# sourceMappingURL=toolbar.main_17f65bfd.js.map</script>
   
 
 </body></html>
