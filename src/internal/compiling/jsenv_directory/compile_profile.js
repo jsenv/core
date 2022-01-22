@@ -12,10 +12,11 @@ const COMPARERS = {
 }
 
 export const createCompileProfile = ({
-  workerUrls,
-  babelPluginMapWithoutSyntax,
-  importMapInWebWorkers,
   importDefaultExtension,
+  customCompilers,
+  babelPluginMapWithoutSyntax,
+  workerUrls,
+  importMapInWebWorkers,
   moduleOutFormat,
   sourcemapMethod,
   sourcemapExcludeSources,
@@ -27,6 +28,13 @@ export const createCompileProfile = ({
   const { env = {} } = runtimeReport
 
   const features = {}
+  if (importDefaultExtension) {
+    features["import_default_extension"] = true
+  }
+  const customCompilerPatterns = Object.keys(customCompilers)
+  if (customCompilerPatterns.length > 0) {
+    features["custom_compiler_patterns"] = customCompilerPatterns
+  }
   Object.keys(babelPluginMapWithoutSyntax).forEach((babelPluginName) => {
     // if we need to be compatible only with node
     // ignore "new-stylesheet-as-jsenv-import" and "transform-import-assertions"
@@ -43,9 +51,7 @@ export const createCompileProfile = ({
       babelPluginMapWithoutSyntax[babelPluginName],
     )
   })
-  if (importDefaultExtension) {
-    features["import_default_extension"] = true
-  }
+
   if (env.browser) {
     features["script_type_module"] = true
   }

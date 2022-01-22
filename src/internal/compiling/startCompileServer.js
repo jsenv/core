@@ -246,10 +246,11 @@ export const startCompileServer = async ({
 
   const createCompileIdFromRuntimeReport = async (runtimeReport) => {
     const compileProfile = createCompileProfile({
-      workerUrls,
-      babelPluginMapWithoutSyntax,
-      importMapInWebWorkers,
       importDefaultExtension,
+      customCompilers,
+      babelPluginMapWithoutSyntax,
+      workerUrls,
+      importMapInWebWorkers,
       moduleOutFormat,
       sourcemapMethod,
       sourcemapExcludeSources,
