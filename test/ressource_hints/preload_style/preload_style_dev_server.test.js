@@ -4,7 +4,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
-import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
+import { openBrowserPage } from "@jsenv/core/test/open_browser_page.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -12,19 +12,20 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `preload_style.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const htmlRelativeUrl = `${testDirectoryRelativeUrl}preload_style.html`
 const devServer = await startDevServer({
   ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const { browser, pageLogs, pageErrors } = await openBrowserPage(
-  `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
-  {
-    // debug: true,
-  },
-)
-
+const { compileId } = await devServer.createCompileIdFromRuntimeReport({
+  forceCompilation: true,
+})
+const htmlCompiledRelativeUrl = `${devServer.jsenvDirectoryRelativeUrl}${compileId}/${htmlRelativeUrl}`
+const urlToVisit = `${devServer.origin}/${htmlCompiledRelativeUrl}`
+const { browser, page, pageLogs, pageErrors } = await openBrowserPage({
+  // debug: true
+})
+await page.goto(urlToVisit)
 const actual = {
   pageLogs,
   pageErrors,

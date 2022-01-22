@@ -1,10 +1,10 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
-import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
+import { openBrowserPage } from "@jsenv/core/test/open_browser_page.js"
 
 const { server } = await import("./server/serve.js")
 try {
@@ -14,25 +14,27 @@ try {
     jsenvCoreDirectoryUrl,
   )
   const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-  const fileRelativeUrl = `${testDirectoryRelativeUrl}main.html`
+  const htmlRelativeUrl = `${testDirectoryRelativeUrl}main.html`
   const getExecutionInfo = async (params) => {
     const devServer = await startDevServer({
       ...START_DEV_SERVER_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       ...params,
     })
-    const { browser, pageLogs, pageErrors, executionResult } =
-      await openBrowserPage(
-        `${devServer.origin}/${devServer.outDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`,
-        {
-          // debug: true,
-          /* eslint-disable no-undef */
-          pageFunction: () => {
-            return window.answer
-          },
-          /* eslint-enable no-undef */
-        },
-      )
+    const { compileId } = await devServer.createCompileIdFromRuntimeReport({
+      forceCompilation: true,
+    })
+    const htmlCompiledRelativeUrl = `${devServer.jsenvDirectoryRelativeUrl}${compileId}/${htmlRelativeUrl}`
+    const urlToVisit = `${devServer.origin}/${htmlCompiledRelativeUrl}`
+    const { browser, page, pageLogs, pageErrors } = await openBrowserPage({
+      // debug: true
+    })
+    await page.goto(urlToVisit)
+    /* eslint-disable no-undef */
+    const executionResult = await page.evaluate(() => {
+      return window.answer
+    })
+    /* eslint-enable no-undef */
     browser.close()
     return {
       pageLogs,
