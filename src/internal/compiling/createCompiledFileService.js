@@ -34,6 +34,7 @@ export const createCompiledFileService = ({
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
+  jsenvDirectory,
   jsenvRemoteDirectory,
 
   babelPluginMap,
@@ -42,7 +43,6 @@ export const createCompiledFileService = ({
   customCompilers,
   workerUrls,
   serviceWorkerUrls,
-  compileDirectories,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -68,6 +68,10 @@ export const createCompiledFileService = ({
     projectDirectoryUrl,
   )
   const importmapInfos = {}
+  const redirectorRelativeUrlForProject = urlToRelativeUrl(
+    REDIRECTOR_BUILD_URL,
+    projectDirectoryUrl,
+  )
   return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
@@ -92,12 +96,8 @@ export const createCompiledFileService = ({
         },
       )
     }
-    const compileDirectory = compileDirectories[compileId]
+    const compileDirectory = jsenvDirectory.compileDirectories[compileId]
     if (!compileDirectory) {
-      const redirectorRelativeUrlForProject = urlToRelativeUrl(
-        REDIRECTOR_BUILD_URL,
-        projectDirectoryUrl,
-      )
       return {
         status: 307,
         headers: {

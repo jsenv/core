@@ -16,7 +16,6 @@ const COMPARERS = {
   preservedUrls: sameValueInTwoObjects,
   workers: sameValuesInTwoArrays,
   serviceWorkers: sameValuesInTwoArrays,
-  customCompilerPatterns: sameValuesInTwoArrays,
   replaceProcessEnvNodeEnv: (a, b) => a === b,
   inlineImportMapIntoHTML: (a, b) => a === b,
 
@@ -39,7 +38,6 @@ export const createCompileContext = async ({
   preservedUrls,
   workers,
   serviceWorkers,
-  customCompilers,
   replaceProcessEnvNodeEnv,
   inlineImportMapIntoHTML,
 }) => {
@@ -47,7 +45,6 @@ export const createCompileContext = async ({
     preservedUrls,
     workers,
     serviceWorkers,
-    customCompilerPatterns: Object.keys(customCompilers),
     replaceProcessEnvNodeEnv,
     inlineImportMapIntoHTML,
 

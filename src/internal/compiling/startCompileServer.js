@@ -211,20 +211,17 @@ export const startCompileServer = async ({
     preservedUrls,
     workers,
     serviceWorkers,
-    customCompilers,
     replaceProcessEnvNodeEnv,
     inlineImportMapIntoHTML,
   })
-  const { jsenvDirectoryMeta, getOrCreateCompileId } =
-    await setupJsenvDirectory({
-      logger,
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-      compileServerCanWriteOnFilesystem,
-      compileContext,
-    })
-  const { compileDirectories } = jsenvDirectoryMeta
+  const jsenvDirectory = await setupJsenvDirectory({
+    logger,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    compileServerCanWriteOnFilesystem,
+    compileContext,
+  })
   const jsenvRemoteDirectory = createJsenvRemoteDirectory({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
@@ -264,7 +261,7 @@ export const startCompileServer = async ({
 
       runtimeReport,
     })
-    const compileId = await getOrCreateCompileId({
+    const compileId = await jsenvDirectory.getOrCreateCompileId({
       runtimeName: runtimeReport.name,
       runtimeVersion: runtimeReport.version,
       compileProfile,
@@ -338,7 +335,7 @@ export const startCompileServer = async ({
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      compileDirectories,
+      jsenvDirectory,
       jsenvRemoteDirectory,
 
       topLevelAwait,

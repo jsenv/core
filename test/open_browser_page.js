@@ -5,7 +5,6 @@ import { evalSource } from "@jsenv/core/src/internal/node_runtime/evalSource.js"
 import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
 export const openBrowserPage = async ({
-  url,
   inheritCoverage = coverageIsEnabled(),
   collectConsole = true,
   collectErrors = true,
@@ -28,7 +27,6 @@ export const openBrowserPage = async ({
       pageErrors.push(error)
     })
   }
-  await page.goto(url)
 
   const getJsenvExecutionResult = async () => {
     let removeErrorListener

@@ -16,19 +16,26 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}main.html`
+const htmlRelativeUrl = `${testDirectoryRelativeUrl}main.html`
 const devServer = await startDevServer({
   ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
 const { compileId } = await devServer.createCompileIdFromRuntimeReport({})
-const { browser, page, getJsenvExecutionResult } = await openBrowserPage(
-  `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
-)
+const compileDirectoryServerUrl = `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/`
+const htmlCompiledServerUrl = `${compileDirectoryServerUrl}${htmlRelativeUrl}`
+const { browser, page, getJsenvExecutionResult } = await openBrowserPage({
+  // debug: true,
+})
+await page.goto(htmlCompiledServerUrl)
+
 const getImportMetaUrl = async () => {
   const { executionResult } = await getJsenvExecutionResult()
-  return executionResult.fileExecutionResultMap["./main.js"].namespace
-    .importMetaUrl
+  return {
+    importMetaUrl:
+      executionResult.fileExecutionResultMap["./main.js"].namespace
+        .importMetaUrl,
+  }
 }
 try {
   // first execution works fine
@@ -38,7 +45,7 @@ try {
       importMetaUrl,
     }
     const expected = {
-      importMetaUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
+      importMetaUrl: `${compileDirectoryServerUrl}${testDirectoryRelativeUrl}main.js`,
     }
     assert({ actual, expected })
   }
@@ -53,27 +60,30 @@ try {
       importMetaUrl,
     }
     const expected = {
-      importMetaUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
+      importMetaUrl: `${compileDirectoryServerUrl}${testDirectoryRelativeUrl}main.js`,
     }
     assert({ actual, expected })
   }
 
   // then we can stop the dev server and restart a new one
-  // -> it works and reuses the compileId
+  // -> it works, but gets a fresh compileId because:
+  // 1. __jsenv_meta__.json was deleted
+  // 2. server was restarted
   {
     await devServer.stop()
     await startDevServer({
       ...START_DEV_SERVER_TEST_PARAMS,
-      port: devServer.port,
+      port: new URL(devServer.origin).port,
       jsenvDirectoryRelativeUrl,
     })
-    await page.reload()
+    await page.goto(htmlCompiledServerUrl)
+    await page.waitForNavigation()
     const { importMetaUrl } = await getImportMetaUrl()
     const actual = {
       importMetaUrl,
     }
     const expected = {
-      importMetaUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`,
+      importMetaUrl: `${devServer.origin}/${testDirectoryRelativeUrl}main.js`,
     }
     assert({ actual, expected })
   }
