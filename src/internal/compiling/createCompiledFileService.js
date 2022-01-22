@@ -4,8 +4,10 @@ import {
   resolveDirectoryUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
+  urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
+import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 
@@ -92,10 +94,19 @@ export const createCompiledFileService = ({
     }
     const compileDirectory = compileDirectories[compileId]
     if (!compileDirectory) {
-      const knownCompileIds = Object.keys(compileDirectories)
+      const redirectorRelativeUrlForProject = urlToRelativeUrl(
+        REDIRECTOR_BUILD_URL,
+        projectDirectoryUrl,
+      )
       return {
-        status: 400,
-        statusText: `Unexpected compileId in url, found ${compileId} but only one of compileId must be one of ${knownCompileIds} is allowed`,
+        status: 307,
+        headers: {
+          location: `${
+            request.origin
+          }/${redirectorRelativeUrlForProject}?redirect=${encodeURIComponent(
+            afterCompileId,
+          )}`,
+        },
       }
     }
     // nothing after compileId, we don't know what to compile (not supposed to happen)

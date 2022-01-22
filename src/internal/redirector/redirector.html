@@ -8,12 +8,9 @@
   </head>
 
   <body>
-    <script
-      type="importmap"
-      src="../../../../node_resolution.importmap"
-    ></script>
+    <script type="importmap" src="../../../node_resolution.importmap"></script>
     <script type="module">
-      import { scanBrowserRuntimeFeatures } from "../../features/browser_feature_detection/browser_feature_detection.js"
+      import { scanBrowserRuntimeFeatures } from "../features/browser_feature_detection/browser_feature_detection.js"
 
       const redirect = async () => {
         const redirectTarget = new URLSearchParams(window.location.search).get(

@@ -1,5 +1,5 @@
 
-export const REDIRECTOR_BUILD_URL = new URL("redirector/redirector_6df9b7cb.html", import.meta.url).href
+export const REDIRECTOR_BUILD_URL = new URL("redirector/redirector_641714c2.html", import.meta.url).href
 
 export const BROWSER_RUNTIME_BUILD_URL = new URL("browser_runtime/browser_runtime_0e3396a1.js", import.meta.url).href
 

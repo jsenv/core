@@ -1,9 +1,9 @@
+import { setupRoutes } from "@jsenv/server"
 import {
   normalizeStructuredMetaMap,
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
-import { setupRoutes } from "@jsenv/server"
 
 import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -15,12 +15,11 @@ import {
   startCompileServer,
   assertAndNormalizeJsenvDirectoryRelativeUrl,
 } from "./internal/compiling/startCompileServer.js"
-import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
-
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "./internal/jsenvInternalFiles.js"
+import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,

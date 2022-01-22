@@ -32,8 +32,7 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/redirector/",
   entryPoints: {
-    "./src/internal/dev_server/redirector/redirector.html":
-      "redirector_[hash].html",
+    "./src/internal/redirector/redirector.html": "redirector_[hash].html",
   },
 })
 addExport(
