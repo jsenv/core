@@ -1,4 +1,4 @@
-import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/server"
 import {
   resolveUrl,
   urlToRelativeUrl,
@@ -6,10 +6,8 @@ import {
   bufferToEtag,
   readFileSystemNodeModificationTime,
 } from "@jsenv/filesystem"
-import { fetchUrl } from "@jsenv/server"
+import { assert } from "@jsenv/assert"
 
-import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
@@ -19,49 +17,24 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `file.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 // const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
-const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
-
-// just the file itself
-{
-  const { origin: compileServerOrigin } = await startCompileServer({
-    ...COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-    compileCacheStrategy: "etag",
-    runtimeSupport: jsenvRuntimeSupportDuringDev,
-  })
-  const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
-  const { status, statusText, headers } = await fetchUrl(fileServerUrl, {
-    ignoreHttpsError: true,
-  })
-
-  const actual = {
-    status,
-    statusText,
-    contentType: headers.get("content-type"),
-  }
-  const expected = {
-    status: 200,
-    statusText: "OK",
-    contentType: "application/javascript",
-  }
-  assert({ actual, expected })
-}
 
 // etag caching
 {
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-    await startCompileServer({
-      ...COMPILE_SERVER_TEST_PARAMS,
-      jsenvDirectoryRelativeUrl,
-      compileCacheStrategy: "etag",
-    })
-  const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-  const firstResponse = await fetchUrl(fileServerUrl, {
+  const compileServer = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    compileCacheStrategy: "etag",
+  })
+  const { compileId } = await compileServer.createCompileIdFromRuntimeReport({
+    env: { browser: true },
+  })
+  const fileCompiledRelativeUrl = `${compileServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+  const fileCompiledServerUrl = `${compileServer.origin}/${fileCompiledRelativeUrl}`
+  const fileCompileUrl = `${jsenvCoreDirectoryUrl}${fileCompiledRelativeUrl}`
+  const firstResponse = await fetchUrl(fileCompiledServerUrl, {
     ignoreHttpsError: true,
   })
   {
@@ -71,14 +44,14 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     }
     const expected = {
       status: 200,
-      etag: bufferToEtag(await readFile(compiledFileUrl, { as: "buffer" })),
+      etag: bufferToEtag(await readFile(fileCompileUrl, { as: "buffer" })),
     }
     assert({ actual, expected })
   }
   // let time to write the compiled files on filesystem
   await new Promise((resolve) => setTimeout(resolve, 500))
 
-  const secondResponse = await fetchUrl(fileServerUrl, {
+  const secondResponse = await fetchUrl(fileCompiledServerUrl, {
     ignoreHttpsError: true,
     headers: {
       "if-none-match": firstResponse.headers.get("etag"),
@@ -99,14 +72,18 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
 
 // mtime caching
 {
-  const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-    await startCompileServer({
-      ...COMPILE_SERVER_TEST_PARAMS,
-      jsenvDirectoryRelativeUrl,
-      compileCacheStrategy: "mtime",
-    })
-  const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-  const firstResponse = await fetchUrl(fileServerUrl, {
+  const compileServer = await startCompileServer({
+    ...COMPILE_SERVER_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    compileCacheStrategy: "mtime",
+  })
+  const { compileId } = await compileServer.createCompileIdFromRuntimeReport({
+    env: { browser: true },
+  })
+  const fileCompiledRelativeUrl = `${compileServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+  const fileCompiledServerUrl = `${compileServer.origin}/${fileCompiledRelativeUrl}`
+  const fileCompileUrl = `${jsenvCoreDirectoryUrl}${fileCompiledRelativeUrl}`
+  const firstResponse = await fetchUrl(fileCompiledServerUrl, {
     ignoreHttpsError: true,
   })
 
@@ -120,13 +97,13 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
     const expected = {
       status: 200,
       lastModified: new Date(
-        await readFileSystemNodeModificationTime(compiledFileUrl),
+        await readFileSystemNodeModificationTime(fileCompileUrl),
       ).toUTCString(),
     }
     assert({ actual, expected })
   }
 
-  const secondResponse = await fetchUrl(fileServerUrl, {
+  const secondResponse = await fetchUrl(fileCompiledServerUrl, {
     ignoreHttpsError: true,
     headers: {
       "if-modified-since": firstResponse.headers.get("last-modified"),

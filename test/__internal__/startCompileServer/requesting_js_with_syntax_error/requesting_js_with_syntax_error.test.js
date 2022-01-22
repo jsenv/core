@@ -1,12 +1,11 @@
-import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/server"
 import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
-import { fetchUrl } from "@jsenv/server"
+import { assert } from "@jsenv/assert"
 
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
@@ -16,16 +15,17 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `syntax_error.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}syntax_error.js`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const response = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+const compileServer = await startCompileServer({
+  ...COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+})
+const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
+const fileCompiledServerUrl = `${compileServer.origin}/${compileServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+const response = await fetchUrl(fileCompiledServerUrl, {
+  ignoreHttpsError: true,
+})
 
 const actual = {
   status: response.status,

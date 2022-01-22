@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -12,16 +12,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `source_file.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}source_file.js`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const { origin: compileServerOrigin } = await startCompileServer({
+const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   compileCacheStrategy: "etag",
   runtimeSupport: jsenvRuntimeSupportDuringDev,
 })
-const fileServerUrl = `${compileServerOrigin}/${fileRelativeUrl}`
+const fileServerUrl = `${compileServer.origin}/${fileRelativeUrl}`
 const response = await fetchUrl(fileServerUrl, {
   ignoreHttpsError: true,
 })
