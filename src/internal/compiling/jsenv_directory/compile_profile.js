@@ -86,23 +86,31 @@ export const createCompileProfile = ({
   }
 
   const missingFeatures = {}
-  featureNames.forEach((featureName) => {
-    const supported = supportedFeatureNames.includes(featureName)
-    if (supported) {
-      return
+  if (!runtimeReport.forceSource) {
+    featureNames.forEach((featureName) => {
+      const supported = supportedFeatureNames.includes(featureName)
+      if (supported) {
+        return
+      }
+      missingFeatures[featureName] = features[featureName]
+    })
+    if (moduleOutFormat === undefined) {
+      if (runtimeReport.moduleOutFormat) {
+        moduleOutFormat = runtimeReport.moduleOutFormat
+        if (moduleOutFormat !== "esmodule") {
+          missingFeatures["module_format"] = moduleOutFormat
+        }
+      } else {
+        const systemJsIsRequired = featuresRelatedToSystemJs.some(
+          (featureName) => {
+            return Boolean(missingFeatures[featureName])
+          },
+        )
+        moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
+      }
     }
-    missingFeatures[featureName] = features[featureName]
-  })
-  if (moduleOutFormat === undefined) {
-    if (runtimeReport.moduleOutFormat) {
-      moduleOutFormat = runtimeReport.moduleOutFormat
-    } else {
-      const systemJsIsRequired = featuresRelatedToSystemJs.some(
-        (featureName) => {
-          return Boolean(missingFeatures[featureName])
-        },
-      )
-      moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
+    if (runtimeReport.forceCompilation) {
+      missingFeatures["compilation_forced"] = true
     }
   }
   return {

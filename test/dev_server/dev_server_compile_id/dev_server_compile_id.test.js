@@ -30,7 +30,7 @@ const { browser, page, getJsenvExecutionResult } = await openBrowserPage({
 await page.goto(htmlCompiledServerUrl)
 
 const getImportMetaUrl = async () => {
-  const { executionResult } = await getJsenvExecutionResult()
+  const executionResult = await getJsenvExecutionResult()
   return {
     importMetaUrl:
       executionResult.fileExecutionResultMap["./main.js"].namespace
