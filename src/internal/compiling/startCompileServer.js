@@ -274,6 +274,7 @@ export const startCompileServer = async ({
       if (request.method === "GET") {
         const body = JSON.stringify(
           {
+            jsenvDirectoryRelativeUrl,
             inlineImportMapIntoHTML,
           },
           null,

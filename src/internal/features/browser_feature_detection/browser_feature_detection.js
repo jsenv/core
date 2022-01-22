@@ -39,7 +39,7 @@ export const scanBrowserRuntimeFeatures = async () => {
   }
 }
 
-const detectSupportedFeatures = async ({ compileContext }) => {
+const detectSupportedFeatures = async ({ inlineImportMapIntoHTML }) => {
   const featuresReport = {}
   // new CSSStyleSheet
   featuresReport.newStylesheet = supportsNewStylesheet()
@@ -56,7 +56,7 @@ const detectSupportedFeatures = async ({ compileContext }) => {
     // But there exploring server can inline importmap by transforming html
     // and in that case we can test only the local importmap support
     // so we test importmap support and the remote one
-    remote: !compileContext.inlineImportMapIntoHTML,
+    remote: !inlineImportMapIntoHTML,
   })
   // dynamic import
   featuresReport.dynamicImport = await supportsDynamicImport()
