@@ -165,11 +165,11 @@ const onExecutionError = (
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const outMetaResponse = await fetchUrl(
-    `${compileServerOrigin}/.jsenv/__out_meta__.json`,
+  const compileServerResponse = await fetchUrl(
+    `${compileServerOrigin}/__jsenv_compile_profile__`,
   )
-  const outMeta = await outMetaResponse.json()
-  const { jsenvDirectoryRelativeUrl, errorStackRemapping } = outMeta
+  const compileServerMeta = await compileServerResponse.json()
+  const { jsenvDirectoryRelativeUrl, errorStackRemapping } = compileServerMeta
   const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
   const afterJsenvDirectory = document.location.href.slice(
     jsenvDirectoryServerUrl.length,
@@ -185,7 +185,7 @@ const getBrowserRuntime = memoize(async () => {
 
   if (errorStackRemapping && Error.captureStackTrace) {
     const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } =
-      outMeta
+      compileServerMeta
     await fetchAndEvalUsingFetch(
       `${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`,
     )

@@ -105,7 +105,6 @@ await buildInternalFile({
         "__TOOLBAR_BUILD_RELATIVE_URL_",
         JSON.stringify(`dist/toolbar/${buildManifest["toolbar.html"]}`),
       )
-
       return {
         compiledSource,
         responseHeaders: {

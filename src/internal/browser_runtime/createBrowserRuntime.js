@@ -33,9 +33,10 @@ export const createBrowserRuntime = async ({
     return json
   }
 
-  const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
-  const envUrl = String(new URL("env.json", jsenvDirectoryServerUrl))
-  const { importDefaultExtension } = await fetchJson(envUrl)
+  const compileServerMetaUrl = String(
+    new URL("__jsenv_compile_profile__", `${compileServerOrigin}/`),
+  )
+  const { importDefaultExtension } = await fetchJson(compileServerMetaUrl)
   const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
   // if there is an importmap in the document we use it instead of fetching.
   // systemjs style with systemjs-importmap

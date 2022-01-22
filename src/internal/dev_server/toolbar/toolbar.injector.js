@@ -1,4 +1,3 @@
-import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
 
 // eslint-disable-next-line no-undef
@@ -13,12 +12,6 @@ const injectToolbar = async () => {
       window.requestAnimationFrame(resolve)
     }
   })
-
-  const { jsenvDirectoryRelativeUrl } = await fetchExploringJson()
-  const jsenvDirectoryServerUrl = resolveUrl(
-    jsenvDirectoryRelativeUrl,
-    document.location.origin,
-  )
 
   const placeholder = getToolbarPlaceholder()
 
@@ -43,10 +36,7 @@ const injectToolbar = async () => {
     "border": "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
-  const jsenvToolbarHtmlServerUrl = resolveUrl(
-    TOOLBAR_BUILD_RELATIVE_URL,
-    jsenvDirectoryServerUrl,
-  )
+  const jsenvToolbarHtmlServerUrl = `/${TOOLBAR_BUILD_RELATIVE_URL}`
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", jsenvToolbarHtmlServerUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
@@ -225,8 +215,6 @@ const iframeToLoadedPromise = (iframe) => {
     iframe.addEventListener("load", onload, true)
   })
 }
-
-const resolveUrl = (url, baseUrl) => String(new URL(url, baseUrl))
 
 if (document.readyState === "complete") {
   injectToolbar()

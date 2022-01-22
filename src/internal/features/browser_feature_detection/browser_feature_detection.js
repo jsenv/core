@@ -34,6 +34,7 @@ export const scanBrowserRuntimeFeatures = async () => {
   )
   return {
     jsenvDirectoryRelativeUrl,
+    inlineImportMapIntoHTML,
     compileProfile,
     compileId,
   }

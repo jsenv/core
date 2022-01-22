@@ -178,36 +178,36 @@ const createExploringJsonService = ({
 }) => {
   return (request) => {
     if (
-      request.ressource === "/.jsenv/exploring.json" &&
-      request.method === "GET"
+      request.ressource !== "/.jsenv/exploring.json" ||
+      request.method !== "GET"
     ) {
-      const data = {
-        projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl,
-        exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
-        sourcemapMainFileRelativeUrl: urlToRelativeUrl(
-          sourcemapMainFileInfo.url,
-          jsenvCoreDirectoryUrl,
-        ),
-        sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
-          sourcemapMappingFileInfo.url,
-          jsenvCoreDirectoryUrl,
-        ),
-        explorableConfig,
-        livereloading,
-      }
-      const json = JSON.stringify(data)
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(json),
-        },
-        body: json,
-      }
+      return null
     }
-    return null
+    const data = {
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
+      sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+        sourcemapMainFileInfo.url,
+        jsenvCoreDirectoryUrl,
+      ),
+      sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+        sourcemapMappingFileInfo.url,
+        jsenvCoreDirectoryUrl,
+      ),
+      explorableConfig,
+      livereloading,
+    }
+    const json = JSON.stringify(data)
+    return {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(json),
+      },
+      body: json,
+    }
   }
 }
 
@@ -218,47 +218,47 @@ const createExplorableJsonService = ({
 }) => {
   return async (request) => {
     if (
-      request.ressource === "/.jsenv/explorables.json" &&
-      request.method === "GET"
+      request.ressource !== "/.jsenv/explorables.json" ||
+      request.method !== "GET"
     ) {
-      const structuredMetaMapRelativeForExplorable = {}
-      Object.keys(explorableConfig).forEach((explorableGroup) => {
-        const explorableGroupConfig = explorableConfig[explorableGroup]
-        structuredMetaMapRelativeForExplorable[explorableGroup] = {
-          "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
-          ...explorableGroupConfig,
-          [jsenvDirectoryRelativeUrl]: false,
-        }
-      })
-      const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
-        structuredMetaMapRelativeForExplorable,
-        projectDirectoryUrl,
-      )
-      const matchingFileResultArray = await collectFiles({
-        directoryUrl: projectDirectoryUrl,
-        structuredMetaMap: structuredMetaMapForExplorable,
-        predicate: (meta) =>
-          Object.keys(meta).some((explorableGroup) =>
-            Boolean(meta[explorableGroup]),
-          ),
-      })
-      const explorableFiles = matchingFileResultArray.map(
-        ({ relativeUrl, meta }) => ({
-          relativeUrl,
-          meta,
-        }),
-      )
-      const json = JSON.stringify(explorableFiles)
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(json),
-        },
-        body: json,
-      }
+      return null
     }
-    return null
+    const structuredMetaMapRelativeForExplorable = {}
+    Object.keys(explorableConfig).forEach((explorableGroup) => {
+      const explorableGroupConfig = explorableConfig[explorableGroup]
+      structuredMetaMapRelativeForExplorable[explorableGroup] = {
+        "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
+        ...explorableGroupConfig,
+        [jsenvDirectoryRelativeUrl]: false,
+      }
+    })
+    const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
+      structuredMetaMapRelativeForExplorable,
+      projectDirectoryUrl,
+    )
+    const matchingFileResultArray = await collectFiles({
+      directoryUrl: projectDirectoryUrl,
+      structuredMetaMap: structuredMetaMapForExplorable,
+      predicate: (meta) =>
+        Object.keys(meta).some((explorableGroup) =>
+          Boolean(meta[explorableGroup]),
+        ),
+    })
+    const explorableFiles = matchingFileResultArray.map(
+      ({ relativeUrl, meta }) => ({
+        relativeUrl,
+        meta,
+      }),
+    )
+    const json = JSON.stringify(explorableFiles)
+    return {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(json),
+      },
+      body: json,
+    }
   }
 }

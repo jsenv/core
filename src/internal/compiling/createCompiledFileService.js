@@ -80,7 +80,7 @@ export const createCompiledFileService = ({
     const { compileId, afterCompileId } = requestCompileInfo
     // serve files inside /.jsenv/* directly without compilation
     // this is just to allow some files to be written inside outDirectory and read directly
-    // if asked by the client (such __out_meta__.json)
+    // if asked by the client
     if (!compileId) {
       return fetchFileSystem(
         new URL(request.ressource.slice(1), projectDirectoryUrl),

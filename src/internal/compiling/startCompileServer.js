@@ -17,6 +17,10 @@ import {
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
+import {
+  sourcemapMainFileInfo,
+  sourcemapMappingFileInfo,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
@@ -96,6 +100,7 @@ export const startCompileServer = async ({
   jsenvEventSourceClientInjection = false,
   jsenvToolbarInjection = false,
   inlineImportMapIntoHTML = true,
+  errorStackRemapping = true,
 }) => {
   const logger = createLogger({ logLevel })
   if (typeof projectDirectoryUrl !== "string") {
@@ -277,6 +282,15 @@ export const startCompileServer = async ({
           {
             jsenvDirectoryRelativeUrl,
             inlineImportMapIntoHTML,
+            errorStackRemapping,
+            sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+              sourcemapMainFileInfo.url,
+              projectDirectoryUrl,
+            ),
+            sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+              sourcemapMappingFileInfo.url,
+              projectDirectoryUrl,
+            ),
           },
           null,
           "  ",

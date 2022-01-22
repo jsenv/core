@@ -313,7 +313,7 @@ export const collectHtmlDependenciesFromAst = (htmlAst) => {
     const srcsetAttribute = getHtmlNodeAttributeByName(htmlNode, "srcset")
     if (srcsetAttribute) {
       const srcsetParts = parseSrcset(srcsetAttribute.value)
-      srcsetParts.forEeach(({ specifier }) => {
+      srcsetParts.forEach(({ specifier }) => {
         dependencies.push({
           htmlNode,
           attribute: srcsetAttribute,

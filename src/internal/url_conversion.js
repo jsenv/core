@@ -163,7 +163,6 @@ export const serverUrlToCompileInfo = (
   const afterJsenvDirectory = url.slice(jsenvDirectoryServerUrl.length)
   // serve files inside /.jsenv/* directly without compilation
   // this is just to allow some files to be written inside outDirectory and read directly
-  // if asked by the client (such as __out_meta__.json)
   if (!afterJsenvDirectory.includes("/") || afterJsenvDirectory[0] === "/") {
     return { insideCompileDirectory: true }
   }
