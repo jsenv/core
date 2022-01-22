@@ -7,6 +7,7 @@ const COMPARERS = {
   moduleOutFormat: (a, b) => a === b,
   sourcemapMethod: (a, b) => a === b,
   sourcemapExcludeSources: (a, b) => a === b,
+  jsenvEventSourceClientInjection: (a, b) => a === b,
   jsenvToolbarInjection: (a, b) => a === b,
 }
 
@@ -18,6 +19,7 @@ export const createCompileProfile = ({
   moduleOutFormat,
   sourcemapMethod,
   sourcemapExcludeSources,
+  jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
 
   runtimeReport,
@@ -43,6 +45,9 @@ export const createCompileProfile = ({
   })
   if (importDefaultExtension) {
     features["import_default_extension"] = true
+  }
+  if (env.browser) {
+    features["script_type_module"] = true
   }
   if (env.browser && workerUrls.length > 0) {
     features["worker_type_module"] = true
@@ -93,6 +98,7 @@ export const createCompileProfile = ({
     moduleOutFormat,
     sourcemapMethod,
     sourcemapExcludeSources,
+    jsenvEventSourceClientInjection,
     jsenvToolbarInjection,
   }
 }

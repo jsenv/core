@@ -1,13 +1,12 @@
-import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/server"
 import {
   resolveUrl,
   urlToRelativeUrl,
   bufferToEtag,
   readFile,
 } from "@jsenv/filesystem"
-import { fetchUrl } from "@jsenv/server"
+import { assert } from "@jsenv/assert"
 
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
@@ -17,17 +16,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `meta_json_asset.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}meta_json_asset.js`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-
-const { origin: compileServerOrigin, outDirectoryRelativeUrl } =
-  await startCompileServer({
-    ...COMPILE_SERVER_TEST_PARAMS,
-    jsenvDirectoryRelativeUrl,
-  })
-const fileRelativeCompiledUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const fileServerUrl = resolveUrl(fileRelativeCompiledUrl, compileServerOrigin)
+const compileServer = await startCompileServer({
+  ...COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+})
+const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
+const fileRelativeCompiledUrl = `${compileServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+const fileServerUrl = resolveUrl(fileRelativeCompiledUrl, compileServer.origin)
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const response = await fetchUrl(`${fileServerUrl}__asset__meta.json`, {
@@ -48,9 +45,9 @@ const expected = {
   contentType: "application/json",
   body: {
     contentType: "application/javascript",
-    sources: [`../../../../../../../${filename}`],
+    sources: [`../../../../../../meta_json_asset.js`],
     sourcesEtag: [bufferToEtag(await readFile(fileUrl, { as: "buffer" }))],
-    assets: [`${filename}.map`],
+    assets: [`meta_json_asset.js.map`],
     assetsEtag: [
       bufferToEtag(await readFile(mapCompiledUrl, { as: "buffer" })),
     ],

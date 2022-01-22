@@ -253,6 +253,7 @@ export const startCompileServer = async ({
       moduleOutFormat,
       sourcemapMethod,
       sourcemapExcludeSources,
+      jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 
       runtimeReport,
