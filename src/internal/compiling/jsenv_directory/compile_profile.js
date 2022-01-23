@@ -163,15 +163,15 @@ export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
 const babelPluginValueAsJSON = (babelPluginValue) => {
   if (Array.isArray(babelPluginValue)) {
     if (babelPluginValue.length === 1) {
-      return {}
+      return true
     }
     if (babelPluginValue.length === 2) {
       return babelPluginValue[1]
     }
-    return {}
+    return true
   }
   if (typeof babelPluginValue === "object") {
-    return { options: babelPluginValue.options }
+    return babelPluginValue.options
   }
-  return {}
+  return true
 }

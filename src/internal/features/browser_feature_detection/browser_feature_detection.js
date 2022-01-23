@@ -8,12 +8,15 @@ import { supportsJsonImportAssertions } from "./browser_feature_detect_import_as
 import { supportsCssImportAssertions } from "./browser_feature_detect_import_assertions_css.js"
 import { supportsNewStylesheet } from "./browser_feature_detect_new_stylesheet.js"
 
-export const scanBrowserRuntimeFeatures = async () => {
+export const scanBrowserRuntimeFeatures = async ({
+  coverageHandledFromOutside = false,
+} = {}) => {
   const jsenvCompileProfileUrl = "/__jsenv_compile_profile__"
   const { jsenvDirectoryRelativeUrl, inlineImportMapIntoHTML } =
     await fetchJson(jsenvCompileProfileUrl)
   const { name, version } = detectBrowser()
   const featuresReport = await detectSupportedFeatures({
+    coverageHandledFromOutside,
     inlineImportMapIntoHTML,
   })
   const runtimeReport = {
@@ -40,8 +43,12 @@ export const scanBrowserRuntimeFeatures = async () => {
   }
 }
 
-const detectSupportedFeatures = async ({ inlineImportMapIntoHTML }) => {
+const detectSupportedFeatures = async ({
+  coverageHandledFromOutside,
+  inlineImportMapIntoHTML,
+}) => {
   const featuresReport = {}
+  featuresReport["transform-instrument"] = coverageHandledFromOutside
   // new CSSStyleSheet
   featuresReport.newStylesheet = supportsNewStylesheet()
   // importmap

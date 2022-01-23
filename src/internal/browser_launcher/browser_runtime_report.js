@@ -2,10 +2,12 @@ export const getBrowserRuntimeReport = async ({
   page,
   runtime,
   compileServerId,
+  coverageHandledFromOutside,
 }) => {
   const cache = cacheFromParams({
     runtime,
     compileServerId,
+    coverageHandledFromOutside,
   })
   const entry = cache.read()
   if (entry) {
@@ -14,11 +16,14 @@ export const getBrowserRuntimeReport = async ({
   const browserRuntimeFeaturesReport = await page.evaluate(
     /* eslint-disable no-undef */
     /* istanbul ignore next */
-    async () => {
+    async ({ coverageHandledFromOutside }) => {
       await window.readyPromise
-      return window.scanBrowserRuntimeFeatures()
+      return window.scanBrowserRuntimeFeatures({
+        coverageHandledFromOutside,
+      })
     },
     /* eslint-enable no-undef */
+    { coverageHandledFromOutside },
   )
   cache.write(browserRuntimeFeaturesReport)
   return browserRuntimeFeaturesReport
@@ -26,9 +31,14 @@ export const getBrowserRuntimeReport = async ({
 
 let currentCacheParams
 let currentCacheValue
-const cacheFromParams = ({ runtime, compileServerId }) => {
+const cacheFromParams = ({
+  runtime,
+  compileServerId,
+  coverageHandledFromOutside,
+}) => {
   const params = {
     compileServerId,
+    coverageHandledFromOutside,
   }
   const runtimeLabel = `${runtime.name}/${runtime.version}`
   if (!currentCacheParams) {

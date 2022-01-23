@@ -54,22 +54,22 @@ export const executeHtmlFile = async (
   await page.goto(compileProxyClientUrl)
   executeOperation.throwIfAborted()
 
-  const browserRuntimeFeaturesReport = await getBrowserRuntimeReport({
+  const coverageHandledFromOutside =
+    coveragePlaywrightAPIAvailable && !coverageForceIstanbul
+  const browserRuntimeReport = await getBrowserRuntimeReport({
     page,
     compileServerId,
     runtime,
-  })
-  if (coveragePlaywrightAPIAvailable && !coverageForceIstanbul) {
     // js coverage
     // When instrumentation CAN be handed by playwright
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
     // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
-    browserRuntimeFeaturesReport.jsCoverage = true
-  }
+    coverageHandledFromOutside,
+  })
 
   try {
     let executionResult
-    const { compileId } = browserRuntimeFeaturesReport
+    const { compileId } = browserRuntimeReport
     executeOperation.throwIfAborted()
     if (!compileId && !forceCompilation) {
       executionResult = await executeSource({
