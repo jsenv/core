@@ -36,24 +36,26 @@ devServerMetrics["time to start dev server"] = {
 }
 await new Promise((resolve) => setTimeout(resolve, 500))
 
-const measureAppDisplayed = async ({ appUrl }) => {
+const measureAppDisplayed = async ({ appUrl, waitRedirect }) => {
   const browser = await chromium.launch({
     args: [],
   })
   const browserContext = await browser.newContext({ ignoreHTTPSErrors: true })
   const page = await browserContext.newPage()
   await page.goto(appUrl)
-
+  if (waitRedirect) {
+    await page.waitForNavigation()
+  }
   const { appDisplayedDuration } = await page.evaluate(
+    /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      // eslint-disable-next-line no-undef
       return window.appDisplayedMetricsPromise
     },
+    /* eslint-enable no-undef */
   )
 
   await browser.close()
-
   return { appDisplayedDuration }
 }
 // for some reason I have to do this to make perf metrics more reliable
@@ -77,6 +79,7 @@ await new Promise((resolve) => setTimeout(resolve, 500))
 {
   const { appDisplayedDuration } = await measureAppDisplayed({
     appUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}.redirect/${directoryRelativeUrl}basic_app/main.html`,
+    waitRedirect: true,
   })
   devServerMetrics["time to display app using compiled files"] = {
     value: appDisplayedDuration,
@@ -88,6 +91,7 @@ await new Promise((resolve) => setTimeout(resolve, 500))
 {
   const { appDisplayedDuration } = await measureAppDisplayed({
     appUrl: `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}.redirect/${directoryRelativeUrl}basic_app/main.html`,
+    waitRedirect: true,
   })
   devServerMetrics["time to display app compiled and second visit"] = {
     value: appDisplayedDuration,
