@@ -55,7 +55,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_f6fdb290.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_d3a918a4.html";
 
   function _async(f) {
     return function () {
@@ -76,7 +76,9 @@
   var injectToolbar = _async(function () {
     return _await(new Promise(function (resolve) {
       if (window.requestIdleCallback) {
-        window.requestIdleCallback(resolve);
+        window.requestIdleCallback(resolve, {
+          timeout: 400
+        });
       } else {
         window.requestAnimationFrame(resolve);
       }
@@ -108,6 +110,9 @@
 
       iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
       placeholder.parentNode.replaceChild(iframe, placeholder);
+      addToolbarEventCallback(iframe, "toolbar_ready", function () {
+        sendCommandToToolbar(iframe, "renderToolbar");
+      });
       return _await(iframeLoadedPromise, function () {
         iframe.removeAttribute("tabindex");
         var div = document.createElement("div");
@@ -164,9 +169,6 @@
           } else {
             showToolbarTrigger();
           }
-        });
-        addToolbarEventCallback(iframe, "toolbar_ready", function () {
-          sendCommandToToolbar(iframe, "renderToolbar");
         });
         return iframe;
       });
@@ -253,9 +255,13 @@
   if (document.readyState === "complete") {
     injectToolbar();
   } else {
-    window.addEventListener("load", injectToolbar);
+    document.addEventListener("readystatechange", function () {
+      if (document.readyState === "complete") {
+        injectToolbar();
+      }
+    });
   }
 
 })();
 
-//# sourceMappingURL=toolbar_injector_6cf20c38.js.map
+//# sourceMappingURL=toolbar_injector_0dd26399.js.map
