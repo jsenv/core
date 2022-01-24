@@ -25,45 +25,51 @@ const whatever = await Promise.resolve(42)
 console.log(whatever)
 ```
 
-A request to `https://localhost/index.js` returns _index.js_ untouched. A request to `https://localhost/.jsenv/dev/best/index.js` returns _index.js_ transformed.
+As you open urls with your browser, jsenv performs feature detection on the browser and generates "compilation profiles". A compilation profile will perform exactly what should be done to make code compatible with a browser.
 
-_/.jsenv/dev/best/index.js response body:_
+At the time of writing this documentation here is what would happen depending the web browser you use:
 
-```js
-System.register([], function () {
-  "use strict"
-  return {
-    execute: async function () {
-      const whatever = await Promise.resolve(42)
-      console.log(whatever)
-    },
-  }
-})
-//# sourceMappingURL=main.js.map
-```
+- Chrome:
 
-And a request to `https://localhost/.jsenv/dev/otherwise/index.js` returns _index.js_ with more transformations applied.
+  "index.js" is served untouched.
 
-_/.jsenv/dev/otherwise/index.js response body:_
+- Firefox, Safari, Edge:
 
-```js
-System.register([], function () {
-  "use strict"
-  return {
-    execute: function () {
-      Promise.resolve(42).then((value) => {
-        var whatever = value
+  You are redirected to `https://localhost/.jsenv/out/index.js` with _index.js_ transformed:
+
+  ```js
+  System.register([], function () {
+    "use strict"
+    return {
+      execute: async function () {
+        const whatever = await Promise.resolve(42)
         console.log(whatever)
-      })
-    },
-  }
-})
-//# sourceMappingURL=main.js.map
-```
+      },
+    }
+  })
+  //# sourceMappingURL=main.js.map
+  ```
 
-</details>
+- Other
 
-When a request to `/.jsenv/dev/best/index.js` is made, the server will not try to find a file there. Instead it reads `/index.js`, transforms it and return the transformed version. In addition the transformed file is written on the filesystem at `/jsenv/dev/best/index.js`. This transformed file version is used as cache.
+  You are redirected to `https://localhost/.jsenv/out_1/index.js` with _index.js_ transformed:
+
+  ```js
+  System.register([], function () {
+    "use strict"
+    return {
+      execute: function () {
+        Promise.resolve(42).then((value) => {
+          var whatever = value
+          console.log(whatever)
+        })
+      },
+    }
+  })
+  //# sourceMappingURL=main.js.map
+  ```
+
+When a request to `/.jsenv/out/index.js` is made, the server will not try to find a file there. Instead it reads `/index.js`, transforms it and return the transformed version. In addition the transformed file is written on the filesystem at `/jsenv/out/index.js`. This transformed file version is used as cache.
 
 # Notes
 
@@ -75,9 +81,9 @@ If the url specifier starts with `/`, server returns the project file.
 <script type="module" src="/index.js"></script>
 ```
 
-This is because script asks to fetch `"/main.js"`. So even if you are in the compile directory at `https://localhost/.jsenv/dev/best/index.html`, browser resolve script url to `https://localhost/index.js`.
+This is because script asks to fetch `"/main.js"`. So even if you are in the compile directory at `https://localhost/.jsenv/out/index.html`, browser resolve script url to `https://localhost/index.js`.
 
-So be sure to use relative notation instead: `"./index.js"`. In that case browser will resolve script url to `https://localhost/.jsenv/dev/best/index.js`.
+So be sure to use relative notation instead: `"./index.js"`. In that case browser will resolve script url to `https://localhost/.jsenv/out/index.js`.
 
 > You can use [import maps](https://github.com/jsenv/jsenv-template-pwa/blob/e06356f9df4c0e063b8f8275cf80433d56853f92/project.importmap#L3) to avoid ../../ hell in js files
 
@@ -91,28 +97,26 @@ If server is requested to compile a file but has no compiler associated, it will
 <link rel="favicon" href="./favicon.ico" />
 ```
 
-## What is `.jsenv/dev/best/`?
+## Jsenv directory
 
 - `.jsenv`
 
-  Contains the 2 directories: `dev` and `build` explained below.
+  Contains _n_ "compilation directories".
 
   It's possible to control this directory name using an undocumented parameter called `jsenvDirectoryRelativeUrl`
 
-- `.jsenv/dev`
+- `.jsenv/out`
 
-  Compile server has two directories where it writes compiled files: `dev` and `build`.
-  It's required to use 2 different directories to keep cache for both scenarios: When files are compiled to be executed and when they are compiled for the build.
+  It's a compilation directory where compiled files will be written.
+  It is generated dynamically depending the browser you are using
 
-- `.jsenv/dev/best`
+- `.jsenv/out_1`
 
-  Contains compiled version of project source files.
+  It's an other compilation directory where compilation slightly differs from an other compilation directory.
 
-  `best` represents a compilation profile. Depending on the browser you are using, you will be redirected either to `.jsenv/dev/best` or `.jsenv/dev/otherwise`.
+- `.jsenv/.redirect/file.js`
 
-  `otherwise` applies all babel plugin to transform js and make it compatible with old browsers.
+  Can be used to be dynamically redirected where you should. Depending on your browser and if compilation is required to execute your files, you will be redirected to:
 
-  `best` applies less transformation.
-
-  It's an implementation detail and not really important to be aware of.
-  In practice if you use chrome you will be redirected to `.jsenv/dev/best`, but you can still manually enter `otherwise` in the url to see the js that would be served to old browsers.
+  1. `file.js`
+  2. `.jsenv/out/file.js`

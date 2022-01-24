@@ -92,7 +92,7 @@ export const setupJsenvDirectory = async ({
     let compileId = compileIdBase
     let integer = 1
     while (existingCompileIds.includes(compileId)) {
-      compileId = `${compileIdBase}${integer}`
+      compileId = `${compileIdBase}_${integer}`
       integer++
     }
     compileDirectories[compileId] = {
