@@ -251,6 +251,7 @@ export const startCompileServer = async ({
       importDefaultExtension,
       customCompilers,
       babelPluginMapWithoutSyntax,
+      preservedUrls,
       workerUrls,
       importMapInWebWorkers,
       moduleOutFormat,

@@ -10,6 +10,8 @@ import { supportsNewStylesheet } from "./browser_feature_detect_new_stylesheet.j
 
 export const scanBrowserRuntimeFeatures = async ({
   coverageHandledFromOutside = false,
+  forceCompilation = false,
+  forceSource = false,
 } = {}) => {
   const jsenvCompileProfileUrl = "/__jsenv_compile_profile__"
   const { jsenvDirectoryRelativeUrl, inlineImportMapIntoHTML } =
@@ -24,6 +26,8 @@ export const scanBrowserRuntimeFeatures = async ({
     name,
     version,
     featuresReport,
+    forceSource,
+    forceCompilation,
   }
   const { compileProfile, compileId } = await fetchJson(
     jsenvCompileProfileUrl,

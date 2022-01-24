@@ -30,6 +30,8 @@ export const executeHtmlFile = async (
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
     transformErrorHook,
+    forceSource,
+    forceCompilation,
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
@@ -64,6 +66,8 @@ export const executeHtmlFile = async (
     // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
     // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
     coverageHandledFromOutside,
+    forceSource,
+    forceCompilation,
   })
 
   try {

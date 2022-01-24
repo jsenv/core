@@ -33,6 +33,7 @@ export const createRuntimeFromPlaywright = ({
 
     projectDirectoryUrl,
     compileServerOrigin,
+    compileServerId,
     jsenvDirectoryRelativeUrl,
 
     collectPerformance,
@@ -130,6 +131,7 @@ export const createRuntimeFromPlaywright = ({
 
       projectDirectoryUrl,
       compileServerOrigin,
+      compileServerId,
       jsenvDirectoryRelativeUrl,
 
       collectPerformance,
