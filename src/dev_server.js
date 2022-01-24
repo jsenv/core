@@ -27,7 +27,7 @@ export const startDevServer = async ({
   port,
   ip,
   protocol,
-  http2,
+  http2 = false, // disable by default for now because it is buggy on safari
   certificate,
   privateKey,
   plugins,
