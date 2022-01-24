@@ -120,7 +120,10 @@ nodeRuntime.launch = async ({
     if (compileId) {
       executionResult = await requestActionOnChildProcess({
         signal,
-        actionType: "execute-using-systemjs",
+        actionType:
+          compileProfile.moduleOutFormat === "systemjs"
+            ? "execute-using-systemjs"
+            : "execute-using-dynamic-import",
         actionParams: {
           compileId,
           importDefaultExtension:
