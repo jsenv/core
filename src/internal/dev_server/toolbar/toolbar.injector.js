@@ -7,7 +7,7 @@ const jsenvLogoSvgUrl = new URL("./jsenv-logo.svg", import.meta.url)
 const injectToolbar = async () => {
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
-      window.requestIdleCallback(resolve)
+      window.requestIdleCallback(resolve, { timeout: 400 })
     } else {
       window.requestAnimationFrame(resolve)
     }
@@ -40,6 +40,10 @@ const injectToolbar = async () => {
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", jsenvToolbarHtmlServerUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
+
+  addToolbarEventCallback(iframe, "toolbar_ready", () => {
+    sendCommandToToolbar(iframe, "renderToolbar")
+  })
 
   await iframeLoadedPromise
   iframe.removeAttribute("tabindex")
@@ -140,9 +144,6 @@ const injectToolbar = async () => {
       showToolbarTrigger()
     }
   })
-  addToolbarEventCallback(iframe, "toolbar_ready", () => {
-    sendCommandToToolbar(iframe, "renderToolbar")
-  })
 
   return iframe
 }
@@ -220,4 +221,9 @@ if (document.readyState === "complete") {
   injectToolbar()
 } else {
   window.addEventListener("load", injectToolbar)
+  // document.addEventListener("readystatechange", () => {
+  //   if (document.readyState === "complete") {
+  //     injectToolbar()
+  //   }
+  // })
 }
