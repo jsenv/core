@@ -9,7 +9,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import { getCssSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { compileScss } from "../../src/compileScss.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/__internal__/startCompileServer/TEST_PARAMS_COMPILE_SERVER.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/__internal__/compile_server/TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
