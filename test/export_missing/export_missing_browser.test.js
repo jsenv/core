@@ -55,25 +55,24 @@ await launchBrowsers(
         errorMessage: `The requested module './file.js' does not provide an export named 'answer'`,
       }
       assert({ actual, expected })
-      return
+    } else {
+      const actual = {
+        status: result.status,
+        consoleCalls: result.consoleCalls,
+      }
+      const expected = {
+        status: "completed",
+        consoleCalls: [
+          {
+            type: "log",
+            text:
+              process.platform === "win32"
+                ? actual.consoleCalls[0].text
+                : `undefined\n`,
+          },
+        ],
+      }
+      assert({ actual, expected })
     }
-
-    const actual = {
-      status: result.status,
-      consoleCalls: result.consoleCalls,
-    }
-    const expected = {
-      status: "completed",
-      consoleCalls: [
-        {
-          type: "log",
-          text:
-            process.platform === "win32"
-              ? actual.consoleCalls[0].text
-              : `undefined\n`,
-        },
-      ],
-    }
-    assert({ actual, expected })
   },
 )

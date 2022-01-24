@@ -53,7 +53,14 @@ export const createCompileProfile = ({
   })
 
   if (env.browser) {
-    features["script_type_module"] = true
+    Object.assign(features, {
+      script_type_module: true,
+      import_dynamic: true,
+      top_level_await: true,
+      importmap: true,
+      import_assertion_type_json: true,
+      import_assertion_type_css: true,
+    })
   }
   if (env.browser && workerUrls.length > 0) {
     features["worker_type_module"] = true
@@ -84,6 +91,13 @@ export const createCompileProfile = ({
       }
     })
   }
+  Object.keys(featureEffects).forEach((featureName) => {
+    if (featuresReport[featureName]) {
+      featureEffects[featureName]({
+        supportedFeatureNames,
+      })
+    }
+  })
 
   const missingFeatures = {}
   if (!runtimeReport.forceSource) {
@@ -124,12 +138,23 @@ export const createCompileProfile = ({
 
 const featuresRelatedToSystemJs = [
   "script_type_module",
+  "import_dynamic",
+  "top_level_await",
   "importmap",
   "import_assertion_type_json",
   "import_assertion_type_css",
   "worker_type_module",
   "worker_importmap",
 ]
+
+const featureEffects = {
+  coverage_js: ({ supportedFeatureNames }) => {
+    supportedFeatureNames.push("transform-instrument")
+  },
+  new_stylesheet: ({ supportedFeatureNames }) => {
+    supportedFeatureNames.push("new-stylesheet-as-jsenv-import")
+  },
+}
 
 export const compareCompileProfiles = (
   compileProfile,

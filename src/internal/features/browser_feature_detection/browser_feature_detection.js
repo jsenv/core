@@ -48,10 +48,10 @@ const detectSupportedFeatures = async ({
   inlineImportMapIntoHTML,
 }) => {
   const featuresReport = {}
-  featuresReport.import_http = true
-  featuresReport["transform-instrument"] = coverageHandledFromOutside
+  featuresReport["import_http"] = true
+  featuresReport["coverage_js"] = coverageHandledFromOutside
   // new CSSStyleSheet
-  featuresReport.newStylesheet = supportsNewStylesheet()
+  featuresReport["new_stylesheet"] = supportsNewStylesheet()
   // importmap
   // start testing importmap support first and not in paralell
   // so that there is not module script loaded beore importmap is injected
@@ -68,11 +68,13 @@ const detectSupportedFeatures = async ({
     remote: !inlineImportMapIntoHTML,
   })
   // dynamic import
-  featuresReport.dynamicImport = await supportsDynamicImport()
+  featuresReport["import_dynamic"] = await supportsDynamicImport()
   // top level await
-  featuresReport.topLevelAwait = await supportsTopLevelAwait()
+  featuresReport["top_level_await"] = await supportsTopLevelAwait()
   // import assertions
-  featuresReport.jsonImportAssertions = await supportsJsonImportAssertions()
-  featuresReport.cssImportAssertions = await supportsCssImportAssertions()
+  featuresReport["import_assertion_type_json"] =
+    await supportsJsonImportAssertions()
+  featuresReport["import_assertion_type_css"] =
+    await supportsCssImportAssertions()
   return featuresReport
 }
