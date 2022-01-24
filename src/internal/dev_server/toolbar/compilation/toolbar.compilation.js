@@ -1,6 +1,10 @@
 import { scanBrowserRuntimeFeatures } from "../../../features/browser_feature_detection/browser_feature_detection.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant/variant.js"
+import {
+  enableWarningStyle,
+  disableWarningStyle,
+} from "../settings/toolbar.settings.js"
 
 export const renderCompilationInToolbar = ({ compileGroup }) => {
   const browserSupportRootNode = document.querySelector("#browser_support")
@@ -15,6 +19,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
       inlineImportMapIntoHTML,
       compileProfile,
       compileId,
+      runtimeReport,
     }) => {
       const browserSupport = compileId
         ? "no"
@@ -65,28 +70,52 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         }
       }
 
-      const filesCompilation = compileGroup.compileId
+      const actualCompileId = compileGroup.compileId
+      const expectedCompiledId = compileId
+      const shouldSwitchCompileId =
+        expectedCompiledId &&
+        actualCompileId &&
+        actualCompileId !== expectedCompiledId
+      const shouldCompile = !actualCompileId && browserSupport === "no"
+      const filesCompilation = shouldSwitchCompileId
+        ? "mismatch"
+        : actualCompileId
         ? "yes"
         : inlineImportMapIntoHTML
         ? "html_only"
         : "no"
+      const hasWarning = shouldCompile || shouldSwitchCompileId
+
       enableVariant(filesCompilationRootNode, {
         filesCompilation,
-        compiled: compileGroup.compileId ? "yes" : "no",
+        compilation_link: shouldSwitchCompileId
+          ? "mismatch"
+          : actualCompileId
+          ? "source"
+          : "compiled",
       })
-      filesCompilationRootNode.querySelector("a.go_to_source_link").onclick =
+      if (filesCompilation === "yes") {
+        document.querySelector(
+          ".files_compilation_text",
+        ).innerHTML = `Files shown are compiled for ${runtimeReport.name}@${runtimeReport.version}`
+      }
+      filesCompilationRootNode.querySelector("a.link_to_source_files").onclick =
         () => {
-          window.parent.location = `/${compileGroup.fileRelativeUrl}`
+          window.parent.location.href = `/${compileGroup.fileRelativeUrl}`
         }
-      filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick =
-        () => {
-          window.parent.location = `/${jsenvDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
-        }
+      filesCompilationRootNode.querySelector(
+        "a.link_to_compiled_files",
+      ).onclick = () => {
+        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
+      }
+      filesCompilationRootNode.querySelector(
+        "a.link_to_appropriate_files",
+      ).onclick = () => {
+        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`
+      }
 
-      const shouldCompile =
-        filesCompilation !== "yes" && browserSupport === "no"
-
-      if (shouldCompile) {
+      if (hasWarning) {
+        enableWarningStyle()
         document
           .querySelector(".files_compilation_text")
           .setAttribute("data-warning", "")
@@ -97,6 +126,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
           .querySelector("#settings-button")
           .setAttribute("data-warning", "")
       } else {
+        disableWarningStyle()
         document
           .querySelector(".files_compilation_text")
           .removeAttribute("data-warning")

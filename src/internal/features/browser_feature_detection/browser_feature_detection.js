@@ -44,6 +44,7 @@ export const scanBrowserRuntimeFeatures = async ({
     inlineImportMapIntoHTML,
     compileProfile,
     compileId,
+    runtimeReport,
   }
 }
 
