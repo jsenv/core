@@ -25,7 +25,6 @@ export const execute = async ({
   collectPerformance,
 }) => {
   let finalizeExecutionResult = (result) => result
-
   if (collectPerformance) {
     const getPerformance = startObservingPerformances()
     finalizeExecutionResult = async (executionResult) => {
@@ -36,11 +35,9 @@ export const execute = async ({
       }
     }
   }
-
   const { getErrorOriginalStackString } = installNodeErrorStackRemapping({
     projectDirectoryUrl,
   })
-
   const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
 
   const errorTransformer = async (error) => {

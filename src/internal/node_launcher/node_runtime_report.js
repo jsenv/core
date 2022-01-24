@@ -4,12 +4,18 @@ export const getNodeRuntimeReport = async ({
   runtime,
   compileServerId,
   compileServerOrigin,
+
+  moduleOutFormat,
+  forceCompilation,
   coverageHandledFromOutside,
 }) => {
   const cache = cacheFromParams({
     runtime,
     compileServerId,
     compileServerOrigin,
+
+    moduleOutFormat,
+    forceCompilation,
     coverageHandledFromOutside,
   })
   const entry = cache.read()
@@ -18,6 +24,8 @@ export const getNodeRuntimeReport = async ({
   }
   const nodeRuntimeFeaturesReport = await scanNodeRuntimeFeatures({
     compileServerOrigin,
+    moduleOutFormat,
+    forceCompilation,
     coverageHandledFromOutside,
   })
   cache.write(nodeRuntimeFeaturesReport)
@@ -29,11 +37,17 @@ let currentCacheValue
 const cacheFromParams = ({
   compileServerId,
   compileServerOrigin,
+
+  moduleOutFormat,
+  forceCompilation,
   coverageHandledFromOutside,
 }) => {
   const params = {
     compileServerId,
     compileServerOrigin,
+
+    moduleOutFormat,
+    forceCompilation,
     coverageHandledFromOutside,
   }
   if (!currentCacheParams) {

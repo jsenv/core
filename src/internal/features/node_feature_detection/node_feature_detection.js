@@ -5,6 +5,9 @@ import { nodeSupportsTopLevelAwait } from "./node_feature_detect_top_level_await
 
 export const scanNodeRuntimeFeatures = async ({
   compileServerOrigin,
+  moduleOutFormat,
+  forceSource,
+  forceCompilation,
   coverageHandledFromOutside,
 }) => {
   const jsenvCompileProfileServerUrl = new URL(
@@ -21,6 +24,9 @@ export const scanNodeRuntimeFeatures = async ({
     name: "node",
     version: process.version.slice(1),
     featuresReport,
+    moduleOutFormat,
+    forceSource,
+    forceCompilation,
   }
   const { compileProfile, compileId } = await fetchJson(
     jsenvCompileProfileServerUrl,

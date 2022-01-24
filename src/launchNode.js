@@ -26,6 +26,9 @@ nodeRuntime.launch = async ({
   coverageForceIstanbul,
   coverageConfig,
 
+  moduleOutFormat,
+  forceCompilation,
+
   debugPort,
   debugMode,
   debugModeInheritBreak,
@@ -36,7 +39,6 @@ nodeRuntime.launch = async ({
   stdout,
   stderr,
   stopAfterExecute,
-  forceSystemJs,
 
   remap = true,
 }) => {
@@ -108,18 +110,14 @@ nodeRuntime.launch = async ({
       runtime: nodeRuntime,
       compileServerId,
       compileServerOrigin,
+
+      moduleOutFormat,
+      forceCompilation,
       coverageHandledFromOutside,
     })
     const { compileProfile, compileId } = nodeRuntimeReport
-
     let executionResult
-    if (!compileId && !forceSystemJs) {
-      executionResult = await requestActionOnChildProcess({
-        signal,
-        actionType: "execute-using-dynamic-import",
-        actionParams: executeParams,
-      })
-    } else {
+    if (compileId) {
       executionResult = await requestActionOnChildProcess({
         signal,
         actionType: "execute-using-systemjs",
@@ -129,6 +127,12 @@ nodeRuntime.launch = async ({
             compileProfile.missingFeatures["import_default_extension"],
           ...executeParams,
         },
+      })
+    } else {
+      executionResult = await requestActionOnChildProcess({
+        signal,
+        actionType: "execute-using-dynamic-import",
+        actionParams: executeParams,
       })
     }
     executionResult = transformExecutionResult(executionResult, {
