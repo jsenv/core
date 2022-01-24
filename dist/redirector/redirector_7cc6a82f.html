@@ -2130,16 +2130,21 @@
       }
 
       var scanBrowserRuntimeFeatures = _async$1(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref$coverageHandledF = _ref.coverageHandledFromOutside,
+            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF;
+
         var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
-        return _await(fetchJson(jsenvCompileProfileUrl), function (_ref) {
-          var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
-              inlineImportMapIntoHTML = _ref.inlineImportMapIntoHTML;
+        return _await(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
+          var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
+              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML;
 
           var _detectBrowser = detectBrowser(),
               name = _detectBrowser.name,
               version = _detectBrowser.version;
 
           return _await(detectSupportedFeatures({
+            coverageHandledFromOutside: coverageHandledFromOutside,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function (featuresReport) {
             var runtimeReport = {
@@ -2156,9 +2161,9 @@
                 "content-type": "application/json"
               },
               body: JSON.stringify(runtimeReport)
-            }), function (_ref2) {
-              var compileProfile = _ref2.compileProfile,
-                  compileId = _ref2.compileId;
+            }), function (_ref3) {
+              var compileProfile = _ref3.compileProfile,
+                  compileId = _ref3.compileId;
               return {
                 jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML,
@@ -2170,9 +2175,14 @@
         });
       });
 
-      var detectSupportedFeatures = _async$1(function (_ref3) {
-        var inlineImportMapIntoHTML = _ref3.inlineImportMapIntoHTML;
-        supportsNewStylesheet(); // importmap
+      var detectSupportedFeatures = _async$1(function (_ref4) {
+        var coverageHandledFromOutside = _ref4.coverageHandledFromOutside,
+            inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
+        var featuresReport = {};
+        featuresReport.import_http = true;
+        featuresReport["transform-instrument"] = coverageHandledFromOutside; // new CSSStyleSheet
+
+        featuresReport.newStylesheet = supportsNewStylesheet(); // importmap
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
@@ -2188,13 +2198,20 @@
           // so we test importmap support and the remote one
           remote: !inlineImportMapIntoHTML
         }), function (_supportsImportmap) {
-          // dynamic import
+          featuresReport.importmap = _supportsImportmap; // dynamic import
+
           return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
-            // top level await
+            featuresReport.dynamicImport = _supportsDynamicImpor; // top level await
+
             return _call$1(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
-              // import assertions
+              featuresReport.topLevelAwait = _supportsTopLevelAwai; // import assertions
+
               return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
-                return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {});
+                featuresReport.jsonImportAssertions = _supportsJsonImportAs;
+                return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {
+                  featuresReport.cssImportAssertions = _supportsCssImportAss;
+                  return featuresReport;
+                });
               });
             });
           });
@@ -2216,8 +2233,8 @@
 
       var redirect = _async(function () {
         var redirectTarget = new URLSearchParams(window.location.search).get("redirect");
-        return _call(scanBrowserRuntimeFeatures, function (browserRuntimeFeaturesReport) {
-          var href = "".concat(getDirectoryUrl(browserRuntimeFeaturesReport)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
+        return _call(scanBrowserRuntimeFeatures, function (browserRuntimeProfile) {
+          var href = "".concat(getDirectoryUrl(browserRuntimeProfile)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
           // otherwise it would break the back button
 
           window.location.replace(href);
@@ -2254,7 +2271,7 @@
   };
 });
 
-//# sourceMappingURL=redirector.html__inline__12_87b4d67e.js.map</script>
+//# sourceMappingURL=redirector.html__inline__12_6be838be.js.map</script>
   
 
 </body></html>

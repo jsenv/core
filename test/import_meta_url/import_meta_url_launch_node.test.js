@@ -64,7 +64,8 @@ const test = async ({ babelPluginMap, runtimeParams } = {}) => {
     status: "completed",
     namespace: {
       isInstanceOfUrl: false,
-      urlString: `${testDirectoryUrl}import_meta_url.js`,
+      // still the compiled file because systemjs is needed
+      urlString: `${testDirectoryUrl}.jsenv/out/${fileRelativeUrl}`,
     },
   }
   assert({ actual, expected })

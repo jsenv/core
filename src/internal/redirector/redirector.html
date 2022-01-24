@@ -16,9 +16,9 @@
         const redirectTarget = new URLSearchParams(window.location.search).get(
           "redirect",
         )
-        const browserRuntimeFeaturesReport = await scanBrowserRuntimeFeatures()
+        const browserRuntimeProfile = await scanBrowserRuntimeFeatures()
         const href = `${getDirectoryUrl(
-          browserRuntimeFeaturesReport,
+          browserRuntimeProfile,
         )}${redirectTarget}`
         // It's IMPORTANT to use location.replace and NOT location.href = url
         // otherwise it would break the back button
