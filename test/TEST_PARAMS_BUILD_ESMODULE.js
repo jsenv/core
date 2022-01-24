@@ -1,5 +1,4 @@
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { testBabelPluginMap } from "./testBabelPluginMap.js"
 
 export const GENERATE_ESMODULE_BUILD_TEST_PARAMS = {
   format: "esmodule",
@@ -7,7 +6,6 @@ export const GENERATE_ESMODULE_BUILD_TEST_PARAMS = {
   jsenvDirectoryClean: true,
   buildDirectoryClean: true,
   logLevel: "warn",
-  babelPluginMap: testBabelPluginMap,
 }
 
 export const NODE_IMPORT_BUILD_TEST_PARAMS = {

@@ -15,7 +15,6 @@ export const EXECUTE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   logLevel: "warn",
-  babelPluginMap: testBabelPluginMap,
 
   executionLogLevel: "warn",
   inheritCoverage: coverageIsEnabled(),
