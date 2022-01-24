@@ -1,4 +1,5 @@
 import { featuresCompatFromRuntime } from "@jsenv/core/src/internal/features/features_compat_from_runtime.js"
+import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 
 import { sameValueInTwoObjects } from "./comparison_utils.js"
 
@@ -84,6 +85,19 @@ export const createCompileProfile = ({
     const { availableFeatureNames } = featuresCompatFromRuntime({
       runtimeName: name,
       runtimeVersion: version,
+      featureNames,
+    })
+    availableFeatureNames.forEach((featureName) => {
+      const runtimeReportResult = featuresReport[featureName]
+      if (runtimeReportResult === undefined) {
+        supportedFeatureNames.push(featureName)
+      }
+    })
+  }
+  const { runtimeSupport } = runtimeReport
+  if (runtimeSupport) {
+    const { availableFeatureNames } = featuresCompatFromRuntimeSupport({
+      runtimeSupport,
       featureNames,
     })
     availableFeatureNames.forEach((featureName) => {

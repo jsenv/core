@@ -1,9 +1,9 @@
-import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   readFile,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"

@@ -1,9 +1,7 @@
-import { fetchUrl } from "@jsenv/server"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -211,44 +209,23 @@ export const buildProject = async ({
   buildOperation.addEndCallback(async () => {
     await compileServer.stop(`build cleanup`)
   })
-  const featuresCompat = featuresCompatFromRuntimeSupport({
-    runtimeSupport,
-    featureNames: [
-      compileServer.featureNames,
+  const node = isNodePartOfSupportedRuntimes(runtimeSupport)
+  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
+  const { compileId, compileProfile } =
+    await compileServer.createCompileIdFromRuntimeReport({
+      env: {
+        browser,
+        node,
+      },
+      name: "jsenv_build",
+      version: "1",
+      runtimeSupport,
       // "rollup_plugin_jsenv.js" expects to hit the compile server
       // so we force compilation by adding a fake feature called "force_compilation"
       // one day we'll test how code behaves if zero transformations is required during
       // the build and update code as needed
-      "force_compilation",
-    ],
-  })
-  const featuresReport = {}
-  featuresCompat.availableFeatureNames.forEach((availableFeatureName) => {
-    featuresReport[availableFeatureName] = true
-  })
-  const node = isNodePartOfSupportedRuntimes(runtimeSupport)
-  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
-  const body = JSON.stringify({
-    env: {
-      browser,
-      node,
-    },
-    name: "jsenv_build",
-    version: "1",
-    featuresReport,
-  })
-  const compileServerResponse = await fetchUrl(
-    `${compileServer.origin}/__jsenv_compile_profile__`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "content-length": Buffer.byteLength(body),
-      },
-      body,
-    },
-  )
-  const { compileProfile, compileId } = await compileServerResponse.json()
+      forceCompilation: true,
+    })
 
   try {
     const result = await buildUsingRollup({
