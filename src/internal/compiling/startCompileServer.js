@@ -1,59 +1,40 @@
-import { readFileSync } from "node:fs"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
   fetchFileSystem,
-  createSSERoom,
   composeServices,
-  urlToContentType,
   pluginServerTiming,
   pluginRequestWaitingCheck,
   pluginCORS,
+  readRequestBody,
 } from "@jsenv/server"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   resolveUrl,
-  urlToFileSystemPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-  readFile,
-  writeFile,
-  ensureEmptyDirectory,
-  registerDirectoryLifecycle,
   urlIsInsideOf,
-  urlToBasename,
-  urlToExtension,
 } from "@jsenv/filesystem"
-import {
-  createCallbackList,
-  createCallbackListNotifiedOnce,
-} from "@jsenv/abort"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
+import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
-import {
-  TOOLBAR_INJECTOR_BUILD_URL,
-  EVENT_SOURCE_CLIENT_BUILD_URL,
-  BROWSER_RUNTIME_BUILD_URL,
-} from "@jsenv/core/dist/build_manifest.js"
-import { generateGroupMap } from "@jsenv/core/src/internal/generateGroupMap/generateGroupMap.js"
-import { isBrowserPartOfSupportedRuntimes } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
-
-import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-} from "../jsenvInternalFiles.js"
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
 import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
-import {
-  jsenvCoreDirectoryUrl,
-  jsenvDistDirectoryUrl,
-} from "../jsenvCoreDirectoryUrl.js"
+import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { createCompileContext } from "./jsenv_directory/compile_context.js"
+import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
+import { setupJsenvDirectory } from "./jsenv_directory/jsenv_directory.js"
+import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
+import { createSSEService } from "./sse_service/sse_service.js"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./createCompiledFileService.js"
-import { urlIsCompilationAsset } from "./compile-directory/compile-asset.js"
 import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
 
 let compileServerId = 0
@@ -77,7 +58,6 @@ export const startCompileServer = async ({
 
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
-  outDirectoryName = "out",
 
   sourcemapMethod = "comment", // "inline" is also possible
   sourcemapExcludeSources = false, // this should increase perf (no need to download source for browser)
@@ -88,9 +68,7 @@ export const startCompileServer = async ({
 
   // js compile options
   moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
-  env = {},
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceProcessEnvNodeEnv = true,
   replaceGlobalObject = false,
@@ -105,7 +83,6 @@ export const startCompileServer = async ({
   serviceWorkers = [],
   importMapInWebWorkers = false,
   prependSystemJs,
-  runtimeSupport,
 
   // remaining options
   livereloadWatchConfig = {
@@ -123,32 +100,14 @@ export const startCompileServer = async ({
   jsenvEventSourceClientInjection = false,
   jsenvToolbarInjection = false,
   inlineImportMapIntoHTML = true,
+  errorStackRemapping = true,
 }) => {
-  assertArguments({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryName,
-  })
-
-  const jsenvDirectoryUrl = resolveDirectoryUrl(
-    jsenvDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const outDirectoryUrl = resolveDirectoryUrl(
-    outDirectoryName,
-    jsenvDirectoryUrl,
-  )
-  const outDirectoryRelativeUrl = urlToRelativeUrl(
-    outDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  // normalization
-  jsenvDirectoryRelativeUrl = urlToRelativeUrl(
-    jsenvDirectoryUrl,
-    projectDirectoryUrl,
-  )
   const logger = createLogger({ logLevel })
-
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(
+      `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
+    )
+  }
   preservedUrls = {
     // Authorize jsenv to modify any file url
     // because the goal is to build the files into chunks
@@ -168,18 +127,12 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
-  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    preservedUrls,
-  })
   const workerUrls = workers.map((worker) =>
     resolveUrl(worker, projectDirectoryUrl),
   )
   const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
     resolveUrl(serviceWorker, projectDirectoryUrl),
   )
-  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
     babelConfigFileUrl,
@@ -211,33 +164,15 @@ export const startCompileServer = async ({
       delete babelPluginMap[key]
     }
   })
-
   const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
     extractSyntaxBabelPluginMap(babelPluginMap)
-  const compileServerGroupMap = generateGroupMap({
-    featureNames: [
-      ...(browser
-        ? [
-            "module",
-            "importmap",
-            "import_assertion_type_json",
-            "import_assertion_type_css",
-          ]
-        : []),
-      ...(browser && workerUrls.length > 0 ? ["worker_type_module"] : []),
-      ...(browser && importMapInWebWorkers ? ["worker_importmap"] : []),
-      ...Object.keys(babelPluginMapWithoutSyntax),
-    ],
-    runtimeSupport,
-  })
-
   babelPluginMap = {
     // When code should be compatible with browsers, ensure
     // process.env.NODE_ENV is replaced to be executable in a browser by forcing
     // "transform-replace-expressions" babel plugin.
     // It happens for module written in ESM but also using process.env.NODE_ENV
     // for example "react-redux"
-    // This babel plugin won't force compilation because it's added after "generateGroupMap"
+    // This babel plugin won't force compilation because it's added after "featureNames"
     // however it will be used even if not part of "missingFeatureNames"
     // as visible in "babelPluginMapFromCompileId"
     // This is a quick workaround to get things working because:
@@ -248,137 +183,168 @@ export const startCompileServer = async ({
     // Ideally this should be a custom compiler dedicated for this use case. It's not the case
     // for now because it was faster to do it this way and the use case is a bit blurry:
     // What should this custom compiler do? Just replace some node globals? How would it be named and documented?
-    ...(browser
-      ? {
-          "transform-replace-expressions": [
-            babelPluginReplaceExpressions,
-            {
-              replaceMap: {
-                ...(replaceProcessEnvNodeEnv
-                  ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
-                  : {}),
-                ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-                ...(replaceGlobalFilename
-                  ? { __filename: __filenameReplacement }
-                  : {}),
-                ...(replaceGlobalDirname
-                  ? { __dirname: __dirnameReplacement }
-                  : {}),
-                ...replaceMap,
-              },
-              allowConflictingReplacements: true,
-            },
-          ],
-        }
-      : {}),
+    "transform-replace-expressions": [
+      babelPluginReplaceExpressions,
+      {
+        replaceMap: {
+          ...(replaceProcessEnvNodeEnv
+            ? { "process.env.NODE_ENV": `("${processEnvNodeEnv}")` }
+            : {}),
+          ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+          ...(replaceGlobalFilename
+            ? { __filename: __filenameReplacement }
+            : {}),
+          ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+          ...replaceMap,
+        },
+        allowConflictingReplacements: true,
+      },
+    ],
     ...babelSyntaxPluginMap,
     ...babelPluginMap,
   }
-
-  const serverStopCallbackList = createCallbackListNotifiedOnce()
-
-  let projectFileRequestedCallback = () => {}
-  if (livereloadSSE) {
-    const sseSetup = setupServerSentEventsForLivereload({
-      serverStopCallbackList,
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
-      livereloadLogLevel,
-      livereloadWatchConfig,
-    })
-
-    projectFileRequestedCallback = sseSetup.projectFileRequestedCallback
-    const serveSSEForLivereload = createSSEForLivereloadService({
-      serverStopCallbackList,
-      outDirectoryRelativeUrl,
-      trackMainAndDependencies: sseSetup.trackMainAndDependencies,
-    })
-    customServices = {
-      ...customServices,
-      "jsenv:sse": serveSSEForLivereload,
-    }
-  } else {
-    const roomWhenLivereloadIsDisabled = createSSERoom()
-    roomWhenLivereloadIsDisabled.open()
-    customServices = {
-      ...customServices,
-      "jsenv:sse": (request) => {
-        const { accept } = request.headers
-        if (!accept || !accept.includes("text/event-stream")) {
-          return null
-        }
-        return roomWhenLivereloadIsDisabled.join(request)
-      },
-    }
-  }
-
-  const compileServerMetaFileInfo = createCompileServerMetaFileInfo({
+  jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    jsenvRemoteDirectory,
-    importDefaultExtension,
-
+  })
+  const compileContext = await createCompileContext({
     preservedUrls,
     workers,
     serviceWorkers,
-    compileServerGroupMap,
-    babelPluginMap,
     replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    env,
     inlineImportMapIntoHTML,
-    customCompilers,
-    jsenvToolbarInjection,
-    sourcemapMethod,
-    sourcemapExcludeSources,
   })
-  if (compileServerCanWriteOnFilesystem) {
-    await cleanOutDirectoryIfNeeded({
-      logger,
-      outDirectoryUrl,
-      jsenvDirectoryUrl,
-      jsenvDirectoryClean,
-      compileServerMetaFileInfo,
+  const jsenvDirectory = await setupJsenvDirectory({
+    logger,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    compileServerCanWriteOnFilesystem,
+    compileContext,
+  })
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    preservedUrls,
+  })
+
+  const serverStopCallbackList = createCallbackListNotifiedOnce()
+  const projectFileRequestedSignal = { onrequested: () => {} }
+  customServices = {
+    ...customServices,
+    "jsenv:sse": createSSEService({
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      livereloadSSE,
+      projectFileRequestedSignal,
+
+      serverStopCallbackList,
+      livereloadLogLevel,
+      livereloadWatchConfig,
+    }),
+  }
+  const projectFileRequestedCallback = (...args) =>
+    projectFileRequestedSignal.onrequested(...args)
+
+  const createCompileIdFromRuntimeReport = async (runtimeReport) => {
+    const compileProfile = createCompileProfile({
+      importDefaultExtension,
+      customCompilers,
+      babelPluginMapWithoutSyntax,
+      preservedUrls,
+      workerUrls,
+      importMapInWebWorkers,
+      moduleOutFormat,
+      sourcemapMethod,
+      sourcemapExcludeSources,
+      jsenvEventSourceClientInjection,
+      jsenvToolbarInjection,
+
+      runtimeReport,
     })
-    await writeFile(
-      compileServerMetaFileInfo.url,
-      JSON.stringify(compileServerMetaFileInfo.data, null, "  "),
-    )
-    logger.debug(`-> ${compileServerMetaFileInfo.url}`)
+    const compileId = await jsenvDirectory.getOrCreateCompileId({
+      runtimeName: runtimeReport.name,
+      runtimeVersion: runtimeReport.version,
+      compileProfile,
+    })
+    return { compileProfile, compileId }
   }
 
   const jsenvServices = {
+    "service:compile profile": async (request) => {
+      if (request.ressource !== `/__jsenv_compile_profile__`) {
+        return null
+      }
+      if (request.method === "GET") {
+        const body = JSON.stringify(
+          {
+            jsenvDirectoryRelativeUrl,
+            inlineImportMapIntoHTML,
+            errorStackRemapping,
+            sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+              sourcemapMainFileInfo.url,
+              projectDirectoryUrl,
+            ),
+            sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+              sourcemapMappingFileInfo.url,
+              projectDirectoryUrl,
+            ),
+          },
+          null,
+          "  ",
+        )
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      }
+      if (request.method === "POST") {
+        const runtimeReport = await readRequestBody(request, {
+          as: "json",
+        })
+        const { compileProfile, compileId } =
+          await createCompileIdFromRuntimeReport(runtimeReport)
+        const responseBodyAsObject = {
+          compileProfile,
+          compileId,
+        }
+        const responseBodyAsString = JSON.stringify(
+          responseBodyAsObject,
+          null,
+          "  ",
+        )
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(responseBodyAsString),
+          },
+          body: responseBodyAsString,
+        }
+      }
+      return null
+    },
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
-    }),
-    "service:compile server meta": createCompileServerMetaService({
-      projectDirectoryUrl,
-      outDirectoryUrl,
-      compileServerMetaFileInfo,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
+      jsenvDirectory,
       jsenvRemoteDirectory,
 
-      importDefaultExtension,
-
-      runtimeSupport,
       topLevelAwait,
-      groupMap: compileServerGroupMap,
       babelPluginMap,
       customCompilers,
       workerUrls,
       serviceWorkerUrls,
-      importMapInWebWorkers,
       prependSystemJs,
-      moduleOutFormat,
-      importMetaFormat,
       jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 
@@ -457,47 +423,19 @@ export const startCompileServer = async ({
   return {
     id: compileServerId++,
     jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
+    createCompileIdFromRuntimeReport,
     ...compileServer,
-    compileServerGroupMap,
     babelPluginMap,
     preservedUrls,
     projectFileRequestedCallback,
   }
 }
 
-export const computeOutDirectoryRelativeUrl = ({
+// updating "jsenvDirectoryRelativeUrl" normalizes it (ensure it has trailing "/")
+export const assertAndNormalizeJsenvDirectoryRelativeUrl = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl = ".jsenv",
-  outDirectoryName = "out",
 }) => {
-  const jsenvDirectoryUrl = resolveDirectoryUrl(
-    jsenvDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const outDirectoryUrl = resolveDirectoryUrl(
-    outDirectoryName,
-    jsenvDirectoryUrl,
-  )
-  const outDirectoryRelativeUrl = urlToRelativeUrl(
-    outDirectoryUrl,
-    projectDirectoryUrl,
-  )
-
-  return outDirectoryRelativeUrl
-}
-
-const assertArguments = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryName,
-}) => {
-  if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(
-      `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
-    )
-  }
-
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
       `jsenvDirectoryRelativeUrl must be a string. got ${jsenvDirectoryRelativeUrl}`,
@@ -507,7 +445,6 @@ const assertArguments = ({
     jsenvDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(
       createDetailedMessage(
@@ -519,441 +456,11 @@ const assertArguments = ({
       ),
     )
   }
-
-  if (typeof outDirectoryName !== "string") {
-    throw new TypeError(
-      `outDirectoryName must be a string. got ${outDirectoryName}`,
-    )
-  }
-}
-
-const cleanOutDirectoryIfNeeded = async ({
-  logger,
-  outDirectoryUrl,
-  jsenvDirectoryClean,
-  jsenvDirectoryUrl,
-  compileServerMetaFileInfo,
-}) => {
-  if (jsenvDirectoryClean) {
-    logger.debug(
-      `Cleaning jsenv directory because jsenvDirectoryClean parameter enabled`,
-    )
-    await ensureEmptyDirectory(jsenvDirectoryUrl)
-  }
-
-  let previousCompileServerMeta
-  try {
-    const source = await readFile(compileServerMetaFileInfo.url)
-    if (source === "") {
-      previousCompileServerMeta = null
-      logger.debug(
-        `compiler server meta file is empty ${compileServerMetaFileInfo.url}`,
-      )
-    } else {
-      previousCompileServerMeta = JSON.parse(source)
-    }
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      previousCompileServerMeta = null
-    } else if (e.name === "SyntaxError") {
-      previousCompileServerMeta = null
-      logger.warn(`Syntax error while parsing ${compileServerMetaFileInfo.url}`)
-    } else {
-      throw e
-    }
-  }
-
-  if (previousCompileServerMeta !== null) {
-    const outDirectoryChanges = getOutDirectoryChanges(
-      previousCompileServerMeta,
-      compileServerMetaFileInfo.data,
-    )
-
-    if (outDirectoryChanges) {
-      if (!jsenvDirectoryClean) {
-        logger.debug(
-          createDetailedMessage(
-            `Cleaning jsenv ${urlToBasename(
-              outDirectoryUrl.slice(0, -1),
-            )} directory because configuration has changed.`,
-            {
-              "changes": outDirectoryChanges.namedChanges
-                ? outDirectoryChanges.namedChanges
-                : `something`,
-              "out directory": urlToFileSystemPath(outDirectoryUrl),
-            },
-          ),
-        )
-      }
-      await ensureEmptyDirectory(outDirectoryUrl)
-    }
-  }
-}
-
-const getOutDirectoryChanges = (
-  previousCompileServerMeta,
-  compileServerMeta,
-) => {
-  const changes = []
-
-  Object.keys(compileServerMeta).forEach((key) => {
-    const now = compileServerMeta[key]
-    const previous = previousCompileServerMeta[key]
-    if (!compareValueJson(now, previous)) {
-      changes.push(key)
-    }
-  })
-
-  if (changes.length > 0) {
-    return { namedChanges: changes }
-  }
-
-  // in case basic comparison from above is not enough
-  if (!compareValueJson(previousCompileServerMeta, compileServerMeta)) {
-    return { somethingChanged: true }
-  }
-
-  return null
-}
-
-const compareValueJson = (left, right) => {
-  return JSON.stringify(left) === JSON.stringify(right)
-}
-
-/**
- * We need to get two things:
- * { projectFileRequestedCallback, trackMainAndDependencies }
- *
- * projectFileRequestedCallback
- * This function will be called by the compile server every time a file inside projectDirectory
- * is requested so that we can build up the dependency tree of any file
- *
- * trackMainAndDependencies
- * This function is meant to be used to implement server sent events in order for a client to know
- * when a given file or any of its dependencies changes in order to implement livereloading.
- * At any time this function can be called with (mainRelativeUrl, { modified, removed, lastEventId })
- * modified is called
- *  - immediatly if lastEventId is passed and mainRelativeUrl or any of its dependencies have
- *  changed since that event (last change is passed to modified if their is more than one change)
- *  - when mainRelativeUrl or any of its dependencies is modified
- * removed is called
- *  - with same spec as modified but when a file is deleted from the filesystem instead of modified
- *
- */
-const setupServerSentEventsForLivereload = ({
-  serverStopCallbackList,
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  livereloadLogLevel,
-  livereloadWatchConfig,
-}) => {
-  const livereloadLogger = createLogger({ logLevel: livereloadLogLevel })
-  const trackerMap = new Map()
-  const projectFileRequested = createCallbackList()
-  const projectFileModified = createCallbackList()
-  const projectFileRemoved = createCallbackList()
-  const projectFileAdded = createCallbackList()
-
-  const projectFileRequestedCallback = (relativeUrl, request) => {
-    if (relativeUrl[0] === "/") {
-      relativeUrl = relativeUrl.slice(1)
-    }
-    const url = `${projectDirectoryUrl}${relativeUrl}`
-
-    if (
-      // Do not watch sourcemap files
-      urlToExtension(url) === ".map" ||
-      // Do not watch compilation asset, watching source file is enough
-      urlIsCompilationAsset(url)
-    ) {
-      return
-    }
-
-    projectFileRequested.notify({ relativeUrl, request })
-  }
-  const watchDescription = {
-    ...livereloadWatchConfig,
-    [jsenvDirectoryRelativeUrl]: false,
-  }
-
-  // wait 100ms to actually start watching
-  // otherwise server starting is delayed by the filesystem scan done in
-  // registerDirectoryLifecycle
-  const timeout = setTimeout(() => {
-    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-      projectDirectoryUrl,
-      {
-        watchDescription,
-        updated: ({ relativeUrl }) => {
-          projectFileModified.notify(relativeUrl)
-        },
-        removed: ({ relativeUrl }) => {
-          projectFileRemoved.notify(relativeUrl)
-        },
-        added: ({ relativeUrl }) => {
-          projectFileAdded.notify(relativeUrl)
-        },
-        keepProcessAlive: false,
-        recursive: true,
-      },
-    )
-    serverStopCallbackList.add(unregisterDirectoryLifecyle)
-  }, 100)
-  serverStopCallbackList.add(() => {
-    clearTimeout(timeout)
-  })
-
-  const startTrackingRoot = (rootFile) => {
-    stopTrackingRoot(rootFile)
-    const set = new Set()
-    set.add(rootFile)
-    const depInfo = {
-      set,
-      cleanup: [],
-    }
-    trackerMap.set(rootFile, depInfo)
-    return depInfo
-  }
-  const addStopTrackingCalback = (rootFile, callback) => {
-    trackerMap.get(rootFile).cleanup.push(callback)
-  }
-  const stopTrackingRoot = (rootFile) => {
-    const depInfo = trackerMap.get(rootFile)
-    if (depInfo) {
-      depInfo.cleanup.forEach((cb) => {
-        cb()
-      })
-      trackerMap.delete(rootFile)
-    }
-  }
-  const isDependencyOf = (file, rootFile) => {
-    const depInfo = trackerMap.get(rootFile)
-    return depInfo && depInfo.set.has(file)
-  }
-  const markAsDependencyOf = (file, rootFile) => {
-    trackerMap.get(rootFile).set.add(file)
-  }
-
-  // each time a file is requested for the first time its dependencySet is computed
-  projectFileRequested.add((requestInfo) => {
-    const rootRelativeUrl = requestInfo.relativeUrl
-    // for now no use case of livereloading on node.js
-    // and for browsers only html file can be main files
-    // this avoid collecting dependencies of non html files that will never be used
-    if (!rootRelativeUrl.endsWith(".html")) {
-      return
-    }
-
-    livereloadLogger.debug(`${rootRelativeUrl} requested -> start tracking it`)
-    // when a file is requested, always rebuild its dependency in case it has changed
-    // since the last time it was requested
-    startTrackingRoot(rootRelativeUrl)
-
-    const removeDependencyRequestedCallback = projectFileRequested.add(
-      ({ relativeUrl, request }) => {
-        if (isDependencyOf(relativeUrl, rootRelativeUrl)) {
-          return
-        }
-        const dependencyReport = reportDependency(
-          relativeUrl,
-          rootRelativeUrl,
-          request,
-        )
-        if (dependencyReport.dependency === false) {
-          livereloadLogger.debug(
-            `${relativeUrl} not a dependency of ${rootRelativeUrl} because ${dependencyReport.reason}`,
-          )
-          return
-        }
-        livereloadLogger.debug(
-          `${relativeUrl} is a dependency of ${rootRelativeUrl} because ${dependencyReport.reason}`,
-        )
-        markAsDependencyOf(relativeUrl, rootRelativeUrl)
-      },
-    )
-    addStopTrackingCalback(rootRelativeUrl, removeDependencyRequestedCallback)
-    const removeRootRemovedCallback = projectFileRemoved.add((relativeUrl) => {
-      if (relativeUrl === rootRelativeUrl) {
-        stopTrackingRoot(rootRelativeUrl)
-        livereloadLogger.debug(`${rootRelativeUrl} removed -> stop tracking it`)
-      }
-    })
-    addStopTrackingCalback(rootRelativeUrl, removeRootRemovedCallback)
-  })
-
-  const trackMainAndDependencies = (
-    mainRelativeUrl,
-    { modified, removed, added },
-  ) => {
-    livereloadLogger.debug(`track ${mainRelativeUrl} and its dependencies`)
-
-    const removeModifiedCallback = projectFileModified.add((relativeUrl) => {
-      if (isDependencyOf(relativeUrl, mainRelativeUrl)) {
-        modified(relativeUrl)
-      }
-    })
-    const removeRemovedCallback = projectFileRemoved.add((relativeUrl) => {
-      if (isDependencyOf(relativeUrl, mainRelativeUrl)) {
-        removed(relativeUrl)
-      }
-    })
-    const removeAddedCallback = projectFileAdded.add((relativeUrl) => {
-      if (isDependencyOf(relativeUrl, mainRelativeUrl)) {
-        added(relativeUrl)
-      }
-    })
-
-    return () => {
-      livereloadLogger.debug(
-        `stop tracking ${mainRelativeUrl} and its dependencies.`,
-      )
-      removeModifiedCallback()
-      removeRemovedCallback()
-      removeAddedCallback()
-    }
-  }
-
-  const reportDependency = (relativeUrl, mainRelativeUrl, request) => {
-    if (relativeUrl === mainRelativeUrl) {
-      return {
-        dependency: true,
-        reason: "it's main",
-      }
-    }
-
-    if ("x-jsenv-execution-id" in request.headers) {
-      const executionId = request.headers["x-jsenv-execution-id"]
-      if (executionId === mainRelativeUrl) {
-        return {
-          dependency: true,
-          reason: "x-jsenv-execution-id request header",
-        }
-      }
-      return {
-        dependency: false,
-        reason: "x-jsenv-execution-id request header",
-      }
-    }
-
-    const { referer } = request.headers
-    if (referer) {
-      // here we know the referer is inside compileServer
-      const refererRelativeUrl = urlToOriginalRelativeUrl(
-        referer,
-        resolveUrl(outDirectoryRelativeUrl, request.origin),
-      )
-      if (refererRelativeUrl) {
-        // search if referer (file requesting this one) is tracked as being a dependency of main file
-        // in that case because the importer is a dependency the importee is also a dependency
-        // eslint-disable-next-line no-unused-vars
-        for (const tracker of trackerMap) {
-          if (
-            tracker[0] === mainRelativeUrl &&
-            tracker[1].set.has(refererRelativeUrl)
-          ) {
-            return {
-              dependency: true,
-              reason: "referer is a dependency",
-            }
-          }
-        }
-      }
-    }
-
-    return {
-      dependency: true,
-      reason: "it was requested",
-    }
-  }
-
-  return {
-    projectFileRequestedCallback,
-    trackMainAndDependencies,
-  }
-}
-
-const createSSEForLivereloadService = ({
-  serverStopCallbackList,
-  outDirectoryRelativeUrl,
-  trackMainAndDependencies,
-}) => {
-  const cache = []
-  const sseRoomLimit = 100
-  const getOrCreateSSERoom = (mainFileRelativeUrl) => {
-    const cacheEntry = cache.find(
-      (cacheEntryCandidate) =>
-        cacheEntryCandidate.mainFileRelativeUrl === mainFileRelativeUrl,
-    )
-    if (cacheEntry) {
-      return cacheEntry.sseRoom
-    }
-
-    const sseRoom = createSSERoom({
-      retryDuration: 2000,
-      historyLength: 100,
-      welcomeEventEnabled: true,
-    })
-
-    // each time something is modified or removed we send event to the room
-    const stopTracking = trackMainAndDependencies(mainFileRelativeUrl, {
-      modified: (relativeUrl) => {
-        sseRoom.sendEvent({ type: "file-modified", data: relativeUrl })
-      },
-      removed: (relativeUrl) => {
-        sseRoom.sendEvent({ type: "file-removed", data: relativeUrl })
-      },
-      added: (relativeUrl) => {
-        sseRoom.sendEvent({ type: "file-added", data: relativeUrl })
-      },
-    })
-
-    const removeSSECleanupCallback = serverStopCallbackList.add(() => {
-      removeSSECleanupCallback()
-      sseRoom.close()
-      stopTracking()
-    })
-    cache.push({
-      mainFileRelativeUrl,
-      sseRoom,
-      cleanup: () => {
-        removeSSECleanupCallback()
-        sseRoom.close()
-        stopTracking()
-      },
-    })
-    if (cache.length >= sseRoomLimit) {
-      const firstCacheEntry = cache.shift()
-      firstCacheEntry.cleanup()
-    }
-    return sseRoom
-  }
-
-  return (request) => {
-    const { accept } = request.headers
-    if (!accept || !accept.includes("text/event-stream")) {
-      return null
-    }
-
-    const fileRelativeUrl = urlToOriginalRelativeUrl(
-      resolveUrl(request.ressource, request.origin),
-      resolveUrl(outDirectoryRelativeUrl, request.origin),
-    )
-
-    const room = getOrCreateSSERoom(fileRelativeUrl)
-    return room.join(request)
-  }
-}
-
-const urlToOriginalRelativeUrl = (url, outDirectoryRemoteUrl) => {
-  if (urlIsInsideOf(url, outDirectoryRemoteUrl)) {
-    const afterCompileDirectory = urlToRelativeUrl(url, outDirectoryRemoteUrl)
-    const fileRelativeUrl = afterCompileDirectory.slice(
-      afterCompileDirectory.indexOf("/") + 1,
-    )
-    return fileRelativeUrl
-  }
-  return new URL(url).pathname.slice(1)
+  jsenvDirectoryRelativeUrl = urlToRelativeUrl(
+    jsenvDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  return jsenvDirectoryRelativeUrl
 }
 
 const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
@@ -1017,161 +524,6 @@ const createSourceFileService = ({
     }
     return filesystemResponse
   }
-}
-
-const createCompileServerMetaFileInfo = ({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  importDefaultExtension,
-
-  preservedUrls,
-  workers,
-  serviceWorkers,
-  compileServerGroupMap,
-  babelPluginMap,
-  replaceProcessEnvNodeEnv,
-  processEnvNodeEnv,
-  env,
-  inlineImportMapIntoHTML,
-  customCompilers,
-  jsenvToolbarInjection,
-  sourcemapMethod,
-  sourcemapExcludeSources,
-}) => {
-  const outDirectoryUrl = resolveUrl(
-    outDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const compileServerMetaFileUrl = resolveUrl(
-    "./__compile_server_meta__.json",
-    outDirectoryUrl,
-  )
-  const jsenvCorePackageFileUrl = resolveUrl(
-    "./package.json",
-    jsenvCoreDirectoryUrl,
-  )
-  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
-  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
-  const customCompilerPatterns = Object.keys(customCompilers)
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMainFileInfo.url,
-    projectDirectoryUrl,
-  )
-  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(
-    sourcemapMappingFileInfo.url,
-    projectDirectoryUrl,
-  )
-  // The object below must list everything that can influence how the
-  // compiled files are generated. So that the cahce for those generated files is
-  // not reused when it should not
-  // In some cases the parameters influences only a subset of files and ideally
-  // this parameter should somehow invalidate a subset of the cache
-  // To keep things simple these parameters currently invalidates the whole cache
-  const compileServerMeta = {
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    importDefaultExtension,
-
-    preservedUrls,
-    workers,
-    serviceWorkers,
-    babelPluginMap: babelPluginMapAsData(babelPluginMap),
-    compileServerGroupMap,
-    customCompilerPatterns,
-    replaceProcessEnvNodeEnv,
-    processEnvNodeEnv,
-    inlineImportMapIntoHTML,
-
-    sourcemapMethod,
-    sourcemapExcludeSources,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-    errorStackRemapping: true,
-
-    // used to consider logic generating files may have changed
-    jsenvCorePackageVersion,
-
-    // impact only HTML files
-    jsenvToolbarInjection,
-    TOOLBAR_INJECTOR_BUILD_URL,
-    EVENT_SOURCE_CLIENT_BUILD_URL,
-    BROWSER_RUNTIME_BUILD_URL,
-
-    env,
-  }
-  return {
-    url: compileServerMetaFileUrl,
-    data: compileServerMeta,
-  }
-}
-
-const babelPluginMapAsData = (babelPluginMap) => {
-  const data = {}
-  Object.keys(babelPluginMap).forEach((key) => {
-    const value = babelPluginMap[key]
-    if (Array.isArray(value)) {
-      data[key] = value
-      return
-    }
-    if (typeof value === "object") {
-      data[key] = {
-        options: value.options,
-      }
-      return
-    }
-    data[key] = value
-  })
-  return data
-}
-
-const createCompileServerMetaService = ({
-  projectDirectoryUrl,
-  outDirectoryUrl,
-  compileServerMetaFileInfo,
-}) => {
-  const isCompileServerMetaFile = (url) => {
-    if (!urlIsInsideOf(url, outDirectoryUrl)) {
-      return false
-    }
-    const afterOutDirectory = url.slice(outDirectoryUrl.length)
-    if (afterOutDirectory.indexOf("/") > -1) {
-      return false
-    }
-    return true
-  }
-
-  // serve from memory
-  return (request) => {
-    const requestUrl = resolveUrl(
-      request.ressource.slice(1),
-      projectDirectoryUrl,
-    )
-    if (
-      isCompileServerMetaFile(requestUrl) ||
-      // allow to request it directly from .jsenv
-      request.ressource === "/.jsenv/__compile_server_meta__.json"
-    ) {
-      const body = JSON.stringify(compileServerMetaFileInfo.data, null, "  ")
-      return {
-        status: 200,
-        headers: {
-          "content-type": urlToContentType(requestUrl),
-          "content-length": Buffer.byteLength(body),
-        },
-        body,
-      }
-    }
-
-    return null
-  }
-}
-
-const readPackage = (packagePath) => {
-  const buffer = readFileSync(packagePath)
-  const string = String(buffer)
-  const packageObject = JSON.parse(string)
-  return packageObject
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

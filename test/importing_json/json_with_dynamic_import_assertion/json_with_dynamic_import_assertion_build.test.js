@@ -1,10 +1,10 @@
-import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
   readFile,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -17,7 +17,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const mainFilename = `main.html`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 const buildDirectoryUrl = resolveUrl(
   buildDirectoryRelativeUrl,
@@ -29,7 +28,7 @@ const { buildMappings } = await buildProject({
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPoints: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.prod.html",
+    [`./${testDirectoryRelativeUrl}main.html`]: "main.prod.html",
   },
 })
 
@@ -55,7 +54,7 @@ const { buildMappings } = await buildProject({
     file: "data.js", // "data.json" becomes "data.js"
     sources: [
       // the source url is theoric because data.js file do not really exist
-      "../../.jsenv/build/best/test/importing_json/json_with_dynamic_import_assertion/data.js?import_type=json",
+      "../../.jsenv/out/test/importing_json/json_with_dynamic_import_assertion/data.js?import_type=json",
     ],
     sourcesContent: [
       // the source content is the fake "data.js" exporting the json

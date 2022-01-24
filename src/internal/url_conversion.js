@@ -150,33 +150,28 @@ const normalizeUrlMappings = (urlMappings, baseUrl) => {
 
 export const serverUrlToCompileInfo = (
   url,
-  { compileServerOrigin, outDirectoryRelativeUrl },
+  { compileServerOrigin, jsenvDirectoryRelativeUrl },
 ) => {
-  const outDirectoryServerUrl = resolveDirectoryUrl(
-    outDirectoryRelativeUrl,
+  const jsenvDirectoryServerUrl = resolveDirectoryUrl(
+    jsenvDirectoryRelativeUrl,
     compileServerOrigin,
   )
   // not inside compile directory -> nothing to compile
-  if (!url.startsWith(outDirectoryServerUrl)) {
+  if (!url.startsWith(jsenvDirectoryServerUrl)) {
     return { insideCompileDirectory: false }
   }
-
-  const afterOutDirectory = url.slice(outDirectoryServerUrl.length)
-
+  const afterJsenvDirectory = url.slice(jsenvDirectoryServerUrl.length)
   // serve files inside /.jsenv/* directly without compilation
   // this is just to allow some files to be written inside outDirectory and read directly
-  // if asked by the client (such as __compile_server_meta__.json)
-  if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
+  if (!afterJsenvDirectory.includes("/") || afterJsenvDirectory[0] === "/") {
     return { insideCompileDirectory: true }
   }
-
-  const parts = afterOutDirectory.split("/")
+  const parts = afterJsenvDirectory.split("/")
   const compileId = parts[0]
   // no compileId, we don't know what to compile (not supposed so happen)
   if (compileId === "") {
     return { insideCompileDirectory: true, compileId: null }
   }
-
   const afterCompileId = parts.slice(1).join("/")
   // note: afterCompileId can be '' (but not supposed to happen)
   return { insideCompileDirectory: true, compileId, afterCompileId }
@@ -260,7 +255,7 @@ const originalProjectUrlFromUrl = (
   {
     projectDirectoryUrl,
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     compileDirectoryRelativeUrl,
   },
 ) => {
@@ -280,7 +275,7 @@ const originalProjectUrlFromUrl = (
     compileDirectoryRelativeUrl = extractCompileDirectoryRelativeUrl({
       serverUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
     })
     if (!compileDirectoryRelativeUrl) {
       return projectUrl
@@ -305,14 +300,14 @@ const originalProjectUrlFromUrl = (
 const extractCompileDirectoryRelativeUrl = ({
   serverUrl,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
 }) => {
   const compileInfo = serverUrlToCompileInfo(serverUrl, {
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
   })
   if (compileInfo.compiledId) {
-    return `${outDirectoryRelativeUrl}${compileInfo.compileId}/`
+    return `${jsenvDirectoryRelativeUrl}${compileInfo.compileId}/`
   }
   return null
 }

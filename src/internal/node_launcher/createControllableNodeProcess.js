@@ -1,15 +1,16 @@
 import { fork } from "node:child_process"
-import { uneval } from "@jsenv/uneval"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { urlToFileSystemPath, assertFilePresence } from "@jsenv/filesystem"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   Abort,
   raceCallbacks,
   createCallbackList,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
+import { uneval } from "@jsenv/uneval"
 
-import { nodeSupportsDynamicImport } from "../node_feature_detection/nodeSupportsDynamicImport.js"
+import { nodeSupportsDynamicImport } from "@jsenv/core/src/internal/features/node_feature_detection/node_feature_detect_dynamic_import.js"
+
 import { createChildProcessOptions } from "./createChildProcessOptions.js"
 import {
   processOptionsFromExecArgv,

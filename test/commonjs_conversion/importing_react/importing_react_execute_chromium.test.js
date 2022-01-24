@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   execute,

@@ -10,7 +10,7 @@ import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_ut
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../node_runtime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { getBrowserRuntimeReport } from "./browser_runtime_report.js"
+import { getBrowserRuntimeProfile } from "./browser_runtime_profile.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -20,7 +20,7 @@ export const executeHtmlFile = async (
     projectDirectoryUrl,
     compileServerOrigin,
     compileServerId,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     page,
 
     // measurePerformance,
@@ -30,6 +30,7 @@ export const executeHtmlFile = async (
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
     transformErrorHook,
+    forceSource,
     forceCompilation,
   },
 ) => {
@@ -56,18 +57,35 @@ export const executeHtmlFile = async (
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
-  const browserRuntimeFeaturesReport = await getBrowserRuntimeReport({
+  const browserRuntimeProfile = await getBrowserRuntimeProfile({
     page,
-    coverageHandledFromOutside,
     compileServerId,
     runtime,
+    // js coverage
+    // When instrumentation CAN be handed by playwright
+    // https://playwright.dev/docs/api/class-chromiumcoverage#chromiumcoveragestartjscoverageoptions
+    // coverageHandledFromOutside is true and "transform-instrument" becomes non mandatory
+    coverageHandledFromOutside,
+    forceSource,
+    forceCompilation,
   })
 
   try {
     let executionResult
-    const { canAvoidCompilation, compileId } = browserRuntimeFeaturesReport
+    const { compileId } = browserRuntimeProfile
     executeOperation.throwIfAborted()
-    if (canAvoidCompilation && !forceCompilation) {
+    if (compileId) {
+      executionResult = await executeCompiledVersion({
+        projectDirectoryUrl,
+        compileServerOrigin,
+        fileRelativeUrl,
+        page,
+        jsenvDirectoryRelativeUrl,
+        compileId,
+        collectCoverage,
+        transformErrorHook,
+      })
+    } else {
       executionResult = await executeSource({
         projectDirectoryUrl,
         compileServerOrigin,
@@ -75,17 +93,6 @@ export const executeHtmlFile = async (
         page,
         collectCoverage,
         coverageIgnorePredicate,
-        transformErrorHook,
-      })
-    } else {
-      executionResult = await executeCompiledVersion({
-        projectDirectoryUrl,
-        compileServerOrigin,
-        fileRelativeUrl,
-        page,
-        outDirectoryRelativeUrl,
-        compileId,
-        collectCoverage,
         transformErrorHook,
       })
     }
@@ -238,7 +245,7 @@ const executeCompiledVersion = async ({
   compileServerOrigin,
   fileRelativeUrl,
   page,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   compileId,
   collectCoverage,
   transformErrorHook,
@@ -259,7 +266,7 @@ const executeCompiledVersion = async ({
     })
   }
 
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
   const compileDirectoryRemoteUrl = resolveUrl(
     compileDirectoryRelativeUrl,
     compileServerOrigin,
@@ -268,11 +275,12 @@ const executeCompiledVersion = async ({
   await page.goto(fileClientUrl, { timeout: 0 })
 
   const executionResult = await page.evaluate(
+    /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      // eslint-disable-next-line no-undef
       return window.__jsenv__.executionResultPromise
     },
+    /* eslint-enable no-undef */
   )
 
   const { fileExecutionResultMap } = executionResult

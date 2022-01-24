@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   execute,
@@ -20,8 +20,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `main.html`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}main.html`
 const imgRelativeUrl = `${testDirectoryRelativeUrl}src/jsenv.png`
 
 await launchBrowsers(
@@ -32,24 +31,23 @@ await launchBrowsers(
     // webkitRuntime, // flaky on webkit don't know why (sometimes throw with "no registration found for JS")
   ],
   async (browserRuntime) => {
-    const { status, namespace, compileServerOrigin, outDirectoryRelativeUrl } =
-      await execute({
-        ...EXECUTE_TEST_PARAMS,
-        jsenvDirectoryRelativeUrl,
-        launchAndExecuteLogLevel: "warn",
-        runtime: browserRuntime,
-        runtimeParams: {
-          ...LAUNCH_TEST_PARAMS,
-          // headless: false,
-        },
-        // stopAfterExecute: false,
-        fileRelativeUrl: htmlFileRelativeUrl,
-        collectCompileServerInfo: true,
-      })
+    const { status, namespace, compileServerOrigin } = await execute({
+      ...EXECUTE_TEST_PARAMS,
+      jsenvDirectoryRelativeUrl,
+      launchAndExecuteLogLevel: "warn",
+      runtime: browserRuntime,
+      runtimeParams: {
+        ...LAUNCH_TEST_PARAMS,
+        // headless: false,
+      },
+      // stopAfterExecute: false,
+      fileRelativeUrl: htmlFileRelativeUrl,
+      collectCompileServerInfo: true,
+    })
     const backgroundUrl =
       browserRuntime === chromiumRuntime
         ? `${compileServerOrigin}/${imgRelativeUrl}`
-        : `${compileServerOrigin}/${outDirectoryRelativeUrl}best/${imgRelativeUrl}`
+        : `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out/${imgRelativeUrl}`
 
     const actual = {
       status,

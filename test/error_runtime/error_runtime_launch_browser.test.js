@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   execute,
@@ -20,8 +20,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `error_runtime.html`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}error_runtime.html`
 
 await launchBrowsers(
   [

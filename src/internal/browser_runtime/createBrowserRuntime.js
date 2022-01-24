@@ -3,7 +3,7 @@
 import { normalizeImportMap } from "@jsenv/importmap/src/normalizeImportMap.js"
 
 // do not use memoize from @jsenv/filesystem to avoid pulling @jsenv/filesystem code into the browser build
-import { fetchUrl } from "../browser_utils/fetch-browser.js"
+import { fetchUrl } from "../browser_utils/fetch_browser.js"
 import { createImportResolverForImportmap } from "../import-resolution/import-resolver-importmap.js"
 import { memoize } from "../memoize.js"
 import { measureAsyncFnPerf } from "../perf_browser.js"
@@ -15,7 +15,7 @@ const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
 export const createBrowserRuntime = async ({
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   compileId,
 }) => {
   const fetchSource = (url, { contentTypeExpected }) => {
@@ -33,10 +33,11 @@ export const createBrowserRuntime = async ({
     return json
   }
 
-  const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const envUrl = String(new URL("env.json", outDirectoryUrl))
-  const { importDefaultExtension } = await fetchJson(envUrl)
-  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileServerMetaUrl = String(
+    new URL("__jsenv_compile_profile__", `${compileServerOrigin}/`),
+  )
+  const { importDefaultExtension } = await fetchJson(compileServerMetaUrl)
+  const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
   // if there is an importmap in the document we use it instead of fetching.
   // systemjs style with systemjs-importmap
   const importmapScript = document.querySelector(

@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { executeTestPlan, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -20,7 +20,7 @@ const testPlan = {
     },
   },
 }
-const depFileCompiledUrl = `${testDirectoryUrl}.jsenv/dev/best/${testDirectoryRelativeUrl}dep.js`
+const depFileCompiledUrl = `${testDirectoryUrl}.jsenv/out/${testDirectoryRelativeUrl}dep.js`
 
 const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,

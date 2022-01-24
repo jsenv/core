@@ -4,6 +4,7 @@ import {
   activateToolbarSection,
   updateIframeOverflowOnParentWindow,
 } from "../util/dom.js"
+import { enableVariant } from "../variant/variant.js"
 
 export const renderToolbarSettings = () => {
   document.querySelector("#settings-button").onclick = toggleSettings
@@ -16,6 +17,18 @@ const toggleSettings = () => {
   } else {
     showSettings()
   }
+}
+
+export const enableWarningStyle = () => {
+  enableVariant(document.querySelector("#settings-button"), {
+    has_warning: "yes",
+  })
+}
+
+export const disableWarningStyle = () => {
+  enableVariant(document.querySelector("#settings-button"), {
+    has_warning: "no",
+  })
 }
 
 export const settingsAreVisible = () => {

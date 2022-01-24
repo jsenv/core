@@ -1,9 +1,9 @@
-import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
   resolveDirectoryUrl,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   execute,
@@ -12,7 +12,6 @@ import {
   webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { launchBrowsers } from "@jsenv/core/test/launchBrowsers.js"
 import {
   EXECUTE_TEST_PARAMS,
@@ -24,12 +23,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const htmlFilename = `import_not_found.html`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}import_not_found.html`
 const mainFileRelativeUrl = `${testDirectoryRelativeUrl}import_not_found.js`
 const importerFileRelativeUrl = `${testDirectoryRelativeUrl}intermediate.js`
-const compileId = COMPILE_ID_BEST
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}foo.js`
 
 await launchBrowsers(
@@ -40,7 +37,7 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const { status, error, outDirectoryRelativeUrl } = await execute({
+    const { status, error } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
@@ -71,7 +68,7 @@ await launchBrowsers(
       return
     }
 
-    const importedFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
+    const importedFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/${importedFileRelativeUrl}`
     const actual = {
       status,
       errorName: error.name,

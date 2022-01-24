@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -14,9 +14,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `import_meta_url.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const test = async ({ babelPluginMap } = {}) => {
+const fileRelativeUrl = `${testDirectoryRelativeUrl}import_meta_url.js`
+const test = async ({ babelPluginMap, runtimeParams } = {}) => {
   const result = await execute({
     ...EXECUTE_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
@@ -24,6 +23,7 @@ const test = async ({ babelPluginMap } = {}) => {
     runtime: nodeRuntime,
     runtimeParams: {
       ...LAUNCH_TEST_PARAMS,
+      ...runtimeParams,
     },
     fileRelativeUrl,
   })
@@ -41,13 +41,13 @@ const test = async ({ babelPluginMap } = {}) => {
     status: "completed",
     namespace: {
       isInstanceOfUrl: false,
-      urlString: `${testDirectoryUrl}${filename}`,
+      urlString: `${testDirectoryUrl}import_meta_url.js`,
     },
   }
   assert({ actual, expected })
 }
 
-// with a non-supported babel plugin
+// compilation because of babel plugin
 {
   const { status, namespace } = await test({
     babelPluginMap: {
@@ -64,7 +64,34 @@ const test = async ({ babelPluginMap } = {}) => {
     status: "completed",
     namespace: {
       isInstanceOfUrl: false,
-      urlString: `${testDirectoryUrl}.jsenv/dev/best/${fileRelativeUrl}`,
+      // still the compiled file because systemjs is needed
+      urlString: `${testDirectoryUrl}.jsenv/out/${fileRelativeUrl}`,
+    },
+  }
+  assert({ actual, expected })
+}
+
+// compilation because of babel plugin + systemjs
+{
+  const { status, namespace } = await test({
+    babelPluginMap: {
+      "not-supported": () => {
+        return {}
+      },
+    },
+    runtimeParams: {
+      moduleOutFormat: "systemjs",
+    },
+  })
+  const actual = {
+    status,
+    namespace,
+  }
+  const expected = {
+    status: "completed",
+    namespace: {
+      isInstanceOfUrl: false,
+      urlString: `${testDirectoryUrl}.jsenv/out/${fileRelativeUrl}`,
     },
   }
   assert({ actual, expected })

@@ -18,13 +18,16 @@ nodeRuntime.launch = async ({
   projectDirectoryUrl,
   compileServerId,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
 
   measurePerformance,
   collectPerformance,
   collectCoverage = false,
   coverageForceIstanbul,
   coverageConfig,
+
+  moduleOutFormat,
+  forceCompilation,
 
   debugPort,
   debugMode,
@@ -36,26 +39,9 @@ nodeRuntime.launch = async ({
   stdout,
   stderr,
   stopAfterExecute,
-  forceSystemJs,
 
   remap = true,
 }) => {
-  if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(
-      `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
-    )
-  }
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(
-      `compileServerOrigin must be a string, got ${compileServerOrigin}`,
-    )
-  }
-  if (typeof outDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`,
-    )
-  }
-
   env = {
     ...env,
     COVERAGE_ENABLED: collectCoverage,
@@ -100,7 +86,7 @@ nodeRuntime.launch = async ({
     const executeParams = {
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
       jsenvCoreDirectoryUrl,
 
       fileRelativeUrl,
@@ -115,45 +101,47 @@ nodeRuntime.launch = async ({
       remap,
     }
 
-    // the computation of runtime features can be cached
-    const nodeFeatures = await getNodeRuntimeReport({
+    // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
+    // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
+    // "transform-instrument" becomes non mandatory
+    const coverageHandledFromOutside =
+      !coverageForceIstanbul && process.env.NODE_V8_COVERAGE
+    const nodeRuntimeReport = await getNodeRuntimeReport({
       runtime: nodeRuntime,
       compileServerId,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
-      // https://nodejs.org/docs/latest-v15.x/api/cli.html#cli_node_v8_coverage_dir
-      // instrumentation CAN be handed by process.env.NODE_V8_COVERAGE
-      // "transform-instrument" becomes non mandatory
-      coverageHandledFromOutside:
-        !coverageForceIstanbul && process.env.NODE_V8_COVERAGE,
-    })
-    const { canAvoidCompilation, compileId, importDefaultExtension } =
-      nodeFeatures
 
+      moduleOutFormat,
+      forceCompilation,
+      coverageHandledFromOutside,
+    })
+    const { compileProfile, compileId } = nodeRuntimeReport
     let executionResult
-    if (canAvoidCompilation && !forceSystemJs) {
+    if (compileId) {
+      executionResult = await requestActionOnChildProcess({
+        signal,
+        actionType:
+          compileProfile.moduleOutFormat === "systemjs"
+            ? "execute-using-systemjs"
+            : "execute-using-dynamic-import",
+        actionParams: {
+          compileId,
+          importDefaultExtension:
+            compileProfile.missingFeatures["import_default_extension"],
+          ...executeParams,
+        },
+      })
+    } else {
       executionResult = await requestActionOnChildProcess({
         signal,
         actionType: "execute-using-dynamic-import",
         actionParams: executeParams,
       })
-    } else {
-      executionResult = await requestActionOnChildProcess({
-        signal,
-        actionType: "execute-using-systemjs",
-        actionParams: {
-          compileId,
-          importDefaultExtension,
-          ...executeParams,
-        },
-      })
     }
-
     executionResult = transformExecutionResult(executionResult, {
       compileServerOrigin,
       projectDirectoryUrl,
     })
-
     return executionResult
   }
 

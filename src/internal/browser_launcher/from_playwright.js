@@ -33,7 +33,8 @@ export const createRuntimeFromPlaywright = ({
 
     projectDirectoryUrl,
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    compileServerId,
+    jsenvDirectoryRelativeUrl,
 
     collectPerformance,
     measurePerformance,
@@ -130,7 +131,8 @@ export const createRuntimeFromPlaywright = ({
 
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      compileServerId,
+      jsenvDirectoryRelativeUrl,
 
       collectPerformance,
       measurePerformance,
@@ -264,7 +266,7 @@ const createExecuteHook = ({
   projectDirectoryUrl,
   compileServerOrigin,
   compileServerId,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
 
   collectPerformance,
   measurePerformance,
@@ -287,7 +289,7 @@ const createExecuteHook = ({
       projectDirectoryUrl,
       compileServerOrigin,
       compileServerId,
-      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl,
 
       page,
       measurePerformance,

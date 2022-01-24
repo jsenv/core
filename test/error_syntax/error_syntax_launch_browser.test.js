@@ -1,9 +1,9 @@
-import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   execute,
@@ -12,7 +12,6 @@ import {
   webkitRuntime,
 } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
@@ -25,15 +24,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `error_syntax.html`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
-const compileId = COMPILE_ID_BEST
-const importedFileRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.js`
-const importedFileUrl = resolveUrl(
-  importedFileRelativeUrl,
-  jsenvCoreDirectoryUrl,
-)
-const importedFilePath = urlToFileSystemPath(importedFileUrl)
+const htmlRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.html`
+const jsRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.js`
+const jsUrl = resolveUrl(jsRelativeUrl, jsenvCoreDirectoryUrl)
+const jsPath = urlToFileSystemPath(jsUrl)
 
 await launchBrowsers(
   [
@@ -43,7 +37,7 @@ await launchBrowsers(
     webkitRuntime,
   ],
   async (browserRuntime) => {
-    const { status, error, outDirectoryRelativeUrl } = await execute({
+    const { status, error } = await execute({
       ...EXECUTE_TEST_PARAMS,
       jsenvDirectoryRelativeUrl,
       launchAndExecuteLogLevel: "off",
@@ -53,12 +47,11 @@ await launchBrowsers(
         // headless: false,
       },
       // stopAfterExecute: false,
-      fileRelativeUrl: htmlFileRelativeUrl,
+      fileRelativeUrl: htmlRelativeUrl,
       collectCompileServerInfo: true,
       ignoreError: true,
     })
-    const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
-
+    const jsCompiledUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/${jsRelativeUrl}`
     if (browserRuntime === chromiumRuntime) {
       const actual = {
         status,
@@ -71,7 +64,6 @@ await launchBrowsers(
       assert({ actual, expected })
       return
     }
-
     const actual = {
       status,
       errorMessage: error.message,
@@ -81,21 +73,21 @@ await launchBrowsers(
       status: "errored",
       errorMessage: `JavaScript module file cannot be parsed
 --- parsing error message ---
-${importedFilePath}: Unexpected token (1:11)
+${jsPath}: Unexpected token (1:11)
 
 > 1 | const a = (
     |            ^
 --- file ---
-${importedFileRelativeUrl}
+${jsRelativeUrl}
 --- file url ---
-${compiledFileUrl}`,
+${jsCompiledUrl}`,
       errorParsingErrror: {
-        message: `${importedFilePath}: Unexpected token (1:11)
+        message: `${jsPath}: Unexpected token (1:11)
 
 > 1 | const a = (
     |            ^`,
         messageHTML: assert.any(String),
-        filename: importedFilePath,
+        filename: jsPath,
         lineNumber: 1,
         columnNumber: 11,
       },

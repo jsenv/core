@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   executeTestPlan,
@@ -70,9 +70,9 @@ const test = async (options = {}) => {
       ...actual[`./${testDirectoryRelativeUrl}file.js`],
       path: `./${testDirectoryRelativeUrl}file.js`,
       s: {
-        0: 2,
-        1: 2,
-        2: 0,
+        0: 3,
+        1: 3,
+        2: 1,
         3: 2,
         4: 2,
         5: 2,

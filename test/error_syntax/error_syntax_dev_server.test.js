@@ -1,14 +1,14 @@
-import { assert } from "@jsenv/assert"
 import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   resolveUrl,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { START_DEV_SERVER_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_DEV_SERVER.js"
-import { openBrowserPage } from "@jsenv/core/test/openBrowserPage.js"
+import { openBrowserPage } from "@jsenv/core/test/open_browser_page.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -16,29 +16,37 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFilename = `error_syntax.html`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const htmlRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.html`
 const importedFileRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.js`
 const importedFileUrl = resolveUrl(
   importedFileRelativeUrl,
   jsenvCoreDirectoryUrl,
 )
 const importedFilePath = urlToFileSystemPath(importedFileUrl)
-const compileId = `best`
-const test = async (params) => {
+const test = async ({ runtimeReport }) => {
   const devServer = await startDevServer({
     ...START_DEV_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
-    ...params,
   })
-  const compiledHtmlFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${htmlFileRelativeUrl}`
-
-  const { browser, pageLogs, pageErrors, executionResult } =
-    await openBrowserPage(compiledHtmlFileUrl, {
-      // headless: false,
+  const { compileId } = await devServer.createCompileIdFromRuntimeReport(
+    runtimeReport,
+  )
+  let urlToVisit
+  if (compileId) {
+    const htmlCompiledRelativeUrl = `${devServer.jsenvDirectoryRelativeUrl}${compileId}/${htmlRelativeUrl}`
+    urlToVisit = `${devServer.origin}/${htmlCompiledRelativeUrl}`
+  } else {
+    urlToVisit = `${devServer.origin}/${htmlRelativeUrl}`
+  }
+  const { browser, page, pageLogs, pageErrors, getJsenvExecutionResult } =
+    await openBrowserPage({
+      // debug: true,
     })
+  await page.goto(urlToVisit)
+  const executionResult = await getJsenvExecutionResult()
   browser.close()
   return {
+    compileId,
     pageLogs,
     pageErrors,
     executionResult,
@@ -46,12 +54,14 @@ const test = async (params) => {
   }
 }
 
-const { pageLogs, pageErrors, executionResult, devServer } = await test({
-  runtimeSupportDuringDev: {
-    firefox: 70,
-  },
-})
-const compiledImportedFileUrl = `${devServer.origin}/${devServer.outDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
+const { pageLogs, pageErrors, executionResult, devServer, compileId } =
+  await test({
+    runtimeReport: {
+      forceCompilation: true,
+      moduleOutFormat: "systemjs",
+    },
+  })
+const compiledImportedFileUrl = `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 const actual = { pageLogs, pageErrors, executionResult }
 const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:11)
 

@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
 import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchUrl } from "../browser_utils/fetch-browser.js"
+import { fetchUrl } from "../browser_utils/fetch_browser.js"
 import { fetchAndEvalUsingFetch } from "../browser_utils/fetchAndEvalUsingFetch.js"
 import { unevalException } from "../unevalException.js"
 import { memoize } from "../memoize.js"
@@ -165,26 +165,27 @@ const onExecutionError = (
 
 const getBrowserRuntime = memoize(async () => {
   const compileServerOrigin = document.location.origin
-  const compileMetaResponse = await fetchUrl(
-    `${compileServerOrigin}/.jsenv/__compile_server_meta__.json`,
+  const compileServerResponse = await fetchUrl(
+    `${compileServerOrigin}/__jsenv_compile_profile__`,
   )
-  const compileMeta = await compileMetaResponse.json()
-  const { outDirectoryRelativeUrl, errorStackRemapping } = compileMeta
-  const outDirectoryUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
-  const afterOutDirectory = document.location.href.slice(outDirectoryUrl.length)
-  const parts = afterOutDirectory.split("/")
+  const compileServerMeta = await compileServerResponse.json()
+  const { jsenvDirectoryRelativeUrl, errorStackRemapping } = compileServerMeta
+  const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
+  const afterJsenvDirectory = document.location.href.slice(
+    jsenvDirectoryServerUrl.length,
+  )
+  const parts = afterJsenvDirectory.split("/")
   const compileId = parts[0]
 
   const browserRuntime = await createBrowserRuntime({
     compileServerOrigin,
-    outDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     compileId,
   })
 
   if (errorStackRemapping && Error.captureStackTrace) {
     const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } =
-      compileMeta
-
+      compileServerMeta
     await fetchAndEvalUsingFetch(
       `${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`,
     )
@@ -195,7 +196,6 @@ const getBrowserRuntime = memoize(async () => {
     const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
       SourceMapConsumer,
     })
-
     const errorTransform = async (error) => {
       // code can throw something else than an error
       // in that case return it unchanged
@@ -204,13 +204,11 @@ const getBrowserRuntime = memoize(async () => {
       error.stack = originalStack
       return error
     }
-
     const executeFile = browserRuntime.executeFile
     browserRuntime.executeFile = (file, options = {}) => {
       return executeFile(file, { errorTransform, ...options })
     }
   }
-
   return browserRuntime
 })
 

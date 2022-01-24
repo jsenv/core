@@ -1,9 +1,9 @@
+import { setupRoutes } from "@jsenv/server"
 import {
   normalizeStructuredMetaMap,
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
-import { setupRoutes } from "@jsenv/server"
 
 import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -13,14 +13,13 @@ import {
 } from "./internal/argUtils.js"
 import {
   startCompileServer,
-  computeOutDirectoryRelativeUrl,
+  assertAndNormalizeJsenvDirectoryRelativeUrl,
 } from "./internal/compiling/startCompileServer.js"
-import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
-
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "./internal/jsenvInternalFiles.js"
+import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -28,7 +27,7 @@ export const startDevServer = async ({
   port,
   ip,
   protocol,
-  http2,
+  http2 = false, // disable by default for now because it is buggy on safari
   certificate,
   privateKey,
   plugins,
@@ -38,7 +37,6 @@ export const startDevServer = async ({
   explorableConfig = jsenvExplorableConfig,
   mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
-  outDirectoryName = "dev",
   jsenvToolbar = true,
   livereloading = true,
   inlineImportMapIntoHTML = true,
@@ -66,7 +64,6 @@ export const startDevServer = async ({
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
   if (mainFileRelativeUrl === undefined) {
     mainFileRelativeUrl = urlToRelativeUrl(
       new URL(
@@ -76,13 +73,10 @@ export const startDevServer = async ({
       projectDirectoryUrl,
     )
   }
-
-  const outDirectoryRelativeUrl = computeOutDirectoryRelativeUrl({
+  jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
-    outDirectoryName,
   })
-
   const compileServer = await startCompileServer({
     signal,
     handleSIGINT,
@@ -103,14 +97,14 @@ export const startDevServer = async ({
       }),
       "jsenv:exploring_json": createExploringJsonService({
         projectDirectoryUrl,
-        outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl,
         mainFileRelativeUrl,
         explorableConfig,
         livereloading,
       }),
       "jsenv:explorables_json": createExplorableJsonService({
         projectDirectoryUrl,
-        outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl,
         explorableConfig,
       }),
     },
@@ -120,7 +114,6 @@ export const startDevServer = async ({
     jsenvEventSourceClientInjection: true,
     jsenvToolbarInjection: jsenvToolbar,
     jsenvDirectoryRelativeUrl,
-    outDirectoryName,
     inlineImportMapIntoHTML,
 
     compileServerCanReadFromFilesystem,
@@ -177,98 +170,94 @@ const createRedirectorService = async ({
 
 const createExploringJsonService = ({
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   explorableConfig,
   livereloading,
   mainFileRelativeUrl,
 }) => {
   return (request) => {
     if (
-      request.ressource === "/.jsenv/exploring.json" &&
-      request.method === "GET"
+      request.ressource !== "/.jsenv/exploring.json" ||
+      request.method !== "GET"
     ) {
-      const data = {
-        projectDirectoryUrl,
-        outDirectoryRelativeUrl,
-        jsenvDirectoryRelativeUrl: urlToRelativeUrl(
-          jsenvCoreDirectoryUrl,
-          projectDirectoryUrl,
-        ),
-        exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
-        sourcemapMainFileRelativeUrl: urlToRelativeUrl(
-          sourcemapMainFileInfo.url,
-          jsenvCoreDirectoryUrl,
-        ),
-        sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
-          sourcemapMappingFileInfo.url,
-          jsenvCoreDirectoryUrl,
-        ),
-        explorableConfig,
-        livereloading,
-      }
-      const json = JSON.stringify(data)
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(json),
-        },
-        body: json,
-      }
+      return null
     }
-    return null
+    const data = {
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
+      sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+        sourcemapMainFileInfo.url,
+        jsenvCoreDirectoryUrl,
+      ),
+      sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+        sourcemapMappingFileInfo.url,
+        jsenvCoreDirectoryUrl,
+      ),
+      explorableConfig,
+      livereloading,
+    }
+    const json = JSON.stringify(data)
+    return {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(json),
+      },
+      body: json,
+    }
   }
 }
 
 const createExplorableJsonService = ({
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   explorableConfig,
 }) => {
   return async (request) => {
     if (
-      request.ressource === "/.jsenv/explorables.json" &&
-      request.method === "GET"
+      request.ressource !== "/.jsenv/explorables.json" ||
+      request.method !== "GET"
     ) {
-      const structuredMetaMapRelativeForExplorable = {}
-      Object.keys(explorableConfig).forEach((explorableGroup) => {
-        const explorableGroupConfig = explorableConfig[explorableGroup]
-        structuredMetaMapRelativeForExplorable[explorableGroup] = {
-          "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
-          ...explorableGroupConfig,
-          [outDirectoryRelativeUrl]: false,
-        }
-      })
-      const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
-        structuredMetaMapRelativeForExplorable,
-        projectDirectoryUrl,
-      )
-      const matchingFileResultArray = await collectFiles({
-        directoryUrl: projectDirectoryUrl,
-        structuredMetaMap: structuredMetaMapForExplorable,
-        predicate: (meta) =>
-          Object.keys(meta).some((explorableGroup) =>
-            Boolean(meta[explorableGroup]),
-          ),
-      })
-      const explorableFiles = matchingFileResultArray.map(
-        ({ relativeUrl, meta }) => ({
-          relativeUrl,
-          meta,
-        }),
-      )
-      const json = JSON.stringify(explorableFiles)
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(json),
-        },
-        body: json,
-      }
+      return null
     }
-    return null
+    const structuredMetaMapRelativeForExplorable = {}
+    Object.keys(explorableConfig).forEach((explorableGroup) => {
+      const explorableGroupConfig = explorableConfig[explorableGroup]
+      structuredMetaMapRelativeForExplorable[explorableGroup] = {
+        "**/.jsenv/": false, // temporary (in theory) to avoid visting .jsenv directory in jsenv itself
+        ...explorableGroupConfig,
+        [jsenvDirectoryRelativeUrl]: false,
+      }
+    })
+    const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
+      structuredMetaMapRelativeForExplorable,
+      projectDirectoryUrl,
+    )
+    const matchingFileResultArray = await collectFiles({
+      directoryUrl: projectDirectoryUrl,
+      structuredMetaMap: structuredMetaMapForExplorable,
+      predicate: (meta) =>
+        Object.keys(meta).some((explorableGroup) =>
+          Boolean(meta[explorableGroup]),
+        ),
+    })
+    const explorableFiles = matchingFileResultArray.map(
+      ({ relativeUrl, meta }) => ({
+        relativeUrl,
+        meta,
+      }),
+    )
+    const json = JSON.stringify(explorableFiles)
+    return {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(json),
+      },
+      body: json,
+    }
   }
 }

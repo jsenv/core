@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import {
   execute,
@@ -19,9 +19,8 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const htmlFilename = `export_missing.html`
-const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}${htmlFilename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}export_missing.html`
 
 await launchBrowsers(
   [
@@ -56,25 +55,24 @@ await launchBrowsers(
         errorMessage: `The requested module './file.js' does not provide an export named 'answer'`,
       }
       assert({ actual, expected })
-      return
+    } else {
+      const actual = {
+        status: result.status,
+        consoleCalls: result.consoleCalls,
+      }
+      const expected = {
+        status: "completed",
+        consoleCalls: [
+          {
+            type: "log",
+            text:
+              process.platform === "win32"
+                ? actual.consoleCalls[0].text
+                : `undefined\n`,
+          },
+        ],
+      }
+      assert({ actual, expected })
     }
-
-    const actual = {
-      status: result.status,
-      consoleCalls: result.consoleCalls,
-    }
-    const expected = {
-      status: "completed",
-      consoleCalls: [
-        {
-          type: "log",
-          text:
-            process.platform === "win32"
-              ? actual.consoleCalls[0].text
-              : `undefined\n`,
-        },
-      ],
-    }
-    assert({ actual, expected })
   },
 )

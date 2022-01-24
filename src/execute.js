@@ -1,6 +1,6 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/generateGroupMap/runtime_support.js"
+import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -61,14 +61,12 @@ export const execute = async ({
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(
       `fileRelativeUrl must be a string, got ${fileRelativeUrl}`,
     )
   }
   fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
-
   if (typeof runtime !== "object") {
     throw new TypeError(`runtime must be an object, got ${runtime}`)
   }
@@ -77,7 +75,6 @@ export const execute = async ({
       `runtime.launch must be a function, got ${runtime.launch}`,
     )
   }
-
   const executeOperation = Abort.startOperation()
   executeOperation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -90,7 +87,6 @@ export const execute = async ({
       )
     })
   }
-
   try {
     const compileServer = await startCompileServer({
       signal: executeOperation.signal,
@@ -99,7 +95,6 @@ export const execute = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      outDirectoryName: "dev",
 
       importDefaultExtension,
 
@@ -133,7 +128,7 @@ export const execute = async ({
         projectDirectoryUrl,
         compileServerOrigin: compileServer.origin,
         compileServerId: compileServer.id,
-        outDirectoryRelativeUrl: compileServer.outDirectoryRelativeUrl,
+        jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
         ...runtimeParams,
       },
       executeParams: {
@@ -161,7 +156,7 @@ export const execute = async ({
 
     if (collectCompileServerInfo) {
       result.compileServerOrigin = compileServer.origin
-      result.outDirectoryRelativeUrl = compileServer.outDirectoryRelativeUrl
+      result.jsenvDirectoryRelativeUrl = compileServer.jsenvDirectoryRelativeUrl
     }
 
     if (result.status === "errored") {

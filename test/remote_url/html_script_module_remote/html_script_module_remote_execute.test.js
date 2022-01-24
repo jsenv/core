@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { execute, chromiumRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -93,7 +93,7 @@ try {
       importMetaUrl,
     }
     const expected = {
-      importMetaUrl: `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}dev/best/${jsenvDirectoryRelativeUrl}.remote/http$3a$2f$2f127.0.0.1$3a9999/file.js`,
+      importMetaUrl: `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out/${jsenvDirectoryRelativeUrl}.remote/http$3a$2f$2f127.0.0.1$3a9999/file.js`,
     }
     assert({ actual, expected })
   }

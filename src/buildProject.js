@@ -1,9 +1,7 @@
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { resolveDirectoryUrl } from "@jsenv/filesystem"
+import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/generateGroupMap/shake_babel_plugin_map.js"
-import { COMPILE_ID_BEST } from "@jsenv/core/src/internal/CONSTANTS.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -13,7 +11,11 @@ import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRo
 import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,
-} from "@jsenv/core/src/internal/generateGroupMap/jsenvRuntimeSupport.js"
+} from "@jsenv/core/src/internal/runtime_support/jsenv_runtime_support.js"
+import {
+  isNodePartOfSupportedRuntimes,
+  isBrowserPartOfSupportedRuntimes,
+} from "@jsenv/core/src/internal/runtime_support/runtime_support.js"
 
 /**
  * Generate optimized version of source files into a directory
@@ -126,19 +128,15 @@ export const buildProject = async ({
       `format must be "systemjs" when importMapInWebWorkers is enabled`,
     )
   }
-
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-  assertentryPoints({ entryPoints })
-
+  assertEntryPoints({ entryPoints })
   if (Object.keys(entryPoints).length === 0) {
     logger.error(`entryPoints is an empty object`)
     return {
       rollupBuilds: {},
     }
   }
-
   assertBuildDirectoryRelativeUrl({ buildDirectoryRelativeUrl })
   const buildDirectoryUrl = resolveDirectoryUrl(
     buildDirectoryRelativeUrl,
@@ -151,7 +149,6 @@ export const buildProject = async ({
 
   const buildOperation = Abort.startOperation()
   buildOperation.addAbortSignal(signal)
-
   if (handleSIGINT) {
     buildOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -162,7 +159,6 @@ export const buildProject = async ({
       )
     })
   }
-
   const compileServer = await startCompileServer({
     signal: buildOperation.signal,
     logLevel: compileServerLogLevel,
@@ -210,12 +206,26 @@ export const buildProject = async ({
     compileServerCanReadFromFilesystem: filesystemCache,
     compileServerCanWriteOnFilesystem: filesystemCache,
   })
-
   buildOperation.addEndCallback(async () => {
     await compileServer.stop(`build cleanup`)
   })
-
-  const { outDirectoryRelativeUrl, origin: compileServerOrigin } = compileServer
+  const node = isNodePartOfSupportedRuntimes(runtimeSupport)
+  const browser = isBrowserPartOfSupportedRuntimes(runtimeSupport)
+  const { compileId, compileProfile } =
+    await compileServer.createCompileIdFromRuntimeReport({
+      env: {
+        browser,
+        node,
+      },
+      name: "jsenv_build",
+      version: "1",
+      runtimeSupport,
+      // "rollup_plugin_jsenv.js" expects to hit the compile server
+      // so we force compilation by adding a fake feature called "force_compilation"
+      // one day we'll test how code behaves if zero transformations is required during
+      // the build and update code as needed
+      forceCompilation: true,
+    })
 
   try {
     const result = await buildUsingRollup({
@@ -224,9 +234,6 @@ export const buildProject = async ({
 
       entryPoints,
       projectDirectoryUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_BEST}/`,
-      jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,
       buildDirectoryUrl,
       buildDirectoryClean,
       assetManifestFile,
@@ -244,19 +251,17 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      babelPluginMap: shakeBabelPluginMap({
-        babelPluginMap: compileServer.babelPluginMap,
-        missingFeatureNames:
-          compileServer.compileServerGroupMap[COMPILE_ID_BEST]
-            .missingFeatureNames,
-      }),
-      runtimeSupport,
       workers,
       serviceWorkers,
       serviceWorkerFinalizer,
       classicWorkers,
       classicServiceWorkers,
-      importMapInWebWorkers,
+
+      node,
+      browser,
+      compileServer,
+      compileProfile,
+      compileId,
 
       urlVersioning,
       lineBreakNormalization,
@@ -287,7 +292,7 @@ export const buildProject = async ({
   }
 }
 
-const assertentryPoints = ({ entryPoints }) => {
+const assertEntryPoints = ({ entryPoints }) => {
   if (typeof entryPoints !== "object") {
     throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
   }

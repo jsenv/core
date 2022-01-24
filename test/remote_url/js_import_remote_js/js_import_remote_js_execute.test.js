@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { execute, chromiumRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -97,7 +97,7 @@ try {
         "./main.js": {
           status: "completed",
           namespace: {
-            url: `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}dev/best/${jsenvDirectoryRelativeUrl}.remote/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
+            url: `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out/${jsenvDirectoryRelativeUrl}.remote/http$3a$2f$2flocalhost$3a9999/constants.js?foo=bar`,
           },
         },
       },

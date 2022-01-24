@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { execute, chromiumRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -84,11 +84,11 @@ const test = async (params) => {
         namespace: {
           namespace: {
             worker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/dev/best/test/workers/workers_complex/worker/worker.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/out/test/workers/workers_complex/worker/worker.js`,
               pingResponse: "pong",
             },
             serviceWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/dev/best/test/workers/workers_complex/service_worker/sw.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/out/test/workers/workers_complex/service_worker/sw.js`,
               inspectResponse: {
                 order: [],
                 generatedUrlsConfig: undefined,

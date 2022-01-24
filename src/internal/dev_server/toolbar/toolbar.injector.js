@@ -1,4 +1,3 @@
-import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
 
 // eslint-disable-next-line no-undef
@@ -8,17 +7,11 @@ const jsenvLogoSvgUrl = new URL("./jsenv-logo.svg", import.meta.url)
 const injectToolbar = async () => {
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
-      window.requestIdleCallback(resolve)
+      window.requestIdleCallback(resolve, { timeout: 400 })
     } else {
       window.requestAnimationFrame(resolve)
     }
   })
-
-  const { jsenvDirectoryRelativeUrl } = await fetchExploringJson()
-  const jsenvDirectoryServerUrl = resolveUrl(
-    jsenvDirectoryRelativeUrl,
-    document.location.origin,
-  )
 
   const placeholder = getToolbarPlaceholder()
 
@@ -43,13 +36,14 @@ const injectToolbar = async () => {
     "border": "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
-  const jsenvToolbarHtmlServerUrl = resolveUrl(
-    TOOLBAR_BUILD_RELATIVE_URL,
-    jsenvDirectoryServerUrl,
-  )
+  const jsenvToolbarHtmlServerUrl = `/${TOOLBAR_BUILD_RELATIVE_URL}`
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", jsenvToolbarHtmlServerUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
+
+  addToolbarEventCallback(iframe, "toolbar_ready", () => {
+    sendCommandToToolbar(iframe, "renderToolbar")
+  })
 
   await iframeLoadedPromise
   iframe.removeAttribute("tabindex")
@@ -150,9 +144,6 @@ const injectToolbar = async () => {
       showToolbarTrigger()
     }
   })
-  addToolbarEventCallback(iframe, "toolbar_ready", () => {
-    sendCommandToToolbar(iframe, "renderToolbar")
-  })
 
   return iframe
 }
@@ -226,10 +217,13 @@ const iframeToLoadedPromise = (iframe) => {
   })
 }
 
-const resolveUrl = (url, baseUrl) => String(new URL(url, baseUrl))
-
 if (document.readyState === "complete") {
   injectToolbar()
 } else {
   window.addEventListener("load", injectToolbar)
+  // document.addEventListener("readystatechange", () => {
+  //   if (document.readyState === "complete") {
+  //     injectToolbar()
+  //   }
+  // })
 }

@@ -12,7 +12,7 @@ const fetchJSON = async (url, options) => {
 const groupPreference = createPreference("group")
 
 const run = async () => {
-  const { projectDirectoryUrl, explorableConfig, outDirectoryRelativeUrl } =
+  const { projectDirectoryUrl, explorableConfig, jsenvDirectoryRelativeUrl } =
     await fetchExploringJson()
 
   const files = await fetchJSON(`/.jsenv/explorables.json`, {
@@ -20,16 +20,18 @@ const run = async () => {
   })
 
   const compileServerOrigin = document.location.origin
-  const outDirectoryUrl = String(
-    new URL(outDirectoryRelativeUrl, compileServerOrigin),
+  const jsenvDirectoryServerUrl = String(
+    new URL(jsenvDirectoryRelativeUrl, compileServerOrigin),
   )
   const documentUrl = document.location.href
   let compileId
 
-  const outDirectoryIndex = documentUrl.indexOf(outDirectoryUrl)
-  if (outDirectoryIndex === 0) {
-    const afterOutDirectory = documentUrl.slice(outDirectoryUrl.length)
-    compileId = afterOutDirectory.split("/")[0]
+  const jsenvDirectoryIndex = documentUrl.indexOf(jsenvDirectoryServerUrl)
+  if (jsenvDirectoryIndex === 0) {
+    const afterJsenvDirectory = documentUrl.slice(
+      jsenvDirectoryServerUrl.length,
+    )
+    compileId = afterJsenvDirectory.split("/")[0]
   } else {
     compileId = null
   }
@@ -134,7 +136,7 @@ const run = async () => {
 
   const urlToVisitFromRelativeUrl = (relativeUrl) => {
     if (compileId) {
-      return `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${relativeUrl}`
+      return `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}${compileId}/${relativeUrl}`
     }
     return `${compileServerOrigin}/${relativeUrl}`
   }

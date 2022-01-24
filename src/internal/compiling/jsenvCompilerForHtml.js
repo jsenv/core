@@ -36,7 +36,7 @@ import {
   visitHtmlAst,
   addHtmlNodeAttribute,
 } from "./compileHtml.js"
-import { generateCompilationAssetUrl } from "./compile-directory/compile-asset.js"
+import { generateCompilationAssetUrl } from "./jsenv_directory/compile_asset.js"
 
 export const compileHtml = async ({
   // cancellationToken,
@@ -46,12 +46,11 @@ export const compileHtml = async ({
   projectDirectoryUrl,
   jsenvRemoteDirectory,
   compileServerOrigin,
-  outDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
 
+  compileProfile,
   compileId,
   babelPluginMap,
-  moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
   jsenvScriptInjection = true,
   jsenvEventSourceClientInjection,
@@ -61,7 +60,7 @@ export const compileHtml = async ({
   sourcemapMethod,
   code,
 }) => {
-  const compileDirectoryUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
   const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
     BROWSER_RUNTIME_BUILD_URL,
     projectDirectoryUrl,
@@ -133,7 +132,7 @@ export const compileHtml = async ({
       specifier,
     })
   }
-  if (moduleOutFormat !== "esmodule") {
+  if (compileProfile.moduleOutFormat !== "esmodule") {
     const ressourceHints = collectRessourceHints(htmlAst)
     await visitRessourceHints({
       ressourceHints,
@@ -141,13 +140,15 @@ export const compileHtml = async ({
     })
   }
   await visitImportmapScript({
-    htmlAst,
     logger,
     url,
     compiledUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    moduleOutFormat,
+
+    compileProfile,
+
+    htmlAst,
     scripts,
     addHtmlMutation,
     addHtmlSourceFile,
@@ -161,9 +162,8 @@ export const compileHtml = async ({
     url,
     compiledUrl,
 
+    compileProfile,
     babelPluginMap,
-    moduleOutFormat,
-    importMetaFormat,
     topLevelAwait,
     sourcemapMethod,
 
@@ -246,13 +246,15 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
 }
 
 const visitImportmapScript = async ({
-  htmlAst,
   logger,
   url,
   compiledUrl,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  moduleOutFormat,
+
+  compileProfile,
+
+  htmlAst,
   scripts,
   addHtmlMutation,
   addHtmlSourceFile,
@@ -280,7 +282,7 @@ const visitImportmapScript = async ({
         scriptInjections: [
           {
             type:
-              moduleOutFormat === "systemjs"
+              compileProfile.moduleOutFormat === "systemjs"
                 ? "systemjs-importmap"
                 : "importmap",
             text: defaultImportMapAsText,
@@ -330,7 +332,7 @@ const visitImportmapScript = async ({
     addHtmlMutation(() => {
       removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
       setHtmlNodeText(firstImportmapScript, importmapAsText)
-      if (moduleOutFormat === "systemjs") {
+      if (compileProfile.moduleOutFormat === "systemjs") {
         const typeAttribute = getHtmlNodeAttributeByName(
           firstImportmapScript,
           "type",
@@ -357,7 +359,7 @@ const visitImportmapScript = async ({
   addHtmlMutation(() => {
     removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
     setHtmlNodeText(firstImportmapScript, importmapAsText)
-    if (moduleOutFormat === "systemjs") {
+    if (compileProfile.moduleOutFormat === "systemjs") {
       const typeAttribute = getHtmlNodeAttributeByName(
         firstImportmapScript,
         "type",
@@ -371,14 +373,13 @@ const visitImportmapScript = async ({
 const visitScripts = async ({
   logger,
   projectDirectoryUrl,
-  compileServerOrigin,
   jsenvRemoteDirectory,
+  compileServerOrigin,
   url,
   compiledUrl,
 
+  compileProfile,
   babelPluginMap,
-  moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
   sourcemapMethod,
 
@@ -398,7 +399,7 @@ const visitScripts = async ({
     if (type === "module") {
       if (src) {
         addHtmlMutation(() => {
-          if (moduleOutFormat === "systemjs") {
+          if (compileProfile.moduleOutFormat === "systemjs") {
             removeHtmlNodeAttribute(script, typeAttribute)
           }
           if (integrityAttribute) {
@@ -406,7 +407,7 @@ const visitScripts = async ({
           }
           removeHtmlNodeAttribute(script, srcAttribute)
           const jsenvMethod =
-            moduleOutFormat === "systemjs"
+            compileProfile.moduleOutFormat === "systemjs"
               ? "executeFileUsingSystemJs"
               : "executeFileUsingDynamicImport"
           let specifier
@@ -442,9 +443,8 @@ const visitScripts = async ({
           compiledUrl: scriptCompiledUrl,
 
           type: "module",
+          compileProfile,
           babelPluginMap,
-          moduleOutFormat,
-          importMetaFormat,
           topLevelAwait,
 
           sourcemapMethod,
@@ -453,12 +453,12 @@ const visitScripts = async ({
       })
       const specifier = `./${urlToRelativeUrl(scriptCompiledUrl, compiledUrl)}`
       addHtmlMutation(() => {
-        if (moduleOutFormat === "systemjs") {
+        if (compileProfile.moduleOutFormat === "systemjs") {
           removeHtmlNodeAttribute(script, typeAttribute)
         }
         removeHtmlNodeAttribute(script, srcAttribute)
         const jsenvMethod =
-          moduleOutFormat === "systemjs"
+          compileProfile.moduleOutFormat === "systemjs"
             ? "executeFileUsingSystemJs"
             : "executeFileUsingDynamicImport"
         setHtmlNodeText(
@@ -531,9 +531,8 @@ const visitScripts = async ({
             compiledUrl: scriptCompiledUrl,
 
             type: "classic",
+            compileProfile,
             babelPluginMap,
-            moduleOutFormat,
-            importMetaFormat,
             topLevelAwait,
 
             sourcemapMethod,
@@ -566,9 +565,8 @@ const visitScripts = async ({
           compiledUrl: scriptCompiledUrl,
 
           type: "classic",
+          compileProfile,
           babelPluginMap,
-          moduleOutFormat,
-          importMetaFormat,
           topLevelAwait,
 
           code: textNode.value,
@@ -591,9 +589,8 @@ const transformHtmlScript = async ({
   compiledUrl,
 
   type,
+  compileProfile,
   babelPluginMap,
-  moduleOutFormat,
-  importMetaFormat,
   topLevelAwait,
 
   code,
@@ -608,8 +605,8 @@ const transformHtmlScript = async ({
       compiledUrl,
 
       babelPluginMap,
-      moduleOutFormat: type === "module" ? moduleOutFormat : "global",
-      importMetaFormat,
+      moduleOutFormat:
+        type === "module" ? compileProfile.moduleOutFormat : "global",
       topLevelAwait: type === "module" ? topLevelAwait : false,
       babelHelpersInjectionAsImport: type === "module" ? undefined : false,
 

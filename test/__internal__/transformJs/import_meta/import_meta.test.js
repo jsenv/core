@@ -1,4 +1,3 @@
-import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
   readFile,
@@ -6,6 +5,7 @@ import {
   urlToRelativeUrl,
   copyFileSystemNode,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -17,8 +17,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const filename = `import_meta.js`
-const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
+const originalFileUrl = resolveUrl(`./import_meta.js`, testDirectoryUrl)
 const originalFileContent = await readFile(originalFileUrl)
 const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
 

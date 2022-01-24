@@ -1,4 +1,4 @@
-import { fetchUrl } from "./fetch-browser.js"
+import { fetchUrl } from "./fetch_browser.js"
 
 export const fetchJson = async (url, options = {}) => {
   const response = await fetchUrl(url, options)

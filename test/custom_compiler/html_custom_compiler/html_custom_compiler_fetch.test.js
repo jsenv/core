@@ -1,16 +1,15 @@
-import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
-import { COMPILE_ID_OTHERWISE } from "@jsenv/core/src/internal/CONSTANTS.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/__internal__/startCompileServer/TEST_PARAMS_COMPILE_SERVER.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/__internal__/compile_server/TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -19,9 +18,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const fileRelativeUrl = `${testDirectoryRelativeUrl}main.html`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-// const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
-const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}out/${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}?t=1`
-// const compiledFileUrl = `${jsenvCoreDirectoryUrl}${compiledFileRelativeUrl}`
 
 let callCount = 0
 const compileServer = await startCompileServer({
@@ -48,6 +44,8 @@ const compileServer = await startCompileServer({
     },
   },
 })
+const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
+const compiledFileRelativeUrl = `${compileServer.jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}?t=1`
 const fileServerUrl = `${compileServer.origin}/${compiledFileRelativeUrl}`
 
 // content correctly inlined in the HTML file

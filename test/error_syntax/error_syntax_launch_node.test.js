@@ -1,9 +1,9 @@
-import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { execute, nodeRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
@@ -18,13 +18,11 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const filename = `error_syntax.js`
-const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}error_syntax.js`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = urlToFileSystemPath(fileUrl)
-const compileId = "best"
 
-const test = async ({ forceSystemJs } = {}) => {
+const test = async ({ runtimeParams } = {}) => {
   const result = await execute({
     ...EXECUTE_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
@@ -32,7 +30,7 @@ const test = async ({ forceSystemJs } = {}) => {
     runtime: nodeRuntime,
     runtimeParams: {
       ...LAUNCH_TEST_PARAMS,
-      forceSystemJs,
+      ...runtimeParams,
     },
     fileRelativeUrl,
     collectCompileServerInfo: true,
@@ -55,11 +53,13 @@ const test = async ({ forceSystemJs } = {}) => {
 
 // with systemjs
 {
-  const { status, error, outDirectoryRelativeUrl } = await test({
-    forceSystemJs: true,
+  const { status, error, jsenvDirectoryRelativeUrl } = await test({
+    runtimeParams: {
+      moduleOutFormat: "systemjs",
+      forceCompilation: true,
+    },
   })
-  const compiledFileUrl = `${jsenvCoreDirectoryUrl}${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
-
+  const compiledFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/${fileRelativeUrl}`
   const actual = {
     status,
     error,

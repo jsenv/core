@@ -1,6 +1,10 @@
-import { scanBrowserRuntimeFeatures } from "../../../browser_feature_detection/browser_feature_detection.js"
+import { scanBrowserRuntimeFeatures } from "../../../features/browser_feature_detection/browser_feature_detection.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant/variant.js"
+import {
+  enableWarningStyle,
+  disableWarningStyle,
+} from "../settings/toolbar.settings.js"
 
 export const renderCompilationInToolbar = ({ compileGroup }) => {
   const browserSupportRootNode = document.querySelector("#browser_support")
@@ -11,19 +15,17 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
 
   scanBrowserRuntimeFeatures().then(
     ({
-      canAvoidCompilation,
-      featuresReport,
-      customCompilerPatterns,
-      missingFeatureNames,
+      jsenvDirectoryRelativeUrl,
       inlineImportMapIntoHTML,
-      outDirectoryRelativeUrl,
+      compileProfile,
       compileId,
+      runtimeReport,
     }) => {
-      const browserSupport = canAvoidCompilation
-        ? inlineImportMapIntoHTML
-          ? "partial"
-          : "full"
-        : "no"
+      const browserSupport = compileId
+        ? "no"
+        : inlineImportMapIntoHTML
+        ? "partial"
+        : "full"
       enableVariant(browserSupportRootNode, {
         browserSupport,
       })
@@ -33,13 +35,9 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
-            `Source files needs to be compiled to be executable in this browser because: ${getBrowserSupportMessage(
+            `Source files needs to be compiled to be executable in this browser because: ${listWhatIsMissing(
               {
-                missingOnly: true,
-                featuresReport,
-                customCompilerPatterns,
-                missingFeatureNames,
-                inlineImportMapIntoHTML,
+                compileProfile,
               },
             )}`,
           )
@@ -50,11 +48,8 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
-            `Source files (except html) can be executed directly in this browser because: ${getBrowserSupportMessage(
+            `Source files (except html) can be executed directly in this browser because: ${listWhatIsSupported(
               {
-                featuresReport,
-                customCompilerPatterns,
-                missingFeatureNames,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -66,11 +61,8 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         ).onclick = () => {
           // eslint-disable-next-line no-alert
           window.alert(
-            `Source files can be executed directly in this browser because: ${getBrowserSupportMessage(
+            `Source files can be executed directly in this browser because: ${listWhatIsSupported(
               {
-                featuresReport,
-                customCompilerPatterns,
-                missingFeatureNames,
                 inlineImportMapIntoHTML,
               },
             )}`,
@@ -78,28 +70,52 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         }
       }
 
-      const filesCompilation = compileGroup.compileId
+      const actualCompileId = compileGroup.compileId
+      const expectedCompiledId = compileId
+      const shouldSwitchCompileId =
+        expectedCompiledId &&
+        actualCompileId &&
+        actualCompileId !== expectedCompiledId
+      const shouldCompile = !actualCompileId && browserSupport === "no"
+      const filesCompilation = shouldSwitchCompileId
+        ? "mismatch"
+        : actualCompileId
         ? "yes"
         : inlineImportMapIntoHTML
         ? "html_only"
         : "no"
+      const hasWarning = shouldCompile || shouldSwitchCompileId
+
       enableVariant(filesCompilationRootNode, {
         filesCompilation,
-        compiled: compileGroup.compileId ? "yes" : "no",
+        compilation_link: shouldSwitchCompileId
+          ? "mismatch"
+          : actualCompileId
+          ? "source"
+          : "compiled",
       })
-      filesCompilationRootNode.querySelector("a.go_to_source_link").onclick =
+      if (filesCompilation === "yes") {
+        document.querySelector(
+          ".files_compilation_text",
+        ).innerHTML = `Files shown are compiled for ${runtimeReport.name}@${runtimeReport.version}`
+      }
+      filesCompilationRootNode.querySelector("a.link_to_source_files").onclick =
         () => {
-          window.parent.location = `/${compileGroup.fileRelativeUrl}`
+          window.parent.location.href = `/${compileGroup.fileRelativeUrl}`
         }
-      filesCompilationRootNode.querySelector("a.go_to_compiled_link").onclick =
-        () => {
-          window.parent.location = `/${outDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
-        }
+      filesCompilationRootNode.querySelector(
+        "a.link_to_compiled_files",
+      ).onclick = () => {
+        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
+      }
+      filesCompilationRootNode.querySelector(
+        "a.link_to_appropriate_files",
+      ).onclick = () => {
+        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`
+      }
 
-      const shouldCompile =
-        filesCompilation !== "yes" && browserSupport === "no"
-
-      if (shouldCompile) {
+      if (hasWarning) {
+        enableWarningStyle()
         document
           .querySelector(".files_compilation_text")
           .setAttribute("data-warning", "")
@@ -110,6 +126,7 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
           .querySelector("#settings-button")
           .setAttribute("data-warning", "")
       } else {
+        disableWarningStyle()
         document
           .querySelector(".files_compilation_text")
           .removeAttribute("data-warning")
@@ -124,63 +141,53 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
   )
 }
 
-const getBrowserSupportMessage = ({
-  missingOnly,
-  featuresReport,
-  customCompilerPatterns,
-  missingFeatureNames,
-  inlineImportMapIntoHTML,
-}) => {
+const listWhatIsSupported = ({ inlineImportMapIntoHTML }) => {
   const parts = []
-
-  if (featuresReport.importmap) {
-    if (!missingOnly) {
-      if (inlineImportMapIntoHTML) {
-        parts.push(`importmaps are supported (only when inlined in html files)`)
-      } else {
-        parts.push(`importmaps are supported`)
-      }
-    }
+  if (inlineImportMapIntoHTML) {
+    parts.push(`importmaps are supported (only when inlined in html files)`)
   } else {
+    parts.push(`importmaps are supported`)
+  }
+  parts.push(`dynamic imports are supported`)
+  parts.push(`top level await is supported`)
+  parts.push(`all features are natively supported`)
+  return `
+- ${parts.join(`
+- `)}`
+}
+
+const listWhatIsMissing = ({ compileProfile }) => {
+  const parts = []
+  const { missingFeatures } = compileProfile
+  if (missingFeatures.importmap) {
     parts.push(`importmaps are not supported`)
   }
-
-  if (featuresReport.dynamicImport) {
-    if (!missingOnly) {
-      parts.push(`dynamic imports are supported`)
-    }
-  } else {
+  if (missingFeatures.dynamicImport) {
     parts.push(`dynamic imports are not supported`)
   }
-
-  if (featuresReport.topLevelAwait) {
-    if (!missingOnly) {
-      parts.push(`top level await is supported`)
-    }
-  } else {
+  if (missingFeatures.topLevelAwait) {
     parts.push(`top level await is not supported`)
   }
-
+  const missingFeatureNames = Object.keys(missingFeatures).filter((name) => {
+    return (
+      name !== "importmap" &&
+      name !== "dynamicImport" &&
+      name !== "topLevelAwait" &&
+      name !== "custom_compiler_patterns"
+    )
+  })
   const missingFeatureCount = missingFeatureNames.length
-  if (missingFeatureCount === 0) {
-    if (!missingOnly) {
-      parts.push(`all features are natively supported`)
-    }
-  } else {
+  if (missingFeatureCount > 0) {
     parts.push(
       `${missingFeatureCount} features are missing: ${missingFeatureNames}`,
     )
   }
-
-  const customCompilerCount = customCompilerPatterns.length
-  if (customCompilerCount === 0) {
-    // no need to talk about something unused
-  } else {
+  const { custom_compiler_patterns } = missingFeatures
+  if (custom_compiler_patterns) {
     parts.push(
-      `${customCompilerCount} custom compilers enabled: ${customCompilerPatterns}`,
+      `${custom_compiler_patterns.length} custom compilers enabled: ${custom_compiler_patterns}`,
     )
   }
-
   return `
 - ${parts.join(`
 - `)}`
