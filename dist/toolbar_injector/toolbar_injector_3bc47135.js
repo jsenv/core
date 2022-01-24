@@ -55,7 +55,7 @@
     return then ? value.then(then) : value;
   }
 
-  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_ff0a0e80.html";
+  var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_b8b4d9c7.html";
 
   function _async(f) {
     return function () {
@@ -258,4 +258,4 @@
 
 })();
 
-//# sourceMappingURL=toolbar_injector_517d1d0d.js.map
+//# sourceMappingURL=toolbar_injector_3bc47135.js.map

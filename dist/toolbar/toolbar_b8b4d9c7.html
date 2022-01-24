@@ -4358,10 +4358,10 @@ html[data-toolbar-visible] #toolbar-trigger {
         var coverageHandledFromOutside = _ref4.coverageHandledFromOutside,
             inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
         var featuresReport = {};
-        featuresReport.import_http = true;
-        featuresReport["transform-instrument"] = coverageHandledFromOutside; // new CSSStyleSheet
+        featuresReport["import_http"] = true;
+        featuresReport["coverage_js"] = coverageHandledFromOutside; // new CSSStyleSheet
 
-        featuresReport.newStylesheet = supportsNewStylesheet(); // importmap
+        featuresReport["new_stylesheet"] = supportsNewStylesheet(); // importmap
         // start testing importmap support first and not in paralell
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
@@ -4380,15 +4380,15 @@ html[data-toolbar-visible] #toolbar-trigger {
           featuresReport.importmap = _supportsImportmap; // dynamic import
 
           return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
-            featuresReport.dynamicImport = _supportsDynamicImpor; // top level await
+            featuresReport["import_dynamic"] = _supportsDynamicImpor; // top level await
 
             return _call$1(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
-              featuresReport.topLevelAwait = _supportsTopLevelAwai; // import assertions
+              featuresReport["top_level_await"] = _supportsTopLevelAwai; // import assertions
 
               return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
-                featuresReport.jsonImportAssertions = _supportsJsonImportAs;
+                featuresReport["import_assertion_type_json"] = _supportsJsonImportAs;
                 return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {
-                  featuresReport.cssImportAssertions = _supportsCssImportAss;
+                  featuresReport["import_assertion_type_css"] = _supportsCssImportAss;
                   return featuresReport;
                 });
               });
@@ -4946,7 +4946,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_e0ec35bc.js.map</script>
+//# sourceMappingURL=toolbar.main_011a9703.js.map</script>
   
 
 </body></html>
