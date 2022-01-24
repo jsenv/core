@@ -10,7 +10,7 @@ import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_ut
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
 import { evalSource } from "../node_runtime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { getBrowserRuntimeReport } from "./browser_runtime_report.js"
+import { getBrowserRuntimeProfile } from "./browser_runtime_profile.js"
 
 export const executeHtmlFile = async (
   fileRelativeUrl,
@@ -55,7 +55,7 @@ export const executeHtmlFile = async (
 
   const coverageHandledFromOutside =
     coveragePlaywrightAPIAvailable && !coverageForceIstanbul
-  const browserRuntimeReport = await getBrowserRuntimeReport({
+  const browserRuntimeProfile = await getBrowserRuntimeProfile({
     page,
     compileServerId,
     runtime,
@@ -68,7 +68,7 @@ export const executeHtmlFile = async (
 
   try {
     let executionResult
-    const { compileId } = browserRuntimeReport
+    const { compileId } = browserRuntimeProfile
     executeOperation.throwIfAborted()
     if (compileId) {
       executionResult = await executeCompiledVersion({

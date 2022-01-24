@@ -1,4 +1,4 @@
-export const getBrowserRuntimeReport = async ({
+export const getBrowserRuntimeProfile = async ({
   page,
   runtime,
   compileServerId,
@@ -13,20 +13,21 @@ export const getBrowserRuntimeReport = async ({
   if (entry) {
     return entry
   }
-  const browserRuntimeFeaturesReport = await page.evaluate(
+  const browserRuntimeProfile = await page.evaluate(
     /* eslint-disable no-undef */
     /* istanbul ignore next */
     async ({ coverageHandledFromOutside }) => {
       await window.readyPromise
-      return window.scanBrowserRuntimeFeatures({
+      const runtimeProfile = await window.scanBrowserRuntimeFeatures({
         coverageHandledFromOutside,
       })
+      return runtimeProfile
     },
     /* eslint-enable no-undef */
     { coverageHandledFromOutside },
   )
-  cache.write(browserRuntimeFeaturesReport)
-  return browserRuntimeFeaturesReport
+  cache.write(browserRuntimeProfile)
+  return browserRuntimeProfile
 }
 
 let currentCacheParams

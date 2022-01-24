@@ -74,4 +74,5 @@ const detectSupportedFeatures = async ({
   // import assertions
   featuresReport.jsonImportAssertions = await supportsJsonImportAssertions()
   featuresReport.cssImportAssertions = await supportsCssImportAssertions()
+  return featuresReport
 }
