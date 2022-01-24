@@ -46,6 +46,9 @@ export const scanNodeRuntimeFeatures = async ({
 
 const detectSupportedFeatures = async ({ coverageHandledFromOutside }) => {
   const featuresReport = {}
+  // Node.js do not support http(s) imports, this information is important
+  // so that we know we cannot use dynamic import
+  featuresReport.import_http = false
   featuresReport["transform-instrument"] = coverageHandledFromOutside
   featuresReport.dynamicImport = await nodeSupportsDynamicImport()
   featuresReport.topLevelAwait = await nodeSupportsTopLevelAwait()

@@ -101,11 +101,10 @@ export const createCompileProfile = ({
           missingFeatures["module_format"] = moduleOutFormat
         }
       } else {
-        const systemJsIsRequired = featuresRelatedToSystemJs.some(
-          (featureName) => {
+        const systemJsIsRequired =
+          featuresRelatedToSystemJs.some((featureName) => {
             return Boolean(missingFeatures[featureName])
-          },
-        )
+          }) || !featuresReport["import_http"]
         moduleOutFormat = systemJsIsRequired ? "systemjs" : "esmodule"
       }
     }

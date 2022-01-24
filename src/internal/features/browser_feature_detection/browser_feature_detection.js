@@ -48,6 +48,7 @@ const detectSupportedFeatures = async ({
   inlineImportMapIntoHTML,
 }) => {
   const featuresReport = {}
+  featuresReport.import_http = true
   featuresReport["transform-instrument"] = coverageHandledFromOutside
   // new CSSStyleSheet
   featuresReport.newStylesheet = supportsNewStylesheet()
