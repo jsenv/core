@@ -30,7 +30,6 @@ export const executeHtmlFile = async (
     coverageForceIstanbul,
     coveragePlaywrightAPIAvailable,
     transformErrorHook,
-    forceCompilation,
   },
 ) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
@@ -71,17 +70,7 @@ export const executeHtmlFile = async (
     let executionResult
     const { compileId } = browserRuntimeReport
     executeOperation.throwIfAborted()
-    if (!compileId && !forceCompilation) {
-      executionResult = await executeSource({
-        projectDirectoryUrl,
-        compileServerOrigin,
-        fileRelativeUrl,
-        page,
-        collectCoverage,
-        coverageIgnorePredicate,
-        transformErrorHook,
-      })
-    } else {
+    if (compileId) {
       executionResult = await executeCompiledVersion({
         projectDirectoryUrl,
         compileServerOrigin,
@@ -90,6 +79,16 @@ export const executeHtmlFile = async (
         jsenvDirectoryRelativeUrl,
         compileId,
         collectCoverage,
+        transformErrorHook,
+      })
+    } else {
+      executionResult = await executeSource({
+        projectDirectoryUrl,
+        compileServerOrigin,
+        fileRelativeUrl,
+        page,
+        collectCoverage,
+        coverageIgnorePredicate,
         transformErrorHook,
       })
     }
@@ -272,11 +271,12 @@ const executeCompiledVersion = async ({
   await page.goto(fileClientUrl, { timeout: 0 })
 
   const executionResult = await page.evaluate(
+    /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      // eslint-disable-next-line no-undef
       return window.__jsenv__.executionResultPromise
     },
+    /* eslint-enable no-undef */
   )
 
   const { fileExecutionResultMap } = executionResult
