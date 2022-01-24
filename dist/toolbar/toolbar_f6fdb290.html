@@ -4311,7 +4311,11 @@ html[data-toolbar-visible] #toolbar-trigger {
       var scanBrowserRuntimeFeatures = _async$1(function () {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref$coverageHandledF = _ref.coverageHandledFromOutside,
-            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF;
+            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
+            _ref$forceCompilation = _ref.forceCompilation,
+            forceCompilation = _ref$forceCompilation === void 0 ? false : _ref$forceCompilation,
+            _ref$forceSource = _ref.forceSource,
+            forceSource = _ref$forceSource === void 0 ? false : _ref$forceSource;
 
         var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
         return _await(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
@@ -4332,7 +4336,9 @@ html[data-toolbar-visible] #toolbar-trigger {
               },
               name: name,
               version: version,
-              featuresReport: featuresReport
+              featuresReport: featuresReport,
+              forceSource: forceSource,
+              forceCompilation: forceCompilation
             };
             return _await(fetchJson(jsenvCompileProfileUrl, {
               method: "POST",
@@ -4946,7 +4952,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_011a9703.js.map</script>
+//# sourceMappingURL=toolbar.main_fb42dc6f.js.map</script>
   
 
 </body></html>
