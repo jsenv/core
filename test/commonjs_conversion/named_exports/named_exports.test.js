@@ -33,6 +33,7 @@ const expected = {
   default: {
     aNumber: 1,
     aString: "foo",
+    aFunction: assert.any(Function),
     nullValue: null,
   },
   nullValue: null,

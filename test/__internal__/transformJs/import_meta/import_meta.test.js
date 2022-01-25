@@ -16,11 +16,6 @@ const test = async (params) => {
   })
   await writeFile(fileDistUrl, code)
 }
-const asObjectWithoutPrototype = (object) => {
-  const objectWithoutPrototype = Object.create(null)
-  Object.assign(objectWithoutPrototype, object)
-  return objectWithoutPrototype
-}
 
 // esmodule
 {
@@ -38,7 +33,7 @@ const asObjectWithoutPrototype = (object) => {
   }
   const expected = {
     // meta contains only url (what is provided by the runtime)
-    meta: asObjectWithoutPrototype({
+    meta: assert.asObjectWithoutPrototype({
       resolve: assert.any(Function),
       url: String(fileDistUrl),
     }),
@@ -90,7 +85,7 @@ const asObjectWithoutPrototype = (object) => {
     typeOfImportMetaDev,
   }
   const expected = {
-    meta: asObjectWithoutPrototype({
+    meta: assert.asObjectWithoutPrototype({
       resolve: assert.any(Function),
       url: String(fileDistUrl),
     }),

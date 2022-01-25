@@ -26,15 +26,19 @@ await buildProject({
 })
 const namespace = await import("./dist/esmodule/file.js")
 const actual = { ...namespace }
+const exportDefault = {
+  answer: 42,
+}
+Object.defineProperty(exportDefault, "__esModule", {
+  value: true,
+})
 const expected = {
-  namedExports: {
-    __moduleExports: {
+  namedExports: Object.freeze(
+    assert.asObjectWithoutPrototype({
+      __moduleExports: exportDefault,
       answer: 42,
-    },
-    answer: 42,
-    default: {
-      answer: 42,
-    },
-  },
+      default: exportDefault,
+    }),
+  ),
 }
 assert({ actual, expected })

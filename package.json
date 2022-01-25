@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "25.4.1",
+  "version": "25.4.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -115,7 +115,7 @@
     "@babel/plugin-transform-react-jsx": "7.16.5",
     "@babel/plugin-transform-typescript": "7.16.1",
     "@babel/preset-env": "7.16.5",
-    "@jsenv/assert": "2.4.1",
+    "@jsenv/assert": "2.5.0",
     "@jsenv/babel-preset": "1.1.2",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/file-size-impact": "12.1.6",
