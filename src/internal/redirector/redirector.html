@@ -13,11 +13,11 @@
       import { scanBrowserRuntimeFeatures } from "../features/browser_feature_detection/browser_feature_detection.js"
 
       const redirect = async () => {
-        const redirectTarget = new URLSearchParams(window.location.search).get(
-          "redirect",
-        )
+        const searchParams = new URLSearchParams(window.location.search)
+        const redirectTarget = searchParams.get("redirect")
+        const forceCompilation = searchParams.get("force_compilation")
         const browserRuntimeProfile = await scanBrowserRuntimeFeatures({
-          forceCompilation: redirectTarget.includes("force_compilation=1"),
+          forceCompilation: forceCompilation === "1",
         })
         const href = `${getDirectoryUrl(
           browserRuntimeProfile,
