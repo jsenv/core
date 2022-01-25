@@ -24,11 +24,11 @@ import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
-const renderToolbar = async ({ exploringConfig }) => {
+const renderToolbar = async ({ exploringJSON }) => {
   const executedFileCompiledUrl = window.parent.location.href
   const compileServerOrigin = window.parent.location.origin
   // this should not block the whole toolbar rendering + interactivity
-  const { jsenvDirectoryRelativeUrl, livereloading } = exploringConfig
+  const { jsenvDirectoryRelativeUrl, livereloading } = exploringJSON
   const compileGroup = getCompileGroup({
     executedFileCompiledUrl,
     jsenvDirectoryRelativeUrl,
@@ -166,25 +166,24 @@ const getCompileGroup = ({
   jsenvDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
-  const outDirectoryServerUrl = String(
-    new URL(jsenvDirectoryRelativeUrl, compileServerOrigin),
-  )
-  if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
+  const jsenvDirectoryServerUrl = new URL(
+    jsenvDirectoryRelativeUrl,
+    compileServerOrigin,
+  ).href
+  if (urlIsInsideOf(executedFileCompiledUrl, jsenvDirectoryServerUrl)) {
     const afterCompileDirectory = urlToRelativeUrl(
       executedFileCompiledUrl,
-      outDirectoryServerUrl,
+      jsenvDirectoryServerUrl,
     )
     const slashIndex = afterCompileDirectory.indexOf("/")
     const fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1)
     return {
       fileRelativeUrl,
-      jsenvDirectoryRelativeUrl,
       compileId: afterCompileDirectory.slice(0, slashIndex),
     }
   }
   return {
     fileRelativeUrl: new URL(executedFileCompiledUrl).pathname.slice(1),
-    jsenvDirectoryRelativeUrl,
     compileId: null,
   }
 }
@@ -230,8 +229,8 @@ window.toolbar = {
   hide: () => hideToolbar(),
 }
 
-addExternalCommandCallback("renderToolbar", ({ exploringConfig }) => {
-  renderToolbar({ exploringConfig })
+addExternalCommandCallback("renderToolbar", (data) => {
+  renderToolbar(data)
 })
 addExternalCommandCallback("showToolbar", () => {
   showToolbar()
