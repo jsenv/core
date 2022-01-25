@@ -20,5 +20,8 @@ export const sameValueInTwoObjects = (object, secondObject) => {
 }
 
 export const sameValuesInTwoArrays = (array, secondArray) => {
-  return array.every((value) => secondArray.includes(value))
+  return (
+    array.length === secondArray.length &&
+    array.every((value) => secondArray.includes(value))
+  )
 }
