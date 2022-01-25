@@ -61,8 +61,9 @@ const readJsenvCoreVersionFromPackageFile = async () => {
     "./package.json",
     jsenvCoreDirectoryUrl,
   )
-  const jsenvCoreVersion = await readFile(jsenvCorePackageFileUrl, {
+  const jsenvCorePackage = await readFile(jsenvCorePackageFileUrl, {
     as: "json",
-  }).version
-  return jsenvCoreVersion
+  })
+  const version = jsenvCorePackage.version
+  return version
 }
