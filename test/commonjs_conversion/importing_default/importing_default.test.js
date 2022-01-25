@@ -24,6 +24,7 @@ await buildProject({
     "**/*.cjs": commonJsToJavaScriptModule,
   },
 })
+// eslint-disable-next-line import/no-unresolved
 const namespace = await import("./dist/esmodule/main.js")
 const actual = { ...namespace }
 const expected = {

@@ -24,6 +24,7 @@ await buildProject({
     "**/file_umd.js": commonJsToJavaScriptModule,
   },
 })
+// eslint-disable-next-line import/no-unresolved
 const namespace = await import("./dist/esmodule/file.js")
 const actual = { ...namespace }
 const exportDefault = {
