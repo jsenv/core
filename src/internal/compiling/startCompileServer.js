@@ -289,6 +289,7 @@ export const startCompileServer = async ({
               sourcemapMappingFileInfo.url,
               projectDirectoryUrl,
             ),
+            availableCompileIds: Object.keys(jsenvDirectory.compileDirectories),
           },
           null,
           "  ",

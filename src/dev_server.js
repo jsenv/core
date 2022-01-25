@@ -6,6 +6,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
+import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
@@ -148,20 +149,45 @@ const createRedirectorService = async ({
       return {
         status: 307,
         headers: {
-          location: `${request.origin}/${redirectorRelativeUrlForProject}?redirect=${redirectTarget}`,
+          location: setUrlSearchParamsDescriptor(
+            `${request.origin}/${redirectorRelativeUrlForProject}`,
+            {
+              redirect: redirectTarget,
+            },
+          ),
         },
       }
     },
+    // compile server (compiled file service to be precised)
+    // is already implementing this redirection when a compile id do not exists
+    // and "redirect" is not a valid compile id
+    // That being said I prefer to keep it to be explicit and shortcircuit the logic
     "/.jsenv/redirect/:rest*": (request) => {
       const redirectTarget = request.ressource.slice("/.jsenv/redirect/".length)
       return {
         status: 307,
         headers: {
-          location: `${
-            request.origin
-          }/${redirectorRelativeUrlForProject}?redirect=${encodeURIComponent(
-            redirectTarget,
-          )}`,
+          location: setUrlSearchParamsDescriptor(
+            `${request.origin}/${redirectorRelativeUrlForProject}`,
+            {
+              redirect: redirectTarget,
+            },
+          ),
+        },
+      }
+    },
+    "/.jsenv/force/:rest*": (request) => {
+      const redirectTarget = request.ressource.slice("/.jsenv/force/".length)
+      return {
+        status: 307,
+        headers: {
+          location: setUrlSearchParamsDescriptor(
+            `${request.origin}/${redirectorRelativeUrlForProject}`,
+            {
+              redirect: redirectTarget,
+              force_compilation: 1,
+            },
+          ),
         },
       }
     },

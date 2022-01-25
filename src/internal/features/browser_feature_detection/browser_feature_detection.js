@@ -14,8 +14,11 @@ export const scanBrowserRuntimeFeatures = async ({
   forceSource = false,
 } = {}) => {
   const jsenvCompileProfileUrl = "/__jsenv_compile_profile__"
-  const { jsenvDirectoryRelativeUrl, inlineImportMapIntoHTML } =
-    await fetchJson(jsenvCompileProfileUrl)
+  const {
+    jsenvDirectoryRelativeUrl,
+    inlineImportMapIntoHTML,
+    availableCompileIds,
+  } = await fetchJson(jsenvCompileProfileUrl)
   const { name, version } = detectBrowser()
   const featuresReport = await detectSupportedFeatures({
     coverageHandledFromOutside,
@@ -42,9 +45,10 @@ export const scanBrowserRuntimeFeatures = async ({
   return {
     jsenvDirectoryRelativeUrl,
     inlineImportMapIntoHTML,
+    availableCompileIds,
+    runtimeReport,
     compileProfile,
     compileId,
-    runtimeReport,
   }
 }
 

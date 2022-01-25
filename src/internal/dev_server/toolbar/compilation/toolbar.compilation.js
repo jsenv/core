@@ -92,7 +92,9 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
           ? "mismatch"
           : actualCompileId
           ? "source"
-          : "compiled",
+          : expectedCompiledId
+          ? "compiled"
+          : "force",
       })
       if (filesCompilation === "yes") {
         document.querySelector(
@@ -106,7 +108,12 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
       filesCompilationRootNode.querySelector(
         "a.link_to_compiled_files",
       ).onclick = () => {
-        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${compileId}/${compileGroup.fileRelativeUrl}`
+        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`
+      }
+      filesCompilationRootNode.querySelector(
+        "a.link_to_compilation_forced_files",
+      ).onclick = () => {
+        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}force/${compileGroup.fileRelativeUrl}`
       }
       filesCompilationRootNode.querySelector(
         "a.link_to_appropriate_files",
