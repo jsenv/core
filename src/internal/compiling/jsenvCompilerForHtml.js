@@ -139,7 +139,7 @@ export const compileHtml = async ({
       addHtmlMutation,
     })
   }
-  await visitImportmapScript({
+  await visitImportmapScripts({
     logger,
     url,
     compiledUrl,
@@ -245,7 +245,7 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
   )
 }
 
-const visitImportmapScript = async ({
+const visitImportmapScripts = async ({
   logger,
   url,
   compiledUrl,
@@ -265,14 +265,15 @@ const visitImportmapScript = async ({
     const type = typeAttribute ? typeAttribute.value : "application/javascript"
     return type === "importmap"
   })
+  const jsenvImportmap = getDefaultImportmap(compiledUrl, {
+    projectDirectoryUrl,
+    compileDirectoryUrl,
+  })
+
   // in case there is no importmap, force the presence
   // so that '@jsenv/core/' are still remapped
   if (importmapScripts.length === 0) {
-    const defaultImportMap = getDefaultImportmap(compiledUrl, {
-      projectDirectoryUrl,
-      compileDirectoryUrl,
-    })
-    const defaultImportMapAsText = JSON.stringify(defaultImportMap, null, "  ")
+    const defaultImportMapAsText = JSON.stringify(jsenvImportmap, null, "  ")
     onHtmlImportmapInfo({
       url: compiledUrl,
       text: defaultImportMapAsText,
@@ -324,6 +325,7 @@ const visitImportmapScript = async ({
       )
       importmap = {}
     }
+    importmap = composeTwoImportMaps(jsenvImportmap, importmap)
     const importmapAsText = JSON.stringify(importmap, null, "  ")
     onHtmlImportmapInfo({
       url: importmapUrl,
@@ -343,10 +345,6 @@ const visitImportmapScript = async ({
     return
   }
 
-  const jsenvImportmap = getDefaultImportmap(compiledUrl, {
-    projectDirectoryUrl,
-    compileDirectoryUrl,
-  })
   const htmlImportmap = JSON.parse(
     getHtmlNodeTextNode(firstImportmapScript).value,
   )
