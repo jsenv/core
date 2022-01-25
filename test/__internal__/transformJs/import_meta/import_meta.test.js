@@ -1,56 +1,102 @@
-import {
-  resolveUrl,
-  readFile,
-  writeFile,
-  urlToRelativeUrl,
-  copyFileSystemNode,
-} from "@jsenv/filesystem"
+import { readFile, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(
-  testDirectoryUrl,
-  jsenvCoreDirectoryUrl,
-)
-const originalFileUrl = resolveUrl(`./import_meta.js`, testDirectoryUrl)
-const originalFileContent = await readFile(originalFileUrl)
-const importMetaEnvFileRelativeUrl = `${testDirectoryRelativeUrl}env.js`
+const fileUrl = new URL(`./import_meta.js`, import.meta.url)
+const fileDistUrl = new URL("./dist/import_meta.js", import.meta.url)
+const originalFileContent = await readFile(fileUrl)
+const test = async (params) => {
+  const { code } = await transformJs({
+    ...TRANSFORM_JS_TEST_PARAMS,
+    code: originalFileContent,
+    url: String(fileUrl),
+    ...params,
+  })
+  await writeFile(fileDistUrl, code)
+}
+const asObjectWithoutPrototype = (object) => {
+  const objectWithoutPrototype = Object.create(null)
+  Object.assign(objectWithoutPrototype, object)
+  return objectWithoutPrototype
+}
 
 // esmodule
 {
-  const { code } = await transformJs({
-    ...TRANSFORM_JS_TEST_PARAMS,
+  await test({
     moduleOutFormat: "esmodule",
-    importMetaEnvFileRelativeUrl,
-    code: originalFileContent,
-    url: originalFileUrl,
   })
-  const distFileUrl = resolveUrl("dist/file.js", testDirectoryUrl)
-  const envDistFileUrl = resolveUrl("dist/env.js", testDirectoryUrl)
-  await writeFile(distFileUrl, code)
-  await copyFileSystemNode({
-    from: resolveUrl(importMetaEnvFileRelativeUrl, jsenvCoreDirectoryUrl),
-    to: envDistFileUrl,
-    overwrite: true,
+  const { meta, url, urlDestructured, typeOfImportMetaDev } = await import(
+    fileDistUrl
+  )
+  const actual = {
+    meta,
+    url,
+    urlDestructured,
+    typeOfImportMetaDev,
+  }
+  const expected = {
+    // meta contains only url (what is provided by the runtime)
+    meta: asObjectWithoutPrototype({
+      resolve: assert.any(Function),
+      url: String(fileDistUrl),
+    }),
+    url: String(fileDistUrl),
+    urlDestructured: String(fileDistUrl),
+    typeOfImportMetaDev: "undefined",
+  }
+  assert({ actual, expected })
+}
+
+// systemjs
+{
+  await test({
+    moduleOutFormat: "systemjs",
   })
-  const result = await nodeImportEsModuleBuild({
-    projectDirectoryUrl: jsenvCoreDirectoryUrl,
-    testDirectoryRelativeUrl,
-    jsFileRelativeUrl: "dist/file.js",
-  })
-  const actual = result.namespace
+  await import("systemjs/dist/system-node.cjs")
+  const { meta, url, urlDestructured, typeOfImportMetaDev } =
+    await global.System.import("./dist/import_meta.js", import.meta.url)
+  const actual = {
+    meta,
+    url,
+    urlDestructured,
+    typeOfImportMetaDev,
+  }
   const expected = {
     meta: {
-      // meta contains only url (what is provided by the runtime)
-      url: distFileUrl,
+      url: String(fileDistUrl),
+      resolve: assert.any(Function),
     },
-    url: distFileUrl,
-    urlDestructured: distFileUrl,
+    url: String(fileDistUrl),
+    urlDestructured: String(fileDistUrl),
+    typeOfImportMetaDev: "undefined",
+  }
+  assert({ actual, expected })
+}
+
+// global
+{
+  await test({
+    moduleOutFormat: "global",
+  })
+  const { meta, url, urlDestructured, typeOfImportMetaDev } = await import(
+    fileDistUrl
+  )
+  const actual = {
+    meta,
+    url,
+    urlDestructured,
+    typeOfImportMetaDev,
+  }
+  const expected = {
+    meta: asObjectWithoutPrototype({
+      resolve: assert.any(Function),
+      url: String(fileDistUrl),
+    }),
+    url: String(fileDistUrl),
+    urlDestructured: String(fileDistUrl),
+    typeOfImportMetaDev: "undefined",
   }
   assert({ actual, expected })
 }

@@ -12,10 +12,10 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
     addDefault,
     addNamed,
   } = require("@babel/helper-module-imports")
-  const { parseExpression } = require("@babel/parser")
   let babelState
   const jsValueToAst = (jsValue) => {
-    const valueAst = parseExpression(jsValue, babelState.opts)
+    const { parseExpression } = require("@babel/parser")
+    const valueAst = parseExpression(jsValue, babelState.parserOpts)
     return valueAst
   }
   const visitImportMetaProperty = ({
@@ -23,51 +23,44 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
     replaceWithImport,
     replaceWithValue,
   }) => {
-    if (importMetaPropertyName === "url") {
-      if (importMetaFormat === "esmodule") {
-        // keep native version
-        return
-      }
-      if (importMetaFormat === "systemjs") {
-        // systemjs will handle it
-        return
-      }
-      if (importMetaFormat === "commonjs") {
+    if (importMetaFormat === "esmodule") {
+      // keep native version
+      return
+    }
+    if (importMetaFormat === "systemjs") {
+      // systemjs will handle it
+      return
+    }
+    if (importMetaFormat === "commonjs") {
+      if (importMetaPropertyName === "url") {
         replaceWithImport({
           from: `@jsenv/core/helpers/import-meta/import-meta-url-commonjs.js`,
         })
         return
       }
-      if (importMetaFormat === "global") {
+      if (importMetaPropertyName === "resolve") {
+        throw createParseError({
+          message: `import.meta.resolve() not supported with commonjs format`,
+        })
+      }
+      replaceWithValue(undefined)
+      return
+    }
+    if (importMetaFormat === "global") {
+      if (importMetaPropertyName === "url") {
         replaceWithImport({
           from: `@jsenv/core/helpers/import-meta/import-meta-url-global.js`,
         })
         return
       }
-      return
-    }
-    if (importMetaPropertyName === "resolve") {
-      if (importMetaFormat === "esmodule") {
-        // keep native version
-        return
-      }
-      if (importMetaFormat === "systemjs") {
-        // systemjs will handle it
-        return
-      }
-      if (importMetaFormat === "commonjs") {
-        throw createParseError({
-          message: `import.meta.resolve() not supported with commonjs format`,
-        })
-      }
-      if (importMetaFormat === "global") {
+      if (importMetaPropertyName === "resolve") {
         throw createParseError({
           message: `import.meta.resolve() not supported with global format`,
         })
       }
+      replaceWithValue(undefined)
       return
     }
-    replaceWithValue(undefined)
   }
 
   return {
@@ -76,31 +69,6 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
     pre: (state) => {
       babelState = state
     },
-
-    //  visitor: {
-    //     Program(programPath) {
-    //       const paths = []
-    //       programPath.traverse({
-    //         MetaProperty(metaPropertyPath) {
-    //           const metaPropertyNode = metaPropertyPath.node
-    //           if (!metaPropertyNode.meta) {
-    //             return
-    //           }
-    //           if (metaPropertyNode.meta.name !== "import") {
-    //             return
-    //           }
-    //           if (metaPropertyNode.property.name !== "meta") {
-    //             return
-    //           }
-    //           paths.push(metaPropertyPath)
-    //         },
-    //       })
-
-    //       const importAst = addNamespace(programPath, importMetaSpecifier)
-    //       paths.forEach((path) => {
-    //         path.replaceWith(importAst)
-    //       })
-    //     },
 
     visitor: {
       Program(programPath) {

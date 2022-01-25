@@ -59,8 +59,7 @@ const sendActionFailed = (error) => {
   sendToParent(
     ACTION_RESPONSE_EVENT_NAME,
     // process.send algorithm does not send non enumerable values
-    // because it works with JSON.stringify I guess so use uneval
-
+    // so use @jsenv/uneval
     uneval(
       {
         status: ACTION_RESPONSE_STATUS_FAILED,
@@ -91,7 +90,6 @@ const sendToParent = (type, data) => {
   if (!process.connected) {
     return
   }
-
   // this can keep process alive longer than expected
   // when source is a long string.
   // It means node process may stay alive longer than expected
@@ -111,11 +109,9 @@ const onceProcessMessage = (type, callback) => {
       callback(eval(`(${event.data})`))
     }
   }
-
   const removeListener = () => {
     process.removeListener("message", listener)
   }
-
   process.on("message", listener)
   return removeListener
 }

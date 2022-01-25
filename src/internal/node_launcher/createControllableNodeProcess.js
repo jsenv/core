@@ -277,7 +277,6 @@ export const createControllableNodeProcess = async ({
 
 const sendToProcess = async (childProcess, type, data) => {
   const source = uneval(data, { functionAllowed: true })
-
   return new Promise((resolve, reject) => {
     childProcess.send({ type, data: source }, (error) => {
       if (error) {
@@ -295,12 +294,10 @@ const installProcessOutputListener = (childProcess, callback) => {
     callback({ type: "log", text: String(chunk) })
   }
   childProcess.stdout.on("data", stdoutDataCallback)
-
   const stdErrorDataCallback = (chunk) => {
     callback({ type: "error", text: String(chunk) })
   }
   childProcess.stderr.on("data", stdErrorDataCallback)
-
   return () => {
     childProcess.stdout.removeListener("data", stdoutDataCallback)
     childProcess.stderr.removeListener("data", stdoutDataCallback)

@@ -101,9 +101,7 @@ export const transformJs = async ({
     ...getMinimalBabelPluginMap(),
     "transform-import-meta": [
       babelPluginTransformImportMeta,
-      {
-        importMetaFormat,
-      },
+      { importMetaFormat },
     ],
     ...babelPluginMap,
     ...(babelHelpersInjectionAsImport
