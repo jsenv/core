@@ -1,16 +1,11 @@
 import { SourceMap } from "node:module"
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
-import { buildProject } from "@jsenv/core"
+import { buildProject, importUsingChildProcess } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  NODE_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
-
-import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -48,12 +43,10 @@ await buildProject({
 
 // top level await not supported in node 13.8 for now (SourceMap test because added in 13.7)
 if (SourceMap) {
-  const { namespace } = await nodeImportEsModuleBuild({
-    ...NODE_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    topLevelAwait: true,
-  })
-
+  const namespace = await importUsingChildProcess(
+    new URL("./dist/esmodule/main.js", import.meta.url),
+    { commandLineOptions: ["--experimental-top-level-await"] },
+  )
   const actual = namespace
   const expected = { default: 42 }
   assert({ actual, expected })

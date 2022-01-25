@@ -15,6 +15,7 @@ export const importUsingChildProcess = async (
     stderr,
   } = {},
 ) => {
+  fileUrl = String(fileUrl)
   const result = await launchAndExecute({
     stopAfterExecute: true,
     fileRelativeUrl: String(fileUrl),

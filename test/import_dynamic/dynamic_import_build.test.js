@@ -1,15 +1,10 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import {
-  GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  NODE_IMPORT_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
+import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
-
-import { nodeImportEsModuleBuild } from "@jsenv/core/test/nodeImportEsModuleBuild.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -64,14 +59,10 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
   })
   const mainJsFileBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}dynamic_import.js`]
-
-  const { namespace } = await nodeImportEsModuleBuild({
-    ...NODE_IMPORT_BUILD_TEST_PARAMS,
-    testDirectoryRelativeUrl,
-    jsFileRelativeUrl: `./dist/esmodule/${mainJsFileBuildRelativeUrl}`,
-  })
-
-  const actual = namespace
+  const namespace = await import(
+    `./dist/esmodule/${mainJsFileBuildRelativeUrl}`
+  )
+  const actual = { ...namespace }
   const expected = { default: 42 }
   assert({ actual, expected })
 }
