@@ -185,6 +185,10 @@ const createExploringJsonService = ({
     const data = {
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
+      jsenvCoreDirectoryRelativeUrl: urlToRelativeUrl(
+        jsenvCoreDirectoryUrl,
+        projectDirectoryUrl,
+      ),
       exploringHtmlFileRelativeUrl: mainFileRelativeUrl,
       sourcemapMainFileRelativeUrl: urlToRelativeUrl(
         sourcemapMainFileInfo.url,

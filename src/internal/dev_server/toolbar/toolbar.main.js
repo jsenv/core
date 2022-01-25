@@ -1,7 +1,6 @@
 import { urlIsInsideOf } from "@jsenv/filesystem/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 
-import { fetchExploringJson } from "../exploring/fetchExploringJson.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import "./focus/toolbar.focus.js"
 import {
@@ -25,11 +24,10 @@ import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 
-const renderToolbar = async () => {
+const renderToolbar = async ({ exploringConfig }) => {
   const executedFileCompiledUrl = window.parent.location.href
   const compileServerOrigin = window.parent.location.origin
   // this should not block the whole toolbar rendering + interactivity
-  const exploringConfig = await fetchExploringJson()
   const { jsenvDirectoryRelativeUrl, livereloading } = exploringConfig
   const compileGroup = getCompileGroup({
     executedFileCompiledUrl,
@@ -228,13 +226,12 @@ const sendEventToParent = (name, data) => {
 }
 
 window.toolbar = {
-  render: renderToolbar,
   show: showToolbar,
   hide: () => hideToolbar(),
 }
 
-addExternalCommandCallback("renderToolbar", () => {
-  renderToolbar()
+addExternalCommandCallback("renderToolbar", ({ exploringConfig }) => {
+  renderToolbar({ exploringConfig })
 })
 addExternalCommandCallback("showToolbar", () => {
   showToolbar()

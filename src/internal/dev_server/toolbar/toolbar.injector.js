@@ -1,3 +1,4 @@
+import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
 import { setAttributes, setStyles } from "./util/dom.js"
 
 // eslint-disable-next-line no-undef
@@ -12,7 +13,7 @@ const injectToolbar = async () => {
       window.requestAnimationFrame(resolve)
     }
   })
-
+  const exploringJSON = await fetchExploringJson()
   const placeholder = getToolbarPlaceholder()
 
   const iframe = document.createElement("iframe")
@@ -36,13 +37,20 @@ const injectToolbar = async () => {
     "border": "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
-  const jsenvToolbarHtmlServerUrl = `/${TOOLBAR_BUILD_RELATIVE_URL}`
+  const jsenvCoreDirectoryServerUrl = new URL(
+    exploringJSON.jsenvCoreDirectoryRelativeUrl,
+    document.location.origin,
+  ).href
+  const jsenvToolbarHtmlServerUrl = new URL(
+    TOOLBAR_BUILD_RELATIVE_URL,
+    jsenvCoreDirectoryServerUrl,
+  )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", jsenvToolbarHtmlServerUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
 
   addToolbarEventCallback(iframe, "toolbar_ready", () => {
-    sendCommandToToolbar(iframe, "renderToolbar")
+    sendCommandToToolbar(iframe, "renderToolbar", { exploringJSON })
   })
 
   await iframeLoadedPromise
