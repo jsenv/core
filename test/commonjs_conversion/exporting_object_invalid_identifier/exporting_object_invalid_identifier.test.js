@@ -1,11 +1,7 @@
-import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
-import {
-  buildProject,
-  commonJsToJavaScriptModule,
-  importUsingChildProcess,
-} from "@jsenv/core"
+import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
@@ -29,18 +25,20 @@ await buildProject({
   },
 })
 const namespace = await import("./dist/esmodule/main.js")
-const actual = namespace
+const asObjectWithoutPrototype = (object) => {
+  const objectWithoutPrototype = Object.create(null)
+  Object.assign(objectWithoutPrototype, object)
+  return objectWithoutPrototype
+}
+const actual = { ...namespace }
+const exportDefault = { "a": 42, ")": "ooops, this is an invalid identifier" }
 const expected = {
-  all: {
-    __moduleExports: {
-      "a": 42,
-      ")": "ooops, this is an invalid identifier",
-    },
-    a: 42,
-    default: {
-      "a": 42,
-      ")": "ooops, this is an invalid identifier",
-    },
-  },
+  all: Object.freeze(
+    asObjectWithoutPrototype({
+      __moduleExports: exportDefault,
+      a: 42,
+      default: exportDefault,
+    }),
+  ),
 }
 assert({ actual, expected })
