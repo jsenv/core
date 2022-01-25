@@ -983,7 +983,7 @@
       /* eslint-env browser */
 
 
-      function _await$8(value, then, direct) {
+      function _await$9(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1009,7 +1009,7 @@
         };
       }
 
-      function _call$2(body, then, direct) {
+      function _call$1(body, then, direct) {
         if (direct) {
           return then ? then(body()) : body();
         }
@@ -1106,7 +1106,7 @@
         }
 
         xhr.send(body);
-        return _await$8(headersPromise, function () {
+        return _await$9(headersPromise, function () {
           // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
           var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
           var responseStatus = xhr.status;
@@ -1114,7 +1114,7 @@
           var responseHeaders = getHeadersFromXHR(xhr);
 
           var readBody = function readBody() {
-            return _await$8(bodyPromise, function () {
+            return _await$9(bodyPromise, function () {
               var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
               if (status === 0) {
@@ -1130,7 +1130,7 @@
           };
 
           var text = function text() {
-            return _call$2(readBody, function (_ref2) {
+            return _call$1(readBody, function (_ref2) {
               var responseBody = _ref2.responseBody,
                   responseBodyType = _ref2.responseBodyType;
 
@@ -1147,7 +1147,7 @@
           };
 
           var json = function json() {
-            return _call$2(text, JSON.parse);
+            return _call$1(text, JSON.parse);
           };
 
           var blob = _async$8(function () {
@@ -1155,7 +1155,7 @@
               throw new Error("blob not supported");
             }
 
-            return _call$2(readBody, function (_ref3) {
+            return _call$1(readBody, function (_ref3) {
               var responseBody = _ref3.responseBody,
                   responseBodyType = _ref3.responseBodyType;
 
@@ -1180,10 +1180,10 @@
           });
 
           var arrayBuffer = function arrayBuffer() {
-            return _call$2(readBody, function (_ref4) {
+            return _call$1(readBody, function (_ref4) {
               var responseBody = _ref4.responseBody,
                   responseBodyType = _ref4.responseBodyType;
-              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$2(blob, blobToArrayBuffer);
+              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
             });
           };
 
@@ -1192,7 +1192,7 @@
               throw new Error("formData not supported");
             }
 
-            return _call$2(text, textToFormData);
+            return _call$1(text, textToFormData);
           });
 
           return {
@@ -1419,7 +1419,7 @@
 
       var _excluded = ["mode"];
 
-      function _await$7(value, then, direct) {
+      function _await$8(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1452,7 +1452,7 @@
             mode = _ref$mode === void 0 ? "cors" : _ref$mode,
             options = _objectWithoutProperties(_ref, _excluded);
 
-        return _await$7(window.fetch(url, _objectSpread2({
+        return _await$8(window.fetch(url, _objectSpread2({
           mode: mode
         }, options)), function (response) {
           return {
@@ -1489,7 +1489,7 @@
 
       var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-      function _await$6(value, then, direct) {
+      function _await$7(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1517,8 +1517,8 @@
 
       var fetchJson = _async$6(function (url) {
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        return _await$6(fetchUrl(url, options), function (response) {
-          return _await$6(response.json());
+        return _await$7(fetchUrl(url, options), function (response) {
+          return _await$7(response.json());
         });
       });
       /*
@@ -1805,7 +1805,7 @@
         return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
       };
 
-      function _await$5(value, then, direct) {
+      function _await$6(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1866,7 +1866,7 @@
 
         document.body.appendChild(importmapScript);
         return _catch$4(function () {
-          return _await$5(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+          return _await$6(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
             document.body.removeChild(importmapScript);
             var supported = window.__jsenv_runtime_test_importmap__;
             delete window.__jsenv_runtime_test_importmap__;
@@ -1878,7 +1878,7 @@
         });
       });
 
-      function _await$4(value, then, direct) {
+      function _await$5(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1921,8 +1921,8 @@
       var supportsDynamicImport = _async$4(function () {
         var moduleSource = asBase64Url("export default 42");
         return _catch$3(function () {
-          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$4(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+          return _await$5(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$5(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
               delete window.__jsenv_runtime_test_dynamic_import__;
               return namespace.default === 42;
             });
@@ -1932,7 +1932,7 @@
         });
       });
 
-      function _await$3(value, then, direct) {
+      function _await$4(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1959,8 +1959,8 @@
       }
 
       var supportsTopLevelAwait = function supportsTopLevelAwait() {
-        return _await$3(_catch$2(function () {
-          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+        return _await$4(_catch$2(function () {
+          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
             var supported = window.__jsenv_runtime_test_top_level_await__ === 42;
             delete window.__jsenv_runtime_test_top_level_await__;
             return supported;
@@ -1970,7 +1970,7 @@
         }));
       };
 
-      function _await$2(value, then, direct) {
+      function _await$3(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -2014,8 +2014,8 @@
         var jsonBase64Url = asBase64Url("42", "application/json");
         var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\n  export default data"));
         return _catch$1(function () {
-          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$2(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$3(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
               var supported = namespace.default === 42;
               delete window.__jsenv_runtime_test_json_import_assertion__;
               return supported;
@@ -2026,7 +2026,7 @@
         });
       });
 
-      function _await$1(value, then, direct) {
+      function _await$2(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -2070,8 +2070,8 @@
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
         var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\n  export default css"));
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$2(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
               return namespace.default instanceof CSSStyleSheet;
             });
           });
@@ -2090,7 +2090,7 @@
         }
       };
 
-      function _await(value, then, direct) {
+      function _await$1(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -2116,7 +2116,7 @@
         };
       }
 
-      function _call$1(body, then, direct) {
+      function _call(body, then, direct) {
         if (direct) {
           return then ? then(body()) : body();
         }
@@ -2139,15 +2139,16 @@
             forceSource = _ref$forceSource === void 0 ? false : _ref$forceSource;
 
         var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
-        return _await(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
+        return _await$1(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
           var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
-              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML;
+              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
+              availableCompileIds = _ref2.availableCompileIds;
 
           var _detectBrowser = detectBrowser(),
               name = _detectBrowser.name,
               version = _detectBrowser.version;
 
-          return _await(detectSupportedFeatures({
+          return _await$1(detectSupportedFeatures({
             coverageHandledFromOutside: coverageHandledFromOutside,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function (featuresReport) {
@@ -2161,7 +2162,7 @@
               forceSource: forceSource,
               forceCompilation: forceCompilation
             };
-            return _await(fetchJson(jsenvCompileProfileUrl, {
+            return _await$1(fetchJson(jsenvCompileProfileUrl, {
               method: "POST",
               headers: {
                 "content-type": "application/json"
@@ -2173,9 +2174,10 @@
               return {
                 jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+                availableCompileIds: availableCompileIds,
+                runtimeReport: runtimeReport,
                 compileProfile: compileProfile,
-                compileId: compileId,
-                runtimeReport: runtimeReport
+                compileId: compileId
               };
             });
           });
@@ -2194,7 +2196,7 @@
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
 
-        return _await(supportsImportmap({
+        return _await$1(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -2207,15 +2209,15 @@
         }), function (_supportsImportmap) {
           featuresReport.importmap = _supportsImportmap; // dynamic import
 
-          return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
+          return _call(supportsDynamicImport, function (_supportsDynamicImpor) {
             featuresReport["import_dynamic"] = _supportsDynamicImpor; // top level await
 
-            return _call$1(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
+            return _call(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
               featuresReport["top_level_await"] = _supportsTopLevelAwai; // import assertions
 
-              return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
+              return _call(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
                 featuresReport["import_assertion_type_json"] = _supportsJsonImportAs;
-                return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {
+                return _call(supportsCssImportAssertions, function (_supportsCssImportAss) {
                   featuresReport["import_assertion_type_css"] = _supportsCssImportAss;
                   return featuresReport;
                 });
@@ -2225,22 +2227,25 @@
         });
       });
 
-      function _call(body, then, direct) {
+      function _await(value, then, direct) {
         if (direct) {
-          return then ? then(body()) : body();
+          return then ? then(value) : value;
         }
 
-        try {
-          var result = Promise.resolve(body());
-          return then ? result.then(then) : result;
-        } catch (e) {
-          return Promise.reject(e);
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
         }
+
+        return then ? value.then(then) : value;
       }
 
       var redirect = _async(function () {
-        var redirectTarget = new URLSearchParams(window.location.search).get("redirect");
-        return _call(scanBrowserRuntimeFeatures, function (browserRuntimeProfile) {
+        var searchParams = new URLSearchParams(window.location.search);
+        var redirectTarget = searchParams.get("redirect");
+        var forceCompilation = searchParams.get("force_compilation");
+        return _await(scanBrowserRuntimeFeatures({
+          forceCompilation: forceCompilation === "1"
+        }), function (browserRuntimeProfile) {
           var href = "".concat(getDirectoryUrl(browserRuntimeProfile)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
           // otherwise it would break the back button
 
@@ -2278,7 +2283,7 @@
   };
 });
 
-//# sourceMappingURL=redirector.html__inline__12_009c47c7.js.map</script>
+//# sourceMappingURL=redirector.html__inline__12_404b8295.js.map</script>
   
 
 </body></html>

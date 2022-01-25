@@ -15,9 +15,9 @@ startDevServer({
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
   jsenvDirectoryClean: true,
-  babelPluginMap: {
-    "transform-react-jsx": [require("@babel/plugin-transform-react-jsx")],
-  },
+  // babelPluginMap: {
+  //   "transform-react-jsx": [require("@babel/plugin-transform-react-jsx")],
+  // },
   // importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,

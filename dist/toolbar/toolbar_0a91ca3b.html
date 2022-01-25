@@ -1921,6 +1921,7 @@ html[data-toolbar-visible] #toolbar-trigger {
                     <a data-when="compilation_link:source" class="link_to_source_files" href="javascript:void(0);">Switch to source files</a>
                     <a data-when="compilation_link:mismatch" class="link_to_appropriate_files" href="javascript:void(0);">Switch to appropriate files</a>
                     <a data-when="compilation_link:compiled" class="link_to_compiled_files" href="javascript:void(0);">Switch to compiled files</a>
+                    <a data-when="compilation_link:force" class="link_to_compilation_forced_files" href="javascript:void(0);">Force compilation</a>
                   </div>
                 </div>
               </div>
@@ -2191,64 +2192,6 @@ html[data-toolbar-visible] #toolbar-trigger {
         return relativeUrl;
       };
 
-      var _defineProperty = function (obj, key, value) {
-        // Shortcircuit the slow defineProperty path when possible.
-        // We are trying to avoid issues where setters defined on the
-        // prototype cause side effects under the fast path of simple
-        // assignment. By checking for existence of the property with
-        // the in operator, we can optimize most of this overhead away.
-        if (key in obj) {
-          Object.defineProperty(obj, key, {
-            value: value,
-            enumerable: true,
-            configurable: true,
-            writable: true
-          });
-        } else {
-          obj[key] = value;
-        }
-
-        return obj;
-      };
-
-      function ownKeys(object, enumerableOnly) {
-        var keys = Object.keys(object);
-
-        if (Object.getOwnPropertySymbols) {
-          var symbols = Object.getOwnPropertySymbols(object);
-
-          if (enumerableOnly) {
-            symbols = symbols.filter(function (sym) {
-              return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-            });
-          }
-
-          keys.push.apply(keys, symbols);
-        }
-
-        return keys;
-      }
-
-      function _objectSpread2(target) {
-        for (var i = 1; i < arguments.length; i++) {
-          var source = arguments[i] != null ? arguments[i] : {};
-
-          if (i % 2) {
-            ownKeys(Object(source), true).forEach(function (key) {
-              _defineProperty(target, key, source[key]);
-            });
-          } else if (Object.getOwnPropertyDescriptors) {
-            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-          } else {
-            ownKeys(Object(source)).forEach(function (key) {
-              Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-            });
-          }
-        }
-
-        return target;
-      }
-
       var objectWithoutPropertiesLoose = function (source, excluded) {
         if (source === null) return {};
         var target = {};
@@ -2284,604 +2227,6 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         return target;
       };
-      /* eslint-env browser */
-
-
-      function _await$a(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      function _async$a(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      function _call$2(body, then, direct) {
-        if (direct) {
-          return then ? then(body()) : body();
-        }
-
-        try {
-          var result = Promise.resolve(body());
-          return then ? result.then(then) : result;
-        } catch (e) {
-          return Promise.reject(e);
-        }
-      }
-
-      var fetchUsingXHR = _async$a(function (url) {
-        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-            signal = _ref.signal,
-            _ref$method = _ref.method,
-            method = _ref$method === void 0 ? "GET" : _ref$method,
-            _ref$credentials = _ref.credentials,
-            credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
-            _ref$headers = _ref.headers,
-            headers = _ref$headers === void 0 ? {} : _ref$headers,
-            _ref$body = _ref.body,
-            body = _ref$body === void 0 ? null : _ref$body;
-
-        var headersPromise = createPromiseAndHooks();
-        var bodyPromise = createPromiseAndHooks();
-        var xhr = new XMLHttpRequest();
-
-        var failure = function failure(error) {
-          // if it was already resolved, we must reject the body promise
-          if (headersPromise.settled) {
-            bodyPromise.reject(error);
-          } else {
-            headersPromise.reject(error);
-          }
-        };
-
-        var cleanup = function cleanup() {
-          xhr.ontimeout = null;
-          xhr.onerror = null;
-          xhr.onload = null;
-          xhr.onreadystatechange = null;
-        };
-
-        xhr.ontimeout = function () {
-          cleanup();
-          failure(new Error("xhr request timeout on ".concat(url, ".")));
-        };
-
-        xhr.onerror = function (error) {
-          cleanup(); // unfortunately with have no clue why it fails
-          // might be cors for instance
-
-          failure(createRequestError(error, {
-            url: url
-          }));
-        };
-
-        xhr.onload = function () {
-          cleanup();
-          bodyPromise.resolve();
-        };
-
-        signal.addEventListener("abort", function () {
-          xhr.abort();
-          var abortError = new Error("aborted");
-          abortError.name = "AbortError";
-          failure(abortError);
-        });
-
-        xhr.onreadystatechange = function () {
-          // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-          var readyState = xhr.readyState;
-
-          if (readyState === 2) {
-            headersPromise.resolve();
-          } else if (readyState === 4) {
-            cleanup();
-            bodyPromise.resolve();
-          }
-        };
-
-        xhr.open(method, url, true);
-        Object.keys(headers).forEach(function (key) {
-          xhr.setRequestHeader(key, headers[key]);
-        });
-        xhr.withCredentials = computeWithCredentials({
-          credentials: credentials,
-          url: url
-        });
-
-        if ("responseType" in xhr && hasBlob) {
-          xhr.responseType = "blob";
-        }
-
-        xhr.send(body);
-        return _await$a(headersPromise, function () {
-          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
-          var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
-          var responseStatus = xhr.status;
-          var responseStatusText = xhr.statusText;
-          var responseHeaders = getHeadersFromXHR(xhr);
-
-          var readBody = function readBody() {
-            return _await$a(bodyPromise, function () {
-              var status = xhr.status; // in Chrome on file:/// URLs, status is 0
-
-              if (status === 0) {
-                responseStatus = 200;
-              }
-
-              var body = "response" in xhr ? xhr.response : xhr.responseText;
-              return {
-                responseBody: body,
-                responseBodyType: detectBodyType(body)
-              };
-            });
-          };
-
-          var text = function text() {
-            return _call$2(readBody, function (_ref2) {
-              var responseBody = _ref2.responseBody,
-                  responseBodyType = _ref2.responseBodyType;
-
-              if (responseBodyType === "blob") {
-                return blobToText(responseBody);
-              }
-
-              if (responseBodyType === "formData") {
-                throw new Error("could not read FormData body as text");
-              }
-
-              return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
-            });
-          };
-
-          var json = function json() {
-            return _call$2(text, JSON.parse);
-          };
-
-          var blob = _async$a(function () {
-            if (!hasBlob) {
-              throw new Error("blob not supported");
-            }
-
-            return _call$2(readBody, function (_ref3) {
-              var responseBody = _ref3.responseBody,
-                  responseBodyType = _ref3.responseBodyType;
-
-              if (responseBodyType === "blob") {
-                return responseBody;
-              }
-
-              if (responseBodyType === "dataView") {
-                return new Blob([cloneBuffer(responseBody.buffer)]);
-              }
-
-              if (responseBodyType === "arrayBuffer") {
-                return new Blob([cloneBuffer(responseBody)]);
-              }
-
-              if (responseBodyType === "formData") {
-                throw new Error("could not read FormData body as blob");
-              }
-
-              return new Blob([String(responseBody)]);
-            });
-          });
-
-          var arrayBuffer = function arrayBuffer() {
-            return _call$2(readBody, function (_ref4) {
-              var responseBody = _ref4.responseBody,
-                  responseBodyType = _ref4.responseBodyType;
-              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$2(blob, blobToArrayBuffer);
-            });
-          };
-
-          var formData = _async$a(function () {
-            if (!hasFormData) {
-              throw new Error("formData not supported");
-            }
-
-            return _call$2(text, textToFormData);
-          });
-
-          return {
-            url: responseUrl,
-            status: responseStatus,
-            statusText: responseStatusText,
-            headers: responseHeaders,
-            text: text,
-            json: json,
-            blob: blob,
-            arrayBuffer: arrayBuffer,
-            formData: formData
-          };
-        });
-      });
-
-      var canUseBlob = function canUseBlob() {
-        if (typeof window.FileReader !== "function") return false;
-        if (typeof window.Blob !== "function") return false;
-
-        try {
-          // eslint-disable-next-line no-new
-          new Blob();
-          return true;
-        } catch (e) {
-          return false;
-        }
-      };
-
-      var hasBlob = canUseBlob();
-      var hasFormData = typeof window.FormData === "function";
-      var hasArrayBuffer = typeof window.ArrayBuffer === "function";
-      var hasSearchParams = typeof window.URLSearchParams === "function";
-
-      var createRequestError = function createRequestError(error, _ref5) {
-        var url = _ref5.url;
-        return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
-      };
-
-      var createPromiseAndHooks = function createPromiseAndHooks() {
-        var resolve;
-        var reject;
-        var promise = new Promise(function (res, rej) {
-          resolve = function resolve(value) {
-            promise.settled = true;
-            res(value);
-          };
-
-          reject = function reject(value) {
-            promise.settled = true;
-            rej(value);
-          };
-        });
-        promise.resolve = resolve;
-        promise.reject = reject;
-        return promise;
-      }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-
-
-      var computeWithCredentials = function computeWithCredentials(_ref6) {
-        var credentials = _ref6.credentials,
-            url = _ref6.url;
-
-        if (credentials === "same-origin") {
-          return originSameAsGlobalOrigin(url);
-        }
-
-        return credentials === "include";
-      };
-
-      var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
-        // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
-        if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
-        if (_typeof(window.location) !== "object") return true;
-        var globalOrigin = window.location.origin;
-        if (globalOrigin === "null") return true;
-        return hrefToOrigin(url) === globalOrigin;
-      };
-
-      var detectBodyType = function detectBodyType(body) {
-        if (!body) {
-          return "";
-        }
-
-        if (typeof body === "string") {
-          return "text";
-        }
-
-        if (hasBlob && Blob.prototype.isPrototypeOf(body)) {
-          return "blob";
-        }
-
-        if (hasFormData && FormData.prototype.isPrototypeOf(body)) {
-          return "formData";
-        }
-
-        if (hasArrayBuffer) {
-          if (hasBlob && isDataView(body)) {
-            return "dataView";
-          }
-
-          if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
-            return "arrayBuffer";
-          }
-        }
-
-        if (hasSearchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
-          return "searchParams";
-        }
-
-        return "";
-      }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
-
-
-      var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
-        var headerMap = {};
-        var headersString = xhr.getAllResponseHeaders();
-        if (headersString === "") return headerMap;
-        var lines = headersString.trim().split(/[\r\n]+/);
-        lines.forEach(function (line) {
-          var parts = line.split(": ");
-          var name = parts.shift();
-          var value = parts.join(": ");
-          headerMap[name.toLowerCase()] = value;
-        });
-        return headerMap;
-      };
-
-      var hrefToOrigin = function hrefToOrigin(href) {
-        var scheme = hrefToScheme(href);
-
-        if (scheme === "file") {
-          return "file://";
-        }
-
-        if (scheme === "http" || scheme === "https") {
-          var secondProtocolSlashIndex = scheme.length + "://".length;
-          var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
-          if (pathnameSlashIndex === -1) return href;
-          return href.slice(0, pathnameSlashIndex);
-        }
-
-        return href.slice(0, scheme.length + 1);
-      };
-
-      var hrefToScheme = function hrefToScheme(href) {
-        var colonIndex = href.indexOf(":");
-        if (colonIndex === -1) return "";
-        return href.slice(0, colonIndex);
-      };
-
-      var isDataView = function isDataView(obj) {
-        return obj && DataView.prototype.isPrototypeOf(obj);
-      };
-
-      var isArrayBufferView = ArrayBuffer.isView || function () {
-        var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
-        return function (value) {
-          return value && viewClasses.includes(Object.prototype.toString.call(value));
-        };
-      }();
-
-      var textToFormData = function textToFormData(text) {
-        var form = new FormData();
-        text.trim().split("&").forEach(function (bytes) {
-          if (bytes) {
-            var split = bytes.split("=");
-            var name = split.shift().replace(/\+/g, " ");
-            var value = split.join("=").replace(/\+/g, " ");
-            form.append(decodeURIComponent(name), decodeURIComponent(value));
-          }
-        });
-        return form;
-      };
-
-      var blobToArrayBuffer = _async$a(function (blob) {
-        var reader = new FileReader();
-        var promise = fileReaderReady(reader);
-        reader.readAsArrayBuffer(blob);
-        return promise;
-      });
-
-      var blobToText = function blobToText(blob) {
-        var reader = new FileReader();
-        var promise = fileReaderReady(reader);
-        reader.readAsText(blob);
-        return promise;
-      };
-
-      var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
-        var view = new Uint8Array(arrayBuffer);
-        var chars = new Array(view.length);
-        var i = 0;
-
-        while (i < view.length) {
-          chars[i] = String.fromCharCode(view[i]);
-          i++;
-        }
-
-        return chars.join("");
-      };
-
-      var fileReaderReady = function fileReaderReady(reader) {
-        return new Promise(function (resolve, reject) {
-          reader.onload = function () {
-            resolve(reader.result);
-          };
-
-          reader.onerror = function () {
-            reject(reader.error);
-          };
-        });
-      };
-
-      var cloneBuffer = function cloneBuffer(buffer) {
-        if (buffer.slice) {
-          return buffer.slice(0);
-        }
-
-        var view = new Uint8Array(buffer.byteLength);
-        view.set(new Uint8Array(buffer));
-        return view.buffer;
-      };
-
-      var _excluded$1 = ["mode"];
-
-      function _await$9(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      function _async$9(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var fetchNative = _async$9(function (url) {
-        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-        var _ref$mode = _ref.mode,
-            mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-            options = _objectWithoutProperties(_ref, _excluded$1);
-
-        return _await$9(window.fetch(url, _objectSpread2({
-          mode: mode
-        }, options)), function (response) {
-          return {
-            url: response.url,
-            status: response.status,
-            statusText: "",
-            headers: responseToHeaders(response),
-            text: function text() {
-              return response.text();
-            },
-            json: function json() {
-              return response.json();
-            },
-            blob: function blob() {
-              return response.blob();
-            },
-            arrayBuffer: function arrayBuffer() {
-              return response.arrayBuffer();
-            },
-            formData: function formData() {
-              return response.formData();
-            }
-          };
-        });
-      });
-
-      var responseToHeaders = function responseToHeaders(response) {
-        var headers = {};
-        response.headers.forEach(function (value, name) {
-          headers[name] = value;
-        });
-        return headers;
-      };
-
-      var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
-
-      function _await$8(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      function _async$8(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var fetchJson = _async$8(function (url) {
-        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        return _await$8(fetchUrl(url, options), function (response) {
-          return _await$8(response.json());
-        });
-      });
-
-      function _await$7(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      function _catch$5(body, recover) {
-        try {
-          var result = body();
-        } catch (e) {
-          return recover(e);
-        }
-
-        if (result && result.then) {
-          return result.then(void 0, recover);
-        }
-
-        return result;
-      }
-
-      function _async$7(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var fetchExploringJson = _async$7(function () {
-        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-            signal = _ref.signal;
-
-        return _catch$5(function () {
-          return _await$7(fetchJson("/.jsenv/exploring.json", {
-            signal: signal
-          }));
-        }, function (e) {
-          if (signal && signal.aborted && e.name === "AbortError") {
-            throw e;
-          }
-
-          throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
-        });
-      });
 
       var updateIframeOverflowOnParentWindow = function updateIframeOverflowOnParentWindow() {
         if (!window.parent) {
@@ -3235,9 +2580,67 @@ html[data-toolbar-visible] #toolbar-trigger {
         updateIframeOverflowOnParentWindow();
       };
 
-      var _excluded = ["clickToFocus", "clickToClose"];
+      var _defineProperty = function (obj, key, value) {
+        // Shortcircuit the slow defineProperty path when possible.
+        // We are trying to avoid issues where setters defined on the
+        // prototype cause side effects under the fast path of simple
+        // assignment. By checking for existence of the property with
+        // the in operator, we can optimize most of this overhead away.
+        if (key in obj) {
+          Object.defineProperty(obj, key, {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        } else {
+          obj[key] = value;
+        }
 
-      function _async$6(f) {
+        return obj;
+      };
+
+      function ownKeys(object, enumerableOnly) {
+        var keys = Object.keys(object);
+
+        if (Object.getOwnPropertySymbols) {
+          var symbols = Object.getOwnPropertySymbols(object);
+
+          if (enumerableOnly) {
+            symbols = symbols.filter(function (sym) {
+              return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+            });
+          }
+
+          keys.push.apply(keys, symbols);
+        }
+
+        return keys;
+      }
+
+      function _objectSpread2(target) {
+        for (var i = 1; i < arguments.length; i++) {
+          var source = arguments[i] != null ? arguments[i] : {};
+
+          if (i % 2) {
+            ownKeys(Object(source), true).forEach(function (key) {
+              _defineProperty(target, key, source[key]);
+            });
+          } else if (Object.getOwnPropertyDescriptors) {
+            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+          } else {
+            ownKeys(Object(source)).forEach(function (key) {
+              Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+            });
+          }
+        }
+
+        return target;
+      }
+
+      var _excluded$1 = ["clickToFocus", "clickToClose"];
+
+      function _async$9(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -3251,7 +2654,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       }
 
-      function _await$6(value, then, direct) {
+      function _await$a(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -3367,14 +2770,14 @@ html[data-toolbar-visible] #toolbar-trigger {
       };
 
       var permission = "default";
-      var notify = notificationAvailable ? _async$6(function (title) {
+      var notify = notificationAvailable ? _async$9(function (title) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         var _ref$clickToFocus = _ref.clickToFocus,
             clickToFocus = _ref$clickToFocus === void 0 ? false : _ref$clickToFocus,
             _ref$clickToClose = _ref.clickToClose,
             clickToClose = _ref$clickToClose === void 0 ? false : _ref$clickToClose,
-            options = _objectWithoutProperties(_ref, _excluded);
+            options = _objectWithoutProperties(_ref, _excluded$1);
 
         if (permission !== "granted") {
           return null;
@@ -3407,10 +2810,10 @@ html[data-toolbar-visible] #toolbar-trigger {
         return notification;
       }) : function () {};
       var requestPromise;
-      var requestPermission = notificationAvailable ? _async$6(function () {
+      var requestPermission = notificationAvailable ? _async$9(function () {
         if (requestPromise) return requestPromise;
         requestPromise = Notification.requestPermission();
-        return _await$6(requestPromise, function (_requestPromise) {
+        return _await$a(requestPromise, function (_requestPromise) {
           permission = _requestPromise;
           requestPromise = undefined;
           return permission;
@@ -3721,6 +3124,547 @@ html[data-toolbar-visible] #toolbar-trigger {
           input.style.width = "".concat(input.value.length, "ch");
         }
       };
+      /* eslint-env browser */
+
+
+      function _await$9(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$8(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _call$1(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var fetchUsingXHR = _async$8(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            signal = _ref.signal,
+            _ref$method = _ref.method,
+            method = _ref$method === void 0 ? "GET" : _ref$method,
+            _ref$credentials = _ref.credentials,
+            credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
+            _ref$headers = _ref.headers,
+            headers = _ref$headers === void 0 ? {} : _ref$headers,
+            _ref$body = _ref.body,
+            body = _ref$body === void 0 ? null : _ref$body;
+
+        var headersPromise = createPromiseAndHooks();
+        var bodyPromise = createPromiseAndHooks();
+        var xhr = new XMLHttpRequest();
+
+        var failure = function failure(error) {
+          // if it was already resolved, we must reject the body promise
+          if (headersPromise.settled) {
+            bodyPromise.reject(error);
+          } else {
+            headersPromise.reject(error);
+          }
+        };
+
+        var cleanup = function cleanup() {
+          xhr.ontimeout = null;
+          xhr.onerror = null;
+          xhr.onload = null;
+          xhr.onreadystatechange = null;
+        };
+
+        xhr.ontimeout = function () {
+          cleanup();
+          failure(new Error("xhr request timeout on ".concat(url, ".")));
+        };
+
+        xhr.onerror = function (error) {
+          cleanup(); // unfortunately with have no clue why it fails
+          // might be cors for instance
+
+          failure(createRequestError(error, {
+            url: url
+          }));
+        };
+
+        xhr.onload = function () {
+          cleanup();
+          bodyPromise.resolve();
+        };
+
+        signal.addEventListener("abort", function () {
+          xhr.abort();
+          var abortError = new Error("aborted");
+          abortError.name = "AbortError";
+          failure(abortError);
+        });
+
+        xhr.onreadystatechange = function () {
+          // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
+          var readyState = xhr.readyState;
+
+          if (readyState === 2) {
+            headersPromise.resolve();
+          } else if (readyState === 4) {
+            cleanup();
+            bodyPromise.resolve();
+          }
+        };
+
+        xhr.open(method, url, true);
+        Object.keys(headers).forEach(function (key) {
+          xhr.setRequestHeader(key, headers[key]);
+        });
+        xhr.withCredentials = computeWithCredentials({
+          credentials: credentials,
+          url: url
+        });
+
+        if ("responseType" in xhr && hasBlob) {
+          xhr.responseType = "blob";
+        }
+
+        xhr.send(body);
+        return _await$9(headersPromise, function () {
+          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+          var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+          var responseStatus = xhr.status;
+          var responseStatusText = xhr.statusText;
+          var responseHeaders = getHeadersFromXHR(xhr);
+
+          var readBody = function readBody() {
+            return _await$9(bodyPromise, function () {
+              var status = xhr.status; // in Chrome on file:/// URLs, status is 0
+
+              if (status === 0) {
+                responseStatus = 200;
+              }
+
+              var body = "response" in xhr ? xhr.response : xhr.responseText;
+              return {
+                responseBody: body,
+                responseBodyType: detectBodyType(body)
+              };
+            });
+          };
+
+          var text = function text() {
+            return _call$1(readBody, function (_ref2) {
+              var responseBody = _ref2.responseBody,
+                  responseBodyType = _ref2.responseBodyType;
+
+              if (responseBodyType === "blob") {
+                return blobToText(responseBody);
+              }
+
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as text");
+              }
+
+              return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
+            });
+          };
+
+          var json = function json() {
+            return _call$1(text, JSON.parse);
+          };
+
+          var blob = _async$8(function () {
+            if (!hasBlob) {
+              throw new Error("blob not supported");
+            }
+
+            return _call$1(readBody, function (_ref3) {
+              var responseBody = _ref3.responseBody,
+                  responseBodyType = _ref3.responseBodyType;
+
+              if (responseBodyType === "blob") {
+                return responseBody;
+              }
+
+              if (responseBodyType === "dataView") {
+                return new Blob([cloneBuffer(responseBody.buffer)]);
+              }
+
+              if (responseBodyType === "arrayBuffer") {
+                return new Blob([cloneBuffer(responseBody)]);
+              }
+
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as blob");
+              }
+
+              return new Blob([String(responseBody)]);
+            });
+          });
+
+          var arrayBuffer = function arrayBuffer() {
+            return _call$1(readBody, function (_ref4) {
+              var responseBody = _ref4.responseBody,
+                  responseBodyType = _ref4.responseBodyType;
+              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
+            });
+          };
+
+          var formData = _async$8(function () {
+            if (!hasFormData) {
+              throw new Error("formData not supported");
+            }
+
+            return _call$1(text, textToFormData);
+          });
+
+          return {
+            url: responseUrl,
+            status: responseStatus,
+            statusText: responseStatusText,
+            headers: responseHeaders,
+            text: text,
+            json: json,
+            blob: blob,
+            arrayBuffer: arrayBuffer,
+            formData: formData
+          };
+        });
+      });
+
+      var canUseBlob = function canUseBlob() {
+        if (typeof window.FileReader !== "function") return false;
+        if (typeof window.Blob !== "function") return false;
+
+        try {
+          // eslint-disable-next-line no-new
+          new Blob();
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+
+      var hasBlob = canUseBlob();
+      var hasFormData = typeof window.FormData === "function";
+      var hasArrayBuffer = typeof window.ArrayBuffer === "function";
+      var hasSearchParams = typeof window.URLSearchParams === "function";
+
+      var createRequestError = function createRequestError(error, _ref5) {
+        var url = _ref5.url;
+        return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
+      };
+
+      var createPromiseAndHooks = function createPromiseAndHooks() {
+        var resolve;
+        var reject;
+        var promise = new Promise(function (res, rej) {
+          resolve = function resolve(value) {
+            promise.settled = true;
+            res(value);
+          };
+
+          reject = function reject(value) {
+            promise.settled = true;
+            rej(value);
+          };
+        });
+        promise.resolve = resolve;
+        promise.reject = reject;
+        return promise;
+      }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+
+
+      var computeWithCredentials = function computeWithCredentials(_ref6) {
+        var credentials = _ref6.credentials,
+            url = _ref6.url;
+
+        if (credentials === "same-origin") {
+          return originSameAsGlobalOrigin(url);
+        }
+
+        return credentials === "include";
+      };
+
+      var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
+        // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
+        if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
+        if (_typeof(window.location) !== "object") return true;
+        var globalOrigin = window.location.origin;
+        if (globalOrigin === "null") return true;
+        return hrefToOrigin(url) === globalOrigin;
+      };
+
+      var detectBodyType = function detectBodyType(body) {
+        if (!body) {
+          return "";
+        }
+
+        if (typeof body === "string") {
+          return "text";
+        }
+
+        if (hasBlob && Blob.prototype.isPrototypeOf(body)) {
+          return "blob";
+        }
+
+        if (hasFormData && FormData.prototype.isPrototypeOf(body)) {
+          return "formData";
+        }
+
+        if (hasArrayBuffer) {
+          if (hasBlob && isDataView(body)) {
+            return "dataView";
+          }
+
+          if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
+            return "arrayBuffer";
+          }
+        }
+
+        if (hasSearchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+          return "searchParams";
+        }
+
+        return "";
+      }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
+
+
+      var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
+        var headerMap = {};
+        var headersString = xhr.getAllResponseHeaders();
+        if (headersString === "") return headerMap;
+        var lines = headersString.trim().split(/[\r\n]+/);
+        lines.forEach(function (line) {
+          var parts = line.split(": ");
+          var name = parts.shift();
+          var value = parts.join(": ");
+          headerMap[name.toLowerCase()] = value;
+        });
+        return headerMap;
+      };
+
+      var hrefToOrigin = function hrefToOrigin(href) {
+        var scheme = hrefToScheme(href);
+
+        if (scheme === "file") {
+          return "file://";
+        }
+
+        if (scheme === "http" || scheme === "https") {
+          var secondProtocolSlashIndex = scheme.length + "://".length;
+          var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+          if (pathnameSlashIndex === -1) return href;
+          return href.slice(0, pathnameSlashIndex);
+        }
+
+        return href.slice(0, scheme.length + 1);
+      };
+
+      var hrefToScheme = function hrefToScheme(href) {
+        var colonIndex = href.indexOf(":");
+        if (colonIndex === -1) return "";
+        return href.slice(0, colonIndex);
+      };
+
+      var isDataView = function isDataView(obj) {
+        return obj && DataView.prototype.isPrototypeOf(obj);
+      };
+
+      var isArrayBufferView = ArrayBuffer.isView || function () {
+        var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+        return function (value) {
+          return value && viewClasses.includes(Object.prototype.toString.call(value));
+        };
+      }();
+
+      var textToFormData = function textToFormData(text) {
+        var form = new FormData();
+        text.trim().split("&").forEach(function (bytes) {
+          if (bytes) {
+            var split = bytes.split("=");
+            var name = split.shift().replace(/\+/g, " ");
+            var value = split.join("=").replace(/\+/g, " ");
+            form.append(decodeURIComponent(name), decodeURIComponent(value));
+          }
+        });
+        return form;
+      };
+
+      var blobToArrayBuffer = _async$8(function (blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
+        reader.readAsArrayBuffer(blob);
+        return promise;
+      });
+
+      var blobToText = function blobToText(blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
+        reader.readAsText(blob);
+        return promise;
+      };
+
+      var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
+        var view = new Uint8Array(arrayBuffer);
+        var chars = new Array(view.length);
+        var i = 0;
+
+        while (i < view.length) {
+          chars[i] = String.fromCharCode(view[i]);
+          i++;
+        }
+
+        return chars.join("");
+      };
+
+      var fileReaderReady = function fileReaderReady(reader) {
+        return new Promise(function (resolve, reject) {
+          reader.onload = function () {
+            resolve(reader.result);
+          };
+
+          reader.onerror = function () {
+            reject(reader.error);
+          };
+        });
+      };
+
+      var cloneBuffer = function cloneBuffer(buffer) {
+        if (buffer.slice) {
+          return buffer.slice(0);
+        }
+
+        var view = new Uint8Array(buffer.byteLength);
+        view.set(new Uint8Array(buffer));
+        return view.buffer;
+      };
+
+      var _excluded = ["mode"];
+
+      function _await$8(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$7(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchNative = _async$7(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+        var _ref$mode = _ref.mode,
+            mode = _ref$mode === void 0 ? "cors" : _ref$mode,
+            options = _objectWithoutProperties(_ref, _excluded);
+
+        return _await$8(window.fetch(url, _objectSpread2({
+          mode: mode
+        }, options)), function (response) {
+          return {
+            url: response.url,
+            status: response.status,
+            statusText: "",
+            headers: responseToHeaders(response),
+            text: function text() {
+              return response.text();
+            },
+            json: function json() {
+              return response.json();
+            },
+            blob: function blob() {
+              return response.blob();
+            },
+            arrayBuffer: function arrayBuffer() {
+              return response.arrayBuffer();
+            },
+            formData: function formData() {
+              return response.formData();
+            }
+          };
+        });
+      });
+
+      var responseToHeaders = function responseToHeaders(response) {
+        var headers = {};
+        response.headers.forEach(function (value, name) {
+          headers[name] = value;
+        });
+        return headers;
+      };
+
+      var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+
+      function _await$7(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$6(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchJson = _async$6(function (url) {
+        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        return _await$7(fetchUrl(url, options), function (response) {
+          return _await$7(response.json());
+        });
+      });
       /*
        * Prefer window.navigator.userAgentData before resorting to
        * window.navigator.userAgent because of
@@ -4005,7 +3949,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
       };
 
-      function _await$5(value, then, direct) {
+      function _await$6(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -4066,7 +4010,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         document.body.appendChild(importmapScript);
         return _catch$4(function () {
-          return _await$5(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+          return _await$6(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
             document.body.removeChild(importmapScript);
             var supported = window.__jsenv_runtime_test_importmap__;
             delete window.__jsenv_runtime_test_importmap__;
@@ -4078,7 +4022,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      function _await$4(value, then, direct) {
+      function _await$5(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -4121,8 +4065,8 @@ html[data-toolbar-visible] #toolbar-trigger {
       var supportsDynamicImport = _async$4(function () {
         var moduleSource = asBase64Url("export default 42");
         return _catch$3(function () {
-          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$4(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+          return _await$5(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$5(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
               delete window.__jsenv_runtime_test_dynamic_import__;
               return namespace.default === 42;
             });
@@ -4132,7 +4076,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      function _await$3(value, then, direct) {
+      function _await$4(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -4159,8 +4103,8 @@ html[data-toolbar-visible] #toolbar-trigger {
       }
 
       var supportsTopLevelAwait = function supportsTopLevelAwait() {
-        return _await$3(_catch$2(function () {
-          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+        return _await$4(_catch$2(function () {
+          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
             var supported = window.__jsenv_runtime_test_top_level_await__ === 42;
             delete window.__jsenv_runtime_test_top_level_await__;
             return supported;
@@ -4170,7 +4114,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         }));
       };
 
-      function _await$2(value, then, direct) {
+      function _await$3(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -4214,8 +4158,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         var jsonBase64Url = asBase64Url("42", "application/json");
         var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\n  export default data"));
         return _catch$1(function () {
-          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$2(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$3(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
               var supported = namespace.default === 42;
               delete window.__jsenv_runtime_test_json_import_assertion__;
               return supported;
@@ -4226,7 +4170,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       });
 
-      function _await$1(value, then, direct) {
+      function _await$2(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -4270,8 +4214,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
         var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\n  export default css"));
         return _catch(function () {
-          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$1(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$2(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
               return namespace.default instanceof CSSStyleSheet;
             });
           });
@@ -4290,7 +4234,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      function _await(value, then, direct) {
+      function _await$1(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -4316,7 +4260,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       }
 
-      function _call$1(body, then, direct) {
+      function _call(body, then, direct) {
         if (direct) {
           return then ? then(body()) : body();
         }
@@ -4339,15 +4283,16 @@ html[data-toolbar-visible] #toolbar-trigger {
             forceSource = _ref$forceSource === void 0 ? false : _ref$forceSource;
 
         var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
-        return _await(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
+        return _await$1(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
           var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
-              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML;
+              inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
+              availableCompileIds = _ref2.availableCompileIds;
 
           var _detectBrowser = detectBrowser(),
               name = _detectBrowser.name,
               version = _detectBrowser.version;
 
-          return _await(detectSupportedFeatures({
+          return _await$1(detectSupportedFeatures({
             coverageHandledFromOutside: coverageHandledFromOutside,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function (featuresReport) {
@@ -4361,7 +4306,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               forceSource: forceSource,
               forceCompilation: forceCompilation
             };
-            return _await(fetchJson(jsenvCompileProfileUrl, {
+            return _await$1(fetchJson(jsenvCompileProfileUrl, {
               method: "POST",
               headers: {
                 "content-type": "application/json"
@@ -4373,9 +4318,10 @@ html[data-toolbar-visible] #toolbar-trigger {
               return {
                 jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
                 inlineImportMapIntoHTML: inlineImportMapIntoHTML,
+                availableCompileIds: availableCompileIds,
+                runtimeReport: runtimeReport,
                 compileProfile: compileProfile,
-                compileId: compileId,
-                runtimeReport: runtimeReport
+                compileId: compileId
               };
             });
           });
@@ -4394,7 +4340,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
 
-        return _await(supportsImportmap({
+        return _await$1(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -4407,15 +4353,15 @@ html[data-toolbar-visible] #toolbar-trigger {
         }), function (_supportsImportmap) {
           featuresReport.importmap = _supportsImportmap; // dynamic import
 
-          return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
+          return _call(supportsDynamicImport, function (_supportsDynamicImpor) {
             featuresReport["import_dynamic"] = _supportsDynamicImpor; // top level await
 
-            return _call$1(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
+            return _call(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
               featuresReport["top_level_await"] = _supportsTopLevelAwai; // import assertions
 
-              return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
+              return _call(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
                 featuresReport["import_assertion_type_json"] = _supportsJsonImportAs;
-                return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {
+                return _call(supportsCssImportAssertions, function (_supportsCssImportAss) {
                   featuresReport["import_assertion_type_css"] = _supportsCssImportAss;
                   return featuresReport;
                 });
@@ -4473,7 +4419,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           var hasWarning = shouldCompile || shouldSwitchCompileId;
           enableVariant(filesCompilationRootNode, {
             filesCompilation: filesCompilation,
-            compilation_link: shouldSwitchCompileId ? "mismatch" : actualCompileId ? "source" : "compiled"
+            compilation_link: shouldSwitchCompileId ? "mismatch" : actualCompileId ? "source" : expectedCompiledId ? "compiled" : "force"
           });
 
           if (filesCompilation === "yes") {
@@ -4485,7 +4431,11 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
 
           filesCompilationRootNode.querySelector("a.link_to_compiled_files").onclick = function () {
-            window.parent.location.href = "/".concat(jsenvDirectoryRelativeUrl).concat(compileId, "/").concat(compileGroup.fileRelativeUrl);
+            window.parent.location.href = "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl);
+          };
+
+          filesCompilationRootNode.querySelector("a.link_to_compilation_forced_files").onclick = function () {
+            window.parent.location.href = "/".concat(jsenvDirectoryRelativeUrl, "force/").concat(compileGroup.fileRelativeUrl);
           };
 
           filesCompilationRootNode.querySelector("a.link_to_appropriate_files").onclick = function () {
@@ -4729,17 +4679,16 @@ html[data-toolbar-visible] #toolbar-trigger {
         document.querySelector("#overflow-menu").removeAttribute("data-animate");
       };
 
-      function _call(body, then, direct) {
+      function _await(value, then, direct) {
         if (direct) {
-          return then ? then(body()) : body();
+          return then ? then(value) : value;
         }
 
-        try {
-          var result = Promise.resolve(body());
-          return then ? result.then(then) : result;
-        } catch (e) {
-          return Promise.reject(e);
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
         }
+
+        return then ? value.then(then) : value;
       }
 
       var toolbarVisibilityPreference = createPreference("toolbar");
@@ -4758,66 +4707,67 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       }
 
-      var renderToolbar = _async(function () {
+      var renderToolbar = _async(function (_ref) {
+        var exploringJSON = _ref.exploringJSON;
         var executedFileCompiledUrl = window.parent.location.href;
         var compileServerOrigin = window.parent.location.origin; // this should not block the whole toolbar rendering + interactivity
 
-        return _call(fetchExploringJson, function (exploringConfig) {
-          var jsenvDirectoryRelativeUrl = exploringConfig.jsenvDirectoryRelativeUrl,
-              livereloading = exploringConfig.livereloading;
-          var compileGroup = getCompileGroup({
-            executedFileCompiledUrl: executedFileCompiledUrl,
-            jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
-            compileServerOrigin: compileServerOrigin
-          });
-          var executedFileRelativeUrl = compileGroup.fileRelativeUrl;
-          var toolbarOverlay = document.querySelector("#toolbar-overlay");
-
-          toolbarOverlay.onclick = function () {
-            hideAllTooltip();
-            hideSettings();
-          };
-
-          var toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
-
-          if (toolbarVisible) {
-            showToolbar({
-              animate: false
-            });
-          } else {
-            hideToolbar({
-              animate: false
-            });
-          }
-
-          document.querySelector(".toolbar-icon-wrapper").onclick = function () {
-            window.parent.location.href = "/";
-          };
-
-          renderToolbarNotification();
-          makeToolbarResponsive();
-          renderToolbarSettings();
-          renderToolbarAnimation();
-          renderToolbarTheme();
-          renderExecutionInToolbar({
-            executedFileRelativeUrl: executedFileRelativeUrl
-          });
-          renderCompilationInToolbar({
-            compileGroup: compileGroup
-          }); // this might become active but we need to detect this somehow
-
-          deactivateToolbarSection(document.querySelector("#file-list-link"));
-          initToolbarEventSource({
-            executedFileRelativeUrl: executedFileRelativeUrl,
-            livereloading: livereloading
-          }); // if user click enter or space quickly while closing toolbar
-          // it will cancel the closing
-          // that's why I used toggleToolbar and not hideToolbar
-
-          document.querySelector("#button-close-toolbar").onclick = function () {
-            return toogleToolbar();
-          };
+        var jsenvDirectoryRelativeUrl = exploringJSON.jsenvDirectoryRelativeUrl,
+            livereloading = exploringJSON.livereloading;
+        var compileGroup = getCompileGroup({
+          executedFileCompiledUrl: executedFileCompiledUrl,
+          jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+          compileServerOrigin: compileServerOrigin
         });
+        var executedFileRelativeUrl = compileGroup.fileRelativeUrl;
+        var toolbarOverlay = document.querySelector("#toolbar-overlay");
+
+        toolbarOverlay.onclick = function () {
+          hideAllTooltip();
+          hideSettings();
+        };
+
+        var toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
+
+        if (toolbarVisible) {
+          showToolbar({
+            animate: false
+          });
+        } else {
+          hideToolbar({
+            animate: false
+          });
+        }
+
+        document.querySelector(".toolbar-icon-wrapper").onclick = function () {
+          window.parent.location.href = "/";
+        };
+
+        renderToolbarNotification();
+        makeToolbarResponsive();
+        renderToolbarSettings();
+        renderToolbarAnimation();
+        renderToolbarTheme();
+        renderExecutionInToolbar({
+          executedFileRelativeUrl: executedFileRelativeUrl
+        });
+        renderCompilationInToolbar({
+          compileGroup: compileGroup
+        }); // this might become active but we need to detect this somehow
+
+        deactivateToolbarSection(document.querySelector("#file-list-link"));
+        initToolbarEventSource({
+          executedFileRelativeUrl: executedFileRelativeUrl,
+          livereloading: livereloading
+        }); // if user click enter or space quickly while closing toolbar
+        // it will cancel the closing
+        // that's why I used toggleToolbar and not hideToolbar
+
+        document.querySelector("#button-close-toolbar").onclick = function () {
+          return toogleToolbar();
+        };
+
+        return _await();
       });
 
       var toogleToolbar = function toogleToolbar() {
@@ -4840,9 +4790,9 @@ html[data-toolbar-visible] #toolbar-trigger {
 
 
       var showToolbar = function showToolbar() {
-        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-            _ref$animate = _ref.animate,
-            animate = _ref$animate === void 0 ? true : _ref$animate;
+        var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref2$animate = _ref2.animate,
+            animate = _ref2$animate === void 0 ? true : _ref2$animate;
 
         toolbarVisibilityPreference.set(true);
 
@@ -4881,8 +4831,8 @@ html[data-toolbar-visible] #toolbar-trigger {
           var scrollEnd = scrollY + 40;
           startJavaScriptAnimation({
             duration: 300,
-            onProgress: function onProgress(_ref2) {
-              var progress = _ref2.progress;
+            onProgress: function onProgress(_ref3) {
+              var progress = _ref3.progress;
               var value = scrollY + (scrollEnd - scrollY) * progress;
               parentDocumentElement.scrollTop = value;
             }
@@ -4907,26 +4857,24 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       };
 
-      var getCompileGroup = function getCompileGroup(_ref3) {
-        var executedFileCompiledUrl = _ref3.executedFileCompiledUrl,
-            jsenvDirectoryRelativeUrl = _ref3.jsenvDirectoryRelativeUrl,
-            compileServerOrigin = _ref3.compileServerOrigin;
-        var outDirectoryServerUrl = String(new URL(jsenvDirectoryRelativeUrl, compileServerOrigin));
+      var getCompileGroup = function getCompileGroup(_ref4) {
+        var executedFileCompiledUrl = _ref4.executedFileCompiledUrl,
+            jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl,
+            compileServerOrigin = _ref4.compileServerOrigin;
+        var jsenvDirectoryServerUrl = new URL(jsenvDirectoryRelativeUrl, compileServerOrigin).href;
 
-        if (urlIsInsideOf(executedFileCompiledUrl, outDirectoryServerUrl)) {
-          var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, outDirectoryServerUrl);
+        if (urlIsInsideOf(executedFileCompiledUrl, jsenvDirectoryServerUrl)) {
+          var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, jsenvDirectoryServerUrl);
           var slashIndex = afterCompileDirectory.indexOf("/");
           var fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
           return {
             fileRelativeUrl: fileRelativeUrl,
-            jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
             compileId: afterCompileDirectory.slice(0, slashIndex)
           };
         }
 
         return {
           fileRelativeUrl: new URL(executedFileCompiledUrl).pathname.slice(1),
-          jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
           compileId: null
         };
       };
@@ -4968,14 +4916,13 @@ html[data-toolbar-visible] #toolbar-trigger {
       };
 
       window.toolbar = {
-        render: renderToolbar,
         show: showToolbar,
         hide: function hide() {
           return hideToolbar();
         }
       };
-      addExternalCommandCallback("renderToolbar", function () {
-        renderToolbar();
+      addExternalCommandCallback("renderToolbar", function (data) {
+        renderToolbar(data);
       });
       addExternalCommandCallback("showToolbar", function () {
         showToolbar();
@@ -4988,7 +4935,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_86335f90.js.map</script>
+//# sourceMappingURL=toolbar.main_279b3a68.js.map</script>
   
 
 </body></html>
