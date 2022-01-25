@@ -26,7 +26,7 @@ const devServer = await startDevServer({
   jsenvDirectoryRelativeUrl,
   livereloading: true,
 })
-const htmlCompiledServerUrl = `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}.redirect/${fileRelativeUrl}`
+const htmlCompiledServerUrl = `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}redirect/${fileRelativeUrl}`
 const { browser, page, pageLogs, pageErrors, getJsenvExecutionResult } =
   await openBrowserPage({
     //  debug: true

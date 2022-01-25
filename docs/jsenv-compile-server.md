@@ -114,7 +114,7 @@ If server is requested to compile a file but has no compiler associated, it will
 
   It's an other compilation directory where compilation slightly differs from an other compilation directory.
 
-- `.jsenv/.redirect/file.js`
+- `.jsenv/redirect/file.js`
 
   Can be used to be dynamically redirected where you should. Depending on your browser and if compilation is required to execute your files, you will be redirected to:
 
