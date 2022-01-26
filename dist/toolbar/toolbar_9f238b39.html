@@ -2426,6 +2426,19 @@ html[data-toolbar-visible] #toolbar-trigger {
         document.documentElement.setAttribute("data-last-interaction", "keyboard");
       });
 
+      var setLinkHrefForParentWindow = function setLinkHrefForParentWindow(a, href) {
+        a.href = href;
+
+        a.onclick = function (e) {
+          if (e.ctrlKey || e.metaKey) {
+            return;
+          }
+
+          e.preventDefault();
+          window.parent.location.href = href;
+        };
+      };
+
       var createPreference = function createPreference(name) {
         return {
           has: function has() {
@@ -4430,17 +4443,9 @@ html[data-toolbar-visible] #toolbar-trigger {
             window.parent.location.href = "/".concat(compileGroup.fileRelativeUrl);
           };
 
-          filesCompilationRootNode.querySelector("a.link_to_compiled_files").onclick = function () {
-            window.parent.location.href = "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl);
-          };
-
-          filesCompilationRootNode.querySelector("a.link_to_compilation_forced_files").onclick = function () {
-            window.parent.location.href = "/".concat(jsenvDirectoryRelativeUrl, "force/").concat(compileGroup.fileRelativeUrl);
-          };
-
-          filesCompilationRootNode.querySelector("a.link_to_appropriate_files").onclick = function () {
-            window.parent.location.href = "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl);
-          };
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compiled_files"), "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl));
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compilation_forced_files"), "/".concat(jsenvDirectoryRelativeUrl, "force/").concat(compileGroup.fileRelativeUrl));
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_appropriate_files"), "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl));
 
           if (hasWarning) {
             enableWarningStyle();
@@ -4739,10 +4744,7 @@ html[data-toolbar-visible] #toolbar-trigger {
           });
         }
 
-        document.querySelector(".toolbar-icon-wrapper").onclick = function () {
-          window.parent.location.href = "/";
-        };
-
+        setLinkHrefForParentWindow(document.querySelector(".toolbar-icon-wrapper"), "/");
         renderToolbarNotification();
         makeToolbarResponsive();
         renderToolbarSettings();
@@ -4935,7 +4937,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_279b3a68.js.map</script>
+//# sourceMappingURL=toolbar.main_62193a7a.js.map</script>
   
 
 </body></html>
