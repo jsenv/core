@@ -1,4 +1,5 @@
 import { scanBrowserRuntimeFeatures } from "../../../features/browser_feature_detection/browser_feature_detection.js"
+import { setLinkHrefForParentWindow } from "../util/iframe_to_parent_href.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant/variant.js"
 import {
@@ -105,21 +106,21 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
         () => {
           window.parent.location.href = `/${compileGroup.fileRelativeUrl}`
         }
-      filesCompilationRootNode.querySelector(
-        "a.link_to_compiled_files",
-      ).onclick = () => {
-        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`
-      }
-      filesCompilationRootNode.querySelector(
-        "a.link_to_compilation_forced_files",
-      ).onclick = () => {
-        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}force/${compileGroup.fileRelativeUrl}`
-      }
-      filesCompilationRootNode.querySelector(
-        "a.link_to_appropriate_files",
-      ).onclick = () => {
-        window.parent.location.href = `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`
-      }
+
+      setLinkHrefForParentWindow(
+        filesCompilationRootNode.querySelector("a.link_to_compiled_files"),
+        `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,
+      )
+      setLinkHrefForParentWindow(
+        filesCompilationRootNode.querySelector(
+          "a.link_to_compilation_forced_files",
+        ),
+        `/${jsenvDirectoryRelativeUrl}force/${compileGroup.fileRelativeUrl}`,
+      )
+      setLinkHrefForParentWindow(
+        filesCompilationRootNode.querySelector("a.link_to_appropriate_files"),
+        `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,
+      )
 
       if (hasWarning) {
         enableWarningStyle()

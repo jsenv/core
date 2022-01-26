@@ -3,6 +3,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
 import "./focus/toolbar.focus.js"
+import { setLinkHrefForParentWindow } from "./util/iframe_to_parent_href.js"
 import {
   getToolbarIframe,
   deactivateToolbarSection,
@@ -52,9 +53,10 @@ const renderToolbar = async ({ exploringJSON }) => {
     hideToolbar({ animate: false })
   }
 
-  document.querySelector(".toolbar-icon-wrapper").onclick = () => {
-    window.parent.location.href = "/"
-  }
+  setLinkHrefForParentWindow(
+    document.querySelector(".toolbar-icon-wrapper"),
+    "/",
+  )
 
   renderToolbarNotification()
   makeToolbarResponsive()
