@@ -6,51 +6,80 @@ const notificationPreference = createPreference("notification")
 
 const arrayOfOpenedNotifications = []
 export const renderToolbarNotification = () => {
-  const notifCheckbox = document.querySelector("#toggle-notifs")
   if (!notificationAvailable) {
-    const notifSetting = document.querySelector(".settings-notification")
-    notifSetting.setAttribute("data-disabled", "true")
-    notifSetting.setAttribute(
-      "title",
-      `Notification not available in the browser`,
-    )
-    notifCheckbox.disabled = true
+    applyNotificationNotAvailableEffects()
     return
   }
+  updatePermission()
+}
 
-  const updatePermission = () => {
-    if (Notification.permission === "denied") {
-      const notifSetting = document.querySelector(".settings-notification")
-      notifSetting.setAttribute("data-disabled", "true")
-      notifSetting.setAttribute("title", `Notification denied`)
-      notifCheckbox.disabled = true
-      return
-    }
+const updatePermission = () => {
+  const notifPermission = Notification.permission
+  if (notifPermission === "default") {
+    applyNotificationDefaultEffects()
+    return
+  }
+  if (notifPermission === "denied") {
+    applyNotificationDeniedEffects()
+    return
+  }
+  if (notifPermission === "granted") {
+    applyNotificationGrantedEffects()
+    return
+  }
+}
 
-    notifCheckbox.checked = getNotificationPreference()
-    notifCheckbox.onchange = () => {
-      setNotificationPreference(notifCheckbox.checked)
-      if (!notifCheckbox.checked) {
-        // slice because arrayOfOpenedNotifications can be mutated while looping
-        arrayOfOpenedNotifications.slice().forEach((notification) => {
-          notification.close()
-        })
-      }
-    }
-    const notifPermission = Notification.permission
-    enableVariant(document.querySelector(".notification-text"), {
-      notif_permission: notifPermission === "granted" ? "yes" : "no",
-    })
-    if (notifPermission === "default") {
-      document.querySelector("a.request_notification_permission").onclick =
-        () => {
-          requestPermission().then(() => {
-            updatePermission()
-          })
-        }
+const notifCheckbox = document.querySelector("#toggle-notifs")
+
+const applyNotificationNotAvailableEffects = () => {
+  const notifSetting = document.querySelector(".settings-notification")
+  notifSetting.setAttribute("data-disabled", "true")
+  notifSetting.setAttribute(
+    "title",
+    `Notification not available in the browser`,
+  )
+  notifCheckbox.disabled = true
+}
+const applyNotificationDefaultEffects = () => {
+  applyNotificationNOTGrantedEffects()
+  const notifSetting = document.querySelector(".settings-notification")
+  notifSetting.removeAttribute("data-disabled")
+  notifSetting.removeAttribute("title")
+}
+const applyNotificationDeniedEffects = () => {
+  applyNotificationNOTGrantedEffects()
+  const notifSetting = document.querySelector(".settings-notification")
+  notifSetting.setAttribute("data-disabled", "true")
+  notifSetting.setAttribute("title", `Notification denied`)
+}
+const applyNotificationGrantedEffects = () => {
+  enableVariant(document.querySelector(".notification-text"), {
+    notif_granted: "yes",
+  })
+  notifCheckbox.disabled = false
+  notifCheckbox.checked = getNotificationPreference()
+  notifCheckbox.onchange = () => {
+    setNotificationPreference(notifCheckbox.checked)
+    if (!notifCheckbox.checked) {
+      // slice because arrayOfOpenedNotifications can be mutated while looping
+      arrayOfOpenedNotifications.slice().forEach((notification) => {
+        notification.close()
+      })
     }
   }
-  updatePermission()
+}
+const applyNotificationNOTGrantedEffects = () => {
+  enableVariant(document.querySelector(".notification-text"), {
+    notif_granted: "no",
+  })
+  notifCheckbox.disabled = true
+  notifCheckbox.checked = false
+  document.querySelector("a.request_notification_permission").onclick = () => {
+    requestPermission().then(() => {
+      setNotificationPreference(true)
+      updatePermission()
+    })
+  }
 }
 
 export const notifyExecutionResult = (

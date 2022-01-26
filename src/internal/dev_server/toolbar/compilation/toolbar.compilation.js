@@ -102,11 +102,10 @@ export const renderCompilationInToolbar = ({ compileGroup }) => {
           ".files_compilation_text",
         ).innerHTML = `Files shown are compiled for ${runtimeReport.name}@${runtimeReport.version}`
       }
-      filesCompilationRootNode.querySelector("a.link_to_source_files").onclick =
-        () => {
-          window.parent.location.href = `/${compileGroup.fileRelativeUrl}`
-        }
-
+      setLinkHrefForParentWindow(
+        filesCompilationRootNode.querySelector("a.link_to_source_files"),
+        `/${compileGroup.fileRelativeUrl}`,
+      )
       setLinkHrefForParentWindow(
         filesCompilationRootNode.querySelector("a.link_to_compiled_files"),
         `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,

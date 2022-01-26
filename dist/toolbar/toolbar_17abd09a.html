@@ -1821,7 +1821,7 @@ html[data-toolbar-visible] #toolbar-trigger {
                   <div class="category-subtitle">
                     Send system notification when execution fails or is fixed.
                     <div class="notification-text">
-                      <a data-when="notif_permission:no" class="request_notification_permission" href="javascript:void(0);">Enable notification</a>
+                      <a data-when="notif_granted:no" class="request_notification_permission" href="javascript:void(0);">Enable notification</a>
                     </div>
                   </div>
                 </div>
@@ -2684,56 +2684,88 @@ html[data-toolbar-visible] #toolbar-trigger {
       var arrayOfOpenedNotifications = [];
 
       var renderToolbarNotification = function renderToolbarNotification() {
-        var notifCheckbox = document.querySelector("#toggle-notifs");
-
         if (!notificationAvailable) {
-          var notifSetting = document.querySelector(".settings-notification");
-          notifSetting.setAttribute("data-disabled", "true");
-          notifSetting.setAttribute("title", "Notification not available in the browser");
-          notifCheckbox.disabled = true;
+          applyNotificationNotAvailableEffects();
           return;
         }
 
-        var updatePermission = function updatePermission() {
-          if (Notification.permission === "denied") {
-            var _notifSetting = document.querySelector(".settings-notification");
+        updatePermission();
+      };
 
-            _notifSetting.setAttribute("data-disabled", "true");
+      var updatePermission = function updatePermission() {
+        var notifPermission = Notification.permission;
 
-            _notifSetting.setAttribute("title", "Notification denied");
+        if (notifPermission === "default") {
+          applyNotificationDefaultEffects();
+          return;
+        }
 
-            notifCheckbox.disabled = true;
-            return;
-          }
+        if (notifPermission === "denied") {
+          applyNotificationDeniedEffects();
+          return;
+        }
 
-          notifCheckbox.checked = getNotificationPreference();
+        if (notifPermission === "granted") {
+          applyNotificationGrantedEffects();
+          return;
+        }
+      };
 
-          notifCheckbox.onchange = function () {
-            setNotificationPreference(notifCheckbox.checked);
+      var notifCheckbox = document.querySelector("#toggle-notifs");
 
-            if (!notifCheckbox.checked) {
-              // slice because arrayOfOpenedNotifications can be mutated while looping
-              arrayOfOpenedNotifications.slice().forEach(function (notification) {
-                notification.close();
-              });
-            }
-          };
+      var applyNotificationNotAvailableEffects = function applyNotificationNotAvailableEffects() {
+        var notifSetting = document.querySelector(".settings-notification");
+        notifSetting.setAttribute("data-disabled", "true");
+        notifSetting.setAttribute("title", "Notification not available in the browser");
+        notifCheckbox.disabled = true;
+      };
 
-          var notifPermission = Notification.permission;
-          enableVariant(document.querySelector(".notification-text"), {
-            notif_permission: notifPermission === "granted" ? "yes" : "no"
-          });
+      var applyNotificationDefaultEffects = function applyNotificationDefaultEffects() {
+        applyNotificationNOTGrantedEffects();
+        var notifSetting = document.querySelector(".settings-notification");
+        notifSetting.removeAttribute("data-disabled");
+        notifSetting.removeAttribute("title");
+      };
 
-          if (notifPermission === "default") {
-            document.querySelector("a.request_notification_permission").onclick = function () {
-              requestPermission().then(function () {
-                updatePermission();
-              });
-            };
+      var applyNotificationDeniedEffects = function applyNotificationDeniedEffects() {
+        applyNotificationNOTGrantedEffects();
+        var notifSetting = document.querySelector(".settings-notification");
+        notifSetting.setAttribute("data-disabled", "true");
+        notifSetting.setAttribute("title", "Notification denied");
+      };
+
+      var applyNotificationGrantedEffects = function applyNotificationGrantedEffects() {
+        enableVariant(document.querySelector(".notification-text"), {
+          notif_granted: "yes"
+        });
+        notifCheckbox.disabled = false;
+        notifCheckbox.checked = getNotificationPreference();
+
+        notifCheckbox.onchange = function () {
+          setNotificationPreference(notifCheckbox.checked);
+
+          if (!notifCheckbox.checked) {
+            // slice because arrayOfOpenedNotifications can be mutated while looping
+            arrayOfOpenedNotifications.slice().forEach(function (notification) {
+              notification.close();
+            });
           }
         };
+      };
 
-        updatePermission();
+      var applyNotificationNOTGrantedEffects = function applyNotificationNOTGrantedEffects() {
+        enableVariant(document.querySelector(".notification-text"), {
+          notif_granted: "no"
+        });
+        notifCheckbox.disabled = true;
+        notifCheckbox.checked = false;
+
+        document.querySelector("a.request_notification_permission").onclick = function () {
+          requestPermission().then(function () {
+            setNotificationPreference(true);
+            updatePermission();
+          });
+        };
       };
 
       var notifyExecutionResult = function notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution) {
@@ -4439,10 +4471,7 @@ html[data-toolbar-visible] #toolbar-trigger {
             document.querySelector(".files_compilation_text").innerHTML = "Files shown are compiled for ".concat(runtimeReport.name, "@").concat(runtimeReport.version);
           }
 
-          filesCompilationRootNode.querySelector("a.link_to_source_files").onclick = function () {
-            window.parent.location.href = "/".concat(compileGroup.fileRelativeUrl);
-          };
-
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_source_files"), "/".concat(compileGroup.fileRelativeUrl));
           setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compiled_files"), "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl));
           setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compilation_forced_files"), "/".concat(jsenvDirectoryRelativeUrl, "force/").concat(compileGroup.fileRelativeUrl));
           setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_appropriate_files"), "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl));
@@ -4937,7 +4966,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_62193a7a.js.map</script>
+//# sourceMappingURL=toolbar.main_2c56a4e0.js.map</script>
   
 
 </body></html>
