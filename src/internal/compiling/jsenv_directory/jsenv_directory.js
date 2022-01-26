@@ -84,7 +84,7 @@ export const setupJsenvDirectory = async ({
       const { runtimes } = compileDirectory
       if (!runtimes.includes(runtime)) {
         runtimes.push(runtime)
-        await writeMetaFile()
+        writeMetaFile()
       }
       return existingCompileId
     }
