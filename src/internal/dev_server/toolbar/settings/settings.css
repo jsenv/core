@@ -3,8 +3,7 @@
 }
 
 #settings-button[data-warning] svg {
-  fill: orange;
-  stroke: darkorange;
+  fill: #cb5909;
 }
 
 #settings-button[data-warning] svg:hover {
