@@ -21,14 +21,18 @@ import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 /**
  * Execute a list of files and log how it goes
- * @param {object} testPlan Configure files to execute and their runtimes (browsers/node)
- * @param {string|url} projectDirectoryUrl Root directory of the project
- * @param {number} [maxExecutionsInParallel=1] Maximum amount of execution in parallel
- * @param {number} [defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
- * @param {number} [cooldownBetweenExecutions=0] Millisecond to wait between each execution
- * @param {boolean} [logMemoryHeapUsage=false] Add memory heap usage during logs
- * @param {boolean} [coverage=false] Controls if coverage is collected during files executions
- * @param {boolean} [coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
+ * @param {Object} testPlanParameters
+ * @param {string|url} testPlanParameters.projectDirectoryUrl Root directory of the project
+ * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
+ * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
+ * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
+ * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
+ * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
+ * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
+ * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
+ * @param {boolean} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
+ * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
+ * @return {Object} An object containing the result of all file executions
  */
 export const executeTestPlan = async ({
   signal = new AbortController().signal,

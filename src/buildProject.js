@@ -19,13 +19,16 @@ import {
 
 /**
  * Generate optimized version of source files into a directory
- * @param {string|url} projectDirectoryUrl Root directory of the project
- * @param {string|url} buildDirectoryRelativeUrl Directory where optimized files are written
- * @param {object} entryPoints Describe entry point paths and control their names in the build directory
- * @param {"esmodule" | "systemjs" | "commonjs" | "global"} format Code generated will use this module format
- * @param {object} runtimeSupport Code generated will be compatible with these runtimes
- * @param {boolean} [minify=false] Minify file content in the build directory (HTML, CSS, JS, JSON, SVG)
+ * @param {Object} buildProjectParameters
+ * @param {string|url} buildProjectParameters.projectDirectoryUrl Root directory of the project
+ * @param {string|url} buildProjectParameters.buildDirectoryRelativeUrl Directory where optimized files are written
+ * @param {object} buildProjectParameters.entryPoints Describe entry point paths and control their names in the build directory
+ * @param {"esmodule" | "systemjs" | "commonjs" | "global"} buildProjectParameters.format Code generated will use this module format
+ * @param {object} buildProjectParameters.runtimeSupport Code generated will be compatible with these runtimes
+ * @param {boolean} [buildProjectParameters.minify=false] Minify file content in the build directory (HTML, CSS, JS, JSON, SVG)
+ * @return {Object} An object containing the result of building files
  */
+
 export const buildProject = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
