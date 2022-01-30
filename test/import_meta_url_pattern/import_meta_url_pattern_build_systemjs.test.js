@@ -50,6 +50,9 @@ const fileBuildRelativeUrl = buildMappings[`${testDirectoryRelativeUrl}file.js`]
     jsUrlString: String(
       new URL(`./dist/systemjs/${fileBuildRelativeUrl}`, serverOrigin),
     ),
+    moduleNamespace: {
+      default: 42,
+    },
   }
   assert({ actual, expected })
 }

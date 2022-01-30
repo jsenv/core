@@ -225,7 +225,7 @@
     var loader = this;
     return Promise.resolve(loader.prepareImport())
     .then(function() {
-      return loader.resolve(id, parentUrl);
+      return loader.resolve(String(id), parentUrl);
     })
     .then(function (id) {
       var load = getOrCreateLoad(loader, id);

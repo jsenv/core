@@ -672,7 +672,9 @@ export const createRollupPlugins = async ({
               resolutionResult.url = compiledFileUrl
             }
             const { searchParams } = new URL(ressourceUrl)
-            if (searchParams.has("worker")) {
+            if (searchParams.has("module")) {
+              resolutionResult.isJsModule = true
+            } else if (searchParams.has("worker")) {
               resolutionResult.isWorker = true
               resolutionResult.isJsModule = true
             } else if (searchParams.has("service_worker")) {
