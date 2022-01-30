@@ -12,7 +12,7 @@ import {
   assertProjectDirectoryExists,
 } from "@jsenv/core/src/internal/argUtils.js"
 import { generateExecutionSteps } from "@jsenv/core/src/internal/executing/generateExecutionSteps.js"
-import { executeConcurrently } from "@jsenv/core/src/internal/executing/executeConcurrently.js"
+import { executePlan } from "@jsenv/core/src/internal/executing/executePlan.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
 
 import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
@@ -228,7 +228,7 @@ export const startContinuousTesting = async ({
       const previousTestingResult = testingResult
       try {
         executing = true
-        testingResult = await executeConcurrently(toRun, {
+        testingResult = await executePlan(toRun, {
           abortSignal,
           logLevel,
           executionLogLevel: "off",
@@ -328,7 +328,7 @@ export const startContinuousTesting = async ({
   }
 
   logger.info("start initial testing")
-  testingResult = await executeConcurrently(executionSteps, {
+  testingResult = await executePlan(executionSteps, {
     abortSignal,
     logLevel,
     executionLogLevel: "off",

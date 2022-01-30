@@ -56,7 +56,7 @@ const normalizeRuntimeVersion = (version) => {
   return version
 }
 
-export const mergeRuntimeSupport = (runtimeSupport, childRuntimeSupport) => {
+const mergeRuntimeSupport = (runtimeSupport, childRuntimeSupport) => {
   Object.keys(childRuntimeSupport).forEach((runtimeName) => {
     const childRuntimeVersion = normalizeRuntimeVersion(
       childRuntimeSupport[runtimeName],
