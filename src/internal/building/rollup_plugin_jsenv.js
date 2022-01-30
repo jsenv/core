@@ -323,6 +323,12 @@ export const createRollupPlugins = async ({
       outputOptions: (outputOptions) => {
         outputOptions.globals = globalsForRollup
       },
+      resolveImportMeta: (property, { chunkId }) => {
+        if (property === "url") {
+          return `(document.currentScript && document.currentScript.src || new URL("${chunkId}", document.baseURI).href);`
+        }
+        return undefined
+      },
       renderChunk(code, chunkInfo) {
         const name = globalNameFromChunkInfo(chunkInfo)
         const out = ESIIFE.transform({
@@ -1394,6 +1400,7 @@ export const createRollupPlugins = async ({
       return outputOptions
     },
 
+    // we should rather use systemjs to provide a better polyfill?
     renderDynamicImport: () => {
       if (format === "global") {
         return {
