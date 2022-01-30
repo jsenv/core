@@ -51,6 +51,7 @@ import {
 } from "./ressource_builder.js"
 import { createBuildUrlGenerator } from "./build_url_generator.js"
 import { visitImportReferences } from "./import_references.js"
+import { esToSystem } from "./es_to_system.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -322,6 +323,7 @@ export const createRollupPlugins = async ({
     rollupPlugins.push({
       outputOptions: (outputOptions) => {
         outputOptions.globals = globalsForRollup
+        outputOptions.format = "esm"
       },
       resolveImportMeta: (property, { chunkId }) => {
         if (property === "url") {
@@ -329,24 +331,52 @@ export const createRollupPlugins = async ({
         }
         return undefined
       },
-      renderChunk(code, chunkInfo) {
-        const name = globalNameFromChunkInfo(chunkInfo)
-        const out = ESIIFE.transform({
-          code,
-          parse: this.parse,
-          name,
-          sourcemap: true,
-          resolveGlobal: (specifier) => {
-            const url = resolveUrl(specifier, chunkInfo.facadeModuleId)
-            const globalName = urlToBasename(url)
-            return globalName
-          },
-          strict: true,
-        })
-        return {
-          code: out.code,
-          map: out.map,
+      renderDynamicImport: () => {
+        if (format === "global") {
+          return {
+            left: "System.import(",
+            right: ")",
+          }
         }
+        return null
+      },
+      async renderChunk(code, chunkInfo) {
+        const serverUrl = asServerUrl(chunkInfo.facadeModuleId)
+        const jsRessource = ressourceBuilder.findRessource(
+          (ressource) => ressource.url === serverUrl,
+        )
+        if (jsRessource.isEntryPoint) {
+          const name = globalNameFromChunkInfo(chunkInfo)
+          const out = ESIIFE.transform({
+            code,
+            parse: this.parse,
+            name,
+            sourcemap: true,
+            resolveGlobal: (specifier) => {
+              const url = resolveUrl(specifier, chunkInfo.facadeModuleId)
+              const globalName = urlToBasename(url)
+              return globalName
+            },
+            strict: true,
+          })
+          code = out.code
+          const magicString = new MagicString(code)
+          const systemjsCode = await readFile(
+            new URL("../runtime/s.js", import.meta.url),
+          )
+          magicString.prepend(systemjsCode)
+          code = magicString.toString()
+          const map = magicString.generateMap({ hires: true })
+          return {
+            code,
+            map,
+          }
+        }
+        return esToSystem({
+          code,
+          url: serverUrl,
+          map: chunkInfo.map,
+        })
       },
     })
   }
@@ -1400,17 +1430,6 @@ export const createRollupPlugins = async ({
       return outputOptions
     },
 
-    // we should rather use systemjs to provide a better polyfill?
-    renderDynamicImport: () => {
-      if (format === "global") {
-        return {
-          left: "window.dynamicImportPolyfill(",
-          right: ")",
-        }
-      }
-      return null
-    },
-
     async renderChunk(code, chunk) {
       const { facadeModuleId } = chunk
       if (!facadeModuleId) {
@@ -1419,7 +1438,7 @@ export const createRollupPlugins = async ({
       }
       const url = asOriginalUrl(facadeModuleId)
       const { searchParams } = new URL(url)
-      if (searchParams.has("worker") || searchParams.has("serviceWorker")) {
+      if (searchParams.has("worker") || searchParams.has("service_worker")) {
         const magicString = new MagicString(code)
         const systemjsCode = await readFile(
           new URL("../runtime/s.js", import.meta.url),

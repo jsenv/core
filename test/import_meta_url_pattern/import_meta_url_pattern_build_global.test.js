@@ -22,10 +22,10 @@ await buildProject({
   jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   buildDirectoryRelativeUrl,
   entryPoints: {
-    [`./${testDirectoryRelativeUrl}index.js`]: "main.js",
+    [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
   },
   globals: {
-    [`./${testDirectoryRelativeUrl}index.js`]: "__namespace__",
+    [`./${testDirectoryRelativeUrl}main.js`]: "__namespace__",
   },
 })
 const { returnValue, serverOrigin } = await executeFileUsingBrowserScript({
@@ -56,6 +56,8 @@ const actual = {
 const expected = {
   jsUrlInstanceOfUrl: true,
   jsUrlString: String(new URL(`./assets/file_ddacbcda.js`, serverOrigin)),
-  moduleNamespace: "DYNAMIC_IMPORT_POLYFILL_RETURN_VALUE",
+  moduleNamespace: {
+    default: 42,
+  },
 }
 assert({ actual, expected })

@@ -813,12 +813,13 @@
     System.register = function(deps, declare) {
       System.register = register;
       System.registerRegistry[self.location.href] = [deps, declare];
-      System.import(self.location.href).then(() => {
+      return System.import(self.location.href).then((result) => {
         self.removeEventListener('message', messageCallback)
         messageEvents.forEach((messageEvent) => {
           self.dispatchEvent(messageEvent)
         })
         messageEvents = null
+        return result
       })
     }
   }

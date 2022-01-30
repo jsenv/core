@@ -4,7 +4,6 @@ export const visitImportReferences = async ({
   onReferenceWithImportAssertion,
 }) => {
   const { asyncWalk } = await import("estree-walker")
-
   await asyncWalk(ast, {
     enter: async (node, parent) => {
       if (isNewUrlImportMetaUrl(node)) {
