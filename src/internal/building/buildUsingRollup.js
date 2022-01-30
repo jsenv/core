@@ -33,13 +33,8 @@ export const buildUsingRollup = async ({
 
   format,
   systemJsUrl,
-  globalName,
   globals,
-  workers,
-  serviceWorkers,
   serviceWorkerFinalizer,
-  classicWorkers,
-  classicServiceWorkers,
 
   node,
   browser,
@@ -79,6 +74,8 @@ export const buildUsingRollup = async ({
 
     format,
     systemJsUrl,
+    globals,
+
     urlMappings,
     importResolutionMethod,
     importMapFileRelativeUrl,
@@ -86,11 +83,7 @@ export const buildUsingRollup = async ({
     externalImportSpecifiers,
     importPaths,
     preservedUrls,
-    workers,
-    serviceWorkers,
     serviceWorkerFinalizer,
-    classicWorkers,
-    classicServiceWorkers,
 
     node,
     browser,
@@ -118,8 +111,6 @@ export const buildUsingRollup = async ({
       rollupPlugins,
       compileProfile,
       format,
-      globals,
-      globalName,
       sourcemapExcludeSources,
       preserveEntrySignatures,
       treeshake,
@@ -224,8 +215,6 @@ const useRollup = async ({
   rollupPlugins,
   compileProfile,
   format,
-  globals,
-  globalName,
   sourcemapExcludeSources,
   preserveEntrySignatures,
   treeshake,
@@ -316,12 +305,6 @@ const useRollup = async ({
     sourcemap: true,
     sourcemapExcludeSources,
     // preserveModules: !jsConcatenation,
-    ...(format === "global"
-      ? {
-          globals,
-          name: globalName,
-        }
-      : {}),
   }
 
   buildOperation.throwIfAborted()
@@ -336,7 +319,7 @@ const useRollup = async ({
 }
 
 const formatToRollupFormat = (format) => {
-  if (format === "global") return "iife"
+  if (format === "global") return "esm" // will be handled by rollup_plugin_iife
   if (format === "commonjs") return "cjs"
   if (format === "systemjs") return "system"
   if (format === "esmodule") return "esm"

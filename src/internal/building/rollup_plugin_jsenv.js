@@ -1,4 +1,4 @@
-import { extname } from "node:path"
+import path from "node:path"
 import MagicString from "magic-string"
 import { composeTwoImportMaps, normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
@@ -15,9 +15,11 @@ import {
   urlToBasename,
   urlToFilename,
   readFile,
+  urlToFileSystemPath,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { require } from "@jsenv/core/src/internal/require.js"
 import { convertJsonTextToJavascriptModule } from "@jsenv/core/src/internal/building/json_module.js"
 import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -67,8 +69,10 @@ export const createRollupPlugins = async ({
   importPaths,
   preservedUrls,
   serviceWorkerFinalizer,
+
   format,
   systemJsUrl,
+  globals,
 
   node,
   compileServer,
@@ -131,7 +135,7 @@ export const createRollupPlugins = async ({
     lastErrorMessage = error.message
   }
 
-  const extension = extname(entryPoints[Object.keys(entryPoints)[0]])
+  const extension = path.extname(entryPoints[Object.keys(entryPoints)[0]])
   const outputExtension = extension === ".html" ? ".js" : extension
 
   const entryPointUrls = {}
@@ -297,6 +301,49 @@ export const createRollupPlugins = async ({
       },
     })
   }
+  if (format === "global") {
+    const globalsForRollup = {}
+    Object.keys(globals).forEach((key) => {
+      if (key.startsWith("./")) {
+        const keyAsUrl = resolveUrl(key, projectDirectoryUrl)
+        const keyAsPath = urlToFileSystemPath(keyAsUrl)
+        globalsForRollup[keyAsPath] = globals[key]
+      } else {
+        globalsForRollup[key] = globals[key]
+      }
+    })
+    const ESIIFE = require("es-iife")
+    const globalNameFromChunkInfo = (chunkInfo) => {
+      const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
+      const originalPath = urlToFileSystemPath(originalUrl)
+      const nameFromGlobals = globalsForRollup[originalPath]
+      return nameFromGlobals || path.parse(chunkInfo.fileName).name
+    }
+    rollupPlugins.push({
+      outputOptions: (outputOptions) => {
+        outputOptions.globals = globalsForRollup
+      },
+      renderChunk(code, chunkInfo) {
+        const name = globalNameFromChunkInfo(chunkInfo)
+        const out = ESIIFE.transform({
+          code,
+          parse: this.parse,
+          name,
+          sourcemap: true,
+          resolveGlobal: (specifier) => {
+            const url = resolveUrl(specifier, chunkInfo.facadeModuleId)
+            const globalName = urlToBasename(url)
+            return globalName
+          },
+          strict: true,
+        })
+        return {
+          code: out.code,
+          map: out.map,
+        }
+      },
+    })
+  }
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {
@@ -308,7 +355,6 @@ export const createRollupPlugins = async ({
         return minifyHtml(...args)
       },
     }
-
     minifyJs = async ({ url, code, map, ...rest }) => {
       const result = await methodHooks.minifyJs({
         url,
@@ -322,11 +368,9 @@ export const createRollupPlugins = async ({
         map: result.map,
       }
     }
-
     minifyHtml = async (html) => {
       return methodHooks.minifyHtml(html, minifyHtmlOptions)
     }
-
     rollupPlugins.push({
       name: "jsenv_minifier",
       async renderChunk(code, chunk) {
@@ -340,7 +384,6 @@ export const createRollupPlugins = async ({
           module: format === "esmodule",
           ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         })
-
         code = result.code
         map = result.map
         return {
@@ -915,6 +958,9 @@ export const createRollupPlugins = async ({
           return ressource.rollupReferenceId === referenceId
         })
         ressource.buildRelativeUrlWithoutHash = fileName
+        if (ressource.isJsModule) {
+          return fileName
+        }
         const buildRelativeUrl = ressource.buildRelativeUrl
         return buildRelativeUrl
       }
@@ -1345,8 +1391,17 @@ export const createRollupPlugins = async ({
         }
         return sourceUrl
       }
-
       return outputOptions
+    },
+
+    renderDynamicImport: () => {
+      if (format === "global") {
+        return {
+          left: "window.dynamicImportPolyfill(",
+          right: ")",
+        }
+      }
+      return null
     },
 
     async renderChunk(code, chunk) {
@@ -1355,7 +1410,6 @@ export const createRollupPlugins = async ({
         // happens for inline module scripts for instance
         return null
       }
-
       const url = asOriginalUrl(facadeModuleId)
       const { searchParams } = new URL(url)
       if (searchParams.has("worker") || searchParams.has("serviceWorker")) {
@@ -1371,7 +1425,6 @@ export const createRollupPlugins = async ({
           map,
         }
       }
-
       return null
     },
 

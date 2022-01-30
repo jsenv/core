@@ -16,24 +16,27 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   jsenvCoreDirectoryUrl,
 )
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
-const mainFilename = `main.js`
 await buildProject({
   ...GENERATE_GLOBAL_BUILD_TEST_PARAMS,
   jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   buildDirectoryRelativeUrl,
   entryPoints: {
-    [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
+    [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
+  },
+  globals: {
+    [`./${testDirectoryRelativeUrl}main.js.js`]: "__namespace__",
   },
 })
-const { globalValue } = await executeFileUsingBrowserScript({
+const { returnValue } = await executeFileUsingBrowserScript({
   rootDirectoryUrl: resolveUrl(
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   ),
   jsFileRelativeUrl: "./main.js",
-  globalName: "__namespace__",
+  /* eslint-disable no-undef */
+  pageFunction: () => window.__namespace__,
+  /* eslint-enable no-undef */
 })
-
-const actual = globalValue
+const actual = returnValue
 const expected = { value: [0, 1] }
 assert({ actual, expected })

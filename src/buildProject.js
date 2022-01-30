@@ -49,7 +49,6 @@ export const buildProject = async ({
 
   format,
   systemJsUrl,
-  globalName,
   globals = {},
   babelPluginMap = {},
   customCompilers,
@@ -246,7 +245,6 @@ export const buildProject = async ({
 
       format,
       systemJsUrl,
-      globalName,
       globals,
       serviceWorkerFinalizer,
 

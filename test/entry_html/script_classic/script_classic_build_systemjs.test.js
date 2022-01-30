@@ -61,14 +61,15 @@ const sourcemap = await readFile(sourcemapBuildUrl, { as: "json" })
 
 // execution works
 {
-  const result = await executeFileUsingBrowserScript({
+  const { returnValue } = await executeFileUsingBrowserScript({
     rootDirectoryUrl: buildDirectoryUrl,
     jsFileRelativeUrl: `./${jsBuildRelativeUrl}`,
-    globalName: "value",
+    /* eslint-disable no-undef */
+    pageFunction: () => window.value,
+    /* eslint-enable no-undef */
     // debug: true,
   })
-
-  const actual = result.globalValue
+  const actual = returnValue
   const expected = 42
   assert({ actual, expected })
 }

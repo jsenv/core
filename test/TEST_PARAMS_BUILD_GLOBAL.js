@@ -6,5 +6,4 @@ export const GENERATE_GLOBAL_BUILD_TEST_PARAMS = {
   jsenvDirectoryClean: true,
   buildDirectoryClean: true,
   logLevel: "warn",
-  globalName: "__namespace__",
 }

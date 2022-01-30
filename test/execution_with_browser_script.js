@@ -4,7 +4,8 @@ import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
 export const executeFileUsingBrowserScript = async ({
   rootDirectoryUrl,
   jsFileRelativeUrl,
-  globalName,
+  pageFunction,
+  pageArguments = [],
   debug = false,
 }) => {
   const [server, browser] = await Promise.all([
@@ -22,13 +23,9 @@ export const executeFileUsingBrowserScript = async ({
   })
 
   try {
-    const globalValue = await page.evaluate(
-      // eslint-disable-next-line no-undef
-      (globalName) => window[globalName],
-      globalName,
-    )
+    const returnValue = await page.evaluate(pageFunction, ...pageArguments)
     return {
-      globalValue,
+      returnValue,
       serverOrigin: server.origin,
     }
   } finally {

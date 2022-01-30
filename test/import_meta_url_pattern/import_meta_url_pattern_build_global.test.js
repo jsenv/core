@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
@@ -25,41 +24,38 @@ await buildProject({
   entryPoints: {
     [`./${testDirectoryRelativeUrl}index.js`]: "main.js",
   },
+  globals: {
+    [`./${testDirectoryRelativeUrl}index.js`]: "__namespace__",
+  },
 })
-const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
+const { returnValue, serverOrigin } = await executeFileUsingBrowserScript({
   rootDirectoryUrl: resolveUrl(
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   ),
   jsFileRelativeUrl: "./main.js",
-  globalName: "__namespace__",
+  /* eslint-disable no-undef */
+  pageFunction: async () => {
+    const { jsUrlInstanceOfUrl, jsUrlString, modulePromise } =
+      window.__namespace__
+    const moduleNamespace = await modulePromise
+    return {
+      jsUrlInstanceOfUrl,
+      jsUrlString,
+      moduleNamespace,
+    }
+  },
+  /* eslint-enable no-undef */
 })
-
-const jsUrlInstanceOfUrl = globalValue.jsUrlInstanceOfUrl
-const jsUrl = globalValue.jsUrlString
-
-// it would be great to have an error or at least a warning.
-// ! The file must be hashed
-// ! The file must be on filesystem
+const { jsUrlInstanceOfUrl, jsUrlString, moduleNamespace } = returnValue
 const actual = {
   jsUrlInstanceOfUrl,
-  jsUrl,
+  jsUrlString,
+  moduleNamespace,
 }
 const expected = {
   jsUrlInstanceOfUrl: true,
-  jsUrl: String(new URL(`./assets/file_7aa95da0.js`, serverOrigin)),
+  jsUrlString: String(new URL(`./assets/file_ddacbcda.js`, serverOrigin)),
+  moduleNamespace: "DYNAMIC_IMPORT_POLYFILL_RETURN_VALUE",
 }
 assert({ actual, expected })
-
-{
-  const buildDirectoryUrl = resolveUrl(
-    buildDirectoryRelativeUrl,
-    jsenvCoreDirectoryUrl,
-  )
-  const jsRelativeUrl = urlToRelativeUrl(jsUrl, serverOrigin)
-  const jsBuildUrl = resolveUrl(jsRelativeUrl, buildDirectoryUrl)
-  const jsBuildFileExists = existsSync(new URL(jsBuildUrl))
-  const actual = jsBuildFileExists
-  const expected = true
-  assert({ actual, expected })
-}

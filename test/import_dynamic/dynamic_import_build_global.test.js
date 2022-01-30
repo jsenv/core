@@ -12,7 +12,6 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 )
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/global/`
-const mainFilename = `dynamic_import_without_top_level_await.js`
 
 try {
   await buildProject({
@@ -20,7 +19,12 @@ try {
     jsenvDirectoryRelativeUrl,
     buildDirectoryRelativeUrl,
     entryPoints: {
-      [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.js",
+      [`./${testDirectoryRelativeUrl}dynamic_import_without_top_level_await.js`]:
+        "main.js",
+    },
+    globals: {
+      [`./${testDirectoryRelativeUrl}dynamic_import_without_top_level_await.js`]:
+        "__namespace__",
     },
   })
 } catch (actual) {
