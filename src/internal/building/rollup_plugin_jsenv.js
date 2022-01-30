@@ -321,6 +321,39 @@ export const createRollupPlugins = async ({
       return nameFromGlobals || path.parse(chunkInfo.fileName).name
     }
     rollupPlugins.push({
+      async transform(code, id) {
+        // const moduleInfo = this.getModuleInfo(id)
+        const serverUrl = asServerUrl(id)
+        const jsRessource = ressourceBuilder.findRessource((ressource) => {
+          return ressource.url === serverUrl
+        })
+        if (!jsRessource || !jsRessource.isEntryPoint) {
+          return null
+        }
+        let map = null
+        const ast = this.parse(code, {
+          // used to know node line and column
+          locations: true,
+        })
+        let useDynamicImport = false
+        const { walk } = await import("estree-walker")
+        walk(ast, {
+          enter: (node) => {
+            if (node.type === "ImportExpression") {
+              useDynamicImport = true
+            }
+          },
+        })
+        if (!useDynamicImport) {
+          return null
+        }
+        const magicString = new MagicString(code)
+        magicString.prepend(`import "@jsenv/core/src/internal/runtime/s.js"`)
+        code = magicString.toString()
+        map = magicString.generateMap({ hires: true })
+        return { code, map }
+      },
+
       outputOptions: (outputOptions) => {
         outputOptions.globals = globalsForRollup
         outputOptions.format = "esm"
@@ -360,13 +393,14 @@ export const createRollupPlugins = async ({
             strict: true,
           })
           code = out.code
-          const magicString = new MagicString(code)
-          const systemjsCode = await readFile(
-            new URL("../runtime/s.js", import.meta.url),
-          )
-          magicString.prepend(systemjsCode)
-          code = magicString.toString()
-          const map = magicString.generateMap({ hires: true })
+          const map = out.map
+          // const magicString = new MagicString(code)
+          // const systemjsCode = await readFile(
+          //   new URL("../runtime/s.js", import.meta.url),
+          // )
+          // magicString.prepend(systemjsCode)
+          // code = magicString.toString()
+          // const map = magicString.generateMap({ hires: true })
           return {
             code,
             map,
