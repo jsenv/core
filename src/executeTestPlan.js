@@ -28,6 +28,7 @@ import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
  * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
+ * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
  * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
  * @param {boolean} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
@@ -48,15 +49,17 @@ export const executeTestPlan = async ({
 
   testPlan,
 
+  logSummary = true,
   logMemoryHeapUsage = false,
+  logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  logSummary = true,
   updateProcessExitCode = true,
   windowsProcessExitFix = true,
 
   maxExecutionsInParallel = 1,
   defaultMsAllocatedPerExecution = 30000,
+  failFast = false,
   // stopAfterExecute: true to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and
   // we have associated coverage and capturedConsole
@@ -103,14 +106,11 @@ export const executeTestPlan = async ({
   jsenvDirectoryClean,
 }) => {
   const logger = createLogger({ logLevel })
-
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
   if (typeof testPlan !== "object") {
     throw new Error(`testPlan must be an object, got ${testPlan}`)
   }
-
   if (coverage) {
     if (typeof coverageConfig !== "object") {
       throw new TypeError(
@@ -155,7 +155,6 @@ export const executeTestPlan = async ({
       }
     }
   }
-
   const result = await executePlan(testPlan, {
     signal,
     handleSIGINT,
@@ -171,13 +170,15 @@ export const executeTestPlan = async ({
     importResolutionMethod,
     importDefaultExtension,
 
+    logSummary,
     logMemoryHeapUsage,
+    logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    logSummary,
 
-    defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
+    defaultMsAllocatedPerExecution,
+    failFast,
     stopAfterExecute,
     cooldownBetweenExecutions,
     gcBetweenExecutions,
@@ -205,11 +206,9 @@ export const executeTestPlan = async ({
     importMapInWebWorkers,
     customCompilers,
   })
-
   if (updateProcessExitCode && !executionIsPassed(result)) {
     process.exitCode = 1
   }
-
   const planCoverage = result.planCoverage
   // planCoverage can be null when execution is aborted
   if (planCoverage) {
@@ -260,7 +259,6 @@ export const executeTestPlan = async ({
     }
     await Promise.all(promises)
   }
-
   // Sometimes on windows test plan scripts never ends
   // I suspect it's some node process keeping the process alive
   // because not properly killed for some reason.
@@ -271,7 +269,6 @@ export const executeTestPlan = async ({
       process.exit()
     }, 2000).unref()
   }
-
   return {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
