@@ -18,7 +18,6 @@ export const createCompileProfile = ({
   preservedUrls,
   customCompilers,
   babelPluginMapWithoutSyntax,
-  workerUrls,
   importMapInWebWorkers,
   moduleOutFormat,
   sourcemapMethod,
@@ -65,7 +64,7 @@ export const createCompileProfile = ({
       import_assertion_type_css: true,
     })
   }
-  if (env.browser && workerUrls.length > 0) {
+  if (env.browser) {
     features["worker_type_module"] = true
   }
   if (env.browser && importMapInWebWorkers) {

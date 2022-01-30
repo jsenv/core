@@ -66,11 +66,7 @@ export const createRollupPlugins = async ({
   externalImportSpecifiers,
   importPaths,
   preservedUrls,
-  workers,
-  serviceWorkers,
   serviceWorkerFinalizer,
-  classicWorkers,
-  classicServiceWorkers,
   format,
   systemJsUrl,
 
@@ -127,6 +123,9 @@ export const createRollupPlugins = async ({
   let buildStats = {}
   const buildStartMs = Date.now()
 
+  const serviceWorkerUrls = []
+  const classicServiceWorkerUrls = []
+
   let lastErrorMessage
   const storeLatestJsenvPluginError = (error) => {
     lastErrorMessage = error.message
@@ -140,19 +139,6 @@ export const createRollupPlugins = async ({
     const url = resolveUrl(key, projectDirectoryUrl)
     entryPointUrls[url] = entryPoints[key]
   })
-  const workerUrls = workers.map((worker) =>
-    resolveUrl(worker, projectDirectoryUrl),
-  )
-  const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
-    resolveUrl(serviceWorker, projectDirectoryUrl),
-  )
-  const classicWorkerUrls = classicWorkers.map((classicWorker) =>
-    resolveUrl(classicWorker, projectDirectoryUrl),
-  )
-  const classicServiceWorkerUrls = classicServiceWorkers.map(
-    (classicServiceWorker) =>
-      resolveUrl(classicServiceWorker, projectDirectoryUrl),
-  )
 
   let ressourceBuilder
   let importResolver
@@ -685,19 +671,19 @@ export const createRollupPlugins = async ({
               const compiledFileUrl = asCompiledServerUrl(fileUrl)
               resolutionResult.url = compiledFileUrl
             }
-
-            if (workerUrls.includes(ressourceOriginalUrl)) {
+            const { searchParams } = new URL(ressourceUrl)
+            if (searchParams.has("worker")) {
               resolutionResult.isWorker = true
               resolutionResult.isJsModule = true
-            } else if (serviceWorkerUrls.includes(ressourceOriginalUrl)) {
+            } else if (searchParams.has("service_worker")) {
               resolutionResult.isServiceWorker = true
               resolutionResult.isJsModule = true
-            } else if (classicWorkerUrls.includes(ressourceOriginalUrl)) {
+              serviceWorkerUrls.push(ressourceOriginalUrl)
+            } else if (searchParams.has("worker_type_classic")) {
               resolutionResult.isWorker = true
-            } else if (
-              classicServiceWorkerUrls.includes(ressourceOriginalUrl)
-            ) {
+            } else if (searchParams.has("service_worker_type_classic")) {
               resolutionResult.isServiceWorker = true
+              classicServiceWorkerUrls.push(ressourceOriginalUrl)
             }
             return resolutionResult
           },
@@ -1047,22 +1033,16 @@ export const createRollupPlugins = async ({
         onReferenceWithImportMetaUrlPattern: async ({ importNode }) => {
           const specifier = importNode.arguments[0].value
           const { line, column } = importNode.loc.start
-
           const { id } = normalizeRollupResolveReturnValue(
             await this.resolve(specifier, url),
           )
           const ressourceUrl = asServerUrl(id)
-          const originalUrl = asOriginalUrl(ressourceUrl)
-          const isJsModule = Boolean(
-            workerUrls[originalUrl] || serviceWorkerUrls[originalUrl],
-          )
           const reference = ressourceBuilder.createReferenceFoundInJsModule({
             referenceLabel: "URL + import.meta.url",
             jsUrl: url,
             jsLine: line,
             jsColumn: column,
             ressourceSpecifier: ressourceUrl,
-            isJsModule,
           })
           if (!reference) {
             return
@@ -1375,7 +1355,8 @@ export const createRollupPlugins = async ({
       }
 
       const url = asOriginalUrl(facadeModuleId)
-      if (workerUrls.includes(url) || serviceWorkerUrls.includes(url)) {
+      const { searchParams } = new URL(url)
+      if (searchParams.has("worker") || searchParams.has("serviceWorker")) {
         const magicString = new MagicString(code)
         const systemjsCode = await readFile(
           new URL("../runtime/s.js", import.meta.url),
@@ -1609,9 +1590,9 @@ export const createRollupPlugins = async ({
       buildMappings = sortObjectByPathnames(buildMappings)
       await visitServiceWorkers({
         projectDirectoryUrl,
+        serviceWorkerFinalizer,
         serviceWorkerUrls,
         classicServiceWorkerUrls,
-        serviceWorkerFinalizer,
         buildMappings,
         ressourceMappings,
         buildFileContents,
@@ -1831,7 +1812,6 @@ const visitServiceWorkers = async ({
     ...serviceWorkerUrls,
     ...classicServiceWorkerUrls,
   ]
-
   await Promise.all(
     allServiceWorkerUrls.map(async (serviceWorkerUrl) => {
       const serviceWorkerRelativeUrl = urlToRelativeUrl(
@@ -1845,7 +1825,6 @@ const visitServiceWorkers = async ({
           `"${serviceWorkerRelativeUrl}" service worker file missing in the build`,
         )
       }
-
       if (serviceWorkerFinalizer) {
         let code = buildFileContents[serviceWorkerBuildRelativeUrl]
         code = await serviceWorkerFinalizer(code, {

@@ -15,18 +15,12 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  // logLevel: "debug",
+  logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPoints: {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
-  workers: [`${testDirectoryRelativeUrl}worker/worker.js`],
-  serviceWorkers: [`${testDirectoryRelativeUrl}service_worker/sw.js`],
-  classicWorkers: [`${testDirectoryRelativeUrl}classic_worker/worker.js`],
-  classicServiceWorkers: [
-    `${testDirectoryRelativeUrl}classic_service_worker/sw.js`,
-  ],
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
 const { returnValue, serverOrigin } = await executeInBrowser({

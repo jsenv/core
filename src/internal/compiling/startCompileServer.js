@@ -9,7 +9,6 @@ import {
   readRequestBody,
 } from "@jsenv/server"
 import {
-  resolveUrl,
   urlToRelativeUrl,
   resolveDirectoryUrl,
   urlIsInsideOf,
@@ -79,8 +78,6 @@ export const startCompileServer = async ({
   babelConfigFileUrl,
   customCompilers = {},
   preservedUrls,
-  workers = [],
-  serviceWorkers = [],
   importMapInWebWorkers = false,
   prependSystemJs,
 
@@ -127,12 +124,6 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
-  const workerUrls = workers.map((worker) =>
-    resolveUrl(worker, projectDirectoryUrl),
-  )
-  const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
-    resolveUrl(serviceWorker, projectDirectoryUrl),
-  )
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
     babelConfigFileUrl,
@@ -209,8 +200,6 @@ export const startCompileServer = async ({
   })
   const compileContext = await createCompileContext({
     preservedUrls,
-    workers,
-    serviceWorkers,
     replaceProcessEnvNodeEnv,
     inlineImportMapIntoHTML,
   })
@@ -252,7 +241,6 @@ export const startCompileServer = async ({
       customCompilers,
       babelPluginMapWithoutSyntax,
       preservedUrls,
-      workerUrls,
       importMapInWebWorkers,
       moduleOutFormat,
       sourcemapMethod,
@@ -343,8 +331,6 @@ export const startCompileServer = async ({
       topLevelAwait,
       babelPluginMap,
       customCompilers,
-      workerUrls,
-      serviceWorkerUrls,
       prependSystemJs,
       jsenvEventSourceClientInjection,
       jsenvToolbarInjection,

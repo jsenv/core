@@ -38,11 +38,7 @@ export const buildProject = async ({
 
   projectDirectoryUrl,
   entryPoints,
-  workers = [],
-  serviceWorkers = [],
   serviceWorkerFinalizer,
-  classicWorkers = [],
-  classicServiceWorkers = [],
   importMapInWebWorkers = false,
   buildDirectoryRelativeUrl,
   buildDirectoryClean = true,
@@ -187,8 +183,6 @@ export const buildProject = async ({
     env,
 
     babelPluginMap,
-    workers,
-    serviceWorkers,
     runtimeSupport,
     customCompilers,
     preservedUrls: {
@@ -254,11 +248,7 @@ export const buildProject = async ({
       systemJsUrl,
       globalName,
       globals,
-      workers,
-      serviceWorkers,
       serviceWorkerFinalizer,
-      classicWorkers,
-      classicServiceWorkers,
 
       node,
       browser,
