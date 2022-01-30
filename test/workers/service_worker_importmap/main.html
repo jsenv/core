@@ -25,7 +25,10 @@
       // eslint-disable-next-line import/no-unresolved
       const { value } = await import("foo")
 
-      const serviceWorkerUrl = new URL("./service_worker.js", import.meta.url)
+      const serviceWorkerUrl = new URL(
+        "./service_worker.js?service_worker",
+        import.meta.url,
+      )
       const serviceWorker = await window.navigator.serviceWorker
         .register(serviceWorkerUrl, { type: "module" })
         .then((registration) => {

@@ -24,7 +24,7 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}main.js`]: "main.js",
   },
   globals: {
-    [`./${testDirectoryRelativeUrl}main.js.js`]: "__namespace__",
+    [`./${testDirectoryRelativeUrl}main.js`]: "__namespace__",
   },
 })
 const { returnValue } = await executeFileUsingBrowserScript({

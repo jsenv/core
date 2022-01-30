@@ -20,8 +20,9 @@ export const compileJavascript = async ({
   sourcemapMethod,
 }) => {
   if (prependSystemJs === undefined) {
-    prependSystemJs = false
-    // workerUrls.includes(url) || serviceWorkerUrls.includes(url)
+    const { searchParams } = new URL(url)
+    prependSystemJs =
+      searchParams.has("worker") || searchParams.has("service_worker")
   }
   const transformResult = await transformJs({
     projectDirectoryUrl,
