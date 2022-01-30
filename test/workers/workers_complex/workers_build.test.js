@@ -15,7 +15,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/esmodule/`
 await buildProject({
   ...GENERATE_ESMODULE_BUILD_TEST_PARAMS,
-  logLevel: "debug",
+  // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
   buildDirectoryRelativeUrl,
   entryPoints: {
@@ -87,7 +87,7 @@ if (process.platform !== "win32") {
           },
           "sw.js": {
             versioned: false,
-            version: "f157fc56",
+            version: "8c13ad75",
           },
           "worker_b7f114ee.js": {
             versioned: true,
