@@ -438,11 +438,7 @@ export const executePlan = async (
       executionCount,
       ...summaryCounts,
       // when execution is aborted, the remaining executions are "cancelled"
-      cancelledCount:
-        executionCount -
-        executionDoneCount -
-        // we substract abortedCount because they are not pushed into executionsDone
-        summaryCounts.abortedCount,
+      cancelledCount: executionCount - executionDoneCount,
       duration: Date.now() - startMs,
     }
     if (logSummary) {
