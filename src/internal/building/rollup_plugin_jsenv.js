@@ -348,7 +348,7 @@ export const createRollupPlugins = async ({
           return null
         }
         const magicString = new MagicString(code)
-        magicString.prepend(`import "@jsenv/core/src/internal/runtime/s.js"`)
+        magicString.prepend(`import "@jsenv/core/src/internal/runtime/s.js";`)
         code = magicString.toString()
         map = magicString.generateMap({ hires: true })
         return { code, map }
@@ -394,13 +394,6 @@ export const createRollupPlugins = async ({
           })
           code = out.code
           const map = out.map
-          // const magicString = new MagicString(code)
-          // const systemjsCode = await readFile(
-          //   new URL("../runtime/s.js", import.meta.url),
-          // )
-          // magicString.prepend(systemjsCode)
-          // code = magicString.toString()
-          // const map = magicString.generateMap({ hires: true })
           return {
             code,
             map,
