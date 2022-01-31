@@ -1,11 +1,11 @@
-import { require } from "../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 // see also https://github.com/sindresorhus/execa/issues/96
 export const killProcessTree = async (
   processId,
   { signal, timeout = 2000 },
 ) => {
-  var pidtree = require("pidtree")
+  const pidtree = require("pidtree")
 
   let descendantProcessIds
   try {

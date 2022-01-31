@@ -11,15 +11,15 @@ import { uneval } from "@jsenv/uneval"
 
 import { nodeSupportsDynamicImport } from "@jsenv/core/src/internal/features/node_feature_detection/node_feature_detect_dynamic_import.js"
 
-import { createChildProcessOptions } from "./createChildProcessOptions.js"
+import { createChildProcessOptions } from "./child_process_options.js"
 import {
   processOptionsFromExecArgv,
   execArgvFromProcessOptions,
-} from "./processOptions.js"
+} from "./process_options.js"
 import { killProcessTree } from "./kill_process_tree.js"
 
 const NODE_CONTROLLABLE_FILE_URL = new URL(
-  "../node_runtime/nodeControllableFile.mjs",
+  "./node_controllable_file.mjs",
   import.meta.url,
 ).href
 

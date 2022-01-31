@@ -1,5 +1,5 @@
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
-import { createControllableNodeProcess } from "./internal/node_launcher/createControllableNodeProcess.js"
+import { createControllableNodeProcess } from "./internal/node_launcher/node_controllable_process.js"
 
 export const importUsingChildProcess = async (
   fileUrl,

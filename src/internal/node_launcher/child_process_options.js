@@ -1,7 +1,7 @@
 import { findFreePort } from "@jsenv/server"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { processOptionsFromExecArgv } from "./processOptions.js"
+import { processOptionsFromExecArgv } from "./process_options.js"
 
 const AVAILABLE_DEBUG_MODE = [
   "none",

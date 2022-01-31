@@ -1,5 +1,5 @@
-import { createNodeSystem } from "@jsenv/core/src/internal/node_client/node_system.js"
-import { fetchSource } from "@jsenv/core/src/internal/node_client/fetchSource.js"
+import { createNodeSystem } from "@jsenv/core/src/internal/node_launcher/node_system.js"
+import { fetchSource } from "@jsenv/core/src/internal/node_launcher/fetch_source.js"
 
 export const executeUsingNodeSystem = async ({
   projectDirectoryUrl,

@@ -17,7 +17,7 @@ import {
 } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
 
 import { valueInstall } from "./value_install.js"
-import { evalSource } from "./evalSource.js"
+import { evalSource } from "./eval_source.js"
 
 export const createNodeSystem = async ({
   projectDirectoryUrl,
