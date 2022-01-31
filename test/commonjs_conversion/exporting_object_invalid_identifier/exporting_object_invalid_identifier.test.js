@@ -32,13 +32,11 @@ const asObjectWithoutPrototype = (object) => {
   return objectWithoutPrototype
 }
 const actual = { ...namespace }
-const exportDefault = { "a": 42, ")": "ooops, this is an invalid identifier" }
 const expected = {
   all: Object.freeze(
     asObjectWithoutPrototype({
-      __moduleExports: exportDefault,
       a: 42,
-      default: exportDefault,
+      default: { "a": 42, ")": "ooops, this is an invalid identifier" },
     }),
   ),
 }
