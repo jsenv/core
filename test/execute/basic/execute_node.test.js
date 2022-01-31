@@ -15,13 +15,14 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 
 const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
-  launchLogLevel: "info",
+  launchLogLevel: "",
   jsenvDirectoryRelativeUrl,
   runtime: nodeRuntime,
   // runtimeParams: {
   //   debugPort: 40001,
   // },
   fileRelativeUrl,
+  mirrorConsole: false,
 })
 const actual = {
   status,
