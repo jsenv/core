@@ -12,7 +12,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { transformJs } from "@jsenv/core/src/internal/compile_server/js-compilation-service/transformJs.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const fileUrl = new URL(`./import_meta.js`, import.meta.url)

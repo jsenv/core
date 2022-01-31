@@ -1,8 +1,8 @@
 import { resolveUrl, readFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { loadBabelPluginMapFromFile } from "@jsenv/core/src/internal/compiling/load_babel_plugin_map_from_file.js"
+import { transformJs } from "@jsenv/core/src/internal/compile_server/js-compilation-service/transformJs.js"
+import { loadBabelPluginMapFromFile } from "@jsenv/core/src/internal/compile_server/load_babel_plugin_map_from_file.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

@@ -5,7 +5,7 @@ import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
 } from "./internal/argUtils.js"
-import { startCompileServer } from "./internal/compiling/startCompileServer.js"
+import { startCompileServer } from "./internal/compile_server/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({

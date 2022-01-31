@@ -12,7 +12,7 @@ import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 

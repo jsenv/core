@@ -8,7 +8,7 @@ import {
   getHtmlNodeTextNode,
   manipulateHtmlAst,
   findFirstImportMapNode,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 import {
   jsenvSystemJsFileInfo,
   jsenvResolveImportUrlHelper,

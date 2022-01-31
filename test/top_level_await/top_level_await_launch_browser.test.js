@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 
 import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/startCompileServer.js"
 import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,

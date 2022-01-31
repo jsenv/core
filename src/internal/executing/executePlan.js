@@ -20,7 +20,7 @@ import {
   writeFile,
 } from "@jsenv/filesystem"
 
-import { startCompileServer } from "../compiling/startCompileServer.js"
+import { startCompileServer } from "../compile_server/startCompileServer.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 

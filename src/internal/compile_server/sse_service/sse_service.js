@@ -9,7 +9,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { createCallbackList } from "@jsenv/abort"
 
-import { urlIsCompilationAsset } from "@jsenv/core/src/internal/compiling/jsenv_directory/compile_asset.js"
+import { urlIsCompilationAsset } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_asset.js"
 
 export const createSSEService = ({
   projectDirectoryUrl,

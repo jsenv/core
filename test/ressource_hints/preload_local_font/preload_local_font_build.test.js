@@ -12,7 +12,7 @@ import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)

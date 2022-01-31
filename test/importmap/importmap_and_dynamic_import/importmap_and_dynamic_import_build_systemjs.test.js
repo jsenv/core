@@ -14,7 +14,7 @@ import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(

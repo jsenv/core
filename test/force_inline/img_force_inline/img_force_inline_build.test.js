@@ -7,7 +7,7 @@ import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAM
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

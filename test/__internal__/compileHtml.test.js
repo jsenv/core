@@ -4,7 +4,7 @@ import {
   parseHtmlString,
   manipulateHtmlAst,
   stringifyHtmlAst,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 
 const compileHtml = (
   htmlBeforeCompilation,

@@ -3,7 +3,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

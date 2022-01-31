@@ -22,7 +22,7 @@ import { UNICODE } from "@jsenv/log"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { convertJsonTextToJavascriptModule } from "@jsenv/core/src/internal/building/json_module.js"
 import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
-import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { transformJs } from "@jsenv/core/src/internal/compile_server/js-compilation-service/transformJs.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
 import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
@@ -34,7 +34,7 @@ import { createImportResolverForImportmap } from "@jsenv/core/src/internal/impor
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compiling/jsenv_directory/compile_profile.js"
+import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_profile.js"
 
 import {
   formatBuildStartLog,

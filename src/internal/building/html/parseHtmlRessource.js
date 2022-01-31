@@ -19,7 +19,6 @@ Or be sure to also reference this url somewhere in the html file like
 import { urlToFilename, urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
 import { applyAlgoToRepresentationData } from "@jsenv/integrity"
 
-
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -35,7 +34,7 @@ import {
   getHtmlNodeLocation,
   removeHtmlNode,
   addHtmlNodeAttribute,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
 import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
