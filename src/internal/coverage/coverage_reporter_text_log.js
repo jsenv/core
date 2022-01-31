@@ -1,5 +1,6 @@
-import { require } from "../../require.js"
-import { istanbulCoverageMapFromCoverage } from "./istanbulCoverageMapFromCoverage.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+
+import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_coverage.js"
 
 export const generateCoverageTextLog = (
   coverage,

@@ -12,11 +12,10 @@ import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
 } from "./internal/argUtils.js"
-import { executePlan } from "./internal/executing/executePlan.js"
-import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
-import { generateCoverageJsonFile } from "./internal/executing/coverage_reporter/coverage_reporter_json_file.js"
-import { generateCoverageHtmlDirectory } from "./internal/executing/coverage_reporter/coverage_reporter_html_directory.js"
-import { generateCoverageTextLog } from "./internal/executing/coverage_reporter/coverage_reporter_text_log.js"
+import { executePlan } from "./internal/executing/execute_plan.js"
+import { generateCoverageJsonFile } from "./internal/coverage/coverage_reporter_json_file.js"
+import { generateCoverageHtmlDirectory } from "./internal/coverage/coverage_reporter_html_directory.js"
+import { generateCoverageTextLog } from "./internal/coverage/coverage_reporter_text_log.js"
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 /**
@@ -206,7 +205,10 @@ export const executeTestPlan = async ({
     importMapInWebWorkers,
     customCompilers,
   })
-  if (updateProcessExitCode && !executionIsPassed(result)) {
+  if (
+    updateProcessExitCode &&
+    result.planSummary.executionCount !== result.planSummary.completedCount
+  ) {
     process.exitCode = 1
   }
   const planCoverage = result.planCoverage

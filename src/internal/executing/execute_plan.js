@@ -20,14 +20,18 @@ import {
   writeFile,
 } from "@jsenv/filesystem"
 
-import { startCompileServer } from "../compile_server/compile_server.js"
-import { launchAndExecute } from "../executing/launchAndExecute.js"
-import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
-import { generateExecutionSteps } from "./generateExecutionSteps.js"
-import { reportToCoverage } from "./coverage/reportToCoverage.js"
-import { formatExecuting, formatExecutionResult } from "./executionLogs.js"
-import { createSummaryLog } from "./createSummaryLog.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
+import { babelPluginInstrument } from "@jsenv/core/src/internal/coverage/babel_plugin_instrument.js"
+import { reportToCoverage } from "@jsenv/core/src/internal/coverage/report_to_coverage.js"
+
 import { ensureGlobalGc } from "./gc.js"
+import { launchAndExecute } from "./launch_and_execute.js"
+import { generateExecutionSteps } from "./execution_steps.js"
+import {
+  formatExecuting,
+  formatExecutionResult,
+} from "./logs_file_execution.js"
+import { createSummaryLog } from "./logs_plan_summary.js"
 
 export const executePlan = async (
   plan,

@@ -4,7 +4,7 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
-import { require } from "../../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 

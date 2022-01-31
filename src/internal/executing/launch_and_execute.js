@@ -1,9 +1,9 @@
 import cuid from "cuid"
+import { resolveUrl, writeFile } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { Abort, raceCallbacks } from "@jsenv/abort"
-import { resolveUrl, writeFile } from "@jsenv/filesystem"
 
-import { composeTwoFileByFileIstanbulCoverages } from "./coverage_utils/istanbul_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/coverage/istanbul_coverage_composition.js"
 
 export const launchAndExecute = async ({
   signal = new AbortController().signal,

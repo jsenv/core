@@ -2,7 +2,7 @@ import { ANSI, UNICODE } from "@jsenv/log"
 
 import { msAsDuration } from "../logs/msAsDuration.js"
 import { EXECUTION_COLORS } from "./execution_colors.js"
-import { createIntermediateSummary } from "./createSummaryLog.js"
+import { createIntermediateSummary } from "./logs_plan_summary.js"
 
 export const formatExecuting = (
   { executionIndex },

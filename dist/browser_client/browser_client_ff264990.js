@@ -3794,17 +3794,6 @@ var readCoverage$1 = function readCoverage() {
   return window.__coverage__;
 };
 
-var stackToString = function stackToString(stack, _ref) {
-  var error = _ref.error,
-      indent = _ref.indent;
-  var name = error.name || "Error";
-  var message = error.message || "";
-  var stackString = stack.map(function (callSite) {
-    return "\n".concat(indent, "at ").concat(callSite);
-  }).join("");
-  return "".concat(name, ": ").concat(message).concat(stackString);
-};
-
 /* eslint-env browser, node */
 var parseDataUrl = function parseDataUrl(dataUrl) {
   var afterDataProtocol = dataUrl.slice("data:".length);
@@ -4313,7 +4302,7 @@ function _continue(value, then) {
   return value && value.then ? value.then(then) : then(value);
 }
 
-var getOriginalCallsites = _async$3(function (_ref) {
+var remapStack = _async$3(function (_ref) {
   var stack = _ref.stack,
       resolveFile = _ref.resolveFile,
       fetchFile = _ref.fetchFile,
@@ -4513,6 +4502,17 @@ var memoizeByFirstArgStringValue = function memoizeByFirstArgStringValue(fn) {
   };
 };
 
+var stringifyStack = function stringifyStack(stack, _ref) {
+  var error = _ref.error,
+      indent = _ref.indent;
+  var name = error.name || "Error";
+  var message = error.message || "";
+  var stackString = stack.map(function (callSite) {
+    return "\n".concat(indent, "at ").concat(callSite);
+  }).join("");
+  return "".concat(name, ": ").concat(message).concat(stackString);
+};
+
 function _await$2(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -4621,7 +4621,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
       }
     };
 
-    var stackRemappingPromise = getOriginalCallsites({
+    var stackRemappingPromise = remapStack({
       stack: stack,
       error: error,
       resolveFile: resolveFile,
@@ -4632,7 +4632,7 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
       onFailure: onFailure
     });
     errorRemappingCache.set(error, stackRemappingPromise);
-    return stackToString(stack, {
+    return stringifyStack(stack, {
       error: error,
       indent: indent
     });
@@ -4675,13 +4675,13 @@ var installErrorStackRemapping = function installErrorStackRemapping(_ref) {
               });
             }
 
-            var _stackToString = stackToString(originalCallsites, {
+            var _stringifyStack = stringifyStack(originalCallsites, {
               error: error,
               indent: indent
             });
 
             _exit = true;
-            return _stackToString;
+            return _stringifyStack;
           });
         }, function (e) {
           var _createDetailedMessag;
@@ -5290,4 +5290,4 @@ window.__jsenv__ = {
 };
 })();
 
-//# sourceMappingURL=browser_client_35787837.js.map
+//# sourceMappingURL=browser_client_ff264990.js.map

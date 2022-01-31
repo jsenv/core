@@ -1,3 +1,5 @@
+import { require } from "@jsenv/core/src/internal/require.js"
+
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { Abort } from "@jsenv/abort"
 
@@ -6,8 +8,7 @@ import {
   getMinimalBabelPluginMap,
 } from "@jsenv/core/src/internal/compile_server/js/babel_plugins.js"
 
-import { babelPluginInstrument } from "../coverage/babel_plugin_instrument.js"
-import { createEmptyCoverage } from "./createEmptyCoverage.js"
+import { babelPluginInstrument } from "./babel_plugin_instrument.js"
 
 export const relativeUrlToEmptyCoverage = async (
   relativeUrl,
@@ -61,4 +62,9 @@ export const relativeUrlToEmptyCoverage = async (
   } finally {
     await operation.end()
   }
+}
+
+const createEmptyCoverage = (relativeUrl) => {
+  const { createFileCoverage } = require("istanbul-lib-coverage")
+  return createFileCoverage(relativeUrl).toJSON()
 }

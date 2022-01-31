@@ -1,4 +1,4 @@
-import { installErrorStackRemapping } from "@jsenv/core/src/internal/error_stack_remap/installErrorStackRemapping.js"
+import { installErrorStackRemapping } from "@jsenv/core/src/internal/error_stack_remap/install_error_stack_remapping.js"
 
 export const installBrowserErrorStackRemapping = (options = {}) =>
   installErrorStackRemapping({

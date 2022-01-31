@@ -1,7 +1,7 @@
 import { Abort } from "@jsenv/abort"
 
 import { listRelativeFileUrlToCover } from "./list_files_not_covered.js"
-import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
+import { relativeUrlToEmptyCoverage } from "./empty_coverage_factory.js"
 
 export const getMissingFileByFileCoverage = async ({
   signal,

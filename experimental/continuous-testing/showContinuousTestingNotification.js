@@ -1,7 +1,6 @@
 import { basename } from "path"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { executionIsPassed } from "@jsenv/core/src/internal/executing/executionIsPassed.js"
 import {
   createBrokenNotificationMessage,
   createStillFailingNotificationMessage,
@@ -21,12 +20,18 @@ export const showContinuousTestingNotification = ({
   if (previousTestingPassed && !testingPassed) {
     notifier.notify({
       title: `${projectName} broken`,
-      message: createBrokenNotificationMessage({ previousTestingResult, testingResult }),
+      message: createBrokenNotificationMessage({
+        previousTestingResult,
+        testingResult,
+      }),
     })
   } else if (!previousTestingPassed && testingPassed) {
     notifier.notify({
       title: `${projectName} fixed`,
-      message: createFixedNotificationMessage({ previousTestingResult, testingResult }),
+      message: createFixedNotificationMessage({
+        previousTestingResult,
+        testingResult,
+      }),
     })
   } else if (!previousTestingPassed && !testingPassed) {
     notifier.notify({
@@ -38,3 +43,5 @@ export const showContinuousTestingNotification = ({
     })
   }
 }
+
+const executionIsPassed = () => true

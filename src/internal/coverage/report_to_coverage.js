@@ -4,13 +4,13 @@ import { Abort } from "@jsenv/abort"
 import {
   visitNodeV8Directory,
   filterV8Coverage,
-} from "../coverage_utils/v8_coverage_from_directory.js"
-import { composeTwoV8Coverages } from "../coverage_utils/v8_coverage_composition.js"
-import { composeTwoFileByFileIstanbulCoverages } from "../coverage_utils/istanbul_coverage_composition.js"
-import { v8CoverageToIstanbul } from "../coverage_utils/v8_coverage_to_istanbul.js"
-import { composeV8AndIstanbul } from "../coverage_utils/v8_and_istanbul.js"
-import { normalizeFileByFileCoveragePaths } from "../coverage_utils/file_by_file_coverage.js"
-import { getMissingFileByFileCoverage } from "../coverage_missing/missing_coverage.js"
+} from "./v8_coverage_from_directory.js"
+import { composeTwoV8Coverages } from "./v8_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js"
+import { v8CoverageToIstanbul } from "./v8_coverage_to_istanbul.js"
+import { composeV8AndIstanbul } from "./v8_and_istanbul.js"
+import { normalizeFileByFileCoveragePaths } from "./file_by_file_coverage.js"
+import { getMissingFileByFileCoverage } from "./missing_coverage.js"
 
 export const reportToCoverage = async (
   report,

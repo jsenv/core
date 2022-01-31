@@ -1,7 +1,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { stackToString } from "./stackToString.js"
-import { getOriginalCallsites } from "./getOriginalCallsites.js"
+import { remapStack } from "./remap_stack.js"
+import { stringifyStack } from "./stringify_stack.js"
 
 export const installErrorStackRemapping = ({
   fetchFile,
@@ -57,7 +57,7 @@ export const installErrorStackRemapping = ({
       }
     }
 
-    const stackRemappingPromise = getOriginalCallsites({
+    const stackRemappingPromise = remapStack({
       stack,
       error,
       resolveFile,
@@ -69,7 +69,7 @@ export const installErrorStackRemapping = ({
     })
     errorRemappingCache.set(error, stackRemappingPromise)
 
-    return stackToString(stack, { error, indent })
+    return stringifyStack(stack, { error, indent })
   }
 
   const getErrorOriginalStackString = async (
@@ -109,7 +109,7 @@ export const installErrorStackRemapping = ({
             columnno: firstCall.getColumnNumber(),
           })
         }
-        return stackToString(originalCallsites, { error, indent })
+        return stringifyStack(originalCallsites, { error, indent })
       } catch (e) {
         onFailure(
           createDetailedMessage(`error while computing original stack.`, {

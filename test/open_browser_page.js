@@ -1,6 +1,6 @@
 import { chromium } from "playwright"
 
-import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
+import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/coverage/istanbul_coverage_composition.js"
 import { evalSource } from "@jsenv/core/src/internal/node_launcher/eval_source.js"
 
 import { coverageIsEnabled } from "./coverageIsEnabled.js"

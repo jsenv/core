@@ -6,9 +6,9 @@ import {
 } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 
-import { remapCallSite } from "./remapCallSite.js"
+import { remapCallSite } from "./remap_call_site.js"
 
-export const getOriginalCallsites = async ({
+export const remapStack = async ({
   stack,
   resolveFile,
   fetchFile,
@@ -196,7 +196,6 @@ export const getOriginalCallsites = async ({
       }
     },
   )
-
   const originalCallsites = await Promise.all(
     stack.map((callSite) =>
       remapCallSite(callSite, {
