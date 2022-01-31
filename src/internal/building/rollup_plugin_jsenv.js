@@ -1478,7 +1478,10 @@ export const createRollupPlugins = async ({
       }
       const url = asOriginalUrl(facadeModuleId)
       const { searchParams } = new URL(url)
-      if (searchParams.has("worker") || searchParams.has("service_worker")) {
+      if (
+        format === "systemjs" &&
+        (searchParams.has("worker") || searchParams.has("service_worker"))
+      ) {
         const magicString = new MagicString(code)
         const systemjsCode = await readFile(
           new URL("../runtime/s.js", import.meta.url),
