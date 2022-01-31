@@ -9,7 +9,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { jsenvDistDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  BROWSER_RUNTIME_BUILD_URL,
+  BROWSER_CLIENT_BUILD_URL,
   EVENT_SOURCE_CLIENT_BUILD_URL,
   TOOLBAR_INJECTOR_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
@@ -61,8 +61,8 @@ export const compileHtml = async ({
   code,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
-  const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
-    BROWSER_RUNTIME_BUILD_URL,
+  const browserClientBuildUrlRelativeToProject = urlToRelativeUrl(
+    BROWSER_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
   const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
@@ -81,7 +81,7 @@ export const compileHtml = async ({
       ...(jsenvScriptInjection
         ? [
             {
-              src: `/${browserRuntimeBuildUrlRelativeToProject}`,
+              src: `/${browserClientBuildUrlRelativeToProject}`,
             },
           ]
         : []),

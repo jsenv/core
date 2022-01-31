@@ -42,19 +42,19 @@ addExport(
 
 await buildInternalFile({
   format: "global",
-  buildDirectoryRelativeUrl: "./dist/browser_runtime/",
+  buildDirectoryRelativeUrl: "./dist/browser_client/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPoints: {
-    "./src/internal/browser_runtime/browser_runtime.js":
-      "browser_runtime_[hash].js",
+    "./src/internal/browser_client/browser_client.js":
+      "browser_client_[hash].js",
   },
   preservedDynamicImports: {
-    "./src/internal/browser_runtime/browser_runtime.js": true,
+    "./src/internal/browser_client/browser_client.js": true,
   },
 })
 addExport(
-  "BROWSER_RUNTIME_BUILD_URL",
-  `browser_runtime/${buildManifest["browser_runtime.js"]}`,
+  "BROWSER_CLIENT_BUILD_URL",
+  `browser_client/${buildManifest["browser_client.js"]}`,
 )
 
 await buildInternalFile({

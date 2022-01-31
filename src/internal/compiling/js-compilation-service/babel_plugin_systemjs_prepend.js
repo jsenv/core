@@ -5,7 +5,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 export const babelPluginSystemJsPrepend = (api) => {
   api.assertVersion(7)
   const systemJsUrl = new URL(
-    "src/internal/runtime/s.js",
+    "src/internal/runtime_client/s.js",
     jsenvCoreDirectoryUrl,
   )
   return {

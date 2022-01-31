@@ -1,4 +1,5 @@
 import { createDetailedMessage } from "@jsenv/logger"
+
 import { stackToString } from "./stackToString.js"
 import { getOriginalCallsites } from "./getOriginalCallsites.js"
 

@@ -22,7 +22,7 @@ import { composeTwoImportMaps, moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import {
-  BROWSER_RUNTIME_BUILD_URL,
+  BROWSER_CLIENT_BUILD_URL,
   EVENT_SOURCE_CLIENT_BUILD_URL,
   TOOLBAR_INJECTOR_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
@@ -165,8 +165,8 @@ const transformHTMLSourceFile = async ({
     projectDirectoryUrl,
   })
 
-  const browserRuntimeBuildUrlRelativeToProject = urlToRelativeUrl(
-    BROWSER_RUNTIME_BUILD_URL,
+  const browserClientBuildUrlRelativeToProject = urlToRelativeUrl(
+    BROWSER_CLIENT_BUILD_URL,
     projectDirectoryUrl,
   )
 
@@ -185,7 +185,7 @@ const transformHTMLSourceFile = async ({
       ...(jsenvScriptInjection
         ? [
             {
-              src: `/${browserRuntimeBuildUrlRelativeToProject}`,
+              src: `/${browserClientBuildUrlRelativeToProject}`,
             },
           ]
         : []),

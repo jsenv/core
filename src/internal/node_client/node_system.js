@@ -8,14 +8,15 @@ import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
 
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import-resolution/import-resolver-node.js"
-import { require } from "../require.js"
-import "../runtime/s.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+import "@jsenv/core/src/internal/runtime_client/s.js"
 import {
   fromFunctionReturningNamespace,
   getJavaScriptModuleResponseError,
   fromFunctionReturningRegisteredModule,
-} from "../runtime/module-registration.js"
-import { valueInstall } from "../runtime/valueInstall.js"
+} from "@jsenv/core/src/internal/runtime_client/module_registration.js"
+
+import { valueInstall } from "./value_install.js"
 import { evalSource } from "./evalSource.js"
 
 export const createNodeSystem = async ({

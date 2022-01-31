@@ -1,4 +1,4 @@
-import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
+import { fetchSource } from "@jsenv/core/src/internal/node_client/fetchSource.js"
 
 import { nodeSupportsDynamicImport } from "./node_feature_detect_dynamic_import.js"
 import { nodeSupportsTopLevelAwait } from "./node_feature_detect_top_level_await.js"

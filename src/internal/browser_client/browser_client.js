@@ -1,14 +1,14 @@
 /* eslint-env browser */
 
-import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
-import { fetchUrl } from "../browser_utils/fetch_browser.js"
-import { fetchAndEvalUsingFetch } from "../browser_utils/fetchAndEvalUsingFetch.js"
-import { unevalException } from "../unevalException.js"
-import { memoize } from "../memoize.js"
+import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
+import { fetchAndEvalUsingFetch } from "@jsenv/core/src/internal/browser_utils/fetchAndEvalUsingFetch.js"
+import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
+import { memoize } from "@jsenv/core/src/internal/memoize.js"
 
+import { createBrowserClient } from "./browser_client_factory.js"
+import { installBrowserErrorStackRemapping } from "./browser_error_stack_remap.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
-import { createBrowserRuntime } from "./createBrowserRuntime.js"
 
 const getNavigationStartTime = () => {
   try {
@@ -177,7 +177,7 @@ const getBrowserRuntime = memoize(async () => {
   const parts = afterJsenvDirectory.split("/")
   const compileId = parts[0]
 
-  const browserRuntime = await createBrowserRuntime({
+  const browserClient = await createBrowserClient({
     compileServerOrigin,
     jsenvDirectoryRelativeUrl,
     compileId,
@@ -204,12 +204,12 @@ const getBrowserRuntime = memoize(async () => {
       error.stack = originalStack
       return error
     }
-    const executeFile = browserRuntime.executeFile
-    browserRuntime.executeFile = (file, options = {}) => {
+    const executeFile = browserClient.executeFile
+    browserClient.executeFile = (file, options = {}) => {
       return executeFile(file, { errorTransform, ...options })
     }
   }
-  return browserRuntime
+  return browserClient
 })
 
 const livereloadingCallbacks = {}

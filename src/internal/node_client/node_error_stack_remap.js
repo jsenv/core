@@ -1,7 +1,8 @@
 import { ensureWindowsDriveLetter, resolveUrl } from "@jsenv/filesystem"
+
 import { require } from "@jsenv/core/src/internal/require.js"
-import { fetchUrl } from "../fetchUrl.js"
-import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { installErrorStackRemapping } from "@jsenv/core/src/internal/error_stack_remap/installErrorStackRemapping.js"
 
 export const installNodeErrorStackRemapping = ({
   projectDirectoryUrl,

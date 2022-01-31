@@ -8,8 +8,9 @@ import {
 import { COMPILE_PROXY_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { filterV8Coverage } from "@jsenv/core/src/internal/executing/coverage_utils/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/executing/coverage_utils/istanbul_coverage_composition.js"
-import { evalSource } from "../node_runtime/evalSource.js"
+import { evalSource } from "@jsenv/core/src/internal/node_client/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
+
 import { getBrowserRuntimeProfile } from "./browser_runtime_profile.js"
 
 export const executeHtmlFile = async (

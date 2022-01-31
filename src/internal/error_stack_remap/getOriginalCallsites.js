@@ -1,6 +1,11 @@
 import { createDetailedMessage } from "@jsenv/logger"
-import { parseDataUrl, dataUrlToRawData } from "../dataUrl.utils.js"
-import { getJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
+
+import {
+  parseDataUrl,
+  dataUrlToRawData,
+} from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
 import { remapCallSite } from "./remapCallSite.js"
 
 export const getOriginalCallsites = async ({

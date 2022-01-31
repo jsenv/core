@@ -1,7 +1,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
 import { resolveImport } from "@jsenv/importmap/src/resolveImport.js"
 
-import { tryToFindProjectRelativeUrl } from "@jsenv/core/src/internal/runtime/module-registration.js"
+import { tryToFindProjectRelativeUrl } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
 
 import { applyDefaultExtension } from "./default-extension.js"
 

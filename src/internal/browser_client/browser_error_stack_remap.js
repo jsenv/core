@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
+import { installErrorStackRemapping } from "@jsenv/core/src/internal/error_stack_remap/installErrorStackRemapping.js"
 
 export const installBrowserErrorStackRemapping = (options = {}) =>
   installErrorStackRemapping({

@@ -3,7 +3,7 @@ import { resolveUrl, readFile } from "@jsenv/filesystem"
 import {
   TOOLBAR_INJECTOR_BUILD_URL,
   EVENT_SOURCE_CLIENT_BUILD_URL,
-  BROWSER_RUNTIME_BUILD_URL,
+  BROWSER_CLIENT_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
@@ -43,7 +43,7 @@ export const createCompileContext = async ({
     jsenvCorePackageVersion: await readJsenvCoreVersionFromPackageFile(),
     TOOLBAR_INJECTOR_BUILD_URL,
     EVENT_SOURCE_CLIENT_BUILD_URL,
-    BROWSER_RUNTIME_BUILD_URL,
+    BROWSER_CLIENT_BUILD_URL,
   }
 }
 

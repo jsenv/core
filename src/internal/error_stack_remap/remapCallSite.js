@@ -1,8 +1,9 @@
 import { createDetailedMessage } from "@jsenv/logger"
+
 import {
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
-} from "../filePathUtils.js"
+} from "@jsenv/core/src/internal/filePathUtils.js"
 
 export const remapCallSite = async (
   callSite,

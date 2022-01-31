@@ -1,12 +1,12 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
-import { startObservingPerformances } from "./node_execution_performance.js"
 import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
 
-import { installNodeErrorStackRemapping } from "@jsenv/core/src/internal/error-stack-remapping/installNodeErrorStackRemapping.js"
-import { fetchSource } from "@jsenv/core/src/internal/node_runtime/fetchSource.js"
-import { createNodeSystem } from "@jsenv/core/src/internal/node_runtime/node_system.js"
+import { installNodeErrorStackRemapping } from "./node_error_stack_remap.js"
+import { startObservingPerformances } from "./node_execution_performance.js"
+import { fetchSource } from "./fetchSource.js"
+import { createNodeSystem } from "./node_system.js"
 
 export const execute = async ({
   projectDirectoryUrl,

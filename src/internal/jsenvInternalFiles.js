@@ -23,8 +23,8 @@ export const sourcemapMappingFileInfo = {
 }
 
 export const jsenvSystemJsFileInfo = {
-  url: resolveUrl("./src/internal/runtime/s.js", jsenvCoreDirectoryUrl),
-  jsenvRelativeUrl: "./src/internal/runtime/s.js",
+  url: resolveUrl("./src/internal/runtime_client/s.js", jsenvCoreDirectoryUrl),
+  jsenvRelativeUrl: "./src/internal/runtime_client/s.js",
 }
 
 export const jsenvResolveImportUrlHelper = {
