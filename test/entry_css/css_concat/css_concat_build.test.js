@@ -1,5 +1,4 @@
-import { assert } from "@jsenv/assert"
-import { existsSync } from "fs"
+import { existsSync } from "node:fs"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
@@ -7,10 +6,11 @@ import {
   resolveUrl,
   urlToFileSystemPath,
 } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
+import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parse_css_urls.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)

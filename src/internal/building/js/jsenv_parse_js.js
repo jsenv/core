@@ -5,6 +5,7 @@ import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
 import { transformWorker } from "./transform_worker.js"
 
 export const parseJsRessource = async (

@@ -8,7 +8,7 @@ import { assert } from "@jsenv/assert"
 import { buildProject } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { buildToCompilationResult } from "@jsenv/core/src/internal/building/buildToCompilationResult.js"
+import { compilationResultFromBuild } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result_from_build.js"
 import { GENERATE_COMMONJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
 
 const { SourceMapConsumer } = require("source-map")
@@ -30,7 +30,7 @@ const build = await buildProject({
     [`./${testDirectoryRelativeUrl}${mainFilename}`]: "main.cjs",
   },
 })
-const compilationResult = buildToCompilationResult(build, {
+const compilationResult = compilationResultFromBuild(build, {
   projectDirectoryUrl: testDirectoryUrl,
   compiledFileUrl: resolveUrl(
     `${buildDirectoryRelativeUrl}main.js`,

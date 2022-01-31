@@ -1,6 +1,6 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { generateContentHash } from "./internal/building/url_versioning.js"
+import { generateContentHash } from "@jsenv/core/src/internal/building/url_versioning/url_versioning.js"
 
 export const jsenvServiceWorkerFinalizer = (
   code,

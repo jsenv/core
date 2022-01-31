@@ -5,9 +5,10 @@ import {
   stringifyHtmlAst,
   getHtmlNodeLocation,
 } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
-import { collectNodesMutations } from "../parsing.utils.js"
+
 import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
-import { minifyHtml } from "../html/minifyHtml.js"
+import { collectNodesMutations } from "../html/html_node_mutations.js"
+import { minifyHtml } from "../html/minify_html.js"
 
 export const parseSvgRessource = async (
   svgRessource,

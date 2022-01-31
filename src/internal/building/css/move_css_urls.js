@@ -1,6 +1,6 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { applyPostCss } from "./applyPostCss.js"
+import { applyPostCss } from "./apply_post_css.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
 export const moveCssUrls = async ({

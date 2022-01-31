@@ -20,14 +20,8 @@ import {
 import { UNICODE } from "@jsenv/log"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { convertJsonTextToJavascriptModule } from "@jsenv/core/src/internal/building/json_module.js"
-import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
 import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
-import { createUrlFetcher } from "@jsenv/core/src/internal/building/url_fetcher.js"
-import { createUrlLoader } from "@jsenv/core/src/internal/building/url_loader.js"
-import { stringifyUrlTrace } from "@jsenv/core/src/internal/building/url_trace.js"
-import { sortObjectByPathnames } from "@jsenv/core/src/internal/building/sortObjectByPathnames.js"
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import_resolution/import_resolver_node.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
@@ -36,6 +30,13 @@ import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remot
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_profile.js"
 
+import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
+import { convertCssTextToJavascriptModule } from "./import_assertions/css_module.js"
+import { importMapsFromHtml } from "./html/html_scan.js"
+import { esToSystem } from "./global_format/es_to_system.js"
+import { createUrlFetcher } from "./url_fetcher.js"
+import { createUrlLoader } from "./url_loader.js"
+import { stringifyUrlTrace } from "./url_trace.js"
 import {
   formatBuildStartLog,
   formatUseImportMapFromHtml,
@@ -43,15 +44,14 @@ import {
   formatRessourceHintNeverUsedWarning,
   formatBuildDoneInfo,
 } from "./build_logs.js"
-import { importMapsFromHtml } from "./html/htmlScan.js"
-import { parseRessource } from "./parseRessource.js"
+import { parseRessource } from "./parse_ressource.js"
 import {
   createRessourceBuilder,
   referenceToCodeForRollup,
 } from "./ressource_builder.js"
 import { createBuildUrlGenerator } from "./build_url_generator.js"
 import { visitImportReferences } from "./import_references.js"
-import { esToSystem } from "./es_to_system.js"
+import { sortObjectByPathnames } from "./sort_pathnames.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -425,11 +425,11 @@ export const createRollupPlugins = async ({
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {
-        const { minifyJs } = await import("./js/minifyJs.js")
+        const { minifyJs } = await import("./js/minify_js.js")
         return minifyJs(...args)
       },
       minifyHtml: async (...args) => {
-        const { minifyHtml } = await import("./html/minifyHtml.js")
+        const { minifyHtml } = await import("./html/minify_html.js")
         return minifyHtml(...args)
       },
     }

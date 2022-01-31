@@ -45,10 +45,10 @@ import {
   getRessourceAsBase64Url,
   isReferencedOnlyByRessourceHint,
 } from "../ressource_builder_util.js"
-import { collectNodesMutations } from "../parsing.utils.js"
+import { collectNodesMutations } from "./html_node_mutations.js"
 
-import { collectSvgMutations } from "../svg/parseSvgRessource.js"
-import { moveCssUrls } from "../css/moveCssUrls.js"
+import { collectSvgMutations } from "../svg/jsenv_parse_svg.js"
+import { moveCssUrls } from "../css/move_css_urls.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,

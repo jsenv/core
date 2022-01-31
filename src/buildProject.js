@@ -7,7 +7,7 @@ import {
   assertProjectDirectoryExists,
 } from "@jsenv/core/src/internal/argUtils.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
-import { buildUsingRollup } from "@jsenv/core/src/internal/building/buildUsingRollup.js"
+import { buildUsingRollup } from "@jsenv/core/src/internal/building/build_using_rollup.js"
 import {
   jsenvBrowserRuntimeSupport,
   jsenvNodeRuntimeSupport,

@@ -2,7 +2,7 @@
 // var blob = new Blob(code, { type: 'text/javascript' })
 // window.URL.createObjectURL(blob)
 
-import { readFileSync } from "fs"
+import { readFileSync } from "node:fs"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 

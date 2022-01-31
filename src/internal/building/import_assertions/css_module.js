@@ -1,11 +1,11 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { moveCssUrls } from "@jsenv/core/src/internal/building/css/moveCssUrls.js"
 import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
 import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { moveCssUrls } from "@jsenv/core/src/internal/building/css/move_css_urls.js"
 
 export const convertCssTextToJavascriptModule = async ({
   cssUrl,

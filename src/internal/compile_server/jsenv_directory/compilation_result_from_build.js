@@ -7,15 +7,16 @@ json file etag is used to invalidate the cache
 
 */
 
-import { readFileSync } from "fs"
+import { readFileSync } from "node:fs"
 import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   resolveUrl,
 } from "@jsenv/filesystem"
-import { setJavaScriptSourceMappingUrl } from "../sourceMappingURLUtils.js"
 
-export const buildToCompilationResult = (
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
+export const compilationResultFromBuild = (
   { rollupBuild, urlResponseBodyMap },
   { mainFileName, projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {

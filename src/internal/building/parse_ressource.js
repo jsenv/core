@@ -1,6 +1,10 @@
 import { readFile, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
+  jsenvSystemJsFileInfo,
+  jsenvResolveImportUrlHelper,
+} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+import {
   parseHtmlString,
   findHtmlNode,
   htmlNodeIsScriptModule,
@@ -9,18 +13,14 @@ import {
   manipulateHtmlAst,
   findFirstImportMapNode,
 } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
-import {
-  jsenvSystemJsFileInfo,
-  jsenvResolveImportUrlHelper,
-} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 
-import { parseHtmlRessource } from "./html/parseHtmlRessource.js"
-import { parseImportmapRessource } from "./importmap/parseImportmapRessource.js"
-import { parseSvgRessource } from "./svg/parseSvgRessource.js"
-import { parseCssRessource } from "./css/parseCssRessource.js"
-import { parseJsRessource } from "./js/parseJsRessource.js"
-import { parseJsonRessource } from "./json/parseJsonRessource.js"
-import { parseWebmanifestRessource } from "./webmanifest/parseWebmanifestRessource.js"
+import { parseHtmlRessource } from "./html/jsenv_parse_html.js"
+import { parseImportmapRessource } from "./importmap/jsenv_parse_importmap.js"
+import { parseSvgRessource } from "./svg/jsenv_parse_svg.js"
+import { parseCssRessource } from "./css/jsenv_parse_css.js"
+import { parseJsRessource } from "./js/jsenv_parse_js.js"
+import { parseJsonRessource } from "./json/jsenv_parse_json.js"
+import { parseWebmanifestRessource } from "./webmanifest/jsenv_parse_webmanifest.js"
 
 export const parseRessource = async (
   ressource,
