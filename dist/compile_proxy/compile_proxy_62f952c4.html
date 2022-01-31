@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head>
-    <title>Jsenv redirector</title>
+    <title>Compile proxy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     
@@ -870,10 +870,15 @@
       </head>
 
   <body>
+    <script>
+      window.readyPromise = new Promise((resolve) => {
+        window.resolveReadyPromise = resolve
+      })
+    </script>
     <script type="systemjs-importmap">{
   "imports": {}
 }</script>
-    <script>System.register("redirector.html__inline__12.js", [], function () {
+    <script>System.register("compile_proxy.html__inline__20.js", [], function () {
   'use strict';
 
   return {
@@ -983,10 +988,8 @@
       };
 
       var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-      /* eslint-env browser */
 
-
-      function _await$9(value, then, direct) {
+      function _await$8(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -998,7 +1001,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$8(f) {
+      function _async$7(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1025,7 +1028,7 @@
         }
       }
 
-      var fetchUsingXHR = _async$8(function (url) {
+      var fetchUsingXHR = _async$7(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
             signal = _ref.signal,
             _ref$method = _ref.method,
@@ -1109,7 +1112,7 @@
         }
 
         xhr.send(body);
-        return _await$9(headersPromise, function () {
+        return _await$8(headersPromise, function () {
           // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
           var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
           var responseStatus = xhr.status;
@@ -1117,7 +1120,7 @@
           var responseHeaders = getHeadersFromXHR(xhr);
 
           var readBody = function readBody() {
-            return _await$9(bodyPromise, function () {
+            return _await$8(bodyPromise, function () {
               var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
               if (status === 0) {
@@ -1153,7 +1156,7 @@
             return _call$1(text, JSON.parse);
           };
 
-          var blob = _async$8(function () {
+          var blob = _async$7(function () {
             if (!hasBlob) {
               throw new Error("blob not supported");
             }
@@ -1190,7 +1193,7 @@
             });
           };
 
-          var formData = _async$8(function () {
+          var formData = _async$7(function () {
             if (!hasFormData) {
               throw new Error("formData not supported");
             }
@@ -1371,7 +1374,7 @@
         return form;
       };
 
-      var blobToArrayBuffer = _async$8(function (blob) {
+      var blobToArrayBuffer = _async$7(function (blob) {
         var reader = new FileReader();
         var promise = fileReaderReady(reader);
         reader.readAsArrayBuffer(blob);
@@ -1422,7 +1425,7 @@
 
       var _excluded = ["mode"];
 
-      function _await$8(value, then, direct) {
+      function _await$7(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1434,7 +1437,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$7(f) {
+      function _async$6(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1448,14 +1451,14 @@
         };
       }
 
-      var fetchNative = _async$7(function (url) {
+      var fetchNative = _async$6(function (url) {
         var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         var _ref$mode = _ref.mode,
             mode = _ref$mode === void 0 ? "cors" : _ref$mode,
             options = _objectWithoutProperties(_ref, _excluded);
 
-        return _await$8(window.fetch(url, _objectSpread2({
+        return _await$7(window.fetch(url, _objectSpread2({
           mode: mode
         }, options)), function (response) {
           return {
@@ -1492,7 +1495,7 @@
 
       var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-      function _await$7(value, then, direct) {
+      function _await$6(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -1504,7 +1507,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$6(f) {
+      function _async$5(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -1518,10 +1521,10 @@
         };
       }
 
-      var fetchJson = _async$6(function (url) {
+      var fetchJson = _async$5(function (url) {
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        return _await$7(fetchUrl(url, options), function (response) {
-          return _await$7(response.json());
+        return _await$6(fetchUrl(url, options), function (response) {
+          return _await$6(response.json());
         });
       });
       /*
@@ -1808,79 +1811,6 @@
         return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
       };
 
-      function _await$6(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      function _catch$4(body, recover) {
-        try {
-          var result = body();
-        } catch (e) {
-          return recover(e);
-        }
-
-        if (result && result.then) {
-          return result.then(void 0, recover);
-        }
-
-        return result;
-      }
-
-      function _async$5(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var supportsImportmap = _async$5(function () {
-        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-            _ref$remote = _ref.remote,
-            remote = _ref$remote === void 0 ? true : _ref$remote;
-
-        var specifier = asBase64Url("export default false");
-        var importMap = {
-          imports: _defineProperty({}, specifier, asBase64Url("export default true"))
-        };
-        var importmapScript = document.createElement("script");
-        var importmapString = JSON.stringify(importMap, null, "  ");
-        importmapScript.type = "importmap";
-
-        if (remote) {
-          importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
-        } else {
-          importmapScript.textContent = importmapString;
-        }
-
-        document.body.appendChild(importmapScript);
-        return _catch$4(function () {
-          return _await$6(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
-            document.body.removeChild(importmapScript);
-            var supported = window.__jsenv_runtime_test_importmap__;
-            delete window.__jsenv_runtime_test_importmap__;
-            return supported;
-          });
-        }, function () {
-          document.body.removeChild(importmapScript);
-          return false;
-        });
-      });
-
       function _await$5(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
@@ -1893,7 +1823,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _catch$3(body, recover) {
+      function _catch$4(body, recover) {
         try {
           var result = body();
         } catch (e) {
@@ -1921,16 +1851,35 @@
         };
       }
 
-      var supportsDynamicImport = _async$4(function () {
-        var moduleSource = asBase64Url("export default 42");
-        return _catch$3(function () {
-          return _await$5(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$5(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
-              delete window.__jsenv_runtime_test_dynamic_import__;
-              return namespace.default === 42;
-            });
+      var supportsImportmap = _async$4(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref$remote = _ref.remote,
+            remote = _ref$remote === void 0 ? true : _ref$remote;
+
+        var specifier = asBase64Url("export default false");
+        var importMap = {
+          imports: _defineProperty({}, specifier, asBase64Url("export default true"))
+        };
+        var importmapScript = document.createElement("script");
+        var importmapString = JSON.stringify(importMap, null, "  ");
+        importmapScript.type = "importmap";
+
+        if (remote) {
+          importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
+        } else {
+          importmapScript.textContent = importmapString;
+        }
+
+        document.body.appendChild(importmapScript);
+        return _catch$4(function () {
+          return _await$5(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+            document.body.removeChild(importmapScript);
+            var supported = window.__jsenv_runtime_test_importmap__;
+            delete window.__jsenv_runtime_test_importmap__;
+            return supported;
           });
         }, function () {
+          document.body.removeChild(importmapScript);
           return false;
         });
       });
@@ -1947,45 +1896,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _catch$2(body, recover) {
-        try {
-          var result = body();
-        } catch (e) {
-          return recover(e);
-        }
-
-        if (result && result.then) {
-          return result.then(void 0, recover);
-        }
-
-        return result;
-      }
-
-      var supportsTopLevelAwait = function supportsTopLevelAwait() {
-        return _await$4(_catch$2(function () {
-          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
-            var supported = window.__jsenv_runtime_test_top_level_await__ === 42;
-            delete window.__jsenv_runtime_test_top_level_await__;
-            return supported;
-          });
-        }, function () {
-          return false;
-        }));
-      };
-
-      function _await$3(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      function _catch$1(body, recover) {
+      function _catch$3(body, recover) {
         try {
           var result = body();
         } catch (e) {
@@ -2013,21 +1924,57 @@
         };
       }
 
-      var supportsJsonImportAssertions = _async$3(function () {
-        var jsonBase64Url = asBase64Url("42", "application/json");
-        var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\n  export default data"));
-        return _catch$1(function () {
-          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$3(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
-              var supported = namespace.default === 42;
-              delete window.__jsenv_runtime_test_json_import_assertion__;
-              return supported;
+      var supportsDynamicImport = _async$3(function () {
+        var moduleSource = asBase64Url("export default 42");
+        return _catch$3(function () {
+          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$4(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+              delete window.__jsenv_runtime_test_dynamic_import__;
+              return namespace.default === 42;
             });
           });
         }, function () {
           return false;
         });
       });
+
+      function _await$3(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$2(body, recover) {
+        try {
+          var result = body();
+        } catch (e) {
+          return recover(e);
+        }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      var supportsTopLevelAwait = function supportsTopLevelAwait() {
+        return _await$3(_catch$2(function () {
+          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+            var supported = window.__jsenv_runtime_test_top_level_await__ === 42;
+            delete window.__jsenv_runtime_test_top_level_await__;
+            return supported;
+          });
+        }, function () {
+          return false;
+        }));
+      };
 
       function _await$2(value, then, direct) {
         if (direct) {
@@ -2041,7 +1988,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _catch(body, recover) {
+      function _catch$1(body, recover) {
         try {
           var result = body();
         } catch (e) {
@@ -2069,12 +2016,68 @@
         };
       }
 
-      var supportsCssImportAssertions = _async$2(function () {
+      var supportsJsonImportAssertions = _async$2(function () {
+        var jsonBase64Url = asBase64Url("42", "application/json");
+        var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\n  export default data"));
+        return _catch$1(function () {
+          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$2(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+              var supported = namespace.default === 42;
+              delete window.__jsenv_runtime_test_json_import_assertion__;
+              return supported;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      function _await$1(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch(body, recover) {
+        try {
+          var result = body();
+        } catch (e) {
+          return recover(e);
+        }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$1(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsCssImportAssertions = _async$1(function () {
         var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
         var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\n  export default css"));
         return _catch(function () {
-          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
-            return _await$2(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+          return _await$1(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$1(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
               return namespace.default instanceof CSSStyleSheet;
             });
           });
@@ -2093,7 +2096,7 @@
         }
       };
 
-      function _await$1(value, then, direct) {
+      function _await(value, then, direct) {
         if (direct) {
           return then ? then(value) : value;
         }
@@ -2105,7 +2108,7 @@
         return then ? value.then(then) : value;
       }
 
-      function _async$1(f) {
+      function _async(f) {
         return function () {
           for (var args = [], i = 0; i < arguments.length; i++) {
             args[i] = arguments[i];
@@ -2132,7 +2135,7 @@
         }
       }
 
-      var scanBrowserRuntimeFeatures = _async$1(function () {
+      var scanBrowserRuntimeFeatures = _async(function () {
         var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
             _ref$coverageHandledF = _ref.coverageHandledFromOutside,
             coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
@@ -2142,7 +2145,7 @@
             forceSource = _ref$forceSource === void 0 ? false : _ref$forceSource;
 
         var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
-        return _await$1(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
+        return _await(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
           var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
               inlineImportMapIntoHTML = _ref2.inlineImportMapIntoHTML,
               availableCompileIds = _ref2.availableCompileIds;
@@ -2151,7 +2154,7 @@
               name = _detectBrowser.name,
               version = _detectBrowser.version;
 
-          return _await$1(detectSupportedFeatures({
+          return _await(detectSupportedFeatures({
             coverageHandledFromOutside: coverageHandledFromOutside,
             inlineImportMapIntoHTML: inlineImportMapIntoHTML
           }), function (featuresReport) {
@@ -2165,7 +2168,7 @@
               forceSource: forceSource,
               forceCompilation: forceCompilation
             };
-            return _await$1(fetchJson(jsenvCompileProfileUrl, {
+            return _await(fetchJson(jsenvCompileProfileUrl, {
               method: "POST",
               headers: {
                 "content-type": "application/json"
@@ -2187,7 +2190,7 @@
         });
       });
 
-      var detectSupportedFeatures = _async$1(function (_ref4) {
+      var detectSupportedFeatures = _async(function (_ref4) {
         var coverageHandledFromOutside = _ref4.coverageHandledFromOutside,
             inlineImportMapIntoHTML = _ref4.inlineImportMapIntoHTML;
         var featuresReport = {};
@@ -2199,7 +2202,7 @@
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
 
-        return _await$1(supportsImportmap({
+        return _await(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -2230,63 +2233,13 @@
         });
       });
 
-      function _await(value, then, direct) {
-        if (direct) {
-          return then ? then(value) : value;
-        }
-
-        if (!value || !value.then) {
-          value = Promise.resolve(value);
-        }
-
-        return then ? value.then(then) : value;
-      }
-
-      var redirect = _async(function () {
-        var searchParams = new URLSearchParams(window.location.search);
-        var redirectTarget = searchParams.get("redirect");
-        var forceCompilation = searchParams.get("force_compilation");
-        return _await(scanBrowserRuntimeFeatures({
-          forceCompilation: forceCompilation === "1"
-        }), function (browserRuntimeProfile) {
-          var href = "".concat(getDirectoryUrl(browserRuntimeProfile)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
-          // otherwise it would break the back button
-
-          window.location.replace(href);
-        });
-      });
-
-      function _async(f) {
-        return function () {
-          for (var args = [], i = 0; i < arguments.length; i++) {
-            args[i] = arguments[i];
-          }
-
-          try {
-            return Promise.resolve(f.apply(this, args));
-          } catch (e) {
-            return Promise.reject(e);
-          }
-        };
-      }
-
-      var getDirectoryUrl = function getDirectoryUrl(_ref) {
-        var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
-            compileId = _ref.compileId;
-
-        if (compileId) {
-          return "/".concat(jsenvDirectoryRelativeUrl).concat(compileId, "/");
-        }
-
-        return "/";
-      };
-
-      redirect();
+      window.scanBrowserRuntimeFeatures = scanBrowserRuntimeFeatures;
+      window.resolveReadyPromise();
     }
   };
 });
 
-//# sourceMappingURL=redirector.html__inline__12_20421b23.js.map</script>
+//# sourceMappingURL=compile_proxy.html__inline__20_651d1e7b.js.map</script>
   
 
 </body></html>

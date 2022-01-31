@@ -1,10 +1,8 @@
-/* eslint-env browser */
-
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "./fetch_browser.js"
 
-export const fetchAndEvalUsingFetch = async (url) => {
+export const fetchAndEval = async (url) => {
   const response = await fetchUrl(url)
 
   if (response.status >= 200 && response.status <= 299) {

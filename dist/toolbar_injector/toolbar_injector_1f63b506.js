@@ -107,7 +107,6 @@ var _objectWithoutProperties = (function (source, excluded) {
   return target;
 });
 
-/* eslint-env browser */
 function _await$4(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -748,7 +747,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_d6045dd0.html";
+var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_26b42742.html";
 
 function _call(body, then, direct) {
   if (direct) {
@@ -974,4 +973,4 @@ if (document.readyState === "complete") {
 }
 })();
 
-//# sourceMappingURL=toolbar_injector_c8c214dd.js.map
+//# sourceMappingURL=toolbar_injector_1f63b506.js.map

@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
 import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
-import { fetchAndEvalUsingFetch } from "@jsenv/core/src/internal/browser_utils/fetchAndEvalUsingFetch.js"
+import { fetchAndEval } from "@jsenv/core/src/internal/browser_utils/fetch_and_eval.js"
 import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
 import { memoize } from "@jsenv/core/src/internal/memoize.js"
 
@@ -186,9 +186,7 @@ const getBrowserRuntime = memoize(async () => {
   if (errorStackRemapping && Error.captureStackTrace) {
     const { sourcemapMainFileRelativeUrl, sourcemapMappingFileRelativeUrl } =
       compileServerMeta
-    await fetchAndEvalUsingFetch(
-      `${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`,
-    )
+    await fetchAndEval(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
     const { SourceMapConsumer } = window.sourceMap
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,

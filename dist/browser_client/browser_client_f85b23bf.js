@@ -107,7 +107,6 @@ var _objectWithoutProperties = (function (source, excluded) {
   return target;
 });
 
-/* eslint-env browser */
 function _await$b(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -650,7 +649,7 @@ function _async$9(f) {
   };
 }
 
-var fetchAndEvalUsingFetch = _async$9(function (url) {
+var fetchAndEval = _async$9(function (url) {
   return _await$9(fetchUrl(url), function (response) {
     return function () {
       if (response.status >= 200 && response.status <= 299) {
@@ -5248,7 +5247,7 @@ var getBrowserRuntime = memoize(_async(function () {
           if (errorStackRemapping && Error.captureStackTrace) {
             var sourcemapMainFileRelativeUrl = compileServerMeta.sourcemapMainFileRelativeUrl,
                 sourcemapMappingFileRelativeUrl = compileServerMeta.sourcemapMappingFileRelativeUrl;
-            return _await(fetchAndEvalUsingFetch("".concat(compileServerOrigin, "/").concat(sourcemapMainFileRelativeUrl)), function () {
+            return _await(fetchAndEval("".concat(compileServerOrigin, "/").concat(sourcemapMainFileRelativeUrl)), function () {
               var SourceMapConsumer = window.sourceMap.SourceMapConsumer;
               SourceMapConsumer.initialize({
                 "lib/mappings.wasm": "".concat(compileServerOrigin, "/").concat(sourcemapMappingFileRelativeUrl)
@@ -5297,4 +5296,4 @@ window.__jsenv__ = {
 };
 })();
 
-//# sourceMappingURL=browser_client_b72e2c04.js.map
+//# sourceMappingURL=browser_client_f85b23bf.js.map

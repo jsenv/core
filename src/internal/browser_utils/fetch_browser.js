@@ -1,4 +1,4 @@
-import { fetchUsingXHR } from "./fetchUsingXHR.js"
+import { fetchUsingXHR } from "./fetch_using_xhr.js"
 
 const fetchNative = async (url, { mode = "cors", ...options } = {}) => {
   const response = await window.fetch(url, {
