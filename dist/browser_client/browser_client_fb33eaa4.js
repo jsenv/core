@@ -2336,54 +2336,6 @@ var _createBareSpecifierError = function _createBareSpecifierError(_ref3) {
   return new Error(detailedMessage);
 };
 
-/* eslint-env browser */
-var _window$1 = window,
-    performance$1 = _window$1.performance;
-
-function _rethrow(thrown, value) {
-  if (thrown) throw value;
-  return value;
-}
-
-function _finallyRethrows(body, finalizer) {
-  try {
-    var result = body();
-  } catch (e) {
-    return finalizer(true, e);
-  }
-
-  if (result && result.then) {
-    return result.then(finalizer.bind(null, false), finalizer.bind(null, true));
-  }
-
-  return finalizer(false, result);
-}
-
-function _async$7(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var measureAsyncFnPerf = performance$1 ? _async$7(function (fn, name) {
-  var perfMarkStartName = "".concat(name, "_start");
-  performance$1.mark(perfMarkStartName);
-  return _finallyRethrows(fn, function (_wasThrown, _result) {
-    performance$1.measure(name, perfMarkStartName);
-    return _rethrow(_wasThrown, _result);
-  });
-}) : _async$7(function (fn) {
-  return fn();
-});
-
 /*
 * SJS 6.11.0
 * Minimal SystemJS Build
@@ -3259,7 +3211,7 @@ function _invoke$5(body, then) {
   return then(result);
 }
 
-function _async$6(f) {
+function _async$7(f) {
   return function () {
     for (var args = [], i = 0; i < arguments.length; i++) {
       args[i] = arguments[i];
@@ -3296,7 +3248,7 @@ var createBrowserSystem = function createBrowserSystem(_ref) {
 
   browserSystem.resolve = _resolve;
   var instantiate = browserSystem.instantiate;
-  browserSystem.instantiate = _async$6(function (url, importerUrl) {
+  browserSystem.instantiate = _async$7(function (url, importerUrl) {
     var _exit = false;
 
     var _this = this;
@@ -3385,7 +3337,7 @@ var extractImportTypeFromUrl = function extractImportTypeFromUrl(url) {
   };
 };
 
-var instantiateAsJsonModule = _async$6(function (url, _ref2) {
+var instantiateAsJsonModule = _async$7(function (url, _ref2) {
   var browserSystem = _ref2.browserSystem,
       fetchSource = _ref2.fetchSource;
   return _await$6(fetchSource(url, {
@@ -3410,7 +3362,7 @@ var instantiateAsJsonModule = _async$6(function (url, _ref2) {
   });
 });
 
-var instantiateAsCssModule = _async$6(function (url, _ref3) {
+var instantiateAsCssModule = _async$7(function (url, _ref3) {
   var importerUrl = _ref3.importerUrl,
       compileDirectoryRelativeUrl = _ref3.compileDirectoryRelativeUrl,
       browserSystem = _ref3.browserSystem,
@@ -3481,7 +3433,7 @@ var cssWithBaseUrl = function cssWithBaseUrl(_ref5) {
   return cssTextRelocated;
 };
 
-var createDetailedInstantiateError = _async$6(function (_ref6) {
+var createDetailedInstantiateError = _async$7(function (_ref6) {
   var _exit3 = false;
   var instantiateError = _ref6.instantiateError,
       url = _ref6.url,
@@ -3511,6 +3463,53 @@ var createDetailedInstantiateError = _async$6(function (_ref6) {
       return jsModuleResponseError || instantiateError;
     });
   });
+});
+
+var _window$1 = window,
+    performance$1 = _window$1.performance;
+
+function _rethrow(thrown, value) {
+  if (thrown) throw value;
+  return value;
+}
+
+function _finallyRethrows(body, finalizer) {
+  try {
+    var result = body();
+  } catch (e) {
+    return finalizer(true, e);
+  }
+
+  if (result && result.then) {
+    return result.then(finalizer.bind(null, false), finalizer.bind(null, true));
+  }
+
+  return finalizer(false, result);
+}
+
+function _async$6(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var measureAsyncFnPerf = performance$1 ? _async$6(function (fn, name) {
+  var perfMarkStartName = "".concat(name, "_start");
+  performance$1.mark(perfMarkStartName);
+  return _finallyRethrows(fn, function (_wasThrown, _result) {
+    performance$1.measure(name, perfMarkStartName);
+    return _rethrow(_wasThrown, _result);
+  });
+}) : _async$6(function (fn) {
+  return fn();
 });
 
 var makeModuleNamespaceTransferable = function makeModuleNamespaceTransferable(namespace) {
@@ -3795,34 +3794,60 @@ var readCoverage$1 = function readCoverage() {
 };
 
 /* eslint-env browser, node */
-var parseDataUrl = function parseDataUrl(dataUrl) {
-  var afterDataProtocol = dataUrl.slice("data:".length);
-  var commaIndex = afterDataProtocol.indexOf(",");
-  var beforeComma = afterDataProtocol.slice(0, commaIndex);
-  var mediaType;
-  var base64Flag;
+var DataUrl = {
+  parse: function parse(string) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$as = _ref.as,
+        as = _ref$as === void 0 ? "raw" : _ref$as;
 
-  if (beforeComma.endsWith(";base64")) {
-    mediaType = beforeComma.slice(0, -";base64".length);
-    base64Flag = true;
-  } else {
-    mediaType = beforeComma;
-    base64Flag = false;
+    var afterDataProtocol = string.slice("data:".length);
+    var commaIndex = afterDataProtocol.indexOf(",");
+    var beforeComma = afterDataProtocol.slice(0, commaIndex);
+    var mediaType;
+    var base64Flag;
+
+    if (beforeComma.endsWith(";base64")) {
+      mediaType = beforeComma.slice(0, -";base64".length);
+      base64Flag = true;
+    } else {
+      mediaType = beforeComma;
+      base64Flag = false;
+    }
+
+    var afterComma = afterDataProtocol.slice(commaIndex + 1);
+    return {
+      mediaType: mediaType === "" ? "text/plain;charset=US-ASCII" : mediaType,
+      base64Flag: base64Flag,
+      data: as === "string" && base64Flag ? base64ToString(afterComma) : afterComma
+    };
+  },
+  stringify: function stringify(_ref2) {
+    var mediaType = _ref2.mediaType,
+        _ref2$base64Flag = _ref2.base64Flag,
+        base64Flag = _ref2$base64Flag === void 0 ? true : _ref2$base64Flag,
+        data = _ref2.data;
+
+    if (!mediaType || mediaType === "text/plain;charset=US-ASCII") {
+      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
+      if (data.length === 0) {
+        return "data:,";
+      }
+
+      if (base64Flag) {
+        return "data:,".concat(data);
+      }
+
+      return "data:,".concat(dataToBase64(data));
+    }
+
+    if (base64Flag) {
+      return "data:".concat(mediaType, ";base64,").concat(dataToBase64(data));
+    }
+
+    return "data:".concat(mediaType, ",").concat(data);
   }
-
-  var afterComma = afterDataProtocol.slice(commaIndex + 1);
-  return {
-    mediaType: mediaType === "" ? "text/plain;charset=US-ASCII" : mediaType,
-    base64Flag: base64Flag,
-    data: afterComma
-  };
 };
-var dataUrlToRawData = function dataUrlToRawData(_ref2) {
-  var base64Flag = _ref2.base64Flag,
-      data = _ref2.data;
-  return base64Flag ? base64ToString(data) : data;
-};
-(typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
+var dataToBase64 = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.atob : function (data) {
   return Buffer.from(data).toString("base64");
 };
 var base64ToString = (typeof window === "undefined" ? "undefined" : _typeof(window)) === "object" ? window.btoa : function (base64String) {
@@ -4356,7 +4381,9 @@ var remapStack = _async$3(function (_ref) {
         return _invoke$2(function () {
           if (jsSourcemapUrl.startsWith("data:")) {
             sourcemapUrl = stackTraceFileUrl;
-            sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl));
+            sourcemapString = DataUrl.parse(jsSourcemapUrl, {
+              as: "string"
+            });
           } else {
             sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
               type: "source-map"
@@ -5290,4 +5317,4 @@ window.__jsenv__ = {
 };
 })();
 
-//# sourceMappingURL=browser_client_ff264990.js.map
+//# sourceMappingURL=browser_client_fb33eaa4.js.map
