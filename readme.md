@@ -291,11 +291,6 @@ _jsenv.config.mjs_ is meant to share configuration, other files will simply impo
 import { buildProject } from '@jsenv/core'
 
 + import { projectDirectoryUrl } from "./jsenv.config.mjs"
-
-await buildProject({
--  projectDirectoryUrl: new URL('./', import.meta.url)
-+  projectDirectoryUrl
-})
 ```
 
 > We recommend to use ".mjs" extension when a file is written for Node.js but you can name the file as you want, "jsenv.config.js" is fine too.
@@ -324,10 +319,10 @@ Jsenv relies on **standard web features**. Each standard listed below is potenti
 
 - `<script type="module">`
 - `<script type="importmap">`
-- top level await
-- import.meta.url
 - dynamic imports
+- import.meta.url
 - import assertions
+- top level await
 
 ## When to use it?
 
