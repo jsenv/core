@@ -28,6 +28,7 @@
     "/main.js"
   ],
   "workspaces": [
+    "./docs/demo",
     "./packages/*"
   ],
   "scripts": {
