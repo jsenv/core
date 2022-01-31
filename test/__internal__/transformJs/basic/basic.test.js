@@ -1,9 +1,9 @@
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
-import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
+import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
+import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
 import {
   TRANSFORM_JS_TEST_PARAMS,
   TRANSFORM_RESULT_TEST_PARAMS,
@@ -24,7 +24,7 @@ const transformResult = await transformJs({
   code: originalFileContent,
   url: originalFileUrl,
 })
-const compilationResult = await transformResultToCompilationResult(
+const compilationResult = await asCompilationResult(
   {
     contentType: "application/javascript",
     ...transformResult,

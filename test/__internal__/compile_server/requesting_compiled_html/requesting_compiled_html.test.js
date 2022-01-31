@@ -2,13 +2,12 @@ import { fetchUrl } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -22,7 +21,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  runtimeSupport: jsenvRuntimeSupportDuringDev,
 })
 const { compileId } = await compileServer.createCompileIdFromRuntimeReport({
   env: { browser: true },

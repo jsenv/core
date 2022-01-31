@@ -6,7 +6,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { GENERATE_GLOBAL_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_GLOBAL.js"
 import { executeFileUsingBrowserScript } from "@jsenv/core/test/execution_with_browser_script.js"
 

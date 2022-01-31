@@ -4,9 +4,9 @@ import { normalizeRuntimeSupport } from "@jsenv/core/src/internal/runtime_suppor
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
-} from "./internal/argUtils.js"
-import { startCompileServer } from "./internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
+} from "@jsenv/core/src/internal/jsenv_params_assertions.js"
+import { startCompileServer } from "./internal/compile_server/compile_server.js"
+import { launchAndExecute } from "./internal/executing/launch_and_execute.js"
 
 export const execute = async ({
   signal = new AbortController().signal,

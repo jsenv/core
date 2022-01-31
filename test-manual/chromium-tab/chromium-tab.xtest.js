@@ -14,7 +14,7 @@ import {
   chromiumRuntime,
   firefoxRuntime,
 } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)

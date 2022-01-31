@@ -1,8 +1,15 @@
-import { resolveUrl, normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
+import {
+  resolveUrl,
+  normalizeStructuredMetaMap,
+  urlToMeta,
+} from "@jsenv/filesystem"
 
-import { generateFileExecutionSteps } from "@jsenv/core/src/internal/executing/generateFileExecutionSteps.js"
+import { generateFileExecutionSteps } from "@jsenv/core/src/internal/executing/execution_steps.js"
 
-export const relativeUrlToExecutionSteps = (relativeUrl, { projectDirectoryUrl, plan }) => {
+export const relativeUrlToExecutionSteps = (
+  relativeUrl,
+  { projectDirectoryUrl, plan },
+) => {
   const structuredMetaMapForExecution = normalizeStructuredMetaMap(
     {
       filePlan: plan,

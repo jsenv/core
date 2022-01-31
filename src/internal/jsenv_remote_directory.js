@@ -8,7 +8,7 @@ import {
 } from "@jsenv/filesystem"
 import { validateResponseIntegrity } from "@jsenv/integrity"
 
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 
 import { originDirectoryConverter } from "./origin_directory_converter.js"
 

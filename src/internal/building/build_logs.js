@@ -1,8 +1,9 @@
 import { ANSI, UNICODE } from "@jsenv/log"
 
-import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { byteAsFileSize } from "../logs/byteAsFileSize.js"
-import { msAsDuration } from "../logs/msAsDuration.js"
+import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+
+import { byteAsFileSize } from "../logs/byte_as_file_size.js"
+import { msAsDuration } from "../logs/ms_as_duration.js"
 import { stringifyUrlSite } from "./url_trace.js"
 
 export const formatBuildStartLog = ({ entryPoints }) => {

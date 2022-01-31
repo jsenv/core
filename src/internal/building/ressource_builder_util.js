@@ -1,10 +1,10 @@
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 
 export const getRessourceAsBase64Url = ({ bufferAfterBuild, contentType }) => {
-  return stringifyDataUrl({
+  return DataUrl.stringify({
     data: bufferAfterBuild,
     base64Flag: true,
     mediaType: contentType,

@@ -1,7 +1,7 @@
-import { convertJsonTextToJavascriptModule } from "@jsenv/core/src/internal/building/json_module.js"
-import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
-import { loadSourcemap } from "./sourcemap_loader.js"
+import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
+import { loadSourcemap } from "./sourcemap/sourcemap_loader.js"
 
 export const createUrlLoader = ({
   urlCustomLoaders,

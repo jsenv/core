@@ -2,13 +2,13 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -51,7 +51,7 @@ await buildProject({
     hasJsenvForceInlineAttribute,
   }
   const expected = {
-    src: stringifyDataUrl({ mediaType: "image/png", data: imgBuffer }),
+    src: DataUrl.stringify({ mediaType: "image/png", data: imgBuffer }),
     hasJsenvForceInlineAttribute: false,
   }
   assert({ actual, expected })

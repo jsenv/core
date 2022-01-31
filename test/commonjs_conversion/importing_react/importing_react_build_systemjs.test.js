@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { buildProject, commonJsToJavaScriptModule } from "@jsenv/core"
+import { buildProject, commonJsToJsModule } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 
@@ -19,13 +19,13 @@ const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `importing_react.html`
 const customCompilers = {
   "./node_modules/react/index.js": (options) => {
-    return commonJsToJavaScriptModule({
+    return commonJsToJsModule({
       ...options,
       processEnvNodeEnv: "production",
     })
   },
   "./node_modules/react-dom/index.js": async (options) => {
-    return commonJsToJavaScriptModule({
+    return commonJsToJsModule({
       ...options,
       // BEWARE: IF YOU FORGET THIS (putting node env to production for react-dom as well)
       // the code generated never resolves

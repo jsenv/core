@@ -2,9 +2,9 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { chromiumRuntime, firefoxRuntime, webkitRuntime } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "@jsenv/core/src/internal/executing/launchAndExecute.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
+import { launchAndExecute } from "@jsenv/core/src/internal/executing/launch_and_execute.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,

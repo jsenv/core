@@ -1,6 +1,6 @@
 import { urlToBasename, urlToExtension } from "@jsenv/filesystem"
 
-import { generateContentHash } from "./url_versioning.js"
+import { generateContentHash } from "./url_versioning/url_versioning.js"
 
 export const createBuildUrlGenerator = ({
   entryPointUrls,

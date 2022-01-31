@@ -75,10 +75,10 @@ According to module format deduced at step 1, do one of the following:
   In _jsenv.config.mjs_:
 
   ```js
-  import { commonJsToJavaScriptModule } from "@jsenv/core"
+  import { commonJsToJsModule } from "@jsenv/core"
 
   export const customCompilers = {
-    "./node_modules/amazing-package/**/*.js": commonJsToJavaScriptModule,
+    "./node_modules/amazing-package/**/*.js": commonJsToJsModule,
   }
   ```
 

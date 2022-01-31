@@ -1,7 +1,5 @@
-import {
-  versionCompare,
-  findHighestVersion,
-} from "@jsenv/core/src/internal/semantic_versioning/index.js"
+import { compareTwoVersions } from "@jsenv/core/src/internal/semantic_versioning/compare_versions.js"
+import { findHighestVersion } from "@jsenv/core/src/internal/semantic_versioning/highest_version.js"
 
 export const minRuntimeVersionsToScore = (
   minRuntimeVersions,
@@ -28,7 +26,7 @@ const scoreFromRuntime = ({ runtimeName, runtimeVersion, runtimeScoreMap }) => {
     return runtimeScoreMap.other || 0
   }
 
-  const versionArrayAscending = versionArray.sort(versionCompare)
+  const versionArrayAscending = versionArray.sort(compareTwoVersions)
   const highestVersion = versionArrayAscending[versionArray.length - 1]
 
   if (findHighestVersion(runtimeVersion, highestVersion) === runtimeVersion) {

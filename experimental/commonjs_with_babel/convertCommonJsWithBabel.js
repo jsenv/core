@@ -1,7 +1,7 @@
 import { require } from "@jsenv/core/src/internal/require.js"
-import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
-import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/babel_plugin_replace_expressions.js"
-import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
+import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
+import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_replace_expressions.js"
+import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 
 export const convertCommonJsWithBabel = async ({
   code,
@@ -51,7 +51,7 @@ export const convertCommonJsWithBabel = async ({
     },
   })
 
-  return transformResultToCompilationResult(
+  return asCompilationResult(
     {
       contentType: "application/javascript",
       code: transformResult.code,

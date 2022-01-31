@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { applyTransform } from "jscodeshift/dist/testUtils.js"
 import { createRequire } from "node:module"
-import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compiling/transformResultToCompilationResult.js"
+import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 
 const require = createRequire(import.meta.url)
 
@@ -18,7 +18,7 @@ export const convertCommonJsWithRecast = ({
 
   const output = applyTransform(cjsToEsModule, {}, { source: code })
 
-  return transformResultToCompilationResult(
+  return asCompilationResult(
     {
       contentType: "application/javascript",
       code: output,

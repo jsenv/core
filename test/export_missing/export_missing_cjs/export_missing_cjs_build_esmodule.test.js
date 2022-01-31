@@ -6,7 +6,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { buildProject } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -48,7 +48,7 @@ try {
 --- suggestion ---
 The file seems written in commonjs, you should use "customCompiler" to convert it to js module
 {
-  "./test/export_missing/export_missing_cjs/file_written_in_commonjs.js": commonJsToJavaScriptModule
+  "./test/export_missing/export_missing_cjs/file_written_in_commonjs.js": commonJsToJsModule
 }
 As documented in https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers`
   assert({ actual, expected })

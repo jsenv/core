@@ -1,6 +1,6 @@
 import { readFile } from "@jsenv/filesystem"
 
-import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 export const getJsenvBuildUrl = async (buildRelativeUrlWithoutHash) => {
   try {

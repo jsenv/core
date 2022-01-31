@@ -1,4 +1,4 @@
-import { fetchJson } from "../../browser_utils/fetchJson.js"
+import { fetchJson } from "../../browser_utils/fetch_json.js"
 import { detectBrowser } from "../../browser_detection/browser_detection.js"
 
 import { supportsImportmap } from "./browser_feature_detect_importmap.js"

@@ -1,13 +1,9 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import {
-  execute,
-  chromiumRuntime,
-  commonJsToJavaScriptModule,
-} from "@jsenv/core"
+import { execute, chromiumRuntime, commonJsToJsModule } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { EXECUTE_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_EXECUTE.js"
 
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
@@ -21,9 +17,9 @@ const { status, namespace } = await execute({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl: `${testDirectoryRelativeUrl}.jsenv/`,
   customCompilers: {
-    "./node_modules/react/index.js": commonJsToJavaScriptModule,
+    "./node_modules/react/index.js": commonJsToJsModule,
     "./node_modules/react-dom/index.js": async (options) => {
-      return commonJsToJavaScriptModule({
+      return commonJsToJsModule({
         ...options,
         external: ["react"],
       })

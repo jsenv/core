@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 
-import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 
 {
-  const actual = parseDataUrl("data:,")
+  const actual = DataUrl.parse("data:,")
   const expected = {
     mediaType: "text/plain;charset=US-ASCII",
     base64Flag: false,
@@ -13,7 +13,7 @@ import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 }
 
 {
-  const actual = parseDataUrl("data:,Hello%2C%20World!")
+  const actual = DataUrl.parse("data:,Hello%2C%20World!")
   const expected = {
     mediaType: "text/plain;charset=US-ASCII",
     base64Flag: false,
@@ -23,7 +23,9 @@ import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 }
 
 {
-  const actual = parseDataUrl("data:text/plain;base64,SGVsbG8sIFdvcmxkIQ%3D%3D")
+  const actual = DataUrl.parse(
+    "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ%3D%3D",
+  )
   const expected = {
     mediaType: "text/plain",
     base64Flag: true,
@@ -33,7 +35,7 @@ import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 }
 
 {
-  const actual = parseDataUrl(
+  const actual = DataUrl.parse(
     "data:text/html,%3Ch1%3EHello%2C%20World!%3C%2Fh1%3E",
   )
   const expected = {
@@ -45,7 +47,7 @@ import { parseDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 }
 
 {
-  const actual = parseDataUrl("data:text/html,<script>alert('hi');</script>")
+  const actual = DataUrl.parse("data:text/html,<script>alert('hi');</script>")
   const expected = {
     mediaType: "text/html",
     base64Flag: false,

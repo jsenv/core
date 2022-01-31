@@ -1,7 +1,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
 import { urlToExtension, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { fetchUrl as jsenvFetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { fetchUrl as jsenvFetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
 export const createUrlFetcher = ({

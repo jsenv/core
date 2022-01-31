@@ -1,8 +1,8 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { buildProject, textToJavaScriptModule } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { buildProject, textToJsModule } from "@jsenv/core"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -21,7 +21,7 @@ await buildProject({
     [`./${testDirectoryRelativeUrl}main.mjs`]: "main.js",
   },
   customCompilers: {
-    "**/*.txt": textToJavaScriptModule,
+    "**/*.txt": textToJsModule,
   },
 })
 // eslint-disable-next-line import/no-unresolved

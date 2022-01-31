@@ -60,10 +60,10 @@ This parameter only adds an extension on extensionless import, it cannot try dif
 But if your code or some of your dependencies use an other format you need to convert it using this parameter. For instance, the following code makes jsenv compatible with `react`.
 
 ```js
-import { commonJsToJavaScriptModule } from "@jsenv/core"
+import { commonJsToJsModule } from "@jsenv/core"
 
 const customCompilers = {
-  "./node_modules/react/index.js": commonJsToJavaScriptModule,
+  "./node_modules/react/index.js": commonJsToJsModule,
 }
 ```
 

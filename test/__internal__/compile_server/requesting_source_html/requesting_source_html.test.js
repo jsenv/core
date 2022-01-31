@@ -7,15 +7,14 @@ import {
 } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compiling/compileHtml.js"
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -28,7 +27,6 @@ const htmlRelativeUrl = `${testDirectoryRelativeUrl}source_html.html`
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  runtimeSupport: jsenvRuntimeSupportDuringDev,
 })
 const htmlServerUrl = `${compileServer.origin}/${htmlRelativeUrl}`
 const response = await fetchUrl(htmlServerUrl, {
@@ -140,7 +138,10 @@ const html = await response.text()
   const imgBuffer = await readFile(imgFileUrl, { as: "buffer" })
 
   const actual = src
-  const expected = stringifyDataUrl({ mediaType: "image/png", data: imgBuffer })
+  const expected = DataUrl.stringify({
+    mediaType: "image/png",
+    data: imgBuffer,
+  })
   assert({ actual, expected })
 }
 

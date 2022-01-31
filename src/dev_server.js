@@ -7,20 +7,19 @@ import {
 
 import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
-} from "./internal/argUtils.js"
+} from "@jsenv/core/src/internal/jsenv_params_assertions.js"
 import {
   startCompileServer,
   assertAndNormalizeJsenvDirectoryRelativeUrl,
-} from "./internal/compiling/startCompileServer.js"
+} from "./internal/compile_server/compile_server.js"
 import {
+  jsenvCoreDirectoryUrl,
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-} from "./internal/jsenvInternalFiles.js"
-import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
+} from "./jsenv_file_urls.js"
 
 const EXPLORING_HTML_URL = new URL(
   "./src/internal/dev_server/exploring/exploring.html",
@@ -40,7 +39,15 @@ export const startDevServer = async ({
   customServices,
 
   projectDirectoryUrl,
-  explorableConfig = jsenvExplorableConfig,
+  explorableConfig = {
+    source: {
+      "./*.html": true,
+      "./src/**/*.html": true,
+    },
+    test: {
+      "./test/**/*.html": true,
+    },
+  },
   mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
   jsenvToolbar = true,

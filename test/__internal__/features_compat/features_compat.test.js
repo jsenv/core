@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert"
 
-import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 
@@ -156,7 +155,12 @@ import { jsenvBabelPluginMap } from "@jsenv/core/test/jsenvBabelPluginMap.js"
 {
   const actual = featuresCompatFromRuntimeSupport({
     featureNames: Object.keys(jsenvBabelPluginMap),
-    runtimeSupport: jsenvRuntimeSupportDuringDev,
+    runtimeSupport: {
+      chrome: "97.0.4666.0",
+      firefox: "93.0",
+      safari: "15.4",
+      node: process.version.slice(1),
+    },
   })
   const expected = {
     availableFeatureNames: [

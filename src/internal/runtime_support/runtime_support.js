@@ -1,4 +1,4 @@
-import { findLowestVersion } from "../semantic_versioning/findLowestVersion.js"
+import { findLowestVersion } from "../semantic_versioning/lowest_version.js"
 
 export const isNodePartOfSupportedRuntimes = (runtimeSupport) => {
   return Boolean(runtimeSupport.node)
