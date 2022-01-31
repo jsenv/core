@@ -55,7 +55,7 @@ await launchBrowsers(
         "./top_level_await.js": {
           status: "completed",
           namespace: {
-            default: 42,
+            value: 42,
           },
         },
       },
