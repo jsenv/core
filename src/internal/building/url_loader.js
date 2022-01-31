@@ -1,4 +1,4 @@
-import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
 import { loadSourcemap } from "./sourcemap/sourcemap_loader.js"

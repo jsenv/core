@@ -1,9 +1,9 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
-import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
-import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
+import { unevalException } from "@jsenv/core/src/internal/runtime_client/uneval_exception.js"
 
 import { startObservingPerformances } from "./node_execution_performance.js"
+import { measureAsyncFnPerf } from "./perf_node.js"
 
 export const execute = async ({
   projectDirectoryUrl,

@@ -4,9 +4,9 @@ import { normalizeImportMap } from "@jsenv/importmap/src/normalizeImportMap.js"
 import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
 import { memoize } from "@jsenv/core/src/internal/memoize.js"
-import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_browser.js"
 
 import { createBrowserSystem } from "./browser_system.js"
+import { measureAsyncFnPerf } from "./perf_browser.js"
 import { makeModuleNamespaceTransferable } from "./module_namespace_transfer.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)

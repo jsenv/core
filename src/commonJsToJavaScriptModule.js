@@ -1,6 +1,6 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
-import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compile_server/commonjs/rollup_plugin_commonjs_named_exports.js"
 

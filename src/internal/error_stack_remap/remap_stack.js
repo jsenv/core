@@ -1,7 +1,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
-import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 import { remapCallSite } from "./remap_call_site.js"
 

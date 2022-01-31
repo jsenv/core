@@ -1,6 +1,6 @@
 import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
 import { fetchAndEval } from "@jsenv/core/src/internal/browser_utils/fetch_and_eval.js"
-import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
+import { unevalException } from "@jsenv/core/src/internal/runtime_client/uneval_exception.js"
 import { memoize } from "@jsenv/core/src/internal/memoize.js"
 
 import { createBrowserClient } from "./browser_client_factory.js"

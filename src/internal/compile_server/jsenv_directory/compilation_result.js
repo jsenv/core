@@ -15,7 +15,7 @@ import {
   setJavaScriptSourceMappingUrl,
   setCssSourceMappingUrl,
   sourcemapToBase64Url,
-} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+} from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 import { generateCompilationAssetUrl } from "./compile_asset.js"
 import { testFilePresence } from "./fs_optimized_for_cache.js"

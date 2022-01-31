@@ -15,7 +15,7 @@ import {
 import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
-} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+} from "@jsenv/core/src/internal/sourcemap_utils.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)

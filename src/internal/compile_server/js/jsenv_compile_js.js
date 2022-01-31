@@ -1,4 +1,4 @@
-import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 

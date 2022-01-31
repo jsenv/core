@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 const { performance } = window
 
 export const measureAsyncFnPerf = performance

@@ -1,10 +1,10 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
-import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_node.js"
-import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
+import { unevalException } from "@jsenv/core/src/internal/runtime_client/uneval_exception.js"
 
 import { installNodeErrorStackRemapping } from "./node_error_stack_remap.js"
 import { startObservingPerformances } from "./node_execution_performance.js"
+import { measureAsyncFnPerf } from "./perf_node.js"
 import { fetchSource } from "./fetch_source.js"
 import { createNodeSystem } from "./node_system.js"
 

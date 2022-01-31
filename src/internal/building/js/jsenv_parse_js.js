@@ -4,7 +4,7 @@ import {
   generateSourcemapUrl,
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
-} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+} from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 import { transformWorker } from "./transform_worker.js"
 

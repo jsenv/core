@@ -13,7 +13,7 @@ import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
-import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(

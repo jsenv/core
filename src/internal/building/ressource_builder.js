@@ -1,7 +1,7 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
-import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 
 import { racePromises } from "../promise_race.js"

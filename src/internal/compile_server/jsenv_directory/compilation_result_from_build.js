@@ -14,7 +14,7 @@ import {
   resolveUrl,
 } from "@jsenv/filesystem"
 
-import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 export const compilationResultFromBuild = (
   { rollupBuild, urlResponseBodyMap },
