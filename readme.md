@@ -12,7 +12,7 @@ This section demos 3 things jsenv provides:
 2. A dev server
 3. A build script
 
-Don't be fooled by the apparent simplicity of the following demos, jsenv can be used on more complex scenarios as well.
+The upcoming demos applies jsenv to simple use cases to make them straightforward.
 
 ## Test runner overview
 
