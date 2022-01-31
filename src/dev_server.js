@@ -22,6 +22,11 @@ import {
 } from "./internal/jsenvInternalFiles.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
+const EXPLORING_HTML_URL = new URL(
+  "./src/internal/dev_server/exploring/exploring.html",
+  jsenvCoreDirectoryUrl,
+).href
+
 export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -67,10 +72,7 @@ export const startDevServer = async ({
   await assertProjectDirectoryExists({ projectDirectoryUrl })
   if (mainFileRelativeUrl === undefined) {
     mainFileRelativeUrl = urlToRelativeUrl(
-      new URL(
-        "./src/internal/dev_server/exploring/exploring.html",
-        jsenvCoreDirectoryUrl,
-      ).href,
+      EXPLORING_HTML_URL,
       projectDirectoryUrl,
     )
   }
