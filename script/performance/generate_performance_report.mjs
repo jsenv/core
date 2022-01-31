@@ -23,21 +23,21 @@ const {
   directoryUrl: new URL("./", import.meta.url),
   metricsDescriptions: {
     packageTarballMetrics: {
-      file: "./measure_npm_tarball/measure_package_tarball.js#packageTarballmetrics",
+      file: "./measure_npm_tarball/measure_package_tarball.mjs#packageTarballmetrics",
       iterations: 1,
     },
     devServerMetrics: {
-      file: "./dev_server/measure_dev_server.js#devServerMetrics",
+      file: "./dev_server/measure_dev_server.mjs#devServerMetrics",
       iterations: process.argv.includes("--once") ? 1 : 3,
       msToWaitBetweenEachIteration: 500,
     },
     buildMetrics: {
-      file: "./measure_build/measure_build.js#buildMetrics",
+      file: "./measure_build/measure_build.mjs#buildMetrics",
       iterations: process.argv.includes("--once") ? 1 : 7,
       msToWaitBetweenEachIteration: 500,
     },
     testPlanMetrics: {
-      file: "./measure_test_plan/measure_test_plan.js#testPlanMetrics",
+      file: "./measure_test_plan/measure_test_plan.mjs#testPlanMetrics",
       iterations: process.argv.includes("--once") ? 1 : 3,
       msToWaitBetweenEachIteration: 500,
     },

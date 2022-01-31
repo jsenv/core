@@ -8,5 +8,5 @@ await reportPerformanceImpact({
   logLevel: "debug",
   installCommand: "npm install",
   performanceReportPath:
-    "./script/performance/generate_performance_report.js#performanceReport",
+    "./script/performance/generate_performance_report.mjs#performanceReport",
 })
