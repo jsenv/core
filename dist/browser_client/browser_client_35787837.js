@@ -3223,8 +3223,6 @@ var measureAsyncFnPerf = performance$1 ? _async$7(function (fn, name) {
   }
 })();
 
-/* eslint-env browser */
-
 function _await$6(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -3515,7 +3513,7 @@ var createDetailedInstantiateError = _async$6(function (_ref6) {
   });
 });
 
-var makeNamespaceTransferable = function makeNamespaceTransferable(namespace) {
+var makeModuleNamespaceTransferable = function makeModuleNamespaceTransferable(namespace) {
   var transferableNamespace = {};
   Object.keys(namespace).forEach(function (key) {
     var value = namespace[key];
@@ -3593,8 +3591,6 @@ var isTransferable = function isTransferable(value) {
 
 var supportedTypes = ["Boolean", "Number", "String", "Date", "RegExp", "Blob", "FileList", "ImageData", "ImageBitmap", "ArrayBuffer"];
 var maybeTypes = ["Array", "Object", "Map", "Set"];
-
-/* eslint-env browser */
 
 function _await$5(value, then, direct) {
   if (direct) {
@@ -3747,7 +3743,7 @@ var createBrowserClient = _async$5(function (_ref) {
               return _catch$3(function () {
                 return _await$5(browserSystem.import(specifier), function (namespace) {
                   if (transferableNamespace) {
-                    namespace = makeNamespaceTransferable(namespace);
+                    namespace = makeModuleNamespaceTransferable(namespace);
                   }
 
                   return {
@@ -4794,7 +4790,6 @@ var responseToHeaders = function responseToHeaders(response) {
   return headers;
 };
 
-/* eslint-env browser */
 var displayErrorInDocument = function displayErrorInDocument(error) {
   var title = "An error occured";
   var theme;
@@ -4969,7 +4964,6 @@ var transferChildren = function transferChildren(fromNode, toNode) {
   };
 };
 
-/* eslint-env browser */
 var _window = window,
     Notification = _window.Notification;
 
@@ -5296,4 +5290,4 @@ window.__jsenv__ = {
 };
 })();
 
-//# sourceMappingURL=browser_client_f85b23bf.js.map
+//# sourceMappingURL=browser_client_35787837.js.map
