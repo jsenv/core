@@ -41,9 +41,9 @@ startDevServer({
 
 ## explorableConfig
 
-`explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match list a subset of html files. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
+`explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match list a subset of html files. The exact value can be found in [src/dev_server.js](../../src/dev_server.js#L42).
 
-This parameter must be an object composed of other objects where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern.
+This parameter must be an object composed of other objects where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/url-meta#common-pattern-example.
 
 Each group declared in `explorableConfig` are turned into tabs in jsenv exploring index page. These tabs are here to regroup files that goes together.
 For instance you might want to have a tab for source files and one for test files.

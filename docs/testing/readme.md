@@ -189,7 +189,7 @@ const testPlan = {
 
 ### pattern
 
-_pattern_ is documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
+_pattern_ is documented in [https://github.com/jsenv/jsenv-url-meta](https://github.com/jsenv/url-meta#common-pattern-example).
 
 ### executionName
 
@@ -350,7 +350,7 @@ _coverage_ parameter is a boolean used to enable coverage or not while executing
 
 ### coverageConfig
 
-_coverageConfig_ parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/jsenvCoverageConfig.js](../../src/jsenvCoverageConfig.js). Keys are patterns as documented in [https://github.com/jsenv/jsenv-url-meta#pattern](https://github.com/jsenv/jsenv-url-meta#pattern).
+_coverageConfig_ parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/execute_test_plan.js](../../src/execute_test_plan.js#L73). Keys are patterns as documented in [https://github.com/jsenv/jsenv-url-meta](https://github.com/jsenv/url-meta#common-pattern-example).
 
 ### coverageIncludeMissing
 

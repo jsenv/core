@@ -16,7 +16,6 @@ import { executePlan } from "./internal/executing/execute_plan.js"
 import { generateCoverageJsonFile } from "./internal/coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./internal/coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./internal/coverage/coverage_reporter_text_log.js"
-import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 /**
  * Execute a list of files and log how it goes
@@ -71,7 +70,13 @@ export const executeTestPlan = async ({
   coverage = process.argv.includes("--cover") ||
     process.argv.includes("--coverage"),
   coverageTempDirectoryRelativeUrl = "./coverage/tmp/",
-  coverageConfig = jsenvCoverageConfig,
+  coverageConfig = {
+    "./index.js": true,
+    "./main.js": true,
+    "./src/**/*.js": true,
+    "./**/*.test.*": false, // contains .test. -> nope
+    "./**/test/": false, // inside a test folder -> nope,
+  },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageForceIstanbul = false,

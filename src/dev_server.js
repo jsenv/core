@@ -20,7 +20,6 @@ import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "./jsenv_file_urls.js"
-import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 const EXPLORING_HTML_URL = new URL(
   "./src/internal/dev_server/exploring/exploring.html",
@@ -40,7 +39,15 @@ export const startDevServer = async ({
   customServices,
 
   projectDirectoryUrl,
-  explorableConfig = jsenvExplorableConfig,
+  explorableConfig = {
+    source: {
+      "./*.html": true,
+      "./src/**/*.html": true,
+    },
+    test: {
+      "./test/**/*.html": true,
+    },
+  },
   mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
   jsenvToolbar = true,
