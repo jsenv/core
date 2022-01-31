@@ -1,6 +1,6 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/escapeTemplateStringSpecialCharacters.js"
+import { escapeTemplateStringSpecialCharacters } from "@jsenv/core/src/internal/template_string_escape.js"
 import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,

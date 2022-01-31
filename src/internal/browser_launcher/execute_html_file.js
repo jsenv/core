@@ -9,7 +9,7 @@ import { COMPILE_PROXY_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { filterV8Coverage } from "@jsenv/core/src/internal/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/coverage/istanbul_coverage_composition.js"
 import { evalSource } from "@jsenv/core/src/internal/node_launcher/eval_source.js"
-import { escapeRegexpSpecialCharacters } from "@jsenv/core/src/internal/escapeRegexpSpecialCharacters.js"
+import { escapeRegexpSpecialCharacters } from "@jsenv/core/src/internal/regexp_escape.js"
 
 import { getBrowserRuntimeProfile } from "./browser_runtime_profile.js"
 
