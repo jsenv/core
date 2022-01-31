@@ -34,6 +34,7 @@ export const buildUsingRollup = async ({
   format,
   systemJsUrl,
   globals,
+  preservedDynamicImports,
   serviceWorkerFinalizer,
 
   node,
@@ -75,6 +76,7 @@ export const buildUsingRollup = async ({
     format,
     systemJsUrl,
     globals,
+    preservedDynamicImports,
 
     urlMappings,
     importResolutionMethod,

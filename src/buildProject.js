@@ -50,6 +50,8 @@ export const buildProject = async ({
   format,
   systemJsUrl,
   globals = {},
+  preservedDynamicImports = {},
+
   babelPluginMap = {},
   customCompilers,
   runtimeSupport = format === "global" ||
@@ -90,7 +92,6 @@ export const buildProject = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
-  env = {},
   protocol,
   privateKey,
   certificate,
@@ -179,7 +180,6 @@ export const buildProject = async ({
     certificate,
     ip,
     port,
-    env,
 
     babelPluginMap,
     runtimeSupport,
@@ -246,6 +246,7 @@ export const buildProject = async ({
       format,
       systemJsUrl,
       globals,
+      preservedDynamicImports,
       serviceWorkerFinalizer,
 
       node,

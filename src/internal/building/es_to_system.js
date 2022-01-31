@@ -9,7 +9,7 @@ export const esToSystem = async ({ code, url, map }) => {
           if (id === url) {
             return id
           }
-          return null
+          return { external: true }
         },
         load: (id) => {
           if (id === url) {

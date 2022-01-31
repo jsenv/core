@@ -74,6 +74,7 @@ export const createRollupPlugins = async ({
   format,
   systemJsUrl,
   globals,
+  preservedDynamicImports,
 
   node,
   compileServer,
@@ -320,10 +321,21 @@ export const createRollupPlugins = async ({
       const nameFromGlobals = globalsForRollup[originalPath]
       return nameFromGlobals || path.parse(chunkInfo.fileName).name
     }
+    const structuredMetaMap = normalizeStructuredMetaMap(
+      { preserved: preservedDynamicImports },
+      projectDirectoryUrl,
+    )
+    const isPreservedDynamicImport = (url) => {
+      const meta = urlToMeta({ url, structuredMetaMap })
+      return Boolean(meta.preserved)
+    }
     rollupPlugins.push({
       async transform(code, id) {
-        // const moduleInfo = this.getModuleInfo(id)
         const serverUrl = asServerUrl(id)
+        const originalUrl = asOriginalUrl(id)
+        if (isPreservedDynamicImport(originalUrl)) {
+          return null
+        }
         const jsRessource = ressourceBuilder.findRessource((ressource) => {
           return ressource.url === serverUrl
         })
@@ -364,14 +376,15 @@ export const createRollupPlugins = async ({
         }
         return undefined
       },
-      renderDynamicImport: () => {
-        if (format === "global") {
-          return {
-            left: "System.import(",
-            right: ")",
-          }
+      renderDynamicImport: ({ moduleId }) => {
+        const originalUrl = asOriginalUrl(moduleId)
+        if (isPreservedDynamicImport(originalUrl)) {
+          return null
         }
-        return null
+        return {
+          left: "System.import(",
+          right: ")",
+        }
       },
       async renderChunk(code, chunkInfo) {
         const serverUrl = asServerUrl(chunkInfo.facadeModuleId)

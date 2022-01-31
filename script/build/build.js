@@ -48,6 +48,9 @@ await buildInternalFile({
     "./src/internal/browser_runtime/browser_runtime.js":
       "browser_runtime_[hash].js",
   },
+  preservedDynamicImports: {
+    "./src/internal/browser_runtime/browser_runtime.js": true,
+  },
 })
 addExport(
   "BROWSER_RUNTIME_BUILD_URL",
