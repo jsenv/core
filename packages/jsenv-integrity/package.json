@@ -27,6 +27,6 @@
     "@jsenv/assert": "*",
     "@jsenv/core": "*",
     "@jsenv/eslint-config": "16.0.9",
-    "eslint": "8.8.0"
+    "eslint": "8.7.0"
   }
 }
