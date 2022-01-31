@@ -352,7 +352,7 @@ const getConvertSuggestion = async ({
   return {
     suggestion: `The file seems written in commonjs, you should use "customCompiler" to convert it to js module
 {
-  "./${importedFileOriginalRelativeUrl}": commonJsToJavaScriptModule
+  "./${importedFileOriginalRelativeUrl}": commonJsToJsModule
 }
 As documented in https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers`,
   }

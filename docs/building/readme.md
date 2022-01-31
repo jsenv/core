@@ -308,11 +308,11 @@ The value above can be translated into the following sentence where build direct
 _main.html_ can be found at _dist/main.html_, _src/main.css_ at _dist/assets/main-2e7e167b.css_ and _src/main.js_ at _dist/main-a340d0ae.js_"
 
 ```js
-import { textToJavaScriptModule } from "@jsenv/core"
+import { textToJsModule } from "@jsenv/core"
 
 export const customCompilers = {
   // Dynamically convert text files to javascript modules
-  "**/*.txt": textToJavaScriptModule,
+  "**/*.txt": textToJsModule,
 }
 ```
 

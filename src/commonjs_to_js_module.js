@@ -4,7 +4,7 @@ import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.j
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compile_server/commonjs/rollup_plugin_commonjs_named_exports.js"
 
-export const commonJsToJavaScriptModule = async ({
+export const commonJsToJsModule = async ({
   logger,
   projectDirectoryUrl,
   jsenvRemoteDirectory,

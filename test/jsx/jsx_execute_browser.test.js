@@ -1,11 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import {
-  execute,
-  chromiumRuntime,
-  commonJsToJavaScriptModule,
-} from "@jsenv/core"
+import { execute, chromiumRuntime, commonJsToJsModule } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
@@ -38,7 +34,7 @@ const { status, namespace } = await execute({
     ],
   },
   customCompilers: {
-    "**/node_modules/react/index.js": commonJsToJavaScriptModule,
+    "**/node_modules/react/index.js": commonJsToJsModule,
   },
   fileRelativeUrl,
 })

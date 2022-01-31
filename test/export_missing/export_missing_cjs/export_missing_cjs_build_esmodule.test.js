@@ -48,7 +48,7 @@ try {
 --- suggestion ---
 The file seems written in commonjs, you should use "customCompiler" to convert it to js module
 {
-  "./test/export_missing/export_missing_cjs/file_written_in_commonjs.js": commonJsToJavaScriptModule
+  "./test/export_missing/export_missing_cjs/file_written_in_commonjs.js": commonJsToJsModule
 }
 As documented in https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers`
   assert({ actual, expected })

@@ -14,10 +14,10 @@ export { executeTestPlan } from "./src/execute_test_plan.js"
 // build
 export { buildProject } from "./src/build_project.js"
 
-// when project goes further
-export { commonJsToJavaScriptModule } from "./src/commonjs_to_javascript_module.js"
-export { textToJavaScriptModule } from "./src/text_to_javascript_module.js"
-export { jsonToJavaScriptModule } from "./src/json_to_javascript_module.js"
+// when project goes further than standard HTML/CSS/JS
+export { commonJsToJsModule } from "./src/commonjs_to_js_module.js"
+export { textToJsModule } from "./src/text_to_js_module.js"
+export { jsonToJsModule } from "./src/json_to_js_module.js"
 export { jsenvServiceWorkerFinalizer } from "./src/jsenv_service_worker_finalizer.js"
 
 // not documented

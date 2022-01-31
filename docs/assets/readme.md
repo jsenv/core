@@ -75,4 +75,4 @@ console.log(text)
 ```
 
 However this cannot run directly in the browser. It needs to be transformed to be executable by a browser.
-This can be achieved by associating `"**/*.txt"` with `textToJavaScriptModule` in [customCompilers](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers). -->
+This can be achieved by associating `"**/*.txt"` with `textToJsModule` in [customCompilers](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers). -->

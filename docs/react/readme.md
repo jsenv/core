@@ -41,15 +41,15 @@ As documented in [2. Remap package with importmap](./npm_package.md#2-remap-pack
 As documented in [3. Adapt to the module format](./npm_package.md#3-adapt-to-module-format), convert "react" and "react-dom" to import/export.
 
 ```js
-import { commonJsToJavaScriptModule } from "@jsenv/core"
+import { commonJsToJsModule } from "@jsenv/core"
 
 // "react" and "react-dom" are written in commonJs, they
 // must be converted to javascript modules
 // see https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customCompilers
 export const customCompilers = {
-  "./node_modules/react/index.js": commonJsToJavaScriptModule,
+  "./node_modules/react/index.js": commonJsToJsModule,
   "./node_modules/react-dom/index.js": (options) => {
-    return commonJsToJavaScriptModule({ ...options, external: ["react"] })
+    return commonJsToJsModule({ ...options, external: ["react"] })
   },
 }
 ```

@@ -1,6 +1,7 @@
-export const jsonToJavaScriptModule = async ({ code, url }) => {
+export const jsonToJsModule = async ({ code, url }) => {
   const codeAsJson = JSON.stringify(code)
-
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029")
   return {
     compiledSource: `export default ${codeAsJson}`,
     contentType: "application/javascript",

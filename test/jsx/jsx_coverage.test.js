@@ -5,7 +5,7 @@ import {
   executeTestPlan,
   nodeRuntime,
   chromiumRuntime,
-  commonJsToJavaScriptModule,
+  commonJsToJsModule,
 } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
@@ -31,7 +31,7 @@ const { testPlanCoverage } = await executeTestPlan({
     ],
   },
   customCompilers: {
-    "./node_modules/react/index.js": commonJsToJavaScriptModule,
+    "./node_modules/react/index.js": commonJsToJsModule,
   },
   testPlan: {
     [htmlFileRelativeUrl]: {
