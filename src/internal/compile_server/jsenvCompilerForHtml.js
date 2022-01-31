@@ -14,7 +14,7 @@ import {
   TOOLBAR_INJECTOR_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 
 import {
   generateSourcemapUrl,

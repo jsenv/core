@@ -28,7 +28,7 @@ import {
 } from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
-import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 
 import {
   parseHtmlString,

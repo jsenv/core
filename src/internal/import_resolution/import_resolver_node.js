@@ -9,7 +9,7 @@ import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierFo
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
-import { applyDefaultExtension } from "./default-extension.js"
+import { applyDefaultExtension } from "./default_extension.js"
 
 export const createImportResolverForNode = async ({
   projectDirectoryUrl,

@@ -2,7 +2,7 @@ import { normalizeImportMap } from "@jsenv/importmap/src/normalizeImportMap.js"
 
 // do not use memoize from @jsenv/filesystem to avoid pulling @jsenv/filesystem code into the browser build
 import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
-import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import-resolution/import-resolver-importmap.js"
+import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
 import { memoize } from "@jsenv/core/src/internal/memoize.js"
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_browser.js"
 

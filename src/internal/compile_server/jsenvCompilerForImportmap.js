@@ -1,6 +1,6 @@
 import { composeTwoImportMaps } from "@jsenv/importmap"
 
-import { getDefaultImportmap } from "@jsenv/core/src/internal/import-resolution/importmap_default.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 
 export const compileImportmap = async ({
   code,

@@ -3,7 +3,7 @@ import { resolveImport } from "@jsenv/importmap/src/resolveImport.js"
 
 import { tryToFindProjectRelativeUrl } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
 
-import { applyDefaultExtension } from "./default-extension.js"
+import { applyDefaultExtension } from "./default_extension.js"
 
 export const createImportResolverForImportmap = async ({
   // projectDirectoryUrl,
