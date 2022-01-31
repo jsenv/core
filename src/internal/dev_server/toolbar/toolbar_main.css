@@ -2,9 +2,9 @@
 @import "./compilation/compilation.css";
 @import "./focus/focus.css";
 @import "./eventsource/eventsource.css";
-@import "./responsive/overflow-menu.css";
+@import "./responsive/overflow_menu.css";
 @import "./settings/settings.css";
-@import "./theme/light-theme.css";
+@import "./theme/light_theme.css";
 @import "./tooltip/tooltip.css";
 
 html[data-animation-disabled] * {

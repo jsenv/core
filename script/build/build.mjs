@@ -98,11 +98,11 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/toolbar_injector/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPoints: {
-    "./src/internal/dev_server/toolbar/toolbar.injector.js":
+    "./src/internal/dev_server/toolbar/toolbar_injector.js":
       "toolbar_injector_[hash].js",
   },
   customCompilers: {
-    "./src/internal/dev_server/toolbar/toolbar.injector.js": ({ code }) => {
+    "./src/internal/dev_server/toolbar/toolbar_injector.js": ({ code }) => {
       const compiledSource = code.replace(
         "__TOOLBAR_BUILD_RELATIVE_URL_",
         JSON.stringify(`dist/toolbar/${buildManifest["toolbar.html"]}`),

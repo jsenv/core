@@ -1,11 +1,12 @@
-import { scanBrowserRuntimeFeatures } from "../../../features/browser_feature_detection/browser_feature_detection.js"
+import { scanBrowserRuntimeFeatures } from "@jsenv/core/src/internal/features/browser_feature_detection/browser_feature_detection.js"
+
 import { setLinkHrefForParentWindow } from "../util/iframe_to_parent_href.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant/variant.js"
 import {
   enableWarningStyle,
   disableWarningStyle,
-} from "../settings/toolbar.settings.js"
+} from "../settings/toolbar_settings.js"
 
 export const renderCompilationInToolbar = ({ compileGroup }) => {
   const browserSupportRootNode = document.querySelector("#browser_support")

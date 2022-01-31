@@ -747,7 +747,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_26b42742.html";
+var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_b0c9100c.html";
 
 function _call(body, then, direct) {
   if (direct) {
@@ -762,7 +762,7 @@ function _call(body, then, direct) {
   }
 }
 
-var jsenvLogoSvgUrl = new URL("assets/jsenv-logo_188b9ca6.svg", document.currentScript && document.currentScript.src || document.baseURI);
+var jsenvLogoSvgUrl = new URL("assets/jsenv_logo_192011c2.svg", document.currentScript && document.currentScript.src || document.baseURI);
 
 function _async(f) {
   return function () {
@@ -825,7 +825,7 @@ var injectToolbar = _async(function () {
       return _await(iframeLoadedPromise, function () {
         iframe.removeAttribute("tabindex");
         var div = document.createElement("div");
-        div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv-logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+        div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
         var toolbarTrigger = div.firstElementChild;
         iframe.parentNode.appendChild(toolbarTrigger);
         var timer;
@@ -973,4 +973,4 @@ if (document.readyState === "complete") {
 }
 })();
 
-//# sourceMappingURL=toolbar_injector_1f63b506.js.map
+//# sourceMappingURL=toolbar_injector_65b501eb.js.map

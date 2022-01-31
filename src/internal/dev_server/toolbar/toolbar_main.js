@@ -2,7 +2,7 @@ import { urlIsInsideOf } from "@jsenv/filesystem/src/urlIsInsideOf.js"
 import { urlToRelativeUrl } from "@jsenv/filesystem/src/urlToRelativeUrl.js"
 
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
-import "./focus/toolbar.focus.js"
+import "./focus/toolbar_focus.js"
 import { setLinkHrefForParentWindow } from "./util/iframe_to_parent_href.js"
 import {
   getToolbarIframe,
@@ -14,14 +14,14 @@ import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
 import {
   renderToolbarSettings,
   hideSettings,
-} from "./settings/toolbar.settings.js"
-import { renderToolbarNotification } from "./notification/toolbar.notification.js"
-import { renderToolbarTheme } from "./theme/toolbar.theme.js"
-import { renderToolbarAnimation } from "./animation/toolbar.animation.js"
-import { renderExecutionInToolbar } from "./execution/toolbar.execution.js"
-import { renderCompilationInToolbar } from "./compilation/toolbar.compilation.js"
-import { initToolbarEventSource } from "./eventsource/toolbar.eventsource.js"
-import { makeToolbarResponsive } from "./responsive/toolbar.responsive.js"
+} from "./settings/toolbar_settings.js"
+import { renderToolbarNotification } from "./notification/toolbar_notification.js"
+import { renderToolbarTheme } from "./theme/toolbar_theme.js"
+import { renderToolbarAnimation } from "./animation/toolbar_animation.js"
+import { renderExecutionInToolbar } from "./execution/toolbar_execution.js"
+import { renderCompilationInToolbar } from "./compilation/toolbar_compilation.js"
+import { initToolbarEventSource } from "./eventsource/toolbar_eventsource.js"
+import { makeToolbarResponsive } from "./responsive/toolbar_responsive.js"
 
 const toolbarVisibilityPreference = createPreference("toolbar")
 

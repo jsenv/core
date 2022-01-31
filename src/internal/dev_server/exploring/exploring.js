@@ -1,7 +1,7 @@
 import { fetchUrl } from "../toolbar/util/fetching.js"
 import { createPreference } from "../toolbar/util/preferences.js"
 import { startJavaScriptAnimation } from "../toolbar/util/animation.js"
-import { fetchExploringJson } from "./fetchExploringJson.js"
+import { fetchExploringJson } from "./fetch_exploring_json.js"
 
 const fetchJSON = async (url, options) => {
   const response = await fetchUrl(url, options)

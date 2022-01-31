@@ -1,9 +1,10 @@
-import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetchExploringJson.js"
+import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetch_exploring_json.js"
+
 import { setAttributes, setStyles } from "./util/dom.js"
 
 // eslint-disable-next-line no-undef
 const TOOLBAR_BUILD_RELATIVE_URL = __TOOLBAR_BUILD_RELATIVE_URL_
-const jsenvLogoSvgUrl = new URL("./jsenv-logo.svg", import.meta.url)
+const jsenvLogoSvgUrl = new URL("./jsenv_logo.svg", import.meta.url)
 
 const injectToolbar = async () => {
   await new Promise((resolve) => {
@@ -60,7 +61,7 @@ const injectToolbar = async () => {
   div.innerHTML = `
 <div id="jsenv-toolbar-trigger">
   <svg id="jsenv-toolbar-trigger-icon">
-    <use xlink:href="${jsenvLogoSvgUrl}#jsenv-logo"></use>
+    <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
   </svg>
   <style>
     #jsenv-toolbar-trigger {
