@@ -1,4 +1,4 @@
-import { findHighestVersion } from "@jsenv/core/src/internal/semantic_versioning/index.js"
+import { findHighestVersion } from "@jsenv/core/src/internal/semantic_versioning/highest_version.js"
 
 import { featuresCompatMap } from "./features_compatibility.js"
 

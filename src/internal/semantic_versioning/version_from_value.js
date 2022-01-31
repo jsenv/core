@@ -1,12 +1,10 @@
-export const valueToVersion = (value) => {
+export const versionFromValue = (value) => {
   if (typeof value === "number") {
     return numberToVersion(value)
   }
-
   if (typeof value === "string") {
     return stringToVersion(value)
   }
-
   throw new TypeError(`version must be a number or a string, got ${value}`)
 }
 
