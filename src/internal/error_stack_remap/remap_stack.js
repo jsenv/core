@@ -1,9 +1,6 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import {
-  parseDataUrl,
-  dataUrlToRawData,
-} from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 
 import { remapCallSite } from "./remap_call_site.js"
@@ -65,7 +62,7 @@ export const remapStack = async ({
         let sourcemapString
         if (jsSourcemapUrl.startsWith("data:")) {
           sourcemapUrl = stackTraceFileUrl
-          sourcemapString = dataUrlToRawData(parseDataUrl(jsSourcemapUrl))
+          sourcemapString = DataUrl.parse(jsSourcemapUrl, { as: "string" })
         } else {
           sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
             type: "source-map",

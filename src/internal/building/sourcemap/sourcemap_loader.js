@@ -1,10 +1,7 @@
 import { resolveUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import {
-  dataUrlToRawData,
-  parseDataUrl,
-} from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
@@ -23,7 +20,7 @@ export const loadSourcemap = async ({
 
   const sourcemapUrl = resolveUrl(sourcemapSpecifier, url)
   if (sourcemapUrl.startsWith("data:")) {
-    const sourcemapString = dataUrlToRawData(parseDataUrl(sourcemapUrl))
+    const sourcemapString = DataUrl.parse(sourcemapUrl, { as: "string" })
     return parseSourcemapString(
       sourcemapString,
       sourcemapUrl,

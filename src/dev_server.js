@@ -7,11 +7,11 @@ import {
 
 import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
-} from "./internal/argUtils.js"
+} from "@jsenv/core/src/internal/jsenv_params_assertions.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   startCompileServer,
   assertAndNormalizeJsenvDirectoryRelativeUrl,

@@ -5,7 +5,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
-} from "@jsenv/core/src/internal/argUtils.js"
+} from "@jsenv/core/src/internal/jsenv_params_assertions.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 import { buildUsingRollup } from "@jsenv/core/src/internal/building/build_using_rollup.js"
 import {

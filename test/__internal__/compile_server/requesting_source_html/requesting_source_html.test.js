@@ -15,7 +15,7 @@ import {
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
 } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -140,7 +140,10 @@ const html = await response.text()
   const imgBuffer = await readFile(imgFileUrl, { as: "buffer" })
 
   const actual = src
-  const expected = stringifyDataUrl({ mediaType: "image/png", data: imgBuffer })
+  const expected = DataUrl.stringify({
+    mediaType: "image/png",
+    data: imgBuffer,
+  })
   assert({ actual, expected })
 }
 

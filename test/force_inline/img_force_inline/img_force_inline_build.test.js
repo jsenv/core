@@ -8,7 +8,7 @@ import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(
@@ -51,7 +51,7 @@ await buildProject({
     hasJsenvForceInlineAttribute,
   }
   const expected = {
-    src: stringifyDataUrl({ mediaType: "image/png", data: imgBuffer }),
+    src: DataUrl.stringify({ mediaType: "image/png", data: imgBuffer }),
     hasJsenvForceInlineAttribute: false,
   }
   assert({ actual, expected })

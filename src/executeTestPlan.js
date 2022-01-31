@@ -11,7 +11,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
-} from "./internal/argUtils.js"
+} from "@jsenv/core/src/internal/jsenv_params_assertions.js"
 import { executePlan } from "./internal/executing/execute_plan.js"
 import { generateCoverageJsonFile } from "./internal/coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./internal/coverage/coverage_reporter_html_directory.js"

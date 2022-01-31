@@ -27,7 +27,7 @@ import {
   TOOLBAR_INJECTOR_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
-import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
@@ -413,7 +413,7 @@ const forceInlineRessources = async ({
       specifier: src,
       mutateHtml: async (response) => {
         const responseArrayBuffer = await response.arrayBuffer()
-        const responseAsBase64 = stringifyDataUrl({
+        const responseAsBase64 = DataUrl.stringify({
           data: responseArrayBuffer,
           base64Flag: true,
           mediaType: response.headers["content-type"],

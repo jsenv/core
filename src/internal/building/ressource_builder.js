@@ -2,9 +2,10 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { setJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 
 import { racePromises } from "../promise_race.js"
-import { parseDataUrl } from "../dataUrl.utils.js"
+
 import {
   getRessourceAsBase64Url,
   memoize,
@@ -276,7 +277,7 @@ export const createRessourceBuilder = (
     if (ressourceUrl.startsWith("data:")) {
       isExternal = false
       isInline = true
-      const { mediaType, base64Flag, data } = parseDataUrl(ressourceUrl)
+      const { mediaType, base64Flag, data } = DataUrl.parse(ressourceUrl)
       contentTypeExpected = mediaType
       contentType = mediaType
       bufferBeforeBuild = base64Flag
