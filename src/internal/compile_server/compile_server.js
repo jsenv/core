@@ -17,11 +17,11 @@ import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
 import {
+  jsenvDistDirectoryUrl,
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+} from "@jsenv/core/src/jsenv_file_urls.js"
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
-import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"

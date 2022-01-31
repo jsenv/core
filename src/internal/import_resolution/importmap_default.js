@@ -8,7 +8,7 @@
 
 import { urlToRelativeUrl, urlIsInsideOf, resolveUrl } from "@jsenv/filesystem"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 export const getDefaultImportmap = (
   url,

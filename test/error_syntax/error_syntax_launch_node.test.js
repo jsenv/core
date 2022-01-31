@@ -6,7 +6,7 @@ import {
 import { assert } from "@jsenv/assert"
 
 import { execute, nodeRuntime } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,

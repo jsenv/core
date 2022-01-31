@@ -7,7 +7,7 @@ import { assert } from "@jsenv/assert"
 
 import { buildProject } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { compilationResultFromBuild } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result_from_build.js"
 import { GENERATE_COMMONJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
 

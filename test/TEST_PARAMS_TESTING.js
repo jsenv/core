@@ -1,4 +1,4 @@
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 export const EXECUTE_TEST_PLAN_TEST_PARAMS = {
   logLevel: "warn",

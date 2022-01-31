@@ -1,7 +1,7 @@
 import { urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { babelPluginInstrument } from "@jsenv/core/src/internal/coverage/babel_plugin_instrument.js"
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"

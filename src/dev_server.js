@@ -11,15 +11,15 @@ import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
 } from "@jsenv/core/src/internal/jsenv_params_assertions.js"
-import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import {
   startCompileServer,
   assertAndNormalizeJsenvDirectoryRelativeUrl,
 } from "./internal/compile_server/compile_server.js"
 import {
+  jsenvCoreDirectoryUrl,
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
-} from "./internal/jsenvInternalFiles.js"
+} from "./jsenv_file_urls.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 const EXPLORING_HTML_URL = new URL(

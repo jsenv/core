@@ -29,7 +29,7 @@ import {
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 import {
   parseHtmlString,

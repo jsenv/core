@@ -1,4 +1,4 @@
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 export const GENERATE_ESMODULE_BUILD_TEST_PARAMS = {
   format: "esmodule",

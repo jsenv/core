@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 export const babelPluginSystemJsPrepend = (api) => {
   api.assertVersion(7)

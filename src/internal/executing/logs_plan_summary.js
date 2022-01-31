@@ -1,7 +1,8 @@
 import { ANSI } from "@jsenv/log"
 
-import { msAsDuration } from "../logs/msAsDuration.js"
-import { formatByte } from "../logs/byte.js"
+import { msAsDuration } from "@jsenv/core/src/internal/logs/ms_as_duration.js"
+import { formatByte } from "@jsenv/core/src/internal/logs/byte.js"
+
 import { EXECUTION_COLORS } from "./execution_colors.js"
 
 export const createSummaryLog = (

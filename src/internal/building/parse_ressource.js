@@ -3,7 +3,7 @@ import { readFile, urlToRelativeUrl } from "@jsenv/filesystem"
 import {
   jsenvSystemJsFileInfo,
   jsenvResolveImportUrlHelper,
-} from "@jsenv/core/src/internal/jsenvInternalFiles.js"
+} from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   parseHtmlString,
   findHtmlNode,

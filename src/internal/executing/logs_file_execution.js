@@ -1,6 +1,7 @@
 import { ANSI, UNICODE } from "@jsenv/log"
 
-import { msAsDuration } from "../logs/msAsDuration.js"
+import { msAsDuration } from "@jsenv/core/src/internal/logs/ms_as_duration.js"
+
 import { EXECUTION_COLORS } from "./execution_colors.js"
 import { createIntermediateSummary } from "./logs_plan_summary.js"
 

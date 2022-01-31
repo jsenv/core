@@ -7,7 +7,7 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { jsenvDistDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   BROWSER_CLIENT_BUILD_URL,
   EVENT_SOURCE_CLIENT_BUILD_URL,

@@ -1,7 +1,7 @@
 import { Script } from "node:vm"
 import { loggerToLogLevel } from "@jsenv/logger"
 
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { escapeRegexpSpecialCharacters } from "./internal/regexp_escape.js"
 import { createControllableNodeProcess } from "./internal/node_launcher/node_controllable_process.js"
 import { getNodeRuntimeReport } from "./internal/node_launcher/node_runtime_report.js"

@@ -19,10 +19,10 @@ import {
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/jsenv_file_urls.js"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
-import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import_resolution/import_resolver_node.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"

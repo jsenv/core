@@ -3,7 +3,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { execute, nodeRuntime } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,

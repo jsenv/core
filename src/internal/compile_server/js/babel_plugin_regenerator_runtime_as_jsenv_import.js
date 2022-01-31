@@ -5,7 +5,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 const regeneratorRuntimeHelperDirectoryUrl = resolveUrl(
   "./helpers/regenerator-runtime/",

@@ -1,7 +1,12 @@
 import { resolveUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { require } from "./require.js"
-import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
+import { require } from "./internal/require.js"
+
+export const jsenvCoreDirectoryUrl = String(new URL("../", import.meta.url))
+
+export const jsenvDistDirectoryUrl = String(
+  new URL("./dist/", jsenvCoreDirectoryUrl),
+)
 
 export const jsenvHelpersDirectoryInfo = {
   url: resolveUrl("./helpers/", jsenvCoreDirectoryUrl),

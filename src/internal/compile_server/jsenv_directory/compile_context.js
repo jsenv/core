@@ -5,7 +5,7 @@ import {
   EVENT_SOURCE_CLIENT_BUILD_URL,
   BROWSER_CLIENT_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
 import { sameValueInTwoObjects } from "./comparison_utils.js"
 
