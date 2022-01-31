@@ -37,5 +37,8 @@ const expected = {
   jsUrlString: String(
     new URL(`./dist/esmodule/${fileBuildRelativeUrl}`, serverOrigin),
   ),
+  moduleNamespace: {
+    default: 42,
+  },
 }
 assert({ actual, expected })

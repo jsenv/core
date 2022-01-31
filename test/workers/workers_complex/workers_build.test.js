@@ -21,12 +21,6 @@ await buildProject({
   entryPoints: {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
-  workers: [`${testDirectoryRelativeUrl}worker/worker.js`],
-  serviceWorkers: [`${testDirectoryRelativeUrl}service_worker/sw.js`],
-  classicWorkers: [`${testDirectoryRelativeUrl}classic_worker/worker.js`],
-  classicServiceWorkers: [
-    `${testDirectoryRelativeUrl}classic_service_worker/sw.js`,
-  ],
   serviceWorkerFinalizer: jsenvServiceWorkerFinalizer,
 })
 const { returnValue, serverOrigin } = await executeInBrowser({
@@ -42,7 +36,7 @@ if (process.platform !== "win32") {
   const actual = returnValue
   const expected = {
     worker: {
-      url: `${serverOrigin}/dist/esmodule/worker_b7f114ee.js`,
+      url: `${serverOrigin}/dist/esmodule/worker_e8d3de54.js`,
       pingResponse: "pong",
     },
     serviceWorker: {
@@ -60,13 +54,13 @@ if (process.platform !== "win32") {
             // To ensure worker is still updated, jsenv adds a jsenvStaticUrlsHash
             // to include a hash for the html file.
             // -> when html file changes -> hash changes -> worker updates
-            version: "73ff05a9",
+            version: "0c9567da",
           },
           "sw2.js": {
             versioned: false,
             version: "148f0aa7",
           },
-          "worker_b7f114ee.js": {
+          "worker_e8d3de54.js": {
             versioned: true,
           },
           "worker2_a850e925.js": {
@@ -89,13 +83,13 @@ if (process.platform !== "win32") {
           },
           "main.html": {
             versioned: false,
-            version: "73ff05a9",
+            version: "0c9567da",
           },
           "sw.js": {
             versioned: false,
-            version: "f157fc56",
+            version: "8c13ad75",
           },
-          "worker_b7f114ee.js": {
+          "worker_e8d3de54.js": {
             versioned: true,
           },
           "worker2_a850e925.js": {

@@ -48,6 +48,6 @@ if (SourceMap) {
     { commandLineOptions: ["--experimental-top-level-await"] },
   )
   const actual = namespace
-  const expected = { default: 42 }
+  const expected = { value: 42 }
   assert({ actual, expected })
 }

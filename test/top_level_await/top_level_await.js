@@ -5,4 +5,4 @@ debugger
 
 console.log(value)
 
-export default value
+export { value }

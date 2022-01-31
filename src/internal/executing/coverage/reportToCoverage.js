@@ -62,6 +62,7 @@ export const reportToCoverage = async (
 
   if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
     await visitNodeV8Directory({
+      logger,
       signal,
       NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
       onV8Coverage: (nodeV8Coverage) => {

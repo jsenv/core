@@ -1,4 +1,4 @@
-import { extname } from "node:path"
+import path from "node:path"
 import MagicString from "magic-string"
 import { composeTwoImportMaps, normalizeImportMap } from "@jsenv/importmap"
 import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
@@ -15,9 +15,11 @@ import {
   urlToBasename,
   urlToFilename,
   readFile,
+  urlToFileSystemPath,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
+import { require } from "@jsenv/core/src/internal/require.js"
 import { convertJsonTextToJavascriptModule } from "@jsenv/core/src/internal/building/json_module.js"
 import { convertCssTextToJavascriptModule } from "@jsenv/core/src/internal/building/css_module.js"
 import { transformJs } from "@jsenv/core/src/internal/compiling/js-compilation-service/transformJs.js"
@@ -49,6 +51,7 @@ import {
 } from "./ressource_builder.js"
 import { createBuildUrlGenerator } from "./build_url_generator.js"
 import { visitImportReferences } from "./import_references.js"
+import { esToSystem } from "./es_to_system.js"
 import { createBuildStats } from "./build_stats.js"
 
 export const createRollupPlugins = async ({
@@ -66,13 +69,12 @@ export const createRollupPlugins = async ({
   externalImportSpecifiers,
   importPaths,
   preservedUrls,
-  workers,
-  serviceWorkers,
   serviceWorkerFinalizer,
-  classicWorkers,
-  classicServiceWorkers,
+
   format,
   systemJsUrl,
+  globals,
+  preservedDynamicImports,
 
   node,
   compileServer,
@@ -127,12 +129,15 @@ export const createRollupPlugins = async ({
   let buildStats = {}
   const buildStartMs = Date.now()
 
+  const serviceWorkerUrls = []
+  const classicServiceWorkerUrls = []
+
   let lastErrorMessage
   const storeLatestJsenvPluginError = (error) => {
     lastErrorMessage = error.message
   }
 
-  const extension = extname(entryPoints[Object.keys(entryPoints)[0]])
+  const extension = path.extname(entryPoints[Object.keys(entryPoints)[0]])
   const outputExtension = extension === ".html" ? ".js" : extension
 
   const entryPointUrls = {}
@@ -140,19 +145,6 @@ export const createRollupPlugins = async ({
     const url = resolveUrl(key, projectDirectoryUrl)
     entryPointUrls[url] = entryPoints[key]
   })
-  const workerUrls = workers.map((worker) =>
-    resolveUrl(worker, projectDirectoryUrl),
-  )
-  const serviceWorkerUrls = serviceWorkers.map((serviceWorker) =>
-    resolveUrl(serviceWorker, projectDirectoryUrl),
-  )
-  const classicWorkerUrls = classicWorkers.map((classicWorker) =>
-    resolveUrl(classicWorker, projectDirectoryUrl),
-  )
-  const classicServiceWorkerUrls = classicServiceWorkers.map(
-    (classicServiceWorker) =>
-      resolveUrl(classicServiceWorker, projectDirectoryUrl),
-  )
 
   let ressourceBuilder
   let importResolver
@@ -311,6 +303,123 @@ export const createRollupPlugins = async ({
       },
     })
   }
+  if (format === "global") {
+    const globalsForRollup = {}
+    Object.keys(globals).forEach((key) => {
+      if (key.startsWith("./")) {
+        const keyAsUrl = resolveUrl(key, projectDirectoryUrl)
+        const keyAsPath = urlToFileSystemPath(keyAsUrl)
+        globalsForRollup[keyAsPath] = globals[key]
+      } else {
+        globalsForRollup[key] = globals[key]
+      }
+    })
+    const ESIIFE = require("es-iife")
+    const globalNameFromChunkInfo = (chunkInfo) => {
+      const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
+      const originalPath = urlToFileSystemPath(originalUrl)
+      const nameFromGlobals = globalsForRollup[originalPath]
+      return nameFromGlobals || path.parse(chunkInfo.fileName).name
+    }
+    const structuredMetaMap = normalizeStructuredMetaMap(
+      { preserved: preservedDynamicImports },
+      projectDirectoryUrl,
+    )
+    const isPreservedDynamicImport = (url) => {
+      const meta = urlToMeta({ url, structuredMetaMap })
+      return Boolean(meta.preserved)
+    }
+    rollupPlugins.push({
+      async transform(code, id) {
+        const serverUrl = asServerUrl(id)
+        const originalUrl = asOriginalUrl(id)
+        if (isPreservedDynamicImport(originalUrl)) {
+          return null
+        }
+        const jsRessource = ressourceBuilder.findRessource((ressource) => {
+          return ressource.url === serverUrl
+        })
+        if (!jsRessource || !jsRessource.isEntryPoint) {
+          return null
+        }
+        let map = null
+        const ast = this.parse(code, {
+          // used to know node line and column
+          locations: true,
+        })
+        let useDynamicImport = false
+        const { walk } = await import("estree-walker")
+        walk(ast, {
+          enter: (node) => {
+            if (node.type === "ImportExpression") {
+              useDynamicImport = true
+            }
+          },
+        })
+        if (!useDynamicImport) {
+          return null
+        }
+        const magicString = new MagicString(code)
+        magicString.prepend(`import "@jsenv/core/src/internal/runtime/s.js";`)
+        code = magicString.toString()
+        map = magicString.generateMap({ hires: true })
+        return { code, map }
+      },
+
+      outputOptions: (outputOptions) => {
+        outputOptions.globals = globalsForRollup
+        outputOptions.format = "esm"
+      },
+      resolveImportMeta: (property, { chunkId }) => {
+        if (property === "url") {
+          return `(document.currentScript && document.currentScript.src || new URL("${chunkId}", document.baseURI).href);`
+        }
+        return undefined
+      },
+      renderDynamicImport: ({ moduleId }) => {
+        const originalUrl = asOriginalUrl(moduleId)
+        if (isPreservedDynamicImport(originalUrl)) {
+          return null
+        }
+        return {
+          left: "System.import(",
+          right: ")",
+        }
+      },
+      async renderChunk(code, chunkInfo) {
+        const serverUrl = asServerUrl(chunkInfo.facadeModuleId)
+        const jsRessource = ressourceBuilder.findRessource(
+          (ressource) => ressource.url === serverUrl,
+        )
+        if (jsRessource.isEntryPoint) {
+          const name = globalNameFromChunkInfo(chunkInfo)
+          const out = ESIIFE.transform({
+            code,
+            parse: this.parse,
+            name,
+            sourcemap: true,
+            resolveGlobal: (specifier) => {
+              const url = resolveUrl(specifier, chunkInfo.facadeModuleId)
+              const globalName = urlToBasename(url)
+              return globalName
+            },
+            strict: true,
+          })
+          code = out.code
+          const map = out.map
+          return {
+            code,
+            map,
+          }
+        }
+        return esToSystem({
+          code,
+          url: serverUrl,
+          map: chunkInfo.map,
+        })
+      },
+    })
+  }
   if (minify) {
     const methodHooks = {
       minifyJs: async (...args) => {
@@ -322,7 +431,6 @@ export const createRollupPlugins = async ({
         return minifyHtml(...args)
       },
     }
-
     minifyJs = async ({ url, code, map, ...rest }) => {
       const result = await methodHooks.minifyJs({
         url,
@@ -336,11 +444,9 @@ export const createRollupPlugins = async ({
         map: result.map,
       }
     }
-
     minifyHtml = async (html) => {
       return methodHooks.minifyHtml(html, minifyHtmlOptions)
     }
-
     rollupPlugins.push({
       name: "jsenv_minifier",
       async renderChunk(code, chunk) {
@@ -354,7 +460,6 @@ export const createRollupPlugins = async ({
           module: format === "esmodule",
           ...(format === "global" ? { toplevel: false } : { toplevel: true }),
         })
-
         code = result.code
         map = result.map
         return {
@@ -685,19 +790,21 @@ export const createRollupPlugins = async ({
               const compiledFileUrl = asCompiledServerUrl(fileUrl)
               resolutionResult.url = compiledFileUrl
             }
-
-            if (workerUrls.includes(ressourceOriginalUrl)) {
+            const { searchParams } = new URL(ressourceUrl)
+            if (searchParams.has("module")) {
+              resolutionResult.isJsModule = true
+            } else if (searchParams.has("worker")) {
               resolutionResult.isWorker = true
               resolutionResult.isJsModule = true
-            } else if (serviceWorkerUrls.includes(ressourceOriginalUrl)) {
+            } else if (searchParams.has("service_worker")) {
               resolutionResult.isServiceWorker = true
               resolutionResult.isJsModule = true
-            } else if (classicWorkerUrls.includes(ressourceOriginalUrl)) {
+              serviceWorkerUrls.push(ressourceOriginalUrl)
+            } else if (searchParams.has("worker_type_classic")) {
               resolutionResult.isWorker = true
-            } else if (
-              classicServiceWorkerUrls.includes(ressourceOriginalUrl)
-            ) {
+            } else if (searchParams.has("service_worker_type_classic")) {
               resolutionResult.isServiceWorker = true
+              classicServiceWorkerUrls.push(ressourceOriginalUrl)
             }
             return resolutionResult
           },
@@ -927,6 +1034,9 @@ export const createRollupPlugins = async ({
           return ressource.rollupReferenceId === referenceId
         })
         ressource.buildRelativeUrlWithoutHash = fileName
+        if (ressource.isJsModule) {
+          return fileName
+        }
         const buildRelativeUrl = ressource.buildRelativeUrl
         return buildRelativeUrl
       }
@@ -1047,22 +1157,16 @@ export const createRollupPlugins = async ({
         onReferenceWithImportMetaUrlPattern: async ({ importNode }) => {
           const specifier = importNode.arguments[0].value
           const { line, column } = importNode.loc.start
-
           const { id } = normalizeRollupResolveReturnValue(
             await this.resolve(specifier, url),
           )
           const ressourceUrl = asServerUrl(id)
-          const originalUrl = asOriginalUrl(ressourceUrl)
-          const isJsModule = Boolean(
-            workerUrls[originalUrl] || serviceWorkerUrls[originalUrl],
-          )
           const reference = ressourceBuilder.createReferenceFoundInJsModule({
             referenceLabel: "URL + import.meta.url",
             jsUrl: url,
             jsLine: line,
             jsColumn: column,
             ressourceSpecifier: ressourceUrl,
-            isJsModule,
           })
           if (!reference) {
             return
@@ -1363,7 +1467,6 @@ export const createRollupPlugins = async ({
         }
         return sourceUrl
       }
-
       return outputOptions
     },
 
@@ -1373,9 +1476,12 @@ export const createRollupPlugins = async ({
         // happens for inline module scripts for instance
         return null
       }
-
       const url = asOriginalUrl(facadeModuleId)
-      if (workerUrls.includes(url) || serviceWorkerUrls.includes(url)) {
+      const { searchParams } = new URL(url)
+      if (
+        format === "systemjs" &&
+        (searchParams.has("worker") || searchParams.has("service_worker"))
+      ) {
         const magicString = new MagicString(code)
         const systemjsCode = await readFile(
           new URL("../runtime/s.js", import.meta.url),
@@ -1388,7 +1494,6 @@ export const createRollupPlugins = async ({
           map,
         }
       }
-
       return null
     },
 
@@ -1609,9 +1714,9 @@ export const createRollupPlugins = async ({
       buildMappings = sortObjectByPathnames(buildMappings)
       await visitServiceWorkers({
         projectDirectoryUrl,
+        serviceWorkerFinalizer,
         serviceWorkerUrls,
         classicServiceWorkerUrls,
-        serviceWorkerFinalizer,
         buildMappings,
         ressourceMappings,
         buildFileContents,
@@ -1831,7 +1936,6 @@ const visitServiceWorkers = async ({
     ...serviceWorkerUrls,
     ...classicServiceWorkerUrls,
   ]
-
   await Promise.all(
     allServiceWorkerUrls.map(async (serviceWorkerUrl) => {
       const serviceWorkerRelativeUrl = urlToRelativeUrl(
@@ -1845,7 +1949,6 @@ const visitServiceWorkers = async ({
           `"${serviceWorkerRelativeUrl}" service worker file missing in the build`,
         )
       }
-
       if (serviceWorkerFinalizer) {
         let code = buildFileContents[serviceWorkerBuildRelativeUrl]
         code = await serviceWorkerFinalizer(code, {

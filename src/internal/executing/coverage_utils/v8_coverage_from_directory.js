@@ -8,6 +8,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { Abort } from "@jsenv/abort"
 
 export const visitNodeV8Directory = async ({
+  logger,
   signal,
   NODE_V8_COVERAGE,
   onV8Coverage,
@@ -20,7 +21,7 @@ export const visitNodeV8Directory = async ({
     if (dirContent.length > 0) {
       return dirContent
     }
-    console.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`)
+    logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`)
     return dirContent
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "25.5.0",
+  "version": "25.6.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -81,6 +81,7 @@
     "cssnano": "5.0.14",
     "cssnano-preset-default": "5.1.9",
     "cuid": "2.1.8",
+    "es-iife": "0.2.2",
     "estree-walker": "3.0.1",
     "html-minifier": "4.0.0",
     "humanize-duration": "3.27.1",

@@ -23,17 +23,21 @@ await buildProject({
   entryPoints: {
     [`./${testDirectoryRelativeUrl}import_meta_url.js`]: "main.js",
   },
+  globals: {
+    [`./${testDirectoryRelativeUrl}import_meta_url.js`]: "__namespace__",
+  },
 })
-const { globalValue, serverOrigin } = await executeFileUsingBrowserScript({
+const { returnValue, serverOrigin } = await executeFileUsingBrowserScript({
   rootDirectoryUrl: resolveUrl(
     buildDirectoryRelativeUrl,
     jsenvCoreDirectoryUrl,
   ),
   jsFileRelativeUrl: "./main.js",
-  globalName: "__namespace__",
+  /* eslint-disable no-undef */
+  pageFunction: () => window.__namespace__,
+  /* eslint-enable no-undef */
 })
-
-const actual = globalValue
+const actual = returnValue
 const expected = {
   isInstanceOfUrl: false,
   urlString: `${serverOrigin}/main.js`,

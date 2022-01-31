@@ -38,11 +38,7 @@ export const buildProject = async ({
 
   projectDirectoryUrl,
   entryPoints,
-  workers = [],
-  serviceWorkers = [],
   serviceWorkerFinalizer,
-  classicWorkers = [],
-  classicServiceWorkers = [],
   importMapInWebWorkers = false,
   buildDirectoryRelativeUrl,
   buildDirectoryClean = true,
@@ -53,8 +49,9 @@ export const buildProject = async ({
 
   format,
   systemJsUrl,
-  globalName,
   globals = {},
+  preservedDynamicImports = {},
+
   babelPluginMap = {},
   customCompilers,
   runtimeSupport = format === "global" ||
@@ -95,7 +92,6 @@ export const buildProject = async ({
   // https://github.com/cssnano/cssnano/tree/master/packages/cssnano-preset-default
   minifyCssOptions,
 
-  env = {},
   protocol,
   privateKey,
   certificate,
@@ -184,11 +180,8 @@ export const buildProject = async ({
     certificate,
     ip,
     port,
-    env,
 
     babelPluginMap,
-    workers,
-    serviceWorkers,
     runtimeSupport,
     customCompilers,
     preservedUrls: {
@@ -252,13 +245,9 @@ export const buildProject = async ({
 
       format,
       systemJsUrl,
-      globalName,
       globals,
-      workers,
-      serviceWorkers,
+      preservedDynamicImports,
       serviceWorkerFinalizer,
-      classicWorkers,
-      classicServiceWorkers,
 
       node,
       browser,

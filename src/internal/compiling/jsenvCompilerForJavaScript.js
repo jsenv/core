@@ -11,8 +11,6 @@ export const compileJavascript = async ({
 
   compileProfile,
   babelPluginMap,
-  workerUrls,
-  serviceWorkerUrls,
   topLevelAwait,
   prependSystemJs,
 
@@ -22,8 +20,9 @@ export const compileJavascript = async ({
   sourcemapMethod,
 }) => {
   if (prependSystemJs === undefined) {
+    const { searchParams } = new URL(url)
     prependSystemJs =
-      workerUrls.includes(url) || serviceWorkerUrls.includes(url)
+      searchParams.has("worker") || searchParams.has("service_worker")
   }
   const transformResult = await transformJs({
     projectDirectoryUrl,

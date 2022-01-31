@@ -14,14 +14,18 @@
     </script>
     <script type="module">
       const jsUrl = new URL("./file.js", import.meta.url)
+      const jsModuleUrl = new URL("./file.js?module", import.meta.url)
 
       const jsUrlInstanceOfUrl = jsUrl instanceof URL
 
       const jsUrlString = String(jsUrl)
 
+      const moduleNamespace = await import(jsModuleUrl)
+
       window.resolveNamespacePromise({
         jsUrlInstanceOfUrl,
         jsUrlString,
+        moduleNamespace,
       })
     </script>
   </body>

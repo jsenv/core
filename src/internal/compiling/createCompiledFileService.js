@@ -41,8 +41,6 @@ export const createCompiledFileService = ({
   topLevelAwait,
   prependSystemJs,
   customCompilers,
-  workerUrls,
-  serviceWorkerUrls,
 
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
@@ -167,8 +165,6 @@ export const createCompiledFileService = ({
             babelPluginMap,
             compileProfile,
           }),
-          workerUrls,
-          serviceWorkerUrls,
           topLevelAwait,
           prependSystemJs,
 

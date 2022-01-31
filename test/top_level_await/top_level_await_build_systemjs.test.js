@@ -44,6 +44,6 @@ const actual = {
 }
 const expected = {
   containsAsync: false,
-  returnValue: { default: 42 },
+  returnValue: { value: 42 },
 }
 assert({ actual, expected })

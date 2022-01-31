@@ -7,15 +7,10 @@ import {
 } from "@jsenv/core/dist/build_manifest.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
-import {
-  sameValuesInTwoArrays,
-  sameValueInTwoObjects,
-} from "./comparison_utils.js"
+import { sameValueInTwoObjects } from "./comparison_utils.js"
 
 const COMPARERS = {
   preservedUrls: sameValueInTwoObjects,
-  workers: sameValuesInTwoArrays,
-  serviceWorkers: sameValuesInTwoArrays,
   replaceProcessEnvNodeEnv: (a, b) => a === b,
   inlineImportMapIntoHTML: (a, b) => a === b,
 
@@ -36,15 +31,11 @@ export const compareCompileContexts = (
 
 export const createCompileContext = async ({
   preservedUrls,
-  workers,
-  serviceWorkers,
   replaceProcessEnvNodeEnv,
   inlineImportMapIntoHTML,
 }) => {
   return {
     preservedUrls,
-    workers,
-    serviceWorkers,
     replaceProcessEnvNodeEnv,
     inlineImportMapIntoHTML,
 

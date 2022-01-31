@@ -24,10 +24,10 @@ const testPlan = {
     },
   },
 }
-
 const { testPlanCoverage } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,
   // launchAndExecuteLogLevel: "debug",
+  logLevel: "error",
   jsenvDirectoryRelativeUrl,
   testPlan,
   coverage: true,
@@ -36,7 +36,6 @@ const { testPlanCoverage } = await executeTestPlan({
     [fileRelativeUrl]: true,
   },
 })
-
 const actual = testPlanCoverage
 const expected = {
   [`./${fileRelativeUrl}`]: {

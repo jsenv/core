@@ -3,37 +3,20 @@
 Recommended way to use a [worker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers):
 
 ```js
-const workerUrl = new URL("./worker.js", import.meta.url)
+const workerUrl = new URL("./worker.js?worker", import.meta.url)
 const worker = new Worker(workerUrl, { type: "module" })
 ```
 
-You must tell jsenv which files are worker modules.
-
-_jsenv.config.mjs:_
-
-```js
-export const projectDirectoryUrl = new URL("./", import.meta.url)
-
-export const workers = ["./worker.js"]
-```
-
-> Jsenv could infer "worker.js" is a worker module by scanning source code but it could fail. It is better to be explicit and declare worker files using "workers".
+> Jsenv could infer "worker.js" is a worker module by scanning source code but it could fail. It is better to be explicit and declare worker files using "?worker".
 
 # Using service worker
 
 ```js
-const serviceWorkerUrl = new URL("./service_worker.js", import.meta.url)
+const serviceWorkerUrl = new URL(
+  "./service_worker.js?service_worker",
+  import.meta.url,
+)
 navigator.serviceWorker.register(serviceWorkerUrl, { type: "module" })
-```
-
-Here again tell jsenv it's a module service worker.
-
-_jsenv.config.mjs:_
-
-```js
-export const projectDirectoryUrl = new URL("./", import.meta.url)
-
-export const serviceWorkers = ["./service_worker.js"]
 ```
 
 # Web workers and importmap
@@ -55,20 +38,12 @@ A classic worker (or service worker) is executed in a context where [self.import
 This happens if you don't pass "type: 'module'" when creating the worker
 
 ```js
-const workerUrl = new URL("./worker.js", import.meta.url)
+const workerUrl = new URL("./worker.js?worker_type_classic", import.meta.url)
 const worker = new Worker(workerUrl)
 
-const serviceWorkerUrl = new URL("./service_worker.js", import.meta.url)
+const serviceWorkerUrl = new URL(
+  "./service_worker.js?service_worker_type_classic",
+  import.meta.url,
+)
 navigator.serviceWorker.register(serviceWorkerUrl)
-```
-
-If you do that, worker files must be configured using "classicWorkers" and "classicServiceWorkers" instead of "workers" and "serviceWorkers".
-
-_jsenv.config.mjs:_
-
-```js
-export const projectDirectoryUrl = new URL("./", import.meta.url)
-
-export const classicWorkers = ["./worker.js"]
-export const classicServiceWorkers = ["./service_worker.js"]
 ```

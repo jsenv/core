@@ -31,7 +31,7 @@
         return pingResponse
       }
 
-      const workerUrl = new URL("./worker/worker.js", import.meta.url)
+      const workerUrl = new URL("./worker/worker.js?worker", import.meta.url)
       const worker = new Worker(workerUrl, { type: "module" })
       namespace.worker = {
         url: String(workerUrl),
@@ -49,7 +49,7 @@
         return inspectResponse
       }
       const serviceWorkerUrl = new URL(
-        "./service_worker/sw.js",
+        "./service_worker/sw.js?service_worker",
         import.meta.url,
       )
       const serviceWorker = await window.navigator.serviceWorker
@@ -64,7 +64,7 @@
       }
 
       const classicWorkerUrl = new URL(
-        "/test/workers/workers_complex/classic_worker/worker.js",
+        "/test/workers/workers_complex/classic_worker/worker.js?worker_type_classic",
         import.meta.url,
       )
       const classicWorker = new Worker(classicWorkerUrl)
@@ -73,7 +73,7 @@
         pingResponse: await testWorker(classicWorker),
       }
       const classicServiceWorkerUrl = new URL(
-        "/test/workers/workers_complex/classic_service_worker/sw.js",
+        "/test/workers/workers_complex/classic_service_worker/sw.js?service_worker_type_classic",
         import.meta.url,
       )
       const classicServiceWorker = await window.navigator.serviceWorker

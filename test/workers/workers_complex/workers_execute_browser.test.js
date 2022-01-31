@@ -37,22 +37,22 @@ const test = async (params) => {
         namespace: {
           namespace: {
             worker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/worker/worker.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/worker/worker.js?worker`,
               pingResponse: "pong",
             },
             serviceWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/service_worker/sw.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/service_worker/sw.js?service_worker`,
               inspectResponse: {
                 order: [],
                 generatedUrlsConfig: undefined,
               },
             },
             classicWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/classic_worker/worker.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/classic_worker/worker.js?worker_type_classic`,
               pingResponse: "pong",
             },
             classicServiceWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/classic_service_worker/sw.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/classic_service_worker/sw.js?service_worker_type_classic`,
               inspectResponse: {
                 order: ["before-a", "before-b", "b", "after-b", "after-a"],
                 generatedUrlsConfig: undefined,
@@ -84,22 +84,22 @@ const test = async (params) => {
         namespace: {
           namespace: {
             worker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/out/test/workers/workers_complex/worker/worker.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/out/test/workers/workers_complex/worker/worker.js?worker`,
               pingResponse: "pong",
             },
             serviceWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/out/test/workers/workers_complex/service_worker/sw.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/.jsenv/out/test/workers/workers_complex/service_worker/sw.js?service_worker`,
               inspectResponse: {
                 order: [],
                 generatedUrlsConfig: undefined,
               },
             },
             classicWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/classic_worker/worker.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/classic_worker/worker.js?worker_type_classic`,
               pingResponse: "pong",
             },
             classicServiceWorker: {
-              url: `${compileServerOrigin}/test/workers/workers_complex/classic_service_worker/sw.js`,
+              url: `${compileServerOrigin}/test/workers/workers_complex/classic_service_worker/sw.js?service_worker_type_classic`,
               inspectResponse: {
                 order: ["before-a", "before-b", "b", "after-b", "after-a"],
                 generatedUrlsConfig: undefined,

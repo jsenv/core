@@ -21,7 +21,6 @@ await buildProject({
   entryPoints: {
     [`./${testDirectoryRelativeUrl}main.html`]: "main.html",
   },
-  serviceWorkers: [`${testDirectoryRelativeUrl}service_worker.js`],
 })
 const { returnValue } = await executeInBrowser({
   directoryUrl: new URL("./", import.meta.url),
