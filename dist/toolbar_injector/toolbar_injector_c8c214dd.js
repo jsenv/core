@@ -30,6 +30,9 @@ var defineProperty = (function (obj, key, value) {
   return obj;
 });
 
+// filters on symbol properties only. Returned string properties are always
+// enumerable. It is good to use in objectSpread.
+
 function ownKeys(object, enumerableOnly) {
   var keys = Object.keys(object);
 
@@ -745,7 +748,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_7447de59.html";
+var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_d6045dd0.html";
 
 function _call(body, then, direct) {
   if (direct) {
@@ -971,4 +974,4 @@ if (document.readyState === "complete") {
 }
 })();
 
-//# sourceMappingURL=toolbar_injector_524c2404.js.map
+//# sourceMappingURL=toolbar_injector_c8c214dd.js.map

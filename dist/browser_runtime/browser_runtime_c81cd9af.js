@@ -30,6 +30,9 @@ var _defineProperty = (function (obj, key, value) {
   return obj;
 });
 
+// filters on symbol properties only. Returned string properties are always
+// enumerable. It is good to use in objectSpread.
+
 function ownKeys(object, enumerableOnly) {
   var keys = Object.keys(object);
 
@@ -5294,4 +5297,4 @@ window.__jsenv__ = {
 };
 })();
 
-//# sourceMappingURL=browser_runtime_27a156f1.js.map
+//# sourceMappingURL=browser_runtime_c81cd9af.js.map

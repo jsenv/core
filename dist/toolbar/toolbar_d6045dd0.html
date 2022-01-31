@@ -2615,7 +2615,9 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return obj;
-      };
+      }; // filters on symbol properties only. Returned string properties are always
+      // enumerable. It is good to use in objectSpread.
+
 
       function ownKeys(object, enumerableOnly) {
         var keys = Object.keys(object);
@@ -4970,7 +4972,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar.main_2c56a4e0.js.map</script>
+//# sourceMappingURL=toolbar.main_7d7783d3.js.map</script>
   
 
 </body></html>
