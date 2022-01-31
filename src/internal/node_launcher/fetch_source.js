@@ -1,4 +1,4 @@
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 
 export const fetchSource = (url, options) => {
   return fetchUrl(url, {

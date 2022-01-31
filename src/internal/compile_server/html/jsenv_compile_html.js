@@ -13,7 +13,7 @@ import {
   EVENT_SOURCE_CLIENT_BUILD_URL,
   TOOLBAR_INJECTOR_BUILD_URL,
 } from "@jsenv/core/dist/build_manifest.js"
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 import { generateCompilationAssetUrl } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_asset.js"
 import {

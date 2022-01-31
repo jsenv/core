@@ -10,7 +10,7 @@ import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
-} from "@jsenv/core/src/internal/filePathUtils.js"
+} from "@jsenv/core/src/internal/windows_file_path_utils.js"
 import {
   setJavaScriptSourceMappingUrl,
   setCssSourceMappingUrl,

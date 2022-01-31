@@ -1,6 +1,3 @@
-export const isWindowsFilePath = (path) =>
-  startsWithWindowsDriveLetter(path) && path[2] === "\\"
-
 export const startsWithWindowsDriveLetter = (string) => {
   const firstChar = string[0]
   if (!/[a-zA-Z]/.test(firstChar)) return false

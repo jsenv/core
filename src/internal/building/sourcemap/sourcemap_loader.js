@@ -2,7 +2,7 @@ import { resolveUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
-import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
+import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { validateResponse } from "@jsenv/core/src/internal/response_validation.js"
 
 export const loadSourcemap = async ({
