@@ -216,19 +216,16 @@ await buildProject({
 > node ./build.mjs
 
 building ./main.html...
---- files in the build: 5 ---
-dist/assets/favicon_5340s4789a.ico (6.67 KB)
-dist/assets/main_3b329ff0.css (62 B)
-dist/main-f7379e10.js (50 Kb)
-dist/main.prod.html (392 B)
-dist/project_b237a334.importmap (29 B)
---- sourcemap files in the build: 2 ---
-dist/assets/main_3b329ff0.css.map (198 B)
-dist/main_3b329ff0.js.map (55Kb B)
+--- build files (excluding sourcemap files) ---
+dist/assets/favicon_25e95a00.ico (6.67 KB)
+dist/assets/main_cd3a5025.css (70 B)
+dist/main_c588dd03.js (167 B)
+dist/main.prod.html (886 B)
 ------- build summary -------
-project files: 27 (70.38 KB)
-build files: 5 (45.2 KB)
-build duration: 1.85 seconds
+project files: 5 (70.32 KB)
+build files: 4 (45.77 KB)
+build sourcemap files: 2 (705 B)
+build duration: 0.14 seconds
 ------------------------------
 ✔ build end
 ```
@@ -241,14 +238,20 @@ build duration: 1.85 seconds
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
-    <link rel="modulepreload" href="main_f7379e10.js" />
-    <link rel="icon" href="assets/favicon_5340s4789a.ico" />
-    <script type="importmap" src="project_b237a334.importmap"></script>
-    <link rel="stylesheet" type="text/css" href="assets/main_3b329ff0.css" />
+    <link rel="modulepreload" href="main_c588dd03.js" />
+    <link rel="icon" href="assets/favicon_25e95a00.ico" />
+    <script type="importmap">
+      {
+        "imports": {
+          "./main.js": "./main_c588dd03.js"
+        }
+      }
+    </script>
+    <link rel="stylesheet" type="text/css" href="assets/main_cd3a5025.css" />
   </head>
 
   <body>
-    <script type="module" src="./main_f7379e10.js"></script>
+    <script type="module" src="./main_c588dd03.js"></script>
   </body>
 </html>
 ```

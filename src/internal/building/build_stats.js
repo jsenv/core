@@ -19,8 +19,9 @@ export const createBuildStats = ({
     projectFileSizes: projectFileSizeInfo.fileSizes,
     projectTotalFileSize: projectFileSizeInfo.totalSize,
     buildFileSizes: buildFileSizeInfo.fileSizes,
-    buildTotalFileSize: buildFileSizeInfo.totalSize,
+    buildFileTotalSize: buildFileSizeInfo.totalSize,
     buildSourcemapFileSizes: sourcemapFileSizeInfo.fileSizes,
+    buildSourcemapFileTotalSize: sourcemapFileSizeInfo.totalSize,
     buildDuration,
   }
 }

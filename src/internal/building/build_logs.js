@@ -61,37 +61,17 @@ const formatBuildDoneDetails = ({ buildStats, buildDirectoryRelativeUrl }) => {
     )})`
   })
   const buildFileCount = buildFiles.length
-
   const { buildSourcemapFileSizes } = buildStats
-  const sourcemapFiles = Object.keys(buildSourcemapFileSizes).map((key) => {
-    const buildSourcemapFileSize = buildSourcemapFileSizes[key]
-    return `${buildDirectoryRelativeUrl}${key} (${byteAsFileSize(
-      buildSourcemapFileSize,
-    )})`
-  })
-  const sourcemapFileCount = sourcemapFiles.length
-
-  const buildFilesDescription =
-    buildFileCount === 1
-      ? "file in the build: 1"
-      : `files in the build: ${buildFileCount}`
-
-  const buildSourcemapFilesDescription =
-    sourcemapFileCount === 0
-      ? ""
-      : sourcemapFileCount === 1
-      ? "sourcemap file in the build: 1"
-      : `sourcemap files in the build: ${sourcemapFileCount}`
-
+  const sourcemapFileCount = Object.keys(buildSourcemapFileSizes).length
+  let buildFilesDescription =
+    buildFileCount === 1 ? "build file" : `build files`
+  if (sourcemapFileCount === 1) {
+    buildFilesDescription += ` (excluding sourcemap file)`
+  } else if (sourcemapFileCount > 1) {
+    buildFilesDescription += ` (excluding sourcemap files)`
+  }
   let message = `--- ${buildFilesDescription} ---
 ${buildFiles.join("\n")}`
-
-  if (buildSourcemapFilesDescription) {
-    message += `
---- ${buildSourcemapFilesDescription} ---
-${sourcemapFiles.join("\n")}`
-  }
-
   return message
 }
 
@@ -101,22 +81,38 @@ const formatBuildSummary = ({ buildStats }) => {
     projectFileSizes,
     projectTotalFileSize,
     buildFileSizes,
-    buildTotalFileSize,
+    buildFileTotalSize,
+    buildSourcemapFileSizes,
+    buildSourcemapFileTotalSize,
   } = buildStats
 
   const projectFileCount = Object.keys(projectFileSizes).length
   const buildFileCount = Object.keys(buildFileSizes).length
+  const buildSourcemapFileCount = Object.keys(buildSourcemapFileSizes).length
 
   return `------- build summary -------
-${ANSI.color(
-  `project files:`,
-  ANSI.GREY,
-)} ${projectFileCount} (${byteAsFileSize(projectTotalFileSize)})
-${ANSI.color(`build files:`, ANSI.GREY)} ${buildFileCount} (${byteAsFileSize(
-    buildTotalFileSize,
-  )})
-${ANSI.color(`build duration:`, ANSI.GREY)} ${msAsDuration(buildDuration)}
+${formatSummaryContent({
+  "project files": `${projectFileCount} (${byteAsFileSize(
+    projectTotalFileSize,
+  )})`,
+  "build files": `${buildFileCount} (${byteAsFileSize(buildFileTotalSize)})`,
+  ...(buildSourcemapFileCount === 0
+    ? {}
+    : {
+        "build sourcemap files": `${buildSourcemapFileCount} (${byteAsFileSize(
+          buildSourcemapFileTotalSize,
+        )})`,
+      }),
+  "build duration": msAsDuration(buildDuration),
+})}
 ------------------------------`
+}
+
+const formatSummaryContent = (summaryData) => {
+  return Object.keys(summaryData).map((key) => {
+    return `${ANSI.color(`${key}:`, ANSI.GREY)} ${summaryData[key]}`
+  }).join(`
+`)
 }
 
 const showHtmlSourceLocation = ({
