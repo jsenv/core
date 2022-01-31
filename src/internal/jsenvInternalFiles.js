@@ -6,14 +6,6 @@ export const jsenvHelpersDirectoryInfo = {
   url: resolveUrl("./helpers/", jsenvCoreDirectoryUrl),
 }
 
-export const jsenvNodeSystemFileInfo = {
-  jsenvRelativeUrl: "./src/internal/node-launcher/node-js-file.js",
-  url: resolveUrl(
-    "./src/internal/node-launcher/node-js-file.js",
-    jsenvCoreDirectoryUrl,
-  ),
-}
-
 export const sourcemapMainFileInfo = {
   url: fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js")),
 }
@@ -29,8 +21,9 @@ export const jsenvSystemJsFileInfo = {
 
 export const jsenvResolveImportUrlHelper = {
   url: resolveUrl(
-    "./src/internal/building/resolve_import_url_helper.js",
+    "./src/internal/building/url_versioning/resolve_import_url_helper.js",
     jsenvCoreDirectoryUrl,
   ),
-  jsenvRelativeUrl: "./src/internal/building/resolve_import_url_helper.js",
+  jsenvRelativeUrl:
+    "./src/internal/building/url_versioning/resolve_import_url_helper.js",
 }
