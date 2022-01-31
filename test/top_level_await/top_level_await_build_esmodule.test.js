@@ -37,7 +37,7 @@ await buildProject({
     pageArguments: ["./dist/esmodule/main.js"],
   })
   const actual = returnValue
-  const expected = { default: 42 }
+  const expected = { value: 42 }
   assert({ actual, expected })
 }
 
