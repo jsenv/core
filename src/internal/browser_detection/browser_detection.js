@@ -2,15 +2,15 @@
 // https://github.com/lancedikson/bowser/blob/master/src/parser-browsers.js#L1
 
 import { detectFromUserAgentData } from "./user_agent_data.js"
-import { detectAndroid } from "./detectAndroid.js"
-import { detectInternetExplorer } from "./detectInternetExplorer.js"
-import { detectOpera } from "./detectOpera.js"
-import { detectEdge } from "./detectEdge.js"
-import { detectFirefox } from "./detectFirefox.js"
-import { detectChrome } from "./detectChrome.js"
-import { detectSafari } from "./detectSafari.js"
-import { detectElectron } from "./detectElectron.js"
-import { detectIOS } from "./detectIOS.js"
+import { detectAndroid } from "./detect_android.js"
+import { detectInternetExplorer } from "./detect_internet_explorer.js"
+import { detectOpera } from "./detect_opera.js"
+import { detectEdge } from "./detect_edge.js"
+import { detectFirefox } from "./detect_firefox.js"
+import { detectChrome } from "./detect_chrome.js"
+import { detectSafari } from "./detect_safari.js"
+import { detectElectron } from "./detect_electron.js"
+import { detectIOS } from "./detect_ios.js"
 
 const detectorCompose = (detectors) => () => {
   let i = 0
@@ -40,7 +40,6 @@ const detector = detectorCompose([
 
 export const detectBrowser = () => {
   const { name = "other", version = "unknown" } = detector() || {}
-
   return {
     name: normalizeName(name),
     version: normalizeVersion(version),
@@ -57,12 +56,10 @@ const normalizeVersion = (version) => {
     // remove extraneous .
     return parts.slice(0, 3).join(".")
   }
-
   if (version.indexOf("_") > -1) {
     const parts = version.split("_")
     // remove extraneous _
     return parts.slice(0, 3).join("_")
   }
-
   return version
 }

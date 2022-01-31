@@ -9,7 +9,6 @@ export const detectFromUserAgentData = () => {
   if (!userAgentData) {
     return null
   }
-
   const { brands } = userAgentData
   let i = 0
   while (i < brands.length) {
