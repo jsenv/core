@@ -4,7 +4,6 @@ import { fetchUrl } from "@jsenv/server"
 
 import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
-import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -20,7 +19,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
   const compileServer = await startCompileServer({
     ...COMPILE_SERVER_TEST_PARAMS,
     jsenvDirectoryRelativeUrl,
-    runtimeSupport: jsenvRuntimeSupportDuringDev,
     babelConfigFileUrl: undefined,
   })
   const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
@@ -52,7 +50,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
     ...COMPILE_SERVER_TEST_PARAMS,
     babelConfigFileUrl: new URL("./babel.config.cjs", import.meta.url),
     jsenvDirectoryRelativeUrl,
-    runtimeSupport: jsenvRuntimeSupportDuringDev,
   })
   const { compileId } = await compileServer.createCompileIdFromRuntimeReport({})
   const compiledFileRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`

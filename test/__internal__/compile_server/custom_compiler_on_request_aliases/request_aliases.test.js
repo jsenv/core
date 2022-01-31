@@ -2,7 +2,6 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { fetchUrl, pluginRessourceAliases } from "@jsenv/server"
 
-import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"
@@ -20,7 +19,6 @@ const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   compileCacheStrategy: "etag",
-  runtimeSupport: jsenvRuntimeSupportDuringDev,
   plugins: {
     ...pluginRessourceAliases({
       [`/${compileDirectoryRelativeUrlPattern}dir/*.js`]: `/${compileDirectoryRelativeUrlPattern}dir/file.js`,
