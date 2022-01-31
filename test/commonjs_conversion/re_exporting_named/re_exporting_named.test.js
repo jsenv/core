@@ -27,13 +27,11 @@ await buildProject({
 // eslint-disable-next-line import/no-unresolved
 const namespace = await import("./dist/esmodule/main.js")
 const actual = { ...namespace }
-const exportDefault = { answer: 42 }
 const expected = {
   all: Object.freeze(
     assert.asObjectWithoutPrototype({
-      __moduleExports: exportDefault,
       answer: 42,
-      default: exportDefault,
+      default: { answer: 42 },
     }),
   ),
   answer: 42,

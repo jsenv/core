@@ -1,6 +1,0 @@
-!/.github/
-.jsenv/
-node_modules/
-dist/
-/coverage/
-!.eslintrc.js

@@ -896,7 +896,9 @@
         }
 
         return obj;
-      };
+      }; // filters on symbol properties only. Returned string properties are always
+      // enumerable. It is good to use in objectSpread.
+
 
       function ownKeys(object, enumerableOnly) {
         var keys = Object.keys(object);
@@ -2284,7 +2286,7 @@
   };
 });
 
-//# sourceMappingURL=redirector.html__inline__12_404b8295.js.map</script>
+//# sourceMappingURL=redirector.html__inline__12_20421b23.js.map</script>
   
 
 </body></html>
