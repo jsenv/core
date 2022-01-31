@@ -5,7 +5,6 @@
 /docs/**/dist/
 /docs/**/node_modules/
 /docs/**/package-lock.json
-/docs/**/yarn.lock
 /coverage-v8/
 /node_modules/
 /script/**/.jsenv/

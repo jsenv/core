@@ -8,10 +8,10 @@
     "node": ">=14.5.0"
   },
   "scripts": {
-    "test": "node ./execute-test-plan.js"
+    "test": "node ./execute_test_plan.mjs"
   },
   "devDependencies": {
-    "@jsenv/core": "../../",
+    "@jsenv/core": "*",
     "playwright-chromium": "1.15.2",
     "playwright-firefox": "1.15.2"
   }
