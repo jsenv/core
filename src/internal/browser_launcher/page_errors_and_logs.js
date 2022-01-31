@@ -1,4 +1,4 @@
-export const trackPageToNotify = (page, { onError, onConsole }) => {
+export const trackPageErrorsAndLogs = (page, { onError, onConsole }) => {
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
   const removeErrorListener = registerEvent({
     object: page,

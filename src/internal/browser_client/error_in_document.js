@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 export const displayErrorInDocument = (error) => {
   const title = "An error occured"
   let theme

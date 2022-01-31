@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { normalizeImportMap } from "@jsenv/importmap/src/normalizeImportMap.js"
 
 // do not use memoize from @jsenv/filesystem to avoid pulling @jsenv/filesystem code into the browser build
@@ -9,7 +7,7 @@ import { memoize } from "@jsenv/core/src/internal/memoize.js"
 import { measureAsyncFnPerf } from "@jsenv/core/src/internal/perf_browser.js"
 
 import { createBrowserSystem } from "./browser_system.js"
-import { makeNamespaceTransferable } from "./makeNamespaceTransferable.js"
+import { makeModuleNamespaceTransferable } from "./module_namespace_transfer.js"
 
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 
@@ -103,7 +101,7 @@ export const createBrowserClient = async ({
         let namespace = await browserSystem.import(specifier)
 
         if (transferableNamespace) {
-          namespace = makeNamespaceTransferable(namespace)
+          namespace = makeModuleNamespaceTransferable(namespace)
         }
 
         return {

@@ -1,4 +1,4 @@
-export const makeNamespaceTransferable = (namespace) => {
+export const makeModuleNamespaceTransferable = (namespace) => {
   const transferableNamespace = {}
   Object.keys(namespace).forEach((key) => {
     const value = namespace[key]

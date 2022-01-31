@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
 import { fetchAndEval } from "@jsenv/core/src/internal/browser_utils/fetch_and_eval.js"
 import { unevalException } from "@jsenv/core/src/internal/unevalException.js"
@@ -7,8 +5,8 @@ import { memoize } from "@jsenv/core/src/internal/memoize.js"
 
 import { createBrowserClient } from "./browser_client_factory.js"
 import { installBrowserErrorStackRemapping } from "./browser_error_stack_remap.js"
-import { displayErrorInDocument } from "./displayErrorInDocument.js"
-import { displayErrorNotification } from "./displayErrorNotification.js"
+import { displayErrorInDocument } from "./error_in_document.js"
+import { displayErrorNotification } from "./error_in_notification.js"
 
 const getNavigationStartTime = () => {
   try {

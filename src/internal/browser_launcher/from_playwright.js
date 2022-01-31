@@ -9,7 +9,7 @@ import {
 } from "@jsenv/abort"
 import { memoize } from "@jsenv/filesystem"
 
-import { trackPageToNotify } from "./trackPageToNotify.js"
+import { trackPageErrorsAndLogs } from "./page_errors_and_logs.js"
 import { executeHtmlFile } from "./executeHtmlFile.js"
 
 export const createRuntimeFromPlaywright = ({
@@ -113,7 +113,7 @@ export const createRuntimeFromPlaywright = ({
         throw e
       }
     })
-    const stopTrackingToNotify = trackPageToNotify(page, {
+    const stopTrackingToNotify = trackPageErrorsAndLogs(page, {
       onError: (error) => {
         error = transformErrorHook(error)
         if (!ignoreErrorHook(error)) {

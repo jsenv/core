@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { getJavaScriptModuleResponseError } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
 import "@jsenv/core/src/internal/runtime_client/s.js"
 
