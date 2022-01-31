@@ -1,20 +1,19 @@
 import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
-import { createParseError } from "@jsenv/core/src/internal/compile_server/babel_parse_error.js"
-import { babelPluginTransformImportMeta } from "@jsenv/core/src/internal/compile_server/babel_plugin_transform_import_meta.js"
+import { ansiToHTML } from "./ansi_to_html.js"
+import { createParseError } from "./babel_parse_error.js"
 import {
   getMinimalBabelPluginMap,
   babelPluginsFromBabelPluginMap,
-} from "@jsenv/core/src/internal/compile_server/babel_plugins.js"
-import { babelPluginProxyExternalImports } from "@jsenv/core/src/internal/compile_server/babel_plugin_proxy_external_imports.js"
-import { babelPluginImportMetadata } from "@jsenv/core/src/internal/compile_server/babel_plugin_import_metadata.js"
-
-import { ansiToHTML } from "./ansiToHTML.js"
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
-import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
-import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
+} from "./babel_plugins.js"
 import { babelHelperNameFromUrl } from "./babelHelper.js"
+import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
+import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
+import { babelPluginTransformImportMeta } from "./babel_plugin_transform_import_meta.js"
+import { babelPluginImportMetadata } from "./babel_plugin_import_metadata.js"
+import { babelPluginProxyExternalImports } from "./babel_plugin_proxy_external_imports.js"
+import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 
 export const transformJs = async ({
   projectDirectoryUrl,

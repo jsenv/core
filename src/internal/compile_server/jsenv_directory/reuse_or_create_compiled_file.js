@@ -2,13 +2,13 @@ import { timeStart, timeFunction } from "@jsenv/server"
 import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { validateCache } from "./validateCache.js"
+import { validateCompileCache } from "./validate_compile_cache.js"
 import { getMetaJsonFileUrl } from "./compile_asset.js"
 import { createLockRegistry } from "./file_lock_registry.js"
 
 const { lockForRessource } = createLockRegistry()
 
-export const getOrGenerateCompiledFile = async ({
+export const reuseOrCreateCompiledFile = async ({
   logger,
 
   projectDirectoryUrl,
@@ -119,7 +119,7 @@ const computeCompileReport = async ({
       //     },
       //   }
       // }
-      return validateCache({
+      return validateCompileCache({
         logger,
         compiledFileUrl,
         compileCacheStrategy,

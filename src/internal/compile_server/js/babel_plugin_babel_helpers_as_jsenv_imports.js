@@ -1,6 +1,7 @@
 import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { require } from "../../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
+
 import {
   babelHelperNameFromUrl,
   babelHelperNameToImportSpecifier,

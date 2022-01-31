@@ -14,7 +14,7 @@ import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 
 const { server } = await import("./server/serve.js")
 try {

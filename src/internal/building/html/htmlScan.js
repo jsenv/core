@@ -3,7 +3,7 @@ import {
   visitHtmlAst,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 
 export const importMapsFromHtml = (htmlSource) => {
   const importmaps = []

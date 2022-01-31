@@ -1,7 +1,8 @@
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 
-import { transformJs } from "./js-compilation-service/transformJs.js"
-import { transformResultToCompilationResult } from "./transformResultToCompilationResult.js"
+import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
+
+import { transformJs } from "./js_transformer.js"
 
 export const compileJavascript = async ({
   projectDirectoryUrl,
@@ -38,7 +39,7 @@ export const compileJavascript = async ({
     code,
     map,
   })
-  return transformResultToCompilationResult(
+  return asCompilationResult(
     {
       contentType: "application/javascript",
       metadata: transformResult.metadata,

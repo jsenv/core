@@ -3,8 +3,8 @@ import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { babelPluginInstrument } from "@jsenv/core/src/internal/executing/coverage/babel_plugin_instrument.js"
-import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compile_server/transformResultToCompilationResult.js"
-import { transformJs } from "@jsenv/core/src/internal/compile_server/js-compilation-service/transformJs.js"
+import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
+import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
 import {
   TRANSFORM_JS_TEST_PARAMS,
   TRANSFORM_RESULT_TEST_PARAMS,
@@ -32,7 +32,7 @@ const transformResult = await transformJs({
   },
 })
 
-const actual = await transformResultToCompilationResult(
+const actual = await asCompilationResult(
   {
     contentType: "application/javascript",
     ...transformResult,

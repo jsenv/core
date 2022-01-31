@@ -10,18 +10,19 @@ import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
-} from "../filePathUtils.js"
+} from "@jsenv/core/src/internal/filePathUtils.js"
 import {
   setJavaScriptSourceMappingUrl,
   setCssSourceMappingUrl,
   sourcemapToBase64Url,
-} from "../sourceMappingURLUtils.js"
-import { generateCompilationAssetUrl } from "./jsenv_directory/compile_asset.js"
-import { testFilePresence } from "./jsenv_directory/fs-optimized-for-cache.js"
+} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
+import { generateCompilationAssetUrl } from "./compile_asset.js"
+import { testFilePresence } from "./fs_optimized_for_cache.js"
 
 const isWindows = process.platform === "win32"
 
-export const transformResultToCompilationResult = async (
+export const asCompilationResult = async (
   { contentType, metadata = {}, code, map },
   {
     projectDirectoryUrl,

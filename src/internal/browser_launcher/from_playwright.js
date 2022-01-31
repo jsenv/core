@@ -10,7 +10,7 @@ import {
 import { memoize } from "@jsenv/filesystem"
 
 import { trackPageErrorsAndLogs } from "./page_errors_and_logs.js"
-import { executeHtmlFile } from "./executeHtmlFile.js"
+import { executeHtmlFile } from "./execute_html_file.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,

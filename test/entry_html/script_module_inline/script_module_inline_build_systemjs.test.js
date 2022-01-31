@@ -12,7 +12,7 @@ import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAM
 import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 import { getJavaScriptSourceMappingUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
 import { executeInBrowser } from "@jsenv/core/test/execute_in_browser.js"
 

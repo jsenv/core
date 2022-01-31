@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/server"
 
-import { startCompileServer } from "@jsenv/core/src/internal/compile_server/startCompileServer.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 import { jsenvRuntimeSupportDuringDev } from "@jsenv/core/src/jsenvRuntimeSupportDuringDev.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS_COMPILE_SERVER.js"

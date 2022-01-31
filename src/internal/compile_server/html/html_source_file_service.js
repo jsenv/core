@@ -29,6 +29,7 @@ import {
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { stringifyDataUrl } from "@jsenv/core/src/internal/dataUrl.utils.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
+import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirectoryUrl.js"
 
 import {
   parseHtmlString,
@@ -42,8 +43,7 @@ import {
   getHtmlNodeTextNode,
   setHtmlNodeText,
   getIdForInlineHtmlNode,
-} from "./compileHtml.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+} from "./html_ast.js"
 
 const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
 

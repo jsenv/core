@@ -5,10 +5,10 @@ import {
 } from "@jsenv/filesystem"
 import { utimesSync } from "node:fs"
 
-import { writeFileContent, testFilePresence } from "./fs-optimized-for-cache.js"
+import { writeFileContent, testFilePresence } from "./fs_optimized_for_cache.js"
 import { getMetaJsonFileUrl } from "./compile_asset.js"
 
-export const updateMeta = async ({
+export const updateCompileCache = async ({
   logger,
   meta,
   compiledFileUrl,

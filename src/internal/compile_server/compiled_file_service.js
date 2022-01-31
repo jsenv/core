@@ -12,10 +12,10 @@ import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.
 import { setUrlExtension } from "../url_utils.js"
 
 import { shakeBabelPluginMap } from "./jsenv_directory/compile_profile.js"
-import { compileFile } from "./compileFile.js"
-import { compileHtml } from "./jsenvCompilerForHtml.js"
-import { compileImportmap } from "./jsenvCompilerForImportmap.js"
-import { compileJavascript } from "./jsenvCompilerForJavaScript.js"
+import { compileFile } from "./compile_file.js"
+import { compileHtml } from "./html/jsenv_compile_html.js"
+import { compileImportmap } from "./importmap/jsenv_compile_importmap.js"
+import { compileJavascript } from "./js/jsenv_compile_js.js"
 
 const jsenvCompilers = {
   "**/*.js": compileJavascript,

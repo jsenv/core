@@ -4,7 +4,7 @@
  * - code should also inject helper when code uses "document.adoptedStylesheets"
  */
 
-import { require } from "../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 export const babelPluginNewStylesheetAsJsenvImport = (
   api,

@@ -12,7 +12,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parseCssUrls.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 

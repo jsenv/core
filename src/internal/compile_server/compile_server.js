@@ -21,20 +21,21 @@ import {
   sourcemapMappingFileInfo,
 } from "@jsenv/core/src/internal/jsenvInternalFiles.js"
 import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
-import { babelPluginReplaceExpressions } from "../babel_plugin_replace_expressions.js"
 import { jsenvDistDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
 import { setupJsenvDirectory } from "./jsenv_directory/jsenv_directory.js"
 import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { createSSEService } from "./sse_service/sse_service.js"
-import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
-import { extractSyntaxBabelPluginMap } from "./babel_plugins.js"
-import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
-import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
-import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
-import { createCompiledFileService } from "./createCompiledFileService.js"
-import { createTransformHtmlSourceFileService } from "./html_source_file_service.js"
+import { loadBabelPluginMapFromFile } from "./js/load_babel_plugin_map_from_file.js"
+import { extractSyntaxBabelPluginMap } from "./js/babel_plugins.js"
+import { babelPluginReplaceExpressions } from "./js/babel_plugin_replace_expressions.js"
+import { babelPluginGlobalThisAsJsenvImport } from "./js/babel_plugin_global_this_as_jsenv_import.js"
+import { babelPluginNewStylesheetAsJsenvImport } from "./js/babel_plugin_new_stylesheet_as_jsenv_import.js"
+import { babelPluginImportAssertions } from "./js/babel_plugin_import_assertions.js"
+import { createCompiledFileService } from "./compiled_file_service.js"
+import { createTransformHtmlSourceFileService } from "./html/html_source_file_service.js"
 
 let compileServerId = 0
 

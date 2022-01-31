@@ -4,7 +4,7 @@ import {
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getHtmlNodeLocation,
-} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 import { collectNodesMutations } from "../parsing.utils.js"
 import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
 import { minifyHtml } from "../html/minifyHtml.js"

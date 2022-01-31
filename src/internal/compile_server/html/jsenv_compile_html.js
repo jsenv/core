@@ -15,13 +15,14 @@ import {
 } from "@jsenv/core/dist/build_manifest.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetchUrl.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
-
+import { generateCompilationAssetUrl } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_asset.js"
 import {
   generateSourcemapUrl,
   setJavaScriptSourceMappingUrl,
   sourcemapToBase64Url,
-} from "../sourceMappingURLUtils.js"
-import { transformJs } from "./js-compilation-service/transformJs.js"
+} from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
+
+import { transformJs } from "../js/js_transformer.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -35,8 +36,7 @@ import {
   setHtmlNodeText,
   visitHtmlAst,
   addHtmlNodeAttribute,
-} from "./compileHtml.js"
-import { generateCompilationAssetUrl } from "./jsenv_directory/compile_asset.js"
+} from "./html_ast.js"
 
 export const compileHtml = async ({
   // cancellationToken,

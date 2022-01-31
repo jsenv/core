@@ -15,7 +15,7 @@ import {
 import {
   startCompileServer,
   assertAndNormalizeJsenvDirectoryRelativeUrl,
-} from "./internal/compile_server/startCompileServer.js"
+} from "./internal/compile_server/compile_server.js"
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,

@@ -4,7 +4,8 @@ import { Abort } from "@jsenv/abort"
 import {
   babelPluginsFromBabelPluginMap,
   getMinimalBabelPluginMap,
-} from "@jsenv/core/src/internal/compile_server/babel_plugins.js"
+} from "@jsenv/core/src/internal/compile_server/js/babel_plugins.js"
+
 import { babelPluginInstrument } from "../coverage/babel_plugin_instrument.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 

@@ -13,7 +13,7 @@ import {
 } from "@jsenv/core/src/internal/argUtils.js"
 import { generateExecutionSteps } from "@jsenv/core/src/internal/executing/generateExecutionSteps.js"
 import { executePlan } from "@jsenv/core/src/internal/executing/executePlan.js"
-import { startCompileServer } from "@jsenv/core/src/internal/compiling/startCompileServer.js"
+import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
 
 import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"

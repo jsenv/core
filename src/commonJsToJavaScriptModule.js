@@ -1,8 +1,8 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/filesystem"
 
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourceMappingURLUtils.js"
-import { transformResultToCompilationResult } from "@jsenv/core/src/internal/compile_server/transformResultToCompilationResult.js"
-import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compile_server/rollup_plugin_commonjs_named_exports.js"
+import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
+import { rollupPluginCommonJsNamedExports } from "@jsenv/core/src/internal/compile_server/commonjs/rollup_plugin_commonjs_named_exports.js"
 
 export const commonJsToJavaScriptModule = async ({
   logger,
@@ -157,7 +157,7 @@ export const commonJsToJavaScriptModule = async ({
   const { output } = await rollupBuild.generate(generateOptions)
   const { code, map } = output[0]
 
-  return transformResultToCompilationResult(
+  return asCompilationResult(
     {
       contentType: "application/javascript",
       code,

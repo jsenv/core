@@ -7,8 +7,8 @@ import {
 } from "@jsenv/filesystem"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
-import { getOrGenerateCompiledFile } from "./jsenv_directory/getOrGenerateCompiledFile.js"
-import { updateMeta } from "./jsenv_directory/updateMeta.js"
+import { reuseOrCreateCompiledFile } from "./jsenv_directory/reuse_or_create_compiled_file.js"
+import { updateCompileCache } from "./jsenv_directory/update_compile_cache.js"
 
 export const compileFile = async ({
   logger,
@@ -47,7 +47,7 @@ export const compileFile = async ({
 
   try {
     const { meta, compileResult, compileResultStatus, timing } =
-      await getOrGenerateCompiledFile({
+      await reuseOrCreateCompiledFile({
         logger,
         projectDirectoryUrl,
         originalFileUrl,
@@ -101,7 +101,7 @@ export const compileFile = async ({
     if (compileResultStatus !== "cached" && compileCacheStrategy !== "none") {
       // we MUST await updateMeta otherwise we might get 404
       // when serving sourcemap files
-      await updateMeta({
+      await updateCompileCache({
         logger,
         meta,
         compileResult,

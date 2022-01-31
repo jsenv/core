@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url"
 import { readFileSync, statSync } from "node:fs"
 import { resolveUrl, bufferToEtag } from "@jsenv/filesystem"
 
-export const validateCache = async ({
+export const validateCompileCache = async ({
   compiledFileUrl,
   compileCacheStrategy,
   compileCacheSourcesValidation = true,

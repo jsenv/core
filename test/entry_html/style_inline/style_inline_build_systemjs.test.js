@@ -11,7 +11,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/internal/jsenvCoreDirecto
 import {
   findNodeByTagName,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compile_server/compileHtml.js"
+} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
 import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,

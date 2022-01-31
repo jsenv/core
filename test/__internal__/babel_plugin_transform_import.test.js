@@ -3,7 +3,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { babelPluginImportVisitor } from "@jsenv/core/src/internal/compile_server/babel_plugin_import_visitor.js"
+import { babelPluginImportVisitor } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_import_visitor.js"
 
 const babelPluginTransformImport = (babel, { transformImportSpecifier }) => {
   return {

@@ -20,11 +20,10 @@ import {
   writeFile,
 } from "@jsenv/filesystem"
 
-import { startCompileServer } from "../compile_server/startCompileServer.js"
+import { startCompileServer } from "../compile_server/compile_server.js"
+import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
-
-import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverage } from "./coverage/reportToCoverage.js"
 import { formatExecuting, formatExecutionResult } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"

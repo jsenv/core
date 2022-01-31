@@ -1,7 +1,7 @@
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
 // the list of possible helpers:
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-import { require } from "../../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 const babelHelperNameInsideJsenvCoreArray = [
   "applyDecoratedDescriptor",

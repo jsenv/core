@@ -1,16 +1,6 @@
-/**
+import { createHash } from "node:crypto"
 
-An important concern here:
-
-All script type="module" will be converted to inline script.
-These inline script execution order is non predictible it depends
-which one is being done first
-
-*/
-
-import { createHash } from "crypto"
-
-import { require } from "../require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 
 // https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
 // eslint-disable-next-line import/no-unresolved
