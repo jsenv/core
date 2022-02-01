@@ -1,5 +1,4 @@
-export default (url) => {
-  console.log(url)
+export default () => {
   return {
     accept: () => {},
     dispose: () => {},

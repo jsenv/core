@@ -13,6 +13,20 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
     replace,
   }) => {
     if (importMetaFormat === "esmodule") {
+      if (importMetaPropertyName === "hot") {
+        const importMetaHotAst = injectImport({
+          programPath,
+          from: "@jsenv/core/helpers/import_meta/import_meta_hot_module.js",
+          nameHint: `createImportMetaHot`,
+          // disable interop, useless as we work only with js modules
+          importedType: "es6",
+          // importedInterop: "uncompiled",
+        })
+        const ast = babel.parse(
+          `import.meta.hot = ${importMetaHotAst.name}(import.meta.url)`,
+        )
+        injectAstAfterImport(programPath, ast.program.body[0])
+      }
       // keep native version
       return
     }
@@ -23,7 +37,7 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
     if (importMetaFormat === "commonjs") {
       if (importMetaPropertyName === "url") {
         replace(
-          generateImportAst({
+          injectImport({
             programPath,
             from: `@jsenv/core/helpers/import_meta/import_meta_url_commonjs.js`,
           }),
@@ -41,7 +55,7 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
     if (importMetaFormat === "global") {
       if (importMetaPropertyName === "url") {
         replace(
-          generateImportAst({
+          injectImport({
             programPath,
             from: `@jsenv/core/helpers/import_meta/import_meta_url_global.js`,
           }),
@@ -61,35 +75,47 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
   return {
     name: "transform-import-meta",
 
+    // pre(babel) {
+    //   parserOpts = babel.opts.parserOpts
+    // },
+
     visitor: {
       Program(programPath) {
-        const metaPropertyPathMap = {}
-        programPath.traverse({
-          MemberExpression(path) {
-            const { node } = path
-            const { object } = node
-            if (object.type !== "MetaProperty") {
-              return
-            }
-            const { property: objectProperty } = object
-            if (objectProperty.name !== "meta") {
-              return
-            }
-            const { property } = node
-            const { name } = property
-            if (name in metaPropertyPathMap) {
-              metaPropertyPathMap[name].push(path)
-            } else {
-              metaPropertyPathMap[name] = [path]
-            }
-          },
+        const importMetaHotPaths = []
+        traverseImportMetaProperties(programPath, ({ name, path }) => {
+          if (name === "hot") {
+            importMetaHotPaths.push(path)
+          }
         })
-        Object.keys(metaPropertyPathMap).forEach((importMetaPropertyName) => {
+        if (importMetaHotPaths.length) {
           visitImportMetaProperty({
             programPath,
-            importMetaPropertyName,
+            importMetaPropertyName: "hot",
             replace: (ast) => {
-              metaPropertyPathMap[importMetaPropertyName].forEach((path) => {
+              importMetaHotPaths.forEach((path) => {
+                path.replaceWith(ast)
+              })
+            },
+          })
+        }
+        const importMetaProperties = {}
+        traverseImportMetaProperties(programPath, ({ name, path }) => {
+          if (name === "hot") {
+            return
+          }
+          const paths = importMetaProperties[name]
+          if (paths) {
+            paths.push(path)
+          } else {
+            importMetaProperties[name] = [path]
+          }
+        })
+        Object.keys(importMetaProperties).forEach((key) => {
+          visitImportMetaProperty({
+            programPath,
+            importMetaPropertyName: key,
+            replace: (ast) => {
+              importMetaProperties[key].forEach((path) => {
                 path.replaceWith(ast)
               })
             },
@@ -100,10 +126,29 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
   }
 }
 
-const generateExpressionAst = (expression) => {
+const traverseImportMetaProperties = (programPath, callback) => {
+  programPath.traverse({
+    MemberExpression(path) {
+      const { node } = path
+      const { object } = node
+      if (object.type !== "MetaProperty") {
+        return
+      }
+      const { property: objectProperty } = object
+      if (objectProperty.name !== "meta") {
+        return
+      }
+      const { property } = node
+      const { name } = property
+      callback({ name, path })
+    },
+  })
+}
+
+const generateExpressionAst = (expression, options) => {
   const { parseExpression } = require("@babel/parser")
 
-  const ast = parseExpression(expression)
+  const ast = parseExpression(expression, options)
   return ast
 }
 
@@ -118,13 +163,20 @@ const generateValueAst = (value) => {
   return valueAst
 }
 
-const generateImportAst = ({
-  programPath,
-  namespace,
-  name,
-  from,
-  nameHint,
-}) => {
+const injectAstAfterImport = (programPath, ast) => {
+  const bodyNodePaths = programPath.get("body")
+  const notAnImportIndex = bodyNodePaths.findIndex(
+    (bodyNodePath) => bodyNodePath.node.type !== "ImportDeclaration",
+  )
+  const notAnImportNodePath = bodyNodePaths[notAnImportIndex]
+  if (notAnImportNodePath) {
+    notAnImportNodePath.insertBefore(ast)
+  } else {
+    bodyNodePaths[0].insertBefore(ast)
+  }
+}
+
+const injectImport = ({ programPath, namespace, name, from, nameHint }) => {
   const {
     addNamespace,
     addDefault,
