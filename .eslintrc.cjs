@@ -108,6 +108,7 @@ const eslintConfig = composeEslintConfig(
           "**/browser_detection/**/*.js",
           "**/browser_runtime/**/*.js",
           "**/browser_feature_detection/**/*.js",
+          "**/event_source_client/**/*.js",
           "**/exploring/**/*.js",
           "**/redirector/**/*.js",
           "**/toolbar/**/*.js",

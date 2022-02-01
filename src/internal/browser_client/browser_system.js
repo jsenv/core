@@ -116,26 +116,35 @@ const instantiateAsJsonModule = async (url, { browserSystem, fetchSource }) => {
 
 const instantiateAsCssModule = async (
   url,
-  { importerUrl, compileDirectoryRelativeUrl, browserSystem, fetchSource },
+  { importerUrl, browserSystem, fetchSource },
 ) => {
   const response = await fetchSource(url, {
     contentTypeExpected: "text/css",
   })
-
-  // There is a logic inside "toolbar.eventsource.js" which is reloading
-  // all link rel="stylesheet" when file ending with ".css" are modified
+  // There is a logic inside "file_changes.js" which is reloading
+  // all link rel="stylesheet" when a file ending with ".css" is modified
   // But here it would not work because we have to replace the css in
-  // the adopted stylsheet + all module importing this css module
+  // the adopted stylesheet + all module importing this css module
   // should be reinstantiated
-  // -> store a livereload callback forcing whole page reload
-  const compileDirectoryServerUrl = `${window.location.origin}/${compileDirectoryRelativeUrl}`
-  const originalFileRelativeUrl = response.url.slice(
-    compileDirectoryServerUrl.length,
-  )
-  window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = ({
-    reloadPage,
-  }) => {
-    reloadPage()
+  // -> the default behaviour for this CSS file should be a page reload
+  const { reloadMetas } = window.__jsenv_event_source_client__
+  // if below is to respect if import.meta.hot is called for this CSS file
+  // TODO: it's not the right way to check
+  // because code would do
+  /*
+  import style from "./style.css" assert { type: 'css' }
+  
+  if (import.meta.hot) {
+    let currentStyle = style
+    import.meta.hot.accept('./style.css', (newStyle) => {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== currentStyle);
+      document.adoptedStylesheets = [...document.adoptedStyleSheets, newStyle]
+      currentStyle = newStyle
+    })
+  }
+  */
+  if (!reloadMetas[url]) {
+    reloadMetas[url] = "decline"
   }
 
   const cssText = await response.text()
@@ -144,7 +153,6 @@ const instantiateAsCssModule = async (
     cssUrl: url,
     baseUrl: importerUrl,
   })
-
   browserSystem.register([], (_export) => {
     return {
       execute: () => {
@@ -173,7 +181,6 @@ const cssWithBaseUrl = ({ cssUrl, cssText, baseUrl }) => {
   if (cssDirectoryUrl === baseDirectoryUrl) {
     return cssText
   }
-
   const cssTextRelocated = cssText.replace(
     /url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g,
     (match, quotes, relUrl1, relUrl2) => {

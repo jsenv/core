@@ -2,6 +2,7 @@
 
 import { createEventSourceConnection } from "./event_source_connection.js"
 import {
+  reloadMetas,
   getFileChanges,
   addFileChange,
   setFileChangeCallback,
@@ -54,6 +55,7 @@ window.__jsenv_event_source_client__ = {
   disconnect,
   getConnectionStatus,
   setConnectionStatusChangeCallback,
+  reloadMetas,
   getFileChanges,
   addFileChange,
   setFileChangeCallback,

@@ -208,12 +208,9 @@ const getBrowserRuntime = memoize(async () => {
   return browserClient
 })
 
-const livereloadingCallbacks = {}
-
 const readCoverage = () => window.__coverage__
 
 window.__jsenv__ = {
-  livereloadingCallbacks,
   executionResultPromise,
   executeFileUsingDynamicImport,
   executeFileUsingSystemJs,
