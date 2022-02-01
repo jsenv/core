@@ -68,7 +68,7 @@ await launchBrowsers(
       return
     }
 
-    const importedFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/${importedFileRelativeUrl}`
+    const importedFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out_system/${importedFileRelativeUrl}`
     const actual = {
       status,
       errorName: error.name,

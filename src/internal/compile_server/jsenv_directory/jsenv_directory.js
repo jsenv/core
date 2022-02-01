@@ -38,6 +38,7 @@ export const setupJsenvDirectory = async ({
     )
   }
 
+  const compiledFileWriteSignal = { onwrite: () => {} }
   if (compileServerCanWriteOnFilesystem) {
     if (jsenvDirectoryClean) {
       await ensureEmptyDirectory(jsenvDirectoryUrl)
@@ -46,9 +47,15 @@ export const setupJsenvDirectory = async ({
       logger,
       jsenvDirectoryUrl,
       jsenvDirectoryMetaFileUrl,
-      writeMetaFile,
       jsenvDirectoryMeta,
     })
+    // We want ".jsenv" directory to appear on the filesystem only
+    // if there is a compiled file inside (and not immediatly when compile server starts)
+    // To do this we wait for a file to be written to write "__jsenv_meta__.json" file
+    compiledFileWriteSignal.onwrite = async () => {
+      compiledFileWriteSignal.onwrite = () => {}
+      await writeMetaFile()
+    }
   }
 
   /*
@@ -88,7 +95,7 @@ export const setupJsenvDirectory = async ({
       }
       return existingCompileId
     }
-    const compileIdBase = generateCompileId({ compileProfile })
+    const compileIdBase = generateCompileId({ compileProfile, runtime })
     let compileId = compileIdBase
     let integer = 1
     while (existingCompileIds.includes(compileId)) {
@@ -106,12 +113,19 @@ export const setupJsenvDirectory = async ({
   return {
     compileDirectories,
     getOrCreateCompileId,
+    compiledFileWriteSignal,
   }
 }
 
-const generateCompileId = ({ compileProfile }) => {
+const generateCompileId = ({ compileProfile, runtime }) => {
+  if (runtime.name === "jsenv_build") {
+    return `out_build`
+  }
   if (compileProfile.missingFeatures["transform-instrument"]) {
     return `out_instrumented`
+  }
+  if (compileProfile.moduleOutFormat === "systemjs") {
+    return `out_system`
   }
   return `out`
 }
@@ -121,7 +135,6 @@ const applyFileSystemEffects = async ({
   jsenvDirectoryUrl,
   jsenvDirectoryMetaFileUrl,
   jsenvDirectoryMeta,
-  writeMetaFile,
 }) => {
   try {
     const source = await readFile(jsenvDirectoryMetaFileUrl)
@@ -130,7 +143,6 @@ const applyFileSystemEffects = async ({
         `${jsenvDirectoryMetaFileUrl} is empty -> clean ${jsenvDirectoryUrl} directory`,
       )
       await ensureEmptyDirectory(jsenvDirectoryUrl)
-      await writeMetaFile()
       return
     }
     const jsenvDirectoryMetaPrevious = JSON.parse(source)
@@ -144,7 +156,6 @@ const applyFileSystemEffects = async ({
         `compile context has changed -> clean ${jsenvDirectoryUrl} directory`,
       )
       await ensureEmptyDirectory(jsenvDirectoryUrl)
-      await writeMetaFile()
       return
     }
     // reuse existing compile directories
@@ -158,7 +169,6 @@ const applyFileSystemEffects = async ({
         `${jsenvDirectoryMetaFileUrl} not found -> clean ${jsenvDirectoryUrl} directory`,
       )
       await ensureEmptyDirectory(jsenvDirectoryUrl)
-      await writeMetaFile()
       return
     }
     if (e.name === "SyntaxError") {
@@ -166,7 +176,6 @@ const applyFileSystemEffects = async ({
         `${jsenvDirectoryMetaFileUrl} syntax error -> clean ${jsenvDirectoryUrl} directory`,
       )
       await ensureEmptyDirectory(jsenvDirectoryUrl)
-      await writeMetaFile()
       return
     }
     throw e

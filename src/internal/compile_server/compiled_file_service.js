@@ -138,6 +138,7 @@ export const createCompiledFileService = ({
       logger,
 
       projectDirectoryUrl,
+      jsenvDirectory,
       jsenvRemoteDirectory,
       originalFileUrl,
       compiledFileUrl,

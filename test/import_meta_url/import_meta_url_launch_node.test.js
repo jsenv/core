@@ -65,7 +65,7 @@ const test = async ({ babelPluginMap, runtimeParams } = {}) => {
     namespace: {
       isInstanceOfUrl: false,
       // still the compiled file because systemjs is needed
-      urlString: `${testDirectoryUrl}.jsenv/out/${fileRelativeUrl}`,
+      urlString: `${testDirectoryUrl}.jsenv/out_system/${fileRelativeUrl}`,
     },
   }
   assert({ actual, expected })
@@ -91,7 +91,7 @@ const test = async ({ babelPluginMap, runtimeParams } = {}) => {
     status: "completed",
     namespace: {
       isInstanceOfUrl: false,
-      urlString: `${testDirectoryUrl}.jsenv/out/${fileRelativeUrl}`,
+      urlString: `${testDirectoryUrl}.jsenv/out_system/${fileRelativeUrl}`,
     },
   }
   assert({ actual, expected })

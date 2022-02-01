@@ -14,6 +14,7 @@ export const compileFile = async ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectory,
   jsenvRemoteDirectory,
   originalFileUrl,
   compiledFileUrl,
@@ -103,6 +104,7 @@ export const compileFile = async ({
       // when serving sourcemap files
       await updateCompileCache({
         logger,
+        jsenvDirectory,
         meta,
         compileResult,
         compileResultStatus,
