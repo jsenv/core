@@ -59,7 +59,7 @@ const test = async ({ runtimeParams } = {}) => {
       forceCompilation: true,
     },
   })
-  const compiledFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/${fileRelativeUrl}`
+  const compiledFileUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out_system/${fileRelativeUrl}`
   const actual = {
     status,
     error,

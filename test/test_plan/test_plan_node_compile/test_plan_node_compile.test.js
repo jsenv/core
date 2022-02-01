@@ -20,7 +20,7 @@ const testPlan = {
     },
   },
 }
-const depFileCompiledUrl = `${testDirectoryUrl}.jsenv/out/${testDirectoryRelativeUrl}dep.js`
+const depFileCompiledUrl = `${testDirectoryUrl}.jsenv/out_system/${testDirectoryRelativeUrl}dep.js`
 
 const { testPlanSummary, testPlanReport } = await executeTestPlan({
   ...EXECUTE_TEST_PLAN_TEST_PARAMS,

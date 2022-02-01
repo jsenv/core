@@ -51,7 +51,7 @@ await launchBrowsers(
       collectCompileServerInfo: true,
       ignoreError: true,
     })
-    const jsCompiledUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/${jsRelativeUrl}`
+    const jsCompiledUrl = `${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out_system/${jsRelativeUrl}`
     if (browserRuntime === chromiumRuntime) {
       const actual = {
         status,

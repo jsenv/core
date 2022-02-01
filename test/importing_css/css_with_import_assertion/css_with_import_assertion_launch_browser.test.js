@@ -47,7 +47,7 @@ await launchBrowsers(
     const backgroundUrl =
       browserRuntime === chromiumRuntime
         ? `${compileServerOrigin}/${imgRelativeUrl}`
-        : `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out/${imgRelativeUrl}`
+        : `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out_system/${imgRelativeUrl}`
 
     const actual = {
       status,
