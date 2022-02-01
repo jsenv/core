@@ -6,22 +6,25 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 import { createParseError } from "./babel_parse_error.js"
 
-export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
-  const {
-    addNamespace,
-    addDefault,
-    addNamed,
-  } = require("@babel/helper-module-imports")
+export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
   let babelState
-  const jsValueToAst = (jsValue) => {
+  const astFromValue = (value) => {
     const { parseExpression } = require("@babel/parser")
-    const valueAst = parseExpression(jsValue, babelState.parserOpts)
+    const valueAst = parseExpression(
+      value === undefined
+        ? "undefined"
+        : value === null
+        ? "null"
+        : JSON.stringify(value),
+      babelState.parserOpts,
+    )
     return valueAst
   }
+
   const visitImportMetaProperty = ({
+    programPath,
     importMetaPropertyName,
-    replaceWithImport,
-    replaceWithValue,
+    replace,
   }) => {
     if (importMetaFormat === "esmodule") {
       // keep native version
@@ -33,9 +36,12 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
     }
     if (importMetaFormat === "commonjs") {
       if (importMetaPropertyName === "url") {
-        replaceWithImport({
-          from: `@jsenv/core/helpers/import-meta/import-meta-url-commonjs.js`,
-        })
+        replace(
+          generateImportAst({
+            programPath,
+            from: `@jsenv/core/helpers/import_meta/import_meta_url_commonjs.js`,
+          }),
+        )
         return
       }
       if (importMetaPropertyName === "resolve") {
@@ -43,14 +49,17 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
           message: `import.meta.resolve() not supported with commonjs format`,
         })
       }
-      replaceWithValue(undefined)
+      replace(astFromValue(undefined))
       return
     }
     if (importMetaFormat === "global") {
       if (importMetaPropertyName === "url") {
-        replaceWithImport({
-          from: `@jsenv/core/helpers/import-meta/import-meta-url-global.js`,
-        })
+        replace(
+          generateImportAst({
+            programPath,
+            from: `@jsenv/core/helpers/import_meta/import_meta_url_global.js`,
+          }),
+        )
         return
       }
       if (importMetaPropertyName === "resolve") {
@@ -58,7 +67,7 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
           message: `import.meta.resolve() not supported with global format`,
         })
       }
-      replaceWithValue(undefined)
+      replace(astFromValue(undefined))
       return
     }
   }
@@ -95,35 +104,11 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
         })
         Object.keys(metaPropertyPathMap).forEach((importMetaPropertyName) => {
           visitImportMetaProperty({
+            programPath,
             importMetaPropertyName,
-            replaceWithImport: ({ namespace, name, from, nameHint }) => {
-              let importAst
-              if (namespace) {
-                importAst = addNamespace(programPath, from, {
-                  nameHint,
-                })
-              } else if (name) {
-                importAst = addNamed(programPath, name, from)
-              } else {
-                importAst = addDefault(programPath, from, {
-                  nameHint,
-                })
-              }
+            replace: (ast) => {
               metaPropertyPathMap[importMetaPropertyName].forEach((path) => {
-                path.replaceWith(importAst)
-              })
-            },
-            replaceWithValue: (value) => {
-              const valueAst = jsValueToAst(
-                // eslint-disable-next-line no-nested-ternary
-                value === undefined
-                  ? "undefined"
-                  : value === null
-                  ? "null"
-                  : JSON.stringify(value),
-              )
-              metaPropertyPathMap[importMetaPropertyName].forEach((path) => {
-                path.replaceWith(valueAst)
+                path.replaceWith(ast)
               })
             },
           })
@@ -131,4 +116,30 @@ export const babelPluginTransformImportMeta = (api, { importMetaFormat }) => {
       },
     },
   }
+}
+
+const generateImportAst = ({
+  programPath,
+  namespace,
+  name,
+  from,
+  nameHint,
+}) => {
+  const {
+    addNamespace,
+    addDefault,
+    addNamed,
+  } = require("@babel/helper-module-imports")
+
+  if (namespace) {
+    return addNamespace(programPath, from, {
+      nameHint,
+    })
+  }
+  if (name) {
+    return addNamed(programPath, name, from)
+  }
+  return addDefault(programPath, from, {
+    nameHint,
+  })
 }
