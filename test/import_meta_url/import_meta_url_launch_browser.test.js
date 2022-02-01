@@ -55,7 +55,7 @@ await launchBrowsers(
             urlString:
               browserRuntime === chromiumRuntime
                 ? `${compileServerOrigin}/${fileRelativeUrl}`
-                : `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out/${fileRelativeUrl}`,
+                : `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out_system/${fileRelativeUrl}`,
           },
         },
       },
