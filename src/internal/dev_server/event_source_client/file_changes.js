@@ -10,7 +10,7 @@ export const getFileChanges = () => fileChanges
 export const addFileChange = ({ file, eventType }) => {
   fileChanges[file] = eventType
   if (isLivereloadEnabled()) {
-    reloadIfNeeded()
+    applyFileChangeEffects()
   } else {
     filechangeCallback()
   }
@@ -46,7 +46,7 @@ const findReloadMetaUrl = (originalFileRelativeUrl) => {
   })
 }
 
-export const reloadIfNeeded = () => {
+export const applyFileChangeEffects = () => {
   const customReloads = []
   const cssReloads = []
   const fullReloads = []

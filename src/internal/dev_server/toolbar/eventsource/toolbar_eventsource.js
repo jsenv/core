@@ -61,7 +61,7 @@ const updateEventSourceIndicator = () => {
         window.parent.alert(JSON.stringify(fileChanges, null, "  "))
       }
       variantNode.querySelector(".eventsource-reload-link").onclick = () => {
-        parentEventSourceClient.reloadIfNeeded()
+        parentEventSourceClient.applyFileChangeEffects()
       }
     }
   } else if (eventSourceConnectionState === "disconnected") {

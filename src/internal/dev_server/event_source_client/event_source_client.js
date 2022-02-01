@@ -6,7 +6,7 @@ import {
   getFileChanges,
   addFileChange,
   setFileChangeCallback,
-  reloadIfNeeded,
+  applyFileChangeEffects,
 } from "./file_changes.js"
 import {
   isLivereloadEnabled,
@@ -59,7 +59,7 @@ window.__jsenv_event_source_client__ = {
   getFileChanges,
   addFileChange,
   setFileChangeCallback,
-  reloadIfNeeded,
+  applyFileChangeEffects,
   isLivereloadEnabled,
   setLivereloadPreference,
 }
