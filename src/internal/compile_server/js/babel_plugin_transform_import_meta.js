@@ -7,20 +7,6 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import { createParseError } from "./babel_parse_error.js"
 
 export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
-  let babelState
-  const astFromValue = (value) => {
-    const { parseExpression } = require("@babel/parser")
-    const valueAst = parseExpression(
-      value === undefined
-        ? "undefined"
-        : value === null
-        ? "null"
-        : JSON.stringify(value),
-      babelState.parserOpts,
-    )
-    return valueAst
-  }
-
   const visitImportMetaProperty = ({
     programPath,
     importMetaPropertyName,
@@ -49,7 +35,7 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
           message: `import.meta.resolve() not supported with commonjs format`,
         })
       }
-      replace(astFromValue(undefined))
+      replace(generateValueAst(undefined))
       return
     }
     if (importMetaFormat === "global") {
@@ -67,17 +53,13 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
           message: `import.meta.resolve() not supported with global format`,
         })
       }
-      replace(astFromValue(undefined))
+      replace(generateValueAst(undefined))
       return
     }
   }
 
   return {
     name: "transform-import-meta",
-
-    pre: (state) => {
-      babelState = state
-    },
 
     visitor: {
       Program(programPath) {
@@ -116,6 +98,24 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
       },
     },
   }
+}
+
+const generateExpressionAst = (expression) => {
+  const { parseExpression } = require("@babel/parser")
+
+  const ast = parseExpression(expression)
+  return ast
+}
+
+const generateValueAst = (value) => {
+  const valueAst = generateExpressionAst(
+    value === undefined
+      ? "undefined"
+      : value === null
+      ? "null"
+      : JSON.stringify(value),
+  )
+  return valueAst
 }
 
 const generateImportAst = ({
