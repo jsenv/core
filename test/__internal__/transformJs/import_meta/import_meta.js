@@ -10,4 +10,6 @@ export const typeOfImportMetaDev = typeof import.meta.dev
 
 export const importMetaHot = import.meta.hot
 
-import.meta.hot.accept(() => {})
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {})
+}
