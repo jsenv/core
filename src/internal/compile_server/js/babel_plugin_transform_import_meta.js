@@ -75,10 +75,6 @@ export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
   return {
     name: "transform-import-meta",
 
-    // pre(babel) {
-    //   parserOpts = babel.opts.parserOpts
-    // },
-
     visitor: {
       Program(programPath) {
         const importMetaHotPaths = []
