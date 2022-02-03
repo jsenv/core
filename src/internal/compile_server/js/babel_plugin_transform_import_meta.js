@@ -19,7 +19,7 @@ export const babelPluginTransformImportMeta = (
       if (importMetaHot && importMetaPropertyName === "hot") {
         const importMetaHotAst = injectImport({
           programPath,
-          from: "@jsenv/core/src/internal/compile_server/hmr/import_meta_hot_module.js",
+          from: "@jsenv/core/src/internal/dev_server/event_source_client/import_meta_hot_module.js",
           nameHint: `createImportMetaHot`,
           // disable interop, useless as we work only with js modules
           importedType: "es6",
@@ -94,6 +94,7 @@ export const babelPluginTransformImportMeta = (
         const importMetaHot = importMetaProperties.hot
         if (importMetaHot) {
           this.file.metadata.importMetaHot = {
+            decline: importMetaHot.decline,
             acceptSelf: importMetaHot.acceptSelf,
             acceptDependencies: importMetaHot.acceptDependencies,
           }
@@ -129,7 +130,7 @@ const collectImportMetaProperties = (programPath) => {
       }
     },
     CallExpression(path) {
-      if (isImportMetaHotAcceptCall(path)) {
+      if (isImportMetaHotMethodCall(path, "accept")) {
         const callNode = path.node
         const args = callNode.arguments
         if (args.length === 0) {
@@ -166,16 +167,19 @@ const collectImportMetaProperties = (programPath) => {
           return
         }
       }
+      if (isImportMetaHotMethodCall(path, "decline")) {
+        importMetaProperties.hot.decline = true
+      }
     },
   })
   return importMetaProperties
 }
 
-const isImportMetaHotAcceptCall = (path) => {
+const isImportMetaHotMethodCall = (path, methodName) => {
   const { property, object } = path.node.callee
   return (
     property &&
-    property.name === "accept" &&
+    property.name === methodName &&
     object &&
     object.property &&
     object.property.name === "hot" &&
