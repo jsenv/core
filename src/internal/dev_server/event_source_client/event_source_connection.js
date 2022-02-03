@@ -23,28 +23,27 @@ export const createEventSourceConnection = (
     }
   })
 
-  let connectionStatus = "default"
-  let connectionStatusChangeCallback = () => {}
-  let _disconnect = () => {}
-
-  const goToStatus = (newStatus) => {
-    if (newStatus !== connectionStatus) {
-      connectionStatus = newStatus
-      connectionStatusChangeCallback()
-    }
+  const status = {
+    value: "default",
+    goTo: (value) => {
+      if (value === status.value) {
+        return
+      }
+      status.value = value
+      status.onchange()
+    },
+    onchange: () => {},
   }
+  let _disconnect = () => {}
 
   const attemptConnection = (url) => {
     const eventSource = new EventSource(url, {
       withCredentials: true,
     })
     _disconnect = () => {
-      if (
-        connectionStatus !== "connecting" &&
-        connectionStatus !== "connected"
-      ) {
+      if (status.value !== "connecting" && status.value !== "connected") {
         console.warn(
-          `disconnect() ignored because connection is ${connectionStatus}`,
+          `disconnect() ignored because connection is ${status.value}`,
         )
         return
       }
@@ -53,7 +52,7 @@ export const createEventSourceConnection = (
       Object.keys(events).forEach((eventName) => {
         eventSource.removeEventListener(eventName, events[eventName])
       })
-      goToStatus("disconnected")
+      status.goTo("disconnected")
     }
     let retryCount = 0
     let firstRetryMs = Date.now()
@@ -79,7 +78,7 @@ export const createEventSourceConnection = (
         }
 
         retryCount++
-        goToStatus("connecting")
+        status.goTo("connecting")
         return
       }
 
@@ -89,7 +88,7 @@ export const createEventSourceConnection = (
       }
     }
     eventSource.onopen = () => {
-      goToStatus("connected")
+      status.goTo("connected")
     }
     Object.keys(events).forEach((eventName) => {
       eventSource.addEventListener(eventName, events[eventName])
@@ -101,7 +100,7 @@ export const createEventSourceConnection = (
         }
       })
     }
-    goToStatus("connecting")
+    status.goTo("connecting")
   }
 
   let connect = () => {
@@ -125,10 +124,7 @@ export const createEventSourceConnection = (
   }
 
   return {
-    getConnectionStatus: () => connectionStatus,
-    setConnectionStatusChangeCallback: (callback) => {
-      connectionStatusChangeCallback = callback
-    },
+    status,
     connect,
     disconnect: () => _disconnect(),
     destroy,

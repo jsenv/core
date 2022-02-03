@@ -15,9 +15,12 @@ export const initToolbarEventSource = ({ livereloading }) => {
   if (!livereloadingAvailableOnServer) {
     disableLivereloadSetting()
   }
-  parentEventSourceClient.setConnectionStatusChangeCallback(() => {
+  parentEventSourceClient.status.onchange = () => {
     updateEventSourceIndicator()
-  })
+  }
+  parentEventSourceClient.serverUpdatesSignal.onchange = () => {
+    updateEventSourceIndicator()
+  }
   const livereloadCheckbox = document.querySelector("#toggle-livereload")
   livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled()
   livereloadCheckbox.onchange = () => {
@@ -29,14 +32,14 @@ export const initToolbarEventSource = ({ livereloading }) => {
 
 const updateEventSourceIndicator = () => {
   const eventSourceIndicator = document.querySelector("#eventsource-indicator")
-  const fileChanges = parentEventSourceClient.getFileChanges()
-  const changeCount = Object.keys(fileChanges).length
-  const eventSourceConnectionState =
-    parentEventSourceClient.getConnectionStatus()
+  const serverUpdates = parentEventSourceClient.serverUpdates
+  const serverUpdateCount = serverUpdates.length
+
+  const eventSourceConnectionState = parentEventSourceClient.status.value
   enableVariant(eventSourceIndicator, {
     eventsource: eventSourceConnectionState,
     livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
-    changes: changeCount > 0 ? "yes" : "no",
+    changes: serverUpdateCount > 0 ? "yes" : "no",
   })
 
   const variantNode = document.querySelector(
@@ -52,16 +55,16 @@ const updateEventSourceIndicator = () => {
     }
   } else if (eventSourceConnectionState === "connected") {
     removeAutoShowTooltip(eventSourceIndicator)
-    if (changeCount) {
+    if (serverUpdateCount > 0) {
       const changeLink = variantNode.querySelector(".eventsource-changes-link")
-      changeLink.innerHTML = changeCount
+      changeLink.innerHTML = serverUpdateCount
       changeLink.onclick = () => {
-        console.log(JSON.stringify(fileChanges, null, "  "), fileChanges)
+        console.log(serverUpdates)
         // eslint-disable-next-line no-alert
-        window.parent.alert(JSON.stringify(fileChanges, null, "  "))
+        window.parent.alert(JSON.stringify(serverUpdates, null, "  "))
       }
       variantNode.querySelector(".eventsource-reload-link").onclick = () => {
-        parentEventSourceClient.applyFileChangeEffects()
+        parentEventSourceClient.applyServerChanges()
       }
     }
   } else if (eventSourceConnectionState === "disconnected") {
