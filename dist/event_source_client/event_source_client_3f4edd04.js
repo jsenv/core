@@ -32,18 +32,20 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
       }
     };
   });
-  var connectionStatus = "default";
+  var status = {
+    value: "default",
+    goTo: function goTo(value) {
+      if (value === status.value) {
+        return;
+      }
 
-  var connectionStatusChangeCallback = function connectionStatusChangeCallback() {};
+      status.value = value;
+      status.onchange();
+    },
+    onchange: function onchange() {}
+  };
 
   var _disconnect = function _disconnect() {};
-
-  var goToStatus = function goToStatus(newStatus) {
-    if (newStatus !== connectionStatus) {
-      connectionStatus = newStatus;
-      connectionStatusChangeCallback();
-    }
-  };
 
   var attemptConnection = function attemptConnection(url) {
     var eventSource = new EventSource(url, {
@@ -51,8 +53,8 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
     });
 
     _disconnect = function _disconnect() {
-      if (connectionStatus !== "connecting" && connectionStatus !== "connected") {
-        console.warn("disconnect() ignored because connection is ".concat(connectionStatus));
+      if (status.value !== "connecting" && status.value !== "connected") {
+        console.warn("disconnect() ignored because connection is ".concat(status.value));
         return;
       }
 
@@ -61,7 +63,7 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
       Object.keys(events).forEach(function (eventName) {
         eventSource.removeEventListener(eventName, events[eventName]);
       });
-      goToStatus("disconnected");
+      status.goTo("disconnected");
     };
 
     var retryCount = 0;
@@ -92,7 +94,7 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
         }
 
         retryCount++;
-        goToStatus("connecting");
+        status.goTo("connecting");
         return;
       }
 
@@ -104,7 +106,7 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
     };
 
     eventSource.onopen = function () {
-      goToStatus("connected");
+      status.goTo("connected");
     };
 
     Object.keys(events).forEach(function (eventName) {
@@ -119,7 +121,7 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
       });
     }
 
-    goToStatus("connecting");
+    status.goTo("connecting");
   };
 
   var _connect = function connect() {
@@ -141,12 +143,7 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
   };
 
   return {
-    getConnectionStatus: function getConnectionStatus() {
-      return connectionStatus;
-    },
-    setConnectionStatusChangeCallback: function setConnectionStatusChangeCallback(callback) {
-      connectionStatusChangeCallback = callback;
-    },
+    status: status,
     connect: _connect,
     disconnect: function disconnect() {
       return _disconnect();
@@ -226,129 +223,119 @@ var setLivereloadPreference = function setLivereloadPreference(value) {
   window.localStorage.setItem("livereload", value ? "1" : "0");
 };
 
-/* eslint-env browser */
-var fileChanges = {};
-
-var filechangeCallback = function filechangeCallback() {};
-
-var getFileChanges = function getFileChanges() {
-  return fileChanges;
-};
-var addFileChange = function addFileChange(_ref) {
-  var file = _ref.file,
-      eventType = _ref.eventType;
-  fileChanges[file] = eventType;
-
-  if (isLivereloadEnabled()) {
-    reloadIfNeeded();
-  } else {
-    filechangeCallback();
-  }
-};
-var setFileChangeCallback = function setFileChangeCallback(callback) {
-  filechangeCallback = callback;
-};
-var reloadIfNeeded = function reloadIfNeeded() {
-  var customReloads = [];
-  var cssReloads = [];
-  var fullReloads = [];
-  Object.keys(fileChanges).forEach(function (key) {
-    var livereloadCallback = window.__jsenv__.livereloadingCallbacks[key];
-
-    if (livereloadCallback) {
-      customReloads.push(function () {
-        delete fileChanges[key];
-        livereloadCallback({
-          reloadPage: reloadPage
-        });
-      });
-    } else if (key.endsWith(".css") || key.endsWith(".scss") || key.endsWith(".sass")) {
-      cssReloads.push(function () {
-        delete fileChanges[key];
-      });
-    } else {
-      fullReloads.push(key);
-    }
-  });
-
-  if (fullReloads.length > 0) {
-    reloadPage();
-    return;
-  }
-
-  customReloads.forEach(function (customReload) {
-    customReload();
-  });
-
-  if (cssReloads.length) {
-    reloadAllCss();
-    cssReloads.forEach(function (cssReload) {
-      cssReload();
-    });
-  }
-
-  filechangeCallback();
-};
-
-var reloadAllCss = function reloadAllCss() {
-  var links = Array.from(window.parent.document.getElementsByTagName("link"));
-  links.forEach(function (link) {
-    if (link.rel === "stylesheet") {
-      var url = new URL(link.href);
-      url.searchParams.set("t", Date.now());
-      link.href = String(url);
-    }
-  });
-};
-
 var reloadPage = function reloadPage() {
   window.parent.location.reload(true);
 };
 
 /* eslint-env browser */
+
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+var reloadMessages = []; // const urlHotMetas = {}
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var reloadMessagesSignal = {
+  onchange: function onchange() {}
+};
+
+var applyReloadMessageEffects = _async(function () {
+  var someEffectIsFullReload = reloadMessages.find(function (reloadMessage) {
+    return reloadMessage.type === "full_reload";
+  });
+
+  if (someEffectIsFullReload) {
+    reloadPage();
+    return;
+  }
+
+  var copy = reloadMessages.slice();
+  reloadMessages.length = 0;
+  copy.forEach(function () {// todo
+  });
+  return _await();
+});
+
 var eventsourceConnection = createEventSourceConnection(document.location.href, {
-  "file-added": function fileAdded(_ref) {
-    var data = _ref.data;
-    addFileChange({
-      file: data,
-      eventType: "added"
+  reload: function reload(_ref) {
+    var reason = _ref.reason,
+        fileRelativeUrl = _ref.fileRelativeUrl,
+        instruction = _ref.instruction;
+    reloadMessages.push({
+      reason: reason,
+      fileRelativeUrl: fileRelativeUrl,
+      instruction: instruction
     });
-  },
-  "file-modified": function fileModified(_ref2) {
-    var data = _ref2.data;
-    addFileChange({
-      file: data,
-      eventType: "modified"
-    });
-  },
-  "file-removed": function fileRemoved(_ref3) {
-    var data = _ref3.data;
-    addFileChange({
-      file: data,
-      eventType: "removed"
-    });
+
+    if (isLivereloadEnabled()) {
+      applyReloadMessageEffects();
+    } else {
+      reloadMessagesSignal.onchange();
+    }
   }
 }, {
   retryMaxAttempt: Infinity,
   retryAllocatedMs: 20 * 1000
 });
-var connect = eventsourceConnection.connect,
-    disconnect = eventsourceConnection.disconnect,
-    setConnectionStatusChangeCallback = eventsourceConnection.setConnectionStatusChangeCallback,
-    getConnectionStatus = eventsourceConnection.getConnectionStatus;
+var status = eventsourceConnection.status,
+    connect = eventsourceConnection.connect,
+    disconnect = eventsourceConnection.disconnect;
 connect();
 window.__jsenv_event_source_client__ = {
+  status: status,
   connect: connect,
   disconnect: disconnect,
-  getConnectionStatus: getConnectionStatus,
-  setConnectionStatusChangeCallback: setConnectionStatusChangeCallback,
-  getFileChanges: getFileChanges,
-  addFileChange: addFileChange,
-  setFileChangeCallback: setFileChangeCallback,
-  reloadIfNeeded: reloadIfNeeded,
   isLivereloadEnabled: isLivereloadEnabled,
-  setLivereloadPreference: setLivereloadPreference
+  setLivereloadPreference: setLivereloadPreference,
+  reloadMessages: reloadMessages,
+  reloadMessagesSignal: reloadMessagesSignal,
+  applyReloadMessageEffects: applyReloadMessageEffects
 };
-})();
+})(); // const findHotMetaUrl = (originalFileRelativeUrl) => {
+//   return Object.keys(urlHotMetas).find((compileUrl) => {
+//     return (
+//       parseCompiledUrl(compileUrl).fileRelativeUrl === originalFileRelativeUrl
+//     )
+//   })
+// }
+// // TODO: the following "parseCompiledUrl"
+// // already exists somewhere in the codebase: reuse the other one
+// const parseCompiledUrl = (url) => {
+//   const { pathname, search } = new URL(url)
+//   const ressource = `${pathname}${search}`
+//   const slashIndex = ressource.indexOf("/", 1)
+//   const compileDirectoryRelativeUrl = ressource.slice(1, slashIndex)
+//   const afterCompileDirectory = ressource.slice(slashIndex)
+//   const nextSlashIndex = afterCompileDirectory.indexOf("/")
+//   const compileId = afterCompileDirectory.slice(0, nextSlashIndex)
+//   const afterCompileId = afterCompileDirectory.slice(nextSlashIndex)
+//   return {
+//     compileDirectoryRelativeUrl,
+//     compileId,
+//     fileRelativeUrl: afterCompileId,
+//   }
+// }
 
-//# sourceMappingURL=event_source_client_69f48287.js.map
+//# sourceMappingURL=event_source_client_3f4edd04.js.map

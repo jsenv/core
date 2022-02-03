@@ -1768,7 +1768,7 @@ html[data-toolbar-visible] #toolbar-trigger {
               <span data-when="changes:yes"><a class="eventsource-changes-link" style="color: inherit" href="javascript:void(0);">X</a></span><span data-when="changes:no">none</span>
               <div data-when="changes:yes">
                 <br>
-                <a class="eventsource-reload-link" style="color: inherit" href="javascript:void(0);">reload</a>
+                <a class="eventsource-reload-link" style="color: inherit" href="javascript:void(0);">apply changes</a>
               </div>
             </div>
             <button>
@@ -4557,9 +4557,14 @@ html[data-toolbar-visible] #toolbar-trigger {
           disableLivereloadSetting();
         }
 
-        parentEventSourceClient.setConnectionStatusChangeCallback(function () {
+        parentEventSourceClient.status.onchange = function () {
           updateEventSourceIndicator();
-        });
+        };
+
+        parentEventSourceClient.reloadMessagesSignal.onchange = function () {
+          updateEventSourceIndicator();
+        };
+
         var livereloadCheckbox = document.querySelector("#toggle-livereload");
         livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled();
 
@@ -4573,13 +4578,13 @@ html[data-toolbar-visible] #toolbar-trigger {
 
       var updateEventSourceIndicator = function updateEventSourceIndicator() {
         var eventSourceIndicator = document.querySelector("#eventsource-indicator");
-        var fileChanges = parentEventSourceClient.getFileChanges();
-        var changeCount = Object.keys(fileChanges).length;
-        var eventSourceConnectionState = parentEventSourceClient.getConnectionStatus();
+        var reloadMessages = parentEventSourceClient.reloadMessages;
+        var reloadMessageCount = reloadMessages.length;
+        var eventSourceConnectionState = parentEventSourceClient.status.value;
         enableVariant(eventSourceIndicator, {
           eventsource: eventSourceConnectionState,
           livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
-          changes: changeCount > 0 ? "yes" : "no"
+          changes: reloadMessageCount > 0 ? "yes" : "no"
         });
         var variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
 
@@ -4594,18 +4599,18 @@ html[data-toolbar-visible] #toolbar-trigger {
         } else if (eventSourceConnectionState === "connected") {
           removeAutoShowTooltip(eventSourceIndicator);
 
-          if (changeCount) {
+          if (reloadMessageCount > 0) {
             var changeLink = variantNode.querySelector(".eventsource-changes-link");
-            changeLink.innerHTML = changeCount;
+            changeLink.innerHTML = reloadMessageCount;
 
             changeLink.onclick = function () {
-              console.log(JSON.stringify(fileChanges, null, "  "), fileChanges); // eslint-disable-next-line no-alert
+              console.log(reloadMessages); // eslint-disable-next-line no-alert
 
-              window.parent.alert(JSON.stringify(fileChanges, null, "  "));
+              window.parent.alert(JSON.stringify(reloadMessages, null, "  "));
             };
 
             variantNode.querySelector(".eventsource-reload-link").onclick = function () {
-              parentEventSourceClient.reloadIfNeeded();
+              parentEventSourceClient.applyReloadMessageEffects();
             };
           }
         } else if (eventSourceConnectionState === "disconnected") {
@@ -4970,7 +4975,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar_main_f54c1bb0.js.map</script>
+//# sourceMappingURL=toolbar_main_b527d538.js.map</script>
   
 
 </body></html>

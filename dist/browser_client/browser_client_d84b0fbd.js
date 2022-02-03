@@ -3364,25 +3364,37 @@ var instantiateAsJsonModule = _async$7(function (url, _ref2) {
 
 var instantiateAsCssModule = _async$7(function (url, _ref3) {
   var importerUrl = _ref3.importerUrl,
-      compileDirectoryRelativeUrl = _ref3.compileDirectoryRelativeUrl,
       browserSystem = _ref3.browserSystem,
       fetchSource = _ref3.fetchSource;
   return _await$6(fetchSource(url, {
     contentTypeExpected: "text/css"
   }), function (response) {
-    // There is a logic inside "toolbar.eventsource.js" which is reloading
-    // all link rel="stylesheet" when file ending with ".css" are modified
+    // There is a logic inside "file_changes.js" which is reloading
+    // all link rel="stylesheet" when a file ending with ".css" is modified
     // But here it would not work because we have to replace the css in
-    // the adopted stylsheet + all module importing this css module
+    // the adopted stylesheet + all module importing this css module
     // should be reinstantiated
-    // -> store a livereload callback forcing whole page reload
-    var compileDirectoryServerUrl = "".concat(window.location.origin, "/").concat(compileDirectoryRelativeUrl);
-    var originalFileRelativeUrl = response.url.slice(compileDirectoryServerUrl.length);
+    // -> the default behaviour for this CSS file should be a page reload
+    var reloadMetas = window.__jsenv_event_source_client__.reloadMetas; // if below is to respect if import.meta.hot is called for this CSS file
+    // TODO: it's not the right way to check
+    // because code would do
 
-    window.__jsenv__.livereloadingCallbacks[originalFileRelativeUrl] = function (_ref4) {
-      var reloadPage = _ref4.reloadPage;
-      reloadPage();
-    };
+    /*
+    import style from "./style.css" assert { type: 'css' }
+    
+    if (import.meta.hot) {
+      let currentStyle = style
+      import.meta.hot.accept('./style.css', (newStyle) => {
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== currentStyle);
+        document.adoptedStylesheets = [...document.adoptedStyleSheets, newStyle]
+        currentStyle = newStyle
+      })
+    }
+    */
+
+    if (!reloadMetas[url]) {
+      reloadMetas[url] = "decline";
+    }
 
     return _await$6(response.text(), function (cssText) {
       var cssTextWithBaseUrl = cssWithBaseUrl({
@@ -3415,10 +3427,10 @@ var instantiateAsCssModule = _async$7(function (url, _ref3) {
 // So we reuse "systemjs" strategy from https://github.com/systemjs/systemjs/blob/98609dbeef01ec62447e4b21449ce47e55f818bd/src/extras/module-types.js#L37
 
 
-var cssWithBaseUrl = function cssWithBaseUrl(_ref5) {
-  var cssUrl = _ref5.cssUrl,
-      cssText = _ref5.cssText,
-      baseUrl = _ref5.baseUrl;
+var cssWithBaseUrl = function cssWithBaseUrl(_ref4) {
+  var cssUrl = _ref4.cssUrl,
+      cssText = _ref4.cssText,
+      baseUrl = _ref4.baseUrl;
   var cssDirectoryUrl = new URL("./", cssUrl).href;
   var baseDirectoryUrl = new URL("./", baseUrl).href;
 
@@ -3433,14 +3445,14 @@ var cssWithBaseUrl = function cssWithBaseUrl(_ref5) {
   return cssTextRelocated;
 };
 
-var createDetailedInstantiateError = _async$7(function (_ref6) {
+var createDetailedInstantiateError = _async$7(function (_ref5) {
   var _exit3 = false;
-  var instantiateError = _ref6.instantiateError,
-      url = _ref6.url,
-      importerUrl = _ref6.importerUrl,
-      compileServerOrigin = _ref6.compileServerOrigin,
-      compileDirectoryRelativeUrl = _ref6.compileDirectoryRelativeUrl,
-      fetchSource = _ref6.fetchSource;
+  var instantiateError = _ref5.instantiateError,
+      url = _ref5.url,
+      importerUrl = _ref5.importerUrl,
+      compileServerOrigin = _ref5.compileServerOrigin,
+      compileDirectoryRelativeUrl = _ref5.compileDirectoryRelativeUrl,
+      fetchSource = _ref5.fetchSource;
   var response;
   return _continue$2(_catch$4(function () {
     return _await$6(fetchSource(url, {
@@ -5303,18 +5315,16 @@ var getBrowserRuntime = memoize(_async(function () {
     });
   });
 }));
-var livereloadingCallbacks = {};
 
 var readCoverage = function readCoverage() {
   return window.__coverage__;
 };
 
 window.__jsenv__ = {
-  livereloadingCallbacks: livereloadingCallbacks,
   executionResultPromise: executionResultPromise,
   executeFileUsingDynamicImport: executeFileUsingDynamicImport,
   executeFileUsingSystemJs: executeFileUsingSystemJs
 };
 })();
 
-//# sourceMappingURL=browser_client_fb33eaa4.js.map
+//# sourceMappingURL=browser_client_d84b0fbd.js.map
