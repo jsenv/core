@@ -21,6 +21,7 @@ const test = async (params) => {
 {
   await test({
     importMetaFormat: "esmodule",
+    importMetaHot: true,
   })
   const { meta, url, urlDestructured, typeOfImportMetaDev, importMetaHot } =
     await import(fileDistUrl)
@@ -55,6 +56,7 @@ const test = async (params) => {
   await test({
     moduleOutFormat: "systemjs",
     importMetaFormat: "systemjs",
+    importMetaHot: true,
   })
   await import("systemjs/dist/system-node.cjs")
   const { meta, url, urlDestructured, typeOfImportMetaDev, importMetaHot } =
@@ -83,6 +85,7 @@ const test = async (params) => {
 {
   await test({
     importMetaFormat: "commonjs",
+    importMetaHot: true,
   })
   global.__filename = urlToFileSystemPath(fileDistUrl)
   const { meta, url, urlDestructured, typeOfImportMetaDev, importMetaHot } =
@@ -111,6 +114,7 @@ const test = async (params) => {
 {
   await test({
     importMetaFormat: "global",
+    importMetaHot: true,
   })
   global.document = {
     currentScript: {

@@ -6,14 +6,17 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 import { createParseError } from "./babel_parse_error.js"
 
-export const babelPluginTransformImportMeta = (babel, { importMetaFormat }) => {
+export const babelPluginTransformImportMeta = (
+  babel,
+  { importMetaFormat, importMetaHot },
+) => {
   const visitImportMetaProperty = ({
     programPath,
     importMetaPropertyName,
     replace,
   }) => {
     if (importMetaFormat === "esmodule") {
-      if (importMetaPropertyName === "hot") {
+      if (importMetaHot && importMetaPropertyName === "hot") {
         const importMetaHotAst = injectImport({
           programPath,
           from: "@jsenv/core/helpers/import_meta/import_meta_hot_module.js",

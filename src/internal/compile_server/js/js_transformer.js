@@ -23,6 +23,7 @@ export const transformJs = async ({
   babelPluginMap,
   moduleOutFormat = "esmodule",
   importMetaFormat = moduleOutFormat,
+  importMetaHot = false,
   babelHelpersInjectionAsImport = moduleOutFormat === "esmodule",
   prependSystemJs,
   topLevelAwait,
@@ -100,7 +101,7 @@ export const transformJs = async ({
     ...getMinimalBabelPluginMap(),
     "transform-import-meta": [
       babelPluginTransformImportMeta,
-      { importMetaFormat },
+      { importMetaFormat, importMetaHot },
     ],
     ...babelPluginMap,
     ...(babelHelpersInjectionAsImport
