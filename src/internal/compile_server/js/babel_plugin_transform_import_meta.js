@@ -19,7 +19,7 @@ export const babelPluginTransformImportMeta = (
       if (importMetaHot && importMetaPropertyName === "hot") {
         const importMetaHotAst = injectImport({
           programPath,
-          from: "@jsenv/core/helpers/import_meta/import_meta_hot_module.js",
+          from: "@jsenv/core/src/internal/compile_server/hmr/import_meta_hot_module.js",
           nameHint: `createImportMetaHot`,
           // disable interop, useless as we work only with js modules
           importedType: "es6",
@@ -77,55 +77,37 @@ export const babelPluginTransformImportMeta = (
 
   return {
     name: "transform-import-meta",
-
     visitor: {
       Program(programPath) {
-        const importMetaHotPaths = []
-        traverseImportMetaProperties(programPath, ({ name, path }) => {
-          if (name === "hot") {
-            importMetaHotPaths.push(path)
-          }
-        })
-        if (importMetaHotPaths.length) {
-          visitImportMetaProperty({
-            programPath,
-            importMetaPropertyName: "hot",
-            replace: (ast) => {
-              importMetaHotPaths.forEach((path) => {
-                path.replaceWith(ast)
-              })
-            },
-          })
-        }
-        const importMetaProperties = {}
-        traverseImportMetaProperties(programPath, ({ name, path }) => {
-          if (name === "hot") {
-            return
-          }
-          const paths = importMetaProperties[name]
-          if (paths) {
-            paths.push(path)
-          } else {
-            importMetaProperties[name] = [path]
-          }
-        })
+        const importMetaProperties = collectImportMetaProperties(programPath)
         Object.keys(importMetaProperties).forEach((key) => {
           visitImportMetaProperty({
             programPath,
             importMetaPropertyName: key,
             replace: (ast) => {
-              importMetaProperties[key].forEach((path) => {
+              importMetaProperties[key].paths.forEach((path) => {
                 path.replaceWith(ast)
               })
             },
           })
         })
+        const importMetaHot = importMetaProperties.hot
+        if (importMetaHot) {
+          this.file.metadata.importMetaHot = {
+            acceptDependencies: importMetaHot.acceptDependencies,
+          }
+        }
       },
     },
   }
 }
 
-const traverseImportMetaProperties = (programPath, callback) => {
+const collectImportMetaProperties = (programPath) => {
+  const importMetaProperties = {}
+  const setAcceptDependencies = (acceptDependencies) => {
+    const importMetaProperty = importMetaProperties.hot
+    importMetaProperty.acceptDependencies = acceptDependencies
+  }
   programPath.traverse({
     MemberExpression(path) {
       const { node } = path
@@ -139,9 +121,65 @@ const traverseImportMetaProperties = (programPath, callback) => {
       }
       const { property } = node
       const { name } = property
-      callback({ name, path })
+
+      const importMetaProperty = importMetaProperties[name]
+      if (importMetaProperty) {
+        importMetaProperty.paths.push(path)
+      } else {
+        importMetaProperties[name] = {
+          paths: [path],
+        }
+      }
+    },
+    CallExpression(path) {
+      if (isImportMetaHotAcceptCall(path)) {
+        const callNode = path.node
+        const args = callNode.arguments
+        const firstArg = args[0]
+        if (firstArg.type === "StringLiteral") {
+          setAcceptDependencies([firstArg.value])
+          return
+        }
+        if (firstArg.type === "ArrayExpression") {
+          const dependencies = firstArg.elements.map((arrayNode) => {
+            if (arrayNode.type !== "StringLiteral") {
+              throw new Error(
+                `all array elements must be strings in "import.meta.hot.accept(array)"`,
+              )
+            }
+            return arrayNode.value
+          })
+          setAcceptDependencies(dependencies)
+          return
+        }
+        if (firstArg.type === "ObjectExpression") {
+          const dependencies = firstArg.properties.map((property) => {
+            if (property.key.type !== "StringLiteral") {
+              throw new Error(
+                `all object key must be strings in "import.meta.hot.accept(object)"`,
+              )
+            }
+            return property.key.value
+          })
+          setAcceptDependencies(dependencies)
+          return
+        }
+      }
     },
   })
+  return importMetaProperties
+}
+
+const isImportMetaHotAcceptCall = (path) => {
+  const { property, object } = path.node.callee
+  return (
+    property &&
+    property.name === "accept" &&
+    object &&
+    object.property &&
+    object.property.name === "hot" &&
+    object.object.type === "MetaProperty"
+  )
 }
 
 const generateExpressionAst = (expression, options) => {

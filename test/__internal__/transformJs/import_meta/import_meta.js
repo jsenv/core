@@ -12,4 +12,11 @@ export const importMetaHot = import.meta.hot
 
 if (import.meta.hot) {
   import.meta.hot.accept(() => {})
+  import.meta.hot.accept("file.js", () => {})
+  import.meta.hot.accept(["a.js", "b.js"], () => {})
+  import.meta.hot.accept({
+    "a.js": () => {},
+    "b.js": () => {},
+  })
+  import.meta.hot.accept(10, () => {})
 }
