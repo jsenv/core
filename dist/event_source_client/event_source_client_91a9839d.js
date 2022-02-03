@@ -280,9 +280,13 @@ var applyReloadMessageEffects = _async(function () {
 
 var eventsourceConnection = createEventSourceConnection(document.location.href, {
   reload: function reload(_ref) {
-    var reason = _ref.reason,
-        fileRelativeUrl = _ref.fileRelativeUrl,
-        instruction = _ref.instruction;
+    var data = _ref.data;
+
+    var _JSON$parse = JSON.parse(data),
+        reason = _JSON$parse.reason,
+        fileRelativeUrl = _JSON$parse.fileRelativeUrl,
+        instruction = _JSON$parse.instruction;
+
     reloadMessages.push({
       reason: reason,
       fileRelativeUrl: fileRelativeUrl,
@@ -338,4 +342,4 @@ window.__jsenv_event_source_client__ = {
 //   }
 // }
 
-//# sourceMappingURL=event_source_client_3f4edd04.js.map
+//# sourceMappingURL=event_source_client_91a9839d.js.map
