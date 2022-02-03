@@ -71,10 +71,12 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       return {
         type: "full_reload",
         reason: updatePropagationResult.reason,
-        declinedBy: urlToRelativeUrl(
-          updatePropagationResult.declinedBy,
-          projectDirectoryUrl,
-        ),
+        declinedBy: updatePropagationResult.declinedBy
+          ? urlToRelativeUrl(
+              updatePropagationResult.declinedBy,
+              projectDirectoryUrl,
+            )
+          : undefined,
       }
     }
     return {
@@ -104,19 +106,13 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       }
     }
     const { dependents } = ressource
-    if (!dependents.size) {
-      return {
-        declined: true,
-        reason: "no ressource depend on this one",
-      }
-    }
     const boundaries = []
     for (const dependentUrl of dependents) {
       const dependent = ressources[dependentUrl]
       if (dependent.importMetaHotDecline) {
         return {
           declined: true,
-          reason: "found import.meta.hot.decline() while propagating update",
+          reason: `found "import.meta.hot.decline()" while propagating update`,
           declinedBy: dependentUrl,
         }
       }
@@ -131,6 +127,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
         return {
           declined: true,
           reason: "circular dependency",
+          declinedBy: dependentUrl,
         }
       }
       const dependentPropagationResult = propagateUpdate(dependent, [
@@ -138,15 +135,15 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
         dependentUrl,
       ])
       if (dependentPropagationResult.declined) {
-        if (
-          dependentPropagationResult.reason ===
-          "no ressource depend on this one"
-        ) {
-          continue
-        }
         return dependentPropagationResult
       }
       boundaries.push(...dependentPropagationResult.boundaries)
+    }
+    if (boundaries.length === 0) {
+      return {
+        declined: true,
+        reason: `nothing calls "import.meta.hot.accept()" while propagating update`,
+      }
     }
     return {
       accepted: true,

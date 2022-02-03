@@ -12,7 +12,7 @@ const reloadMessages = []
 const reloadMessagesSignal = { onchange: () => {} }
 const applyReloadMessageEffects = async () => {
   const someEffectIsFullReload = reloadMessages.find(
-    (reloadMessage) => reloadMessage.type === "full_reload",
+    (reloadMessage) => reloadMessage.instruction.type === "full_reload",
   )
   if (someEffectIsFullReload) {
     reloadPage()
