@@ -91,14 +91,16 @@ export const babelPluginTransformImportMeta = (
             },
           })
         })
-        const importMetaHot = importMetaProperties.hot
-        if (importMetaHot) {
-          this.file.metadata.importMetaHot = {
-            decline: importMetaHot.decline,
-            acceptSelf: importMetaHot.acceptSelf,
-            acceptDependencies: importMetaHot.acceptDependencies,
-          }
-        }
+        const {
+          decline = false,
+          acceptSelf = false,
+          acceptDependencies = [],
+        } = importMetaProperties.hot || {}
+        Object.assign(this.file.metadata, {
+          importMetaHotDecline: decline,
+          importMetaHotAcceptSelf: acceptSelf,
+          importMetaHotAcceptDependencies: acceptDependencies,
+        })
       },
     },
   }

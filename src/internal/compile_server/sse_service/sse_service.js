@@ -50,10 +50,27 @@ const createSSEServiceWithLivereload = ({
   const projectFileModified = createCallbackList()
   const projectFileRemoved = createCallbackList()
   const projectFileAdded = createCallbackList()
-  const watchProjectFiles = ({ modified, removed, added }) => {
-    const removeModifiedCallback = projectFileModified.add(modified)
-    const removeRemovedCallback = projectFileRemoved.add(removed)
-    const removeAddedCallback = projectFileRemoved.add(added)
+  const watchProjectFiles = (callback) => {
+    const removeModifiedCallback = projectFileModified.add(
+      (fileRelativeUrl) => {
+        callback({
+          event: "file_modified",
+          fileRelativeUrl,
+        })
+      },
+    )
+    const removeRemovedCallback = projectFileRemoved.add((fileRelativeUrl) => {
+      callback({
+        event: "file_removed",
+        fileRelativeUrl,
+      })
+    })
+    const removeAddedCallback = projectFileRemoved.add((fileRelativeUrl) => {
+      callback({
+        event: "file_added",
+        fileRelativeUrl,
+      })
+    })
     return () => {
       removeModifiedCallback()
       removeRemovedCallback()
@@ -72,25 +89,13 @@ const createSSEServiceWithLivereload = ({
           [jsenvDirectoryRelativeUrl]: false,
         },
         updated: ({ relativeUrl }) => {
-          const url = resolveUrl(relativeUrl, projectDirectoryUrl)
-          const ressource = ressourceGraph.getRessourceByUrl(url)
-          if (ressource) {
-            projectFileModified.notify(relativeUrl)
-          }
+          projectFileModified.notify(relativeUrl)
         },
         removed: ({ relativeUrl }) => {
-          const url = resolveUrl(relativeUrl, projectDirectoryUrl)
-          const ressource = ressourceGraph.getRessourceByUrl(url)
-          if (ressource) {
-            projectFileRemoved.notify(relativeUrl)
-          }
+          projectFileRemoved.notify(relativeUrl)
         },
         added: ({ relativeUrl }) => {
-          const url = resolveUrl(relativeUrl, projectDirectoryUrl)
-          const ressource = ressourceGraph.getRessourceByUrl(url)
-          if (ressource) {
-            projectFileAdded.notify(relativeUrl)
-          }
+          projectFileAdded.notify(relativeUrl)
         },
         keepProcessAlive: false,
         recursive: true,
@@ -117,16 +122,18 @@ const createSSEServiceWithLivereload = ({
       historyLength: 100,
       welcomeEventEnabled: true,
     })
-    const stopWatching = watchProjectFiles({
-      modified: (relativeUrl) => {
-        sseRoom.sendEvent({ type: "file-modified", data: relativeUrl })
-      },
-      removed: (relativeUrl) => {
-        sseRoom.sendEvent({ type: "file-removed", data: relativeUrl })
-      },
-      added: (relativeUrl) => {
-        sseRoom.sendEvent({ type: "file-added", data: relativeUrl })
-      },
+    const stopWatching = watchProjectFiles(({ event, fileRelativeUrl }) => {
+      const url = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
+      const ressource = ressourceGraph.getRessourceByUrl(url)
+      if (!ressource) {
+        return
+      }
+      const reloadInstructions = ressourceGraph.getReloadInstructions(url)
+      sseRoom.sendEvent("reload", {
+        reason: event,
+        fileRelativeUrl,
+        instructions: reloadInstructions,
+      })
     })
     const removeSSECleanupCallback = serverStopCallbackList.add(() => {
       removeSSECleanupCallback()

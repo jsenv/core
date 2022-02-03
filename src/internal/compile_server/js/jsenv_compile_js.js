@@ -43,17 +43,20 @@ export const compileJavascript = async ({
   const metadata = transformResult.metadata
   ressourceGraph.updateRessourceDependencies({
     url,
+    type: "js",
     dependencyUrls: metadata.dependencies.map((dependencyUrlSpecifier) => {
       // TODO: handle importmap
       return new URL(dependencyUrlSpecifier, url).href
     }),
-    hotAcceptSelf: metadata.importMetaHot.acceptSelf,
-    hotAcceptDependencies: metadata.importMetaHot.acceptDependencies.map(
-      (acceptDependencyUrlSpecifier) => {
-        // TODO: handle importmap
-        return new URL(acceptDependencyUrlSpecifier, url).href
-      },
-    ),
+    importMetaHotDecline: metadata.importMetaHotDecline,
+    importMetaHotAcceptSelf: metadata.importMetaHotAcceptSelf,
+    importMetaHotAcceptDependencies:
+      metadata.importMetaHotAcceptDependencies.map(
+        (acceptDependencyUrlSpecifier) => {
+          // TODO: handle importmap
+          return new URL(acceptDependencyUrlSpecifier, url).href
+        },
+      ),
   })
   return asCompilationResult(
     {

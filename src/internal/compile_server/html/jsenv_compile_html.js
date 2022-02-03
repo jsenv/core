@@ -192,6 +192,7 @@ export const compileHtml = async ({
 
   ressourceGraph.updateRessourceDependencies({
     url,
+    type: "html",
     dependencyUrls: assets,
     hotAcceptSelf: false,
   })

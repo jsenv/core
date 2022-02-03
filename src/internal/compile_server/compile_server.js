@@ -127,7 +127,9 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
-  const ressourceGraph = createRessourceGraph()
+  const ressourceGraph = createRessourceGraph({
+    projectDirectoryUrl,
+  })
 
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
