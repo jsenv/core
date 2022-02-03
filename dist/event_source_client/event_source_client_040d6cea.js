@@ -263,7 +263,7 @@ var reloadMessagesSignal = {
 
 var applyReloadMessageEffects = _async(function () {
   var someEffectIsFullReload = reloadMessages.find(function (reloadMessage) {
-    return reloadMessage.type === "full_reload";
+    return reloadMessage.instruction.type === "full_reload";
   });
 
   if (someEffectIsFullReload) {
@@ -342,4 +342,4 @@ window.__jsenv_event_source_client__ = {
 //   }
 // }
 
-//# sourceMappingURL=event_source_client_91a9839d.js.map
+//# sourceMappingURL=event_source_client_040d6cea.js.map
