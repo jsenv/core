@@ -81,6 +81,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     }
     return {
       type: "hot_reload",
+      timestamp: Date.now(),
       updates: updatePropagationResult.boundaries.map(
         ({ boundary, acceptedBy }) => {
           return {

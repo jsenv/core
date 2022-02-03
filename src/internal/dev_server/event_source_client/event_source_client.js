@@ -8,7 +8,7 @@ import {
 import { reloadPage } from "./reload.js"
 
 const reloadMessages = []
-// const urlHotMetas = {}
+const urlHotMetas = {}
 const reloadMessagesSignal = { onchange: () => {} }
 const applyReloadMessageEffects = async () => {
   const someEffectIsFullReload = reloadMessages.find(
@@ -20,9 +20,34 @@ const applyReloadMessageEffects = async () => {
   }
   const copy = reloadMessages.slice()
   reloadMessages.length = 0
-  copy.forEach(() => {
-    // todo
+  await Promise.all(
+    copy.map(async (reloadMessage) => {
+      if (reloadMessage.type === "hot_reload") {
+        await applyHotReload(reloadMessage)
+      }
+    }),
+  )
+}
+
+const applyHotReload = async ({ timestamp, updates }) => {
+  await Promise.all(
+    updates.map(async ({ type, url }) => {
+      if (type === "js") {
+        const namespace = await import(injectQuery(url, { hmr: timestamp }))
+        return namespace
+      }
+      throw new Error(`unknown update type: "${type}"`)
+    }),
+  )
+}
+
+const injectQuery = (url, query) => {
+  const urlObject = new URL(url)
+  const { searchParams } = urlObject
+  Object.keys(query).forEach((key) => {
+    searchParams.set(key, query[key])
   })
+  return String(urlObject)
 }
 
 const eventsourceConnection = createEventSourceConnection(
@@ -56,6 +81,7 @@ window.__jsenv_event_source_client__ = {
   disconnect,
   isLivereloadEnabled,
   setLivereloadPreference,
+  urlHotMetas,
   reloadMessages,
   reloadMessagesSignal,
   applyReloadMessageEffects,

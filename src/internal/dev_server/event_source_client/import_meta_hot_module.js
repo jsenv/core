@@ -7,54 +7,53 @@
 
 export default (url) => {
   const data = {}
-  const { reloadMetas } = window.__jsenv_event_source_client__
+  const { urlHotMetas } = window.__jsenv_event_source_client__
 
   return {
     data,
     accept: (firstArg, secondArg) => {
-      // TODO: the dependencies must be resolved againt url
       if (!firstArg) {
-        reloadMetas[url] = {
+        urlHotMetas[url] = {
           dependencies: [url],
-          reloadCallback: () => {},
+          acceptCallback: () => {},
         }
         return
       }
       if (typeof firstArg === "function") {
-        reloadMetas[url] = {
+        urlHotMetas[url] = {
           dependencies: [url],
-          reloadCallback: firstArg,
+          acceptCallback: firstArg,
         }
         return
       }
       if (typeof firstArg === "string") {
-        reloadMetas[url] = {
+        urlHotMetas[url] = {
           dependencies: [firstArg],
-          reloadCallback: secondArg,
+          acceptCallback: secondArg,
         }
         return
       }
       if (Array.isArray(firstArg)) {
-        reloadMetas[url] = {
+        urlHotMetas[url] = {
           dependencies: firstArg,
-          reloadCallback: secondArg,
+          acceptCallback: secondArg,
         }
         return
       }
       throw new Error(`invalid call to hot.accept()`)
     },
     dispose: (callback) => {
-      reloadMetas[url] = {
+      urlHotMetas[url] = {
         disposeCallback: () => {
           return callback(data)
         },
       }
     },
     decline: () => {
-      reloadMetas[url] = "decline"
+      urlHotMetas[url] = "decline"
     },
     invalidate: () => {
-      reloadMetas[url] = "invalid"
+      urlHotMetas[url] = "invalid"
     },
   }
 }
