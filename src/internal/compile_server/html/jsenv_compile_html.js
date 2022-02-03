@@ -41,12 +41,13 @@ import {
 export const compileHtml = async ({
   // cancellationToken,
   logger,
-  url,
-  compiledUrl,
   projectDirectoryUrl,
   jsenvRemoteDirectory,
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
+  url,
+  compiledUrl,
+  ressourceGraph,
 
   compileProfile,
   compileId,
@@ -141,10 +142,10 @@ export const compileHtml = async ({
   }
   await visitImportmapScripts({
     logger,
-    url,
-    compiledUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
+    url,
+    compiledUrl,
 
     compileProfile,
 
@@ -188,6 +189,13 @@ export const compileHtml = async ({
   })
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
+
+  ressourceGraph.updateRessourceDependencies({
+    url,
+    dependencyUrls: assets,
+    hotAcceptSelf: false,
+  })
+
   return {
     contentType: "text/html",
     compiledSource: htmlAfterTransformation,
@@ -247,10 +255,10 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
 
 const visitImportmapScripts = async ({
   logger,
-  url,
-  compiledUrl,
   projectDirectoryUrl,
   compileDirectoryUrl,
+  url,
+  compiledUrl,
 
   compileProfile,
 
