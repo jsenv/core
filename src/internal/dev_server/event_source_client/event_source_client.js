@@ -28,7 +28,8 @@ const applyReloadMessageEffects = async () => {
 const eventsourceConnection = createEventSourceConnection(
   document.location.href,
   {
-    reload: ({ reason, fileRelativeUrl, instruction }) => {
+    reload: ({ data }) => {
+      const { reason, fileRelativeUrl, instruction } = JSON.parse(data)
       reloadMessages.push({
         reason,
         fileRelativeUrl,

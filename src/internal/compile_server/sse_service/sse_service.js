@@ -129,10 +129,13 @@ const createSSEServiceWithLivereload = ({
         return
       }
       const reloadInstruction = ressourceGraph.getReloadInstruction(url)
-      sseRoom.sendEvent("reload", {
-        reason: event,
-        fileRelativeUrl,
-        instruction: reloadInstruction,
+      sseRoom.sendEvent({
+        type: "reload",
+        data: JSON.stringify({
+          reason: event,
+          fileRelativeUrl,
+          instruction: reloadInstruction,
+        }),
       })
     })
     const removeSSECleanupCallback = serverStopCallbackList.add(() => {

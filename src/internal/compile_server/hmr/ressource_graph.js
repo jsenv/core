@@ -20,7 +20,8 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     importMetaHotAcceptDependencies,
   }) => {
     const existingRessource = getRessourceByUrl(url)
-    const ressource = existingRessource || createRessource(url)
+    const ressource =
+      existingRessource || (ressources[url] = createRessource(url))
     const notUsedAnymore = []
     if (type !== undefined) {
       ressource.type = type
@@ -102,47 +103,50 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
         ],
       }
     }
-    const { importers } = ressource
-    if (!importers.size) {
+    const { dependents } = ressource
+    if (!dependents.size) {
       return {
         declined: true,
-        reason: "no importer",
+        reason: "no ressource depend on this one",
       }
     }
     const boundaries = []
-    for (const importerUrl of ressource.importers) {
-      const importer = ressources[importerUrl]
-      if (importer.importMetaHotDecline) {
+    for (const dependentUrl of dependents) {
+      const dependent = ressources[dependentUrl]
+      if (dependent.importMetaHotDecline) {
         return {
           declined: true,
           reason: "found import.meta.hot.decline() while propagating update",
-          declinedBy: importerUrl,
+          declinedBy: dependentUrl,
         }
       }
-      if (importer.importMetaHotAcceptDependencies.includes(ressource.url)) {
+      if (dependent.importMetaHotAcceptDependencies.includes(ressource.url)) {
         boundaries.push({
-          boundary: importerUrl,
+          boundary: dependentUrl,
           acceptedBy: ressource.url,
         })
         continue
       }
-      if (trace.includes(importerUrl)) {
+      if (trace.includes(dependentUrl)) {
         return {
           declined: true,
           reason: "circular dependency",
         }
       }
-      const importerPropagationResult = propagateUpdate(importer, [
+      const dependentPropagationResult = propagateUpdate(dependent, [
         ...trace,
-        importerUrl,
+        dependentUrl,
       ])
-      if (
-        importerPropagationResult.declined &&
-        importerPropagationResult.reason !== "no importer"
-      ) {
-        return importerPropagationResult
+      if (dependentPropagationResult.declined) {
+        if (
+          dependentPropagationResult.reason ===
+          "no ressource depend on this one"
+        ) {
+          continue
+        }
+        return dependentPropagationResult
       }
-      boundaries.push(...importerPropagationResult.boundaries)
+      boundaries.push(...dependentPropagationResult.boundaries)
     }
     return {
       accepted: true,
