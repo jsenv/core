@@ -46,6 +46,8 @@ export const createCompiledFileService = ({
   jsenvToolbarInjection,
 
   projectFileRequestedCallback,
+  ressourceGraph,
+
   compileCacheStrategy,
   sourcemapMethod,
   sourcemapExcludeSources,
@@ -158,6 +160,7 @@ export const createCompiledFileService = ({
           jsenvDirectoryRelativeUrl,
           url: originalFileUrl,
           compiledUrl: compiledFileUrl,
+          ressourceGraph,
           request,
 
           compileProfile,

@@ -94,6 +94,7 @@ export const babelPluginTransformImportMeta = (
         const importMetaHot = importMetaProperties.hot
         if (importMetaHot) {
           this.file.metadata.importMetaHot = {
+            acceptSelf: importMetaHot.acceptSelf,
             acceptDependencies: importMetaHot.acceptDependencies,
           }
         }
@@ -104,10 +105,6 @@ export const babelPluginTransformImportMeta = (
 
 const collectImportMetaProperties = (programPath) => {
   const importMetaProperties = {}
-  const setAcceptDependencies = (acceptDependencies) => {
-    const importMetaProperty = importMetaProperties.hot
-    importMetaProperty.acceptDependencies = acceptDependencies
-  }
   programPath.traverse({
     MemberExpression(path) {
       const { node } = path
@@ -135,9 +132,13 @@ const collectImportMetaProperties = (programPath) => {
       if (isImportMetaHotAcceptCall(path)) {
         const callNode = path.node
         const args = callNode.arguments
+        if (args.length === 0) {
+          importMetaProperties.hot.acceptSelf = true
+          return
+        }
         const firstArg = args[0]
         if (firstArg.type === "StringLiteral") {
-          setAcceptDependencies([firstArg.value])
+          importMetaProperties.hot.acceptDependencies = [firstArg.value]
           return
         }
         if (firstArg.type === "ArrayExpression") {
@@ -149,7 +150,7 @@ const collectImportMetaProperties = (programPath) => {
             }
             return arrayNode.value
           })
-          setAcceptDependencies(dependencies)
+          importMetaProperties.hot.acceptDependencies = dependencies
           return
         }
         if (firstArg.type === "ObjectExpression") {
@@ -161,7 +162,7 @@ const collectImportMetaProperties = (programPath) => {
             }
             return property.key.value
           })
-          setAcceptDependencies(dependencies)
+          importMetaProperties.hot.acceptDependencies = dependencies
           return
         }
       }

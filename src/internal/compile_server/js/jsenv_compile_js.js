@@ -9,6 +9,7 @@ export const compileJavascript = async ({
   jsenvRemoteDirectory,
   url,
   compiledUrl,
+  ressourceGraph,
 
   compileProfile,
   babelPluginMap,
@@ -39,10 +40,25 @@ export const compileJavascript = async ({
     code,
     map,
   })
+  const metadata = transformResult.metadata
+  ressourceGraph.updateRessourceDependencies({
+    url,
+    dependencyUrls: metadata.dependencies.map((dependencyUrlSpecifier) => {
+      // TODO: handle importmap
+      return new URL(dependencyUrlSpecifier, url).href
+    }),
+    hotAcceptSelf: metadata.importMetaHot.acceptSelf,
+    hotAcceptDependencies: metadata.importMetaHot.acceptDependencies.map(
+      (acceptDependencyUrlSpecifier) => {
+        // TODO: handle importmap
+        return new URL(acceptDependencyUrlSpecifier, url).href
+      },
+    ),
+  })
   return asCompilationResult(
     {
       contentType: "application/javascript",
-      metadata: transformResult.metadata,
+      metadata,
       code: transformResult.code,
       map: transformResult.map,
     },

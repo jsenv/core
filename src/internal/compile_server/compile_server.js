@@ -36,6 +36,7 @@ import { babelPluginNewStylesheetAsJsenvImport } from "./js/babel_plugin_new_sty
 import { babelPluginImportAssertions } from "./js/babel_plugin_import_assertions.js"
 import { createCompiledFileService } from "./compiled_file_service.js"
 import { createTransformHtmlSourceFileService } from "./html/html_source_file_service.js"
+import { createRessourceGraph } from "./hmr/ressource_graph.js"
 
 let compileServerId = 0
 
@@ -93,6 +94,8 @@ export const startCompileServer = async ({
   customServices = {},
   plugins,
   livereloadSSE = false,
+  // hmr = false,
+
   transformHtmlSourceFiles = true,
   jsenvScriptInjection = true,
   jsenvEventSourceClientInjection = false,
@@ -125,6 +128,8 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
+  const ressourceGraph = createRessourceGraph()
+
   const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
     projectDirectoryUrl,
     babelConfigFileUrl,
@@ -336,7 +341,9 @@ export const startCompileServer = async ({
       jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 
+      ressourceGraph,
       projectFileRequestedCallback,
+
       sourcemapMethod,
       sourcemapExcludeSources,
       compileCacheStrategy: compileServerCanReadFromFilesystem
