@@ -18,7 +18,7 @@ export const initToolbarEventSource = ({ livereloading }) => {
   parentEventSourceClient.status.onchange = () => {
     updateEventSourceIndicator()
   }
-  parentEventSourceClient.serverUpdatesSignal.onchange = () => {
+  parentEventSourceClient.reloadMessagesSignal.onchange = () => {
     updateEventSourceIndicator()
   }
   const livereloadCheckbox = document.querySelector("#toggle-livereload")
@@ -32,14 +32,14 @@ export const initToolbarEventSource = ({ livereloading }) => {
 
 const updateEventSourceIndicator = () => {
   const eventSourceIndicator = document.querySelector("#eventsource-indicator")
-  const serverUpdates = parentEventSourceClient.serverUpdates
-  const serverUpdateCount = serverUpdates.length
+  const reloadMessages = parentEventSourceClient.reloadMessages
+  const reloadMessageCount = reloadMessages.length
 
   const eventSourceConnectionState = parentEventSourceClient.status.value
   enableVariant(eventSourceIndicator, {
     eventsource: eventSourceConnectionState,
     livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
-    changes: serverUpdateCount > 0 ? "yes" : "no",
+    changes: reloadMessageCount > 0 ? "yes" : "no",
   })
 
   const variantNode = document.querySelector(
@@ -55,16 +55,16 @@ const updateEventSourceIndicator = () => {
     }
   } else if (eventSourceConnectionState === "connected") {
     removeAutoShowTooltip(eventSourceIndicator)
-    if (serverUpdateCount > 0) {
+    if (reloadMessageCount > 0) {
       const changeLink = variantNode.querySelector(".eventsource-changes-link")
-      changeLink.innerHTML = serverUpdateCount
+      changeLink.innerHTML = reloadMessageCount
       changeLink.onclick = () => {
-        console.log(serverUpdates)
+        console.log(reloadMessages)
         // eslint-disable-next-line no-alert
-        window.parent.alert(JSON.stringify(serverUpdates, null, "  "))
+        window.parent.alert(JSON.stringify(reloadMessages, null, "  "))
       }
       variantNode.querySelector(".eventsource-reload-link").onclick = () => {
-        parentEventSourceClient.applyServerChanges()
+        parentEventSourceClient.applyReloadMessageEffects()
       }
     }
   } else if (eventSourceConnectionState === "disconnected") {

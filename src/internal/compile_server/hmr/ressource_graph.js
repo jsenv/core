@@ -60,12 +60,12 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return notUsedAnymore
   }
 
-  const getReloadInstructions = (urlModified) => {
+  const getReloadInstruction = (urlModified) => {
     const ressource = getRessourceByUrl(urlModified)
     if (!ressource) {
       return null
     }
-    const updatePropagationResult = propagateUpdate(urlModified)
+    const updatePropagationResult = propagateUpdate(ressource)
     if (updatePropagationResult.declined) {
       return {
         type: "full_reload",
@@ -90,15 +90,14 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     }
   }
 
-  const propagateUpdate = (url, trace = []) => {
-    const ressource = ressources[url]
+  const propagateUpdate = (ressource, trace = []) => {
     if (ressource.importMetaHotAcceptSelf) {
       return {
         accepted: true,
         boundaries: [
           {
-            boundary: url,
-            acceptedBy: url,
+            boundary: ressource.url,
+            acceptedBy: ressource.url,
           },
         ],
       }
@@ -106,8 +105,8 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     const { importers } = ressource
     if (!importers.size) {
       return {
-        accepted: true,
-        boundaries: [],
+        declined: true,
+        reason: "no importer",
       }
     }
     const boundaries = []
@@ -120,10 +119,10 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
           declinedBy: importerUrl,
         }
       }
-      if (importer.importMetaHotAcceptDependencies.includes(url)) {
+      if (importer.importMetaHotAcceptDependencies.includes(ressource.url)) {
         boundaries.push({
           boundary: importerUrl,
-          acceptedBy: url,
+          acceptedBy: ressource.url,
         })
         continue
       }
@@ -133,11 +132,14 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
           reason: "circular dependency",
         }
       }
-      const importerPropagationResult = propagateUpdate(importerUrl, [
+      const importerPropagationResult = propagateUpdate(importer, [
         ...trace,
         importerUrl,
       ])
-      if (importerPropagationResult.declined) {
+      if (
+        importerPropagationResult.declined &&
+        importerPropagationResult.reason !== "no importer"
+      ) {
         return importerPropagationResult
       }
       boundaries.push(...importerPropagationResult.boundaries)
@@ -151,7 +153,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   return {
     getRessourceByUrl,
     updateRessourceDependencies,
-    getReloadInstructions,
+    getReloadInstruction,
   }
 }
 
