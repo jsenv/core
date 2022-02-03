@@ -2,79 +2,78 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 
-import { babelPluginImportVisitor } from "./babel_plugin_import_visitor.js"
+import { traverseProgramImports } from "./traverse_program_imports.js"
 
 export const babelPluginImportAssertions = (
   babel,
   { transformJson = true, transformCss = true },
 ) => {
   return {
-    ...babelPluginImportVisitor(
-      babel,
-      // During build we throw on import call expression where "specifier" or "type" is dynamic
-      // Here there is no strong need to throw because keeping the source code intact
-      // will throw an error when browser will execute the code
-      ({ importPath, specifierPath }) => {
-        const importNode = importPath.node
-        let assertionsDescriptor
-        if (importNode.type === "CallExpression") {
-          const args = importNode.arguments
-          const secondArg = args[1]
-          if (!secondArg) {
-            return
-          }
-
-          const { properties } = secondArg
-          const assertProperty = properties.find((property) => {
-            return property.key.name === "assert"
-          })
-          if (!assertProperty) {
-            return
-          }
-
-          const assertProperties = assertProperty.value.properties
-          const typePropertyNode = assertProperties.find((property) => {
-            return property.key.name === "type"
-          })
-          if (!typePropertyNode) {
-            return
-          }
-
-          const typePropertyValue = typePropertyNode.value
-          if (typePropertyValue.type !== "StringLiteral") {
-            return
-          }
-
-          assertionsDescriptor = {
-            type: typePropertyValue.value,
-          }
-        } else {
-          assertionsDescriptor = getImportAssertionsDescriptor(
-            importPath.node.assertions,
-          )
-        }
-
-        const { type } = assertionsDescriptor
-        if (type === "json" && transformJson) {
-          forceImportTypeOnSpecifier({
-            specifierPath,
-            babel,
-            importType: "json",
-          })
-          return
-        }
-
-        if (type === "css" && transformCss) {
-          forceImportTypeOnSpecifier({
-            specifierPath,
-            babel,
-            importType: "css",
-          })
-          return
-        }
-      },
-    ),
     name: "transform-import-assertions",
+    // During build we throw on import call expression where "specifier" or "type" is dynamic
+    // Here there is no strong need to throw because keeping the source code intact
+    // will throw an error when browser will execute the code
+    visitor: {
+      Program: (path) => {
+        traverseProgramImports(path, ({ importPath, specifierPath }) => {
+          const importNode = importPath.node
+          let assertionsDescriptor
+          if (importNode.type === "CallExpression") {
+            const args = importNode.arguments
+            const secondArg = args[1]
+            if (!secondArg) {
+              return
+            }
+
+            const { properties } = secondArg
+            const assertProperty = properties.find((property) => {
+              return property.key.name === "assert"
+            })
+            if (!assertProperty) {
+              return
+            }
+
+            const assertProperties = assertProperty.value.properties
+            const typePropertyNode = assertProperties.find((property) => {
+              return property.key.name === "type"
+            })
+            if (!typePropertyNode) {
+              return
+            }
+
+            const typePropertyValue = typePropertyNode.value
+            if (typePropertyValue.type !== "StringLiteral") {
+              return
+            }
+
+            assertionsDescriptor = {
+              type: typePropertyValue.value,
+            }
+          } else {
+            assertionsDescriptor = getImportAssertionsDescriptor(
+              importPath.node.assertions,
+            )
+          }
+          const { type } = assertionsDescriptor
+          if (type === "json" && transformJson) {
+            forceImportTypeOnSpecifier({
+              specifierPath,
+              babel,
+              importType: "json",
+            })
+            return
+          }
+          if (type === "css" && transformCss) {
+            forceImportTypeOnSpecifier({
+              specifierPath,
+              babel,
+              importType: "css",
+            })
+            return
+          }
+        })
+      },
+    },
   }
 }
 

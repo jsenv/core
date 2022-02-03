@@ -3,22 +3,26 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
-import { babelPluginImportVisitor } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_import_visitor.js"
+import { traverseProgramImports } from "@jsenv/core/src/internal/compile_server/js/traverse_program_imports.js"
 
 const babelPluginTransformImport = (babel, { transformImportSpecifier }) => {
   return {
-    ...babelPluginImportVisitor(babel, ({ specifierPath }) => {
-      const specifier = specifierPath.node.value
-      const specifierTransformed = transformImportSpecifier({
-        specifier,
-      })
-      if (specifierTransformed !== specifier) {
-        specifierPath.replaceWith(
-          babel.types.stringLiteral(specifierTransformed),
-        )
-      }
-    }),
     name: "transform-import",
+    visitor: {
+      Program: (path) => {
+        traverseProgramImports(path, ({ specifierPath }) => {
+          const specifier = specifierPath.node.value
+          const specifierTransformed = transformImportSpecifier({
+            specifier,
+          })
+          if (specifierTransformed !== specifier) {
+            specifierPath.replaceWith(
+              babel.types.stringLiteral(specifierTransformed),
+            )
+          }
+        })
+      },
+    },
   }
 }
 

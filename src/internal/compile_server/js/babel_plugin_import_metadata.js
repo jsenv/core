@@ -1,18 +1,22 @@
-import { babelPluginImportVisitor } from "./babel_plugin_import_visitor.js"
+import { traverseProgramImports } from "./traverse_program_imports.js"
 
-export const babelPluginImportMetadata = (babel) => {
+export const babelPluginImportMetadata = () => {
   return {
-    ...babelPluginImportVisitor(babel, ({ state, specifierPath }) => {
-      const specifierNode = specifierPath.node
-      if (specifierNode.type === "StringLiteral") {
-        const specifier = specifierNode.value
-        const { metadata } = state.file
-        metadata.dependencies = [
-          ...(metadata.dependencies ? metadata.dependencies : []),
-          specifier,
-        ]
-      }
-    }),
     name: "import-metadata",
+    visitor: {
+      Program(path) {
+        traverseProgramImports(path, ({ state, specifierPath }) => {
+          const specifierNode = specifierPath.node
+          if (specifierNode.type === "StringLiteral") {
+            const specifier = specifierNode.value
+            const { metadata } = state.file
+            metadata.dependencies = [
+              ...(metadata.dependencies ? metadata.dependencies : []),
+              specifier,
+            ]
+          }
+        })
+      },
+    },
   }
 }

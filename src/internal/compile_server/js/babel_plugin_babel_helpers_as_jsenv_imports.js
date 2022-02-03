@@ -5,7 +5,7 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import {
   babelHelperNameFromUrl,
   babelHelperNameToImportSpecifier,
-} from "./babelHelper.js"
+} from "./babel_helper.js"
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
