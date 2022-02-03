@@ -84,13 +84,12 @@ export const startCompileServer = async ({
   prependSystemJs,
 
   // remaining options
-  livereloadWatchConfig = {
+  watchConfig = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
     "./dist/": false,
     "./**/node_modules/": false,
   },
-  livereloadLogLevel = "info",
   customServices = {},
   plugins,
   livereloadSSE = false,
@@ -224,22 +223,18 @@ export const startCompileServer = async ({
   })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-  const projectFileRequestedSignal = { onrequested: () => {} }
   customServices = {
     ...customServices,
     "jsenv:sse": createSSEService({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       livereloadSSE,
-      projectFileRequestedSignal,
-
+      watchConfig,
+      ressourceGraph,
       serverStopCallbackList,
-      livereloadLogLevel,
-      livereloadWatchConfig,
     }),
   }
-  const projectFileRequestedCallback = (...args) =>
-    projectFileRequestedSignal.onrequested(...args)
+  const projectFileRequestedCallback = () => {}
 
   const createCompileIdFromRuntimeReport = async (runtimeReport) => {
     const compileProfile = createCompileProfile({

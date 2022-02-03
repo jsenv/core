@@ -1,5 +1,13 @@
 export const createRessourceGraph = () => {
   const ressources = {}
+  const getRessourceByUrl = (url) => ressources[url]
+  const reuseOrCreateRessource = (url) => {
+    const existingRessource = getRessourceByUrl(url)
+    if (existingRessource) return existingRessource
+    const ressource = createRessource(url)
+    ressources[url] = ressource
+    return ressource
+  }
 
   const updateRessourceDependencies = ({
     url,
@@ -7,7 +15,7 @@ export const createRessourceGraph = () => {
     hotAcceptSelf,
     hotAcceptDependencies,
   }) => {
-    const existingRessource = ressources[url]
+    const existingRessource = getRessourceByUrl(url)
     const ressource = existingRessource || createRessource(url)
     const notUsedAnymore = []
     if (dependencyUrls !== undefined) {
@@ -41,15 +49,8 @@ export const createRessourceGraph = () => {
     return notUsedAnymore
   }
 
-  const reuseOrCreateRessource = (url) => {
-    const existingRessource = ressources[url]
-    if (existingRessource) return existingRessource
-    const ressource = createRessource(url)
-    ressources[url] = ressource
-    return ressource
-  }
-
   return {
+    getRessourceByUrl,
     updateRessourceDependencies,
   }
 }
