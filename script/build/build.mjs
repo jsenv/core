@@ -7,6 +7,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 // because jsenv can enable long term caching of jsenv dist files
 // but while working on jsenv it's simpler to have this disabled
 const versioning = false
+const babelConfigFile = false
 
 let buildManifestCode = ""
 let buildManifest
@@ -20,6 +21,7 @@ const buildInternalFile = async ({
     buildDirectoryRelativeUrl,
     entryPoints,
     assetManifestFile: true,
+    babelConfigFile,
     ...params,
   })
   buildManifest = build.buildManifest

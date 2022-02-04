@@ -53,6 +53,7 @@ export const buildProject = async ({
   preservedDynamicImports = {},
 
   babelPluginMap = {},
+  babelConfigFile,
   customCompilers,
   runtimeSupport = format === "global" ||
   format === "systemjs" ||
@@ -182,6 +183,7 @@ export const buildProject = async ({
     port,
 
     babelPluginMap,
+    babelConfigFile,
     runtimeSupport,
     customCompilers,
     preservedUrls: {

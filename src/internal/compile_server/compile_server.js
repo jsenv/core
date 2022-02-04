@@ -70,6 +70,7 @@ export const startCompileServer = async ({
   preservedUrls,
   importMapInWebWorkers = false,
   babelPluginMap,
+  babelConfigFile = true,
   babelConfigFileUrl,
   prependSystemJs,
   processEnvNodeEnv = process.env.NODE_ENV,
@@ -155,6 +156,7 @@ export const startCompileServer = async ({
     jsenvRemoteDirectory,
 
     babelPluginMap,
+    babelConfigFile,
     babelConfigFileUrl,
     transformGenerator,
     processEnvNodeEnv,

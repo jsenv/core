@@ -17,6 +17,7 @@ export const loadBabelPluginMap = async ({
   jsenvRemoteDirectory,
 
   babelPluginMap,
+  babelConfigFile,
   babelConfigFileUrl,
   processEnvNodeEnv,
   replaceProcessEnvNodeEnv,
@@ -25,10 +26,12 @@ export const loadBabelPluginMap = async ({
   replaceGlobalDirname,
   replaceMap,
 }) => {
-  const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
-    projectDirectoryUrl,
-    babelConfigFileUrl,
-  })
+  const babelPluginMapFromFile = babelConfigFile
+    ? await loadBabelPluginMapFromFile({
+        projectDirectoryUrl,
+        babelConfigFileUrl,
+      })
+    : {}
   babelPluginMap = {
     ...babelPluginMapFromFile,
     ...babelPluginMap,
