@@ -747,7 +747,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar_7bbf6599.html";
+var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/undefined";
 
 function _call(body, then, direct) {
   if (direct) {
@@ -973,4 +973,4 @@ if (document.readyState === "complete") {
 }
 })();
 
-//# sourceMappingURL=toolbar_injector_7f5e7212.js.map
+//# sourceMappingURL=toolbar_injector.js.map

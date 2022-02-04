@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "browser_client_d84b0fbd.js",
+  "file": "browser_client.js",
   "sources": [
     "../../helpers/babel/typeof/typeof.js",
     "../../helpers/babel/defineProperty/defineProperty.js",

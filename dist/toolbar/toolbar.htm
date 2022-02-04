@@ -4609,7 +4609,13 @@ html[data-toolbar-visible] #toolbar-trigger {
               window.parent.alert(JSON.stringify(reloadMessages, null, "  "));
             };
 
-            variantNode.querySelector(".eventsource-reload-link").onclick = function () {
+            var applyLink = variantNode.querySelector(".eventsource-reload-link");
+            applyLink.innerHTML = "apply changes";
+
+            applyLink.onclick = function () {
+              applyLink.onclick = function () {};
+
+              applyLink.innerHTML = "applying...";
               parentEventSourceClient.applyReloadMessageEffects();
             };
           }
@@ -4975,7 +4981,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar_main_b527d538.js.map</script>
+//# sourceMappingURL=toolbar_main_807d7e74.js.map</script>
   
 
 </body></html>

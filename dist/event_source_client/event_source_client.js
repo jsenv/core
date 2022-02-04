@@ -227,21 +227,17 @@ var reloadPage = function reloadPage() {
   window.parent.location.reload(true);
 };
 
-/* eslint-env browser */
+function _empty() {}
 
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
+var reloadMessages = [];
+
+function _awaitIgnored(value, direct) {
+  if (!direct) {
+    return value && value.then ? value.then(_empty) : Promise.resolve();
   }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
 }
 
-var reloadMessages = []; // const urlHotMetas = {}
+var urlHotMetas = {};
 
 function _async(f) {
   return function () {
@@ -261,8 +257,20 @@ var reloadMessagesSignal = {
   onchange: function onchange() {}
 };
 
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
 var applyReloadMessageEffects = _async(function () {
-  var someEffectIsFullReload = reloadMessages.find(function (reloadMessage) {
+  var someEffectIsFullReload = reloadMessages.some(function (reloadMessage) {
     return reloadMessage.instruction.type === "full_reload";
   });
 
@@ -271,16 +279,73 @@ var applyReloadMessageEffects = _async(function () {
     return;
   }
 
-  var copy = reloadMessages.slice();
-  reloadMessages.length = 0;
-  copy.forEach(function () {// todo
-  });
-  return _await();
+  return _awaitIgnored(Promise.all(reloadMessages.map(_async(function (reloadMessage, index) {
+    return _invokeIgnored(function () {
+      if (reloadMessage.instruction.type === "hot_reload") {
+        return _await(applyHotReload(reloadMessage.instruction), function () {
+          reloadMessages.splice(index, 1);
+          reloadMessagesSignal.onchange();
+        });
+      }
+    });
+  }))));
 });
 
+function _invokeIgnored(body) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(_empty);
+  }
+}
+
+var applyHotReload = _async(function (_ref) {
+  var timestamp = _ref.timestamp,
+      updates = _ref.updates;
+  return _awaitIgnored(Promise.all(updates.map(_async(function (_ref2) {
+    var _exit = false;
+    var type = _ref2.type,
+        url = _ref2.url;
+    return _invoke(function () {
+      if (type === "js") {
+        var urlWithHmr = injectQuery(url, {
+          hmr: timestamp
+        });
+        return _await(import(urlWithHmr), function (namespace) {
+          console.log("[jsenv] hot updated: ".concat(url));
+          _exit = true;
+          return namespace;
+        });
+      }
+    }, function (_result) {
+      if (_exit) return _result;
+      throw new Error("unknown update type: \"".concat(type, "\""));
+    });
+  }))));
+});
+
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
+var injectQuery = function injectQuery(url, query) {
+  var urlObject = new URL(url);
+  var searchParams = urlObject.searchParams;
+  Object.keys(query).forEach(function (key) {
+    searchParams.set(key, query[key]);
+  });
+  return String(urlObject);
+};
+
 var eventsourceConnection = createEventSourceConnection(document.location.href, {
-  reload: function reload(_ref) {
-    var data = _ref.data;
+  reload: function reload(_ref3) {
+    var data = _ref3.data;
 
     var _JSON$parse = JSON.parse(data),
         reason = _JSON$parse.reason,
@@ -313,6 +378,7 @@ window.__jsenv_event_source_client__ = {
   disconnect: disconnect,
   isLivereloadEnabled: isLivereloadEnabled,
   setLivereloadPreference: setLivereloadPreference,
+  urlHotMetas: urlHotMetas,
   reloadMessages: reloadMessages,
   reloadMessagesSignal: reloadMessagesSignal,
   applyReloadMessageEffects: applyReloadMessageEffects
@@ -342,4 +408,4 @@ window.__jsenv_event_source_client__ = {
 //   }
 // }
 
-//# sourceMappingURL=event_source_client_040d6cea.js.map
+//# sourceMappingURL=event_source_client.js.map

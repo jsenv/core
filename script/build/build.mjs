@@ -3,6 +3,11 @@ import { writeFile } from "@jsenv/filesystem"
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
+// versioning is great when publishing the package to NPM
+// because jsenv can enable long term caching of jsenv dist files
+// but while working on jsenv it's simpler to have this disabled
+const versioning = false
+
 let buildManifestCode = ""
 let buildManifest
 const buildInternalFile = async ({
@@ -32,7 +37,9 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/redirector/",
   entryPoints: {
-    "./src/internal/redirector/redirector.html": "redirector_[hash].html",
+    "./src/internal/redirector/redirector.html": versioning
+      ? "redirector_[hash].html"
+      : "redirector.html",
   },
 })
 addExport(
@@ -45,8 +52,9 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/browser_client/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPoints: {
-    "./src/internal/browser_client/browser_client.js":
-      "browser_client_[hash].js",
+    "./src/internal/browser_client/browser_client.js": versioning
+      ? "browser_client_[hash].js"
+      : "browser_client.js",
   },
   preservedDynamicImports: {
     "./src/internal/browser_client/browser_client.js": true,
@@ -62,7 +70,7 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/compile_proxy/",
   entryPoints: {
     "./src/internal/features/browser_feature_detection/compile_proxy.html":
-      "compile_proxy_[hash].html",
+      versioning ? "compile_proxy_[hash].html" : "compile_proxy.html",
   },
 })
 addExport(
@@ -75,7 +83,10 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/event_source_client/",
   entryPoints: {
     "./src/internal/dev_server/event_source_client/event_source_client.js":
-      "event_source_client_[hash].js",
+      versioning ? "event_source_client_[hash].js" : "event_source_client.js",
+  },
+  preservedDynamicImports: {
+    "./src/internal/dev_server/event_source_client/event_source_client.js": true,
   },
 })
 addExport(
@@ -87,7 +98,9 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/toolbar/",
   entryPoints: {
-    "./src/internal/dev_server/toolbar/toolbar.html": "toolbar_[hash].html",
+    "./src/internal/dev_server/toolbar/toolbar.html": versioning
+      ? "toolbar_[hash].html"
+      : "toolbar.htm",
   },
   cssConcatenation: true,
 })
@@ -98,8 +111,9 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/toolbar_injector/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPoints: {
-    "./src/internal/dev_server/toolbar/toolbar_injector.js":
-      "toolbar_injector_[hash].js",
+    "./src/internal/dev_server/toolbar/toolbar_injector.js": versioning
+      ? "toolbar_injector_[hash].js"
+      : "toolbar_injector.js",
   },
   customCompilers: {
     "./src/internal/dev_server/toolbar/toolbar_injector.js": ({ code }) => {
