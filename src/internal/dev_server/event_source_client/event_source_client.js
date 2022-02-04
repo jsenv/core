@@ -3,7 +3,10 @@ import {
   isLivereloadEnabled,
   setLivereloadPreference,
 } from "./livereload_preference.js"
+import { createUrlContext } from "./url_context.js"
 import { reloadPage } from "./reload.js"
+
+const urlContext = createUrlContext()
 
 const reloadMessages = []
 const urlHotMetas = {}
@@ -55,11 +58,12 @@ This could be due to syntax errors or importing non-existent modules (see errors
 
 const applyHotReload = async ({ timestamp, updates }) => {
   await Promise.all(
-    updates.map(async ({ type, url }) => {
+    updates.map(async ({ type, relativeUrl }) => {
       if (type === "js") {
-        const urlWithHmr = injectQuery(url, { hmr: timestamp })
+        const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
+        const urlWithHmr = injectQuery(urlToFetch, { hmr: timestamp })
         const namespace = await import(urlWithHmr)
-        console.log(`[jsenv] hot updated: ${url}`)
+        console.log(`[jsenv] hot updated: ${relativeUrl}`)
         return namespace
       }
       throw new Error(`unknown update type: "${type}"`)
@@ -119,22 +123,4 @@ window.__jsenv_event_source_client__ = {
 //       parseCompiledUrl(compileUrl).fileRelativeUrl === originalFileRelativeUrl
 //     )
 //   })
-// }
-
-// // TODO: the following "parseCompiledUrl"
-// // already exists somewhere in the codebase: reuse the other one
-// const parseCompiledUrl = (url) => {
-//   const { pathname, search } = new URL(url)
-//   const ressource = `${pathname}${search}`
-//   const slashIndex = ressource.indexOf("/", 1)
-//   const compileDirectoryRelativeUrl = ressource.slice(1, slashIndex)
-//   const afterCompileDirectory = ressource.slice(slashIndex)
-//   const nextSlashIndex = afterCompileDirectory.indexOf("/")
-//   const compileId = afterCompileDirectory.slice(0, nextSlashIndex)
-//   const afterCompileId = afterCompileDirectory.slice(nextSlashIndex)
-//   return {
-//     compileDirectoryRelativeUrl,
-//     compileId,
-//     fileRelativeUrl: afterCompileId,
-//   }
 // }

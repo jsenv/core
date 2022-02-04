@@ -108,7 +108,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
         ({ boundary, acceptedBy }) => {
           return {
             type: ressources[boundary].type,
-            url: urlToRelativeUrl(boundary, projectDirectoryUrl),
+            relativeUrl: urlToRelativeUrl(boundary, projectDirectoryUrl),
             acceptedBy: urlToRelativeUrl(acceptedBy, projectDirectoryUrl),
           }
         },
