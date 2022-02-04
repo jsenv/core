@@ -217,10 +217,39 @@ const setLivereloadPreference = value => {
   window.localStorage.setItem("livereload", value ? "1" : "0");
 };
 
+const createUrlContext = () => {
+  const {
+    origin,
+    pathname,
+    search
+  } = new URL(window.location);
+
+  if (!pathname.includes("/.jsenv/")) {
+    return {
+      asUrlToFetch: relativeUrl => {
+        return `${origin}/${relativeUrl}`;
+      }
+    };
+  }
+
+  const ressource = `${pathname}${search}`;
+  const slashIndex = ressource.indexOf("/", 1);
+  const compileDirectoryRelativeUrl = ressource.slice(1, slashIndex);
+  const afterCompileDirectory = ressource.slice(slashIndex + 1);
+  const nextSlashIndex = afterCompileDirectory.indexOf("/");
+  const compileId = afterCompileDirectory.slice(0, nextSlashIndex);
+  return {
+    asUrlToFetch: relativeUrl => {
+      return `${origin}/${compileDirectoryRelativeUrl}/${compileId}/${relativeUrl}`;
+    }
+  };
+};
+
 const reloadPage = () => {
   window.parent.location.reload(true);
 };
 
+const urlContext = createUrlContext();
 const reloadMessages = [];
 const urlHotMetas = {};
 const reloadMessagesSignal = {
@@ -265,19 +294,21 @@ This could be due to syntax errors or importing non-existent modules (see errors
 };
 
 const applyHotReload = async ({
-  timestamp,
   updates
 }) => {
   await Promise.all(updates.map(async ({
     type,
-    url
+    relativeUrl
   }) => {
+    // maybe rename "js" into "import"
+    // "js" is too generic it could apply to a regular js file
     if (type === "js") {
-      const urlWithHmr = injectQuery(url, {
-        hmr: timestamp
+      const urlToFetch = urlContext.asUrlToFetch(relativeUrl);
+      const urlWithHmr = injectQuery(urlToFetch, {
+        hmr: Date.now()
       });
       const namespace = await import(urlWithHmr);
-      console.log(`[jsenv] hot updated: ${url}`);
+      console.log(`[jsenv] hot updated: ${relativeUrl}`);
       return namespace;
     }
 
@@ -296,26 +327,22 @@ const injectQuery = (url, query) => {
   return String(urlObject);
 };
 
+const addReloadMessage = reloadMessage => {
+  reloadMessages.push(reloadMessage);
+
+  if (isLivereloadEnabled()) {
+    applyReloadMessageEffects();
+  } else {
+    reloadMessagesSignal.onchange();
+  }
+};
+
 const eventsourceConnection = createEventSourceConnection(document.location.href, {
   reload: ({
     data
   }) => {
-    const {
-      reason,
-      fileRelativeUrl,
-      instruction
-    } = JSON.parse(data);
-    reloadMessages.push({
-      reason,
-      fileRelativeUrl,
-      instruction
-    });
-
-    if (isLivereloadEnabled()) {
-      applyReloadMessageEffects();
-    } else {
-      reloadMessagesSignal.onchange();
-    }
+    const reloadMessage = JSON.parse(data);
+    addReloadMessage(reloadMessage);
   }
 }, {
   retryMaxAttempt: Infinity,
@@ -336,7 +363,8 @@ window.__jsenv_event_source_client__ = {
   urlHotMetas,
   reloadMessages,
   reloadMessagesSignal,
-  applyReloadMessageEffects
+  applyReloadMessageEffects,
+  addReloadMessage
 };
 })(); // const findHotMetaUrl = (originalFileRelativeUrl) => {
 //   return Object.keys(urlHotMetas).find((compileUrl) => {
@@ -344,23 +372,6 @@ window.__jsenv_event_source_client__ = {
 //       parseCompiledUrl(compileUrl).fileRelativeUrl === originalFileRelativeUrl
 //     )
 //   })
-// }
-// // TODO: the following "parseCompiledUrl"
-// // already exists somewhere in the codebase: reuse the other one
-// const parseCompiledUrl = (url) => {
-//   const { pathname, search } = new URL(url)
-//   const ressource = `${pathname}${search}`
-//   const slashIndex = ressource.indexOf("/", 1)
-//   const compileDirectoryRelativeUrl = ressource.slice(1, slashIndex)
-//   const afterCompileDirectory = ressource.slice(slashIndex)
-//   const nextSlashIndex = afterCompileDirectory.indexOf("/")
-//   const compileId = afterCompileDirectory.slice(0, nextSlashIndex)
-//   const afterCompileId = afterCompileDirectory.slice(nextSlashIndex)
-//   return {
-//     compileDirectoryRelativeUrl,
-//     compileId,
-//     fileRelativeUrl: afterCompileId,
-//   }
 // }
 
 //# sourceMappingURL=event_source_client.js.map

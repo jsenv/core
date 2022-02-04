@@ -1592,6 +1592,10 @@ ${error.stack}`);
       const supportsImportmap = async ({
         remote = true
       } = {}) => {
+        if (HTMLScriptElement.supports("importmap")) {
+          return true;
+        }
+
         const specifier = asBase64Url(`export default false`);
         const importMap = {
           imports: {
@@ -1799,7 +1803,7 @@ ${error.stack}`);
   };
 }));
 
-//# sourceMappingURL=redirector.html__inline__12_495a6158.js.map</script>
+//# sourceMappingURL=redirector.html__inline__12_290bc6e4.js.map</script>
   
 
 </body></html>

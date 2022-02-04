@@ -500,7 +500,11 @@ const setAttributes = (element, attributes) => {
   });
 };
 
-const TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar.html";
+/* eslint-disable no-undef */
+
+const TOOLBAR_HTML_RELATIVE_URL = __TOOLBAR_BUILD_RELATIVE_URL_;
+/* eslint-enable no-undef */
+
 const jsenvLogoSvgUrl = new URL("assets/jsenv_logo_192011c2.svg", document.currentScript && document.currentScript.src || document.baseURI);
 
 const injectToolbar = async () => {
@@ -538,7 +542,7 @@ const injectToolbar = async () => {
   });
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
   const jsenvCoreDirectoryServerUrl = new URL(exploringJSON.jsenvCoreDirectoryRelativeUrl, document.location.origin).href;
-  const jsenvToolbarHtmlServerUrl = new URL(TOOLBAR_BUILD_RELATIVE_URL, jsenvCoreDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
+  const jsenvToolbarHtmlServerUrl = new URL(TOOLBAR_HTML_RELATIVE_URL, jsenvCoreDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
 
   iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
   placeholder.parentNode.replaceChild(iframe, placeholder);
