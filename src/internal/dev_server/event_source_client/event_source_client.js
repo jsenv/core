@@ -56,12 +56,14 @@ This could be due to syntax errors or importing non-existent modules (see errors
   )
 }
 
-const applyHotReload = async ({ timestamp, updates }) => {
+const applyHotReload = async ({ updates }) => {
   await Promise.all(
     updates.map(async ({ type, relativeUrl }) => {
+      // maybe rename "js" into "import"
+      // "js" is too generic it could apply to a regular js file
       if (type === "js") {
         const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
-        const urlWithHmr = injectQuery(urlToFetch, { hmr: timestamp })
+        const urlWithHmr = injectQuery(urlToFetch, { hmr: Date.now() })
         const namespace = await import(urlWithHmr)
         console.log(`[jsenv] hot updated: ${relativeUrl}`)
         return namespace
@@ -80,21 +82,21 @@ const injectQuery = (url, query) => {
   return String(urlObject)
 }
 
+const addReloadMessage = (reloadMessage) => {
+  reloadMessages.push(reloadMessage)
+  if (isLivereloadEnabled()) {
+    applyReloadMessageEffects()
+  } else {
+    reloadMessagesSignal.onchange()
+  }
+}
+
 const eventsourceConnection = createEventSourceConnection(
   document.location.href,
   {
     reload: ({ data }) => {
-      const { reason, fileRelativeUrl, instruction } = JSON.parse(data)
-      reloadMessages.push({
-        reason,
-        fileRelativeUrl,
-        instruction,
-      })
-      if (isLivereloadEnabled()) {
-        applyReloadMessageEffects()
-      } else {
-        reloadMessagesSignal.onchange()
-      }
+      const reloadMessage = JSON.parse(data)
+      addReloadMessage(reloadMessage)
     },
   },
   {
@@ -115,6 +117,7 @@ window.__jsenv_event_source_client__ = {
   reloadMessages,
   reloadMessagesSignal,
   applyReloadMessageEffects,
+  addReloadMessage,
 }
 
 // const findHotMetaUrl = (originalFileRelativeUrl) => {

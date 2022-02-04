@@ -11,7 +11,7 @@ export const injectHmrInEsmUrls = async ({
   url,
   code,
 }) => {
-  await babelTransform({
+  const result = await babelTransform({
     code,
     options: {
       filename: urlToFileSystemPath(url),
@@ -28,4 +28,5 @@ export const injectHmrInEsmUrls = async ({
       plugins: [[babelPluginSyntaxes], [babelPluginHmrEsm, { ressourceGraph }]],
     },
   })
+  return result.code
 }

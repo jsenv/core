@@ -17,7 +17,7 @@ export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
             return
           }
           const specifier = specifierNode.value
-          const fileUrl = fileSystemPathToUrl(state.file.path)
+          const fileUrl = fileSystemPathToUrl(state.filename)
           const url = ressourceGraph.applyImportmapResolution(
             specifier,
             fileUrl,

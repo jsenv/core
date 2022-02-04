@@ -138,7 +138,7 @@ export const compileFile = async ({
         moduleFormat: compileProfile.moduleOutFormat,
         code: compiledSource,
       })
-      compiledEtag = bufferToEtag(compiledSource)
+      compiledEtag = bufferToEtag(Buffer.from(compiledSource))
       compiledMtime = Date.now()
       return {
         status: 200,

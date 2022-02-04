@@ -4,6 +4,9 @@ import {
 } from "./execute_with_script_module.js"
 
 export const supportsImportmap = async ({ remote = true } = {}) => {
+  if (HTMLScriptElement.supports("importmap")) {
+    return true
+  }
   const specifier = asBase64Url(`export default false`)
   const importMap = {
     imports: {
