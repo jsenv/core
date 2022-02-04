@@ -16,13 +16,39 @@ const applyReloadMessageEffects = async () => {
     reloadPage()
     return
   }
-  await Promise.all(
-    reloadMessages.map(async (reloadMessage, index) => {
-      if (reloadMessage.instruction.type === "hot_reload") {
-        await applyHotReload(reloadMessage.instruction)
-        reloadMessages.splice(index, 1)
+
+  const onApplied = (reloadMessage) => {
+    const index = reloadMessages.indexOf(reloadMessage)
+    reloadMessages.splice(index, 1)
+    reloadMessagesSignal.onchange()
+  }
+  const setReloadMessagePromise = (reloadMessage, promise) => {
+    reloadMessage.status = "pending"
+    promise.then(
+      () => {
+        onApplied(reloadMessage)
+      },
+      (e) => {
+        console.error(e)
+        console.error(
+          `[hmr] Failed to reload after ${reloadMessage.reason}.
+This could be due to syntax errors or importing non-existent modules (see errors above)`,
+        )
+        reloadMessage.status = "failed"
         reloadMessagesSignal.onchange()
+      },
+    )
+  }
+  await Promise.all(
+    reloadMessages.map(async (reloadMessage) => {
+      if (reloadMessage.instruction.type === "hot_reload") {
+        setReloadMessagePromise(
+          reloadMessage,
+          applyHotReload(reloadMessage.instruction),
+        )
+        return
       }
+      onApplied(reloadMessage)
     }),
   )
 }

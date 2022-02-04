@@ -63,13 +63,15 @@ const updateEventSourceIndicator = () => {
         // eslint-disable-next-line no-alert
         window.parent.alert(JSON.stringify(reloadMessages, null, "  "))
       }
+
+      const somePending = reloadMessages.some((m) => m.status === "pending")
       const applyLink = variantNode.querySelector(".eventsource-reload-link")
-      applyLink.innerHTML = "apply changes"
-      applyLink.onclick = () => {
-        applyLink.onclick = () => {}
-        applyLink.innerHTML = "applying..."
-        parentEventSourceClient.applyReloadMessageEffects()
-      }
+      applyLink.innerHTML = somePending ? "applying..." : "apply changes"
+      applyLink.onclick = somePending
+        ? () => {}
+        : () => {
+            parentEventSourceClient.applyReloadMessageEffects()
+          }
     }
   } else if (eventSourceConnectionState === "disconnected") {
     autoShowTooltip(eventSourceIndicator)

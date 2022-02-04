@@ -54,20 +54,20 @@ const createSSEServiceWithLivereload = ({
     const removeModifiedCallback = projectFileModified.add(
       (fileRelativeUrl) => {
         callback({
-          event: "file_modified",
+          event: "modified",
           fileRelativeUrl,
         })
       },
     )
     const removeRemovedCallback = projectFileRemoved.add((fileRelativeUrl) => {
       callback({
-        event: "file_removed",
+        event: "removed",
         fileRelativeUrl,
       })
     })
     const removeAddedCallback = projectFileRemoved.add((fileRelativeUrl) => {
       callback({
-        event: "file_added",
+        event: "added",
         fileRelativeUrl,
       })
     })
@@ -132,8 +132,7 @@ const createSSEServiceWithLivereload = ({
       sseRoom.sendEvent({
         type: "reload",
         data: JSON.stringify({
-          reason: event,
-          fileRelativeUrl,
+          reason: `${fileRelativeUrl} ${event}`,
           instruction: reloadInstruction,
         }),
       })
