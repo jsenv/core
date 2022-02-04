@@ -6,6 +6,8 @@ import {
 } from "@jsenv/filesystem"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
+import { injectHmr } from "@jsenv/core/src/internal/hmr/hmr_injection.js"
+
 import { reuseOrCreateCompiledFile } from "./jsenv_directory/reuse_or_create_compiled_file.js"
 import { updateCompileCache } from "./jsenv_directory/update_compile_cache.js"
 
@@ -17,15 +19,18 @@ export const compileFile = async ({
   jsenvRemoteDirectory,
   originalFileUrl,
   compiledFileUrl,
+  importmapInfos,
 
   request,
   responseHeaders = {},
   pushResponse,
-  importmapInfos,
-  compile,
+
+  compileProfile,
+
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
+  compile,
 }) => {
   if (
     compileCacheStrategy !== "etag" &&
@@ -36,9 +41,6 @@ export const compileFile = async ({
       `compileCacheStrategy must be "etag", "mtime" or "none", got ${compileCacheStrategy}`,
     )
   }
-  const hmr = new URL(originalFileUrl).searchParams.get("hmr")
-  const clientCacheDisabled =
-    request.headers["cache-control"] === "no-cache" || hmr
 
   try {
     const { meta, compileResult, compileResultStatus, timing } =
@@ -126,23 +128,34 @@ export const compileFile = async ({
         })
       }
     }
+    const hmr = new URL(originalFileUrl).searchParams.get("hmr")
+    if (hmr) {
+      compiledSource = await injectHmr({
+        hmr,
+        contentType,
+        moduleFormat: compileProfile.moduleOutFormat,
+        code: compiledSource,
+      })
+      compiledEtag = bufferToEtag(compiledSource)
+      compiledMtime = Date.now()
+      return {
+        status: 200,
+        headers: {
+          "content-length": Buffer.byteLength(compiledSource),
+          "content-type": contentType,
+          "cache-control": "no-store",
+          ...responseHeaders,
+        },
+        body: compiledSource,
+        timing,
+      }
+    }
+
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay
     // when the file is written for perf reasons
     // Moreover we already got the data in RAM
-    const respondUsingRAM = (finalizeResponse = () => {}) => {
-      // if hmr is enabled we'll change server response
-      // const hmr = new URL(originalFileUrl).searchParams.get("hmr")
-      // if (hmr) {
-      //   const jsWithHmr = await injectHmrInJsUrls({
-      //     js: compileResult.compiledSource,
-      //     hmr,
-      //   })
-      //   compiledSource = jsWithHmr
-      //   compiledEtag = bufferToEtag(jsWithHmr)
-      //   compiledMtime = Date.now()
-      // }
-
+    const respondUsingRAM = async (finalizeResponse = () => {}) => {
       const response = {
         status: 200,
         headers: {
@@ -157,6 +170,7 @@ export const compileFile = async ({
       finalizeResponse(response)
       return response
     }
+    const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
     if (!clientCacheDisabled && compileCacheStrategy === "etag") {
       if (
         request.headers["if-none-match"] &&

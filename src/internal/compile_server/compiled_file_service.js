@@ -45,7 +45,6 @@ export const createCompiledFileService = ({
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
 
-  projectFileRequestedCallback,
   ressourceGraph,
 
   compileCacheStrategy,
@@ -144,12 +143,13 @@ export const createCompiledFileService = ({
       jsenvRemoteDirectory,
       originalFileUrl,
       compiledFileUrl,
+      importmapInfos,
 
-      compileCacheStrategy,
-      projectFileRequestedCallback,
       request,
       pushResponse,
-      importmapInfos,
+
+      compileProfile,
+      compileCacheStrategy,
       compile: ({ code }) => {
         return compiler({
           logger,

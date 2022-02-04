@@ -21,7 +21,8 @@ import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "@jsenv/core/src/jsenv_file_urls.js"
-import { createJsenvRemoteDirectory } from "../jsenv_remote_directory.js"
+import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
+import { createRessourceGraph } from "@jsenv/core/src/internal/hmr/ressource_graph.js"
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
@@ -31,7 +32,6 @@ import { createSSEService } from "./sse_service/sse_service.js"
 
 import { createCompiledFileService } from "./compiled_file_service.js"
 import { createTransformHtmlSourceFileService } from "./html/html_source_file_service.js"
-import { createRessourceGraph } from "./hmr/ressource_graph.js"
 import { loadBabelPluginMap } from "./js/babel_plugin_map.js"
 
 let compileServerId = 0
