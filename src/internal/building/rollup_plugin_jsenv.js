@@ -1767,6 +1767,7 @@ export const createRollupPlugins = async ({
         // Object mapping build relative urls without hash to build relative urls
         buildManifest: createBuildManifest({
           buildFileContents,
+          ressourceBuilder,
         }),
         buildImportMap: createImportMapForFilesUsedInJs(),
         buildFileContents,
@@ -1780,19 +1781,15 @@ export const createRollupPlugins = async ({
   }
 }
 
-const createBuildManifest = ({ buildFileContents }) => {
+const createBuildManifest = ({ buildFileContents, ressourceBuilder }) => {
   const buildManifest = {}
   Object.keys(buildFileContents).forEach((buildRelativeUrl) => {
-    const relativeUrlWithoutHash = asFileNameWithoutHash(buildRelativeUrl)
-    buildManifest[relativeUrlWithoutHash] = buildRelativeUrl
+    const ressource = ressourceBuilder.findRessource(
+      (ressource) => ressource.buildRelativeUrl === buildRelativeUrl,
+    )
+    buildManifest[ressource.buildRelativeUrlWithoutHash] = buildRelativeUrl
   })
   return buildManifest
-}
-
-const asFileNameWithoutHash = (fileName) => {
-  return fileName.replace(/_[a-z0-9]{8,}(\..*?)?$/, (_, afterHash = "") => {
-    return afterHash
-  })
 }
 
 const prepareEntryPoints = async (

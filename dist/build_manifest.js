@@ -9,4 +9,4 @@ export const EVENT_SOURCE_CLIENT_BUILD_URL = new URL("event_source_client/event_
 
 export const TOOLBAR_BUILD_URL = new URL("toolbar/toolbar.html", import.meta.url).href
 
-export const TOOLBAR_INJECTOR_BUILD_URL = new URL("toolbar_injector/undefined", import.meta.url).href
+export const TOOLBAR_INJECTOR_BUILD_URL = new URL("toolbar_injector/toolbar_injector.js", import.meta.url).href

@@ -1,5 +1,5 @@
 {
   "assets/jsenv_logo.svg": "assets/jsenv_logo_192011c2.svg",
-  "toolbar.js": "toolbar_injector.js",
-  "toolbar.js.map": "toolbar_injector.js.map"
+  "toolbar_injector.js": "toolbar_injector.js",
+  "assets/toolbar_injector.js.map": "toolbar_injector.js.map"
 }
