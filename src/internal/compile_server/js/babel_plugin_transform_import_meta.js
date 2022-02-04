@@ -4,7 +4,7 @@
 
 import { require } from "@jsenv/core/src/internal/require.js"
 
-import { createParseError } from "./babel_parse_error.js"
+import { createParseError } from "@jsenv/core/src/internal/transform_js/babel_parse_error.js"
 
 export const babelPluginTransformImportMeta = (
   babel,

@@ -1,6 +1,6 @@
 import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { traverseProgramImports } from "./traverse_program_imports.js"
+import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
 
 export const babelPluginProxyExternalImports = (
   babel,

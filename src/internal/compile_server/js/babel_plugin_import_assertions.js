@@ -2,7 +2,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
 
-import { traverseProgramImports } from "./traverse_program_imports.js"
+import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
 
 export const babelPluginImportAssertions = (
   babel,

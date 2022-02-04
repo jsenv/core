@@ -1,11 +1,10 @@
 import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/internal/require.js"
+import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
-import { babelTransform } from "./babel_transform.js"
 import { babelPluginsFromBabelPluginMap } from "./babel_plugin_map.js"
 import { babelHelperNameFromUrl } from "./babel_helper.js"
-
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { babelPluginTransformImportMeta } from "./babel_plugin_transform_import_meta.js"
 import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"

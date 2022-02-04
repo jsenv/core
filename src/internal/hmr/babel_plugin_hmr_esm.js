@@ -4,7 +4,7 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { traverseProgramImports } from "@jsenv/core/src/internal/compile_server/js/traverse_program_imports.js"
+import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
 
 export const babelPluginHmrEsm = (
   babel,
