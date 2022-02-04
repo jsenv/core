@@ -4,21 +4,15 @@ import { require } from "@jsenv/core/src/internal/require.js"
 
 import { ansiToHTML } from "./ansi_to_html.js"
 import { createParseError } from "./babel_parse_error.js"
-import {
-  getMinimalBabelPluginMap,
-  babelPluginsFromBabelPluginMap,
-} from "./babel_plugins.js"
+import { babelPluginsFromBabelPluginMap } from "./babel_plugins.js"
 import { babelHelperNameFromUrl } from "./babel_helper.js"
+
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginTransformImportMeta } from "./babel_plugin_transform_import_meta.js"
-import { babelPluginImportMetadata } from "./babel_plugin_import_metadata.js"
-import { babelPluginProxyExternalImports } from "./babel_plugin_proxy_external_imports.js"
 import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 
 export const transformJs = async ({
   projectDirectoryUrl,
-  jsenvRemoteDirectory,
   url,
 
   babelPluginMap,
@@ -28,7 +22,6 @@ export const transformJs = async ({
   babelHelpersInjectionAsImport = moduleOutFormat === "esmodule",
   prependSystemJs,
   topLevelAwait,
-  transformGenerator = true,
   sourcemapEnabled = true,
 
   map,
@@ -90,16 +83,7 @@ export const transformJs = async ({
     delete babelPluginMapWithoutTransformTypeOf["transform-typeof-symbol"]
     babelPluginMap = babelPluginMapWithoutTransformTypeOf
   }
-  if (transformGenerator) {
-    babelPluginMap = {
-      ...babelPluginMap,
-      "regenerator-runtime-as-jsenv-import": [
-        babelPluginRegeneratorRuntimeAsJsenvImport,
-      ],
-    }
-  }
   babelPluginMap = {
-    ...getMinimalBabelPluginMap(),
     "transform-import-meta": [
       babelPluginTransformImportMeta,
       { importMetaFormat, importMetaHot },
@@ -112,15 +96,6 @@ export const transformJs = async ({
           ],
         }
       : {}),
-    ...(jsenvRemoteDirectory
-      ? {
-          "proxy-external-imports": [
-            babelPluginProxyExternalImports,
-            { jsenvRemoteDirectory },
-          ],
-        }
-      : {}),
-    "import-metadata": [babelPluginImportMetadata],
   }
   if (moduleOutFormat === "systemjs") {
     const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")

@@ -1,6 +1,5 @@
 import {
   urlToRelativeUrl,
-  fileSystemPathToUrl,
   resolveUrl,
   bufferToEtag,
   urlIsInsideOf,
@@ -19,7 +18,6 @@ export const compileFile = async ({
   originalFileUrl,
   compiledFileUrl,
 
-  projectFileRequestedCallback = () => {},
   request,
   responseHeaders = {},
   pushResponse,
@@ -38,13 +36,9 @@ export const compileFile = async ({
       `compileCacheStrategy must be "etag", "mtime" or "none", got ${compileCacheStrategy}`,
     )
   }
-
-  projectFileRequestedCallback(
-    urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
-    request,
-  )
-
-  const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
+  const hmr = new URL(originalFileUrl).searchParams.get("hmr")
+  const clientCacheDisabled =
+    request.headers["cache-control"] === "no-cache" || hmr
 
   try {
     const { meta, compileResult, compileResultStatus, timing } =
@@ -54,6 +48,7 @@ export const compileFile = async ({
         originalFileUrl,
         compiledFileUrl,
         jsenvRemoteDirectory,
+        hmr,
 
         request,
         compileCacheStrategy,
@@ -61,14 +56,12 @@ export const compileFile = async ({
         compileCacheAssetsValidation,
         compile,
       })
-
     if (compileCacheStrategy === "etag" && !compileResult.compiledEtag) {
       // happens when file was just compiled so etag was not computed
       compileResult.compiledEtag = bufferToEtag(
         Buffer.from(compileResult.compiledSource),
       )
     }
-
     if (compileCacheStrategy === "mtime" && !compileResult.compiledMtime) {
       // happens when file was just compiled so it's not yet written on filesystem
       // Here we know the compiled file will be written on the filesystem
@@ -88,17 +81,14 @@ export const compileFile = async ({
       // be useful
       compileResult.compiledMtime = Date.now()
     }
-
-    const { contentType, compiledEtag, compiledMtime, compiledSource } =
+    let { contentType, compiledEtag, compiledMtime, compiledSource } =
       compileResult
-
     if (compileResult.responseHeaders) {
       responseHeaders = {
         ...responseHeaders,
         ...compileResult.responseHeaders,
       }
     }
-
     if (compileResultStatus !== "cached" && compileCacheStrategy !== "none") {
       // we MUST await updateMeta otherwise we might get 404
       // when serving sourcemap files
@@ -112,15 +102,6 @@ export const compileFile = async ({
         // originalFileUrl,
       })
     }
-
-    compileResult.sources.forEach((source) => {
-      const sourceFileUrl = resolveUrl(source, compiledFileUrl)
-      projectFileRequestedCallback(
-        urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
-        request,
-      )
-    })
-
     if (request.http2) {
       const dependencyResolver = getDependencyResolver({
         compileResult,
@@ -145,12 +126,23 @@ export const compileFile = async ({
         })
       }
     }
-
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay
     // when the file is written for perf reasons
     // Moreover we already got the data in RAM
     const respondUsingRAM = (finalizeResponse = () => {}) => {
+      // if hmr is enabled we'll change server response
+      // const hmr = new URL(originalFileUrl).searchParams.get("hmr")
+      // if (hmr) {
+      //   const jsWithHmr = await injectHmrInJsUrls({
+      //     js: compileResult.compiledSource,
+      //     hmr,
+      //   })
+      //   compiledSource = jsWithHmr
+      //   compiledEtag = bufferToEtag(jsWithHmr)
+      //   compiledMtime = Date.now()
+      // }
+
       const response = {
         status: 200,
         headers: {
@@ -165,7 +157,6 @@ export const compileFile = async ({
       finalizeResponse(response)
       return response
     }
-
     if (!clientCacheDisabled && compileCacheStrategy === "etag") {
       if (
         request.headers["if-none-match"] &&
@@ -185,7 +176,6 @@ export const compileFile = async ({
         response.headers["cache-control"] = "private,max-age=0,must-revalidate"
       })
     }
-
     if (!clientCacheDisabled && compileCacheStrategy === "mtime") {
       if (
         request.headers["if-modified-since"] &&
@@ -206,19 +196,10 @@ export const compileFile = async ({
         response.headers["cache-control"] = "private,max-age=0,must-revalidate"
       })
     }
-
     return respondUsingRAM()
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
       const { data } = error
-      const { filename } = data
-      if (filename) {
-        const relativeUrl = urlToRelativeUrl(
-          fileSystemPathToUrl(filename),
-          projectDirectoryUrl,
-        )
-        projectFileRequestedCallback(relativeUrl, request)
-      }
       // on the correspondig file
       const json = JSON.stringify(data)
       return {
@@ -247,7 +228,6 @@ export const compileFile = async ({
 const getDependencyResolver = ({ compileResult, importmapInfos, request }) => {
   const importmapKeys = Object.keys(importmapInfos)
   const requestUrl = resolveUrl(request.ressource, request.origin)
-
   if (
     compileResult.contentType === "application/javascript" &&
     // we cannot trust importmapKeys because when html is restored from cache
@@ -262,7 +242,6 @@ const getDependencyResolver = ({ compileResult, importmapInfos, request }) => {
     // either because main file is already fetched or an other file request the same ressource
     return null
   }
-
   return {
     type: "url_resolution",
     resolve: (dependency) => {

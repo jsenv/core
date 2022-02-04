@@ -75,7 +75,6 @@ export const reuseOrCreateCompiledFile = async ({
           request,
           logger,
         })
-
       return {
         meta,
         compileResult,
@@ -129,14 +128,11 @@ const computeCompileReport = async ({
       })
     },
   )
-
   if (!cacheValidity.isValid) {
     if (cacheValidity.code === "SOURCES_EMPTY") {
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
-
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
-
     const fetchOriginalFile = async () => {
       // The original file might be behind an http url.
       // In that case jsenv try first to read file from filesystem
@@ -174,7 +170,6 @@ const computeCompileReport = async ({
         compile,
       }),
     )
-
     return {
       meta: metaIsValid ? cacheValidity.meta.data : null,
       compileResult,
@@ -185,22 +180,22 @@ const computeCompileReport = async ({
       },
     }
   }
-
   const meta = cacheValidity.meta.data
   const { contentType, sources, assets, dependencies } = meta
+  const compileResult = {
+    compiledSource: String(
+      cacheValidity.compiledFile.data.compiledSourceBuffer,
+    ),
+    compiledEtag: cacheValidity.compiledFile.data.compiledEtag,
+    compiledMtime: cacheValidity.compiledFile.data.compiledMtime,
+    contentType,
+    sources,
+    assets,
+    dependencies,
+  }
   return {
     meta,
-    compileResult: {
-      compiledSource: String(
-        cacheValidity.compiledFile.data.compiledSourceBuffer,
-      ),
-      compiledEtag: cacheValidity.compiledFile.data.compiledEtag,
-      compiledMtime: cacheValidity.compiledFile.data.compiledMtime,
-      contentType,
-      sources,
-      assets,
-      dependencies,
-    },
+    compileResult,
     compileResultStatus: "cached",
     timing: {
       ...readCacheTiming,
