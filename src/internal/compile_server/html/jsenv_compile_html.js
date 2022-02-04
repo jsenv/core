@@ -219,14 +219,18 @@ export const compileHtml = async ({
   })
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
-
+  const dependencyUrls = htmlDependencies.map(({ specifier }) =>
+    ressourceGraph.applyUrlResolution(specifier, url),
+  )
   ressourceGraph.updateRessourceDependencies({
     url,
     type: "html",
-    dependencyUrls: assets,
-    hotAcceptSelf: false,
+    dependencyUrls,
+    importMetaHotAcceptSelf: false,
+    // for "importMetaHotAcceptDependencies" we should filter dependencyUrls
+    // because some cannot be hot reloaded but should trigger a page reload
+    importMetaHotAcceptDependencies: dependencyUrls,
   })
-
   return {
     contentType: "text/html",
     compiledSource: htmlAfterTransformation,

@@ -4,7 +4,11 @@ import {
   setLivereloadPreference,
 } from "./livereload_preference.js"
 import { createUrlContext } from "./url_context.js"
-import { reloadPage } from "./reload.js"
+import {
+  reloadHtmlPage,
+  reloadDOMNodesUsingUrls,
+  reloadJsImport,
+} from "./reload.js"
 
 const urlContext = createUrlContext()
 
@@ -16,7 +20,7 @@ const applyReloadMessageEffects = async () => {
     (reloadMessage) => reloadMessage.instruction.type === "full_reload",
   )
   if (someEffectIsFullReload) {
-    reloadPage()
+    reloadHtmlPage()
     return
   }
   const onApplied = (reloadMessage) => {
@@ -57,6 +61,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
 const applyHotReload = async ({ updates }) => {
   await updates.reduce(async (previous, { type, relativeUrl }) => {
     await previous
+    const url = new URL(relativeUrl, `${window.origin}/`).href
     const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
     const urlHotMeta = urlHotMetas[urlToFetch]
     if (urlHotMeta && urlHotMeta.disposeCallback) {
@@ -64,23 +69,18 @@ const applyHotReload = async ({ updates }) => {
     }
     // maybe rename "js" into "import"
     // "js" is too generic it could apply to a regular js file
+    // or "js_module"
     if (type === "js") {
-      const urlWithHmr = injectQuery(urlToFetch, { hmr: Date.now() })
-      const namespace = await import(urlWithHmr)
+      const namespace = await reloadJsImport(urlToFetch)
       console.log(`[jsenv] hot updated: ${relativeUrl}`)
       return namespace
     }
+    if (type === "html") {
+      reloadDOMNodesUsingUrls([urlToFetch, url])
+      return null
+    }
     throw new Error(`unknown update type: "${type}"`)
   }, Promise.resolve())
-}
-
-const injectQuery = (url, query) => {
-  const urlObject = new URL(url)
-  const { searchParams } = urlObject
-  Object.keys(query).forEach((key) => {
-    searchParams.set(key, query[key])
-  })
-  return String(urlObject)
 }
 
 const addReloadMessage = (reloadMessage) => {
