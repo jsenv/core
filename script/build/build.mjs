@@ -100,7 +100,7 @@ await buildInternalFile({
   entryPoints: {
     "./src/internal/dev_server/toolbar/toolbar.html": versioning
       ? "toolbar_[hash].html"
-      : "toolbar.htm",
+      : "toolbar.html",
   },
   cssConcatenation: true,
 })

@@ -747,7 +747,7 @@ function _await(value, then, direct) {
   return then ? value.then(then) : value;
 }
 
-var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/undefined";
+var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar.html";
 
 function _call(body, then, direct) {
   if (direct) {
