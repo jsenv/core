@@ -157,7 +157,7 @@ export const compileHtml = async ({
   const addHtmlMutation = (htmlMutation) => {
     htmlMutations.push(htmlMutation)
   }
-  const addHtmlDependency = ({ htmlNode, specifier }) => {
+  const injectHtmlDependency = ({ htmlNode, specifier }) => {
     htmlDependencies.push({
       htmlNode,
       specifier,
@@ -202,7 +202,7 @@ export const compileHtml = async ({
     addHtmlSourceFile,
     addHtmlAssetGenerator,
     addHtmlMutation,
-    addHtmlDependency,
+    injectHtmlDependency,
   })
   await Promise.all(
     htmlAssetGenerators.map(async (htmlAssetGenerator) => {
@@ -219,17 +219,25 @@ export const compileHtml = async ({
   })
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
-  const dependencyUrls = htmlDependencies.map(({ specifier }) =>
-    ressourceGraph.applyUrlResolution(specifier, url),
-  )
+  const dependencyUrls = []
+  const importMetaHotAcceptDependencies = []
+  htmlDependencies.forEach(({ specifier }) => {
+    const ressourceUrl = ressourceGraph.applyUrlResolution(specifier, url)
+    dependencyUrls.push(ressourceUrl)
+    // adding url to "dependencyUrls" means html uses an url
+    // and should reload (hot or full) when an url changes.
+    // Adding url to "importMetaHotAcceptDependencies" means html hot_reload these ressources:
+    // something like this: link.href = `${link.href}?hmr=${Date.now()}`)
+    // If some url must trigger a full reload of the html page it should be excluded from
+    // "importMetaHotAcceptDependencies". For now it seems it's ok to hot reload everything
+    importMetaHotAcceptDependencies.push(ressourceUrl)
+  })
   ressourceGraph.updateRessourceDependencies({
     url,
     type: "html",
     dependencyUrls,
     importMetaHotAcceptSelf: false,
-    // for "importMetaHotAcceptDependencies" we should filter dependencyUrls
-    // because some cannot be hot reloaded but should trigger a page reload
-    importMetaHotAcceptDependencies: dependencyUrls,
+    importMetaHotAcceptDependencies,
   })
   return {
     contentType: "text/html",
@@ -428,7 +436,7 @@ const visitScripts = async ({
   addHtmlSourceFile,
   addHtmlAssetGenerator,
   addHtmlMutation,
-  addHtmlDependency,
+  injectHtmlDependency,
 }) => {
   scripts.forEach((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -515,7 +523,7 @@ const visitScripts = async ({
           `window.__jsenv__.${jsenvMethod}(${JSON.stringify(specifier)})`,
         )
       })
-      addHtmlDependency({
+      injectHtmlDependency({
         htmlNode: script,
         specifier,
       })

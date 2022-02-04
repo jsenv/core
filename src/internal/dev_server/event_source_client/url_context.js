@@ -2,8 +2,11 @@ export const createUrlContext = () => {
   const { origin, pathname, search } = new URL(window.location)
   if (!pathname.includes("/.jsenv/")) {
     return {
-      asUrlToFetch: (relativeUrl) => {
-        return `${origin}/${relativeUrl}`
+      asSourceUrl: (projectRelativeUrl) => {
+        return `${origin}/${projectRelativeUrl}`
+      },
+      asUrlToFetch: (projectRelativeUrl) => {
+        return `${origin}/${projectRelativeUrl}`
       },
     }
   }
@@ -14,8 +17,11 @@ export const createUrlContext = () => {
   const nextSlashIndex = afterCompileDirectory.indexOf("/")
   const compileId = afterCompileDirectory.slice(0, nextSlashIndex)
   return {
-    asUrlToFetch: (relativeUrl) => {
-      return `${origin}/${compileDirectoryRelativeUrl}/${compileId}/${relativeUrl}`
+    asSourceUrl: (projectRelativeUrl) => {
+      return `${origin}/${projectRelativeUrl}`
+    },
+    asUrlToFetch: (projectRelativeUrl) => {
+      return `${origin}/${compileDirectoryRelativeUrl}/${compileId}/${projectRelativeUrl}`
     },
   }
 }

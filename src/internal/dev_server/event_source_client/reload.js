@@ -1,10 +1,12 @@
+import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
 import { htmlAttributeSrcSet } from "./html_attribute_src_set.js"
 
 export const reloadHtmlPage = () => {
   window.parent.location.reload(true)
 }
 
-export const reloadDOMNodesUsingUrls = (...urlsToReload) => {
+export const reloadDOMNodesUsingUrls = (urlsToReload) => {
+  const mutations = []
   const shouldReloadUrl = (urlCandidate) => {
     return urlsToReload.some((urlToReload) =>
       compareTwoUrlPaths(urlCandidate, urlToReload),
@@ -13,10 +15,11 @@ export const reloadDOMNodesUsingUrls = (...urlsToReload) => {
   const visitNodeAttributeAsUrl = (node, attributeName) => {
     const attributeValue = node[attributeName]
     if (attributeValue && shouldReloadUrl(attributeValue)) {
-      node[attributeName] = injectQuery(attributeValue, { t: Date.now() })
+      mutations.push(() => {
+        node[attributeName] = injectQuery(attributeValue, { t: Date.now() })
+      })
     }
   }
-
   Array.from(document.querySelector("script")).forEach((script) => {
     visitNodeAttributeAsUrl(script, "src")
   })
@@ -27,6 +30,9 @@ export const reloadDOMNodesUsingUrls = (...urlsToReload) => {
   )
   Array.from(document.querySelectorAll(`link[rel="icon"]`)).forEach((link) => {
     visitNodeAttributeAsUrl(link, "href")
+  })
+  Array.from(document.querySelectorAll("source")).forEach((source) => {
+    visitNodeAttributeAsUrl(source, "src")
   })
   Array.from(document.querySelectorAll("img")).forEach((img) => {
     visitNodeAttributeAsUrl(img, "src")
@@ -39,11 +45,21 @@ export const reloadDOMNodesUsingUrls = (...urlsToReload) => {
           srcCandidate.specifier = injectQuery(url, { hmr: Date.now() })
         }
       })
-      img.srcset = htmlAttributeSrcSet.stringify(srcCandidates)
+      mutations.push(() => {
+        img.srcset = htmlAttributeSrcSet.stringify(srcCandidates)
+      })
     }
   })
-  Array.from(document.querySelectorAll("source")).forEach((source) => {
-    visitNodeAttributeAsUrl(source, "src")
+  // svg image tag
+  Array.from(document.querySelectorAll("image")).forEach((image) => {
+    visitNodeAttributeAsUrl(image, "href")
+  })
+  // svg use
+  Array.from(document.querySelectorAll("use")).forEach((use) => {
+    visitNodeAttributeAsUrl(use, "href")
+  })
+  mutations.forEach((mutation) => {
+    mutation()
   })
 }
 
@@ -60,22 +76,4 @@ export const reloadAllCss = () => {
       link.href = injectQuery(link.href, { hmr: Date.now() })
     }
   })
-}
-
-const compareTwoUrlPaths = (url, otherUrl) => {
-  const urlObject = new URL(url)
-  const otherUrlObject = new URL(otherUrl)
-  return (
-    urlObject.origin === otherUrlObject.origin &&
-    urlObject.pathname === otherUrlObject.pathname
-  )
-}
-
-const injectQuery = (url, query) => {
-  const urlObject = new URL(url)
-  const { searchParams } = urlObject
-  Object.keys(query).forEach((key) => {
-    searchParams.set(key, query[key])
-  })
-  return String(urlObject)
 }

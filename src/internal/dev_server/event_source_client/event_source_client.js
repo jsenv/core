@@ -3,6 +3,7 @@ import {
   isLivereloadEnabled,
   setLivereloadPreference,
 } from "./livereload_preference.js"
+import { compareTwoUrlPaths } from "./url_helpers.js"
 import { createUrlContext } from "./url_context.js"
 import {
   reloadHtmlPage,
@@ -59,28 +60,37 @@ This could be due to syntax errors or importing non-existent modules (see errors
 }
 
 const applyHotReload = async ({ updates }) => {
-  await updates.reduce(async (previous, { type, relativeUrl }) => {
-    await previous
-    const url = new URL(relativeUrl, `${window.origin}/`).href
-    const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
-    const urlHotMeta = urlHotMetas[urlToFetch]
-    if (urlHotMeta && urlHotMeta.disposeCallback) {
-      await urlHotMeta.disposeCallback()
-    }
-    // maybe rename "js" into "import"
-    // "js" is too generic it could apply to a regular js file
-    // or "js_module"
-    if (type === "js") {
-      const namespace = await reloadJsImport(urlToFetch)
-      console.log(`[jsenv] hot updated: ${relativeUrl}`)
-      return namespace
-    }
-    if (type === "html") {
-      reloadDOMNodesUsingUrls([urlToFetch, url])
-      return null
-    }
-    throw new Error(`unknown update type: "${type}"`)
-  }, Promise.resolve())
+  await updates.reduce(
+    async (previous, { type, relativeUrl, acceptedByRelativeUrl }) => {
+      await previous
+
+      const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
+      const urlHotMeta = urlHotMetas[urlToFetch]
+      if (urlHotMeta && urlHotMeta.disposeCallback) {
+        await urlHotMeta.disposeCallback()
+      }
+      // maybe rename "js" into "import"
+      // "js" is too generic it could apply to a regular js file
+      // or "js_module"
+      if (type === "js") {
+        const namespace = await reloadJsImport(urlToFetch)
+        console.log(`[jsenv] hot updated: ${relativeUrl}`)
+        return namespace
+      }
+      if (type === "html") {
+        if (!compareTwoUrlPaths(urlToFetch, window.location)) {
+          // we are not in that HTML page
+          return null
+        }
+        const urlToReload = urlContext.asUrlToFetch(acceptedByRelativeUrl)
+        const sourceUrlToReload = urlContext.asSourceUrl(acceptedByRelativeUrl)
+        reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload])
+        return null
+      }
+      throw new Error(`unknown update type: "${type}"`)
+    },
+    Promise.resolve(),
+  )
 }
 
 const addReloadMessage = (reloadMessage) => {
