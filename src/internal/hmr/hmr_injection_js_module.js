@@ -25,10 +25,7 @@ export const injectHmrInJsModuleUrls = async ({
       generatorOpts: {
         compact: false,
       },
-      plugins: [
-        [babelPluginSyntaxes],
-        [babelPluginHmrEsm, { projectDirectoryUrl, ressourceGraph }],
-      ],
+      plugins: [[babelPluginSyntaxes], [babelPluginHmrEsm, { ressourceGraph }]],
     },
   })
   return result.code

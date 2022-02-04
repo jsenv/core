@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
 export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   const ressources = {}
@@ -25,7 +25,11 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return removeHmrQuery(url)
   }
 
-  const injectHmrIntoUrl = (url) => {
+  const injectHmrIntoSpecifier = (specifier, baseUrl) => {
+    const url = applyImportmapResolution(specifier, baseUrl)
+    if (!urlIsInsideOf(url, projectDirectoryUrl)) {
+      return null
+    }
     const ressource = ressources[url]
     if (!ressource) {
       return null
@@ -34,7 +38,14 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!hmrTimestamp) {
       return null
     }
-    return injectHmrQuery(url, hmrTimestamp)
+    const urlWithHmr = injectHmrQuery(url, hmrTimestamp)
+    const relativeUrl = urlToRelativeUrl(urlWithHmr, baseUrl)
+    if (relativeUrl.startsWith(".")) {
+      return relativeUrl
+    }
+    // ensure "./" for relative specifiers otherwise we could get
+    // bare specifier errors for js
+    return `./${relativeUrl}`
   }
 
   const updateRessourceDependencies = ({
@@ -211,7 +222,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     getRessourceByUrl,
     updateRessourceDependencies,
     onFileChange,
-    injectHmrIntoUrl,
+    injectHmrIntoSpecifier,
   }
 }
 

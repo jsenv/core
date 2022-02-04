@@ -119,7 +119,7 @@ export const parseCssRessource = async (
         return getUrlRelativeToImporter(cssUrlRessource)
       },
       cssConcatenation,
-      loadCssImport: async (path) => {
+      cssConcatenationLoadImport: async (path) => {
         // const cssFileUrl = asProjectUrl(url)
         const importedCssFileUrl = fileSystemPathToUrl(path)
         const atImportReference = atImportReferences.find(

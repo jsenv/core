@@ -1,15 +1,8 @@
-import {
-  fileSystemPathToUrl,
-  urlIsInsideOf,
-  urlToRelativeUrl,
-} from "@jsenv/filesystem"
+import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
 import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
 
-export const babelPluginHmrEsm = (
-  babel,
-  { projectDirectoryUrl, ressourceGraph },
-) => {
+export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
   return {
     name: "jsenv-hmr-esm",
     visitor: {
@@ -19,24 +12,15 @@ export const babelPluginHmrEsm = (
           if (specifierNode.type !== "StringLiteral") {
             return
           }
-          const specifier = specifierNode.value
-          const fileUrl = fileSystemPathToUrl(state.filename)
-          const url = ressourceGraph.applyImportmapResolution(
-            specifier,
-            fileUrl,
+          const specifierWithHmr = ressourceGraph.injectHmrIntoSpecifier(
+            specifierNode.value,
+            fileSystemPathToUrl(state.filename),
           )
-          if (!urlIsInsideOf(url, projectDirectoryUrl)) {
-            return
+          if (specifierWithHmr) {
+            specifierPath.replaceWith(
+              babel.types.stringLiteral(specifierWithHmr),
+            )
           }
-          const urlWithHmr = ressourceGraph.injectHmrIntoUrl(url)
-          if (!urlWithHmr) {
-            return
-          }
-          const relativeUrl = urlToRelativeUrl(urlWithHmr, fileUrl)
-          const specifierWithHmr = relativeUrl.startsWith(".")
-            ? relativeUrl
-            : `./${relativeUrl}`
-          specifierPath.replaceWith(babel.types.stringLiteral(specifierWithHmr))
         })
       },
     },

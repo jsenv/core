@@ -14,7 +14,7 @@ export const replaceCssUrls = async ({
   map,
   urlVisitor,
   cssConcatenation = false,
-  loadCssImport,
+  cssConcatenationLoadImport,
   cssMinification = false,
   cssMinificationOptions,
 } = {}) => {
@@ -24,7 +24,7 @@ export const replaceCssUrls = async ({
     plugins: [
       postCssPluginUrlVisitor({ urlVisitor }),
       ...(cssConcatenation
-        ? [await getCssConcatenationPlugin({ url, loadCssImport })]
+        ? [await getCssConcatenationPlugin({ url, cssConcatenationLoadImport })]
         : []),
       ...(cssMinification
         ? [await getCssMinificationPlugin(cssMinificationOptions)]
@@ -39,7 +39,7 @@ export const replaceCssUrls = async ({
   }
 }
 
-const getCssConcatenationPlugin = async ({ loadCssImport }) => {
+const getCssConcatenationPlugin = async ({ cssConcatenationLoadImport }) => {
   const postcssImport = require("postcss-import")
   return postcssImport({
     resolve: (id, basedir) => {
@@ -47,7 +47,7 @@ const getCssConcatenationPlugin = async ({ loadCssImport }) => {
       return urlToFileSystemPath(url)
     },
     load: (id) => {
-      return loadCssImport(id)
+      return cssConcatenationLoadImport(id)
     },
   })
 }

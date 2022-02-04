@@ -1,4 +1,5 @@
 import { injectHmrInJsModuleUrls } from "./hmr_injection_js_module.js"
+import { injectHmrInCssUrls } from "./hmr_injection_css.js"
 
 export const injectHmr = ({
   projectDirectoryUrl,
@@ -24,6 +25,12 @@ export const injectHmr = ({
     //
     // }
   }
-  // TODO: CSS
+  if (contentType === "text/css") {
+    return injectHmrInCssUrls({
+      ressourceGraph,
+      url,
+      code,
+    })
+  }
   return code
 }

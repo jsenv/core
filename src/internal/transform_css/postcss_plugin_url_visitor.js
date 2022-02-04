@@ -32,7 +32,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               atImportNode.warn(result, "`@import` should be top level")
               return
             }
-
             if (atImportNode.nodes) {
               atImportNode.warn(
                 result,
@@ -40,10 +39,8 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               )
               return
             }
-
             const parsed = parseCssValue(atImportNode.params)
             let [urlNode] = parsed.nodes
-
             if (
               !urlNode ||
               (urlNode.type !== "string" && urlNode.type !== "function")
@@ -54,7 +51,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               )
               return
             }
-
             let url = ""
             if (urlNode.type === "string") {
               url = urlNode.value
@@ -67,7 +63,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 )
                 return
               }
-
               const firstNode = urlNode.nodes[0]
               if (firstNode && firstNode.type === "string") {
                 urlNode = firstNode
@@ -79,7 +74,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
             }
 
             url = url.trim()
-
             if (url.length === 0) {
               atImportNode.warn(
                 result,
@@ -90,7 +84,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
 
             const specifier = url
             url = resolveUrl(specifier, fromUrl)
-
             if (url === fromUrl) {
               atImportNode.warn(
                 result,
