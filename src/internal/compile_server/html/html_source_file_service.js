@@ -50,7 +50,6 @@ const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
 export const createTransformHtmlSourceFileService = ({
   logger,
   projectDirectoryUrl,
-  projectFileRequestedCallback,
   inlineImportMapIntoHTML,
   jsenvScriptInjection,
   jsenvEventSourceClientInjection,
@@ -104,7 +103,6 @@ export const createTransformHtmlSourceFileService = ({
       }
       throw e
     }
-    projectFileRequestedCallback(relativeUrl, request)
     htmlInlineScriptMap.forEach((inlineScript, inlineScriptUrl) => {
       if (inlineScript.htmlFileUrl === fileUrl) {
         htmlInlineScriptMap.delete(inlineScriptUrl)
