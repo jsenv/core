@@ -5,7 +5,7 @@ import { babelPluginSyntaxes } from "@jsenv/core/src/internal/compile_server/js/
 
 import { babelPluginHmrEsm } from "./babel_plugin_hmr_esm.js"
 
-export const injectHmrInEsmUrls = async ({
+export const injectHmrInJsModuleUrls = async ({
   projectDirectoryUrl,
   ressourceGraph,
   url,
