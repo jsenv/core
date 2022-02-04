@@ -8,16 +8,11 @@ import {
   pluginCORS,
   readRequestBody,
 } from "@jsenv/server"
-import {
-  urlToRelativeUrl,
-  resolveDirectoryUrl,
-  urlIsInsideOf,
-} from "@jsenv/filesystem"
+import { urlToRelativeUrl, resolveDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
 import {
-  jsenvDistDirectoryUrl,
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "@jsenv/core/src/jsenv_file_urls.js"
@@ -31,6 +26,8 @@ import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { createSSEService } from "./sse_service/sse_service.js"
 
 import { createCompiledFileService } from "./compiled_file_service.js"
+import { createJsenvDistFileService } from "./jsenv_dist_file_service.js"
+import { createSourceFileService } from "./source_file_service.js"
 import { createTransformHtmlSourceFileService } from "./html/html_source_file_service.js"
 import { loadBabelPluginMap } from "./js/babel_plugin_map.js"
 
@@ -301,6 +298,10 @@ export const startCompileServer = async ({
             }),
         }
       : {}),
+    "service:jsenv dist file": createJsenvDistFileService({
+      projectDirectoryUrl,
+      projectFileCacheStrategy,
+    }),
     "service:source file": createSourceFileService({
       projectDirectoryUrl,
       jsenvRemoteDirectory,
@@ -407,49 +408,5 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
       )
     }
     return null
-  }
-}
-
-const createSourceFileService = ({
-  projectDirectoryUrl,
-  projectFileCacheStrategy,
-  jsenvRemoteDirectory,
-}) => {
-  return async (request) => {
-    const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
-      .href
-    const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
-      fileUrl,
-      jsenvDistDirectoryUrl,
-    )
-    const fromFileSystem = () =>
-      fetchFileSystem(fileUrl, {
-        headers: request.headers,
-        etagEnabled: projectFileCacheStrategy === "etag",
-        mtimeEnabled: projectFileCacheStrategy === "mtime",
-        ...(fileIsInsideJsenvDistDirectory &&
-        /_[a-z0-9]{8,}(\..*?)?$/.test(fileUrl)
-          ? {
-              cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
-            }
-          : {}),
-      })
-    const filesystemResponse = await fromFileSystem()
-    if (
-      filesystemResponse.status === 404 &&
-      jsenvRemoteDirectory.isFileUrlForRemoteUrl(fileUrl)
-    ) {
-      try {
-        await jsenvRemoteDirectory.loadFileUrlFromRemote(fileUrl, request)
-        // re-fetch filesystem instead to ensure response headers are correct
-        return fromFileSystem()
-      } catch (e) {
-        if (e && e.asResponse) {
-          return e.asResponse()
-        }
-        throw e
-      }
-    }
-    return filesystemResponse
   }
 }
