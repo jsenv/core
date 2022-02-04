@@ -1,5 +1,6 @@
 import { featuresCompatFromRuntime } from "@jsenv/core/src/internal/features/features_compat_from_runtime.js"
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
+import { isBabelPluginForJsenv } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_map.js"
 
 import { sameValueInTwoObjects } from "./comparison_utils.js"
 
@@ -17,7 +18,7 @@ export const createCompileProfile = ({
   importDefaultExtension,
   preservedUrls,
   customCompilers,
-  babelPluginMapWithoutSyntax,
+  babelPluginMap,
   importMapInWebWorkers,
   moduleOutFormat,
   sourcemapMethod,
@@ -33,11 +34,13 @@ export const createCompileProfile = ({
   if (importDefaultExtension) {
     features["import_default_extension"] = true
   }
+  features.global_this = true
+  features.async_generator_function = true
   const customCompilerPatterns = Object.keys(customCompilers)
   if (customCompilerPatterns.length > 0) {
     features["custom_compiler_patterns"] = customCompilerPatterns
   }
-  Object.keys(babelPluginMapWithoutSyntax).forEach((babelPluginName) => {
+  Object.keys(babelPluginMap).forEach((babelPluginName) => {
     // if we need to be compatible only with node
     // ignore "new-stylesheet-as-jsenv-import" and "transform-import-assertions"
     // (we consider they won't be used in the code we are about to execute)
@@ -50,7 +53,7 @@ export const createCompileProfile = ({
       }
     }
     features[babelPluginName] = babelPluginValueAsJSON(
-      babelPluginMapWithoutSyntax[babelPluginName],
+      babelPluginMap[babelPluginName],
     )
   })
 
@@ -107,18 +110,28 @@ export const createCompileProfile = ({
     })
   }
   Object.keys(featureEffects).forEach((featureName) => {
-    if (featuresReport[featureName]) {
+    if (supportedFeatureNames.includes(featureName)) {
       featureEffects[featureName]({
         supportedFeatureNames,
       })
     }
   })
+  if (
+    supportedFeatureNames.includes("import_assertion_type_json") &&
+    supportedFeatureNames.includes("import_assertion_type_css")
+  ) {
+    supportedFeatureNames.push("syntax-import-assertions")
+    supportedFeatureNames.push("transform-import-assertions")
+  }
 
   const missingFeatures = {}
   if (!runtimeReport.forceSource) {
     featureNames.forEach((featureName) => {
       const supported = supportedFeatureNames.includes(featureName)
       if (supported) {
+        return
+      }
+      if (isBabelPluginForJsenv(featureName)) {
         return
       }
       missingFeatures[featureName] = features[featureName]
@@ -170,6 +183,12 @@ const featureEffects = {
   new_stylesheet: ({ supportedFeatureNames }) => {
     supportedFeatureNames.push("new-stylesheet-as-jsenv-import")
   },
+  global_this: ({ supportedFeatureNames }) => {
+    supportedFeatureNames.push("global-this-as-jsenv-import")
+  },
+  async_generator_function: ({ supportedFeatureNames }) => {
+    supportedFeatureNames.push("regenerator-runtime-as-jsenv-import")
+  },
 }
 
 export const compareCompileProfiles = (
@@ -185,16 +204,11 @@ export const shakeBabelPluginMap = ({ babelPluginMap, compileProfile }) => {
   const babelPluginMapShaked = {}
   const { missingFeatures } = compileProfile
   Object.keys(babelPluginMap).forEach((babelPluginName) => {
-    if (missingFeatures[babelPluginName]) {
+    if (
+      missingFeatures[babelPluginName] ||
+      isBabelPluginForJsenv(babelPluginName)
+    ) {
       babelPluginMapShaked[babelPluginName] = babelPluginMap[babelPluginName]
-    }
-  })
-  Object.keys(babelPluginMap).forEach((key) => {
-    if (key.startsWith("syntax-")) {
-      babelPluginMapShaked[key] = babelPluginMap[key]
-    }
-    if (key === "transform-replace-expressions") {
-      babelPluginMapShaked[key] = babelPluginMap[key]
     }
   })
   return babelPluginMapShaked

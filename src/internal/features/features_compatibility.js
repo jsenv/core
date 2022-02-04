@@ -11,6 +11,23 @@ export const featuresCompatMap = {
     android: "61",
     samsung: "8.2",
   },
+  import_meta: {
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    safari: "11.1",
+    opera: "51",
+    ios: "12",
+    android: "9",
+  },
+  import_dynamic: {
+    edge: "79",
+    firefox: "67",
+    chrome: "63",
+    safari: "11.3",
+    opera: "50",
+    android: "8",
+  },
   // https://caniuse.com/import-maps
   importmap: {
     edge: "89",
@@ -33,5 +50,27 @@ export const featuresCompatMap = {
     android: "80",
   },
   worker_importmap: {},
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios: "12.2",
+    android: "94",
+    node: "12",
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3",
+  },
   ...babelPluginCompatMap,
 }

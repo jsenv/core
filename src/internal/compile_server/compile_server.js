@@ -105,6 +105,23 @@ export const startCompileServer = async ({
       `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
     )
   }
+  jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+  })
+  const compileContext = await createCompileContext({
+    preservedUrls,
+    replaceProcessEnvNodeEnv,
+    inlineImportMapIntoHTML,
+  })
+  const jsenvDirectory = await setupJsenvDirectory({
+    logger,
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    compileServerCanWriteOnFilesystem,
+    compileContext,
+  })
   preservedUrls = {
     // Authorize jsenv to modify any file url
     // because the goal is to build the files into chunks
@@ -124,10 +141,15 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
+  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+    projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    preservedUrls,
+  })
   const ressourceGraph = createRessourceGraph({
     projectDirectoryUrl,
   })
-  const babelInfo = await loadBabelPluginMap({
+  babelPluginMap = await loadBabelPluginMap({
     logger,
     projectDirectoryUrl,
     jsenvRemoteDirectory,
@@ -141,31 +163,6 @@ export const startCompileServer = async ({
     replaceGlobalFilename,
     replaceGlobalDirname,
     replaceMap,
-  })
-  babelPluginMap = babelInfo.babelPluginMap
-  const babelPluginMapWithoutSyntax = babelInfo.babelPluginMapWithoutSyntax
-
-  jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-  })
-  const compileContext = await createCompileContext({
-    preservedUrls,
-    replaceProcessEnvNodeEnv,
-    inlineImportMapIntoHTML,
-  })
-  const jsenvDirectory = await setupJsenvDirectory({
-    logger,
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    jsenvDirectoryClean,
-    compileServerCanWriteOnFilesystem,
-    compileContext,
-  })
-  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    preservedUrls,
   })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
@@ -186,7 +183,7 @@ export const startCompileServer = async ({
     const compileProfile = createCompileProfile({
       importDefaultExtension,
       customCompilers,
-      babelPluginMapWithoutSyntax,
+      babelPluginMap,
       preservedUrls,
       importMapInWebWorkers,
       moduleOutFormat,
@@ -361,7 +358,6 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     createCompileIdFromRuntimeReport,
     ...compileServer,
-    babelPluginMap,
     preservedUrls,
     projectFileRequestedCallback,
   }

@@ -1,6 +1,7 @@
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
+import { shakeBabelPluginMap } from "../jsenv_directory/compile_profile.js"
 
 import { transformJs } from "./js_transformer.js"
 
@@ -32,7 +33,10 @@ export const compileJavascript = async ({
     url,
     compiledUrl,
 
-    babelPluginMap,
+    babelPluginMap: shakeBabelPluginMap({
+      babelPluginMap,
+      compileProfile,
+    }),
     moduleOutFormat: compileProfile.moduleOutFormat,
     topLevelAwait,
     prependSystemJs,

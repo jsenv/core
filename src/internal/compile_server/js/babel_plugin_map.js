@@ -1,11 +1,8 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
-import {
-  getMinimalBabelPluginMap,
-  extractSyntaxBabelPluginMap,
-} from "./babel_plugins.js"
 
+import { babelPluginSyntaxes } from "./babel_plugin_syntaxes.js"
 import { babelPluginImportMetadata } from "./babel_plugin_import_metadata.js"
 import { babelPluginProxyExternalImports } from "./babel_plugin_proxy_external_imports.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
@@ -21,7 +18,6 @@ export const loadBabelPluginMap = async ({
 
   babelPluginMap,
   babelConfigFileUrl,
-  transformGenerator,
   processEnvNodeEnv,
   replaceProcessEnvNodeEnv,
   replaceGlobalObject,
@@ -34,10 +30,6 @@ export const loadBabelPluginMap = async ({
     babelConfigFileUrl,
   })
   babelPluginMap = {
-    ...getMinimalBabelPluginMap(),
-    "global-this-as-jsenv-import": babelPluginGlobalThisAsJsenvImport,
-    "new-stylesheet-as-jsenv-import": babelPluginNewStylesheetAsJsenvImport,
-    "transform-import-assertions": babelPluginImportAssertions,
     ...babelPluginMapFromFile,
     ...babelPluginMap,
   }
@@ -61,10 +53,26 @@ export const loadBabelPluginMap = async ({
       delete babelPluginMap[key]
     }
   })
-  const { babelSyntaxPluginMap, babelPluginMapWithoutSyntax } =
-    extractSyntaxBabelPluginMap(babelPluginMap)
-
   babelPluginMap = {
+    ...babelPluginMap,
+    "transform-import-assertions": [babelPluginImportAssertions],
+    "global-this-as-jsenv-import": [babelPluginGlobalThisAsJsenvImport],
+    "new-stylesheet-as-jsenv-import": [babelPluginNewStylesheetAsJsenvImport],
+    "regenerator-runtime-as-jsenv-import": [
+      babelPluginRegeneratorRuntimeAsJsenvImport,
+    ],
+  }
+
+  // "babelPluginMapForJsenv" is special:
+  // - the babel plugin options are taken into acount in compile profile
+  // - BUT they cannot be missing features
+  const babelPluginMapForJsenv = {
+    "syntaxes": [babelPluginSyntaxes],
+    "import-metadata": [babelPluginImportMetadata],
+    "proxy-external-imports": [
+      babelPluginProxyExternalImports,
+      { jsenvRemoteDirectory },
+    ],
     // When code should be compatible with browsers, ensure
     // process.env.NODE_ENV is replaced to be executable in a browser by forcing
     // "transform-replace-expressions" babel plugin.
@@ -98,30 +106,27 @@ export const loadBabelPluginMap = async ({
         allowConflictingReplacements: true,
       },
     ],
-    ...babelSyntaxPluginMap,
-    ...babelPluginMap,
-    ...(transformGenerator
-      ? {
-          "regenerator-runtime-as-jsenv-import": [
-            babelPluginRegeneratorRuntimeAsJsenvImport,
-          ],
-        }
-      : {}),
-    ...(jsenvRemoteDirectory
-      ? {
-          "proxy-external-imports": [
-            babelPluginProxyExternalImports,
-            { jsenvRemoteDirectory },
-          ],
-        }
-      : {}),
-    "import-metadata": [babelPluginImportMetadata],
   }
   return {
-    babelPluginMap,
-    babelSyntaxPluginMap,
-    babelPluginMapWithoutSyntax,
+    ...babelPluginMap,
+    ...babelPluginMapForJsenv,
   }
+}
+
+export const isBabelPluginForJsenv = (babelPluginName) =>
+  BABEL_PLUGIN_NAMES_FOR_JSENV.includes(babelPluginName)
+
+const BABEL_PLUGIN_NAMES_FOR_JSENV = [
+  "syntaxes",
+  "import-metadata",
+  "proxy-external-imports",
+  "transform-replace-expressions",
+]
+
+export const babelPluginsFromBabelPluginMap = (babelPluginMap) => {
+  return Object.keys(babelPluginMap).map(
+    (babelPluginName) => babelPluginMap[babelPluginName],
+  )
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

@@ -15,6 +15,7 @@
 module.exports = (
   api,
   {
+    importAssertions = true,
     // pass false if your codebase never uses generators
     generators = true,
     // pass false if your codebase never uses async generators
@@ -22,6 +23,10 @@ module.exports = (
   } = {},
 ) => {
   const plugins = []
+
+  if (importAssertions) {
+    plugins.push(require("@babel/plugin-syntax-import-assertions"))
+  }
 
   // The default list of babel plugins MUST be in compatMap
   // https://github.com/jsenv/jsenv-core/blob/master/src/internal/features/babel_plugin_compatibility.js#L11

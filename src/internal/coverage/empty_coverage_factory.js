@@ -3,10 +3,8 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/filesystem"
 import { Abort } from "@jsenv/abort"
 
-import {
-  babelPluginsFromBabelPluginMap,
-  getMinimalBabelPluginMap,
-} from "@jsenv/core/src/internal/compile_server/js/babel_plugins.js"
+import { babelPluginSyntaxes } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_syntaxes.js"
+import { babelPluginsFromBabelPluginMap } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_map.js"
 
 import { babelPluginInstrument } from "./babel_plugin_instrument.js"
 
@@ -23,7 +21,7 @@ export const relativeUrlToEmptyCoverage = async (
     const source = await readFile(fileUrl)
 
     babelPluginMap = {
-      ...getMinimalBabelPluginMap(),
+      "syntaxes": [babelPluginSyntaxes],
       ...babelPluginMap,
       "transform-instrument": [babelPluginInstrument, { projectDirectoryUrl }],
     }

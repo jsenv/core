@@ -3,7 +3,7 @@ import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 import { babelTransform } from "./babel_transform.js"
-import { babelPluginsFromBabelPluginMap } from "./babel_plugins.js"
+import { babelPluginsFromBabelPluginMap } from "./babel_plugin_map.js"
 import { babelHelperNameFromUrl } from "./babel_helper.js"
 
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
@@ -98,10 +98,8 @@ export const transformJs = async ({
   }
   if (moduleOutFormat === "systemjs") {
     const transformModulesSystemJs = require("@babel/plugin-transform-modules-systemjs")
-    const proposalDynamicImport = require("@babel/plugin-proposal-dynamic-import")
     babelPluginMap = {
       ...babelPluginMap,
-      "proposal-dynamic-import": [proposalDynamicImport],
       "transform-modules-systemjs": [transformModulesSystemJs],
     }
   }

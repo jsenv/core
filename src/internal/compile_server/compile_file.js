@@ -51,7 +51,6 @@ export const compileFile = async ({
         originalFileUrl,
         compiledFileUrl,
         jsenvRemoteDirectory,
-        hmr,
 
         request,
         compileCacheStrategy,

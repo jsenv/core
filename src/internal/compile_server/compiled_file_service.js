@@ -11,7 +11,6 @@ import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 
-import { shakeBabelPluginMap } from "./jsenv_directory/compile_profile.js"
 import { compileFile } from "./compile_file.js"
 import { compileHtml } from "./html/jsenv_compile_html.js"
 import { compileImportmap } from "./importmap/jsenv_compile_importmap.js"
@@ -166,10 +165,7 @@ export const createCompiledFileService = ({
 
           compileProfile,
           compileId,
-          babelPluginMap: shakeBabelPluginMap({
-            babelPluginMap,
-            compileProfile,
-          }),
+          babelPluginMap,
           topLevelAwait,
           prependSystemJs,
 

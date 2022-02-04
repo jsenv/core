@@ -431,25 +431,10 @@ babelPluginCompatMap["transform-async-to-promises"] =
 babelPluginCompatMap["regenerator-transform"] =
   babelPluginCompatMap["transform-regenerator"]
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
-babelPluginCompatMap["global-this-as-jsenv-import"] = {
-  edge: "79",
-  firefox: "65",
-  chrome: "71",
-  safari: "12.1",
-  opera: "58",
-  ios: "12.2",
-  android: "94",
-  node: "12",
-}
-
 // needs support for both json and css
 babelPluginCompatMap["transform-import-assertions"] = {
   chrome: "93",
   edge: "93",
 }
-
-babelPluginCompatMap["new-stylesheet-as-jsenv-import"] = {
-  chrome: "93",
-  edge: "93",
-}
+babelPluginCompatMap["syntax-import-assertions"] =
+  babelPluginCompatMap["transform-import-assertions"]
