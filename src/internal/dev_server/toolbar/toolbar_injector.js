@@ -2,8 +2,12 @@ import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/explorin
 
 import { setAttributes, setStyles } from "./util/dom.js"
 
-// eslint-disable-next-line no-undef
-const TOOLBAR_BUILD_RELATIVE_URL = __TOOLBAR_BUILD_RELATIVE_URL_
+/* eslint-disable no-undef */
+const TOOLBAR_HTML_RELATIVE_URL =
+  typeof __TOOLBAR_BUILD_RELATIVE_URL_ === "undefined"
+    ? "./src/internal/dev_server/toolbar/toolbar.html"
+    : __TOOLBAR_BUILD_RELATIVE_URL_
+/* eslint-enable no-undef */
 const jsenvLogoSvgUrl = new URL("./jsenv_logo.svg", import.meta.url)
 
 const injectToolbar = async () => {
@@ -43,7 +47,7 @@ const injectToolbar = async () => {
     document.location.origin,
   ).href
   const jsenvToolbarHtmlServerUrl = new URL(
-    TOOLBAR_BUILD_RELATIVE_URL,
+    TOOLBAR_HTML_RELATIVE_URL,
     jsenvCoreDirectoryServerUrl,
   )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)

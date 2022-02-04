@@ -7,7 +7,10 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
+import {
+  jsenvCoreDirectoryUrl,
+  jsenvDistDirectoryUrl,
+} from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   BROWSER_CLIENT_BUILD_URL,
   EVENT_SOURCE_CLIENT_BUILD_URL,
@@ -62,48 +65,75 @@ export const compileHtml = async ({
   code,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
-  const browserClientBuildUrlRelativeToProject = urlToRelativeUrl(
-    BROWSER_CLIENT_BUILD_URL,
-    projectDirectoryUrl,
-  )
-  const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    EVENT_SOURCE_CLIENT_BUILD_URL,
-    projectDirectoryUrl,
-  )
-  const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    TOOLBAR_INJECTOR_BUILD_URL,
-    projectDirectoryUrl,
-  )
 
   // ideally we should try/catch html syntax error
   const htmlAst = parseHtmlString(code)
-  manipulateHtmlAst(htmlAst, {
-    scriptInjections: [
-      ...(jsenvScriptInjection
-        ? [
-            {
-              src: `/${browserClientBuildUrlRelativeToProject}`,
-            },
-          ]
-        : []),
-      ...(jsenvEventSourceClientInjection
-        ? [
-            {
-              src: `/${eventSourceClientBuildRelativeUrlForProject}`,
-            },
-          ]
-        : []),
-      ...(jsenvToolbarInjection
-        ? [
-            {
-              src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
-              defer: "",
-              async: "",
-            },
-          ]
-        : []),
-    ],
-  })
+  const scriptInjections = []
+  if (jsenvScriptInjection) {
+    // this one cannot use module format because it sets window.__jsenv__
+    // used by other scripts
+    const browserClientBuildUrlRelativeToProject = urlToRelativeUrl(
+      BROWSER_CLIENT_BUILD_URL,
+      projectDirectoryUrl,
+    )
+    scriptInjections.push({
+      "src": `/${browserClientBuildUrlRelativeToProject}`,
+      "data-jsenv": true,
+    })
+  }
+  if (jsenvEventSourceClientInjection) {
+    if (compileProfile.moduleOutFormat === "esmodule") {
+      const eventSourceClientUrlRelativeToProject = urlToRelativeUrl(
+        new URL(
+          "./src/internal/dev_server/event_source_client/event_source_client.js",
+          jsenvCoreDirectoryUrl,
+        ),
+        projectDirectoryUrl,
+      )
+      scriptInjections.push({
+        "type": "module",
+        "src": `/${eventSourceClientUrlRelativeToProject}`,
+        "data-jsenv": true,
+      })
+    } else {
+      const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
+        EVENT_SOURCE_CLIENT_BUILD_URL,
+        projectDirectoryUrl,
+      )
+      scriptInjections.push({
+        "src": `/${eventSourceClientBuildRelativeUrlForProject}`,
+        "data-jsenv": true,
+      })
+    }
+  }
+  if (jsenvToolbarInjection) {
+    if (compileProfile.moduleOutFormat === "esmodule") {
+      const toolbarInjectorUrlRelativeToProject = urlToRelativeUrl(
+        new URL(
+          "./src/internal/dev_server/toolbar/toolbar_injector.js",
+          jsenvCoreDirectoryUrl,
+        ),
+        projectDirectoryUrl,
+      )
+      scriptInjections.push({
+        "type": "module",
+        "src": `/${toolbarInjectorUrlRelativeToProject}`,
+        "data-jsenv": true,
+      })
+    } else {
+      const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
+        TOOLBAR_INJECTOR_BUILD_URL,
+        projectDirectoryUrl,
+      )
+      scriptInjections.push({
+        "src": `/${toolbarInjectorBuildRelativeUrlForProject}`,
+        "defer": "",
+        "async": "",
+        "data-jsenv": true,
+      })
+    }
+  }
+  manipulateHtmlAst(htmlAst, { scriptInjections })
 
   const sources = []
   const sourcesContent = []
@@ -404,6 +434,14 @@ const visitScripts = async ({
     const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
     const textNode = getHtmlNodeTextNode(script)
     if (type === "module") {
+      const dataJsenvAttribute = getHtmlNodeAttributeByName(
+        script,
+        "data-jsenv",
+      )
+      if (dataJsenvAttribute) {
+        return
+      }
+
       if (src) {
         addHtmlMutation(() => {
           if (compileProfile.moduleOutFormat === "systemjs") {

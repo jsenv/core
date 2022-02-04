@@ -194,7 +194,12 @@ const transformHTMLSourceFile = async ({
             },
           ]
         : []),
-      ...(jsenvToolbarInjection
+      ...(jsenvToolbarInjection &&
+      fileUrl !==
+        new URL(
+          "./src/internal/dev_server/toolbar/toolbar.html",
+          jsenvCoreDirectoryUrl,
+        ).href
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
