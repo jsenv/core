@@ -45,17 +45,22 @@ export const compileJavascript = async ({
     url,
     type: "js",
     dependencyUrls: metadata.dependencies.map((dependencyUrlSpecifier) => {
-      // TODO: handle importmap
-      return new URL(dependencyUrlSpecifier, url).href
+      // TODO: use ressourceGraph.resolveAssetUrl
+      // for import.meta.url + new URL)
+      return ressourceGraph.applyImportmapResolution(
+        dependencyUrlSpecifier,
+        url,
+      )
     }),
     importMetaHotDecline: metadata.importMetaHotDecline,
     importMetaHotAcceptSelf: metadata.importMetaHotAcceptSelf,
     importMetaHotAcceptDependencies:
       metadata.importMetaHotAcceptDependencies.map(
-        (acceptDependencyUrlSpecifier) => {
-          // TODO: handle importmap
-          return new URL(acceptDependencyUrlSpecifier, url).href
-        },
+        (acceptDependencyUrlSpecifier) =>
+          ressourceGraph.applyImportmapResolution(
+            acceptDependencyUrlSpecifier,
+            url,
+          ),
       ),
   })
   return asCompilationResult(

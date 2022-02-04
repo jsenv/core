@@ -1,4 +1,4 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
 export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   const ressources = {}
@@ -9,6 +9,28 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     const ressource = createRessource(url)
     ressources[url] = ressource
     return ressource
+  }
+
+  const applyImportmapResolution = (specifier, baseUrl) => {
+    // const ressourceReferencingUrl = ressources[importerUrl]
+    // if (ressourceReferencingUrl) {
+    //   // TODO: find first html file importing this js file and use importmap
+    //   eventually found in that html file
+    // }
+    return resolveUrl(specifier, baseUrl)
+  }
+  const applyUrlResolution = (specifier, baseUrl) => {
+    return resolveUrl(specifier, baseUrl)
+  }
+
+  const injectHmrIntoUrl = (url) => {
+    const ressource = ressources[url]
+    if (!ressource) {
+      return null
+    }
+    const urlObject = new URL(url)
+    urlObject.searchParams.set("hmr", ressource.hmrTimestamp)
+    return String(urlObject)
   }
 
   const updateRessourceDependencies = ({
@@ -41,7 +63,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
           }
         })
       }
-
       dependencyUrls.forEach((dependencyUrl) => {
         const dependency = reuseOrCreateRessource(dependencyUrl)
         ressource.dependencies.add(url)
@@ -66,6 +87,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!ressource) {
       return null
     }
+    updateHmrTimestamp(ressource)
     const updatePropagationResult = propagateUpdate(ressource)
     if (updatePropagationResult.declined) {
       return {
@@ -94,68 +116,94 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     }
   }
 
-  const propagateUpdate = (ressource, trace = []) => {
-    if (ressource.importMetaHotAcceptSelf) {
+  const updateHmrTimestamp = (ressource, hmr) => {
+    const seen = []
+    const iterate = (url) => {
+      if (seen.includes(url)) {
+        return
+      }
+      seen.push(url)
+      const ressource = ressources[url]
+      ressource.hmrTimestamp = hmr
+      ressource.dependents.forEach((dependentUrl) => {
+        const dependent = ressources[dependentUrl]
+        if (!dependent.importMetaHotAcceptDependencies.includes(url)) {
+          iterate(dependentUrl, hmr)
+        }
+      })
+    }
+    iterate(ressource.url)
+  }
+
+  const propagateUpdate = (ressource) => {
+    const iterate = (ressource, trace) => {
+      if (ressource.importMetaHotAcceptSelf) {
+        return {
+          accepted: true,
+          boundaries: [
+            {
+              boundary: ressource.url,
+              acceptedBy: ressource.url,
+            },
+          ],
+        }
+      }
+      const { dependents } = ressource
+      const boundaries = []
+      for (const dependentUrl of dependents) {
+        const dependent = ressources[dependentUrl]
+        if (dependent.importMetaHotDecline) {
+          return {
+            declined: true,
+            reason: `found "import.meta.hot.decline()" while propagating update`,
+            declinedBy: dependentUrl,
+          }
+        }
+        if (dependent.importMetaHotAcceptDependencies.includes(ressource.url)) {
+          boundaries.push({
+            boundary: dependentUrl,
+            acceptedBy: ressource.url,
+          })
+          continue
+        }
+        if (trace.includes(dependentUrl)) {
+          return {
+            declined: true,
+            reason: "circular dependency",
+            declinedBy: dependentUrl,
+          }
+        }
+        const dependentPropagationResult = iterate(dependent, [
+          ...trace,
+          dependentUrl,
+        ])
+        if (dependentPropagationResult.declined) {
+          return dependentPropagationResult
+        }
+        boundaries.push(...dependentPropagationResult.boundaries)
+      }
+      if (boundaries.length === 0) {
+        return {
+          declined: true,
+          reason: `nothing calls "import.meta.hot.accept()" while propagating update`,
+        }
+      }
       return {
         accepted: true,
-        boundaries: [
-          {
-            boundary: ressource.url,
-            acceptedBy: ressource.url,
-          },
-        ],
+        boundaries,
       }
     }
-    const { dependents } = ressource
-    const boundaries = []
-    for (const dependentUrl of dependents) {
-      const dependent = ressources[dependentUrl]
-      if (dependent.importMetaHotDecline) {
-        return {
-          declined: true,
-          reason: `found "import.meta.hot.decline()" while propagating update`,
-          declinedBy: dependentUrl,
-        }
-      }
-      if (dependent.importMetaHotAcceptDependencies.includes(ressource.url)) {
-        boundaries.push({
-          boundary: dependentUrl,
-          acceptedBy: ressource.url,
-        })
-        continue
-      }
-      if (trace.includes(dependentUrl)) {
-        return {
-          declined: true,
-          reason: "circular dependency",
-          declinedBy: dependentUrl,
-        }
-      }
-      const dependentPropagationResult = propagateUpdate(dependent, [
-        ...trace,
-        dependentUrl,
-      ])
-      if (dependentPropagationResult.declined) {
-        return dependentPropagationResult
-      }
-      boundaries.push(...dependentPropagationResult.boundaries)
-    }
-    if (boundaries.length === 0) {
-      return {
-        declined: true,
-        reason: `nothing calls "import.meta.hot.accept()" while propagating update`,
-      }
-    }
-    return {
-      accepted: true,
-      boundaries,
-    }
+    const trace = []
+    return iterate(ressource, trace)
   }
 
   return {
+    applyImportmapResolution,
+    applyUrlResolution,
     getRessourceByUrl,
     updateRessourceDependencies,
     getReloadInstruction,
+    injectHmrIntoUrl,
   }
 }
 
@@ -163,6 +211,7 @@ const createRessource = (url) => {
   return {
     url,
     type: "",
+    hmrTimestamp: 0,
     dependencies: new Set(),
     dependents: new Set(),
     hotAcceptSelf: false,

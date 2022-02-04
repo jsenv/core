@@ -1,11 +1,20 @@
 import { injectHmrInEsmUrls } from "./hmr_injection_esm.js"
 
-export const injectHmr = ({ contentType, moduleFormat, code, hmr }) => {
+export const injectHmr = ({
+  projectDirectoryUrl,
+  ressourceGraph,
+  url,
+  contentType,
+  moduleFormat,
+  code,
+}) => {
   if (contentType === "application/javascript") {
     if (moduleFormat === "esmodule") {
       return injectHmrInEsmUrls({
+        projectDirectoryUrl,
+        ressourceGraph,
+        url,
         code,
-        hmr,
       })
     }
     return code

@@ -141,6 +141,7 @@ export const createCompiledFileService = ({
       projectDirectoryUrl,
       jsenvDirectory,
       jsenvRemoteDirectory,
+      ressourceGraph,
       originalFileUrl,
       compiledFileUrl,
       importmapInfos,

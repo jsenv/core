@@ -17,6 +17,7 @@ export const compileFile = async ({
   projectDirectoryUrl,
   jsenvDirectory,
   jsenvRemoteDirectory,
+  ressourceGraph,
   originalFileUrl,
   compiledFileUrl,
   importmapInfos,
@@ -131,7 +132,9 @@ export const compileFile = async ({
     const hmr = new URL(originalFileUrl).searchParams.get("hmr")
     if (hmr) {
       compiledSource = await injectHmr({
-        hmr,
+        projectDirectoryUrl,
+        ressourceGraph,
+        url: originalFileUrl,
         contentType,
         moduleFormat: compileProfile.moduleOutFormat,
         code: compiledSource,
