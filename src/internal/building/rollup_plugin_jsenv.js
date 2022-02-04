@@ -27,7 +27,7 @@ import { createImportResolverForNode } from "@jsenv/core/src/internal/import_res
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
-import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_profile.js"
 
 import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
@@ -1090,7 +1090,7 @@ export const createRollupPlugins = async ({
           jsModuleRessource.firstStrongReference &&
           jsModuleRessource.firstStrongReference.integrity
         ) {
-          urlToLoad = setUrlSearchParamsDescriptor(url, {
+          urlToLoad = injectQuery(url, {
             integrity: jsModuleRessource.firstStrongReference.integrity,
           })
           urlImporterMap[urlToLoad] = urlImporterMap[url]

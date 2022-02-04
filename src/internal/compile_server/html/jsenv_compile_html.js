@@ -7,6 +7,7 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 import {
   jsenvCoreDirectoryUrl,
   jsenvDistDirectoryUrl,
@@ -56,15 +57,23 @@ export const compileHtml = async ({
   compileId,
   babelPluginMap,
   topLevelAwait,
+
+  jsenvCorePackageVersion,
   jsenvScriptInjection = true,
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
+
   onHtmlImportmapInfo,
 
   sourcemapMethod,
   code,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
+  const getJsenvDistFileSpecifier = (url) => {
+    const urlVersioned = injectQuery(url, { version: jsenvCorePackageVersion })
+    const relativeUrl = urlToRelativeUrl(urlVersioned, projectDirectoryUrl)
+    return `/${relativeUrl}`
+  }
 
   // ideally we should try/catch html syntax error
   const htmlAst = parseHtmlString(code)
@@ -72,61 +81,45 @@ export const compileHtml = async ({
   if (jsenvScriptInjection) {
     // this one cannot use module format because it sets window.__jsenv__
     // used by other scripts
-    const browserClientBuildUrlRelativeToProject = urlToRelativeUrl(
-      BROWSER_CLIENT_BUILD_URL,
-      projectDirectoryUrl,
-    )
     scriptInjections.push({
-      "src": `/${browserClientBuildUrlRelativeToProject}`,
+      "src": getJsenvDistFileSpecifier(BROWSER_CLIENT_BUILD_URL),
       "data-jsenv": true,
     })
   }
   if (jsenvEventSourceClientInjection) {
     if (compileProfile.moduleOutFormat === "esmodule") {
-      const eventSourceClientUrlRelativeToProject = urlToRelativeUrl(
-        new URL(
-          "./src/internal/dev_server/event_source_client/event_source_client.js",
-          jsenvCoreDirectoryUrl,
-        ),
-        projectDirectoryUrl,
-      )
       scriptInjections.push({
         "type": "module",
-        "src": `/${eventSourceClientUrlRelativeToProject}`,
+        "src": getJsenvDistFileSpecifier(
+          new URL(
+            "./src/internal/dev_server/event_source_client/event_source_client.js",
+            jsenvCoreDirectoryUrl,
+          ),
+        ),
         "data-jsenv": true,
       })
     } else {
-      const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-        EVENT_SOURCE_CLIENT_BUILD_URL,
-        projectDirectoryUrl,
-      )
       scriptInjections.push({
-        "src": `/${eventSourceClientBuildRelativeUrlForProject}`,
+        "src": getJsenvDistFileSpecifier(EVENT_SOURCE_CLIENT_BUILD_URL),
         "data-jsenv": true,
       })
     }
   }
   if (jsenvToolbarInjection) {
     if (compileProfile.moduleOutFormat === "esmodule") {
-      const toolbarInjectorUrlRelativeToProject = urlToRelativeUrl(
-        new URL(
-          "./src/internal/dev_server/toolbar/toolbar_injector.js",
-          jsenvCoreDirectoryUrl,
-        ),
-        projectDirectoryUrl,
-      )
       scriptInjections.push({
         "type": "module",
-        "src": `/${toolbarInjectorUrlRelativeToProject}`,
+        "src": getJsenvDistFileSpecifier(
+          new URL(
+            "./src/internal/dev_server/toolbar/toolbar_injector.js",
+            jsenvCoreDirectoryUrl,
+          ),
+        ),
         "data-jsenv": true,
       })
     } else {
-      const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-        TOOLBAR_INJECTOR_BUILD_URL,
-        projectDirectoryUrl,
-      )
       scriptInjections.push({
-        "src": `/${toolbarInjectorBuildRelativeUrlForProject}`,
+        "src": getJsenvDistFileSpecifier(TOOLBAR_INJECTOR_BUILD_URL),
         "defer": "",
         "async": "",
         "data-jsenv": true,

@@ -1,6 +1,6 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 
 import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
 
@@ -92,7 +92,7 @@ const forceImportTypeOnSpecifier = ({ specifierPath, babel, importType }) => {
   const specifier = specifierPath.node.value
   const fakeOrigin = "http://jsenv.com"
   const url = new URL(specifier, fakeOrigin)
-  const urlWithImportType = setUrlSearchParamsDescriptor(url, {
+  const urlWithImportType = injectQuery(url, {
     import_type: importType,
   })
   if (urlWithImportType.startsWith(fakeOrigin)) {

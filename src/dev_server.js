@@ -6,7 +6,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
-import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -158,7 +158,7 @@ const createRedirectorService = async ({
       return {
         status: 307,
         headers: {
-          location: setUrlSearchParamsDescriptor(
+          location: injectQuery(
             `${request.origin}/${redirectorRelativeUrlForProject}`,
             {
               redirect: redirectTarget,
@@ -176,7 +176,7 @@ const createRedirectorService = async ({
       return {
         status: 307,
         headers: {
-          location: setUrlSearchParamsDescriptor(
+          location: injectQuery(
             `${request.origin}/${redirectorRelativeUrlForProject}`,
             {
               redirect: redirectTarget,
@@ -190,7 +190,7 @@ const createRedirectorService = async ({
       return {
         status: 307,
         headers: {
-          location: setUrlSearchParamsDescriptor(
+          location: injectQuery(
             `${request.origin}/${redirectorRelativeUrlForProject}`,
             {
               redirect: redirectTarget,

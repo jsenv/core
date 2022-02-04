@@ -274,6 +274,7 @@ export const startCompileServer = async ({
       babelPluginMap,
       customCompilers,
       prependSystemJs,
+      jsenvCorePackageVersion: compileContext.jsenvCorePackageVersion,
       jsenvEventSourceClientInjection,
       jsenvToolbarInjection,
 

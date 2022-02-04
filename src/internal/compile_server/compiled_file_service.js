@@ -41,6 +41,7 @@ export const createCompiledFileService = ({
   prependSystemJs,
   customCompilers,
 
+  jsenvCorePackageVersion,
   jsenvEventSourceClientInjection,
   jsenvToolbarInjection,
 
@@ -172,6 +173,7 @@ export const createCompiledFileService = ({
           code,
           sourcemapMethod,
           sourcemapExcludeSources,
+          jsenvCorePackageVersion,
           jsenvEventSourceClientInjection,
           jsenvToolbarInjection,
           onHtmlImportmapInfo: ({ htmlUrl, importmapInfo }) => {

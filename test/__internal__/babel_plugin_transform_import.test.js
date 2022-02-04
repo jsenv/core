@@ -2,7 +2,7 @@ import { transformAsync } from "@babel/core"
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { setUrlSearchParamsDescriptor } from "@jsenv/core/src/internal/url_utils.js"
+import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
 
 const babelPluginTransformImport = (babel, { transformImportSpecifier }) => {
@@ -37,7 +37,7 @@ const babelPluginTransformImport = (babel, { transformImportSpecifier }) => {
           transformImportSpecifier: ({ specifier }) => {
             const fakeOrigin = "http://jsenv.com"
             const url = new URL(specifier, fakeOrigin)
-            const urlWithImportType = setUrlSearchParamsDescriptor(url, {
+            const urlWithImportType = injectQuery(url, {
               import_type: "css",
             })
             if (urlWithImportType.startsWith(fakeOrigin)) {

@@ -23,11 +23,11 @@ export const getUrlSearchParamsDescriptor = (url) => {
   return searchParamsDescriptor
 }
 
-export const setUrlSearchParamsDescriptor = (url, searchParamsDescriptor) => {
+export const injectQuery = (url, params) => {
   const urlObject = new URL(url)
   const { searchParams } = urlObject
-  Object.keys(searchParamsDescriptor).forEach((key) => {
-    searchParams.set(key, searchParamsDescriptor[key])
+  Object.keys(params).forEach((key) => {
+    searchParams.set(key, params[key])
   })
   return String(urlObject)
 }
