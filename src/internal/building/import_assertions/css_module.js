@@ -5,7 +5,7 @@ import {
   getCssSourceMappingUrl,
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourcemap_utils.js"
-import { moveCssUrls } from "@jsenv/core/src/internal/building/css/move_css_urls.js"
+import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
 
 export const convertCssTextToJavascriptModule = async ({
   cssUrl,

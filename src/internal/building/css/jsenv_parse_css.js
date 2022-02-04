@@ -11,10 +11,11 @@ import {
   setCssSourceMappingUrl,
 } from "@jsenv/core/src/internal/sourcemap_utils.js"
 
-import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
-import { parseCssUrls } from "./parse_css_urls.js"
-import { replaceCssUrls } from "./replace_css_urls.js"
-import { moveCssUrls } from "./move_css_urls.js"
+import { parseCssUrls } from "@jsenv/core/src/internal/transform_css/parse_css_urls.js"
+import { replaceCssUrls } from "@jsenv/core/src/internal/transform_css/replace_css_urls.js"
+import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
+
+import { getRessourceAsBase64Url } from "@jsenv/core/src/internal/building/ressource_builder_util.js"
 
 export const parseCssRessource = async (
   cssRessource,

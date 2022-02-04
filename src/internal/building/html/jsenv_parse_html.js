@@ -35,6 +35,7 @@ import {
   removeHtmlNode,
   addHtmlNodeAttribute,
 } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
 import {
   getJavaScriptSourceMappingUrl,
   setJavaScriptSourceMappingUrl,
@@ -48,7 +49,6 @@ import {
 import { collectNodesMutations } from "./html_node_mutations.js"
 
 import { collectSvgMutations } from "../svg/jsenv_parse_svg.js"
-import { moveCssUrls } from "../css/move_css_urls.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,

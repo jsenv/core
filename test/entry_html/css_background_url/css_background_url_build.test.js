@@ -8,7 +8,7 @@ import {
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/building/css/parse_css_urls.js"
+import { parseCssUrls } from "@jsenv/core/src/internal/transform_css/parse_css_urls.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
