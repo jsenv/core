@@ -124,18 +124,16 @@ const createSSEServiceWithLivereload = ({
     })
     const stopWatching = watchProjectFiles(({ event, fileRelativeUrl }) => {
       const url = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
-      const ressource = ressourceGraph.getRessourceByUrl(url)
-      if (!ressource) {
-        return
+      const reloadInstruction = ressourceGraph.onFileChange(url)
+      if (reloadInstruction) {
+        sseRoom.sendEvent({
+          type: "reload",
+          data: JSON.stringify({
+            reason: `${fileRelativeUrl} ${event}`,
+            instruction: reloadInstruction,
+          }),
+        })
       }
-      const reloadInstruction = ressourceGraph.getReloadInstruction(url)
-      sseRoom.sendEvent({
-        type: "reload",
-        data: JSON.stringify({
-          reason: `${fileRelativeUrl} ${event}`,
-          instruction: reloadInstruction,
-        }),
-      })
     })
     const removeSSECleanupCallback = serverStopCallbackList.add(() => {
       removeSSECleanupCallback()

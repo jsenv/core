@@ -17,10 +17,12 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     //   // TODO: find first html file importing this js file and use importmap
     //   eventually found in that html file
     // }
-    return resolveUrl(specifier, baseUrl)
+    const url = resolveUrl(specifier, baseUrl)
+    return removeHmrQuery(url)
   }
   const applyUrlResolution = (specifier, baseUrl) => {
-    return resolveUrl(specifier, baseUrl)
+    const url = resolveUrl(specifier, baseUrl)
+    return removeHmrQuery(url)
   }
 
   const injectHmrIntoUrl = (url) => {
@@ -28,9 +30,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!ressource) {
       return null
     }
-    const urlObject = new URL(url)
-    urlObject.searchParams.set("hmr", ressource.hmrTimestamp)
-    return String(urlObject)
+    return injectHmrQuery(url, ressource.hmrTimestamp)
   }
 
   const updateRessourceDependencies = ({
@@ -41,6 +41,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     importMetaHotAcceptSelf,
     importMetaHotAcceptDependencies,
   }) => {
+    url = removeHmrQuery(url)
     const existingRessource = getRessourceByUrl(url)
     const ressource =
       existingRessource || (ressources[url] = createRessource(url))
@@ -82,12 +83,12 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return notUsedAnymore
   }
 
-  const getReloadInstruction = (urlModified) => {
-    const ressource = getRessourceByUrl(urlModified)
+  const onFileChange = (url) => {
+    const ressource = getRessourceByUrl(url)
     if (!ressource) {
       return null
     }
-    updateHmrTimestamp(ressource)
+    updateHmrTimestamp(ressource, Date.now())
     const updatePropagationResult = propagateUpdate(ressource)
     if (updatePropagationResult.declined) {
       return {
@@ -202,9 +203,21 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     applyUrlResolution,
     getRessourceByUrl,
     updateRessourceDependencies,
-    getReloadInstruction,
+    onFileChange,
     injectHmrIntoUrl,
   }
+}
+
+const injectHmrQuery = (url, hmr) => {
+  const urlObject = new URL(url)
+  urlObject.searchParams.set("hmr", hmr)
+  return String(urlObject)
+}
+
+const removeHmrQuery = (url) => {
+  const urlObject = new URL(url)
+  urlObject.searchParams.delete("hmr")
+  return String(urlObject)
 }
 
 const createRessource = (url) => {
@@ -214,7 +227,8 @@ const createRessource = (url) => {
     hmrTimestamp: 0,
     dependencies: new Set(),
     dependents: new Set(),
-    hotAcceptSelf: false,
-    hotAcceptDependencies: [],
+    importMetaHotAcceptSelf: false,
+    importMetaHotAcceptDependencies: [],
+    importMetaHotDecline: false,
   }
 }

@@ -6,7 +6,10 @@ import {
 
 import { traverseProgramImports } from "@jsenv/core/src/internal/compile_server/js/traverse_program_imports.js"
 
-export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
+export const babelPluginHmrEsm = (
+  babel,
+  { projectDirectoryUrl, ressourceGraph },
+) => {
   return {
     name: "jsenv-hmr-esm",
     visitor: {
@@ -22,14 +25,17 @@ export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
             specifier,
             fileUrl,
           )
-          if (!urlIsInsideOf(url, fileUrl)) {
+          if (!urlIsInsideOf(url, projectDirectoryUrl)) {
             return
           }
           const urlWithHmr = ressourceGraph.injectHmrIntoUrl(url)
           if (!urlWithHmr) {
             return
           }
-          const specifierWithHmr = `${urlToRelativeUrl(urlWithHmr, fileUrl)}`
+          const relativeUrl = urlToRelativeUrl(urlWithHmr, fileUrl)
+          const specifierWithHmr = relativeUrl.startsWith(".")
+            ? relativeUrl
+            : `./${relativeUrl}`
           specifierPath.replaceWith(babel.types.stringLiteral(specifierWithHmr))
         })
       },

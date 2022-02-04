@@ -10,21 +10,6 @@ let livereloadingAvailableOnServer = false
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
 export const initToolbarEventSource = ({ livereloading }) => {
-  document.querySelector("#hmr_debug").onclick = () => {
-    window.parent.__jsenv_event_source_client__.addReloadMessage({
-      reason: "fake file change on other-file.js",
-      instruction: {
-        type: "hot_reload",
-        updates: [
-          {
-            type: "js",
-            relativeUrl: "./test-manual/exploring/basic/basic.js",
-          },
-        ],
-      },
-    })
-  }
-
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
   livereloadingAvailableOnServer = livereloading
   if (!livereloadingAvailableOnServer) {

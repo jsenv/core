@@ -25,7 +25,10 @@ export const injectHmrInEsmUrls = async ({
       generatorOpts: {
         compact: false,
       },
-      plugins: [[babelPluginSyntaxes], [babelPluginHmrEsm, { ressourceGraph }]],
+      plugins: [
+        [babelPluginSyntaxes],
+        [babelPluginHmrEsm, { projectDirectoryUrl, ressourceGraph }],
+      ],
     },
   })
   return result.code
