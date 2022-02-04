@@ -1,168 +1,17 @@
 (function () {
 'use strict';
-var nativeTypeOf = function nativeTypeOf(obj) {
-  return typeof obj;
-};
+const fetchUsingXHR = async (url, {
+  signal,
+  method = "GET",
+  credentials = "same-origin",
+  headers = {},
+  body = null
+} = {}) => {
+  const headersPromise = createPromiseAndHooks();
+  const bodyPromise = createPromiseAndHooks();
+  const xhr = new XMLHttpRequest();
 
-var customTypeOf = function customTypeOf(obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
-
-var defineProperty = (function (obj, key, value) {
-  // Shortcircuit the slow defineProperty path when possible.
-  // We are trying to avoid issues where setters defined on the
-  // prototype cause side effects under the fast path of simple
-  // assignment. By checking for existence of the property with
-  // the in operator, we can optimize most of this overhead away.
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-});
-
-// filters on symbol properties only. Returned string properties are always
-// enumerable. It is good to use in objectSpread.
-
-function ownKeys(object, enumerableOnly) {
-  var keys = Object.keys(object);
-
-  if (Object.getOwnPropertySymbols) {
-    var symbols = Object.getOwnPropertySymbols(object);
-
-    if (enumerableOnly) {
-      symbols = symbols.filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
-      });
-    }
-
-    keys.push.apply(keys, symbols);
-  }
-
-  return keys;
-}
-
-function _objectSpread2(target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i] != null ? arguments[i] : {};
-
-    if (i % 2) {
-      ownKeys(Object(source), true).forEach(function (key) {
-        defineProperty(target, key, source[key]);
-      });
-    } else if (Object.getOwnPropertyDescriptors) {
-      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
-    } else {
-      ownKeys(Object(source)).forEach(function (key) {
-        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-      });
-    }
-  }
-
-  return target;
-}
-
-var objectWithoutPropertiesLoose = (function (source, excluded) {
-  if (source === null) return {};
-  var target = {};
-  var sourceKeys = Object.keys(source);
-  var key;
-  var i;
-
-  for (i = 0; i < sourceKeys.length; i++) {
-    key = sourceKeys[i];
-    if (excluded.indexOf(key) >= 0) continue;
-    target[key] = source[key];
-  }
-
-  return target;
-});
-
-var _objectWithoutProperties = (function (source, excluded) {
-  if (source === null) return {};
-  var target = objectWithoutPropertiesLoose(source, excluded);
-  var key;
-  var i;
-
-  if (Object.getOwnPropertySymbols) {
-    var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
-
-    for (i = 0; i < sourceSymbolKeys.length; i++) {
-      key = sourceSymbolKeys[i];
-      if (excluded.indexOf(key) >= 0) continue;
-      if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
-      target[key] = source[key];
-    }
-  }
-
-  return target;
-});
-
-function _await$4(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async$4(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-function _call$1(body, then, direct) {
-  if (direct) {
-    return then ? then(body()) : body();
-  }
-
-  try {
-    var result = Promise.resolve(body());
-    return then ? result.then(then) : result;
-  } catch (e) {
-    return Promise.reject(e);
-  }
-}
-
-var fetchUsingXHR = _async$4(function (url) {
-  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      signal = _ref.signal,
-      _ref$method = _ref.method,
-      method = _ref$method === void 0 ? "GET" : _ref$method,
-      _ref$credentials = _ref.credentials,
-      credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
-      _ref$headers = _ref.headers,
-      headers = _ref$headers === void 0 ? {} : _ref$headers,
-      _ref$body = _ref.body,
-      body = _ref$body === void 0 ? null : _ref$body;
-
-  var headersPromise = createPromiseAndHooks();
-  var bodyPromise = createPromiseAndHooks();
-  var xhr = new XMLHttpRequest();
-
-  var failure = function failure(error) {
+  const failure = error => {
     // if it was already resolved, we must reject the body promise
     if (headersPromise.settled) {
       bodyPromise.reject(error);
@@ -171,42 +20,44 @@ var fetchUsingXHR = _async$4(function (url) {
     }
   };
 
-  var cleanup = function cleanup() {
+  const cleanup = () => {
     xhr.ontimeout = null;
     xhr.onerror = null;
     xhr.onload = null;
     xhr.onreadystatechange = null;
   };
 
-  xhr.ontimeout = function () {
+  xhr.ontimeout = () => {
     cleanup();
-    failure(new Error("xhr request timeout on ".concat(url, ".")));
+    failure(new Error(`xhr request timeout on ${url}.`));
   };
 
-  xhr.onerror = function (error) {
+  xhr.onerror = error => {
     cleanup(); // unfortunately with have no clue why it fails
     // might be cors for instance
 
     failure(createRequestError(error, {
-      url: url
+      url
     }));
   };
 
-  xhr.onload = function () {
+  xhr.onload = () => {
     cleanup();
     bodyPromise.resolve();
   };
 
-  signal.addEventListener("abort", function () {
+  signal.addEventListener("abort", () => {
     xhr.abort();
-    var abortError = new Error("aborted");
+    const abortError = new Error("aborted");
     abortError.name = "AbortError";
     failure(abortError);
   });
 
-  xhr.onreadystatechange = function () {
+  xhr.onreadystatechange = () => {
     // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-    var readyState = xhr.readyState;
+    const {
+      readyState
+    } = xhr;
 
     if (readyState === 2) {
       headersPromise.resolve();
@@ -217,12 +68,12 @@ var fetchUsingXHR = _async$4(function (url) {
   };
 
   xhr.open(method, url, true);
-  Object.keys(headers).forEach(function (key) {
+  Object.keys(headers).forEach(key => {
     xhr.setRequestHeader(key, headers[key]);
   });
   xhr.withCredentials = computeWithCredentials({
-    credentials: credentials,
-    url: url
+    credentials,
+    url
   });
 
   if ("responseType" in xhr && hasBlob) {
@@ -230,110 +81,129 @@ var fetchUsingXHR = _async$4(function (url) {
   }
 
   xhr.send(body);
-  return _await$4(headersPromise, function () {
-    // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
-    var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
-    var responseStatus = xhr.status;
-    var responseStatusText = xhr.statusText;
-    var responseHeaders = getHeadersFromXHR(xhr);
+  await headersPromise; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
 
-    var readBody = function readBody() {
-      return _await$4(bodyPromise, function () {
-        var status = xhr.status; // in Chrome on file:/// URLs, status is 0
+  const responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+  let responseStatus = xhr.status;
+  const responseStatusText = xhr.statusText;
+  const responseHeaders = getHeadersFromXHR(xhr);
 
-        if (status === 0) {
-          responseStatus = 200;
-        }
+  const readBody = async () => {
+    await bodyPromise;
+    const {
+      status
+    } = xhr; // in Chrome on file:/// URLs, status is 0
 
-        var body = "response" in xhr ? xhr.response : xhr.responseText;
-        return {
-          responseBody: body,
-          responseBodyType: detectBodyType(body)
-        };
-      });
-    };
+    if (status === 0) {
+      responseStatus = 200;
+    }
 
-    var text = function text() {
-      return _call$1(readBody, function (_ref2) {
-        var responseBody = _ref2.responseBody,
-            responseBodyType = _ref2.responseBodyType;
-
-        if (responseBodyType === "blob") {
-          return blobToText(responseBody);
-        }
-
-        if (responseBodyType === "formData") {
-          throw new Error("could not read FormData body as text");
-        }
-
-        return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
-      });
-    };
-
-    var json = function json() {
-      return _call$1(text, JSON.parse);
-    };
-
-    var blob = _async$4(function () {
-      if (!hasBlob) {
-        throw new Error("blob not supported");
-      }
-
-      return _call$1(readBody, function (_ref3) {
-        var responseBody = _ref3.responseBody,
-            responseBodyType = _ref3.responseBodyType;
-
-        if (responseBodyType === "blob") {
-          return responseBody;
-        }
-
-        if (responseBodyType === "dataView") {
-          return new Blob([cloneBuffer(responseBody.buffer)]);
-        }
-
-        if (responseBodyType === "arrayBuffer") {
-          return new Blob([cloneBuffer(responseBody)]);
-        }
-
-        if (responseBodyType === "formData") {
-          throw new Error("could not read FormData body as blob");
-        }
-
-        return new Blob([String(responseBody)]);
-      });
-    });
-
-    var arrayBuffer = function arrayBuffer() {
-      return _call$1(readBody, function (_ref4) {
-        var responseBody = _ref4.responseBody,
-            responseBodyType = _ref4.responseBodyType;
-        return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
-      });
-    };
-
-    var formData = _async$4(function () {
-      if (!hasFormData) {
-        throw new Error("formData not supported");
-      }
-
-      return _call$1(text, textToFormData);
-    });
-
+    const body = "response" in xhr ? xhr.response : xhr.responseText;
     return {
-      url: responseUrl,
-      status: responseStatus,
-      statusText: responseStatusText,
-      headers: responseHeaders,
-      text: text,
-      json: json,
-      blob: blob,
-      arrayBuffer: arrayBuffer,
-      formData: formData
+      responseBody: body,
+      responseBodyType: detectBodyType(body)
     };
-  });
-});
+  };
 
-var canUseBlob = function canUseBlob() {
+  const text = async () => {
+    const {
+      responseBody,
+      responseBodyType
+    } = await readBody();
+
+    if (responseBodyType === "blob") {
+      return blobToText(responseBody);
+    }
+
+    if (responseBodyType === "formData") {
+      throw new Error("could not read FormData body as text");
+    }
+
+    if (responseBodyType === "dataView") {
+      return arrayBufferToText(responseBody.buffer);
+    }
+
+    if (responseBodyType === "arrayBuffer") {
+      return arrayBufferToText(responseBody);
+    } // if (responseBodyType === "text" || responseBodyType === 'searchParams') {
+    //   return body
+    // }
+
+
+    return String(responseBody);
+  };
+
+  const json = async () => {
+    const responseText = await text();
+    return JSON.parse(responseText);
+  };
+
+  const blob = async () => {
+    if (!hasBlob) {
+      throw new Error(`blob not supported`);
+    }
+
+    const {
+      responseBody,
+      responseBodyType
+    } = await readBody();
+
+    if (responseBodyType === "blob") {
+      return responseBody;
+    }
+
+    if (responseBodyType === "dataView") {
+      return new Blob([cloneBuffer(responseBody.buffer)]);
+    }
+
+    if (responseBodyType === "arrayBuffer") {
+      return new Blob([cloneBuffer(responseBody)]);
+    }
+
+    if (responseBodyType === "formData") {
+      throw new Error("could not read FormData body as blob");
+    }
+
+    return new Blob([String(responseBody)]);
+  };
+
+  const arrayBuffer = async () => {
+    const {
+      responseBody,
+      responseBodyType
+    } = await readBody();
+
+    if (responseBodyType === "arrayBuffer") {
+      return cloneBuffer(responseBody);
+    }
+
+    const responseBlob = await blob();
+    return blobToArrayBuffer(responseBlob);
+  };
+
+  const formData = async () => {
+    if (!hasFormData) {
+      throw new Error(`formData not supported`);
+    }
+
+    const responseText = await text();
+    return textToFormData(responseText);
+  };
+
+  return {
+    url: responseUrl,
+    status: responseStatus,
+    statusText: responseStatusText,
+    headers: responseHeaders,
+    text,
+    json,
+    blob,
+    arrayBuffer,
+    formData
+  };
+};
+
+const canUseBlob = () => {
   if (typeof window.FileReader !== "function") return false;
   if (typeof window.Blob !== "function") return false;
 
@@ -346,26 +216,29 @@ var canUseBlob = function canUseBlob() {
   }
 };
 
-var hasBlob = canUseBlob();
-var hasFormData = typeof window.FormData === "function";
-var hasArrayBuffer = typeof window.ArrayBuffer === "function";
-var hasSearchParams = typeof window.URLSearchParams === "function";
+const hasBlob = canUseBlob();
+const hasFormData = typeof window.FormData === "function";
+const hasArrayBuffer = typeof window.ArrayBuffer === "function";
+const hasSearchParams = typeof window.URLSearchParams === "function";
 
-var createRequestError = function createRequestError(error, _ref5) {
-  var url = _ref5.url;
-  return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
+const createRequestError = (error, {
+  url
+}) => {
+  return new Error(`error during xhr request on ${url}.
+--- error stack ---
+${error.stack}`);
 };
 
-var createPromiseAndHooks = function createPromiseAndHooks() {
-  var resolve;
-  var reject;
-  var promise = new Promise(function (res, rej) {
-    resolve = function resolve(value) {
+const createPromiseAndHooks = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = value => {
       promise.settled = true;
       res(value);
     };
 
-    reject = function reject(value) {
+    reject = value => {
       promise.settled = true;
       rej(value);
     };
@@ -376,10 +249,10 @@ var createPromiseAndHooks = function createPromiseAndHooks() {
 }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 
 
-var computeWithCredentials = function computeWithCredentials(_ref6) {
-  var credentials = _ref6.credentials,
-      url = _ref6.url;
-
+const computeWithCredentials = ({
+  credentials,
+  url
+}) => {
   if (credentials === "same-origin") {
     return originSameAsGlobalOrigin(url);
   }
@@ -387,16 +260,16 @@ var computeWithCredentials = function computeWithCredentials(_ref6) {
   return credentials === "include";
 };
 
-var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
+const originSameAsGlobalOrigin = url => {
   // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
-  if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
-  if (_typeof(window.location) !== "object") return true;
-  var globalOrigin = window.location.origin;
+  if (typeof window !== "object") return true;
+  if (typeof window.location !== "object") return true;
+  const globalOrigin = window.location.origin;
   if (globalOrigin === "null") return true;
   return hrefToOrigin(url) === globalOrigin;
 };
 
-var detectBodyType = function detectBodyType(body) {
+const detectBodyType = body => {
   if (!body) {
     return "";
   }
@@ -415,11 +288,11 @@ var detectBodyType = function detectBodyType(body) {
 
   if (hasArrayBuffer) {
     if (hasBlob && isDataView(body)) {
-      return "dataView";
+      return `dataView`;
     }
 
     if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
-      return "arrayBuffer";
+      return `arrayBuffer`;
     }
   }
 
@@ -431,30 +304,30 @@ var detectBodyType = function detectBodyType(body) {
 }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
 
 
-var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
-  var headerMap = {};
-  var headersString = xhr.getAllResponseHeaders();
+const getHeadersFromXHR = xhr => {
+  const headerMap = {};
+  const headersString = xhr.getAllResponseHeaders();
   if (headersString === "") return headerMap;
-  var lines = headersString.trim().split(/[\r\n]+/);
-  lines.forEach(function (line) {
-    var parts = line.split(": ");
-    var name = parts.shift();
-    var value = parts.join(": ");
+  const lines = headersString.trim().split(/[\r\n]+/);
+  lines.forEach(line => {
+    const parts = line.split(": ");
+    const name = parts.shift();
+    const value = parts.join(": ");
     headerMap[name.toLowerCase()] = value;
   });
   return headerMap;
 };
 
-var hrefToOrigin = function hrefToOrigin(href) {
-  var scheme = hrefToScheme(href);
+const hrefToOrigin = href => {
+  const scheme = hrefToScheme(href);
 
   if (scheme === "file") {
     return "file://";
   }
 
   if (scheme === "http" || scheme === "https") {
-    var secondProtocolSlashIndex = scheme.length + "://".length;
-    var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
     if (pathnameSlashIndex === -1) return href;
     return href.slice(0, pathnameSlashIndex);
   }
@@ -462,54 +335,54 @@ var hrefToOrigin = function hrefToOrigin(href) {
   return href.slice(0, scheme.length + 1);
 };
 
-var hrefToScheme = function hrefToScheme(href) {
-  var colonIndex = href.indexOf(":");
+const hrefToScheme = href => {
+  const colonIndex = href.indexOf(":");
   if (colonIndex === -1) return "";
   return href.slice(0, colonIndex);
 };
 
-var isDataView = function isDataView(obj) {
+const isDataView = obj => {
   return obj && DataView.prototype.isPrototypeOf(obj);
 };
 
-var isArrayBufferView = ArrayBuffer.isView || function () {
-  var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
-  return function (value) {
+const isArrayBufferView = ArrayBuffer.isView || (() => {
+  const viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+  return value => {
     return value && viewClasses.includes(Object.prototype.toString.call(value));
   };
-}();
+})();
 
-var textToFormData = function textToFormData(text) {
-  var form = new FormData();
+const textToFormData = text => {
+  const form = new FormData();
   text.trim().split("&").forEach(function (bytes) {
     if (bytes) {
-      var split = bytes.split("=");
-      var name = split.shift().replace(/\+/g, " ");
-      var value = split.join("=").replace(/\+/g, " ");
+      const split = bytes.split("=");
+      const name = split.shift().replace(/\+/g, " ");
+      const value = split.join("=").replace(/\+/g, " ");
       form.append(decodeURIComponent(name), decodeURIComponent(value));
     }
   });
   return form;
 };
 
-var blobToArrayBuffer = _async$4(function (blob) {
-  var reader = new FileReader();
-  var promise = fileReaderReady(reader);
+const blobToArrayBuffer = async blob => {
+  const reader = new FileReader();
+  const promise = fileReaderReady(reader);
   reader.readAsArrayBuffer(blob);
   return promise;
-});
+};
 
-var blobToText = function blobToText(blob) {
-  var reader = new FileReader();
-  var promise = fileReaderReady(reader);
+const blobToText = blob => {
+  const reader = new FileReader();
+  const promise = fileReaderReady(reader);
   reader.readAsText(blob);
   return promise;
 };
 
-var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
-  var view = new Uint8Array(arrayBuffer);
-  var chars = new Array(view.length);
-  var i = 0;
+const arrayBufferToText = arrayBuffer => {
+  const view = new Uint8Array(arrayBuffer);
+  const chars = new Array(view.length);
+  let i = 0;
 
   while (i < view.length) {
     chars[i] = String.fromCharCode(view[i]);
@@ -519,7 +392,7 @@ var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
   return chars.join("");
 };
 
-var fileReaderReady = function fileReaderReady(reader) {
+const fileReaderReady = reader => {
   return new Promise(function (resolve, reject) {
     reader.onload = function () {
       resolve(reader.result);
@@ -531,191 +404,85 @@ var fileReaderReady = function fileReaderReady(reader) {
   });
 };
 
-var cloneBuffer = function cloneBuffer(buffer) {
+const cloneBuffer = buffer => {
   if (buffer.slice) {
     return buffer.slice(0);
   }
 
-  var view = new Uint8Array(buffer.byteLength);
+  const view = new Uint8Array(buffer.byteLength);
   view.set(new Uint8Array(buffer));
   return view.buffer;
 };
 
-var _excluded = ["mode"];
-
-function _await$3(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async$3(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var fetchNative = _async$3(function (url) {
-  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-  var _ref$mode = _ref.mode,
-      mode = _ref$mode === void 0 ? "cors" : _ref$mode,
-      options = _objectWithoutProperties(_ref, _excluded);
-
-  return _await$3(window.fetch(url, _objectSpread2({
-    mode: mode
-  }, options)), function (response) {
-    return {
-      url: response.url,
-      status: response.status,
-      statusText: "",
-      headers: responseToHeaders(response),
-      text: function text() {
-        return response.text();
-      },
-      json: function json() {
-        return response.json();
-      },
-      blob: function blob() {
-        return response.blob();
-      },
-      arrayBuffer: function arrayBuffer() {
-        return response.arrayBuffer();
-      },
-      formData: function formData() {
-        return response.formData();
-      }
-    };
+const fetchNative = async (url, {
+  mode = "cors",
+  ...options
+} = {}) => {
+  const response = await window.fetch(url, {
+    mode,
+    ...options
   });
-});
+  return {
+    url: response.url,
+    status: response.status,
+    statusText: "",
+    headers: responseToHeaders(response),
+    text: () => response.text(),
+    json: () => response.json(),
+    blob: () => response.blob(),
+    arrayBuffer: () => response.arrayBuffer(),
+    formData: () => response.formData()
+  };
+};
 
-var responseToHeaders = function responseToHeaders(response) {
-  var headers = {};
-  response.headers.forEach(function (value, name) {
+const responseToHeaders = response => {
+  const headers = {};
+  response.headers.forEach((value, name) => {
     headers[name] = value;
   });
   return headers;
 };
 
-var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+const fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-function _await$2(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
+const fetchJson = async (url, options = {}) => {
+  const response = await fetchUrl(url, options);
+  const object = await response.json();
+  return object;
+};
 
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _async$2(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var fetchJson = _async$2(function (url) {
-  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-  return _await$2(fetchUrl(url, options), function (response) {
-    return _await$2(response.json());
-  });
-});
-
-function _await$1(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-function _catch(body, recover) {
+const fetchExploringJson = async ({
+  signal
+} = {}) => {
   try {
-    var result = body();
+    const exploringInfo = await fetchJson("/.jsenv/exploring.json", {
+      signal
+    });
+    return exploringInfo;
   } catch (e) {
-    return recover(e);
-  }
-
-  if (result && result.then) {
-    return result.then(void 0, recover);
-  }
-
-  return result;
-}
-
-function _async$1(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var fetchExploringJson = _async$1(function () {
-  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      signal = _ref.signal;
-
-  return _catch(function () {
-    return _await$1(fetchJson("/.jsenv/exploring.json", {
-      signal: signal
-    }));
-  }, function (e) {
     if (signal && signal.aborted && e.name === "AbortError") {
       throw e;
     }
 
-    throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
-  });
-});
+    throw new Error(`Cannot communicate with exploring server due to a network error
+--- error stack ---
+${e.stack}`);
+  }
+};
 
-var setStyles = function setStyles(element, styles) {
-  var elementStyle = element.style;
-  var restoreStyles = Object.keys(styles).map(function (styleName) {
-    var restore;
+const setStyles = (element, styles) => {
+  const elementStyle = element.style;
+  const restoreStyles = Object.keys(styles).map(styleName => {
+    let restore;
 
     if (styleName in elementStyle) {
-      var currentStyle = elementStyle[styleName];
+      const currentStyle = elementStyle[styleName];
 
-      restore = function restore() {
+      restore = () => {
         elementStyle[styleName] = currentStyle;
       };
     } else {
-      restore = function restore() {
+      restore = () => {
         delete elementStyle[styleName];
       };
     }
@@ -723,63 +490,21 @@ var setStyles = function setStyles(element, styles) {
     elementStyle[styleName] = styles[styleName];
     return restore;
   });
-  return function () {
-    restoreStyles.forEach(function (restore) {
-      return restore();
-    });
+  return () => {
+    restoreStyles.forEach(restore => restore());
   };
 };
-var setAttributes = function setAttributes(element, attributes) {
-  Object.keys(attributes).forEach(function (name) {
+const setAttributes = (element, attributes) => {
+  Object.keys(attributes).forEach(name => {
     element.setAttribute(name, attributes[name]);
   });
 };
 
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
+const TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar.html";
+const jsenvLogoSvgUrl = new URL("assets/jsenv_logo_192011c2.svg", document.currentScript && document.currentScript.src || document.baseURI);
 
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var TOOLBAR_BUILD_RELATIVE_URL = "dist/toolbar/toolbar.html";
-
-function _call(body, then, direct) {
-  if (direct) {
-    return then ? then(body()) : body();
-  }
-
-  try {
-    var result = Promise.resolve(body());
-    return then ? result.then(then) : result;
-  } catch (e) {
-    return Promise.reject(e);
-  }
-}
-
-var jsenvLogoSvgUrl = new URL("assets/jsenv_logo_192011c2.svg", document.currentScript && document.currentScript.src || document.baseURI);
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var injectToolbar = _async(function () {
-  return _await(new Promise(function (resolve) {
+const injectToolbar = async () => {
+  await new Promise(resolve => {
     if (window.requestIdleCallback) {
       window.requestIdleCallback(resolve, {
         timeout: 400
@@ -787,113 +512,159 @@ var injectToolbar = _async(function () {
     } else {
       window.requestAnimationFrame(resolve);
     }
-  }), function () {
-    return _call(fetchExploringJson, function (exploringJSON) {
-      var placeholder = getToolbarPlaceholder();
-      var iframe = document.createElement("iframe");
-      setAttributes(iframe, {
-        tabindex: -1,
-        // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-        // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-        allowtransparency: true
-      });
-      setStyles(iframe, {
-        "position": "fixed",
-        "zIndex": 1000,
-        "bottom": 0,
-        "left": 0,
-        "width": "100%",
-        "height": 0,
+  });
+  const exploringJSON = await fetchExploringJson();
+  const placeholder = getToolbarPlaceholder();
+  const iframe = document.createElement("iframe");
+  setAttributes(iframe, {
+    tabindex: -1,
+    // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+    // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+    allowtransparency: true
+  });
+  setStyles(iframe, {
+    "position": "fixed",
+    "zIndex": 1000,
+    "bottom": 0,
+    "left": 0,
+    "width": "100%",
+    "height": 0,
 
-        /* ensure toolbar children are not focusable when hidden */
-        "visibility": "hidden",
-        "transition-duration": "300ms",
-        "transition-property": "height, visibility",
-        "border": "none"
-      });
-      var iframeLoadedPromise = iframeToLoadedPromise(iframe);
-      var jsenvCoreDirectoryServerUrl = new URL(exploringJSON.jsenvCoreDirectoryRelativeUrl, document.location.origin).href;
-      var jsenvToolbarHtmlServerUrl = new URL(TOOLBAR_BUILD_RELATIVE_URL, jsenvCoreDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
+    /* ensure toolbar children are not focusable when hidden */
+    "visibility": "hidden",
+    "transition-duration": "300ms",
+    "transition-property": "height, visibility",
+    "border": "none"
+  });
+  const iframeLoadedPromise = iframeToLoadedPromise(iframe);
+  const jsenvCoreDirectoryServerUrl = new URL(exploringJSON.jsenvCoreDirectoryRelativeUrl, document.location.origin).href;
+  const jsenvToolbarHtmlServerUrl = new URL(TOOLBAR_BUILD_RELATIVE_URL, jsenvCoreDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
 
-      iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
-      placeholder.parentNode.replaceChild(iframe, placeholder);
-      addToolbarEventCallback(iframe, "toolbar_ready", function () {
-        sendCommandToToolbar(iframe, "renderToolbar", {
-          exploringJSON: exploringJSON
-        });
-      });
-      return _await(iframeLoadedPromise, function () {
-        iframe.removeAttribute("tabindex");
-        var div = document.createElement("div");
-        div.innerHTML = "\n<div id=\"jsenv-toolbar-trigger\">\n  <svg id=\"jsenv-toolbar-trigger-icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
-        var toolbarTrigger = div.firstElementChild;
-        iframe.parentNode.appendChild(toolbarTrigger);
-        var timer;
-
-        toolbarTrigger.onmouseenter = function () {
-          toolbarTrigger.setAttribute("data-animate", "");
-          timer = setTimeout(expandToolbarTrigger, 500);
-        };
-
-        toolbarTrigger.onmouseleave = function () {
-          clearTimeout(timer);
-          collapseToolbarTrigger();
-        };
-
-        toolbarTrigger.onfocus = function () {
-          toolbarTrigger.removeAttribute("data-animate");
-          expandToolbarTrigger();
-        };
-
-        toolbarTrigger.onblur = function () {
-          toolbarTrigger.removeAttribute("data-animate");
-          clearTimeout(timer);
-          collapseToolbarTrigger();
-        };
-
-        toolbarTrigger.onclick = function () {
-          sendCommandToToolbar(iframe, "showToolbar");
-        };
-
-        var showToolbarTrigger = function showToolbarTrigger() {
-          toolbarTrigger.style.display = "block";
-        };
-
-        var hideToolbarTrigger = function hideToolbarTrigger() {
-          toolbarTrigger.style.display = "none";
-        };
-
-        var expandToolbarTrigger = function expandToolbarTrigger() {
-          toolbarTrigger.setAttribute("data-expanded", "");
-        };
-
-        var collapseToolbarTrigger = function collapseToolbarTrigger() {
-          toolbarTrigger.removeAttribute("data-expanded", "");
-        };
-
-        hideToolbarTrigger();
-        addToolbarEventCallback(iframe, "toolbar-visibility-change", function (visible) {
-          if (visible) {
-            hideToolbarTrigger();
-          } else {
-            showToolbarTrigger();
-          }
-        });
-        return iframe;
-      });
+  iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
+  placeholder.parentNode.replaceChild(iframe, placeholder);
+  addToolbarEventCallback(iframe, "toolbar_ready", () => {
+    sendCommandToToolbar(iframe, "renderToolbar", {
+      exploringJSON
     });
   });
-});
+  await iframeLoadedPromise;
+  iframe.removeAttribute("tabindex");
+  const div = document.createElement("div");
+  div.innerHTML = `
+<div id="jsenv-toolbar-trigger">
+  <svg id="jsenv-toolbar-trigger-icon">
+    <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
+  </svg>
+  <style>
+    #jsenv-toolbar-trigger {
+      display: block;
+      overflow: hidden;
+      position: fixed;
+      z-index: 1000;
+      bottom: -32px;
+      right: 20px;
+      height: 40px;
+      width: 40px;
+      padding: 0;
+      margin: 0;
+      border-radius: 5px 5px 0 0;
+      border: 1px solid rgba(0, 0, 0, 0.33);
+      border-bottom: none;
+      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+      background: transparent;
+      text-align: center;
+      transition: 600ms;
+    }
 
-var addToolbarEventCallback = function addToolbarEventCallback(iframe, eventName, callback) {
-  var messageEventCallback = function messageEventCallback(messageEvent) {
-    var data = messageEvent.data;
+    #jsenv-toolbar-trigger:hover {
+      cursor: pointer;
+    }
 
-    if (_typeof(data) !== "object") {
+    #jsenv-toolbar-trigger[data-expanded] {
+      bottom: 0;
+    }
+
+    #jsenv-toolbar-trigger-icon {
+      width: 35px;
+      height: 35px;
+      opacity: 0;
+      transition: 600ms;
+    }
+
+    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {
+      opacity: 1;
+    }
+  </style>
+</div>`;
+  const toolbarTrigger = div.firstElementChild;
+  iframe.parentNode.appendChild(toolbarTrigger);
+  let timer;
+
+  toolbarTrigger.onmouseenter = () => {
+    toolbarTrigger.setAttribute("data-animate", "");
+    timer = setTimeout(expandToolbarTrigger, 500);
+  };
+
+  toolbarTrigger.onmouseleave = () => {
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
+
+  toolbarTrigger.onfocus = () => {
+    toolbarTrigger.removeAttribute("data-animate");
+    expandToolbarTrigger();
+  };
+
+  toolbarTrigger.onblur = () => {
+    toolbarTrigger.removeAttribute("data-animate");
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
+
+  toolbarTrigger.onclick = () => {
+    sendCommandToToolbar(iframe, "showToolbar");
+  };
+
+  const showToolbarTrigger = () => {
+    toolbarTrigger.style.display = "block";
+  };
+
+  const hideToolbarTrigger = () => {
+    toolbarTrigger.style.display = "none";
+  };
+
+  const expandToolbarTrigger = () => {
+    toolbarTrigger.setAttribute("data-expanded", "");
+  };
+
+  const collapseToolbarTrigger = () => {
+    toolbarTrigger.removeAttribute("data-expanded", "");
+  };
+
+  hideToolbarTrigger();
+  addToolbarEventCallback(iframe, "toolbar-visibility-change", visible => {
+    if (visible) {
+      hideToolbarTrigger();
+    } else {
+      showToolbarTrigger();
+    }
+  });
+  return iframe;
+};
+
+const addToolbarEventCallback = (iframe, eventName, callback) => {
+  const messageEventCallback = messageEvent => {
+    const {
+      data
+    } = messageEvent;
+
+    if (typeof data !== "object") {
       return;
     }
 
-    var __jsenv__ = data.__jsenv__;
+    const {
+      __jsenv__
+    } = data;
 
     if (!__jsenv__) {
       return;
@@ -907,26 +678,22 @@ var addToolbarEventCallback = function addToolbarEventCallback(iframe, eventName
   };
 
   window.addEventListener("message", messageEventCallback, false);
-  return function () {
+  return () => {
     window.removeEventListener("message", messageEventCallback, false);
   };
 };
 
-var sendCommandToToolbar = function sendCommandToToolbar(iframe, command) {
-  for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-    args[_key - 2] = arguments[_key];
-  }
-
+const sendCommandToToolbar = (iframe, command, ...args) => {
   iframe.contentWindow.postMessage({
     __jsenv__: {
-      command: command,
-      args: args
+      command,
+      args
     }
   }, window.origin);
 };
 
-var getToolbarPlaceholder = function getToolbarPlaceholder() {
-  var placeholder = queryPlaceholder();
+const getToolbarPlaceholder = () => {
+  const placeholder = queryPlaceholder();
 
   if (placeholder) {
     if (document.body.contains(placeholder)) {
@@ -941,19 +708,19 @@ var getToolbarPlaceholder = function getToolbarPlaceholder() {
   return createTooolbarPlaceholder();
 };
 
-var queryPlaceholder = function queryPlaceholder() {
+const queryPlaceholder = () => {
   return document.querySelector("[data-jsenv-toolbar-placeholder]");
 };
 
-var createTooolbarPlaceholder = function createTooolbarPlaceholder() {
-  var placeholder = document.createElement("span");
+const createTooolbarPlaceholder = () => {
+  const placeholder = document.createElement("span");
   document.body.appendChild(placeholder);
   return placeholder;
 };
 
-var iframeToLoadedPromise = function iframeToLoadedPromise(iframe) {
-  return new Promise(function (resolve) {
-    var onload = function onload() {
+const iframeToLoadedPromise = iframe => {
+  return new Promise(resolve => {
+    const onload = () => {
       iframe.removeEventListener("load", onload, true);
       resolve();
     };

@@ -1,28 +1,24 @@
 /* eslint-env browser */
 (function () {
 'use strict';
-var createEventSourceConnection = function createEventSourceConnection(eventSourceUrl) {
-  var events = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-  var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
-      _ref$retryMaxAttempt = _ref.retryMaxAttempt,
-      retryMaxAttempt = _ref$retryMaxAttempt === void 0 ? Infinity : _ref$retryMaxAttempt,
-      _ref$retryAllocatedMs = _ref.retryAllocatedMs,
-      retryAllocatedMs = _ref$retryAllocatedMs === void 0 ? Infinity : _ref$retryAllocatedMs,
-      lastEventId = _ref.lastEventId;
-
-  var _window = window,
-      EventSource = _window.EventSource;
+const createEventSourceConnection = (eventSourceUrl, events = {}, {
+  retryMaxAttempt = Infinity,
+  retryAllocatedMs = Infinity,
+  lastEventId
+} = {}) => {
+  const {
+    EventSource
+  } = window;
 
   if (typeof EventSource !== "function") {
-    return function () {};
+    return () => {};
   }
 
-  var eventSourceOrigin = new URL(eventSourceUrl).origin;
-  Object.keys(events).forEach(function (eventName) {
-    var eventCallback = events[eventName];
+  const eventSourceOrigin = new URL(eventSourceUrl).origin;
+  Object.keys(events).forEach(eventName => {
+    const eventCallback = events[eventName];
 
-    events[eventName] = function (e) {
+    events[eventName] = e => {
       if (e.origin === eventSourceOrigin) {
         if (e.lastEventId) {
           lastEventId = e.lastEventId;
@@ -32,9 +28,9 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
       }
     };
   });
-  var status = {
+  const status = {
     value: "default",
-    goTo: function goTo(value) {
+    goTo: value => {
       if (value === status.value) {
         return;
       }
@@ -42,37 +38,37 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
       status.value = value;
       status.onchange();
     },
-    onchange: function onchange() {}
+    onchange: () => {}
   };
 
-  var _disconnect = function _disconnect() {};
+  let _disconnect = () => {};
 
-  var attemptConnection = function attemptConnection(url) {
-    var eventSource = new EventSource(url, {
+  const attemptConnection = url => {
+    const eventSource = new EventSource(url, {
       withCredentials: true
     });
 
-    _disconnect = function _disconnect() {
+    _disconnect = () => {
       if (status.value !== "connecting" && status.value !== "connected") {
-        console.warn("disconnect() ignored because connection is ".concat(status.value));
+        console.warn(`disconnect() ignored because connection is ${status.value}`);
         return;
       }
 
       eventSource.onerror = undefined;
       eventSource.close();
-      Object.keys(events).forEach(function (eventName) {
+      Object.keys(events).forEach(eventName => {
         eventSource.removeEventListener(eventName, events[eventName]);
       });
       status.goTo("disconnected");
     };
 
-    var retryCount = 0;
-    var firstRetryMs = Date.now();
+    let retryCount = 0;
+    let firstRetryMs = Date.now();
 
-    eventSource.onerror = function (errorEvent) {
+    eventSource.onerror = errorEvent => {
       if (errorEvent.target.readyState === EventSource.CONNECTING) {
         if (retryCount > retryMaxAttempt) {
-          console.info("could not connect after ".concat(retryMaxAttempt, " attempt"));
+          console.info(`could not connect after ${retryMaxAttempt} attempt`);
 
           _disconnect();
 
@@ -82,10 +78,10 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
         if (retryCount === 0) {
           firstRetryMs = Date.now();
         } else {
-          var allRetryDuration = Date.now() - firstRetryMs;
+          const allRetryDuration = Date.now() - firstRetryMs;
 
           if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
-            console.info("could not connect in less than ".concat(retryAllocatedMs, " ms"));
+            console.info(`could not connect in less than ${retryAllocatedMs} ms`);
 
             _disconnect();
 
@@ -105,16 +101,16 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
       }
     };
 
-    eventSource.onopen = function () {
+    eventSource.onopen = () => {
       status.goTo("connected");
     };
 
-    Object.keys(events).forEach(function (eventName) {
+    Object.keys(events).forEach(eventName => {
       eventSource.addEventListener(eventName, events[eventName]);
     });
 
     if (!events.hasOwnProperty("welcome")) {
-      eventSource.addEventListener("welcome", function (e) {
+      eventSource.addEventListener("welcome", e => {
         if (e.origin === eventSourceOrigin && e.lastEventId) {
           lastEventId = e.lastEventId;
         }
@@ -124,42 +120,40 @@ var createEventSourceConnection = function createEventSourceConnection(eventSour
     status.goTo("connecting");
   };
 
-  var _connect = function connect() {
+  let connect = () => {
     attemptConnection(eventSourceUrl);
 
-    _connect = function connect() {
+    connect = () => {
       attemptConnection(lastEventId ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId) : eventSourceUrl);
     };
   };
 
-  var removePageUnloadListener = listenPageUnload(function () {
+  const removePageUnloadListener = listenPageUnload(() => {
     _disconnect();
   });
 
-  var destroy = function destroy() {
+  const destroy = () => {
     removePageUnloadListener();
 
     _disconnect();
   };
 
   return {
-    status: status,
-    connect: _connect,
-    disconnect: function disconnect() {
-      return _disconnect();
-    },
-    destroy: destroy
+    status,
+    connect,
+    disconnect: () => _disconnect(),
+    destroy
   };
 };
 
-var addLastEventIdIntoUrlSearchParams = function addLastEventIdIntoUrlSearchParams(url, lastEventId) {
+const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
   if (url.indexOf("?") === -1) {
     url += "?";
   } else {
     url += "&";
   }
 
-  return "".concat(url, "last-event-id=").concat(encodeURIComponent(lastEventId));
+  return `${url}last-event-id=${encodeURIComponent(lastEventId)}`;
 }; // const listenPageMightFreeze = (callback) => {
 //   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
 //     if (pageHideEvent.persisted === true) {
@@ -193,8 +187,8 @@ var addLastEventIdIntoUrlSearchParams = function addLastEventIdIntoUrlSearchPara
 // }
 
 
-var listenPageUnload = function listenPageUnload(callback) {
-  var removePageHideListener = listenEvent(window, "pagehide", function (pageHideEvent) {
+const listenPageUnload = callback => {
+  const removePageHideListener = listenEvent(window, "pagehide", pageHideEvent => {
     if (pageHideEvent.persisted !== true) {
       callback(pageHideEvent);
     }
@@ -202,16 +196,16 @@ var listenPageUnload = function listenPageUnload(callback) {
   return removePageHideListener;
 };
 
-var listenEvent = function listenEvent(emitter, event, callback) {
+const listenEvent = (emitter, event, callback) => {
   emitter.addEventListener(event, callback);
-  return function () {
+  return () => {
     emitter.removeEventListener(event, callback);
   };
 };
 
 /* eslint-env browser */
-var isLivereloadEnabled = function isLivereloadEnabled() {
-  var value = window.localStorage.getItem("livereload");
+const isLivereloadEnabled = () => {
+  const value = window.localStorage.getItem("livereload");
 
   if (value === "0") {
     return false;
@@ -219,143 +213,102 @@ var isLivereloadEnabled = function isLivereloadEnabled() {
 
   return true;
 };
-var setLivereloadPreference = function setLivereloadPreference(value) {
+const setLivereloadPreference = value => {
   window.localStorage.setItem("livereload", value ? "1" : "0");
 };
 
-var reloadPage = function reloadPage() {
+const reloadPage = () => {
   window.parent.location.reload(true);
 };
 
-function _empty() {}
-
-var reloadMessages = [];
-
-function _awaitIgnored(value, direct) {
-  if (!direct) {
-    return value && value.then ? value.then(_empty) : Promise.resolve();
-  }
-}
-
-var urlHotMetas = {};
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i];
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args));
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-}
-
-var reloadMessagesSignal = {
-  onchange: function onchange() {}
+const reloadMessages = [];
+const urlHotMetas = {};
+const reloadMessagesSignal = {
+  onchange: () => {}
 };
 
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value;
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value);
-  }
-
-  return then ? value.then(then) : value;
-}
-
-var applyReloadMessageEffects = _async(function () {
-  var someEffectIsFullReload = reloadMessages.some(function (reloadMessage) {
-    return reloadMessage.instruction.type === "full_reload";
-  });
+const applyReloadMessageEffects = async () => {
+  const someEffectIsFullReload = reloadMessages.some(reloadMessage => reloadMessage.instruction.type === "full_reload");
 
   if (someEffectIsFullReload) {
     reloadPage();
     return;
   }
 
-  return _awaitIgnored(Promise.all(reloadMessages.map(_async(function (reloadMessage, index) {
-    return _invokeIgnored(function () {
-      if (reloadMessage.instruction.type === "hot_reload") {
-        return _await(applyHotReload(reloadMessage.instruction), function () {
-          reloadMessages.splice(index, 1);
-          reloadMessagesSignal.onchange();
-        });
-      }
+  const onApplied = reloadMessage => {
+    const index = reloadMessages.indexOf(reloadMessage);
+    reloadMessages.splice(index, 1);
+    reloadMessagesSignal.onchange();
+  };
+
+  const setReloadMessagePromise = (reloadMessage, promise) => {
+    reloadMessage.status = "pending";
+    promise.then(() => {
+      onApplied(reloadMessage);
+    }, e => {
+      console.error(e);
+      console.error(`[hmr] Failed to reload after ${reloadMessage.reason}.
+This could be due to syntax errors or importing non-existent modules (see errors above)`);
+      reloadMessage.status = "failed";
+      reloadMessagesSignal.onchange();
     });
-  }))));
-});
+  };
 
-function _invokeIgnored(body) {
-  var result = body();
+  await Promise.all(reloadMessages.map(async reloadMessage => {
+    if (reloadMessage.instruction.type === "hot_reload") {
+      setReloadMessagePromise(reloadMessage, applyHotReload(reloadMessage.instruction));
+      return;
+    }
 
-  if (result && result.then) {
-    return result.then(_empty);
-  }
-}
+    onApplied(reloadMessage);
+  }));
+};
 
-var applyHotReload = _async(function (_ref) {
-  var timestamp = _ref.timestamp,
-      updates = _ref.updates;
-  return _awaitIgnored(Promise.all(updates.map(_async(function (_ref2) {
-    var _exit = false;
-    var type = _ref2.type,
-        url = _ref2.url;
-    return _invoke(function () {
-      if (type === "js") {
-        var urlWithHmr = injectQuery(url, {
-          hmr: timestamp
-        });
-        return _await(import(urlWithHmr), function (namespace) {
-          console.log("[jsenv] hot updated: ".concat(url));
-          _exit = true;
-          return namespace;
-        });
-      }
-    }, function (_result) {
-      if (_exit) return _result;
-      throw new Error("unknown update type: \"".concat(type, "\""));
-    });
-  }))));
-});
+const applyHotReload = async ({
+  timestamp,
+  updates
+}) => {
+  await Promise.all(updates.map(async ({
+    type,
+    url
+  }) => {
+    if (type === "js") {
+      const urlWithHmr = injectQuery(url, {
+        hmr: timestamp
+      });
+      const namespace = await import(urlWithHmr);
+      console.log(`[jsenv] hot updated: ${url}`);
+      return namespace;
+    }
 
-function _invoke(body, then) {
-  var result = body();
+    throw new Error(`unknown update type: "${type}"`);
+  }));
+};
 
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
-var injectQuery = function injectQuery(url, query) {
-  var urlObject = new URL(url);
-  var searchParams = urlObject.searchParams;
-  Object.keys(query).forEach(function (key) {
+const injectQuery = (url, query) => {
+  const urlObject = new URL(url);
+  const {
+    searchParams
+  } = urlObject;
+  Object.keys(query).forEach(key => {
     searchParams.set(key, query[key]);
   });
   return String(urlObject);
 };
 
-var eventsourceConnection = createEventSourceConnection(document.location.href, {
-  reload: function reload(_ref3) {
-    var data = _ref3.data;
-
-    var _JSON$parse = JSON.parse(data),
-        reason = _JSON$parse.reason,
-        fileRelativeUrl = _JSON$parse.fileRelativeUrl,
-        instruction = _JSON$parse.instruction;
-
+const eventsourceConnection = createEventSourceConnection(document.location.href, {
+  reload: ({
+    data
+  }) => {
+    const {
+      reason,
+      fileRelativeUrl,
+      instruction
+    } = JSON.parse(data);
     reloadMessages.push({
-      reason: reason,
-      fileRelativeUrl: fileRelativeUrl,
-      instruction: instruction
+      reason,
+      fileRelativeUrl,
+      instruction
     });
 
     if (isLivereloadEnabled()) {
@@ -368,20 +321,22 @@ var eventsourceConnection = createEventSourceConnection(document.location.href, 
   retryMaxAttempt: Infinity,
   retryAllocatedMs: 20 * 1000
 });
-var status = eventsourceConnection.status,
-    connect = eventsourceConnection.connect,
-    disconnect = eventsourceConnection.disconnect;
+const {
+  status,
+  connect,
+  disconnect
+} = eventsourceConnection;
 connect();
 window.__jsenv_event_source_client__ = {
-  status: status,
-  connect: connect,
-  disconnect: disconnect,
-  isLivereloadEnabled: isLivereloadEnabled,
-  setLivereloadPreference: setLivereloadPreference,
-  urlHotMetas: urlHotMetas,
-  reloadMessages: reloadMessages,
-  reloadMessagesSignal: reloadMessagesSignal,
-  applyReloadMessageEffects: applyReloadMessageEffects
+  status,
+  connect,
+  disconnect,
+  isLivereloadEnabled,
+  setLivereloadPreference,
+  urlHotMetas,
+  reloadMessages,
+  reloadMessagesSignal,
+  applyReloadMessageEffects
 };
 })(); // const findHotMetaUrl = (originalFileRelativeUrl) => {
 //   return Object.keys(urlHotMetas).find((compileUrl) => {
