@@ -4,7 +4,7 @@ import {
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getHtmlNodeLocation,
-} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
 import { collectNodesMutations } from "../html/html_node_mutations.js"

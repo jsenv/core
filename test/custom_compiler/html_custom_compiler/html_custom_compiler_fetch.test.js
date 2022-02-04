@@ -7,7 +7,7 @@ import { startCompileServer } from "@jsenv/core/src/internal/compile_server/comp
 import {
   findHtmlNodeById,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "@jsenv/core/test/__internal__/compile_server/TEST_PARAMS_COMPILE_SERVER.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

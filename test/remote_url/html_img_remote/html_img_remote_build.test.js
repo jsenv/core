@@ -12,7 +12,7 @@ import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAM
 import {
   findHtmlNodeById,
   getHtmlNodeAttributeByName,
-} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 const { server } = await import("./script/serve.js")
 try {

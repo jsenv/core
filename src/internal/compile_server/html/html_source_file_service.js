@@ -43,7 +43,7 @@ import {
   getHtmlNodeTextNode,
   setHtmlNodeText,
   getIdForInlineHtmlNode,
-} from "./html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
 

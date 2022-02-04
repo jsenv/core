@@ -39,7 +39,7 @@ import {
   setHtmlNodeText,
   visitHtmlAst,
   addHtmlNodeAttribute,
-} from "./html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 export const compileHtml = async ({
   // cancellationToken,

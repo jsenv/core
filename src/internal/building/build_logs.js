@@ -1,6 +1,6 @@
 import { ANSI, UNICODE } from "@jsenv/log"
 
-import { getHtmlNodeLocation } from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+import { getHtmlNodeLocation } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 import { byteAsFileSize } from "../logs/byte_as_file_size.js"
 import { msAsDuration } from "../logs/ms_as_duration.js"

@@ -8,7 +8,7 @@ import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(

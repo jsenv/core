@@ -12,7 +12,7 @@ import {
   getHtmlNodeTextNode,
   manipulateHtmlAst,
   findFirstImportMapNode,
-} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 import { parseHtmlRessource } from "./html/jsenv_parse_html.js"
 import { parseImportmapRessource } from "./importmap/jsenv_parse_importmap.js"

@@ -34,7 +34,7 @@ import {
   getHtmlNodeLocation,
   removeHtmlNode,
   addHtmlNodeAttribute,
-} from "@jsenv/core/src/internal/compile_server/html/html_ast.js"
+} from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
 import {
   getJavaScriptSourceMappingUrl,
