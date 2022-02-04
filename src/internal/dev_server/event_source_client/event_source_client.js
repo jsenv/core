@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { createEventSourceConnection } from "./event_source_connection.js"
 import {
   isLivereloadEnabled,
@@ -11,19 +9,19 @@ const reloadMessages = []
 const urlHotMetas = {}
 const reloadMessagesSignal = { onchange: () => {} }
 const applyReloadMessageEffects = async () => {
-  const someEffectIsFullReload = reloadMessages.find(
+  const someEffectIsFullReload = reloadMessages.some(
     (reloadMessage) => reloadMessage.instruction.type === "full_reload",
   )
   if (someEffectIsFullReload) {
     reloadPage()
     return
   }
-  const copy = reloadMessages.slice()
-  reloadMessages.length = 0
   await Promise.all(
-    copy.map(async (reloadMessage) => {
-      if (reloadMessage.type === "hot_reload") {
-        await applyHotReload(reloadMessage)
+    reloadMessages.map(async (reloadMessage, index) => {
+      if (reloadMessage.instruction.type === "hot_reload") {
+        await applyHotReload(reloadMessage.instruction)
+        reloadMessages.splice(index, 1)
+        reloadMessagesSignal.onchange()
       }
     }),
   )
@@ -33,7 +31,9 @@ const applyHotReload = async ({ timestamp, updates }) => {
   await Promise.all(
     updates.map(async ({ type, url }) => {
       if (type === "js") {
-        const namespace = await import(injectQuery(url, { hmr: timestamp }))
+        const urlWithHmr = injectQuery(url, { hmr: timestamp })
+        const namespace = await import(urlWithHmr)
+        console.log(`[jsenv] hot updated: ${url}`)
         return namespace
       }
       throw new Error(`unknown update type: "${type}"`)

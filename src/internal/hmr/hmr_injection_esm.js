@@ -1,6 +1,7 @@
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { babelTransform } from "@jsenv/core/src/internal/compile_server/js/babel_transform.js"
+import { babelPluginSyntaxes } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_syntaxes.js"
 
 import { babelPluginHmrEsm } from "./babel_plugin_hmr_esm.js"
 
@@ -24,7 +25,7 @@ export const injectHmrInEsmUrls = async ({
       generatorOpts: {
         compact: false,
       },
-      plugins: [[babelPluginHmrEsm, { ressourceGraph }]],
+      plugins: [[babelPluginSyntaxes], [babelPluginHmrEsm, { ressourceGraph }]],
     },
   })
 }

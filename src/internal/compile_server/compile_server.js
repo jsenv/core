@@ -109,18 +109,8 @@ export const startCompileServer = async ({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
   })
-  const compileContext = await createCompileContext({
-    preservedUrls,
-    replaceProcessEnvNodeEnv,
-    inlineImportMapIntoHTML,
-  })
-  const jsenvDirectory = await setupJsenvDirectory({
-    logger,
+  const ressourceGraph = createRessourceGraph({
     projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    jsenvDirectoryClean,
-    compileServerCanWriteOnFilesystem,
-    compileContext,
   })
   preservedUrls = {
     // Authorize jsenv to modify any file url
@@ -146,8 +136,18 @@ export const startCompileServer = async ({
     jsenvDirectoryRelativeUrl,
     preservedUrls,
   })
-  const ressourceGraph = createRessourceGraph({
+  const compileContext = await createCompileContext({
+    preservedUrls,
+    replaceProcessEnvNodeEnv,
+    inlineImportMapIntoHTML,
+  })
+  const jsenvDirectory = await setupJsenvDirectory({
+    logger,
     projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    jsenvDirectoryClean,
+    compileServerCanWriteOnFilesystem,
+    compileContext,
   })
   babelPluginMap = await loadBabelPluginMap({
     logger,
@@ -425,7 +425,8 @@ const createSourceFileService = ({
         headers: request.headers,
         etagEnabled: projectFileCacheStrategy === "etag",
         mtimeEnabled: projectFileCacheStrategy === "mtime",
-        ...(fileIsInsideJsenvDistDirectory
+        ...(fileIsInsideJsenvDistDirectory &&
+        /_[a-z0-9]{8,}(\..*?)?$/.test(fileUrl)
           ? {
               cacheControl: `private,max-age=${60 * 60 * 24 * 30},immutable`,
             }

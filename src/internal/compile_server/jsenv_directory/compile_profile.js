@@ -6,7 +6,6 @@ import { sameValueInTwoObjects } from "./comparison_utils.js"
 
 const COMPARERS = {
   missingFeatures: sameValueInTwoObjects,
-  preservedUrls: sameValueInTwoObjects,
   moduleOutFormat: (a, b) => a === b,
   sourcemapMethod: (a, b) => a === b,
   sourcemapExcludeSources: (a, b) => a === b,
@@ -16,7 +15,6 @@ const COMPARERS = {
 
 export const createCompileProfile = ({
   importDefaultExtension,
-  preservedUrls,
   customCompilers,
   babelPluginMap,
   importMapInWebWorkers,
@@ -158,7 +156,6 @@ export const createCompileProfile = ({
   }
   return {
     missingFeatures,
-    preservedUrls,
     moduleOutFormat,
     sourcemapMethod,
     sourcemapExcludeSources,

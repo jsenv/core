@@ -9,4 +9,8 @@ console.log("bar")
 
 console.log(typeof window === "object")
 
+if (import.meta.hot) {
+  import.meta.hot.accept()
+}
+
 export default 42

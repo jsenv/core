@@ -63,7 +63,11 @@ const updateEventSourceIndicator = () => {
         // eslint-disable-next-line no-alert
         window.parent.alert(JSON.stringify(reloadMessages, null, "  "))
       }
-      variantNode.querySelector(".eventsource-reload-link").onclick = () => {
+      const applyLink = variantNode.querySelector(".eventsource-reload-link")
+      applyLink.innerHTML = "apply changes"
+      applyLink.onclick = () => {
+        applyLink.onclick = () => {}
+        applyLink.innerHTML = "applying..."
         parentEventSourceClient.applyReloadMessageEffects()
       }
     }
