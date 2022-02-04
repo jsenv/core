@@ -30,7 +30,11 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!ressource) {
       return null
     }
-    return injectHmrQuery(url, ressource.hmrTimestamp)
+    const { hmrTimestamp } = ressource
+    if (!hmrTimestamp) {
+      return null
+    }
+    return injectHmrQuery(url, hmrTimestamp)
   }
 
   const updateRessourceDependencies = ({

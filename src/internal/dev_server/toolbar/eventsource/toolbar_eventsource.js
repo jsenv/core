@@ -64,10 +64,19 @@ const updateEventSourceIndicator = () => {
         window.parent.alert(JSON.stringify(reloadMessages, null, "  "))
       }
 
+      const someFailed = reloadMessages.some((m) => m.status === "failed")
       const somePending = reloadMessages.some((m) => m.status === "pending")
       const applyLink = variantNode.querySelector(".eventsource-reload-link")
-      applyLink.innerHTML = somePending ? "applying..." : "apply changes"
-      applyLink.onclick = somePending
+      applyLink.innerHTML = someFailed
+        ? "failed"
+        : somePending
+        ? "applying..."
+        : "apply changes"
+      applyLink.onclick = someFailed
+        ? () => {
+            parentEventSourceClient.applyReloadMessageEffects()
+          }
+        : somePending
         ? () => {}
         : () => {
             parentEventSourceClient.applyReloadMessageEffects()

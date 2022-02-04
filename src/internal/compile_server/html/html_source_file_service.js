@@ -178,6 +178,18 @@ const transformHTMLSourceFile = async ({
     projectDirectoryUrl,
   )
 
+  const isJsenvToolbar =
+    fileUrl ===
+    new URL(
+      "./src/internal/dev_server/toolbar/toolbar.html",
+      jsenvCoreDirectoryUrl,
+    ).href
+
+  if (isJsenvToolbar) {
+    jsenvScriptInjection = false
+    jsenvEventSourceClientInjection = false
+    jsenvToolbarInjection = false
+  }
   manipulateHtmlAst(htmlAst, {
     scriptInjections: [
       ...(jsenvScriptInjection
@@ -194,12 +206,7 @@ const transformHTMLSourceFile = async ({
             },
           ]
         : []),
-      ...(jsenvToolbarInjection &&
-      fileUrl !==
-        new URL(
-          "./src/internal/dev_server/toolbar/toolbar.html",
-          jsenvCoreDirectoryUrl,
-        ).href
+      ...(jsenvToolbarInjection
         ? [
             {
               src: `/${toolbarInjectorBuildRelativeUrlForProject}`,

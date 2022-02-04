@@ -19,7 +19,6 @@ const applyReloadMessageEffects = async () => {
     reloadPage()
     return
   }
-
   const onApplied = (reloadMessage) => {
     const index = reloadMessages.indexOf(reloadMessage)
     reloadMessages.splice(index, 1)
@@ -42,35 +41,37 @@ This could be due to syntax errors or importing non-existent modules (see errors
       },
     )
   }
-  await Promise.all(
-    reloadMessages.map(async (reloadMessage) => {
-      if (reloadMessage.instruction.type === "hot_reload") {
-        setReloadMessagePromise(
-          reloadMessage,
-          applyHotReload(reloadMessage.instruction),
-        )
-        return
-      }
-      onApplied(reloadMessage)
-    }),
-  )
+  reloadMessages.forEach((reloadMessage) => {
+    if (reloadMessage.instruction.type === "hot_reload") {
+      setReloadMessagePromise(
+        reloadMessage,
+        applyHotReload(reloadMessage.instruction),
+      )
+      return
+    }
+    setReloadMessagePromise(reloadMessage, Promise.resolve())
+  })
+  reloadMessagesSignal.onchange() // reload status is "pending"
 }
 
 const applyHotReload = async ({ updates }) => {
-  await Promise.all(
-    updates.map(async ({ type, relativeUrl }) => {
-      // maybe rename "js" into "import"
-      // "js" is too generic it could apply to a regular js file
-      if (type === "js") {
-        const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
-        const urlWithHmr = injectQuery(urlToFetch, { hmr: Date.now() })
-        const namespace = await import(urlWithHmr)
-        console.log(`[jsenv] hot updated: ${relativeUrl}`)
-        return namespace
-      }
-      throw new Error(`unknown update type: "${type}"`)
-    }),
-  )
+  await updates.reduce(async (previous, { type, relativeUrl }) => {
+    await previous
+    const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
+    const urlHotMeta = urlHotMetas[urlToFetch]
+    if (urlHotMeta && urlHotMeta.disposeCallback) {
+      await urlHotMeta.disposeCallback()
+    }
+    // maybe rename "js" into "import"
+    // "js" is too generic it could apply to a regular js file
+    if (type === "js") {
+      const urlWithHmr = injectQuery(urlToFetch, { hmr: Date.now() })
+      const namespace = await import(urlWithHmr)
+      console.log(`[jsenv] hot updated: ${relativeUrl}`)
+      return namespace
+    }
+    throw new Error(`unknown update type: "${type}"`)
+  }, Promise.resolve())
 }
 
 const injectQuery = (url, query) => {
