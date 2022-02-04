@@ -35,7 +35,9 @@ export const createCompileProfile = ({
     features["import_default_extension"] = true
   }
   features.global_this = true
-  features.async_generator_function = true
+  features.async_generator_function = Boolean(
+    babelPluginMap["transform-async-to-generator"],
+  )
   const customCompilerPatterns = Object.keys(customCompilers)
   if (customCompilerPatterns.length > 0) {
     features["custom_compiler_patterns"] = customCompilerPatterns

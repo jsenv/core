@@ -177,7 +177,6 @@ export const startCompileServer = async ({
       serverStopCallbackList,
     }),
   }
-  const projectFileRequestedCallback = () => {}
 
   const createCompileIdFromRuntimeReport = async (runtimeReport) => {
     const compileProfile = createCompileProfile({
@@ -280,7 +279,6 @@ export const startCompileServer = async ({
       jsenvToolbarInjection,
 
       ressourceGraph,
-      projectFileRequestedCallback,
 
       sourcemapMethod,
       sourcemapExcludeSources,
@@ -294,7 +292,6 @@ export const startCompileServer = async ({
             createTransformHtmlSourceFileService({
               logger,
               projectDirectoryUrl,
-              projectFileRequestedCallback,
               inlineImportMapIntoHTML,
               jsenvScriptInjection,
               jsenvEventSourceClientInjection,
@@ -305,7 +302,6 @@ export const startCompileServer = async ({
     "service:source file": createSourceFileService({
       projectDirectoryUrl,
       jsenvRemoteDirectory,
-      projectFileRequestedCallback,
       projectFileCacheStrategy,
     }),
   }
@@ -359,7 +355,7 @@ export const startCompileServer = async ({
     createCompileIdFromRuntimeReport,
     ...compileServer,
     preservedUrls,
-    projectFileRequestedCallback,
+    babelPluginMap,
   }
 }
 
@@ -414,13 +410,10 @@ const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
 
 const createSourceFileService = ({
   projectDirectoryUrl,
-  projectFileRequestedCallback,
   projectFileCacheStrategy,
   jsenvRemoteDirectory,
 }) => {
   return async (request) => {
-    const relativeUrl = request.pathname.slice(1)
-    projectFileRequestedCallback(relativeUrl, request)
     const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
       .href
     const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
