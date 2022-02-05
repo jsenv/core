@@ -21,10 +21,12 @@ import { createRessourceGraph } from "@jsenv/core/src/internal/hmr/ressource_gra
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
+import { createJsenvFileSelector } from "../jsenv_file_selector.js"
 import { setupJsenvDirectory } from "./jsenv_directory/jsenv_directory.js"
 import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { createSSEService } from "./sse_service/sse_service.js"
 
+import { createCompileRedirectorService } from "./compile_redirector_service.js"
 import { createCompiledFileService } from "./compiled_file_service.js"
 import { createJsenvDistFileService } from "./jsenv_dist_file_service.js"
 import { createSourceFileService } from "./source_file_service.js"
@@ -47,6 +49,7 @@ export const startCompileServer = async ({
   onStop = () => {},
 
   projectDirectoryUrl,
+  mainFileRelativeUrl,
 
   importDefaultExtension,
 
@@ -139,6 +142,10 @@ export const startCompileServer = async ({
     replaceProcessEnvNodeEnv,
     inlineImportMapIntoHTML,
   })
+  const jsenvFileSelector = createJsenvFileSelector({
+    projectDirectoryUrl,
+    jsenvCorePackageVersion: compileContext.jsenvCorePackageVersion,
+  })
   const jsenvDirectory = await setupJsenvDirectory({
     logger,
     projectDirectoryUrl,
@@ -204,6 +211,10 @@ export const startCompileServer = async ({
   }
 
   const jsenvServices = {
+    "service:redirector": createCompileRedirectorService({
+      jsenvFileSelector,
+      mainFileRelativeUrl,
+    }),
     "service:compile profile": async (request) => {
       if (request.ressource !== `/__jsenv_compile_profile__`) {
         return null
@@ -269,6 +280,7 @@ export const startCompileServer = async ({
       logger,
 
       projectDirectoryUrl,
+      jsenvFileSelector,
       jsenvDirectoryRelativeUrl,
       jsenvDirectory,
       jsenvRemoteDirectory,
@@ -278,7 +290,6 @@ export const startCompileServer = async ({
       customCompilers,
       prependSystemJs,
 
-      jsenvCorePackageVersion: compileContext.jsenvCorePackageVersion,
       inlineImportMapIntoHTML,
       eventSourceClient,
       browserClient,
@@ -298,8 +309,7 @@ export const startCompileServer = async ({
             createTransformHtmlSourceFileService({
               logger,
               projectDirectoryUrl,
-
-              jsenvCorePackageVersion: compileContext.jsenvCorePackageVersion,
+              jsenvFileSelector,
               inlineImportMapIntoHTML,
               eventSourceClient,
               browserClient,
@@ -363,11 +373,12 @@ export const startCompileServer = async ({
 
   return {
     id: compileServerId++,
+    preservedUrls,
+    babelPluginMap,
+    jsenvFileSelector,
     jsenvDirectoryRelativeUrl,
     createCompileIdFromRuntimeReport,
     ...compileServer,
-    preservedUrls,
-    babelPluginMap,
   }
 }
 

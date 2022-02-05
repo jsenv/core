@@ -126,6 +126,7 @@ export const execute = async ({
       runtime,
       runtimeParams: {
         projectDirectoryUrl,
+        compileServer,
         compileServerOrigin: compileServer.origin,
         compileServerId: compileServer.id,
         jsenvDirectoryRelativeUrl: compileServer.jsenvDirectoryRelativeUrl,

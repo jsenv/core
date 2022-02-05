@@ -5,7 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/filesystem"
 
-import { COMPILE_PROXY_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
+import { compileProxyFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { filterV8Coverage } from "@jsenv/core/src/internal/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/internal/coverage/istanbul_coverage_composition.js"
 import { evalSource } from "@jsenv/core/src/internal/node_launcher/eval_source.js"
@@ -19,6 +19,7 @@ export const executeHtmlFile = async (
     runtime,
     executeOperation,
     projectDirectoryUrl,
+    jsenvFileSelector,
     compileServerOrigin,
     compileServerId,
     jsenvDirectoryRelativeUrl,
@@ -41,19 +42,16 @@ export const executeHtmlFile = async (
       `the file to execute must use .html extension, received ${fileRelativeUrl}.`,
     )
   }
-
   await assertFilePresence(fileUrl)
-
-  const compileProxyProjectRelativeUrl = urlToRelativeUrl(
-    COMPILE_PROXY_BUILD_URL,
-    projectDirectoryUrl,
-  )
-  const compileProxyClientUrl = resolveUrl(
-    compileProxyProjectRelativeUrl,
+  const compileProxyFile = jsenvFileSelector.select(compileProxyFiles, {
+    canUseScriptTypeModule: false,
+  })
+  const compileProxyServerUrl = resolveUrl(
+    compileProxyFile.urlRelativeToProject,
     compileServerOrigin,
   )
   executeOperation.throwIfAborted()
-  await page.goto(compileProxyClientUrl)
+  await page.goto(compileProxyServerUrl)
   executeOperation.throwIfAborted()
 
   const coverageHandledFromOutside =
@@ -141,11 +139,9 @@ const isBrowserClosedError = (error) => {
   if (error.message.match(/browserContext.newPage: Browser closed/)) {
     return true
   }
-
   if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
     return true
   }
-
   return false
 }
 

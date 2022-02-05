@@ -7,6 +7,7 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { browserClientFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
@@ -38,6 +39,7 @@ export const compileHtml = async ({
   // cancellationToken,
   logger,
   projectDirectoryUrl,
+  jsenvFileSelector,
   jsenvRemoteDirectory,
   compileServerOrigin,
   jsenvDirectoryRelativeUrl,
@@ -50,7 +52,6 @@ export const compileHtml = async ({
   babelPluginMap,
   topLevelAwait,
 
-  jsenvCorePackageVersion,
   eventSourceClient,
   browserClient,
   toolbar,
@@ -64,10 +65,8 @@ export const compileHtml = async ({
   // ideally we should try/catch html syntax error
   const htmlAst = parseHtmlString(code)
   const scriptInjections = getScriptsToInject({
-    projectDirectoryUrl,
-    jsenvCorePackageVersion,
-    moduleOutFormat: compileProfile.moduleOutFormat,
-
+    jsenvFileSelector,
+    canUseScriptTypeModule: compileProfile.moduleOutFormat === "esmodule",
     eventSourceClient,
     browserClient,
     toolbar,
@@ -127,6 +126,7 @@ export const compileHtml = async ({
   await visitScripts({
     logger,
     projectDirectoryUrl,
+    jsenvFileSelector,
     jsenvRemoteDirectory,
     compileServerOrigin,
     url,
@@ -361,6 +361,7 @@ const visitImportmapScripts = async ({
 const visitScripts = async ({
   logger,
   projectDirectoryUrl,
+  jsenvFileSelector,
   jsenvRemoteDirectory,
   compileServerOrigin,
   url,
@@ -377,6 +378,18 @@ const visitScripts = async ({
   addHtmlMutation,
   injectHtmlDependency,
 }) => {
+  const generateCodeToSuperviseImport = (specifier) => {
+    const specifierAsJson = JSON.stringify(specifier)
+    if (compileProfile.moduleOutFormat === "esmodule") {
+      const browserClientFile = jsenvFileSelector.select(browserClientFiles, {
+        canUseScriptTypeModule: true,
+      })
+      return `import { superviseDynamicImport } from "@jsenv/core${browserClientFile.urlRelativeToProject}"
+superviseDynamicImport(${specifierAsJson})`
+    }
+    return `window.__jsenv__.superviseSystemJsImport(${specifierAsJson})`
+  }
+
   scripts.forEach((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
     const type = typeAttribute ? typeAttribute.value : "application/javascript"
@@ -385,14 +398,13 @@ const visitScripts = async ({
     const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
     const textNode = getHtmlNodeTextNode(script)
     if (type === "module") {
-      const dataJsenvAttribute = getHtmlNodeAttributeByName(
+      const dataInjectedAttribute = getHtmlNodeAttributeByName(
         script,
-        "data-jsenv",
+        "data-injected",
       )
-      if (dataJsenvAttribute) {
+      if (dataInjectedAttribute) {
         return
       }
-
       if (src) {
         addHtmlMutation(() => {
           if (compileProfile.moduleOutFormat === "systemjs") {
@@ -402,10 +414,6 @@ const visitScripts = async ({
             removeHtmlNodeAttribute(script, integrityAttribute)
           }
           removeHtmlNodeAttribute(script, srcAttribute)
-          const jsenvMethod =
-            compileProfile.moduleOutFormat === "systemjs"
-              ? "executeFileUsingSystemJs"
-              : "executeFileUsingDynamicImport"
           let specifier
           if (
             jsenvRemoteDirectory.isRemoteUrl(src) &&
@@ -417,10 +425,7 @@ const visitScripts = async ({
           } else {
             specifier = src
           }
-          setHtmlNodeText(
-            script,
-            `window.__jsenv__.${jsenvMethod}(${JSON.stringify(specifier)})`,
-          )
+          setHtmlNodeText(script, generateCodeToSuperviseImport(specifier))
         })
         return
       }
@@ -453,14 +458,7 @@ const visitScripts = async ({
           removeHtmlNodeAttribute(script, typeAttribute)
         }
         removeHtmlNodeAttribute(script, srcAttribute)
-        const jsenvMethod =
-          compileProfile.moduleOutFormat === "systemjs"
-            ? "executeFileUsingSystemJs"
-            : "executeFileUsingDynamicImport"
-        setHtmlNodeText(
-          script,
-          `window.__jsenv__.${jsenvMethod}(${JSON.stringify(specifier)})`,
-        )
+        setHtmlNodeText(script, generateCodeToSuperviseImport(specifier))
       })
       injectHtmlDependency({
         htmlNode: script,

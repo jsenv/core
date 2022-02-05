@@ -32,6 +32,7 @@ export const createRuntimeFromPlaywright = ({
     browserServerLogLevel,
 
     projectDirectoryUrl,
+    compileServer,
     compileServerOrigin,
     compileServerId,
     jsenvDirectoryRelativeUrl,
@@ -130,6 +131,7 @@ export const createRuntimeFromPlaywright = ({
       browserServerLogLevel,
 
       projectDirectoryUrl,
+      compileServer,
       compileServerOrigin,
       compileServerId,
       jsenvDirectoryRelativeUrl,
@@ -264,6 +266,7 @@ const createExecuteHook = ({
   page,
   runtime,
   projectDirectoryUrl,
+  compileServer,
   compileServerOrigin,
   compileServerId,
   jsenvDirectoryRelativeUrl,
@@ -287,6 +290,7 @@ const createExecuteHook = ({
       executeOperation,
 
       projectDirectoryUrl,
+      jsenvFileSelector: compileServer.jsenvFileSelector,
       compileServerOrigin,
       compileServerId,
       jsenvDirectoryRelativeUrl,

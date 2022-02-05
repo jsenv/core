@@ -4,10 +4,9 @@ import {
   resolveDirectoryUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
-  urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
+import { redirectorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { setUrlExtension } from "../url_utils.js"
 
@@ -32,6 +31,7 @@ export const createCompiledFileService = ({
   logger,
 
   projectDirectoryUrl,
+  jsenvFileSelector,
   jsenvDirectoryRelativeUrl,
   jsenvDirectory,
   jsenvRemoteDirectory,
@@ -46,7 +46,6 @@ export const createCompiledFileService = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 
-  jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
   eventSourceClient,
   browserClient,
@@ -68,10 +67,10 @@ export const createCompiledFileService = ({
     projectDirectoryUrl,
   )
   const importmapInfos = {}
-  const redirectorRelativeUrlForProject = urlToRelativeUrl(
-    REDIRECTOR_BUILD_URL,
-    projectDirectoryUrl,
-  )
+  const redirectorFile = jsenvFileSelector.select(redirectorFiles, {
+    canUseScriptTypeModule: false,
+  })
+
   return async (request, { pushResponse, redirectRequest }) => {
     const { origin, ressource } = request
     const requestUrl = `${origin}${ressource}`
@@ -101,11 +100,9 @@ export const createCompiledFileService = ({
       return {
         status: 307,
         headers: {
-          location: `${
-            request.origin
-          }/${redirectorRelativeUrlForProject}?redirect=${encodeURIComponent(
-            afterCompileId,
-          )}`,
+          location: `${request.origin}${
+            redirectorFile.urlRelativeToProject
+          }?redirect=${encodeURIComponent(afterCompileId)}`,
         },
       }
     }
@@ -157,6 +154,7 @@ export const createCompiledFileService = ({
           logger,
 
           projectDirectoryUrl,
+          jsenvFileSelector,
           jsenvRemoteDirectory,
           compileServerOrigin: request.origin,
           jsenvDirectoryRelativeUrl,
@@ -175,7 +173,6 @@ export const createCompiledFileService = ({
           sourcemapMethod,
           sourcemapExcludeSources,
 
-          jsenvCorePackageVersion,
           inlineImportMapIntoHTML,
           eventSourceClient,
           browserClient,

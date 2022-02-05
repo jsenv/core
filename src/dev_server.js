@@ -1,12 +1,9 @@
-import { setupRoutes } from "@jsenv/server"
 import {
   normalizeStructuredMetaMap,
   collectFiles,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { REDIRECTOR_BUILD_URL } from "@jsenv/core/dist/build_manifest.js"
-import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 import {
   assertProjectDirectoryUrl,
   assertProjectDirectoryExists,
@@ -105,10 +102,6 @@ export const startDevServer = async ({
     plugins,
     customServices: {
       ...customServices,
-      "jsenv:redirector": await createRedirectorService({
-        projectDirectoryUrl,
-        mainFileRelativeUrl,
-      }),
       "jsenv:exploring_json": createExploringJsonService({
         projectDirectoryUrl,
         jsenvDirectoryRelativeUrl,
@@ -126,6 +119,7 @@ export const startDevServer = async ({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
 
+    mainFileRelativeUrl,
     inlineImportMapIntoHTML,
     hmr,
     eventSourceClient,
@@ -148,65 +142,6 @@ export const startDevServer = async ({
   })
 
   return compileServer
-}
-
-const createRedirectorService = async ({
-  projectDirectoryUrl,
-  mainFileRelativeUrl,
-}) => {
-  const redirectorRelativeUrlForProject = urlToRelativeUrl(
-    REDIRECTOR_BUILD_URL,
-    projectDirectoryUrl,
-  )
-  return setupRoutes({
-    "/": (request) => {
-      const redirectTarget = mainFileRelativeUrl
-      return {
-        status: 307,
-        headers: {
-          location: injectQuery(
-            `${request.origin}/${redirectorRelativeUrlForProject}`,
-            {
-              redirect: redirectTarget,
-            },
-          ),
-        },
-      }
-    },
-    // compile server (compiled file service to be precised)
-    // is already implementing this redirection when a compile id do not exists
-    // and "redirect" is not a valid compile id
-    // That being said I prefer to keep it to be explicit and shortcircuit the logic
-    "/.jsenv/redirect/:rest*": (request) => {
-      const redirectTarget = request.ressource.slice("/.jsenv/redirect/".length)
-      return {
-        status: 307,
-        headers: {
-          location: injectQuery(
-            `${request.origin}/${redirectorRelativeUrlForProject}`,
-            {
-              redirect: redirectTarget,
-            },
-          ),
-        },
-      }
-    },
-    "/.jsenv/force/:rest*": (request) => {
-      const redirectTarget = request.ressource.slice("/.jsenv/force/".length)
-      return {
-        status: 307,
-        headers: {
-          location: injectQuery(
-            `${request.origin}/${redirectorRelativeUrlForProject}`,
-            {
-              redirect: redirectTarget,
-              force_compilation: 1,
-            },
-          ),
-        },
-      }
-    },
-  })
 }
 
 const createExploringJsonService = ({
