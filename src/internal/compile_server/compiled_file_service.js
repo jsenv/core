@@ -8,7 +8,7 @@ import {
 
 import { redirectorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
-import { setUrlExtension } from "../url_utils.js"
+import { injectQuery, setUrlExtension } from "../url_utils.js"
 
 import { compileFile } from "./compile_file.js"
 import { compileHtml } from "./html/compile_html.js"
@@ -100,9 +100,12 @@ export const createCompiledFileService = ({
       return {
         status: 307,
         headers: {
-          location: `${request.origin}${
-            redirectorFile.urlRelativeToProject
-          }?redirect=${encodeURIComponent(afterCompileId)}`,
+          location: injectQuery(
+            `${request.origin}${redirectorFile.urlRelativeToProject}`,
+            {
+              redirect: afterCompileId,
+            },
+          ),
         },
       }
     }
