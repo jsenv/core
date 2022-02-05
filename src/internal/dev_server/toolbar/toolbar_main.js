@@ -29,7 +29,7 @@ const renderToolbar = async ({ exploringJSON }) => {
   const executedFileCompiledUrl = window.parent.location.href
   const compileServerOrigin = window.parent.location.origin
   // this should not block the whole toolbar rendering + interactivity
-  const { jsenvDirectoryRelativeUrl, livereloading } = exploringJSON
+  const { jsenvDirectoryRelativeUrl, hmr } = exploringJSON
   const compileGroup = getCompileGroup({
     executedFileCompiledUrl,
     jsenvDirectoryRelativeUrl,
@@ -69,7 +69,7 @@ const renderToolbar = async ({ exploringJSON }) => {
   deactivateToolbarSection(document.querySelector("#file-list-link"))
   initToolbarEventSource({
     executedFileRelativeUrl,
-    livereloading,
+    hmr,
   })
 
   // if user click enter or space quickly while closing toolbar

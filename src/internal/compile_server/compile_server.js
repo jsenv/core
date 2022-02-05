@@ -87,14 +87,14 @@ export const startCompileServer = async ({
   },
   customServices = {},
   plugins,
-  livereloadSSE = false,
-  // hmr = false,
 
   transformHtmlSourceFiles = true,
-  jsenvScriptInjection = true,
-  jsenvEventSourceClientInjection = false,
-  jsenvToolbarInjection = false,
   inlineImportMapIntoHTML = true,
+  hmr = false,
+  eventSourceClient = false,
+  browserClient = false,
+  toolbar = false,
+
   errorStackRemapping = true,
 }) => {
   const logger = createLogger({ logLevel })
@@ -170,8 +170,8 @@ export const startCompileServer = async ({
     "jsenv:sse": createSSEService({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      livereloadSSE,
       watchConfig,
+      hmr,
       ressourceGraph,
       serverStopCallbackList,
     }),
@@ -187,8 +187,11 @@ export const startCompileServer = async ({
       moduleOutFormat,
       sourcemapMethod,
       sourcemapExcludeSources,
-      jsenvEventSourceClientInjection,
-      jsenvToolbarInjection,
+
+      inlineImportMapIntoHTML,
+      eventSourceClient,
+      browserClient,
+      toolbar,
 
       runtimeReport,
     })
@@ -274,9 +277,12 @@ export const startCompileServer = async ({
       babelPluginMap,
       customCompilers,
       prependSystemJs,
+
       jsenvCorePackageVersion: compileContext.jsenvCorePackageVersion,
-      jsenvEventSourceClientInjection,
-      jsenvToolbarInjection,
+      inlineImportMapIntoHTML,
+      eventSourceClient,
+      browserClient,
+      toolbar,
 
       ressourceGraph,
 
@@ -292,10 +298,12 @@ export const startCompileServer = async ({
             createTransformHtmlSourceFileService({
               logger,
               projectDirectoryUrl,
+
+              jsenvCorePackageVersion: compileContext.jsenvCorePackageVersion,
               inlineImportMapIntoHTML,
-              jsenvScriptInjection,
-              jsenvEventSourceClientInjection,
-              jsenvToolbarInjection,
+              eventSourceClient,
+              browserClient,
+              toolbar,
             }),
         }
       : {}),

@@ -9,8 +9,11 @@ const COMPARERS = {
   moduleOutFormat: (a, b) => a === b,
   sourcemapMethod: (a, b) => a === b,
   sourcemapExcludeSources: (a, b) => a === b,
-  jsenvEventSourceClientInjection: (a, b) => a === b,
-  jsenvToolbarInjection: (a, b) => a === b,
+
+  inlineImportMapIntoHTML: (a, b) => a === b,
+  eventSourceClient: (a, b) => a === b,
+  browserClient: (a, b) => a === b,
+  toolbar: (a, b) => a === b,
 }
 
 export const createCompileProfile = ({
@@ -21,8 +24,11 @@ export const createCompileProfile = ({
   moduleOutFormat,
   sourcemapMethod,
   sourcemapExcludeSources,
-  jsenvEventSourceClientInjection,
-  jsenvToolbarInjection,
+
+  inlineImportMapIntoHTML,
+  eventSourceClient,
+  browserClient,
+  toolbar,
 
   runtimeReport,
 }) => {
@@ -159,8 +165,11 @@ export const createCompileProfile = ({
     moduleOutFormat,
     sourcemapMethod,
     sourcemapExcludeSources,
-    jsenvEventSourceClientInjection,
-    jsenvToolbarInjection,
+
+    inlineImportMapIntoHTML,
+    eventSourceClient,
+    browserClient,
+    toolbar,
   }
 }
 

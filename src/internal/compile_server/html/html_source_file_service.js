@@ -21,11 +21,7 @@ import {
 import { composeTwoImportMaps, moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import {
-  BROWSER_CLIENT_BUILD_URL,
-  EVENT_SOURCE_CLIENT_BUILD_URL,
-  TOOLBAR_INJECTOR_BUILD_URL,
-} from "@jsenv/core/dist/build_manifest.js"
+import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
@@ -50,10 +46,12 @@ const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
 export const createTransformHtmlSourceFileService = ({
   logger,
   projectDirectoryUrl,
+
+  jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
-  jsenvScriptInjection,
-  jsenvEventSourceClientInjection,
-  jsenvToolbarInjection,
+  eventSourceClient,
+  browserClient,
+  toolbar,
 }) => {
   /**
    * htmlInlineScriptMap is composed as below
@@ -71,11 +69,9 @@ export const createTransformHtmlSourceFileService = ({
     const { ressource } = request
     const relativeUrl = ressource.slice(1)
     const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-
     if (urlIsInsideOf(fileUrl, jsenvDistDirectoryUrl)) {
       return null
     }
-
     const inlineScript = htmlInlineScriptMap.get(fileUrl)
     if (inlineScript) {
       return {
@@ -87,11 +83,9 @@ export const createTransformHtmlSourceFileService = ({
         body: inlineScript.scriptContent,
       }
     }
-
     if (urlToExtension(fileUrl) !== ".html") {
       return null
     }
-
     let fileContent
     try {
       fileContent = await readFile(fileUrl, { as: "string" })
@@ -115,10 +109,13 @@ export const createTransformHtmlSourceFileService = ({
       fileContent,
       request,
       pushResponse,
+
+      jsenvCorePackageVersion,
       inlineImportMapIntoHTML,
-      jsenvScriptInjection,
-      jsenvEventSourceClientInjection,
-      jsenvToolbarInjection,
+      eventSourceClient,
+      browserClient,
+      toolbar,
+
       onInlineModuleScript: ({ scriptContent, scriptSpecifier }) => {
         const inlineScriptUrl = resolveUrl(scriptSpecifier, fileUrl)
         htmlInlineScriptMap.set(inlineScriptUrl, {
@@ -146,10 +143,13 @@ const transformHTMLSourceFile = async ({
   fileContent,
   request,
   pushResponse,
+
+  jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
-  jsenvScriptInjection,
-  jsenvToolbarInjection,
-  jsenvEventSourceClientInjection,
+  eventSourceClient,
+  browserClient,
+  toolbar,
+
   onInlineModuleScript = () => {},
 }) => {
   fileUrl = urlWithoutSearch(fileUrl)
@@ -163,61 +163,27 @@ const transformHTMLSourceFile = async ({
     projectDirectoryUrl,
   })
 
-  const browserClientBuildUrlRelativeToProject = urlToRelativeUrl(
-    BROWSER_CLIENT_BUILD_URL,
-    projectDirectoryUrl,
-  )
-
-  const eventSourceClientBuildRelativeUrlForProject = urlToRelativeUrl(
-    EVENT_SOURCE_CLIENT_BUILD_URL,
-    projectDirectoryUrl,
-  )
-
-  const toolbarInjectorBuildRelativeUrlForProject = urlToRelativeUrl(
-    TOOLBAR_INJECTOR_BUILD_URL,
-    projectDirectoryUrl,
-  )
-
   const isJsenvToolbar =
     fileUrl ===
     new URL(
       "./src/internal/dev_server/toolbar/toolbar.html",
       jsenvCoreDirectoryUrl,
     ).href
-
   if (isJsenvToolbar) {
-    jsenvScriptInjection = false
-    jsenvEventSourceClientInjection = false
-    jsenvToolbarInjection = false
+    eventSourceClient = false
+    browserClient = false
+    toolbar = false
   }
-  manipulateHtmlAst(htmlAst, {
-    scriptInjections: [
-      ...(jsenvScriptInjection
-        ? [
-            {
-              src: `/${browserClientBuildUrlRelativeToProject}`,
-            },
-          ]
-        : []),
-      ...(jsenvEventSourceClientInjection
-        ? [
-            {
-              src: `/${eventSourceClientBuildRelativeUrlForProject}`,
-            },
-          ]
-        : []),
-      ...(jsenvToolbarInjection
-        ? [
-            {
-              src: `/${toolbarInjectorBuildRelativeUrlForProject}`,
-              defer: "",
-              async: "",
-            },
-          ]
-        : []),
-    ],
-  })
+  const scriptInjections = getScriptsToInject({
+    projectDirectoryUrl,
+    jsenvCorePackageVersion,
+    moduleOutFormat: "esmodule",
 
+    eventSourceClient,
+    browserClient,
+    toolbar,
+  })
+  manipulateHtmlAst(htmlAst, { scriptInjections })
   if (request.http2) {
     const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
     htmlDependencies.forEach(({ specifier }) => {
@@ -237,8 +203,7 @@ const transformHTMLSourceFile = async ({
       pushResponse({ path: `/${dependencyRelativeUrl}` })
     })
   }
-
-  if (jsenvScriptInjection) {
+  if (browserClient) {
     const { scripts } = parseHtmlAstRessources(htmlAst)
     scripts.forEach((script) => {
       const typeAttribute = getHtmlNodeAttributeByName(script, "type")
@@ -277,14 +242,12 @@ const transformHTMLSourceFile = async ({
       }
     })
   }
-
   await forceInlineRessources({
     logger,
     htmlAst,
     htmlFileUrl: fileUrl,
     projectDirectoryUrl,
   })
-
   const htmlTransformed = stringifyHtmlAst(htmlAst)
   return htmlTransformed
 }

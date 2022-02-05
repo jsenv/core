@@ -35,21 +35,22 @@ export const createCompiledFileService = ({
   jsenvDirectoryRelativeUrl,
   jsenvDirectory,
   jsenvRemoteDirectory,
+  ressourceGraph,
 
   babelPluginMap,
   topLevelAwait,
   prependSystemJs,
   customCompilers,
 
-  jsenvCorePackageVersion,
-  jsenvEventSourceClientInjection,
-  jsenvToolbarInjection,
-
-  ressourceGraph,
-
   compileCacheStrategy,
   sourcemapMethod,
   sourcemapExcludeSources,
+
+  jsenvCorePackageVersion,
+  inlineImportMapIntoHTML,
+  eventSourceClient,
+  browserClient,
+  toolbar,
 }) => {
   Object.keys(customCompilers).forEach((key) => {
     const value = customCompilers[key]
@@ -173,9 +174,12 @@ export const createCompiledFileService = ({
           code,
           sourcemapMethod,
           sourcemapExcludeSources,
+
           jsenvCorePackageVersion,
-          jsenvEventSourceClientInjection,
-          jsenvToolbarInjection,
+          inlineImportMapIntoHTML,
+          eventSourceClient,
+          browserClient,
+          toolbar,
           onHtmlImportmapInfo: ({ htmlUrl, importmapInfo }) => {
             importmapInfos[htmlUrl] = importmapInfo
           },

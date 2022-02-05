@@ -24,7 +24,6 @@ const filePath = urlToFileSystemPath(
 const devServer = await startDevServer({
   ...START_DEV_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  livereloading: true,
 })
 const htmlCompiledServerUrl = `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}redirect/${fileRelativeUrl}`
 const { browser, page, pageLogs, pageErrors, getJsenvExecutionResult } =

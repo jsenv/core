@@ -6,5 +6,4 @@ export const START_DEV_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   keepProcessAlive: false,
-  // livereloading: false,
 }

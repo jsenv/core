@@ -10,14 +10,14 @@ import { createCallbackList } from "@jsenv/abort"
 export const createSSEService = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  livereloadSSE,
   watchConfig,
+  hmr,
   ressourceGraph,
   serverStopCallbackList,
 }) => {
   let handleSSEClientRequest
-  if (livereloadSSE) {
-    handleSSEClientRequest = createSSEServiceWithLivereload({
+  if (hmr) {
+    handleSSEClientRequest = createSSEServiceWithHmr({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       watchConfig,
@@ -25,10 +25,10 @@ export const createSSEService = ({
       serverStopCallbackList,
     })
   } else {
-    const roomWhenLivereloadIsDisabled = createSSERoom()
-    roomWhenLivereloadIsDisabled.open()
+    const roomWhenHmrIsDisabled = createSSERoom()
+    roomWhenHmrIsDisabled.open()
     handleSSEClientRequest = (request) => {
-      return roomWhenLivereloadIsDisabled.join(request)
+      return roomWhenHmrIsDisabled.join(request)
     }
   }
   return (request) => {
@@ -40,7 +40,7 @@ export const createSSEService = ({
   }
 }
 
-const createSSEServiceWithLivereload = ({
+const createSSEServiceWithHmr = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   watchConfig,

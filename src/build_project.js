@@ -197,10 +197,8 @@ export const buildProject = async ({
     },
     // keep source html untouched
     // here we don't need to inline importmap
-    // nor to inject jsenv script
+    // nor to inject event_source_client, browser_client or toolbar
     transformHtmlSourceFiles: false,
-    jsenvScriptInjection: false,
-    jsenvEventSourceClientInjection: false,
     compileServerCanReadFromFilesystem: filesystemCache,
     compileServerCanWriteOnFilesystem: filesystemCache,
   })

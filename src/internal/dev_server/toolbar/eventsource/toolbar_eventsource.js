@@ -6,13 +6,13 @@ import {
   autoShowTooltip,
 } from "../tooltip/tooltip.js"
 
-let livereloadingAvailableOnServer = false
+let autoreloadAvailableOnServer = false
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
-export const initToolbarEventSource = ({ livereloading }) => {
+export const initToolbarEventSource = ({ hmr }) => {
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
-  livereloadingAvailableOnServer = livereloading
-  if (!livereloadingAvailableOnServer) {
+  autoreloadAvailableOnServer = hmr
+  if (!autoreloadAvailableOnServer) {
     disableLivereloadSetting()
   }
   parentEventSourceClient.status.onchange = () => {

@@ -7,16 +7,8 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
-import {
-  jsenvCoreDirectoryUrl,
-  jsenvDistDirectoryUrl,
-} from "@jsenv/core/src/jsenv_file_urls.js"
-import {
-  BROWSER_CLIENT_BUILD_URL,
-  EVENT_SOURCE_CLIENT_BUILD_URL,
-  TOOLBAR_INJECTOR_BUILD_URL,
-} from "@jsenv/core/dist/build_manifest.js"
+import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
+import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 import { generateCompilationAssetUrl } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_asset.js"
@@ -59,9 +51,9 @@ export const compileHtml = async ({
   topLevelAwait,
 
   jsenvCorePackageVersion,
-  jsenvScriptInjection = true,
-  jsenvEventSourceClientInjection,
-  jsenvToolbarInjection,
+  eventSourceClient,
+  browserClient,
+  toolbar,
 
   onHtmlImportmapInfo,
 
@@ -69,63 +61,17 @@ export const compileHtml = async ({
   code,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
-  const getJsenvDistFileSpecifier = (url) => {
-    const urlVersioned = injectQuery(url, { version: jsenvCorePackageVersion })
-    const relativeUrl = urlToRelativeUrl(urlVersioned, projectDirectoryUrl)
-    return `/${relativeUrl}`
-  }
-
   // ideally we should try/catch html syntax error
   const htmlAst = parseHtmlString(code)
-  const scriptInjections = []
-  if (jsenvScriptInjection) {
-    // this one cannot use module format because it sets window.__jsenv__
-    // used by other scripts
-    scriptInjections.push({
-      "src": getJsenvDistFileSpecifier(BROWSER_CLIENT_BUILD_URL),
-      "data-jsenv": true,
-    })
-  }
-  if (jsenvEventSourceClientInjection) {
-    if (compileProfile.moduleOutFormat === "esmodule") {
-      scriptInjections.push({
-        "type": "module",
-        "src": getJsenvDistFileSpecifier(
-          new URL(
-            "./src/internal/dev_server/event_source_client/event_source_client.js",
-            jsenvCoreDirectoryUrl,
-          ),
-        ),
-        "data-jsenv": true,
-      })
-    } else {
-      scriptInjections.push({
-        "src": getJsenvDistFileSpecifier(EVENT_SOURCE_CLIENT_BUILD_URL),
-        "data-jsenv": true,
-      })
-    }
-  }
-  if (jsenvToolbarInjection) {
-    if (compileProfile.moduleOutFormat === "esmodule") {
-      scriptInjections.push({
-        "type": "module",
-        "src": getJsenvDistFileSpecifier(
-          new URL(
-            "./src/internal/dev_server/toolbar/toolbar_injector.js",
-            jsenvCoreDirectoryUrl,
-          ),
-        ),
-        "data-jsenv": true,
-      })
-    } else {
-      scriptInjections.push({
-        "src": getJsenvDistFileSpecifier(TOOLBAR_INJECTOR_BUILD_URL),
-        "defer": "",
-        "async": "",
-        "data-jsenv": true,
-      })
-    }
-  }
+  const scriptInjections = getScriptsToInject({
+    projectDirectoryUrl,
+    jsenvCorePackageVersion,
+    moduleOutFormat: compileProfile.moduleOutFormat,
+
+    eventSourceClient,
+    browserClient,
+    toolbar,
+  })
   manipulateHtmlAst(htmlAst, { scriptInjections })
 
   const sources = []
