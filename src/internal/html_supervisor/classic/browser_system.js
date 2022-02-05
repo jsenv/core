@@ -7,18 +7,12 @@ export const createBrowserSystem = ({
   importResolver,
   fetchSource,
 }) => {
-  if (typeof window.System === "undefined") {
-    throw new Error(`window.System is undefined`)
-  }
-
   const browserSystem = window.System
-
   const resolve = (specifier, importer = document.location.href) => {
     return importResolver.resolveImport(specifier, importer)
   }
 
   browserSystem.resolve = resolve
-
   const instantiate = browserSystem.instantiate
   browserSystem.instantiate = async function (url, importerUrl) {
     const { importType, urlWithoutImportType } = extractImportTypeFromUrl(url)
@@ -71,7 +65,6 @@ ${window.navigator.vendor}`,
       resolve: (specifier) => resolve(specifier, importerUrl),
     }
   }
-
   return browserSystem
 }
 

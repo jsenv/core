@@ -26,10 +26,9 @@ import { makeToolbarResponsive } from "./responsive/toolbar_responsive.js"
 const toolbarVisibilityPreference = createPreference("toolbar")
 
 const renderToolbar = async ({ exploringJSON }) => {
+  const { jsenvDirectoryRelativeUrl, hmr } = exploringJSON
   const executedFileCompiledUrl = window.parent.location.href
   const compileServerOrigin = window.parent.location.origin
-  // this should not block the whole toolbar rendering + interactivity
-  const { jsenvDirectoryRelativeUrl, hmr } = exploringJSON
   const compileGroup = getCompileGroup({
     executedFileCompiledUrl,
     jsenvDirectoryRelativeUrl,
@@ -63,8 +62,13 @@ const renderToolbar = async ({ exploringJSON }) => {
   renderToolbarSettings()
   renderToolbarAnimation()
   renderToolbarTheme()
-  renderExecutionInToolbar({ executedFileRelativeUrl })
-  renderCompilationInToolbar({ compileGroup })
+  renderExecutionInToolbar({
+    executedFileRelativeUrl,
+  })
+  renderCompilationInToolbar({
+    jsenvDirectoryRelativeUrl,
+    compileGroup,
+  })
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
   initToolbarEventSource({
@@ -231,8 +235,12 @@ window.toolbar = {
   hide: () => hideToolbar(),
 }
 
-addExternalCommandCallback("renderToolbar", (data) => {
-  renderToolbar(data)
+// const { currentScript } = document
+addExternalCommandCallback("renderToolbar", ({ exploringJSON }) => {
+  renderToolbar({
+    exploringJSON,
+    //  toolbarScript: currentScript,
+  })
 })
 addExternalCommandCallback("showToolbar", () => {
   showToolbar()

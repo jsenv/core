@@ -6,7 +6,7 @@ import { notifyExecutionResult } from "../notification/toolbar_notification.js"
 
 const WINDOW_MEDIUM_WIDTH = 570
 
-export const renderExecutionInToolbar = ({ executedFileRelativeUrl }) => {
+export const renderExecutionInToolbar = async ({ executedFileRelativeUrl }) => {
   // reset file execution indicator ui
   applyExecutionIndicator()
   removeForceHideElement(document.querySelector("#execution-indicator"))
@@ -25,26 +25,16 @@ export const renderExecutionInToolbar = ({ executedFileRelativeUrl }) => {
   activateToolbarSection(document.querySelector("#file"))
   removeForceHideElement(document.querySelector("#file"))
 
-  window.parent.__jsenv__.executionResultPromise.then(
-    ({ status, startTime, endTime }) => {
-      const execution = { status, startTime, endTime }
-      applyExecutionIndicator(execution)
-
-      const executionStorageKey = executedFileRelativeUrl
-      const previousExecution = sessionStorage.hasOwnProperty(
-        executionStorageKey,
-      )
-        ? JSON.parse(sessionStorage.getItem(executionStorageKey))
-        : undefined
-      notifyExecutionResult(
-        executedFileRelativeUrl,
-        execution,
-        previousExecution,
-      )
-
-      sessionStorage.setItem(executedFileRelativeUrl, JSON.stringify(execution))
-    },
-  )
+  const { status, startTime, endTime } =
+    await window.parent.__html_supervisor__.getScriptExecutionResults()
+  const execution = { status, startTime, endTime }
+  applyExecutionIndicator(execution)
+  const executionStorageKey = executedFileRelativeUrl
+  const previousExecution = sessionStorage.hasOwnProperty(executionStorageKey)
+    ? JSON.parse(sessionStorage.getItem(executionStorageKey))
+    : undefined
+  notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution)
+  sessionStorage.setItem(executedFileRelativeUrl, JSON.stringify(execution))
 }
 
 const applyExecutionIndicator = ({

@@ -2,14 +2,14 @@ import { unevalException } from "./uneval_exception.js"
 import { displayErrorInDocument } from "./error_in_document.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
-export const initHtmlExecution = () => {
+export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
   const result = {}
 
-  let ready = true
+  let collectCalled = false
   let pendingExecutionCount = 0
-  let resolveJsExecutionsPromise
-  const jsExecutionsPromise = new Promise((resolve) => {
-    resolveJsExecutionsPromise = resolve
+  let resolveScriptExecutionsPromise
+  const scriptExecutionsPromise = new Promise((resolve) => {
+    resolveScriptExecutionsPromise = resolve
   })
   const onExecutionStart = (name) => {
     result[name] = null // ensure execution order is reflected into result
@@ -20,20 +20,12 @@ export const initHtmlExecution = () => {
     performance.measure(`execution`, `execution_start`)
     result[name] = executionResult
     pendingExecutionCount--
-    if (pendingExecutionCount === 0 && ready) {
-      resolveJsExecutionsPromise()
-    }
-  }
-  const waitUntil = async (asyncFunction) => {
-    ready = false
-    await asyncFunction
-    ready = true
-    if (pendingExecutionCount === 0) {
-      resolveJsExecutionsPromise()
+    if (pendingExecutionCount === 0 && collectCalled) {
+      resolveScriptExecutionsPromise()
     }
   }
   const addExecution = async ({ name, promise, currentScript }) => {
-    onExecutionStart()
+    onExecutionStart(name)
     promise.then(
       (namespace) => {
         const executionResult = {
@@ -43,7 +35,12 @@ export const initHtmlExecution = () => {
         }
         onExecutionSettled(name, executionResult)
       },
-      (e) => {
+      async (e) => {
+        if (errorTransformer) {
+          try {
+            e = await errorTransformer(e)
+          } catch (e) {}
+        }
         const executionResult = {
           status: "errored",
           error: e,
@@ -55,12 +52,17 @@ export const initHtmlExecution = () => {
     )
   }
 
-  const getHtmlExecutionResult = async () => {
-    await jsExecutionsPromise
+  const collectScriptResults = async () => {
+    collectCalled = true
+    if (pendingExecutionCount === 0) {
+      resolveScriptExecutionsPromise()
+    } else {
+      await scriptExecutionsPromise
+    }
+
     let status = "completed"
     let exceptionSource = ""
     Object.keys(result).forEach((key) => {
-      result[key] = null // to get always same order for Object.keys(executionResult)
       const executionResult = result[key]
       if (executionResult.status === "errored") {
         status = "errored"
@@ -76,26 +78,9 @@ export const initHtmlExecution = () => {
     }
   }
 
-  // by default wait until document.readyState is completed before considering
-  // html execution as done. If this is not enough we can use an other strategy
-  // before considering html execution as done
-  waitUntil(async () => {
-    if (document.readyState === "complete") {
-      return
-    }
-    await new Promise((resolve) => {
-      const loadCallback = () => {
-        window.removeEventListener("load", loadCallback)
-        resolve()
-      }
-      window.addEventListener("load", loadCallback)
-    })
-  })
-
   return {
-    waitUntil,
     addExecution,
-    getHtmlExecutionResult,
+    collectScriptResults,
   }
 }
 

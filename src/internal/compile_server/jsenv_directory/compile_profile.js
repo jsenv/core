@@ -12,7 +12,7 @@ const COMPARERS = {
 
   inlineImportMapIntoHTML: (a, b) => a === b,
   eventSourceClient: (a, b) => a === b,
-  browserClient: (a, b) => a === b,
+  htmlSupervisor: (a, b) => a === b,
   toolbar: (a, b) => a === b,
 }
 
@@ -27,7 +27,7 @@ export const createCompileProfile = ({
 
   inlineImportMapIntoHTML,
   eventSourceClient,
-  browserClient,
+  htmlSupervisor,
   toolbar,
 
   runtimeReport,
@@ -168,7 +168,7 @@ export const createCompileProfile = ({
 
     inlineImportMapIntoHTML,
     eventSourceClient,
-    browserClient,
+    htmlSupervisor,
     toolbar,
   }
 }

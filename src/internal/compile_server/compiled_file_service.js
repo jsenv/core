@@ -48,7 +48,7 @@ export const createCompiledFileService = ({
 
   inlineImportMapIntoHTML,
   eventSourceClient,
-  browserClient,
+  htmlSupervisor,
   toolbar,
 }) => {
   Object.keys(customCompilers).forEach((key) => {
@@ -178,7 +178,7 @@ export const createCompiledFileService = ({
 
           inlineImportMapIntoHTML,
           eventSourceClient,
-          browserClient,
+          htmlSupervisor,
           toolbar,
           onHtmlImportmapInfo: ({ htmlUrl, importmapInfo }) => {
             importmapInfos[htmlUrl] = importmapInfo

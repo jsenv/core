@@ -51,7 +51,7 @@ export const startDevServer = async ({
   inlineImportMapIntoHTML = true,
   hmr = true,
   eventSourceClient = true,
-  browserClient = true,
+  htmlSupervisor = true,
   toolbar = true,
 
   keepProcessAlive = true,
@@ -123,7 +123,7 @@ export const startDevServer = async ({
     inlineImportMapIntoHTML,
     hmr,
     eventSourceClient,
-    browserClient,
+    htmlSupervisor,
     toolbar,
 
     compileServerCanReadFromFilesystem,

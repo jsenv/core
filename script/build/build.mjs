@@ -27,14 +27,11 @@ await buildInternalFile({
 
 await buildInternalFile({
   format: "global",
-  buildDirectoryRelativeUrl: "./dist/browser_client_systemjs/",
+  buildDirectoryRelativeUrl: "./dist/html_supervisor_classic/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPoints: {
-    "./src/internal/browser_client/systemjs/browser_client_systemjs.js":
-      "browser_client_systemjs.js",
-  },
-  preservedDynamicImports: {
-    "./src/internal/browser_client/browser_client.js": true,
+    "./src/internal/html_supervisor/classic/html_supervisor_classic.js":
+      "html_supervisor_classic.js",
   },
 })
 

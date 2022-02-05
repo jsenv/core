@@ -8,145 +8,137 @@ import {
   disableWarningStyle,
 } from "../settings/toolbar_settings.js"
 
-export const renderCompilationInToolbar = ({ compileGroup }) => {
+export const renderCompilationInToolbar = async ({
+  jsenvDirectoryRelativeUrl,
+  compileGroup,
+}) => {
   const browserSupportRootNode = document.querySelector("#browser_support")
   const filesCompilationRootNode = document.querySelector("#files_compilation")
 
   removeForceHideElement(browserSupportRootNode)
   removeForceHideElement(filesCompilationRootNode)
 
-  scanBrowserRuntimeFeatures().then(
-    ({
-      jsenvDirectoryRelativeUrl,
-      inlineImportMapIntoHTML,
-      compileProfile,
-      compileId,
-      runtimeReport,
-    }) => {
-      const browserSupport = compileId
-        ? "no"
-        : inlineImportMapIntoHTML
-        ? "partial"
-        : "full"
-      enableVariant(browserSupportRootNode, {
-        browserSupport,
-      })
-      if (browserSupport === "no") {
-        browserSupportRootNode.querySelector(
-          `a.browser_support_read_more_link`,
-        ).onclick = () => {
-          // eslint-disable-next-line no-alert
-          window.alert(
-            `Source files needs to be compiled to be executable in this browser because: ${listWhatIsMissing(
-              {
-                compileProfile,
-              },
-            )}`,
-          )
-        }
-      } else if (browserSupport === "partial") {
-        browserSupportRootNode.querySelector(
-          `a.browser_support_read_more_link`,
-        ).onclick = () => {
-          // eslint-disable-next-line no-alert
-          window.alert(
-            `Source files (except html) can be executed directly in this browser because: ${listWhatIsSupported(
-              {
-                inlineImportMapIntoHTML,
-              },
-            )}`,
-          )
-        }
-      } else if (browserSupport === "full") {
-        browserSupportRootNode.querySelector(
-          `a.browser_support_read_more_link`,
-        ).onclick = () => {
-          // eslint-disable-next-line no-alert
-          window.alert(
-            `Source files can be executed directly in this browser because: ${listWhatIsSupported(
-              {
-                inlineImportMapIntoHTML,
-              },
-            )}`,
-          )
-        }
-      }
+  const { inlineImportMapIntoHTML, compileProfile, compileId, runtimeReport } =
+    await scanBrowserRuntimeFeatures()
 
-      const actualCompileId = compileGroup.compileId
-      const expectedCompiledId = compileId
-      const shouldSwitchCompileId =
-        expectedCompiledId &&
-        actualCompileId &&
-        actualCompileId !== expectedCompiledId
-      const shouldCompile = !actualCompileId && browserSupport === "no"
-      const filesCompilation = shouldSwitchCompileId
-        ? "mismatch"
-        : actualCompileId
-        ? "yes"
-        : inlineImportMapIntoHTML
-        ? "html_only"
-        : "no"
-      const hasWarning = shouldCompile || shouldSwitchCompileId
+  const browserSupport = compileId
+    ? "no"
+    : inlineImportMapIntoHTML
+    ? "partial"
+    : "full"
+  enableVariant(browserSupportRootNode, {
+    browserSupport,
+  })
+  if (browserSupport === "no") {
+    browserSupportRootNode.querySelector(
+      `a.browser_support_read_more_link`,
+    ).onclick = () => {
+      // eslint-disable-next-line no-alert
+      window.alert(
+        `Source files needs to be compiled to be executable in this browser because: ${listWhatIsMissing(
+          {
+            compileProfile,
+          },
+        )}`,
+      )
+    }
+  } else if (browserSupport === "partial") {
+    browserSupportRootNode.querySelector(
+      `a.browser_support_read_more_link`,
+    ).onclick = () => {
+      // eslint-disable-next-line no-alert
+      window.alert(
+        `Source files (except html) can be executed directly in this browser because: ${listWhatIsSupported(
+          {
+            inlineImportMapIntoHTML,
+          },
+        )}`,
+      )
+    }
+  } else if (browserSupport === "full") {
+    browserSupportRootNode.querySelector(
+      `a.browser_support_read_more_link`,
+    ).onclick = () => {
+      // eslint-disable-next-line no-alert
+      window.alert(
+        `Source files can be executed directly in this browser because: ${listWhatIsSupported(
+          {
+            inlineImportMapIntoHTML,
+          },
+        )}`,
+      )
+    }
+  }
 
-      enableVariant(filesCompilationRootNode, {
-        filesCompilation,
-        compilation_link: shouldSwitchCompileId
-          ? "mismatch"
-          : actualCompileId
-          ? "source"
-          : expectedCompiledId
-          ? "compiled"
-          : "force",
-      })
-      if (filesCompilation === "yes") {
-        document.querySelector(
-          ".files_compilation_text",
-        ).innerHTML = `Files shown are compiled for ${runtimeReport.name}@${runtimeReport.version}`
-      }
-      setLinkHrefForParentWindow(
-        filesCompilationRootNode.querySelector("a.link_to_source_files"),
-        `/${compileGroup.fileRelativeUrl}`,
-      )
-      setLinkHrefForParentWindow(
-        filesCompilationRootNode.querySelector("a.link_to_compiled_files"),
-        `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,
-      )
-      setLinkHrefForParentWindow(
-        filesCompilationRootNode.querySelector(
-          "a.link_to_compilation_forced_files",
-        ),
-        `/${jsenvDirectoryRelativeUrl}force/${compileGroup.fileRelativeUrl}`,
-      )
-      setLinkHrefForParentWindow(
-        filesCompilationRootNode.querySelector("a.link_to_appropriate_files"),
-        `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,
-      )
+  const actualCompileId = compileGroup.compileId
+  const expectedCompiledId = compileId
+  const shouldSwitchCompileId =
+    expectedCompiledId &&
+    actualCompileId &&
+    actualCompileId !== expectedCompiledId
+  const shouldCompile = !actualCompileId && browserSupport === "no"
+  const filesCompilation = shouldSwitchCompileId
+    ? "mismatch"
+    : actualCompileId
+    ? "yes"
+    : inlineImportMapIntoHTML
+    ? "html_only"
+    : "no"
+  const hasWarning = shouldCompile || shouldSwitchCompileId
 
-      if (hasWarning) {
-        enableWarningStyle()
-        document
-          .querySelector(".files_compilation_text")
-          .setAttribute("data-warning", "")
-        document
-          .querySelector(".browser_support_text")
-          .setAttribute("data-warning", "")
-        document
-          .querySelector("#settings-button")
-          .setAttribute("data-warning", "")
-      } else {
-        disableWarningStyle()
-        document
-          .querySelector(".files_compilation_text")
-          .removeAttribute("data-warning")
-        document
-          .querySelector(".browser_support_text")
-          .removeAttribute("data-warning")
-        document
-          .querySelector("#settings-button")
-          .removeAttribute("data-warning")
-      }
-    },
+  enableVariant(filesCompilationRootNode, {
+    filesCompilation,
+    compilation_link: shouldSwitchCompileId
+      ? "mismatch"
+      : actualCompileId
+      ? "source"
+      : expectedCompiledId
+      ? "compiled"
+      : "force",
+  })
+  if (filesCompilation === "yes") {
+    document.querySelector(
+      ".files_compilation_text",
+    ).innerHTML = `Files shown are compiled for ${runtimeReport.name}@${runtimeReport.version}`
+  }
+  setLinkHrefForParentWindow(
+    filesCompilationRootNode.querySelector("a.link_to_source_files"),
+    `/${compileGroup.fileRelativeUrl}`,
   )
+  setLinkHrefForParentWindow(
+    filesCompilationRootNode.querySelector("a.link_to_compiled_files"),
+    `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,
+  )
+  setLinkHrefForParentWindow(
+    filesCompilationRootNode.querySelector(
+      "a.link_to_compilation_forced_files",
+    ),
+    `/${jsenvDirectoryRelativeUrl}force/${compileGroup.fileRelativeUrl}`,
+  )
+  setLinkHrefForParentWindow(
+    filesCompilationRootNode.querySelector("a.link_to_appropriate_files"),
+    `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`,
+  )
+
+  if (hasWarning) {
+    enableWarningStyle()
+    document
+      .querySelector(".files_compilation_text")
+      .setAttribute("data-warning", "")
+    document
+      .querySelector(".browser_support_text")
+      .setAttribute("data-warning", "")
+    document.querySelector("#settings-button").setAttribute("data-warning", "")
+  } else {
+    disableWarningStyle()
+    document
+      .querySelector(".files_compilation_text")
+      .removeAttribute("data-warning")
+    document
+      .querySelector(".browser_support_text")
+      .removeAttribute("data-warning")
+    document.querySelector("#settings-button").removeAttribute("data-warning")
+  }
 }
 
 const listWhatIsSupported = ({ inlineImportMapIntoHTML }) => {

@@ -95,7 +95,7 @@ export const startCompileServer = async ({
   inlineImportMapIntoHTML = true,
   hmr = false,
   eventSourceClient = false,
-  browserClient = false,
+  htmlSupervisor = false,
   toolbar = false,
 
   errorStackRemapping = true,
@@ -197,7 +197,7 @@ export const startCompileServer = async ({
 
       inlineImportMapIntoHTML,
       eventSourceClient,
-      browserClient,
+      htmlSupervisor,
       toolbar,
 
       runtimeReport,
@@ -292,7 +292,7 @@ export const startCompileServer = async ({
 
       inlineImportMapIntoHTML,
       eventSourceClient,
-      browserClient,
+      htmlSupervisor,
       toolbar,
 
       ressourceGraph,
@@ -312,7 +312,7 @@ export const startCompileServer = async ({
               jsenvFileSelector,
               inlineImportMapIntoHTML,
               eventSourceClient,
-              browserClient,
+              htmlSupervisor,
               toolbar,
             }),
         }

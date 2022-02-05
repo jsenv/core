@@ -9,7 +9,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   COMPILE_PROXY_DIST_URL,
   EVENT_SOURCE_CLIENT_DIST_URL,
-  BROWSER_CLIENT_SYSTEMJS_DIST_URL,
+  HTML_SUPERVISOR_CLASSIC_DIST_URL,
   TOOLBAR_INJECTOR_DIST_URL,
   REDIRECTOR_DIST_URL,
 } from "@jsenv/core/dist/build_manifest.js"
@@ -20,26 +20,27 @@ export const createJsenvFileSelector = ({
   jsenvCorePackageVersion,
 }) => {
   const select = (files, { canUseScriptTypeModule = false } = {}) => {
-    const preferSource = projectDirectoryUrl === jsenvCoreDirectoryUrl
-    if (preferSource && canUseScriptTypeModule && files.source) {
+    const fileType = selectFileType({
+      projectDirectoryUrl,
+      jsenvCoreDirectoryUrl,
+      canUseScriptTypeModule,
+      files,
+    })
+    const fileUrl = files[fileType]
+    if (fileType === "source_module" || fileType === "source_classic") {
       return {
-        selected: "source",
+        selected: fileType,
         urlRelativeToProject: `/${urlToRelativeUrl(
-          files.source,
+          fileUrl,
           projectDirectoryUrl,
         )}`,
       }
     }
-    const selected =
-      canUseScriptTypeModule && files.dist_module
-        ? "dist_module"
-        : "dist_classic"
-    const fileUrl = files[selected]
     const fileUrlVersioned = injectQuery(fileUrl, {
       version: jsenvCorePackageVersion,
     })
     return {
-      selected,
+      selected: fileType,
       urlRelativeToProject: `/${urlToRelativeUrl(
         fileUrlVersioned,
         projectDirectoryUrl,
@@ -50,8 +51,30 @@ export const createJsenvFileSelector = ({
   return { select }
 }
 
+const selectFileType = ({
+  projectDirectoryUrl,
+  jsenvCoreDirectoryUrl,
+  canUseScriptTypeModule,
+  files,
+}) => {
+  const preferSource = projectDirectoryUrl === jsenvCoreDirectoryUrl
+  if (preferSource && canUseScriptTypeModule && files.source_module) {
+    return "source_module"
+  }
+  if (preferSource && files.source_classic) {
+    return "source_classic"
+  }
+  if (canUseScriptTypeModule && files.dist_module) {
+    return "dist_module"
+  }
+  if (files.dist_classic) {
+    return "dist_classic"
+  }
+  return files[Object.keys(files)[0]]
+}
+
 export const redirectorFiles = {
-  source: new URL(
+  source_module: new URL(
     "./src/internal/redirector/redirector.html",
     jsenvCoreDirectoryUrl,
   ),
@@ -59,7 +82,7 @@ export const redirectorFiles = {
 }
 
 export const compileProxyFiles = {
-  source: new URL(
+  source_module: new URL(
     "./src/internal/features/browser_feature_detection/compile_proxy.html",
     jsenvCoreDirectoryUrl,
   ),
@@ -68,7 +91,7 @@ export const compileProxyFiles = {
 }
 
 export const eventSourceClientFiles = {
-  source: new URL(
+  source_module: new URL(
     "./src/internal/dev_server/event_source_client/event_source_client.js",
     jsenvCoreDirectoryUrl,
   ),
@@ -76,16 +99,23 @@ export const eventSourceClientFiles = {
   dist_classic: EVENT_SOURCE_CLIENT_DIST_URL,
 }
 
-export const browserClientFiles = {
-  source: new URL(
-    "./src/internal/browser_client/module/browser_client_module.js",
+export const htmlSupervisorFiles = {
+  source_module: new URL(
+    "./src/internal/html_supervisor/module/html_supervisor_module.js",
     jsenvCoreDirectoryUrl,
   ),
-  dist_classic: BROWSER_CLIENT_SYSTEMJS_DIST_URL,
+  dist_classic: HTML_SUPERVISOR_CLASSIC_DIST_URL,
+}
+
+export const htmlSupervisorSetupFiles = {
+  source_classic: new URL(
+    "./src/internal/html_supervisor/html_supervisor_setup.js",
+    jsenvCoreDirectoryUrl,
+  ),
 }
 
 export const toolbarInjectorFiles = {
-  source: new URL(
+  source_module: new URL(
     "./src/internal/dev_server/toolbar/toolbar_injector.js",
     jsenvCoreDirectoryUrl,
   ),

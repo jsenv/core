@@ -7,7 +7,7 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { browserClientFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
+import { htmlSupervisorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
@@ -53,7 +53,7 @@ export const compileHtml = async ({
   topLevelAwait,
 
   eventSourceClient,
-  browserClient,
+  htmlSupervisor,
   toolbar,
 
   onHtmlImportmapInfo,
@@ -68,7 +68,7 @@ export const compileHtml = async ({
     jsenvFileSelector,
     canUseScriptTypeModule: compileProfile.moduleOutFormat === "esmodule",
     eventSourceClient,
-    browserClient,
+    htmlSupervisor,
     toolbar,
   })
   manipulateHtmlAst(htmlAst, { scriptInjections })
@@ -381,13 +381,13 @@ const visitScripts = async ({
   const generateCodeToSuperviseImport = (specifier) => {
     const specifierAsJson = JSON.stringify(specifier)
     if (compileProfile.moduleOutFormat === "esmodule") {
-      const browserClientFile = jsenvFileSelector.select(browserClientFiles, {
+      const htmlSupervisorFile = jsenvFileSelector.select(htmlSupervisorFiles, {
         canUseScriptTypeModule: true,
       })
-      return `import { superviseDynamicImport } from "@jsenv/core${browserClientFile.urlRelativeToProject}"
+      return `import { superviseDynamicImport } from "@jsenv/core${htmlSupervisorFile.urlRelativeToProject}"
 superviseDynamicImport(${specifierAsJson})`
     }
-    return `window.__jsenv__.superviseSystemJsImport(${specifierAsJson})`
+    return `window.__html_supervisor__.superviseSystemJsImport(${specifierAsJson})`
   }
 
   scripts.forEach((script) => {

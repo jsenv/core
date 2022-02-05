@@ -1,13 +1,13 @@
-import { initHtmlExecution } from "../html_execution.js"
+import { initHtmlSupervisor } from "../html_supervisor.js"
 
-const htmlExecution = initHtmlExecution()
+const htmlSupervisor = initHtmlSupervisor()
 
 export const superviseDynamicImport = (specifier) => {
-  htmlExecution.addExecution({
+  htmlSupervisor.addExecution({
     name: specifier,
     promise: import(new URL(specifier, document.location.href).href),
     currentScript: document.currentScript,
   })
 }
 
-export { htmlExecution }
+window.__html_supervisor__.htmlSupervisor = htmlSupervisor

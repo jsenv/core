@@ -50,7 +50,7 @@ export const createTransformHtmlSourceFileService = ({
   jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
   eventSourceClient,
-  browserClient,
+  htmlSupervisor,
   toolbar,
 }) => {
   /**
@@ -113,7 +113,7 @@ export const createTransformHtmlSourceFileService = ({
       jsenvCorePackageVersion,
       inlineImportMapIntoHTML,
       eventSourceClient,
-      browserClient,
+      htmlSupervisor,
       toolbar,
 
       onInlineModuleScript: ({ scriptContent, scriptSpecifier }) => {
@@ -147,7 +147,7 @@ const transformHTMLSourceFile = async ({
   jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
   eventSourceClient,
-  browserClient,
+  htmlSupervisor,
   toolbar,
 
   onInlineModuleScript = () => {},
@@ -171,7 +171,7 @@ const transformHTMLSourceFile = async ({
     ).href
   if (isJsenvToolbar) {
     eventSourceClient = false
-    browserClient = false
+    htmlSupervisor = false
     toolbar = false
   }
   const scriptInjections = getScriptsToInject({
@@ -180,7 +180,7 @@ const transformHTMLSourceFile = async ({
     moduleOutFormat: "esmodule",
 
     eventSourceClient,
-    browserClient,
+    htmlSupervisor,
     toolbar,
   })
   manipulateHtmlAst(htmlAst, { scriptInjections })
@@ -203,7 +203,7 @@ const transformHTMLSourceFile = async ({
       pushResponse({ path: `/${dependencyRelativeUrl}` })
     })
   }
-  if (browserClient) {
+  if (htmlSupervisor) {
     const { scripts } = parseHtmlAstRessources(htmlAst)
     scripts.forEach((script) => {
       const typeAttribute = getHtmlNodeAttributeByName(script, "type")

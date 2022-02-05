@@ -1,6 +1,7 @@
 import {
   eventSourceClientFiles,
-  browserClientFiles,
+  htmlSupervisorFiles,
+  htmlSupervisorSetupFiles,
   toolbarInjectorFiles,
 } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 
@@ -9,13 +10,13 @@ export const getScriptsToInject = ({
   canUseScriptTypeModule,
 
   eventSourceClient,
-  browserClient,
+  htmlSupervisor,
   toolbar,
 }) => {
   const scriptInjections = []
   const scriptPropertiesFromFile = (file) => {
     return {
-      ...(file.selected === "source" || file.selected === "dist_module"
+      ...(file.selected === "source_module" || file.selected === "dist_module"
         ? { type: "module" }
         : {}),
       src: file.urlRelativeToProject,
@@ -30,12 +31,19 @@ export const getScriptsToInject = ({
       "data-injected": true,
     })
   }
-  if (browserClient) {
-    const browserClientFile = jsenvFileSelector.select(browserClientFiles, {
+  if (htmlSupervisor) {
+    const htmlSupervisorSetupFile = jsenvFileSelector.select(
+      htmlSupervisorSetupFiles,
+    )
+    scriptInjections.push({
+      ...scriptPropertiesFromFile(htmlSupervisorSetupFile),
+      "data-injected": true,
+    })
+    const htmlSupervisorFile = jsenvFileSelector.select(htmlSupervisorFiles, {
       canUseScriptTypeModule,
     })
     scriptInjections.push({
-      ...scriptPropertiesFromFile(browserClientFile),
+      ...scriptPropertiesFromFile(htmlSupervisorFile),
       "data-injected": true,
     })
   }
