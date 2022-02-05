@@ -7,7 +7,7 @@ import {
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { htmlSupervisorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
+import { generateCodeToSuperviseScriptTypeModule } from "@jsenv/core/src/internal/html_supervisor/supervise_script_type_module.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
@@ -378,18 +378,6 @@ const visitScripts = async ({
   addHtmlMutation,
   injectHtmlDependency,
 }) => {
-  const generateCodeToSuperviseScriptTypeModule = (specifier) => {
-    const specifierAsJson = JSON.stringify(specifier)
-    if (compileProfile.moduleOutFormat === "esmodule") {
-      const htmlSupervisorFile = jsenvFileSelector.select(htmlSupervisorFiles, {
-        canUseScriptTypeModule: true,
-      })
-      return `import { superviseDynamicImport } from "@jsenv/core${htmlSupervisorFile.urlRelativeToProject}"
-superviseDynamicImport(${specifierAsJson})`
-    }
-    return `window.__html_supervisor__.superviseSystemJsImport(${specifierAsJson})`
-  }
-
   scripts.forEach((script) => {
     const typeAttribute = getHtmlNodeAttributeByName(script, "type")
     const type = typeAttribute ? typeAttribute.value : "application/javascript"
@@ -427,7 +415,12 @@ superviseDynamicImport(${specifierAsJson})`
           }
           setHtmlNodeText(
             script,
-            generateCodeToSuperviseScriptTypeModule(specifier),
+            generateCodeToSuperviseScriptTypeModule({
+              jsenvFileSelector,
+              canUseScriptTypeModule:
+                compileProfile.moduleOutFormat === "esmodule",
+              specifier,
+            }),
           )
         })
         return
@@ -463,7 +456,12 @@ superviseDynamicImport(${specifierAsJson})`
         removeHtmlNodeAttribute(script, srcAttribute)
         setHtmlNodeText(
           script,
-          generateCodeToSuperviseScriptTypeModule(specifier),
+          generateCodeToSuperviseScriptTypeModule({
+            jsenvFileSelector,
+            canUseScriptTypeModule:
+              compileProfile.moduleOutFormat === "esmodule",
+            specifier,
+          }),
         )
       })
       injectHtmlDependency({

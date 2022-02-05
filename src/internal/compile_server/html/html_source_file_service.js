@@ -1,13 +1,16 @@
 /**
- * Send a modified version of the html files instead of serving
- * the source html files
+ * Perform some/all the following modifications before serving html source files
  * - force inlining of importmap
- * - inject a script into html head to have window.__jsenv__
- * - <script type="module" src="file.js">
- *   into
- *   <script type="module">
- *      window.__jsenv__.executeFileUsingDynamicImport('file.js')
- *   </script>
+ * - inject event source client
+ * - inject html supervisor
+ * - inject toolbar
+ *
+ * This allows to
+ * - Fake remote importmap support
+ * - Inject the event source client doing the autoreload (hmr or full reload)
+ * - Know which script is throwing an error (allow to provide useful error messages and logs)
+ * - Know when the whole HTML execution is done (mandatory for test execution)
+ * - Have jsenv toolbar during dev which comes with some useful features
  */
 
 import {
@@ -21,11 +24,15 @@ import {
 import { composeTwoImportMaps, moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { generateCodeToSuperviseScriptTypeModule } from "@jsenv/core/src/internal/html_supervisor/supervise_script_type_module.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
+import {
+  jsenvCoreDirectoryUrl,
+  jsenvDistDirectoryUrl,
+} from "@jsenv/core/src/jsenv_file_urls.js"
 
 import {
   parseHtmlString,
@@ -41,13 +48,11 @@ import {
   getIdForInlineHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
-const jsenvDistDirectoryUrl = new URL("./dist/", jsenvCoreDirectoryUrl).href
-
 export const createTransformHtmlSourceFileService = ({
   logger,
   projectDirectoryUrl,
+  jsenvFileSelector,
 
-  jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
   eventSourceClient,
   htmlSupervisor,
@@ -105,12 +110,12 @@ export const createTransformHtmlSourceFileService = ({
     const htmlTransformed = await transformHTMLSourceFile({
       logger,
       projectDirectoryUrl,
+      jsenvFileSelector,
       fileUrl,
       fileContent,
       request,
       pushResponse,
 
-      jsenvCorePackageVersion,
       inlineImportMapIntoHTML,
       eventSourceClient,
       htmlSupervisor,
@@ -139,12 +144,12 @@ export const createTransformHtmlSourceFileService = ({
 const transformHTMLSourceFile = async ({
   logger,
   projectDirectoryUrl,
+  jsenvFileSelector,
   fileUrl,
   fileContent,
   request,
   pushResponse,
 
-  jsenvCorePackageVersion,
   inlineImportMapIntoHTML,
   eventSourceClient,
   htmlSupervisor,
@@ -175,9 +180,8 @@ const transformHTMLSourceFile = async ({
     toolbar = false
   }
   const scriptInjections = getScriptsToInject({
-    projectDirectoryUrl,
-    jsenvCorePackageVersion,
-    moduleOutFormat: "esmodule",
+    jsenvFileSelector,
+    canUseScriptTypeModule: true,
 
     eventSourceClient,
     htmlSupervisor,
@@ -212,13 +216,14 @@ const transformHTMLSourceFile = async ({
       const src = srcAttribute ? srcAttribute.value : ""
       if (type === "module" && src) {
         removeHtmlNodeAttribute(script, srcAttribute)
-        // Ideally jsenv should take into account eventual
-        // "integrity" and "crossorigin" attribute during "executeFileUsingDynamicImport"
+
         setHtmlNodeText(
           script,
-          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(
-            src,
-          )})`,
+          generateCodeToSuperviseScriptTypeModule({
+            jsenvFileSelector,
+            canUseScriptTypeModule: true,
+            specifier: src,
+          }),
         )
         return
       }
@@ -234,9 +239,11 @@ const transformHTMLSourceFile = async ({
         })
         setHtmlNodeText(
           script,
-          `window.__jsenv__.executeFileUsingDynamicImport(${JSON.stringify(
-            `./${scriptSpecifier}`,
-          )})`,
+          generateCodeToSuperviseScriptTypeModule({
+            jsenvFileSelector,
+            canUseScriptTypeModule: true,
+            specifier: `./${scriptSpecifier}`,
+          }),
         )
         return
       }
