@@ -3,7 +3,7 @@ import { setupRoutes } from "@jsenv/server"
 import { redirectorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 
-export const createCompileRedirectorService = async ({
+export const createCompileRedirectorService = ({
   jsenvFileSelector,
   mainFileRelativeUrl,
 }) => {
