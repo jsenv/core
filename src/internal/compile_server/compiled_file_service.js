@@ -12,9 +12,9 @@ import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.
 import { setUrlExtension } from "../url_utils.js"
 
 import { compileFile } from "./compile_file.js"
-import { compileHtml } from "./html/jsenv_compile_html.js"
-import { compileImportmap } from "./importmap/jsenv_compile_importmap.js"
-import { compileJavascript } from "./js/jsenv_compile_js.js"
+import { compileHtml } from "./html/compile_html.js"
+import { compileImportmap } from "./importmap/compile_importmap.js"
+import { compileJavascript } from "./js/compile_js.js"
 
 const jsenvCompilers = {
   "**/*.js": compileJavascript,

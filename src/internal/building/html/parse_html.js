@@ -48,7 +48,7 @@ import {
 } from "../ressource_builder_util.js"
 import { collectNodesMutations } from "./html_node_mutations.js"
 
-import { collectSvgMutations } from "../svg/jsenv_parse_svg.js"
+import { collectSvgMutations } from "../svg/parse_svg.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,

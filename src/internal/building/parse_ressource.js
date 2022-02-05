@@ -14,13 +14,13 @@ import {
   findFirstImportMapNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
-import { parseHtmlRessource } from "./html/jsenv_parse_html.js"
-import { parseImportmapRessource } from "./importmap/jsenv_parse_importmap.js"
-import { parseSvgRessource } from "./svg/jsenv_parse_svg.js"
-import { parseCssRessource } from "./css/jsenv_parse_css.js"
-import { parseJsRessource } from "./js/jsenv_parse_js.js"
-import { parseJsonRessource } from "./json/jsenv_parse_json.js"
-import { parseWebmanifestRessource } from "./webmanifest/jsenv_parse_webmanifest.js"
+import { parseHtmlRessource } from "./html/parse_html.js"
+import { parseImportmapRessource } from "./importmap/parse_importmap.js"
+import { parseSvgRessource } from "./svg/parse_svg.js"
+import { parseCssRessource } from "./css/parse_css.js"
+import { parseJsRessource } from "./js/parse_js.js"
+import { parseJsonRessource } from "./json/parse_json.js"
+import { parseWebmanifestRessource } from "./webmanifest/parse_webmanifest.js"
 
 export const parseRessource = async (
   ressource,
