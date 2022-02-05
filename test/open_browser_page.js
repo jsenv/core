@@ -42,7 +42,7 @@ export const openBrowserPage = async ({
         /* eslint-disable no-undef */
         /* istanbul ignore next */
         () => {
-          return window.__jsenv__.executionResultPromise
+          return window.__html_supervisor__.getScriptExecutionResults()
         },
         /* eslint-enable no-undef */
       ),
@@ -61,10 +61,10 @@ export const openBrowserPage = async ({
       )
     }
     delete executionResult.coverage
-    const { fileExecutionResultMap } = executionResult
-    Object.keys(fileExecutionResultMap).forEach((file) => {
-      const fileExecutionResult = fileExecutionResultMap[file]
-      delete fileExecutionResult.coverage
+    const { scriptExecutionResults } = executionResult
+    Object.keys(scriptExecutionResults).forEach((file) => {
+      const scriptExecutionResult = scriptExecutionResults[file]
+      delete scriptExecutionResult.coverage
     })
     delete executionResult.performance
     return executionResult

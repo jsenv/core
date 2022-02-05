@@ -107,7 +107,7 @@ const expected = {
     status: "errored",
     startTime: assert.any(Number),
     endTime: assert.any(Number),
-    fileExecutionResultMap: {
+    scriptExecutionResults: {
       [`./error_syntax.js`]: {
         status: "errored",
         exceptionSource: assert.any(String),

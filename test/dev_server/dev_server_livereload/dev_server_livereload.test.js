@@ -44,7 +44,7 @@ try {
         status: "completed",
         startTime: assert.any(Number),
         endTime: assert.any(Number),
-        fileExecutionResultMap: {
+        scriptExecutionResults: {
           "./dev_server_livereload.js": {
             status: "completed",
             namespace: { default: 42 },
@@ -62,7 +62,7 @@ try {
     await navigationPromise
     const afterReloadExecutionResult = await getJsenvExecutionResult()
     const actual =
-      afterReloadExecutionResult.fileExecutionResultMap[
+      afterReloadExecutionResult.scriptExecutionResults[
         "./dev_server_livereload.js"
       ].namespace
     const expected = {
@@ -79,7 +79,7 @@ try {
     await navigationPromise
     const afterReloadExecutionResult = await getJsenvExecutionResult()
     const actual =
-      afterReloadExecutionResult.fileExecutionResultMap[
+      afterReloadExecutionResult.scriptExecutionResults[
         "./dev_server_livereload.js"
       ].namespace
     const expected = {

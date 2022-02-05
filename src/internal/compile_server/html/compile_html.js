@@ -378,7 +378,7 @@ const visitScripts = async ({
   addHtmlMutation,
   injectHtmlDependency,
 }) => {
-  const generateCodeToSuperviseImport = (specifier) => {
+  const generateCodeToSuperviseScriptTypeModule = (specifier) => {
     const specifierAsJson = JSON.stringify(specifier)
     if (compileProfile.moduleOutFormat === "esmodule") {
       const htmlSupervisorFile = jsenvFileSelector.select(htmlSupervisorFiles, {
@@ -425,7 +425,10 @@ superviseDynamicImport(${specifierAsJson})`
           } else {
             specifier = src
           }
-          setHtmlNodeText(script, generateCodeToSuperviseImport(specifier))
+          setHtmlNodeText(
+            script,
+            generateCodeToSuperviseScriptTypeModule(specifier),
+          )
         })
         return
       }
@@ -458,7 +461,10 @@ superviseDynamicImport(${specifierAsJson})`
           removeHtmlNodeAttribute(script, typeAttribute)
         }
         removeHtmlNodeAttribute(script, srcAttribute)
-        setHtmlNodeText(script, generateCodeToSuperviseImport(specifier))
+        setHtmlNodeText(
+          script,
+          generateCodeToSuperviseScriptTypeModule(specifier),
+        )
       })
       injectHtmlDependency({
         htmlNode: script,

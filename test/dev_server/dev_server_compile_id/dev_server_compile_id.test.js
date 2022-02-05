@@ -33,7 +33,7 @@ const getImportMetaUrl = async () => {
   const executionResult = await getJsenvExecutionResult()
   return {
     importMetaUrl:
-      executionResult.fileExecutionResultMap["./main.js"].namespace
+      executionResult.scriptExecutionResults["./main.js"].namespace
         .importMetaUrl,
   }
 }

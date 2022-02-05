@@ -37,7 +37,7 @@ try {
       status: "completed",
       startTime: actual.executionResult.startTime,
       endTime: actual.executionResult.endTime,
-      fileExecutionResultMap: {
+      scriptExecutionResults: {
         "./dev_server_basic.js": {
           status: "completed",
           namespace: { default: 42 },

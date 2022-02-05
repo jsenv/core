@@ -3,7 +3,7 @@ import { displayErrorInDocument } from "./error_in_document.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
 export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
-  const result = {}
+  const scriptExecutionResults = {}
 
   let collectCalled = false
   let pendingExecutionCount = 0
@@ -12,13 +12,13 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
     resolveScriptExecutionsPromise = resolve
   })
   const onExecutionStart = (name) => {
-    result[name] = null // ensure execution order is reflected into result
+    scriptExecutionResults[name] = null // ensure execution order is reflected into the object
     pendingExecutionCount++
     performance.mark(`execution_start`)
   }
   const onExecutionSettled = (name, executionResult) => {
     performance.measure(`execution`, `execution_start`)
-    result[name] = executionResult
+    scriptExecutionResults[name] = executionResult
     pendingExecutionCount--
     if (pendingExecutionCount === 0 && collectCalled) {
       resolveScriptExecutionsPromise()
@@ -62,11 +62,11 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
 
     let status = "completed"
     let exceptionSource = ""
-    Object.keys(result).forEach((key) => {
-      const executionResult = result[key]
-      if (executionResult.status === "errored") {
+    Object.keys(scriptExecutionResults).forEach((key) => {
+      const scriptExecutionResult = scriptExecutionResults[key]
+      if (scriptExecutionResult.status === "errored") {
         status = "errored"
-        exceptionSource = executionResult.exceptionSource
+        exceptionSource = scriptExecutionResult.exceptionSource
       }
     })
     return {
@@ -74,7 +74,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       ...(status === "errored" ? { exceptionSource } : {}),
       startTime: getNavigationStartTime(),
       endTime: Date.now(),
-      result,
+      scriptExecutionResults,
     }
   }
 

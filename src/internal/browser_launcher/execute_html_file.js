@@ -190,9 +190,9 @@ const executeSource = async ({
     })
   } else {
     transformResult = composeTransformer(transformResult, (result) => {
-      const { namespace: fileExecutionResultMap } = result
-      Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-        delete fileExecutionResultMap[fileRelativeUrl].coverage
+      const scriptExecutionResults = result.namespace
+      Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
+        delete scriptExecutionResults[fileRelativeUrl].coverage
       })
       return result
     })
@@ -209,16 +209,15 @@ const executeSource = async ({
     },
   )
 
-  const { fileExecutionResultMap } = executionResult
-  const fileErrored = Object.keys(fileExecutionResultMap).find(
+  const { scriptExecutionResults } = executionResult
+  const scriptErrored = Object.keys(scriptExecutionResults).find(
     (fileRelativeUrl) => {
-      const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
-      return fileExecutionResult.status === "errored"
+      const scriptExecutionResult = scriptExecutionResults[fileRelativeUrl]
+      return scriptExecutionResult.status === "errored"
     },
   )
-
-  if (fileErrored) {
-    const { exceptionSource } = fileExecutionResultMap[fileErrored]
+  if (scriptErrored) {
+    const { exceptionSource } = scriptExecutionResults[scriptErrored]
     const error = evalException(exceptionSource, {
       projectDirectoryUrl,
       compileServerOrigin,
@@ -227,13 +226,13 @@ const executeSource = async ({
     return transformResult({
       status: "errored",
       error,
-      namespace: fileExecutionResultMap,
+      namespace: scriptExecutionResults,
     })
   }
 
   return transformResult({
     status: "completed",
-    namespace: fileExecutionResultMap,
+    namespace: scriptExecutionResults,
   })
 }
 
@@ -250,14 +249,14 @@ const executeCompiledVersion = async ({
   let transformResult = (result) => result
   if (collectCoverage) {
     transformResult = composeTransformer(transformResult, async (result) => {
-      result.coverage = generateCoverageForPage(fileExecutionResultMap)
+      result.coverage = generateCoverageForPage(result.namespace)
       return result
     })
   } else {
     transformResult = composeTransformer(transformResult, (result) => {
-      const { namespace: fileExecutionResultMap } = result
-      Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-        delete fileExecutionResultMap[fileRelativeUrl].coverage
+      const scriptExecutionResults = result.namespace
+      Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
+        delete scriptExecutionResults[fileRelativeUrl].coverage
       })
       return result
     })
@@ -275,21 +274,20 @@ const executeCompiledVersion = async ({
     /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      return window.__jsenv__.executionResultPromise
+      return window.__html_supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   )
 
-  const { fileExecutionResultMap } = executionResult
-  const fileErrored = Object.keys(fileExecutionResultMap).find(
+  const { scriptExecutionResults } = executionResult
+  const scriptErrored = Object.keys(scriptExecutionResults).find(
     (fileRelativeUrl) => {
-      const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
-      return fileExecutionResult.status === "errored"
+      const scriptExecutionResult = scriptExecutionResults[fileRelativeUrl]
+      return scriptExecutionResult.status === "errored"
     },
   )
-
-  if (fileErrored) {
-    const { exceptionSource } = fileExecutionResultMap[fileErrored]
+  if (scriptErrored) {
+    const { exceptionSource } = scriptExecutionResults[scriptErrored]
     const error = evalException(exceptionSource, {
       projectDirectoryUrl,
       compileServerOrigin,
@@ -298,20 +296,19 @@ const executeCompiledVersion = async ({
     return transformResult({
       status: "errored",
       error,
-      namespace: fileExecutionResultMap,
+      namespace: scriptExecutionResults,
     })
   }
-
   return transformResult({
     status: "completed",
-    namespace: fileExecutionResultMap,
+    namespace: scriptExecutionResults,
   })
 }
 
-const generateCoverageForPage = (fileExecutionResultMap) => {
+const generateCoverageForPage = (scriptExecutionResults) => {
   let istanbulCoverageComposed = null
-  Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-    const istanbulCoverage = fileExecutionResultMap[fileRelativeUrl].coverage
+  Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
+    const istanbulCoverage = scriptExecutionResults[fileRelativeUrl].coverage
     istanbulCoverageComposed = istanbulCoverageComposed
       ? composeTwoFileByFileIstanbulCoverages(
           istanbulCoverageComposed,
@@ -319,7 +316,6 @@ const generateCoverageForPage = (fileExecutionResultMap) => {
         )
       : istanbulCoverage
   })
-
   return istanbulCoverageComposed
 }
 
