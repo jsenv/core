@@ -403,6 +403,7 @@ const visitScripts = async ({
             jsenvRemoteDirectory,
             url: inlineScriptOriginalUrl,
             compiledUrl: inlineScriptCompiledUrl,
+            isInline: true,
 
             type,
             compileProfile,
@@ -427,6 +428,7 @@ const transformHtmlScript = async ({
   jsenvRemoteDirectory,
   url,
   compiledUrl,
+  isInline,
 
   type,
   compileProfile,
@@ -461,7 +463,13 @@ const transformHtmlScript = async ({
     // document and livereloading still works
     // because we gracefully handle this error
     if (e.code === "PARSE_ERROR") {
-      return [{ url, content: code }]
+      return [
+        {
+          // inline script do actually exists on the filesystem
+          url: isInline ? compiledUrl : url,
+          content: code,
+        },
+      ]
     }
     throw e
   }

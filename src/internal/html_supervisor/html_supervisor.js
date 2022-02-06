@@ -51,39 +51,32 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         onExecutionSettled(src, executionResult)
       },
       async (e) => {
-        if (improveErrorWithFetch) {
-          const url = new URL(src, window.location.href).href
-          let response
-          try {
-            response = await fetchUrl(url)
-          } catch (e) {
-            e.code = "NETWORK_FAILURE"
-            throw e
-          }
-          const responseError = await getRessourceResponseError({
-            urlContext,
-            contentTypeExpected: "application/javascript",
-            type: "js_module",
-            url,
-            importerUrl: window.location.href,
-            response,
-          })
-          if (responseError) {
-            e = responseError
-          }
-        }
-        if (errorTransformer) {
-          try {
-            e = await errorTransformer(e)
-          } catch (e) {}
-        }
         const executionResult = {
           status: "errored",
           error: e,
           coverage: window.__coverage__,
         }
-        onExecutionError(executionResult, { currentScript })
+        let errorExposureInConsole = true
+        if (e.name === "SyntaxError") {
+          improveErrorWithFetch = false
+          errorExposureInConsole = false
+        }
+        if (improveErrorWithFetch) {
+          const url = new URL(src, window.location.href).href
+          const errorFromServer = await getErrorFromServer({ url, urlContext })
+          executionResult.error = errorFromServer
+        }
+        if (errorTransformer) {
+          try {
+            executionResult.error = await errorTransformer(e)
+          } catch (e) {}
+        }
+
         onExecutionSettled(src, executionResult)
+        onExecutionError(executionResult, {
+          currentScript,
+          errorExposureInConsole,
+        })
       },
     )
   }
@@ -120,6 +113,25 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
   }
 }
 
+const getErrorFromServer = async ({ url, urlContext }) => {
+  let response
+  try {
+    response = await fetchUrl(url)
+  } catch (e) {
+    e.code = "NETWORK_FAILURE"
+    return e
+  }
+  const responseError = await getRessourceResponseError({
+    urlContext,
+    contentTypeExpected: "application/javascript",
+    type: "js_module",
+    url,
+    importerUrl: window.location.href,
+    response,
+  })
+  return responseError
+}
+
 const onExecutionError = (
   executionResult,
   {
@@ -152,7 +164,11 @@ const onExecutionError = (
     window.dispatchEvent(globalErrorEvent)
   }
   if (errorExposureInConsole) {
-    console.error(error)
+    if (typeof window.reportError === "function") {
+      window.reportError(error)
+    } else {
+      console.error(error)
+    }
   }
   if (errorExposureInNotification) {
     displayErrorNotification(error)

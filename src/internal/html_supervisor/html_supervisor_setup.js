@@ -25,13 +25,29 @@ window.__html_supervisor__ = {
           script.integrity = integrity
         }
         script.src = src
-        script.addEventListener("error", function () {
+        const scriptUrl = new URL(src, window.location).href
+        let lastWindowErrorUrl
+        let lastWindowError
+        const windowErrorCallback = (e) => {
+          lastWindowErrorUrl = e.filename
+          lastWindowError = e.error
+        }
+        const cleanup = () => {
           document.body.removeChild(script)
+          window.removeEventListener("error", windowErrorCallback)
+        }
+        window.addEventListener("error", windowErrorCallback)
+        script.addEventListener("error", () => {
+          cleanup()
           reject(src)
         })
-        script.addEventListener("load", function () {
-          document.body.removeChild(script)
-          resolve()
+        script.addEventListener("load", () => {
+          cleanup()
+          if (lastWindowErrorUrl === scriptUrl) {
+            reject(lastWindowError)
+          } else {
+            resolve()
+          }
         })
         document.body.appendChild(script)
       }),
