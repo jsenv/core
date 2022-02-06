@@ -64,7 +64,9 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         if (improveErrorWithFetch) {
           const url = new URL(src, window.location.href).href
           const errorFromServer = await getErrorFromServer({ url, urlContext })
-          executionResult.error = errorFromServer
+          if (errorFromServer) {
+            executionResult.error = errorFromServer
+          }
         }
         if (errorTransformer) {
           try {
