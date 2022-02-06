@@ -1,13 +1,12 @@
 import { initHtmlSupervisor } from "../html_supervisor.js"
 
 const htmlSupervisor = initHtmlSupervisor()
+window.__html_supervisor__.setHtmlSupervisor(htmlSupervisor)
 
-export const superviseDynamicImport = (specifier) => {
+export const superviseScriptTypeModule = ({ src }) => {
   htmlSupervisor.addExecution({
-    name: specifier,
-    promise: import(new URL(specifier, document.location.href).href),
-    currentScript: document.currentScript,
+    src,
+    currentScript: null,
+    promise: import(new URL(src, document.location.href).href),
   })
 }
-
-window.__html_supervisor__.htmlSupervisor = htmlSupervisor

@@ -61,16 +61,16 @@ const htmlSupervisor = initHtmlSupervisor({
     return transformer ? transformer(e) : e
   },
 })
+window.__html_supervisor__.setHtmlSupervisor(htmlSupervisor)
 
-const superviseSystemJsImport = async (specifier) => {
+const superviseScriptTypeModule = ({ src }) => {
   htmlSupervisor.addExecution({
-    name: specifier,
+    src,
+    currentScript: document.currentScript,
     promise: (async () => {
       const browserClient = await getBrowserClient()
-      return browserClient.import(specifier)
+      return browserClient.import(src)
     })(),
-    currentScript: document.currentScript,
   })
 }
-window.__html_supervisor__.htmlSupervisor = htmlSupervisor
-window.__html_supervisor__.superviseSystemJsImport = superviseSystemJsImport
+window.__html_supervisor__.superviseScriptTypeModule = superviseScriptTypeModule

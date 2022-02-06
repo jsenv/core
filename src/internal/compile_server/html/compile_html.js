@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl, urlToFilename } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
@@ -375,7 +375,7 @@ const visitScripts = async ({
     canUseScriptTypeModule,
     scripts,
     generateInlineScriptSrc: (inlineScriptId) => {
-      return `__asset__${inlineScriptId}.js`
+      return `./${urlToFilename(url)}__asset__${inlineScriptId}.js`
     },
   })
   supervisedScripts.forEach(

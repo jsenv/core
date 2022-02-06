@@ -34,6 +34,7 @@ export const superviseScripts = ({
     const srcAttribute = getHtmlNodeAttributeByName(script, "src")
     let src = srcAttribute ? srcAttribute.value : undefined
     if (
+      src &&
       jsenvRemoteDirectory.isRemoteUrl(src) &&
       !jsenvRemoteDirectory.isPreservedUrl(src)
     ) {
@@ -52,6 +53,16 @@ export const superviseScripts = ({
       : undefined
     const textNode = getHtmlNodeTextNode(script)
     if (src) {
+      if (type !== "module") {
+        src = injectQueryIntoUrlSpecifier(src, { script: "" })
+      }
+      supervisedScripts.push({
+        script,
+        type,
+        src,
+        integrity,
+        crossorigin,
+      })
       removeHtmlNodeAttributeByName(script, "src")
       setHtmlNodeText(
         script,
@@ -64,13 +75,6 @@ export const superviseScripts = ({
           crossorigin,
         }),
       )
-      supervisedScripts.push({
-        script,
-        type,
-        src,
-        integrity,
-        crossorigin,
-      })
       return
     }
     if (textNode) {
@@ -81,6 +85,12 @@ export const superviseScripts = ({
           script: "",
         })
       }
+      supervisedScripts.push({
+        script,
+        type,
+        textContent: textNode.value,
+        inlineScriptSrc,
+      })
       setHtmlNodeText(
         script,
         generateCodeToSuperviseScript({
@@ -90,12 +100,6 @@ export const superviseScripts = ({
           src: inlineScriptSrc,
         }),
       )
-      supervisedScripts.push({
-        script,
-        type,
-        textContent: textNode.value,
-        inlineScriptSrc,
-      })
       return
     }
   })
@@ -109,17 +113,23 @@ const generateCodeToSuperviseScript = ({
   canUseScriptTypeModule,
   type,
   src,
+  integrity,
+  crossorigin,
 }) => {
+  const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
   if (type === "module") {
-    const srcAsJson = JSON.stringify(src)
     if (canUseScriptTypeModule) {
       const htmlSupervisorFile = jsenvFileSelector.select(htmlSupervisorFiles, {
-        canUseScriptTypeModule: true,
+        canUseScriptTypeModule,
       })
-      return `import { superviseDynamicImport } from "@jsenv/core${htmlSupervisorFile.urlRelativeToProject}"
-superviseDynamicImport(${srcAsJson})`
+      const specifier =
+        htmlSupervisorFile.selected === "source_module"
+          ? htmlSupervisorFile.urlRelativeToProject
+          : htmlSupervisorFile.urlRelativeToProject
+      return `import { superviseScriptTypeModule } from "${specifier}"
+superviseScriptTypeModule(${paramsAsJson})`
     }
-    return `window.__html_supervisor__.superviseSystemJsImport(${srcAsJson})`
+    return `window.__html_supervisor__.superviseScriptTypeModule(${paramsAsJson})`
   }
-  return "" // TODO
+  return `window.__html_supervisor__.superviseScript(${paramsAsJson})`
 }

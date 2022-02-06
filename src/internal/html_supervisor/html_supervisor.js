@@ -24,8 +24,8 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       resolveScriptExecutionsPromise()
     }
   }
-  const addExecution = async ({ name, promise, currentScript }) => {
-    onExecutionStart(name)
+  const addExecution = async ({ src, currentScript, promise }) => {
+    onExecutionStart(src)
     promise.then(
       (namespace) => {
         const executionResult = {
@@ -33,7 +33,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
           namespace,
           coverage: window.__coverage__,
         }
-        onExecutionSettled(name, executionResult)
+        onExecutionSettled(src, executionResult)
       },
       async (e) => {
         if (errorTransformer) {
@@ -47,7 +47,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
           coverage: window.__coverage__,
         }
         onExecutionError(executionResult, { currentScript })
-        onExecutionSettled(name, executionResult)
+        onExecutionSettled(src, executionResult)
       },
     )
   }

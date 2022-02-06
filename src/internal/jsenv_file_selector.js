@@ -104,7 +104,7 @@ export const htmlSupervisorFiles = {
     "./src/internal/html_supervisor/module/html_supervisor_module.js",
     jsenvCoreDirectoryUrl,
   ),
-  dist_classic: HTML_SUPERVISOR_CLASSIC_DIST_URL,
+  dist_module: HTML_SUPERVISOR_CLASSIC_DIST_URL,
 }
 
 export const htmlSupervisorSetupFiles = {
