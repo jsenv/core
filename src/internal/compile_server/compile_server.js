@@ -309,6 +309,7 @@ export const startCompileServer = async ({
             createTransformHtmlSourceFileService({
               logger,
               projectDirectoryUrl,
+              jsenvRemoteDirectory,
               jsenvFileSelector,
               inlineImportMapIntoHTML,
               eventSourceClient,

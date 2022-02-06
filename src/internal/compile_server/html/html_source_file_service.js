@@ -46,6 +46,7 @@ import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/
 export const createTransformHtmlSourceFileService = ({
   logger,
   projectDirectoryUrl,
+  jsenvRemoteDirectory,
   jsenvFileSelector,
 
   inlineImportMapIntoHTML,
@@ -105,6 +106,7 @@ export const createTransformHtmlSourceFileService = ({
     const htmlTransformed = await transformHTMLSourceFile({
       logger,
       projectDirectoryUrl,
+      jsenvRemoteDirectory,
       jsenvFileSelector,
       fileUrl,
       fileContent,
@@ -139,6 +141,7 @@ export const createTransformHtmlSourceFileService = ({
 const transformHTMLSourceFile = async ({
   logger,
   projectDirectoryUrl,
+  jsenvRemoteDirectory,
   jsenvFileSelector,
   fileUrl,
   fileContent,
@@ -205,6 +208,7 @@ const transformHTMLSourceFile = async ({
   if (htmlSupervisor) {
     const { scripts } = parseHtmlAstRessources(htmlAst)
     const supervisedScripts = superviseScripts({
+      jsenvRemoteDirectory,
       jsenvFileSelector,
       url: fileUrl,
       canUseScriptTypeModule: true,

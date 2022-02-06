@@ -25,23 +25,14 @@ startDevServer({
   workers: ["./test/workers/worker_importmap/worker.js"],
   serviceWorkers: ["./test/workers/service_worker_importmap/service_worker.js"],
   explorableConfig: {
-    source: {
-      "./index.html": false,
-      "./src/**/*.html": false,
-      "./**/docs/**/*.html": false,
-      "./**/.jsenv/": false,
-      "./**/node_modules/": false,
+    main: {
+      "./dev_exploring/main/**/*.html": true,
     },
-    test: {
-      "./test/**/*.html": false,
-      "./**/docs/**/*.html": false,
-      "./test-manual/**/*.html": true,
-      "./test/workers/**/*.html": true,
-      "./test/entry_html/**/*.html": true,
-      "./test/remote_url/**/*.html": true,
-      "./**/.jsenv/": false,
-      "./**/dist/": false,
-      "./**/node_modules/": false,
+    errors: {
+      "./dev_exploring/errors/**/*.html": true,
+    },
+    other: {
+      "./dev_exploring/other/**/*.html": true,
     },
   },
 })

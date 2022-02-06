@@ -369,6 +369,7 @@ const visitScripts = async ({
 }) => {
   const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
   const supervisedScripts = superviseScripts({
+    jsenvRemoteDirectory,
     jsenvFileSelector,
     url: compiledUrl,
     canUseScriptTypeModule,
