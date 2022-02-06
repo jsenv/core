@@ -42,7 +42,6 @@ export const compileFile = async ({
       `compileCacheStrategy must be "etag", "mtime" or "none", got ${compileCacheStrategy}`,
     )
   }
-
   try {
     const { meta, compileResult, compileResultStatus, timing } =
       await reuseOrCreateCompiledFile({

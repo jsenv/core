@@ -198,21 +198,17 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
   const urlObject = new URL(originalFileUrl)
   urlObject.search = ""
   originalFileUrl = urlObject.href
-
   const { jsenvCompiler, customCompiler } = urlToMeta({
     url: originalFileUrl,
     structuredMetaMap: compileMeta,
   })
-
   if (!jsenvCompiler && !customCompiler) {
     return null
   }
-
   // there is only a jsenvCompiler
   if (jsenvCompiler && !customCompiler) {
     return jsenvCompiler
   }
-
   // there is a custom compiler and potentially a jsenv compiler
   return async (params) => {
     // do custom compilation first

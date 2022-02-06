@@ -1,3 +1,4 @@
+import { fetchFileSystem } from "@jsenv/server"
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
@@ -62,7 +63,26 @@ export const createJsenvRemoteDirectory = ({
       return remoteUrl
     },
 
-    loadFileUrlFromRemote: async (url, request) => {
+    // The original file might be behind an http url.
+    // In that case jsenv try first to read file from filesystem
+    // in ".jsenv/.http/" directory. If not found, the url
+    // is fetched and file is written in that ".jsenv/.http/" directory.
+    // After that the only way to re-fetch this ressource is
+    // to delete the content of ".jsenv/.http/"
+    fetchUrl: async (url, { request, projectFileCacheStrategy }) => {
+      const fromFileSystem = () =>
+        fetchFileSystem(url, {
+          headers: request.headers,
+          etagEnabled: projectFileCacheStrategy === "etag",
+          mtimeEnabled: projectFileCacheStrategy === "mtime",
+        })
+      const filesystemResponse = await fromFileSystem()
+      if (
+        filesystemResponse.status !== 404 ||
+        !jsenvRemoteDirectory.isFileUrlForRemoteUrl(url)
+      ) {
+        return filesystemResponse
+      }
       const urlObject = new URL(url)
       const integrity = urlObject.searchParams.get("integrity")
       if (integrity) {
@@ -78,7 +98,7 @@ export const createJsenvRemoteDirectory = ({
         headers: requestHeadersToForward,
       })
       if (response.status !== 200) {
-        throw createRemoteFetchError({
+        return createBadGatewayResponse({
           code: "UNEXPECTED_STATUS",
           message: `unexpected status for ressource "${remoteUrl}", received ${response.status}`,
         })
@@ -95,41 +115,37 @@ export const createJsenvRemoteDirectory = ({
             integrity,
           )
         } catch (e) {
-          throw createRemoteFetchError({
+          return createBadGatewayResponse({
             code: e.code,
             message: e.message,
           })
         }
       }
       await writeFile(url, responseBodyAsBuffer)
-      return responseBodyAsBuffer
+      // re-fetch filesystem instead to ensure response headers are correct
+      return fromFileSystem()
     },
   }
 
   return jsenvRemoteDirectory
 }
 
-const createRemoteFetchError = ({ message, code }) => {
-  const error = new Error(message)
-  error.code = "UNEXPECTED_REMOTE_URL_RESPONSE"
-  error.asResponse = () => {
-    const data = {
-      code,
-      message,
-    }
-    const json = JSON.stringify(data)
-    return {
-      status: 502,
-      statusText: "Bad Gateway",
-      headers: {
-        "cache-control": "no-store",
-        "content-length": Buffer.byteLength(json),
-        "content-type": "application/json",
-      },
-      body: json,
-    }
+const createBadGatewayResponse = ({ code, message }) => {
+  const data = {
+    code,
+    message,
   }
-  return error
+  const json = JSON.stringify(data)
+  return {
+    status: 502,
+    statusText: "Bad Gateway",
+    headers: {
+      "cache-control": "no-store",
+      "content-length": Buffer.byteLength(json),
+      "content-type": "application/json",
+    },
+    body: json,
+  }
 }
 
 const originFromUrlOrUrlPattern = (url) => {

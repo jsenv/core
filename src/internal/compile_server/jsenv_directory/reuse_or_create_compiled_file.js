@@ -1,6 +1,8 @@
 import { timeStart, timeFunction } from "@jsenv/server"
-import { urlToFileSystemPath, readFile } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
+
+import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
 
 import { validateCompileCache } from "./validate_compile_cache.js"
 import { getMetaJsonFileUrl } from "./compile_asset.js"
@@ -133,35 +135,16 @@ const computeCompileReport = async ({
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
-    const fetchOriginalFile = async () => {
-      // The original file might be behind an http url.
-      // In that case jsenv try first to read file from filesystem
-      // in ".jsenv/.http/" directory. If not found, the url
-      // is fetched and file is written in that ".jsenv/.http/" directory.
-      // After that the only way to re-fetch this ressource is
-      // to delete the content of ".jsenv/.http/"
-      try {
-        const code = await readFile(originalFileUrl)
-        return { code }
-      } catch (e) {
-        // when file is not found and the file is referenced with an http url
-        if (
-          e &&
-          e.code === "ENOENT" &&
-          jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalFileUrl)
-        ) {
-          const responseBodyAsBuffer =
-            await jsenvRemoteDirectory.loadFileUrlFromRemote(
-              originalFileUrl,
-              request,
-            )
-          const code = String(responseBodyAsBuffer)
-          return { code }
-        }
-        throw e
-      }
+    const response = await jsenvRemoteDirectory.fetchUrl(
+      originalFileUrl,
+      request,
+    )
+    if (response.status !== 200) {
+      const error = { asResponse: () => response }
+      throw error
     }
-    const { code } = await fetchOriginalFile()
+    const buffer = await readNodeStream(response.body)
+    const code = String(buffer)
     const [compileTiming, compileResult] = await timeFunction("compile", () =>
       callCompile({
         logger,

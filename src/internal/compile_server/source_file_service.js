@@ -18,39 +18,66 @@
  * qui se charge de servir les fichiers inlines
  */
 
-import { fetchFileSystem } from "@jsenv/server"
+import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
+
+import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
+import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
+
+const jsenvScanners = {
+  "**/*.html": scanHtml,
+}
 
 export const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileCacheStrategy,
   jsenvRemoteDirectory,
 }) => {
-  return async (request) => {
-    const fileUrl = new URL(request.ressource.slice(1), projectDirectoryUrl)
-      .href
-    const fromFileSystem = () =>
-      fetchFileSystem(fileUrl, {
-        headers: request.headers,
-        etagEnabled: projectFileCacheStrategy === "etag",
-        mtimeEnabled: projectFileCacheStrategy === "mtime",
-      })
+  const sourceMeta = normalizeStructuredMetaMap(
+    {
+      jsenvScanner: jsenvScanners,
+    },
+    projectDirectoryUrl,
+  )
 
-    const filesystemResponse = await fromFileSystem()
-    if (
-      filesystemResponse.status === 404 &&
-      jsenvRemoteDirectory.isFileUrlForRemoteUrl(fileUrl)
-    ) {
-      try {
-        await jsenvRemoteDirectory.loadFileUrlFromRemote(fileUrl, request)
-        // re-fetch filesystem instead to ensure response headers are correct
-        return fromFileSystem()
-      } catch (e) {
-        if (e && e.asResponse) {
-          return e.asResponse()
-        }
-        throw e
-      }
+  return async (request) => {
+    const url = new URL(request.ressource.slice(1), projectDirectoryUrl).href
+    const scanner = getScanner({ url, sourceMeta })
+    if (!scanner) {
+      return jsenvRemoteDirectory.fetchUrl(url, {
+        request,
+        projectFileCacheStrategy,
+      })
     }
-    return filesystemResponse
+
+    const response = await jsenvRemoteDirectory.fetchUrl(url, request)
+    if (response.status !== 200) {
+      return response
+    }
+    const buffer = await readNodeStream(response.body)
+    const code = String(buffer)
+    // use jsenv scanner
+    return {
+      status: 200,
+      headers: {
+        "content-type": "",
+        "content-length": "",
+      },
+      body: code,
+    }
   }
+}
+
+const getScanner = ({ url, sourceMeta }) => {
+  // we remove eventual query param from the url
+  // Without this a pattern like "**/*.js" would not match "file.js?t=1"
+  // This would result in file not being compiled when they should
+  // Ideally we would do a first pass with the query param and a second without
+  const urlObject = new URL(url)
+  urlObject.search = ""
+  url = urlObject.href
+  const { jsenvScanner } = urlToMeta({
+    url,
+    structuredMetaMap: sourceMeta,
+  })
+  return jsenvScanner
 }
