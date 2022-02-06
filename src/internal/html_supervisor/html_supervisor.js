@@ -1,9 +1,19 @@
+import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
+import { inferContextFrom, createUrlContext } from "../url_context.js"
+
+import { getRessourceResponseError } from "./ressource_response_error.js"
 import { unevalException } from "./uneval_exception.js"
 import { displayErrorInDocument } from "./error_in_document.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
 export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
   const scriptExecutionResults = {}
+
+  const urlContext = createUrlContext(
+    inferContextFrom({
+      url: window.location.href,
+    }),
+  )
 
   let collectCalled = false
   let pendingExecutionCount = 0
@@ -24,7 +34,12 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       resolveScriptExecutionsPromise()
     }
   }
-  const addExecution = async ({ src, currentScript, promise }) => {
+  const addExecution = async ({
+    src,
+    currentScript,
+    promise,
+    improveErrorWithFetch = false,
+  }) => {
     onExecutionStart(src)
     promise.then(
       (namespace) => {
@@ -36,6 +51,27 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         onExecutionSettled(src, executionResult)
       },
       async (e) => {
+        if (improveErrorWithFetch) {
+          const url = new URL(src, window.location.href).href
+          let response
+          try {
+            response = await fetchUrl(url)
+          } catch (e) {
+            e.code = "NETWORK_FAILURE"
+            throw e
+          }
+          const responseError = await getRessourceResponseError({
+            urlContext,
+            contentTypeExpected: "application/javascript",
+            type: "js_module",
+            url,
+            importerUrl: window.location.href,
+            response,
+          })
+          if (responseError) {
+            e = responseError
+          }
+        }
         if (errorTransformer) {
           try {
             e = await errorTransformer(e)

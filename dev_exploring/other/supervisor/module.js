@@ -1,1 +1,1 @@
-console.log("module")
+console.log("module", import.meta.url)

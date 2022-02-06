@@ -12,10 +12,11 @@ import { require } from "@jsenv/core/src/internal/require.js"
 import "@jsenv/core/src/internal/runtime_client/s.js"
 import {
   fromFunctionReturningNamespace,
-  getJavaScriptModuleResponseError,
   fromFunctionReturningRegisteredModule,
 } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
 
+import { getRessourceResponseError } from "../html_supervisor/ressource_response_error.js"
+import { createUrlContext } from "../url_context.js"
 import { valueInstall } from "./value_install.js"
 import { evalSource } from "./eval_source.js"
 
@@ -26,6 +27,11 @@ export const createNodeSystem = async ({
   fetchSource,
   importDefaultExtension,
 } = {}) => {
+  const urlContext = createUrlContext({
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
+  })
+
   if (typeof global.System === "undefined") {
     throw new Error(`global.System is undefined`)
   }
@@ -58,10 +64,9 @@ export const createNodeSystem = async ({
           )
         },
         {
+          urlContext,
           url,
           importerUrl,
-          compileServerOrigin,
-          compileDirectoryRelativeUrl,
         },
       )
     }
@@ -75,38 +80,17 @@ export const createNodeSystem = async ({
       e.code = "NETWORK_FAILURE"
       throw e
     }
-
-    const responseError = await getJavaScriptModuleResponseError(response, {
+    const responseError = await getRessourceResponseError({
+      urlContext,
+      contentTypeExpected: "application/javascript",
+      type: "js_module",
       url,
       importerUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-      jsonContentTypeAccepted: process.execArgv.includes(
-        "--experimental-json-modules",
-      ),
+      response,
     })
     if (responseError) {
       throw responseError
     }
-
-    const contentType = response.headers["content-type"]
-    if (contentType === "application/json" || contentType.endsWith("+json")) {
-      const responseBodyAsJson = await response.json()
-      return fromFunctionReturningNamespace(
-        () => {
-          return {
-            default: responseBodyAsJson,
-          }
-        },
-        {
-          url: response.url,
-          importerUrl,
-          compileServerOrigin,
-          compileDirectoryRelativeUrl,
-        },
-      )
-    }
-
     const responseBodyAsText = await response.text()
     return fromFunctionReturningRegisteredModule(
       () => {
@@ -122,14 +106,13 @@ export const createNodeSystem = async ({
         } finally {
           uninstallSystemGlobal()
         }
-
         return nodeSystem.getRegister()
       },
       {
+        urlContext,
+        type: "js_module",
         url: response.url,
         importerUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl,
       },
     )
   }

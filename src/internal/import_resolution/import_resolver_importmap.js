@@ -1,14 +1,11 @@
 import { createDetailedMessage } from "@jsenv/logger"
 import { resolveImport } from "@jsenv/importmap/src/resolveImport.js"
 
-import { tryToFindProjectRelativeUrl } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
-
 import { applyDefaultExtension } from "./default_extension.js"
 
 export const createImportResolverForImportmap = async ({
   // projectDirectoryUrl,
-  compileServerOrigin,
-  compileDirectoryRelativeUrl,
+  urlContext,
   importMap,
   importMapUrl,
   importDefaultExtension,
@@ -25,16 +22,8 @@ export const createImportResolverForImportmap = async ({
       createBareSpecifierError: ({ specifier, importer }) => {
         const bareSpecifierError = createBareSpecifierError({
           specifier,
-          importer:
-            tryToFindProjectRelativeUrl(importer, {
-              compileServerOrigin,
-              compileDirectoryRelativeUrl,
-            }) || importer,
-          importMapUrl:
-            tryToFindProjectRelativeUrl(importMapUrl, {
-              compileServerOrigin,
-              compileDirectoryRelativeUrl,
-            }) || importMapUrl,
+          importer: urlContext.asSourceRelativeUrl(importer),
+          importMapUrl: urlContext.asSourceRelativeUrl(importMapUrl),
           importMap,
         })
         onBareSpecifierError(bareSpecifierError)

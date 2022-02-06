@@ -7,17 +7,9 @@ import { createImportResolverForImportmap } from "@jsenv/core/src/internal/impor
 import { createBrowserSystem } from "./browser_system.js"
 
 export const createBrowserClient = async ({
-  jsenvDirectoryRelativeUrl,
+  urlContext,
   importDefaultExtension,
 }) => {
-  const compileServerOrigin = document.location.origin
-  const jsenvDirectoryServerUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}`
-  const afterJsenvDirectory = document.location.href.slice(
-    jsenvDirectoryServerUrl.length,
-  )
-  const parts = afterJsenvDirectory.split("/")
-  const compileId = parts[0]
-  const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
   // if there is an importmap in the document we use it instead of fetching.
   // systemjs style with systemjs-importmap
   const importmapScript = document.querySelector(
@@ -45,16 +37,14 @@ export const createBrowserClient = async ({
 
   const importResolver = await createImportResolverForImportmap({
     // projectDirectoryUrl,
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
+    urlContext,
     importMap,
     importMapUrl,
     importDefaultExtension,
   })
 
   const browserSystem = await createBrowserSystem({
-    compileServerOrigin,
-    compileDirectoryRelativeUrl,
+    urlContext,
     fetchSource,
     importResolver,
   })

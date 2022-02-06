@@ -1,17 +1,21 @@
+import { inferContextFrom, createUrlContext } from "../../url_context.js"
 import { createEventSourceConnection } from "./event_source_connection.js"
 import {
   isLivereloadEnabled,
   setLivereloadPreference,
 } from "./livereload_preference.js"
 import { compareTwoUrlPaths } from "./url_helpers.js"
-import { createUrlContext } from "./url_context.js"
 import {
   reloadHtmlPage,
   reloadDOMNodesUsingUrls,
   reloadJsImport,
 } from "./reload.js"
 
-const urlContext = createUrlContext()
+const urlContext = createUrlContext(
+  inferContextFrom({
+    url: window.location,
+  }),
+)
 
 const reloadMessages = []
 const urlHotMetas = {}

@@ -23,6 +23,7 @@ import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/jsenv_file_urls.js"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
+import { createUrlContext } from "@jsenv/core/src/internal/url_context.js"
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import_resolution/import_resolver_node.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
@@ -167,6 +168,10 @@ export const createRollupPlugins = async ({
     compileServerOrigin,
     compileDirectoryRelativeUrl,
     urlMappings,
+  })
+  const urlContext = createUrlContext({
+    compileServerOrigin,
+    compileDirectoryRelativeUrl,
   })
 
   const buildUrlGenerator = createBuildUrlGenerator({
@@ -646,8 +651,7 @@ export const createRollupPlugins = async ({
           throw e
         }
         importResolver = await createImportResolverForImportmap({
-          compileServerOrigin,
-          compileDirectoryRelativeUrl,
+          urlContext,
           importMap,
           importMapUrl,
           importDefaultExtension,

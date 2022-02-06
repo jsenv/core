@@ -5,8 +5,10 @@ window.__html_supervisor__.setHtmlSupervisor(htmlSupervisor)
 
 export const superviseScriptTypeModule = ({ src }) => {
   htmlSupervisor.addExecution({
-    src,
+    type: "js_module",
     currentScript: null,
+    improveErrorWithFetch: true,
+    src,
     promise: import(new URL(src, document.location.href).href),
   })
 }

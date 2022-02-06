@@ -1,9 +1,8 @@
-import { getJavaScriptModuleResponseError } from "@jsenv/core/src/internal/runtime_client/module_registration.js"
+import { getRessourceResponseError } from "@jsenv/core/src/internal/html_supervisor/ressource_response_error.js"
 import "@jsenv/core/src/internal/runtime_client/s.js"
 
 export const createBrowserSystem = ({
-  compileServerOrigin,
-  compileDirectoryRelativeUrl,
+  urlContext,
   importResolver,
   fetchSource,
 }) => {
@@ -23,17 +22,15 @@ export const createBrowserSystem = ({
       })
       return jsonModule
     }
-
     if (importType === "css") {
       const cssModule = await instantiateAsCssModule(urlWithoutImportType, {
         browserSystem,
         importerUrl,
-        compileDirectoryRelativeUrl,
+        urlContext,
         fetchSource,
       })
       return cssModule
     }
-
     try {
       const registration = await instantiate.call(this, url, importerUrl)
       if (!registration) {
@@ -47,15 +44,22 @@ ${window.navigator.vendor}`,
       }
       return registration
     } catch (e) {
-      const jsenvError = await createDetailedInstantiateError({
-        instantiateError: e,
+      let response
+      try {
+        response = await fetchSource(url)
+      } catch (e) {
+        e.code = "NETWORK_FAILURE"
+        throw e
+      }
+      const responseError = await getRessourceResponseError({
+        urlContext,
+        contentTypeExpected: "application/javascript",
+        type: "js_module",
         url,
         importerUrl,
-        compileServerOrigin,
-        compileDirectoryRelativeUrl,
-        fetchSource,
+        response,
       })
-      throw jsenvError
+      throw responseError || e
     }
   }
 
@@ -182,35 +186,4 @@ const cssWithBaseUrl = ({ cssUrl, cssText, baseUrl }) => {
     },
   )
   return cssTextRelocated
-}
-
-const createDetailedInstantiateError = async ({
-  instantiateError,
-  url,
-  importerUrl,
-  compileServerOrigin,
-  compileDirectoryRelativeUrl,
-  fetchSource,
-}) => {
-  let response
-  try {
-    response = await fetchSource(url, {
-      importerUrl,
-      contentTypeExpected: "application/javascript",
-    })
-  } catch (e) {
-    e.code = "NETWORK_FAILURE"
-    return e
-  }
-
-  const jsModuleResponseError = await getJavaScriptModuleResponseError(
-    response,
-    {
-      url,
-      importerUrl,
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
-    },
-  )
-  return jsModuleResponseError || instantiateError
 }

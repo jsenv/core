@@ -11,12 +11,12 @@ window.__html_supervisor__ = {
   },
 
   superviseScript: ({ src, crossorigin, integrity }) => {
-    const execution = {
-      src,
+    window.__html_supervisor__.htmlSupervisor.addExecution({
+      type: "js_script",
+      improveErrorWithFetch: true,
       currentScript: document.currentScript,
+      src,
       promise: new Promise((resolve, reject) => {
-        // for now we'll use a script tag
-        // but we might want to resort on fetch+eval to get better error messages
         const script = document.createElement("script")
         if (crossorigin) {
           script.crossorigin = crossorigin
@@ -35,8 +35,7 @@ window.__html_supervisor__ = {
         })
         document.body.appendChild(script)
       }),
-    }
-    window.__html_supervisor__.htmlSupervisor.addExecution(execution)
+    })
   },
 
   setHtmlSupervisor: (htmlSupervisor) => {

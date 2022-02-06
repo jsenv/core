@@ -2,6 +2,7 @@ import { memoize } from "@jsenv/core/src/internal/memoize.js"
 import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
 import { fetchAndEval } from "@jsenv/core/src/internal/browser_utils/fetch_and_eval.js"
 
+import { inferContextFrom, createUrlContext } from "../../url_context.js"
 import { initHtmlSupervisor } from "../html_supervisor.js"
 import { installBrowserErrorStackRemapping } from "./browser_error_stack_remap.js"
 import { createBrowserClient } from "./browser_client_factory.js"
@@ -49,8 +50,14 @@ const getErrorTransformer = memoize(async () => {
 const getBrowserClient = memoize(async () => {
   const { jsenvDirectoryRelativeUrl, importDefaultExtension } =
     await getCompileProfilePromise()
+  const urlContext = createUrlContext(
+    inferContextFrom({
+      url: window.location.origin,
+      jsenvDirectoryRelativeUrl,
+    }),
+  )
   return createBrowserClient({
-    jsenvDirectoryRelativeUrl,
+    urlContext,
     importDefaultExtension,
   })
 })
@@ -65,8 +72,9 @@ window.__html_supervisor__.setHtmlSupervisor(htmlSupervisor)
 
 const superviseScriptTypeModule = ({ src }) => {
   htmlSupervisor.addExecution({
-    src,
+    type: "js_module",
     currentScript: document.currentScript,
+    src,
     promise: (async () => {
       const browserClient = await getBrowserClient()
       return browserClient.import(src)
