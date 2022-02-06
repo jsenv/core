@@ -265,29 +265,21 @@ const visitScripts = async ({
     url: compiledUrl,
     canUseScriptTypeModule,
     scripts,
-    generateInlineScriptSrc: (inlineScriptId) => {
+    generateSrcForInlineScript: (inlineScriptId) => {
       return `./${urlToFilename(url)}__asset__${inlineScriptId}.js`
     },
   })
   supervisedScripts.forEach(
-    ({
-      script,
-      type,
-      src,
-      integrity,
-      textContent,
-
-      inlineScriptSrc,
-    }) => {
+    ({ script, type, src, integrity, textContent, inlineSrc }) => {
       if (type === "module" && !canUseScriptTypeModule) {
         removeHtmlNodeAttributeByName(script, "type")
       }
       if (src && integrity) {
         removeHtmlNodeAttribute(script, "integrity")
       }
-      if (inlineScriptSrc) {
-        const inlineScriptOriginalUrl = resolveUrl(inlineScriptSrc, url)
-        const inlineScriptCompiledUrl = resolveUrl(inlineScriptSrc, compiledUrl)
+      if (inlineSrc) {
+        const inlineScriptOriginalUrl = resolveUrl(inlineSrc, url)
+        const inlineScriptCompiledUrl = resolveUrl(inlineSrc, compiledUrl)
         addHtmlAssetGenerator(async () => {
           return transformHtmlScript({
             projectDirectoryUrl,
@@ -307,7 +299,7 @@ const visitScripts = async ({
         })
         injectHtmlDependency({
           htmlNode: script,
-          specifier: inlineScriptSrc,
+          specifier: inlineSrc,
         })
       }
     },

@@ -16,7 +16,7 @@ export const superviseScripts = ({
   url,
   canUseScriptTypeModule,
   scripts,
-  generateInlineScriptSrc = (inlineScriptId) => {
+  generateSrcForInlineScript = (inlineScriptId) => {
     return `./${urlToFilename(url)}__inline__${inlineScriptId}.js`
   },
 }) => {
@@ -79,9 +79,9 @@ export const superviseScripts = ({
     }
     if (textNode) {
       const inlineScriptId = getIdForInlineHtmlNode(script, scripts)
-      let inlineScriptSrc = generateInlineScriptSrc(inlineScriptId)
+      let inlineSrc = generateSrcForInlineScript(inlineScriptId)
       if (type !== "module") {
-        inlineScriptSrc = injectQueryIntoUrlSpecifier(inlineScriptSrc, {
+        inlineSrc = injectQueryIntoUrlSpecifier(inlineSrc, {
           script: "",
         })
       }
@@ -89,7 +89,7 @@ export const superviseScripts = ({
         script,
         type,
         textContent: textNode.value,
-        inlineScriptSrc,
+        inlineSrc,
       })
       setHtmlNodeText(
         script,
@@ -97,7 +97,7 @@ export const superviseScripts = ({
           jsenvFileSelector,
           canUseScriptTypeModule,
           type,
-          src: inlineScriptSrc,
+          src: inlineSrc,
         }),
       )
       return
