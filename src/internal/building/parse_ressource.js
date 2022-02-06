@@ -10,8 +10,9 @@ import {
   htmlNodeIsScriptModule,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-  manipulateHtmlAst,
   findFirstImportMapNode,
+  injectBeforeFirstHeadScript,
+  createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 import { parseHtmlRessource } from "./html/parse_html.js"
@@ -67,31 +68,30 @@ export const parseRessource = async (
               projectDirectoryUrl,
             )}`
           }
-
-          manipulateHtmlAst(htmlAst, {
-            scriptInjections: [
-              {
-                id: "jsenv_inject_systemjs",
-                src: systemJsUrl,
-                ...(hasInlineModuleScript
-                  ? { "data-jsenv-force-inline": true }
-                  : {}),
-              },
-            ],
-          })
+          injectBeforeFirstHeadScript(
+            htmlAst,
+            createHtmlNode({
+              tagName: "script",
+              id: "jsenv_inject_systemjs",
+              src: systemJsUrl,
+              ...(hasInlineModuleScript
+                ? { "data-jsenv-force-inline": true }
+                : {}),
+            }),
+          )
         }
 
         if (useImportMapToMaximizeCacheReuse) {
           if (hasModuleScript && format === "esmodule") {
             // inject an inline script helper to resolve url
-            manipulateHtmlAst(htmlAst, {
-              scriptInjections: [
-                {
-                  id: "jsenv_import_url_resolution_helper",
-                  text: await readFile(jsenvResolveImportUrlHelper.url),
-                },
-              ],
-            })
+            injectBeforeFirstHeadScript(
+              htmlAst,
+              createHtmlNode({
+                tagName: "script",
+                id: "jsenv_import_url_resolution_helper",
+                textContent: await readFile(jsenvResolveImportUrlHelper.url),
+              }),
+            )
           }
 
           if (!findFirstImportMapNode(htmlAst)) {
@@ -99,15 +99,15 @@ export const parseRessource = async (
             // if html contains no importmap and we useImportMapToMaximizeCacheReuse
             // this inline importmap will be transformed later to have top level remapping
             // required to target hashed js urls
-            manipulateHtmlAst(htmlAst, {
-              scriptInjections: [
-                {
-                  type: "importmap",
-                  id: "jsenv_inject_importmap",
-                  text: "{}",
-                },
-              ],
-            })
+            injectBeforeFirstHeadScript(
+              htmlAst,
+              createHtmlNode({
+                tagName: "script",
+                type: "importmap",
+                id: "jsenv_inject_importmap",
+                textContent: "{}",
+              }),
+            )
           }
         }
 

@@ -15,13 +15,10 @@
 
 import {
   resolveUrl,
-  urlToRelativeUrl,
   urlToExtension,
   readFile,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
-import { composeTwoImportMaps, moveImportMap } from "@jsenv/importmap"
-import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
@@ -29,19 +26,18 @@ import {
   jsenvCoreDirectoryUrl,
   jsenvDistDirectoryUrl,
 } from "@jsenv/core/src/jsenv_file_urls.js"
+import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
-  collectHtmlDependenciesFromAst,
   getHtmlNodeAttributeByName,
   replaceHtmlNode,
   stringifyHtmlAst,
-  manipulateHtmlAst,
-  getHtmlNodeTextNode,
+  injectBeforeFirstHeadScript,
+  createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
-import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 
 export const createTransformHtmlSourceFileService = ({
   logger,
@@ -145,10 +141,7 @@ const transformHTMLSourceFile = async ({
   jsenvFileSelector,
   fileUrl,
   fileContent,
-  request,
-  pushResponse,
 
-  inlineImportMapIntoHTML,
   eventSourceClient,
   htmlSupervisor,
   toolbar,
@@ -158,12 +151,15 @@ const transformHTMLSourceFile = async ({
   fileUrl = urlWithoutSearch(fileUrl)
 
   const htmlAst = parseHtmlString(fileContent)
-  await visitImportmapScripts({
+  const { scripts } = parseHtmlAstRessources(htmlAst)
+
+  await mutateImportmapScripts({
     logger,
-    htmlAst,
-    inlineImportMapIntoHTML,
-    htmlFileUrl: fileUrl,
     projectDirectoryUrl,
+    url: fileUrl,
+    canUseScriptTypeImportmap: true,
+    htmlAst,
+    scripts,
   })
 
   const isJsenvToolbar =
@@ -177,7 +173,7 @@ const transformHTMLSourceFile = async ({
     htmlSupervisor = false
     toolbar = false
   }
-  const scriptInjections = getScriptsToInject({
+  const scriptsToInject = getScriptsToInject({
     jsenvFileSelector,
     canUseScriptTypeModule: true,
 
@@ -185,28 +181,16 @@ const transformHTMLSourceFile = async ({
     htmlSupervisor,
     toolbar,
   })
-  manipulateHtmlAst(htmlAst, { scriptInjections })
-  if (request.http2) {
-    const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
-    htmlDependencies.forEach(({ specifier }) => {
-      const requestUrl = resolveUrl(request.ressource, request.origin)
-      const dependencyUrl = resolveUrl(specifier, requestUrl)
-      if (!urlIsInsideOf(dependencyUrl, request.origin)) {
-        // ignore external urls
-        return
-      }
-      if (dependencyUrl.startsWith("data:")) {
-        return
-      }
-      const dependencyRelativeUrl = urlToRelativeUrl(
-        dependencyUrl,
-        request.origin,
-      )
-      pushResponse({ path: `/${dependencyRelativeUrl}` })
-    })
-  }
+  scriptsToInject.forEach((scriptToInject) => {
+    injectBeforeFirstHeadScript(
+      htmlAst,
+      createHtmlNode({
+        tagName: "script",
+        ...scriptToInject,
+      }),
+    )
+  })
   if (htmlSupervisor) {
-    const { scripts } = parseHtmlAstRessources(htmlAst)
     const supervisedScripts = superviseScripts({
       jsenvRemoteDirectory,
       jsenvFileSelector,
@@ -231,75 +215,6 @@ const transformHTMLSourceFile = async ({
   })
   const htmlTransformed = stringifyHtmlAst(htmlAst)
   return htmlTransformed
-}
-
-const visitImportmapScripts = async ({
-  logger,
-  inlineImportMapIntoHTML,
-  htmlAst,
-  htmlFileUrl,
-  projectDirectoryUrl,
-}) => {
-  const { scripts } = parseHtmlAstRessources(htmlAst)
-  const importmapScripts = scripts.filter((script) => {
-    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-    if (typeAttribute && typeAttribute.value === "importmap") {
-      return true
-    }
-    return false
-  })
-
-  await Promise.all(
-    importmapScripts.map(async (importmapScript) => {
-      const srcAttribute = getHtmlNodeAttributeByName(importmapScript, "src")
-      if (srcAttribute && inlineImportMapIntoHTML) {
-        const importMapUrl = resolveUrl(srcAttribute.value, htmlFileUrl)
-        const importMapResponse = await fetchUrl(importMapUrl)
-        if (importMapResponse.status !== 200) {
-          logger.warn(
-            createDetailedMessage(
-              importMapResponse.status === 404
-                ? `Cannot inline importmap script because file cannot be found.`
-                : `Cannot inline importmap script due to unexpected response status (${importMapResponse.status}).`,
-              {
-                "importmap script src": srcAttribute.value,
-                "importmap url": importMapUrl,
-                "html url": htmlFileUrl,
-              },
-            ),
-          )
-          return
-        }
-        const importMapContent = await importMapResponse.json()
-        const importMapInlined = moveImportMap(
-          importMapContent,
-          importMapUrl,
-          htmlFileUrl,
-        )
-        replaceHtmlNode(
-          importmapScript,
-          `<script type="importmap">${JSON.stringify(
-            importMapInlined,
-            null,
-            "  ",
-          )}</script>`,
-          {
-            attributesToIgnore: ["src"],
-          },
-        )
-      }
-
-      const textNode = getHtmlNodeTextNode(importmapScript)
-      if (!srcAttribute && textNode) {
-        const jsenvImportmap = getDefaultImportmap(htmlFileUrl, {
-          projectDirectoryUrl,
-        })
-        const htmlImportmap = JSON.parse(textNode.value)
-        const importmap = composeTwoImportMaps(jsenvImportmap, htmlImportmap)
-        textNode.value = JSON.stringify(importmap, null, "  ")
-      }
-    }),
-  )
 }
 
 const forceInlineRessources = async ({

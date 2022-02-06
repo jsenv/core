@@ -377,101 +377,52 @@ export const replaceHtmlNode = (
   replaceNode(node, newNode)
 }
 
-export const manipulateHtmlAst = (htmlAst, { scriptInjections = [] }) => {
-  if (scriptInjections.length === 0) {
-    return
-  }
-
-  const htmlNode = htmlAst.childNodes.find((node) => node.nodeName === "html")
-  const headNode = htmlNode.childNodes[0]
-  const bodyNode = htmlNode.childNodes[1]
-
-  const scriptsToPreprendInHead = []
-  scriptInjections.forEach((script) => {
-    const scriptExistingInHead = findExistingScript(headNode, script)
-    if (scriptExistingInHead) {
-      replaceNode(scriptExistingInHead, scriptToNode(script))
-      return
-    }
-    const scriptExistingInBody = findExistingScript(bodyNode, script)
-    if (scriptExistingInBody) {
-      replaceNode(scriptExistingInBody, scriptToNode(script))
-      return
-    }
-    scriptsToPreprendInHead.push(script)
-  })
-  const headScriptsFragment = scriptsToFragment(scriptsToPreprendInHead)
-  insertFragmentBefore(
-    headNode,
-    headScriptsFragment,
-    findChild(headNode, (node) => node.nodeName === "script"),
-  )
-}
-
-const insertFragmentBefore = (node, fragment, childNode) => {
-  const { childNodes = [] } = node
-
-  if (childNode) {
-    const childNodeIndex = childNodes.indexOf(childNode)
-    node.childNodes = [
-      ...childNodes.slice(0, childNodeIndex),
-      ...fragment.childNodes.map((child) => {
-        return { ...child, parentNode: node }
-      }),
-      ...childNodes.slice(childNodeIndex),
-    ]
-  } else {
-    node.childNodes = [
-      ...childNodes,
-      ...fragment.childNodes.map((child) => {
-        return { ...child, parentNode: node }
-      }),
-    ]
-  }
-}
-
-const scriptToNode = (script) => {
-  return scriptsToFragment([script]).childNodes[0]
-}
-
-const scriptsToFragment = (scripts) => {
-  const html = scripts.reduce((previous, script) => {
-    const { text = "", ...attributes } = script
-    const scriptAttributes = objectToHtmlAttributes(attributes)
-    return `${previous}<script ${scriptAttributes}>${text}</script>
-      `
-  }, "")
+export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
+  const html = `<${tagName} ${stringifyAttributes(
+    rest,
+  )}>${textContent}</${tagName}>`
   const parse5 = require("parse5")
   const fragment = parse5.parseFragment(html)
-  return fragment
+  return fragment.childNodes[0]
 }
 
-const findExistingScript = (node, script) =>
-  findChild(node, (childNode) => {
-    return childNode.nodeName === "script" && sameScript(childNode, script)
+export const injectBeforeFirstHeadScript = (htmlAst, htmlNode) => {
+  const headNode = htmlAst.childNodes.find((node) => node.nodeName === "html")
+    .childNodes[0]
+
+  const firstHeadScript = findChild(headNode, (node) => {
+    if (node.nodeName !== "script") {
+      return false
+    }
+    const typeAttribute = getHtmlNodeAttributeByName(node, "type")
+    if (typeAttribute && typeAttribute.value === "importmap") {
+      return false
+    }
+    return true
   })
+  return insertBefore(htmlNode, headNode, firstHeadScript)
+}
+
+const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
+  const { childNodes = [] } = futureParentNode
+  if (futureNextSibling) {
+    const nextSiblingIndex = childNodes.indexOf(futureNextSibling)
+    futureParentNode.childNodes = [
+      ...childNodes.slice(0, nextSiblingIndex),
+      { ...nodeToInsert, parentNode: futureParentNode },
+      ...childNodes.slice(nextSiblingIndex),
+    ]
+  } else {
+    futureParentNode.childNodes = [
+      ...childNodes,
+      { ...nodeToInsert, parentNode: futureParentNode },
+    ]
+  }
+}
 
 const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
 
-const sameScript = (node, { type = "text/javascript", src }) => {
-  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
-  const leftScriptType = typeAttribute ? typeAttribute.value : "text/javascript"
-  if (leftScriptType !== type) {
-    return false
-  }
-
-  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
-  if (!srcAttribute && src) {
-    return false
-  }
-  if (srcAttribute && srcAttribute.value !== src) {
-    return false
-  }
-
-  return true
-}
-
-const objectToHtmlAttributes = (object) => {
+const stringifyAttributes = (object) => {
   return Object.keys(object)
     .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
     .join(" ")

@@ -1,11 +1,8 @@
 import { resolveUrl, urlToRelativeUrl, urlToFilename } from "@jsenv/filesystem"
-import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
-import { createDetailedMessage } from "@jsenv/logger"
 
+import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
 import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
-import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
-import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 import {
   generateSourcemapUrl,
   setJavaScriptSourceMappingUrl,
@@ -14,18 +11,17 @@ import {
 
 import { transformJs } from "../js/js_transformer.js"
 import {
+  injectBeforeFirstHeadScript,
   parseHtmlString,
   parseHtmlAstRessources,
   collectHtmlDependenciesFromAst,
-  manipulateHtmlAst,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
-  getHtmlNodeTextNode,
   removeHtmlNodeAttribute,
-  setHtmlNodeText,
   visitHtmlAst,
   addHtmlNodeAttribute,
   removeHtmlNodeAttributeByName,
+  createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 export const compileHtml = async ({
@@ -57,14 +53,22 @@ export const compileHtml = async ({
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
   // ideally we should try/catch html syntax error
   const htmlAst = parseHtmlString(code)
-  const scriptInjections = getScriptsToInject({
+  const scriptsToInject = getScriptsToInject({
     jsenvFileSelector,
     canUseScriptTypeModule: compileProfile.moduleOutFormat === "esmodule",
     eventSourceClient,
     htmlSupervisor,
     toolbar,
   })
-  manipulateHtmlAst(htmlAst, { scriptInjections })
+  scriptsToInject.forEach((scriptToInject) => {
+    injectBeforeFirstHeadScript(
+      htmlAst,
+      createHtmlNode({
+        tagName: "script",
+        ...scriptToInject,
+      }),
+    )
+  })
 
   const sources = []
   const sourcesContent = []
@@ -101,21 +105,31 @@ export const compileHtml = async ({
       addHtmlMutation,
     })
   }
-  await visitImportmapScripts({
+
+  const importmapInfo = await mutateImportmapScripts({
     logger,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    url,
-    compiledUrl,
-
-    compileProfile,
-
+    url: compiledUrl,
+    canUseScriptTypeImportmap: compileProfile.moduleOutFormat === "esmodule",
     htmlAst,
     scripts,
-    addHtmlMutation,
-    addHtmlSourceFile,
-    onHtmlImportmapInfo,
   })
+  if (
+    importmapInfo.url &&
+    // indirect way of checking there was no 404 while fetching
+    importmapInfo.sourceText
+  ) {
+    addHtmlSourceFile({
+      url: importmapInfo.url,
+      content: importmapInfo.sourceText,
+    })
+  }
+  onHtmlImportmapInfo({
+    url: importmapInfo.url || compiledUrl,
+    text: importmapInfo.text,
+  })
+
   await visitScripts({
     logger,
     projectDirectoryUrl,
@@ -226,129 +240,6 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
       // }
     }),
   )
-}
-
-const visitImportmapScripts = async ({
-  logger,
-  projectDirectoryUrl,
-  compileDirectoryUrl,
-  url,
-  compiledUrl,
-
-  compileProfile,
-
-  htmlAst,
-  scripts,
-  addHtmlMutation,
-  addHtmlSourceFile,
-  onHtmlImportmapInfo,
-}) => {
-  const importmapScripts = scripts.filter((script) => {
-    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-    const type = typeAttribute ? typeAttribute.value : "application/javascript"
-    return type === "importmap"
-  })
-  const jsenvImportmap = getDefaultImportmap(compiledUrl, {
-    projectDirectoryUrl,
-    compileDirectoryUrl,
-  })
-
-  // in case there is no importmap, force the presence
-  // so that '@jsenv/core/' are still remapped
-  if (importmapScripts.length === 0) {
-    const defaultImportMapAsText = JSON.stringify(jsenvImportmap, null, "  ")
-    onHtmlImportmapInfo({
-      url: compiledUrl,
-      text: defaultImportMapAsText,
-    })
-    addHtmlMutation(() => {
-      manipulateHtmlAst(htmlAst, {
-        scriptInjections: [
-          {
-            type:
-              compileProfile.moduleOutFormat === "systemjs"
-                ? "systemjs-importmap"
-                : "importmap",
-            text: defaultImportMapAsText,
-          },
-        ],
-      })
-    })
-    return
-  }
-  if (importmapScripts.length > 1) {
-    logger.error("HTML file must contain max 1 importmap")
-  }
-  const firstImportmapScript = importmapScripts[0]
-  const srcAttribute = getHtmlNodeAttributeByName(firstImportmapScript, "src")
-  const src = srcAttribute ? srcAttribute.value : ""
-  if (src) {
-    const importmapUrl = resolveUrl(src, url)
-    const importMapResponse = await fetchUrl(importmapUrl)
-    let importmap
-    if (importMapResponse.status === 200) {
-      const importmapAsText = await importMapResponse.text()
-      addHtmlSourceFile({
-        url: importmapUrl,
-        content: importmapAsText,
-      })
-      let htmlImportmap = JSON.parse(importmapAsText)
-      importmap = moveImportMap(htmlImportmap, importmapUrl, url)
-    } else {
-      logger.warn(
-        createDetailedMessage(
-          importMapResponse.status === 404
-            ? `importmap script file cannot be found.`
-            : `importmap script file unexpected response status (${importMapResponse.status}).`,
-          {
-            "importmap url": importmapUrl,
-            "html url": url,
-          },
-        ),
-      )
-      importmap = {}
-    }
-    importmap = composeTwoImportMaps(jsenvImportmap, importmap)
-    const importmapAsText = JSON.stringify(importmap, null, "  ")
-    onHtmlImportmapInfo({
-      url: importmapUrl,
-      text: importmapAsText,
-    })
-    addHtmlMutation(() => {
-      removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
-      setHtmlNodeText(firstImportmapScript, importmapAsText)
-      if (compileProfile.moduleOutFormat === "systemjs") {
-        const typeAttribute = getHtmlNodeAttributeByName(
-          firstImportmapScript,
-          "type",
-        )
-        typeAttribute.value = "systemjs-importmap"
-      }
-    })
-    return
-  }
-
-  const htmlImportmap = JSON.parse(
-    getHtmlNodeTextNode(firstImportmapScript).value,
-  )
-  const importmap = composeTwoImportMaps(jsenvImportmap, htmlImportmap)
-  const importmapAsText = JSON.stringify(importmap, null, "  ")
-  onHtmlImportmapInfo({
-    url: compiledUrl,
-    text: importmapAsText,
-  })
-  addHtmlMutation(() => {
-    removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
-    setHtmlNodeText(firstImportmapScript, importmapAsText)
-    if (compileProfile.moduleOutFormat === "systemjs") {
-      const typeAttribute = getHtmlNodeAttributeByName(
-        firstImportmapScript,
-        "type",
-      )
-      typeAttribute.value = "systemjs-importmap"
-    }
-  })
-  return
 }
 
 const visitScripts = async ({
