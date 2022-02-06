@@ -18,22 +18,17 @@ import {
   urlToRelativeUrl,
   urlToExtension,
   readFile,
-  urlToFilename,
   urlIsInsideOf,
 } from "@jsenv/filesystem"
 import { composeTwoImportMaps, moveImportMap } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { generateCodeToSuperviseScriptTypeModule } from "@jsenv/core/src/internal/html_supervisor/supervise_script_type_module.js"
-import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
-import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 import {
   jsenvCoreDirectoryUrl,
   jsenvDistDirectoryUrl,
 } from "@jsenv/core/src/jsenv_file_urls.js"
-
 import {
   parseHtmlString,
   parseHtmlAstRessources,
@@ -42,11 +37,11 @@ import {
   replaceHtmlNode,
   stringifyHtmlAst,
   manipulateHtmlAst,
-  removeHtmlNodeAttribute,
   getHtmlNodeTextNode,
-  setHtmlNodeText,
-  getIdForInlineHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
+import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
+import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
+import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
 
 export const createTransformHtmlSourceFileService = ({
   logger,
@@ -121,7 +116,7 @@ export const createTransformHtmlSourceFileService = ({
       htmlSupervisor,
       toolbar,
 
-      onInlineModuleScript: ({ scriptContent, scriptSpecifier }) => {
+      onInlineScript: ({ scriptContent, scriptSpecifier }) => {
         const inlineScriptUrl = resolveUrl(scriptSpecifier, fileUrl)
         htmlInlineScriptMap.set(inlineScriptUrl, {
           htmlFileUrl: fileUrl,
@@ -155,7 +150,7 @@ const transformHTMLSourceFile = async ({
   htmlSupervisor,
   toolbar,
 
-  onInlineModuleScript = () => {},
+  onInlineScript = () => {},
 }) => {
   fileUrl = urlWithoutSearch(fileUrl)
 
@@ -209,43 +204,18 @@ const transformHTMLSourceFile = async ({
   }
   if (htmlSupervisor) {
     const { scripts } = parseHtmlAstRessources(htmlAst)
-    scripts.forEach((script) => {
-      const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-      const type = typeAttribute ? typeAttribute.value : ""
-      const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-      const src = srcAttribute ? srcAttribute.value : ""
-      if (type === "module" && src) {
-        removeHtmlNodeAttribute(script, srcAttribute)
-
-        setHtmlNodeText(
-          script,
-          generateCodeToSuperviseScriptTypeModule({
-            jsenvFileSelector,
-            canUseScriptTypeModule: true,
-            specifier: src,
-          }),
-        )
-        return
-      }
-      const textNode = getHtmlNodeTextNode(script)
-      if (type === "module" && textNode) {
-        const scriptId = getIdForInlineHtmlNode(script, scripts)
-        const scriptSpecifier = `${urlToFilename(
-          fileUrl,
-        )}__inline__${scriptId}.js`
-        onInlineModuleScript({
-          scriptContent: textNode.value,
-          scriptSpecifier,
+    const supervisedScripts = superviseScripts({
+      jsenvFileSelector,
+      url: fileUrl,
+      canUseScriptTypeModule: true,
+      scripts,
+    })
+    supervisedScripts.forEach(({ inlineSrc, textContent }) => {
+      if (inlineSrc) {
+        onInlineScript({
+          scriptSpecifier: inlineSrc,
+          scriptContent: textContent,
         })
-        setHtmlNodeText(
-          script,
-          generateCodeToSuperviseScriptTypeModule({
-            jsenvFileSelector,
-            canUseScriptTypeModule: true,
-            specifier: `./${scriptSpecifier}`,
-          }),
-        )
-        return
       }
     })
   }

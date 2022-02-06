@@ -31,3 +31,21 @@ export const injectQuery = (url, params) => {
   })
   return String(urlObject)
 }
+
+export const injectQueryIntoUrlSpecifier = (specifier, params) => {
+  const url = new URL(specifier, "https://jsenv.dev/")
+  const urlWithParams = injectQuery(url, params)
+  const { origin, pathname, search, href } = new URL(urlWithParams)
+  const ressource = `${pathname}${search}`
+  if (specifier.slice(0, 2) === "./") {
+    return `./${ressource.slice(1)}`
+  }
+  if (specifier[0] === "/") {
+    return ressource
+  }
+  // specifier was relative
+  if (origin === "https://jsenv.dev") {
+    return ressource.slice(1)
+  }
+  return href
+}

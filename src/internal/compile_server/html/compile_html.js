@@ -1,18 +1,11 @@
-import {
-  resolveUrl,
-  urlToFilename,
-  urlToRelativeUrl,
-  urlIsInsideOf,
-} from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { moveImportMap, composeTwoImportMaps } from "@jsenv/importmap"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { generateCodeToSuperviseScriptTypeModule } from "@jsenv/core/src/internal/html_supervisor/supervise_script_type_module.js"
+import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
-import { jsenvDistDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
-import { generateCompilationAssetUrl } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_asset.js"
 import {
   generateSourcemapUrl,
   setJavaScriptSourceMappingUrl,
@@ -28,11 +21,11 @@ import {
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
-  getIdForInlineHtmlNode,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   visitHtmlAst,
   addHtmlNodeAttribute,
+  removeHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 export const compileHtml = async ({
@@ -359,11 +352,9 @@ const visitImportmapScripts = async ({
 }
 
 const visitScripts = async ({
-  logger,
   projectDirectoryUrl,
   jsenvFileSelector,
   jsenvRemoteDirectory,
-  compileServerOrigin,
   url,
   compiledUrl,
 
@@ -373,211 +364,61 @@ const visitScripts = async ({
   sourcemapMethod,
 
   scripts,
-  addHtmlSourceFile,
   addHtmlAssetGenerator,
-  addHtmlMutation,
   injectHtmlDependency,
 }) => {
-  scripts.forEach((script) => {
-    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-    const type = typeAttribute ? typeAttribute.value : "application/javascript"
-    const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-    const src = srcAttribute ? srcAttribute.value : ""
-    const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
-    const textNode = getHtmlNodeTextNode(script)
-    if (type === "module") {
-      const dataInjectedAttribute = getHtmlNodeAttributeByName(
-        script,
-        "data-injected",
-      )
-      if (dataInjectedAttribute) {
-        return
-      }
-      if (src) {
-        addHtmlMutation(() => {
-          if (compileProfile.moduleOutFormat === "systemjs") {
-            removeHtmlNodeAttribute(script, typeAttribute)
-          }
-          if (integrityAttribute) {
-            removeHtmlNodeAttribute(script, integrityAttribute)
-          }
-          removeHtmlNodeAttribute(script, srcAttribute)
-          let specifier
-          if (
-            jsenvRemoteDirectory.isRemoteUrl(src) &&
-            !jsenvRemoteDirectory.isPreservedUrl(src)
-          ) {
-            const fileUrl = jsenvRemoteDirectory.fileUrlFromRemoteUrl(src)
-            const fileUrlRelativeToHtml = urlToRelativeUrl(fileUrl, url)
-            specifier = `./${fileUrlRelativeToHtml}`
-          } else {
-            specifier = src
-          }
-          setHtmlNodeText(
-            script,
-            generateCodeToSuperviseScriptTypeModule({
-              jsenvFileSelector,
-              canUseScriptTypeModule:
-                compileProfile.moduleOutFormat === "esmodule",
-              specifier,
-            }),
-          )
-        })
-        return
-      }
-      const scriptId = getIdForInlineHtmlNode(script, scripts)
-      const inlineScriptName = `${scriptId}.js`
-      const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
-      const scriptCompiledUrl = generateCompilationAssetUrl(
-        compiledUrl,
-        inlineScriptName,
-      )
-      addHtmlAssetGenerator(async () => {
-        return transformHtmlScript({
-          projectDirectoryUrl,
-          jsenvRemoteDirectory,
-          url: scriptOriginalUrl,
-          compiledUrl: scriptCompiledUrl,
+  const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
+  const supervisedScripts = superviseScripts({
+    jsenvFileSelector,
+    url: compiledUrl,
+    canUseScriptTypeModule,
+    scripts,
+    generateInlineScriptSrc: (inlineScriptId) => {
+      return `__asset__${inlineScriptId}.js`
+    },
+  })
+  supervisedScripts.forEach(
+    ({
+      script,
+      type,
+      src,
+      integrity,
+      textContent,
 
-          type: "module",
-          compileProfile,
-          babelPluginMap,
-          topLevelAwait,
-
-          sourcemapMethod,
-          code: textNode.value,
-        })
-      })
-      const specifier = `./${urlToRelativeUrl(scriptCompiledUrl, compiledUrl)}`
-      addHtmlMutation(() => {
-        if (compileProfile.moduleOutFormat === "systemjs") {
-          removeHtmlNodeAttribute(script, typeAttribute)
-        }
-        removeHtmlNodeAttribute(script, srcAttribute)
-        setHtmlNodeText(
-          script,
-          generateCodeToSuperviseScriptTypeModule({
-            jsenvFileSelector,
-            canUseScriptTypeModule:
-              compileProfile.moduleOutFormat === "esmodule",
-            specifier,
-          }),
-        )
-      })
-      injectHtmlDependency({
-        htmlNode: script,
-        specifier,
-      })
-      return
-    }
-    if (type === "application/javascript" || type === "text/javascript") {
-      if (src) {
-        const htmlServerUrl = url.replace(
-          projectDirectoryUrl,
-          `${compileServerOrigin}/`,
-        )
-        const scriptOriginalServerUrl = resolveUrl(src, htmlServerUrl)
-        const scriptOriginalUrl = scriptOriginalServerUrl.replace(
-          `${compileServerOrigin}/`,
-          projectDirectoryUrl,
-        )
-        const fileIsInsideJsenvDistDirectory = urlIsInsideOf(
-          scriptOriginalUrl,
-          jsenvDistDirectoryUrl,
-        )
-        if (fileIsInsideJsenvDistDirectory) {
-          return
-        }
-        const isRemoteUrl = jsenvRemoteDirectory.isRemoteUrl(src)
-        if (isRemoteUrl && jsenvRemoteDirectory.isPreservedUrl(src)) {
-          return
-        }
-        const scriptCompiledUrl = generateCompilationAssetUrl(
-          compiledUrl,
-          urlToFilename(scriptOriginalUrl),
-        )
+      inlineScriptSrc,
+    }) => {
+      if (type === "module" && !canUseScriptTypeModule) {
+        removeHtmlNodeAttributeByName(script, "type")
+      }
+      if (src && integrity) {
+        removeHtmlNodeAttribute(script, "integrity")
+      }
+      if (inlineScriptSrc) {
+        const inlineScriptOriginalUrl = resolveUrl(inlineScriptSrc, url)
+        const inlineScriptCompiledUrl = resolveUrl(inlineScriptSrc, compiledUrl)
         addHtmlAssetGenerator(async () => {
-          // we fetch scriptOriginalUrl on purpose because we do
-          // the transformation here and not in compile server
-          // (because compile server would think it's a module script
-          // and add things like systemjs)
-          // we could take into account the integrity her
-          const scriptResponse = await fetchUrl(scriptOriginalUrl)
-          if (scriptResponse.status !== 200) {
-            logger.warn(
-              createDetailedMessage(
-                scriptResponse.status === 404
-                  ? `script file cannot be found.`
-                  : `script file unexpected response status (${scriptResponse.status}).`,
-                {
-                  "script url": script.url,
-                  "html url": url,
-                },
-              ),
-            )
-            return []
-          }
-          const scriptAsText = await scriptResponse.text()
-          addHtmlSourceFile({
-            url: scriptOriginalUrl,
-            content: scriptAsText,
-          })
           return transformHtmlScript({
             projectDirectoryUrl,
             jsenvRemoteDirectory,
-            url: scriptOriginalUrl,
-            compiledUrl: scriptCompiledUrl,
+            url: inlineScriptOriginalUrl,
+            compiledUrl: inlineScriptCompiledUrl,
 
-            type: "classic",
+            type,
             compileProfile,
             babelPluginMap,
             topLevelAwait,
 
             sourcemapMethod,
-            code: scriptAsText,
+            code: textContent,
           })
         })
-        addHtmlMutation(() => {
-          if (integrityAttribute) {
-            removeHtmlNodeAttribute(script, integrityAttribute)
-          }
-          srcAttribute.value = `./${urlToRelativeUrl(
-            scriptCompiledUrl,
-            compiledUrl,
-          )}`
+        injectHtmlDependency({
+          htmlNode: script,
+          specifier: inlineScriptSrc,
         })
-        return
       }
-      const scriptId = getIdForInlineHtmlNode(script, scripts)
-      const inlineScriptName = `${scriptId}.js`
-      const scriptOriginalUrl = resolveUrl(inlineScriptName, url)
-      const scriptCompiledUrl = generateCompilationAssetUrl(
-        compiledUrl,
-        inlineScriptName,
-      )
-      addHtmlAssetGenerator(async () => {
-        const htmlAssets = await transformHtmlScript({
-          projectDirectoryUrl,
-          jsenvRemoteDirectory,
-          url: scriptOriginalUrl,
-          compiledUrl: scriptCompiledUrl,
-
-          type: "classic",
-          compileProfile,
-          babelPluginMap,
-          topLevelAwait,
-
-          code: textNode.value,
-          sourcemapMethod,
-        })
-        addHtmlMutation(() => {
-          setHtmlNodeText(script, htmlAssets[0].content)
-        })
-        return htmlAssets
-      })
-      return
-    }
-  })
+    },
+  )
 }
 
 const transformHtmlScript = async ({

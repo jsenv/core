@@ -75,6 +75,11 @@ export const getHtmlNodeAttributeByName = (htmlNode, attributeName) => {
   return attrs && attrs.find((attr) => attr.name === attributeName)
 }
 
+export const removeHtmlNodeAttributeByName = (htmlNode, attributeName) => {
+  const attr = getHtmlNodeAttributeByName(htmlNode, attributeName)
+  return attr ? removeHtmlNodeAttribute(htmlNode, attr) : false
+}
+
 export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
   const attrIndex = htmlNode.attrs.indexOf(attributeToRemove)
   if (attrIndex === -1) {

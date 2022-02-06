@@ -28,7 +28,7 @@ export const getScriptsToInject = ({
     })
     scriptInjections.push({
       ...scriptPropertiesFromFile(eventSourceFile),
-      "data-injected": true,
+      "data-injected": "",
     })
   }
   if (htmlSupervisor) {
@@ -37,14 +37,14 @@ export const getScriptsToInject = ({
     )
     scriptInjections.push({
       ...scriptPropertiesFromFile(htmlSupervisorSetupFile),
-      "data-injected": true,
+      "data-injected": "",
     })
     const htmlSupervisorFile = jsenvFileSelector.select(htmlSupervisorFiles, {
       canUseScriptTypeModule,
     })
     scriptInjections.push({
       ...scriptPropertiesFromFile(htmlSupervisorFile),
-      "data-injected": true,
+      "data-injected": "",
     })
   }
   if (toolbar) {
@@ -55,7 +55,7 @@ export const getScriptsToInject = ({
       ...scriptPropertiesFromFile(toolbarInjectorFile),
       "defer": "",
       "async": "",
-      "data-injected": true,
+      "data-injected": "",
     })
   }
   return scriptInjections

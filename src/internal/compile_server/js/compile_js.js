@@ -22,8 +22,8 @@ export const compileJavascript = async ({
   sourcemapExcludeSources,
   sourcemapMethod,
 }) => {
+  const { searchParams } = new URL(url)
   if (prependSystemJs === undefined) {
-    const { searchParams } = new URL(url)
     prependSystemJs =
       searchParams.has("worker") || searchParams.has("service_worker")
   }
@@ -37,7 +37,9 @@ export const compileJavascript = async ({
       babelPluginMap,
       compileProfile,
     }),
-    moduleOutFormat: compileProfile.moduleOutFormat,
+    moduleOutFormat: searchParams.has("script")
+      ? "global"
+      : compileProfile.moduleOutFormat,
     topLevelAwait,
     prependSystemJs,
 
