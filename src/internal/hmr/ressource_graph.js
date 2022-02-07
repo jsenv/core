@@ -25,8 +25,8 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return removeHmrQuery(url)
   }
 
-  const injectHmrIntoSpecifier = (specifier, baseUrl) => {
-    const url = applyImportmapResolution(specifier, baseUrl)
+  const injectHmrIntoUrlSpecifier = (urlSpecifier, baseUrl) => {
+    const url = applyImportmapResolution(urlSpecifier, baseUrl)
     if (!urlIsInsideOf(url, projectDirectoryUrl)) {
       return null
     }
@@ -221,7 +221,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     getRessourceByUrl,
     updateRessourceDependencies,
     onFileChange,
-    injectHmrIntoSpecifier,
+    injectHmrIntoUrlSpecifier,
   }
 }
 

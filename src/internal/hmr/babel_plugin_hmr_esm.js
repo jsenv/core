@@ -13,7 +13,7 @@ export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
           if (specifierNode.type !== "StringLiteral") {
             return
           }
-          const specifierWithHmr = ressourceGraph.injectHmrIntoSpecifier(
+          const specifierWithHmr = ressourceGraph.injectHmrIntoUrlSpecifier(
             specifierNode.value,
             fileSystemPathToUrl(state.filename),
           )

@@ -3,17 +3,17 @@ import { replaceCssUrls } from "@jsenv/core/src/internal/transform_css/replace_c
 export const injectHmrInCssUrls = async ({ ressourceGraph, url, code }) => {
   const result = await replaceCssUrls({
     url,
-    code,
     urlVisitor: ({ specifier }) => {
-      const specifierWithHmr = ressourceGraph.injectHmrIntoSpecifier(
+      const urlSpecifierWithHmr = ressourceGraph.injectHmrIntoUrlSpecifier(
         specifier,
         url,
       )
-      if (specifierWithHmr) {
-        return specifierWithHmr
+      if (urlSpecifierWithHmr) {
+        return urlSpecifierWithHmr
       }
       return null
     },
+    code,
   })
   return result.code
 }
