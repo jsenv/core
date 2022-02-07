@@ -8,6 +8,7 @@ import {
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
   createHtmlNode,
+  setHtmlNodeText,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { inlineScript } from "@jsenv/core/src/internal/transform_html/html_inlining.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
@@ -37,9 +38,10 @@ export const mutateImportmapScripts = async ({
     injectBeforeFirstHeadScript(
       htmlAst,
       createHtmlNode({
-        tagName: "script",
-        type: canUseScriptTypeImportmap ? "importmap" : "systemjs-importmap",
-        textContent: importmapAsText,
+        "tagName": "script",
+        "type": canUseScriptTypeImportmap ? "importmap" : "systemjs-importmap",
+        "textContent": importmapAsText,
+        "data-injected": "",
       }),
     )
     return {
@@ -101,7 +103,7 @@ export const mutateImportmapScripts = async ({
   const importmapFromHtml = JSON.parse(sourceText)
   const importmap = composeTwoImportMaps(importmapFromJsenv, importmapFromHtml)
   const importmapAsText = JSON.stringify(importmap, null, "  ")
-  inlineScript(firstImportmapScript, importmapAsText)
+  setHtmlNodeText(firstImportmapScript, importmapAsText)
   if (!canUseScriptTypeImportmap) {
     const typeAttribute = getHtmlNodeAttributeByName(
       firstImportmapScript,

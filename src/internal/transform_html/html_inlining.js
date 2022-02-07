@@ -8,7 +8,7 @@ import {
 
 export const inlineScript = (script, textContent) => {
   const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-  assignHtmlNodeAttributes(script, "content-src", srcAttribute.value)
+  assignHtmlNodeAttributes(script, { "content-src": srcAttribute.value })
   removeHtmlNodeAttribute(script, srcAttribute)
   setHtmlNodeText(script, textContent)
 
@@ -18,7 +18,7 @@ export const inlineScript = (script, textContent) => {
 
 export const inlineLinkStylesheet = (link, textContent) => {
   const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
-  assignHtmlNodeAttributes(link, "content-href", hrefAttribute.value)
+  assignHtmlNodeAttributes(link, { "content-href": hrefAttribute.value })
   removeHtmlNodeAttribute(link, hrefAttribute)
   removeHtmlNodeAttributeByName(link, "rel")
   removeHtmlNodeAttributeByName(link, "type")
@@ -26,11 +26,12 @@ export const inlineLinkStylesheet = (link, textContent) => {
   removeHtmlNodeAttributeByName(link, "crossorigin")
   removeHtmlNodeAttributeByName(link, "integrity")
   link.nodeName = "style"
+  link.tagName = "style"
   setHtmlNodeText(link, textContent)
 }
 
 export const inlineImg = (img, contentAsBase64) => {
   const srcAttribute = getHtmlNodeAttributeByName(img, "src")
-  assignHtmlNodeAttributes(img, "content-src", srcAttribute.value)
+  assignHtmlNodeAttributes(img, { "content-src": srcAttribute.value })
   srcAttribute.value = contentAsBase64
 }
