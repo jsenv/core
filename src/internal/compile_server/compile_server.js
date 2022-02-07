@@ -338,15 +338,12 @@ export const startCompileServer = async ({
         ...(hmr
           ? {
               "application/javascript": async ({ url, code }) => {
-                const content = await modifyJs({
+                return modifyJs({
                   projectDirectoryUrl,
                   ressourceGraph,
                   url,
                   js: code,
                 })
-                return {
-                  content,
-                }
               },
             }
           : {}),

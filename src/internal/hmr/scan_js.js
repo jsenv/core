@@ -1,5 +1,5 @@
 export const scanJs = ({ ressourceGraph, url, metadata }) => {
-  const dependencyUrls = metadata.dependencyUrls.map(
+  const dependencyUrls = metadata.urlDependencies.map(
     ({ type, urlSpecifier }) => {
       if (type === "url") {
         return ressourceGraph.applyUrlResolution(urlSpecifier, url)
