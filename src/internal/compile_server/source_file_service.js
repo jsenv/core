@@ -50,7 +50,7 @@ export const createSourceFileService = ({
       return response
     }
     const buffer = await readNodeStream(response.body)
-    const { content, artifacts } = await modifier({
+    const { content, artifacts = [] } = await modifier({
       url,
       code: String(buffer),
     })

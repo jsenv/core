@@ -48,7 +48,6 @@ export const startDevServer = async ({
   mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
 
-  inlineImportMapIntoHTML = true,
   hmr = true,
   eventSourceClient = true,
   htmlSupervisor = true,
@@ -120,7 +119,6 @@ export const startDevServer = async ({
     jsenvDirectoryRelativeUrl,
 
     mainFileRelativeUrl,
-    inlineImportMapIntoHTML,
     hmr,
     eventSourceClient,
     htmlSupervisor,

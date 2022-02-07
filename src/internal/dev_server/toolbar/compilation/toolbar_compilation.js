@@ -18,14 +18,10 @@ export const renderCompilationInToolbar = async ({
   removeForceHideElement(browserSupportRootNode)
   removeForceHideElement(filesCompilationRootNode)
 
-  const { inlineImportMapIntoHTML, compileProfile, compileId, runtimeReport } =
+  const { compileProfile, compileId, runtimeReport } =
     await scanBrowserRuntimeFeatures()
 
-  const browserSupport = compileId
-    ? "no"
-    : inlineImportMapIntoHTML
-    ? "partial"
-    : "full"
+  const browserSupport = compileId ? "no" : "full"
   enableVariant(browserSupportRootNode, {
     browserSupport,
   })
@@ -42,30 +38,13 @@ export const renderCompilationInToolbar = async ({
         )}`,
       )
     }
-  } else if (browserSupport === "partial") {
-    browserSupportRootNode.querySelector(
-      `a.browser_support_read_more_link`,
-    ).onclick = () => {
-      // eslint-disable-next-line no-alert
-      window.alert(
-        `Source files (except html) can be executed directly in this browser because: ${listWhatIsSupported(
-          {
-            inlineImportMapIntoHTML,
-          },
-        )}`,
-      )
-    }
   } else if (browserSupport === "full") {
     browserSupportRootNode.querySelector(
       `a.browser_support_read_more_link`,
     ).onclick = () => {
       // eslint-disable-next-line no-alert
       window.alert(
-        `Source files can be executed directly in this browser because: ${listWhatIsSupported(
-          {
-            inlineImportMapIntoHTML,
-          },
-        )}`,
+        `Source files can be executed directly in this browser because: ${listWhatIsSupported()}`,
       )
     }
   }
@@ -81,9 +60,7 @@ export const renderCompilationInToolbar = async ({
     ? "mismatch"
     : actualCompileId
     ? "yes"
-    : inlineImportMapIntoHTML
-    ? "html_only"
-    : "no"
+    : "html_only"
   const hasWarning = shouldCompile || shouldSwitchCompileId
 
   enableVariant(filesCompilationRootNode, {
@@ -141,13 +118,9 @@ export const renderCompilationInToolbar = async ({
   }
 }
 
-const listWhatIsSupported = ({ inlineImportMapIntoHTML }) => {
+const listWhatIsSupported = () => {
   const parts = []
-  if (inlineImportMapIntoHTML) {
-    parts.push(`importmaps are supported (only when inlined in html files)`)
-  } else {
-    parts.push(`importmaps are supported`)
-  }
+  parts.push(`importmaps are supported`)
   parts.push(`dynamic imports are supported`)
   parts.push(`top level await is supported`)
   parts.push(`all features are natively supported`)

@@ -14,15 +14,12 @@ export const scanBrowserRuntimeFeatures = async ({
   forceSource = false,
 } = {}) => {
   const jsenvCompileProfileUrl = "/__jsenv_compile_profile__"
-  const {
-    jsenvDirectoryRelativeUrl,
-    inlineImportMapIntoHTML,
-    availableCompileIds,
-  } = await fetchJson(jsenvCompileProfileUrl)
+  const { jsenvDirectoryRelativeUrl, availableCompileIds } = await fetchJson(
+    jsenvCompileProfileUrl,
+  )
   const { name, version } = detectBrowser()
   const featuresReport = await detectSupportedFeatures({
     coverageHandledFromOutside,
-    inlineImportMapIntoHTML,
   })
   const runtimeReport = {
     env: { browser: true },
@@ -44,7 +41,6 @@ export const scanBrowserRuntimeFeatures = async ({
   )
   return {
     jsenvDirectoryRelativeUrl,
-    inlineImportMapIntoHTML,
     availableCompileIds,
     runtimeReport,
     compileProfile,
@@ -52,10 +48,7 @@ export const scanBrowserRuntimeFeatures = async ({
   }
 }
 
-const detectSupportedFeatures = async ({
-  coverageHandledFromOutside,
-  inlineImportMapIntoHTML,
-}) => {
+const detectSupportedFeatures = async ({ coverageHandledFromOutside }) => {
   const featuresReport = {}
   featuresReport["import_http"] = true
   featuresReport["coverage_js"] = coverageHandledFromOutside
@@ -74,7 +67,7 @@ const detectSupportedFeatures = async ({
     // But there exploring server can inline importmap by transforming html
     // and in that case we can test only the local importmap support
     // so we test importmap support and the remote one
-    remote: !inlineImportMapIntoHTML,
+    remote: false,
   })
   // dynamic import
   featuresReport["import_dynamic"] = await supportsDynamicImport()

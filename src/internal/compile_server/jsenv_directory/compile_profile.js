@@ -10,7 +10,6 @@ const COMPARERS = {
   sourcemapMethod: (a, b) => a === b,
   sourcemapExcludeSources: (a, b) => a === b,
 
-  inlineImportMapIntoHTML: (a, b) => a === b,
   eventSourceClient: (a, b) => a === b,
   htmlSupervisor: (a, b) => a === b,
   toolbar: (a, b) => a === b,
@@ -25,7 +24,6 @@ export const createCompileProfile = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 
-  inlineImportMapIntoHTML,
   eventSourceClient,
   htmlSupervisor,
   toolbar,
@@ -166,7 +164,6 @@ export const createCompileProfile = ({
     sourcemapMethod,
     sourcemapExcludeSources,
 
-    inlineImportMapIntoHTML,
     eventSourceClient,
     htmlSupervisor,
     toolbar,

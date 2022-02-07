@@ -35,7 +35,6 @@ export const createCompiledFileService = ({
   sourcemapMethod,
   sourcemapExcludeSources,
 
-  inlineImportMapIntoHTML,
   eventSourceClient,
   htmlSupervisor,
   toolbar,
@@ -164,7 +163,6 @@ export const createCompiledFileService = ({
           sourcemapMethod,
           sourcemapExcludeSources,
 
-          inlineImportMapIntoHTML,
           eventSourceClient,
           htmlSupervisor,
           toolbar,

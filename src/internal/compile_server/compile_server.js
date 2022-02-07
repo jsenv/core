@@ -93,7 +93,6 @@ export const startCompileServer = async ({
   plugins,
 
   transformHtmlSourceFiles = true,
-  inlineImportMapIntoHTML = true,
   hmr = false,
   eventSourceClient = false,
   htmlSupervisor = false,
@@ -141,7 +140,6 @@ export const startCompileServer = async ({
   const compileContext = await createCompileContext({
     preservedUrls,
     replaceProcessEnvNodeEnv,
-    inlineImportMapIntoHTML,
   })
   const jsenvFileSelector = createJsenvFileSelector({
     projectDirectoryUrl,
@@ -196,7 +194,6 @@ export const startCompileServer = async ({
       sourcemapMethod,
       sourcemapExcludeSources,
 
-      inlineImportMapIntoHTML,
       eventSourceClient,
       htmlSupervisor,
       toolbar,
@@ -224,7 +221,6 @@ export const startCompileServer = async ({
         const body = JSON.stringify(
           {
             jsenvDirectoryRelativeUrl,
-            inlineImportMapIntoHTML,
             errorStackRemapping,
             sourcemapMainFileRelativeUrl: urlToRelativeUrl(
               sourcemapMainFileInfo.url,
@@ -291,7 +287,6 @@ export const startCompileServer = async ({
       customCompilers,
       prependSystemJs,
 
-      inlineImportMapIntoHTML,
       eventSourceClient,
       htmlSupervisor,
       toolbar,
@@ -316,47 +311,32 @@ export const startCompileServer = async ({
         ...(transformHtmlSourceFiles || hmr
           ? {
               "text/html": async ({ url, code }) => {
-                let content = code
-                let artifacts = []
-                if (transformHtmlSourceFiles) {
-                  const modifyResult = await modifyHtml({
-                    logger,
-                    projectDirectoryUrl,
-                    jsenvRemoteDirectory,
-                    jsenvFileSelector,
-                    inlineImportMapIntoHTML,
-                    eventSourceClient,
-                    htmlSupervisor,
-                    toolbar,
-                    url,
-                    code,
-                  })
-                  content = modifyResult.content
-                  artifacts = modifyResult.artifacts
-                }
-                if (hmr) {
-                  await scanHtml({
-                    ressourceGraph,
-                    url,
-                    html: content,
-                  })
-                }
-                return {
-                  content,
-                  artifacts,
-                }
+                return modifyHtml({
+                  logger,
+                  projectDirectoryUrl,
+                  jsenvRemoteDirectory,
+                  jsenvFileSelector,
+                  transformHtmlSourceFiles,
+                  eventSourceClient,
+                  htmlSupervisor,
+                  toolbar,
+                  url,
+                  code,
+                })
               },
             }
           : {}),
         ...(hmr
           ? {
               "application/javascript": async ({ url, code }) => {
-                // deux choses a faire:
-                // 1. parcourir le js pour y trouver les import.meta.hot
-                // 2. parcourir le js pour y trouver les dépendences et
-                // mettre a jour le ressourceGraph
-                // il faudra que new URL('./file.txt', import.meta.url)
-                // compte aussi comme une dep
+                const content = await modifyJs({
+                  ressourceGraph,
+                  url,
+                  code,
+                })
+                return {
+                  content,
+                }
               },
             }
           : {}),
