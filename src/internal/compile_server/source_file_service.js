@@ -18,16 +18,25 @@
  * qui se charge de servir les fichiers inlines
  */
 
+import { resolveUrl } from "@jsenv/filesystem"
+
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
-import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
 
 export const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileCacheStrategy,
   jsenvRemoteDirectory,
+  modifiers,
 }) => {
+  const ressourceArtifacts = createRessourceArtifacts()
+
   return async (request) => {
     const url = new URL(request.ressource.slice(1), projectDirectoryUrl).href
+    // artifacts are inline ressource found in HTML (inline scripts, styles, ...)
+    const artifactResponse = ressourceArtifacts.getResponseForUrl(url)
+    if (artifactResponse) {
+      return artifactResponse
+    }
     const response = await jsenvRemoteDirectory.fetchUrl(url, {
       request,
       projectFileCacheStrategy,
@@ -36,24 +45,74 @@ export const createSourceFileService = ({
       return response
     }
     const responseContentType = response.headers["content-type"]
-    const jsenvScanner = jsenvScanners[responseContentType]
-    if (!jsenvScanner) {
+    const modifier = modifiers[responseContentType]
+    if (!modifier) {
       return response
     }
     const buffer = await readNodeStream(response.body)
-    const code = String(buffer)
+    const { content, artifacts } = await modifier({
+      code: String(buffer),
+    })
+    ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
     // use jsenv scanner
     return {
       status: 200,
       headers: {
-        "content-type": "",
-        "content-length": "",
+        "content-type": responseContentType,
+        "content-length": Buffer.byteLength(content),
+        "cache-control": "no-cache",
       },
-      body: code,
+      body: content,
     }
   }
 }
 
-const jsenvScanners = {
-  "text/html": scanHtml,
+/**
+ * artifacts can be represented as below
+ * "file:///project_directory/index.html.10.js": {
+ *   "ownerUrl": "file:///project_directory/index.html",
+ *   "contentType": "application/javascript",
+ *   "content": "console.log(`Hello world`)"
+ * }
+ * It is used to serve inline ressources as if they where inside a file
+ * Every time the html file is retransformed, the list of inline ressources inside it
+ * are deleted so that when html file and page is reloaded, the inline ressources are updated
+ */
+const createRessourceArtifacts = () => {
+  const artifactMap = new Map()
+
+  const getResponseForUrl = (url) => {
+    const artifact = artifactMap.get(url)
+    if (!artifact) {
+      return null
+    }
+    return {
+      status: 200,
+      headers: {
+        "content-type": artifact.contentType,
+        "content-length": Buffer.byteLength(artifact.content),
+      },
+      body: artifact.content,
+    }
+  }
+
+  const updateRessourceArtifacts = (ownerUrl, artifacts) => {
+    artifactMap.forEach((artifact, artifactUrl) => {
+      if (artifact.ownerUrl === ownerUrl) {
+        artifactMap.delete(artifactUrl)
+      }
+    })
+    artifacts.forEach(({ specifier, contentType, content }) => {
+      artifactMap.set(resolveUrl(specifier, ownerUrl), {
+        ownerUrl,
+        contentType,
+        content,
+      })
+    })
+  }
+
+  return {
+    getResponseForUrl,
+    updateRessourceArtifacts,
+  }
 }

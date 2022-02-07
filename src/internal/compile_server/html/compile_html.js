@@ -60,7 +60,7 @@ export const compileHtml = async ({
     htmlSupervisor,
     toolbar,
   })
-  scriptsToInject.forEach((scriptToInject) => {
+  scriptsToInject.reverse().forEach((scriptToInject) => {
     injectBeforeFirstHeadScript(
       htmlAst,
       createHtmlNode({

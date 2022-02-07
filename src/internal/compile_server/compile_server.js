@@ -18,6 +18,7 @@ import {
 } from "@jsenv/core/src/jsenv_file_urls.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
 import { createRessourceGraph } from "@jsenv/core/src/internal/hmr/ressource_graph.js"
+import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
@@ -30,7 +31,7 @@ import { createCompileRedirectorService } from "./compile_redirector_service.js"
 import { createCompiledFileService } from "./compiled_file_service.js"
 import { createJsenvDistFileService } from "./jsenv_dist_file_service.js"
 import { createSourceFileService } from "./source_file_service.js"
-import { createTransformHtmlSourceFileService } from "./html/html_source_file_service.js"
+import { modifyHtml } from "./html/modify_html.js"
 import { loadBabelPluginMap } from "./js/babel_plugin_map.js"
 
 let compileServerId = 0
@@ -303,21 +304,6 @@ export const startCompileServer = async ({
         ? compileCacheStrategy
         : "none",
     }),
-    ...(transformHtmlSourceFiles
-      ? {
-          "service:transform html source file":
-            createTransformHtmlSourceFileService({
-              logger,
-              projectDirectoryUrl,
-              jsenvRemoteDirectory,
-              jsenvFileSelector,
-              inlineImportMapIntoHTML,
-              eventSourceClient,
-              htmlSupervisor,
-              toolbar,
-            }),
-        }
-      : {}),
     "service:jsenv dist file": createJsenvDistFileService({
       projectDirectoryUrl,
       projectFileCacheStrategy,
@@ -326,6 +312,41 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       jsenvRemoteDirectory,
       projectFileCacheStrategy,
+      modifiers: {
+        ...(transformHtmlSourceFiles || hmr
+          ? {
+              "text/html": async ({ code }) => {
+                let content = code
+                let artifacts = []
+                if (transformHtmlSourceFiles) {
+                  const modifyResult = await modifyHtml({
+                    logger,
+                    projectDirectoryUrl,
+                    jsenvRemoteDirectory,
+                    jsenvFileSelector,
+                    inlineImportMapIntoHTML,
+                    eventSourceClient,
+                    htmlSupervisor,
+                    toolbar,
+                    code,
+                  })
+                  content = modifyResult.content
+                  artifacts = modifyResult.artifacts
+                }
+                if (hmr) {
+                  await scanHtml({
+                    code: content,
+                    ressourceGraph,
+                  })
+                }
+                return {
+                  content,
+                  artifacts,
+                }
+              },
+            }
+          : {}),
+      },
     }),
   }
 
