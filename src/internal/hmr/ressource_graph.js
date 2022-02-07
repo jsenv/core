@@ -52,9 +52,9 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     url,
     type,
     dependencyUrls,
-    importMetaHotDecline,
-    importMetaHotAcceptSelf,
-    importMetaHotAcceptDependencies,
+    hotDecline,
+    hotAcceptSelf,
+    hotAcceptDependencies,
   }) => {
     url = removeHmrQuery(url)
     const existingRessource = getRessourceByUrl(url)
@@ -85,15 +85,14 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
         dependency.dependents.add(url)
       })
     }
-    if (importMetaHotDecline !== undefined) {
-      ressource.importMetaHotDecline = importMetaHotDecline
+    if (hotDecline !== undefined) {
+      ressource.hotDecline = hotDecline
     }
-    if (importMetaHotAcceptSelf !== undefined) {
-      ressource.importMetaHotAcceptSelf = importMetaHotAcceptSelf
+    if (hotAcceptSelf !== undefined) {
+      ressource.hotAcceptSelf = hotAcceptSelf
     }
-    if (importMetaHotAcceptDependencies !== undefined) {
-      ressource.importMetaHotAcceptDependencies =
-        importMetaHotAcceptDependencies
+    if (hotAcceptDependencies !== undefined) {
+      ressource.hotAcceptDependencies = hotAcceptDependencies
     }
     return notUsedAnymore
   }
@@ -146,7 +145,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       ressource.hmrTimestamp = hmr
       ressource.dependents.forEach((dependentUrl) => {
         const dependent = ressources[dependentUrl]
-        if (!dependent.importMetaHotAcceptDependencies.includes(url)) {
+        if (!dependent.hotAcceptDependencies.includes(url)) {
           iterate(dependentUrl, hmr)
         }
       })
@@ -156,7 +155,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
 
   const propagateUpdate = (ressource) => {
     const iterate = (ressource, trace) => {
-      if (ressource.importMetaHotAcceptSelf) {
+      if (ressource.hotAcceptSelf) {
         return {
           accepted: true,
           boundaries: [
@@ -171,14 +170,14 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       const boundaries = []
       for (const dependentUrl of dependents) {
         const dependent = ressources[dependentUrl]
-        if (dependent.importMetaHotDecline) {
+        if (dependent.hotDecline) {
           return {
             declined: true,
-            reason: `found "import.meta.hot.decline()" while propagating update`,
+            reason: `found ressource declining hot reload while propagating update`,
             declinedBy: dependentUrl,
           }
         }
-        if (dependent.importMetaHotAcceptDependencies.includes(ressource.url)) {
+        if (dependent.hotAcceptDependencies.includes(ressource.url)) {
           boundaries.push({
             boundary: dependentUrl,
             acceptedBy: ressource.url,
@@ -204,7 +203,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       if (boundaries.length === 0) {
         return {
           declined: true,
-          reason: `nothing calls "import.meta.hot.accept()" while propagating update`,
+          reason: `there is no ressource accepting hot reload while propagating update`,
         }
       }
       return {
@@ -245,8 +244,8 @@ const createRessource = (url) => {
     hmrTimestamp: 0,
     dependencies: new Set(),
     dependents: new Set(),
-    importMetaHotAcceptSelf: false,
-    importMetaHotAcceptDependencies: [],
-    importMetaHotDecline: false,
+    hotAcceptSelf: false,
+    hotAcceptDependencies: [],
+    hotDecline: false,
   }
 }

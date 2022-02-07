@@ -29,12 +29,11 @@ import {
   removeHtmlNodeAttribute,
   setHtmlNodeText,
   getHtmlNodeTextNode,
-  parseSrcset,
-  stringifySrcset,
   getHtmlNodeLocation,
   removeHtmlNode,
   addHtmlNodeAttribute,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
+import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
 import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
 import {
   getJavaScriptSourceMappingUrl,
@@ -704,8 +703,8 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
   if (!srcsetAttribute) {
     return null
   }
-  const srcsetParts = parseSrcset(srcsetAttribute.value)
-  const srcsetPartsReferences = srcsetParts.map(({ specifier }, index) =>
+  const srcCandidates = htmlAttributeSrcSet.parse(srcsetAttribute.value)
+  const srcReferences = srcCandidates.map(({ specifier }, index) =>
     notifyReferenceFound({
       referenceLabel: `html srcset ${index}`,
       ressourceSpecifier: specifier,
@@ -713,20 +712,19 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
       ...referenceLocationFromHtmlNode(htmlNode, "srcset"),
     }),
   )
-  if (srcsetParts.length === 0) {
+  if (srcCandidates.length === 0) {
     return null
   }
   return ({ getUrlRelativeToImporter }) => {
-    srcsetParts.forEach((srcsetPart, index) => {
-      const reference = srcsetPartsReferences[index]
-      srcsetPart.specifier = referenceToUrl({
+    srcCandidates.forEach((srcCandidate, index) => {
+      const reference = srcReferences[index]
+      srcCandidate.specifier = referenceToUrl({
         reference,
         htmlNode,
         getUrlRelativeToImporter,
       })
     })
-
-    const srcsetNewValue = stringifySrcset(srcsetParts)
+    const srcsetNewValue = htmlAttributeSrcSet.stringify(srcCandidates)
     srcsetAttribute.value = srcsetNewValue
   }
 }

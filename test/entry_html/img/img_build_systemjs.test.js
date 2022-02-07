@@ -12,8 +12,8 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   findNodeByTagName,
   getHtmlNodeAttributeByName,
-  parseSrcset,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
+import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
 import { GENERATE_SYSTEMJS_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_SYSTEMJS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -64,7 +64,7 @@ const img = findNodeByTagName(htmlString, "img")
   const imgCBuildRelativeUrl =
     buildMappings[`${testDirectoryRelativeUrl}img-c.png`]
 
-  const actual = parseSrcset(srcsetAttribute.value)
+  const actual = htmlAttributeSrcSet.parse(srcsetAttribute.value)
   const expected = [
     {
       specifier: imgBBuildRelativeUrl,

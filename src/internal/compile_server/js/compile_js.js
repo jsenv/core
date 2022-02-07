@@ -58,16 +58,15 @@ export const compileJavascript = async ({
         url,
       )
     }),
-    importMetaHotDecline: metadata.importMetaHotDecline,
-    importMetaHotAcceptSelf: metadata.importMetaHotAcceptSelf,
-    importMetaHotAcceptDependencies:
-      metadata.importMetaHotAcceptDependencies.map(
-        (acceptDependencyUrlSpecifier) =>
-          ressourceGraph.applyImportmapResolution(
-            acceptDependencyUrlSpecifier,
-            url,
-          ),
-      ),
+    hotDecline: metadata.importMetaHotDecline,
+    hotAcceptSelf: metadata.importMetaHotAcceptSelf,
+    hotAcceptDependencies: metadata.importMetaHotAcceptDependencies.map(
+      (acceptDependencyUrlSpecifier) =>
+        ressourceGraph.applyImportmapResolution(
+          acceptDependencyUrlSpecifier,
+          url,
+        ),
+    ),
   })
   return asCompilationResult(
     {

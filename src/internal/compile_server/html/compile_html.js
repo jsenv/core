@@ -92,6 +92,8 @@ export const compileHtml = async ({
   const addHtmlMutation = (htmlMutation) => {
     htmlMutations.push(htmlMutation)
   }
+  // this will likely disappear, instead we'll put something special
+  // on supervised tag to allow html to discover the dependency
   const injectHtmlDependency = ({ htmlNode, specifier }) => {
     htmlDependencies.push({
       htmlNode,
@@ -166,24 +168,34 @@ export const compileHtml = async ({
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
   const dependencyUrls = []
-  const importMetaHotAcceptDependencies = []
-  htmlDependencies.forEach(({ specifier }) => {
+  const hotAcceptDependencies = []
+  htmlDependencies.forEach(({ specifier, hotAccepted }) => {
     const ressourceUrl = ressourceGraph.applyUrlResolution(specifier, url)
-    dependencyUrls.push(ressourceUrl)
     // adding url to "dependencyUrls" means html uses an url
-    // and should reload (hot or full) when an url changes.
-    // Adding url to "importMetaHotAcceptDependencies" means html hot_reload these ressources:
+    // and should reload (hot or full) when an url changes
+    dependencyUrls.push(ressourceUrl)
+    // Adding url to "hotAcceptDependencies" means html hot_reload these ressources:
     // something like this: link.href = `${link.href}?hmr=${Date.now()}`)
     // If some url must trigger a full reload of the html page it should be excluded from
-    // "importMetaHotAcceptDependencies". For now it seems it's ok to hot reload everything
-    importMetaHotAcceptDependencies.push(ressourceUrl)
+    // "hotAcceptDependencies".
+    // There is some "smart" default applied in "collectHtmlDependenciesFromAst"
+    // to decide what should hot reload / fullreload:
+    // By default:
+    //   - hot reload on <img src="./image.png" />
+    //   - fullreload on <script src="./file.js" />
+    // Can be controlled by [hot-decline] and [hot-accept]:
+    //   - fullreload on <img src="./image.png" hot-decline />
+    //   - hot reload on <script src="./file.js" hot-accept />
+    if (hotAccepted) {
+      hotAcceptDependencies.push(ressourceUrl)
+    }
   })
   ressourceGraph.updateRessourceDependencies({
     url,
     type: "html",
     dependencyUrls,
-    importMetaHotAcceptSelf: false,
-    importMetaHotAcceptDependencies,
+    hotAcceptSelf: false,
+    hotAcceptDependencies,
   })
   return {
     contentType: "text/html",

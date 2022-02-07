@@ -1,10 +1,14 @@
 import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
-import { htmlAttributeSrcSet } from "./html_attribute_src_set.js"
+import { htmlAttributeSrcSet } from "../../transform_html/html_attribute_src_set.js"
 
 export const reloadHtmlPage = () => {
   window.parent.location.reload(true)
 }
 
+// This function can consider everything as hot reloadable:
+// - no need to check [hot-accept]and [hot-decline] attributes for instance
+// This is because if something should full reload, we receive "full_reload"
+// from server and this function is not called
 export const reloadDOMNodesUsingUrls = (urlsToReload) => {
   const mutations = []
   const shouldReloadUrl = (urlCandidate) => {

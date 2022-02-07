@@ -2,6 +2,8 @@ import { createHash } from "node:crypto"
 
 import { require } from "@jsenv/core/src/internal/require.js"
 
+import { htmlAttributeSrcSet } from "./html_attribute_src_set.js"
+
 // https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
 // eslint-disable-next-line import/no-unresolved
 // const treeAdapter = require("parse5/lib/tree-adapters/default.js")
@@ -197,25 +199,6 @@ export const htmlNodeIsScriptImportmap = (htmlNode) => {
   return typeAttribute.value === "importmap"
 }
 
-export const parseSrcset = (srcsetString) => {
-  const srcsetParts = []
-  srcsetString.split(",").forEach((set) => {
-    const [specifier, descriptor] = set.trim().split(" ")
-    srcsetParts.push({
-      specifier,
-      descriptor,
-    })
-  })
-  return srcsetParts
-}
-
-export const stringifySrcset = (srcsetParts) => {
-  const srcsetString = srcsetParts
-    .map(({ specifier, descriptor }) => `${specifier} ${descriptor}`)
-    .join(", ")
-  return srcsetString
-}
-
 // <img>, <link for favicon>, <link for css>, <styles>
 // <audio> <video> <picture> supports comes for free by detecting
 // <source src> attribute
@@ -228,38 +211,31 @@ export const parseHtmlAstRessources = (htmlAst) => {
   const images = []
   const uses = []
   const sources = []
-
   visitHtmlAst(htmlAst, (node) => {
     if (node.nodeName === "link") {
       links.push(node)
       return
     }
-
     if (node.nodeName === "style") {
       styles.push(node)
       return
     }
-
     if (node.nodeName === "script") {
       scripts.push(node)
       return
     }
-
     if (node.nodeName === "img") {
       imgs.push(node)
       return
     }
-
     if (node.nodeName === "image") {
       images.push(node)
       return
     }
-
     if (node.nodeName === "use") {
       uses.push(node)
       return
     }
-
     if (node.nodeName === "source") {
       sources.push(node)
       return
@@ -277,69 +253,183 @@ export const parseHtmlAstRessources = (htmlAst) => {
   }
 }
 
-export const collectHtmlDependenciesFromAst = (htmlAst) => {
-  const { links, scripts, imgs, images, uses, sources } =
-    parseHtmlAstRessources(htmlAst)
+export const parseLinkNode = (linkNode) => {
+  const relAttr = getHtmlNodeAttributeByName(linkNode, "rel")
+  const rel = relAttr ? relAttr.value : undefined
 
+  if (rel === "stylesheet") {
+    return {
+      isStylesheet: true,
+    }
+  }
+  const isRessourceHint = [
+    "preconnect",
+    "dns-prefetch",
+    "prefetch",
+    "preload",
+    "modulepreload",
+  ].includes(rel)
+  return {
+    isRessourceHint,
+    rel,
+  }
+}
+
+export const collectHtmlDependenciesFromAst = (htmlAst) => {
   const dependencies = []
-  const visitSrcAttribute = (htmlNode) => {
-    const srcAttribute = getHtmlNodeAttributeByName(htmlNode, "src")
-    const src = srcAttribute ? srcAttribute.value : undefined
-    if (src) {
-      dependencies.push({
-        htmlNode,
-        attribute: srcAttribute,
-        specifier: src,
+  const addDependency = ({ node, attribute, specifier, hotAccepted }) => {
+    dependencies.push({
+      htmlNode: node,
+      attribute,
+      specifier,
+      hotAccepted,
+    })
+  }
+  const onNode = (node, { hotAccepted }) => {
+    if (node.nodeName === "link") {
+      const { isStylesheet, isRessourceHint } = parseLinkNode(node)
+      // stylesheets can be hot replaced by default
+      if (hotAccepted === undefined && isStylesheet) {
+        hotAccepted = true
+      }
+      // for ressource hints html will be notified the underlying ressource has changed
+      // but we won't do anything (if the ressource is deleted we should?)
+      if (hotAccepted === undefined && isRessourceHint) {
+        hotAccepted = true
+      }
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "href",
+        hotAccepted,
+      })
+      return
+    }
+    // if (node.nodeName === "style") {
+    //   // styles.push(node)
+    //   return
+    // }
+    if (node.nodeName === "script") {
+      // script full_reload by default
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "src",
+        hotAccepted,
+      })
+      return
+    }
+    if (node.nodeName === "img") {
+      if (hotAccepted === undefined) {
+        hotAccepted = true
+      }
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "src",
+        hotAccepted,
+      })
+      visitSrcset({
+        node,
+        hotAccepted,
+      })
+      return
+    }
+    if (node.nodeName === "source") {
+      if (hotAccepted === undefined) {
+        hotAccepted = true
+      }
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "src",
+        hotAccepted,
+      })
+      visitSrcset({
+        node,
+        hotAccepted,
+      })
+      return
+    }
+    // svg <image> tag
+    if (node.nodeName === "image") {
+      if (hotAccepted === undefined) {
+        hotAccepted = true
+      }
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "href",
+        hotAccepted,
+      })
+      return
+    }
+    if (node.nodeName === "use") {
+      if (hotAccepted === undefined) {
+        hotAccepted = true
+      }
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "href",
+        hotAccepted,
+      })
+      return
+    }
+  }
+  const visitAttributeAsUrlSpecifier = ({
+    node,
+    attributeName,
+    hotAccepted,
+  }) => {
+    const attribute = getHtmlNodeAttributeByName(node, attributeName)
+    const value = attribute ? attribute.value : undefined
+    if (value && value[0] !== "#") {
+      addDependency({
+        node,
+        attribute,
+        value,
+        hotAccepted,
       })
     }
   }
-  const visitHrefAttribute = (htmlNode) => {
-    const hrefAttribute = getHtmlNodeAttributeByName(htmlNode, "href")
-    const href = hrefAttribute ? hrefAttribute.value : undefined
-    if (href && href[0] !== "#") {
-      dependencies.push({
-        htmlNode,
-        attribute: hrefAttribute,
-        specifier: href,
-      })
-    }
-  }
-  const visitSrcSetAttribute = (htmlNode) => {
-    const srcsetAttribute = getHtmlNodeAttributeByName(htmlNode, "srcset")
-    if (srcsetAttribute) {
-      const srcsetParts = parseSrcset(srcsetAttribute.value)
-      srcsetParts.forEach(({ specifier }) => {
-        dependencies.push({
-          htmlNode,
+  const visitSrcset = ({ node, hotAccepted }) => {
+    const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset")
+    const srcset = srcsetAttribute ? srcsetAttribute.value : undefined
+    if (srcset) {
+      const srcCandidates = htmlAttributeSrcSet.parse(srcset)
+      srcCandidates.forEach((srcCandidate) => {
+        addDependency({
+          node,
           attribute: srcsetAttribute,
-          specifier,
+          value: srcCandidate.specifier,
+          hotAccepted,
         })
       })
     }
   }
-
-  links.forEach((link) => {
-    visitHrefAttribute(link)
-  })
-  scripts.forEach((script) => {
-    visitSrcAttribute(script)
-  })
-  imgs.forEach((img) => {
-    visitSrcAttribute(img)
-    visitSrcSetAttribute(img)
-  })
-  sources.forEach((source) => {
-    visitSrcAttribute(source)
-    visitSrcSetAttribute(source)
-  })
-  // svg <image> tag
-  images.forEach((image) => {
-    visitHrefAttribute(image)
-  })
-  uses.forEach((use) => {
-    visitHrefAttribute(use)
-  })
-
+  const getNodeContext = (node) => {
+    const context = {}
+    const hotAcceptAttribute = getHtmlNodeAttributeByName(node, "hot-accept")
+    if (hotAcceptAttribute) {
+      context.hotAccepted = true
+    }
+    const hotDeclineAttribute = getHtmlNodeAttributeByName(node, "hot-decline")
+    if (hotDeclineAttribute) {
+      context.hotAccepted = false
+    }
+    return context
+  }
+  const iterate = (node, context) => {
+    context = {
+      ...context,
+      ...getNodeContext(node),
+    }
+    onNode(node, context)
+    const { childNodes } = node
+    if (childNodes) {
+      let i = 0
+      while (i < childNodes.length) {
+        const childNode = childNodes[i++]
+        iterate(childNode, context)
+      }
+    }
+  }
+  iterate(htmlAst, {})
   return dependencies
 }
 

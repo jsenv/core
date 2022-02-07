@@ -18,39 +18,26 @@
  * qui se charge de servir les fichiers inlines
  */
 
-import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
-
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
 import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
-
-const jsenvScanners = {
-  "**/*.html": scanHtml,
-}
 
 export const createSourceFileService = ({
   projectDirectoryUrl,
   projectFileCacheStrategy,
   jsenvRemoteDirectory,
 }) => {
-  const sourceMeta = normalizeStructuredMetaMap(
-    {
-      jsenvScanner: jsenvScanners,
-    },
-    projectDirectoryUrl,
-  )
-
   return async (request) => {
     const url = new URL(request.ressource.slice(1), projectDirectoryUrl).href
-    const scanner = getScanner({ url, sourceMeta })
-    if (!scanner) {
-      return jsenvRemoteDirectory.fetchUrl(url, {
-        request,
-        projectFileCacheStrategy,
-      })
-    }
-
-    const response = await jsenvRemoteDirectory.fetchUrl(url, request)
+    const response = await jsenvRemoteDirectory.fetchUrl(url, {
+      request,
+      projectFileCacheStrategy,
+    })
     if (response.status !== 200) {
+      return response
+    }
+    const responseContentType = response.headers["content-type"]
+    const jsenvScanner = jsenvScanners[responseContentType]
+    if (!jsenvScanner) {
       return response
     }
     const buffer = await readNodeStream(response.body)
@@ -67,17 +54,6 @@ export const createSourceFileService = ({
   }
 }
 
-const getScanner = ({ url, sourceMeta }) => {
-  // we remove eventual query param from the url
-  // Without this a pattern like "**/*.js" would not match "file.js?t=1"
-  // This would result in file not being compiled when they should
-  // Ideally we would do a first pass with the query param and a second without
-  const urlObject = new URL(url)
-  urlObject.search = ""
-  url = urlObject.href
-  const { jsenvScanner } = urlToMeta({
-    url,
-    structuredMetaMap: sourceMeta,
-  })
-  return jsenvScanner
+const jsenvScanners = {
+  "text/html": scanHtml,
 }
