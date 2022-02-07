@@ -172,6 +172,12 @@ const collectHtmlDependenciesFromAst = (htmlAst) => {
         attributeName: "content-src",
         hotAccepted,
       })
+    } else if (attributeName === "href") {
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "content-href",
+        hotAccepted,
+      })
     }
   }
   const visitSrcset = ({ node, hotAccepted }) => {

@@ -23,11 +23,15 @@ import {
   parseHtmlString,
   parseHtmlAstRessources,
   getHtmlNodeAttributeByName,
-  replaceHtmlNode,
   stringifyHtmlAst,
   injectBeforeFirstHeadScript,
   createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
+import {
+  inlineImg,
+  inlineLinkStylesheet,
+  inlineScript,
+} from "@jsenv/core/src/internal/transform_html/html_inlining.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
 
@@ -121,7 +125,6 @@ const forceInlineRessources = async ({
   projectDirectoryUrl,
 }) => {
   const { scripts, links, imgs } = parseHtmlAstRessources(htmlAst)
-
   const inlineOperations = []
   scripts.forEach((script) => {
     const forceInlineAttribute = getJsenvForceInlineAttribute(script)
@@ -136,9 +139,8 @@ const forceInlineRessources = async ({
     inlineOperations.push({
       specifier: src,
       mutateHtml: async (response) => {
-        replaceHtmlNode(script, `<script>${await response.text()}</script>`, {
-          attributesToIgnore: ["src"],
-        })
+        const textContent = await response.text()
+        inlineScript(script, textContent)
       },
     })
   })
@@ -160,9 +162,8 @@ const forceInlineRessources = async ({
     inlineOperations.push({
       specifier: href,
       mutateHtml: async (response) => {
-        replaceHtmlNode(link, `<style>${await response.text()}</style>`, {
-          attributesToIgnore: ["rel", "href"],
-        })
+        const textNode = await response.text()
+        inlineLinkStylesheet(link, textNode)
       },
     })
   })
@@ -185,7 +186,7 @@ const forceInlineRessources = async ({
           base64Flag: true,
           mediaType: response.headers["content-type"],
         })
-        replaceHtmlNode(img, `<img src=${responseAsBase64} />`)
+        inlineImg(img, responseAsBase64)
       },
     })
   })

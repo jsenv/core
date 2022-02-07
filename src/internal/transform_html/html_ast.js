@@ -276,40 +276,6 @@ export const parseLinkNode = (linkNode) => {
   }
 }
 
-export const replaceHtmlNode = (
-  node,
-  replacement,
-  { attributesInherit = true, attributesToIgnore = [] } = {},
-) => {
-  let newNode
-  if (typeof replacement === "string") {
-    newNode = parseHtmlAsSingleElement(replacement)
-  } else {
-    newNode = replacement
-  }
-
-  if (attributesInherit) {
-    const attributeMap = {}
-    // inherit attributes except thoos listed in attributesToIgnore
-    node.attrs.forEach((attribute) => {
-      if (attributesToIgnore.includes(attribute.name)) {
-        return
-      }
-      attributeMap[attribute.name] = attribute
-    })
-    newNode.attrs.forEach((newAttribute) => {
-      attributeMap[newAttribute.name] = newAttribute
-    })
-    const attributes = []
-    Object.keys(attributeMap).forEach((attributeName) => {
-      attributes.push(attributeMap[attributeName])
-    })
-    newNode.attrs = attributes
-  }
-
-  replaceNode(node, newNode)
-}
-
 export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   const html = `<${tagName} ${stringifyAttributes(
     rest,
@@ -390,19 +356,6 @@ export const getIdForInlineHtmlNode = (node, nodes) => {
     return `${line}.${column}`
   }
   return line
-}
-
-const parseHtmlAsSingleElement = (html) => {
-  const parse5 = require("parse5")
-  const fragment = parse5.parseFragment(html)
-  return fragment.childNodes[0]
-}
-
-const replaceNode = (node, newNode) => {
-  const { parentNode } = node
-  const parentNodeChildNodes = parentNode.childNodes
-  const nodeIndex = parentNodeChildNodes.indexOf(node)
-  parentNodeChildNodes[nodeIndex] = newNode
 }
 
 export const visitHtmlAst = (htmlAst, callback) => {

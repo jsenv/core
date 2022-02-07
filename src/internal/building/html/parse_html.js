@@ -22,18 +22,20 @@ import { applyAlgoToRepresentationData } from "@jsenv/integrity"
 import {
   parseHtmlString,
   parseHtmlAstRessources,
-  replaceHtmlNode,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getIdForInlineHtmlNode,
   removeHtmlNodeAttribute,
-  setHtmlNodeText,
   getHtmlNodeTextNode,
   getHtmlNodeLocation,
   removeHtmlNode,
   assignHtmlNodeAttributes,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
+import {
+  inlineLinkStylesheet,
+  inlineScript,
+} from "@jsenv/core/src/internal/transform_html/html_inlining.js"
 import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
 import {
   getJavaScriptSourceMappingUrl,
@@ -189,7 +191,6 @@ const regularScriptSrcVisitor = (
       return
     }
     if (shouldInline({ ressource, htmlNode: script })) {
-      removeHtmlNodeAttribute(script, srcAttribute)
       const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
@@ -202,7 +203,7 @@ const regularScriptSrcVisitor = (
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
       }
-      setHtmlNodeText(script, jsString)
+      inlineScript(script, jsString)
       remoteScriptReference.inlinedCallback()
       return
     }
@@ -293,7 +294,6 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
     if (shouldInline({ ressource, htmlNode: script })) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
-      removeHtmlNodeAttribute(script, srcAttribute)
       const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
@@ -304,7 +304,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // with these assumptions we can force the sourcemap url
       const sourcemapUrl = `${ressource.buildRelativeUrl}.map`
       jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
-      setHtmlNodeText(script, jsString)
+      inlineScript(script, jsString)
       remoteScriptReference.inlinedCallback()
       return
     }
@@ -413,9 +413,7 @@ const importmapScriptSrcVisitor = (
       // the remapping (note that it's feasible) but not yet supported
       const { bufferAfterBuild } = ressource
       const importmapString = String(bufferAfterBuild)
-      removeHtmlNodeAttribute(script, srcAttribute)
-      setHtmlNodeText(script, importmapString)
-      removeHtmlNodeAttribute(script, integrityAttribute)
+      inlineScript(script, importmapString)
       importmapReference.inlinedCallback()
       return
     }
@@ -537,16 +535,7 @@ const linkStylesheetHrefVisitor = (
         )
         code = setCssSourceMappingUrl(code, sourcemapInlineUrl)
       }
-      replaceHtmlNode(link, `<style>${code}</style>`, {
-        attributesToIgnore: [
-          "href",
-          "rel",
-          "as",
-          "crossorigin",
-          "type",
-          "integrity",
-        ],
-      })
+      inlineLinkStylesheet(link, code)
       cssReference.inlinedCallback()
       return
     }
