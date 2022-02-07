@@ -128,7 +128,7 @@ export const compileFile = async ({
     }
     const hmr = new URL(originalFileUrl).searchParams.get("hmr")
     if (hmr) {
-      compiledSource = await injectHmr({
+      const body = await injectHmr({
         projectDirectoryUrl,
         ressourceGraph,
         url: originalFileUrl,
@@ -136,21 +136,18 @@ export const compileFile = async ({
         moduleFormat: compileProfile.moduleOutFormat,
         code: compiledSource,
       })
-      compiledEtag = bufferToEtag(Buffer.from(compiledSource))
-      compiledMtime = Date.now()
       return {
         status: 200,
         headers: {
-          "content-length": Buffer.byteLength(compiledSource),
+          "content-length": Buffer.byteLength(body),
           "content-type": contentType,
-          "cache-control": "no-store",
+          "cache-control": "no-store", // not really needed thanks to the query param
           ...responseHeaders,
         },
-        body: compiledSource,
+        body,
         timing,
       }
     }
-
     // when a compiled version of the source file was just created or updated
     // we don't want to rely on filesystem because we might want to delay
     // when the file is written for perf reasons

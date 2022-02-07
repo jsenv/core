@@ -21,11 +21,13 @@
 import { resolveUrl } from "@jsenv/filesystem"
 
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
+import { injectHmr } from "@jsenv/core/src/internal/hmr/hmr_injection.js"
 
 export const createSourceFileService = ({
   projectDirectoryUrl,
-  projectFileCacheStrategy,
+  ressourceGraph,
   jsenvRemoteDirectory,
+  projectFileCacheStrategy,
   modifiers,
 }) => {
   const ressourceArtifacts = createRessourceArtifacts()
@@ -55,7 +57,26 @@ export const createSourceFileService = ({
       code: String(buffer),
     })
     ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
-    // use jsenv scanner
+
+    const hmr = new URL(url).searchParams.get("hmr")
+    if (hmr) {
+      const body = await injectHmr({
+        projectDirectoryUrl,
+        ressourceGraph,
+        url,
+        contentType: responseContentType,
+        moduleFormat: "esmodule",
+        code: content,
+      })
+      return {
+        status: 200,
+        headers: {
+          "content-type": responseContentType,
+          "content-length": Buffer.byteLength(body),
+        },
+        body,
+      }
+    }
     return {
       status: 200,
       headers: {

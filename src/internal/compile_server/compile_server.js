@@ -31,6 +31,7 @@ import { createCompiledFileService } from "./compiled_file_service.js"
 import { createJsenvDistFileService } from "./jsenv_dist_file_service.js"
 import { createSourceFileService } from "./source_file_service.js"
 import { modifyHtml } from "./html/modify_html.js"
+import { modifyCss } from "./css/modify_css.js"
 import { modifyJs } from "./js/modify_js.js"
 import { loadBabelPluginMap } from "./js/babel_plugin_map.js"
 
@@ -310,6 +311,7 @@ export const startCompileServer = async ({
     }),
     "service:source file": createSourceFileService({
       projectDirectoryUrl,
+      ressourceGraph,
       jsenvRemoteDirectory,
       projectFileCacheStrategy,
       modifiers: {
@@ -337,6 +339,14 @@ export const startCompileServer = async ({
           : {}),
         ...(hmr
           ? {
+              "text/css": async ({ url, code }) => {
+                return modifyCss({
+                  projectDirectoryUrl,
+                  ressourceGraph,
+                  url,
+                  css: code,
+                })
+              },
               "application/javascript": async ({ url, code }) => {
                 return modifyJs({
                   projectDirectoryUrl,
