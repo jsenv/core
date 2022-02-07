@@ -2,7 +2,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 
-import { collectProgramUrlReferences } from "@jsenv/core/src/internal/transform_js/program_url_references.js"
+import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
 
 export const babelPluginImportAssertions = (
   babel,
@@ -15,10 +15,10 @@ export const babelPluginImportAssertions = (
     // will throw an error when browser will execute the code
     visitor: {
       Program: (path) => {
-        const urlReferences = collectProgramUrlReferences(path)
-        urlReferences
+        const urlMentions = collectProgramUrlMentions(path)
+        urlMentions
           .filter(({ type }) => type === "import_exports")
-          .forEach(({ urlSpecifierPath, path }) => {
+          .forEach(({ specifierPath, path }) => {
             const importNode = path.node
             let assertionsDescriptor
             if (importNode.type === "CallExpression") {
@@ -55,16 +55,16 @@ export const babelPluginImportAssertions = (
             }
             const { type } = assertionsDescriptor
             if (type === "json" && transformJson) {
-              forceImportTypeOnSpecifier({
-                urlSpecifierPath,
+              forceImportTypeOnUrlSpecifier({
+                specifierPath,
                 babel,
                 importType: "json",
               })
               return
             }
             if (type === "css" && transformCss) {
-              forceImportTypeOnSpecifier({
-                urlSpecifierPath,
+              forceImportTypeOnUrlSpecifier({
+                specifierPath,
                 babel,
                 importType: "css",
               })
@@ -87,12 +87,12 @@ const getImportAssertionsDescriptor = (importAssertions) => {
   return importAssertionsDescriptor
 }
 
-const forceImportTypeOnSpecifier = ({
-  urlSpecifierPath,
+const forceImportTypeOnUrlSpecifier = ({
+  specifierPath,
   babel,
   importType,
 }) => {
-  const specifier = urlSpecifierPath.node.value
+  const specifier = specifierPath.node.value
   const fakeOrigin = "http://jsenv.com"
   const url = new URL(specifier, fakeOrigin)
   const urlWithImportType = injectQuery(url, {
@@ -104,20 +104,18 @@ const forceImportTypeOnSpecifier = ({
       urlWithImportType,
       fakeOrigin,
     )
-
-    replaceSpecifierUsingBabel(`./${specifierWithImportType}`, {
-      urlSpecifierPath,
+    replaceUrlSpecifierUsingBabel(`./${specifierWithImportType}`, {
+      specifierPath,
       babel,
     })
     return
   }
-
-  replaceSpecifierUsingBabel(urlWithImportType, {
-    urlSpecifierPath,
+  replaceUrlSpecifierUsingBabel(urlWithImportType, {
+    specifierPath,
     babel,
   })
 }
 
-const replaceSpecifierUsingBabel = (value, { urlSpecifierPath, babel }) => {
-  urlSpecifierPath.replaceWith(babel.types.stringLiteral(value))
+const replaceUrlSpecifierUsingBabel = (value, { specifierPath, babel }) => {
+  specifierPath.replaceWith(babel.types.stringLiteral(value))
 }

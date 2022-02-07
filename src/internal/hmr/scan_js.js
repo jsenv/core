@@ -1,12 +1,10 @@
 export const scanJs = ({ ressourceGraph, url, metadata }) => {
-  const dependencyUrls = metadata.urlDependencies.map(
-    ({ type, urlSpecifier }) => {
-      if (type === "url") {
-        return ressourceGraph.applyUrlResolution(urlSpecifier, url)
-      }
-      return ressourceGraph.applyImportmapResolution(urlSpecifier, url)
-    },
-  )
+  const dependencyUrls = metadata.urlMentions.map(({ type, specifier }) => {
+    if (type === "url") {
+      return ressourceGraph.applyUrlResolution(specifier, url)
+    }
+    return ressourceGraph.applyImportmapResolution(specifier, url)
+  })
   ressourceGraph.updateRessourceDependencies({
     url,
     type: "js",

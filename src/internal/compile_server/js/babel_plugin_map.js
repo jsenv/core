@@ -3,7 +3,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 
 import { babelPluginSyntaxes } from "./babel_plugin_syntaxes.js"
-import { babelPluginMetadataUrlDependencies } from "./babel_plugin_metadata_url_dependencies.js"
+import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginProxyExternalUrls } from "./babel_plugin_proxy_external_urls.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
@@ -71,7 +71,7 @@ export const loadBabelPluginMap = async ({
   // - BUT they cannot be missing features
   const babelPluginMapForJsenv = {
     "syntaxes": [babelPluginSyntaxes],
-    "metadata-url-dependencies": [babelPluginMetadataUrlDependencies],
+    "metadata-url-mentions": [babelPluginMetadataUrlMentions],
     "proxy-external-urls": [
       babelPluginProxyExternalUrls,
       { jsenvRemoteDirectory },
@@ -121,7 +121,7 @@ export const isBabelPluginForJsenv = (babelPluginName) =>
 
 const BABEL_PLUGIN_NAMES_FOR_JSENV = [
   "syntaxes",
-  "metadata-url-dependencies",
+  "metadata-url-mentions",
   "proxy-external-urls",
   "transform-replace-expressions",
 ]

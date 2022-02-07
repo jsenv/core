@@ -8,14 +8,14 @@
  *
  */
 
-export const collectProgramUrlReferences = (programPath) => {
-  const urlReferences = []
+export const collectProgramUrlMentions = (programPath) => {
+  const urlMentions = []
   programPath.traverse({
     NewExpression: (path) => {
       if (isNewUrlImportMetaUrl(path.node)) {
-        urlReferences.push({
+        urlMentions.push({
           type: "url",
-          urlSpecifierPath: path.get("arguments")[0],
+          specifierPath: path.get("arguments")[0],
           path,
         })
       }
@@ -31,16 +31,16 @@ export const collectProgramUrlReferences = (programPath) => {
         // import('./' + moduleName)
         return
       }
-      urlReferences.push({
+      urlMentions.push({
         type: "import_export",
-        urlSpecifierPath: path.get("arguments")[0],
+        specifierPath: path.get("arguments")[0],
         path,
       })
     },
     ExportAllDeclaration: (path) => {
-      urlReferences.push({
+      urlMentions.push({
         type: "import_export",
-        urlSpecifierPath: path.get("source"),
+        specifierPath: path.get("source"),
         path,
       })
     },
@@ -53,21 +53,21 @@ export const collectProgramUrlReferences = (programPath) => {
         // export function funcName() {}
         return
       }
-      urlReferences.push({
+      urlMentions.push({
         type: "import_export",
-        urlSpecifierPath: path.get("source"),
+        specifierPath: path.get("source"),
         path,
       })
     },
     ImportDeclaration: (path) => {
-      urlReferences.push({
+      urlMentions.push({
         type: "import_export",
-        urlSpecifierPath: path.get("source"),
+        specifierPath: path.get("source"),
         path,
       })
     },
   })
-  return urlReferences
+  return urlMentions
 }
 
 const isNewUrlImportMetaUrl = (node) => {

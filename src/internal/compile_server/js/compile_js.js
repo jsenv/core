@@ -56,9 +56,7 @@ export const compileJavascript = async ({
     {
       contentType: "application/javascript",
       coverage: metadata.coverage,
-      dependencies: metadata.urlDependencies.map(
-        ({ urlSpecifier }) => urlSpecifier,
-      ),
+      dependencies: metadata.urlMentions.map(({ specifier }) => specifier),
       code: transformResult.code,
       map: transformResult.map,
     },

@@ -3,21 +3,21 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
-import { collectProgramUrlReferences } from "@jsenv/core/src/internal/transform_js/program_url_references.js"
+import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
 
 const babelPluginTransformJsUrls = (babel, { transformUrlSpecifier }) => {
   return {
     name: "transform-js-urls",
     visitor: {
       Program: (path) => {
-        const urlReferences = collectProgramUrlReferences(path)
-        urlReferences.forEach(({ urlSpecifierPath }) => {
-          const specifier = urlSpecifierPath.node.value
+        const urlMentions = collectProgramUrlMentions(path)
+        urlMentions.forEach(({ specifierPath }) => {
+          const specifier = specifierPath.node.value
           const specifierTransformed = transformUrlSpecifier({
             specifier,
           })
           if (specifierTransformed !== specifier) {
-            urlSpecifierPath.replaceWith(
+            specifierPath.replaceWith(
               babel.types.stringLiteral(specifierTransformed),
             )
           }

@@ -1,6 +1,6 @@
 import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { collectProgramUrlReferences } from "@jsenv/core/src/internal/transform_js/program_url_references.js"
+import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
 
 export const babelPluginProxyExternalUrls = (
   babel,
@@ -10,9 +10,9 @@ export const babelPluginProxyExternalUrls = (
     name: "proxy-external-urls",
     visitor: {
       Program: (path, state) => {
-        const urlReferences = collectProgramUrlReferences(path)
-        urlReferences.forEach(({ urlSpecifierPath }) => {
-          const specifierNode = urlSpecifierPath.node
+        const urlMentions = collectProgramUrlMentions(path)
+        urlMentions.forEach(({ specifierPath }) => {
+          const specifierNode = specifierPath.node
           if (specifierNode.type === "StringLiteral") {
             const specifier = specifierNode.value
             if (
@@ -27,7 +27,7 @@ export const babelPluginProxyExternalUrls = (
                 importerFileUrl,
               )
               const specifierProxy = `./${urlRelativeToProject}`
-              urlSpecifierPath.replaceWith(
+              specifierPath.replaceWith(
                 babel.types.stringLiteral(specifierProxy),
               )
             }

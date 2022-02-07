@@ -1,15 +1,15 @@
 import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { collectProgramUrlReferences } from "@jsenv/core/src/internal/transform_js/program_url_references.js"
+import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
 
 export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
   return {
     name: "jsenv-hmr-esm",
     visitor: {
       Program(path, state) {
-        const urlReferences = collectProgramUrlReferences(path)
-        urlReferences.forEach(({ urlSpecifierPath }) => {
-          const specifierNode = urlSpecifierPath.node
+        const urlMentions = collectProgramUrlMentions(path)
+        urlMentions.forEach(({ specifierPath }) => {
+          const specifierNode = specifierPath.node
           if (specifierNode.type !== "StringLiteral") {
             return
           }
@@ -18,7 +18,7 @@ export const babelPluginHmrEsm = (babel, { ressourceGraph }) => {
             fileSystemPathToUrl(state.filename),
           )
           if (specifierWithHmr) {
-            urlSpecifierPath.replaceWith(
+            specifierPath.replaceWith(
               babel.types.stringLiteral(specifierWithHmr),
             )
           }
