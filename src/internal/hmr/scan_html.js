@@ -81,15 +81,7 @@ const collectHtmlDependenciesFromAst = (htmlAst) => {
     // }
     if (node.nodeName === "script") {
       if (hotAccepted === undefined) {
-        const typeAttr = getHtmlNodeAttributeByName(node, "type")
-        const type = typeAttr ? typeAttr.value : undefined && type === "module"
-        if (type === "module") {
-          // it's the module that will decide (if there import.meta.hot.accept() inside the module)
-          hotAccepted = true
-        } else {
-          // importmap and scripts cannot hotreload by default
-          hotAccepted = false
-        }
+        hotAccepted = false
       }
       visitAttributeAsUrlSpecifier({
         node,

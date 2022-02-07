@@ -33,7 +33,7 @@ import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compile_server/jse
 
 import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
 import { convertCssTextToJavascriptModule } from "./import_assertions/css_module.js"
-import { importMapsFromHtml } from "./html/html_scan.js"
+import { importMapsFromHtml } from "./html/importmaps_from_html.js"
 import { esToSystem } from "./global_format/es_to_system.js"
 import { createUrlFetcher } from "./url_fetcher.js"
 import { createUrlLoader } from "./url_loader.js"

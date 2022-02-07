@@ -17,12 +17,19 @@ export const reloadDOMNodesUsingUrls = (urlsToReload) => {
     )
   }
   const visitNodeAttributeAsUrl = (node, attributeName) => {
-    const attributeValue = node[attributeName]
-    if (attributeValue && shouldReloadUrl(attributeValue)) {
-      mutations.push(() => {
-        node[attributeName] = injectQuery(attributeValue, { t: Date.now() })
-      })
+    let attribute = node[attributeName]
+    if (!attribute) {
+      return
     }
+    if (SVGAnimatedString && attribute instanceof SVGAnimatedString) {
+      attribute = attribute.animVal
+    }
+    if (!shouldReloadUrl(attribute)) {
+      return
+    }
+    mutations.push(() => {
+      node[attributeName] = injectQuery(attribute, { t: Date.now() })
+    })
   }
   Array.from(document.querySelector("script")).forEach((script) => {
     visitNodeAttributeAsUrl(script, "src")

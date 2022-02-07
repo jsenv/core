@@ -241,3 +241,7 @@ const run = async () => {
 }
 
 run()
+
+if (import.meta.hot) {
+  import.meta.hot.accept()
+}

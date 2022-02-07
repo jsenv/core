@@ -82,7 +82,7 @@ const applyHotReload = async ({ updates }) => {
         return namespace
       }
       if (type === "html") {
-        if (!compareTwoUrlPaths(urlToFetch, window.location)) {
+        if (!compareTwoUrlPaths(urlToFetch, window.location.href)) {
           // we are not in that HTML page
           return null
         }

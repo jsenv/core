@@ -5,7 +5,7 @@ export const inferContextFrom = ({
   const { origin, pathname } = new URL(url)
   if (!pathname.startsWith(`/${jsenvDirectoryRelativeUrl}`)) {
     return {
-      compileServerOrigin: origin,
+      projectDirectoryServerUrl: `${origin}/`,
       jsenvDirectoryRelativeUrl: null,
       compileId: null,
       compileDirectoryRelativeUrl: null,
@@ -16,7 +16,7 @@ export const inferContextFrom = ({
   const nextSlashIndex = afterJsenvDirectory.indexOf("/")
   const compileId = afterJsenvDirectory.slice(0, nextSlashIndex)
   return {
-    compileServerOrigin: origin,
+    projectDirectoryServerUrl: `${origin}/`,
     jsenvDirectoryRelativeUrl,
     compileId,
     compileDirectoryRelativeUrl: `${jsenvDirectoryRelativeUrl}${compileId}/`,
@@ -24,43 +24,43 @@ export const inferContextFrom = ({
 }
 
 export const createUrlContext = ({
-  compileServerOrigin,
+  projectDirectoryServerUrl,
   compileDirectoryRelativeUrl,
 }) => {
   if (!compileDirectoryRelativeUrl) {
-    const compileDirectoryServerUrl = `${compileServerOrigin}/.jsenv/out/`
+    const compileDirectoryServerUrl = `${projectDirectoryServerUrl}.jsenv/out/`
     return {
       asSourceRelativeUrl: (url) => {
-        if (url.startsWith(compileServerOrigin)) {
-          return url.slice(compileServerOrigin.length)
+        if (url.startsWith(projectDirectoryServerUrl)) {
+          return url.slice(projectDirectoryServerUrl.length)
         }
         return url
       },
       asSourceUrl: (sourceRelativeUrl) => {
-        return `${compileServerOrigin}${sourceRelativeUrl}`
+        return `${projectDirectoryServerUrl}${sourceRelativeUrl}`
       },
       asCompiledUrl: (sourceRelativeUrl) => {
         return `${compileDirectoryServerUrl}${sourceRelativeUrl}`
       },
       asUrlToFetch: (sourceRelativeUrl) => {
-        return `${compileServerOrigin}${sourceRelativeUrl}`
+        return `${projectDirectoryServerUrl}${sourceRelativeUrl}`
       },
     }
   }
-  const compileDirectoryServerUrl = `${compileServerOrigin}/${compileDirectoryRelativeUrl}`
+  const compileDirectoryServerUrl = `${projectDirectoryServerUrl}${compileDirectoryRelativeUrl}`
   return {
     asSourceRelativeUrl: (url) => {
       console.log(url, compileDirectoryServerUrl)
       if (url.startsWith(compileDirectoryServerUrl)) {
         return url.slice(compileDirectoryServerUrl.length)
       }
-      if (url.startsWith(compileServerOrigin)) {
-        return url.slice(compileServerOrigin.length)
+      if (url.startsWith(projectDirectoryServerUrl)) {
+        return url.slice(projectDirectoryServerUrl.length)
       }
       return url
     },
     asSourceUrl: (sourceRelativeUrl) => {
-      return `${compileServerOrigin}${sourceRelativeUrl}`
+      return `${projectDirectoryServerUrl}${sourceRelativeUrl}`
     },
     asCompiledUrl: (sourceRelativeUrl) => {
       return `${compileDirectoryServerUrl}${sourceRelativeUrl}`

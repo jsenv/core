@@ -16,12 +16,10 @@ export const importMapsFromHtml = (htmlSource) => {
     if (!typeAttribute) {
       return
     }
-
     const type = typeAttribute.value
     if (type !== "importmap") {
       return
     }
-
     const srcAttribute = getHtmlNodeAttributeByName(htmlNode, "src")
     if (srcAttribute) {
       importmaps.push({
@@ -31,7 +29,6 @@ export const importMapsFromHtml = (htmlSource) => {
       })
       return
     }
-
     const textNode = getHtmlNodeTextNode(htmlNode)
     importmaps.push({
       type: "inline",
@@ -40,31 +37,4 @@ export const importMapsFromHtml = (htmlSource) => {
     })
   })
   return importmaps
-}
-
-export const preloadLinksFromHtml = (htmlSource) => {
-  const preloadLinks = []
-  const htmlAst = parseHtmlString(htmlSource)
-  visitHtmlAst(htmlAst, (htmlNode) => {
-    if (htmlNode.nodeName !== "link") {
-      return
-    }
-    const relAttribute = getHtmlNodeAttributeByName(htmlNode, "rel")
-    if (!relAttribute) {
-      return
-    }
-    const relAttributeValue = relAttribute.value
-    if (
-      relAttributeValue !== "preload" &&
-      relAttributeValue !== "modulepreload"
-    ) {
-      return
-    }
-
-    preloadLinks.push({
-      htmlNode,
-      rel: relAttributeValue,
-    })
-  })
-  return preloadLinks
 }
