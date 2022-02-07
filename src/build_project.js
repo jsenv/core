@@ -198,7 +198,7 @@ export const buildProject = async ({
     // keep source html untouched
     // here we don't need to inline importmap
     // nor to inject event_source_client, html_supervisor or toolbar
-    transformHtmlSourceFiles: false,
+    preserveHtmlSourceFiles: true,
     compileServerCanReadFromFilesystem: filesystemCache,
     compileServerCanWriteOnFilesystem: filesystemCache,
   })

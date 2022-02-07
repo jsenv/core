@@ -1,8 +1,8 @@
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
+import { scanJs } from "@jsenv/core/src/internal/hmr/scan_js.js"
 
-import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
+import { asCompilationResult } from "../jsenv_directory/compilation_result.js"
 import { shakeBabelPluginMap } from "../jsenv_directory/compile_profile.js"
-
 import { transformJs } from "./js_transformer.js"
 
 export const compileJavascript = async ({
@@ -47,35 +47,18 @@ export const compileJavascript = async ({
     map,
   })
   const metadata = transformResult.metadata
-  const dependencyUrls = metadata.dependencyUrls.map(
-    (dependencyUrlSpecifier) => {
-      // TODO: use ressourceGraph.resolveAssetUrl
-      // for import.meta.url + new URL)
-      return ressourceGraph.applyImportmapResolution(
-        dependencyUrlSpecifier,
-        url,
-      )
-    },
-  )
-  ressourceGraph.updateRessourceDependencies({
+  scanJs({
+    ressourceGraph,
     url,
-    type: "js",
-    dependencyUrls,
-    hotDecline: metadata.importMetaHotDecline,
-    hotAcceptSelf: metadata.importMetaHotAcceptSelf,
-    hotAcceptDependencies: metadata.importMetaHotAcceptDependencies.map(
-      (acceptDependencyUrlSpecifier) =>
-        ressourceGraph.applyImportmapResolution(
-          acceptDependencyUrlSpecifier,
-          url,
-        ),
-    ),
+    metadata,
   })
   return asCompilationResult(
     {
       contentType: "application/javascript",
       coverage: metadata.coverage,
-      dependencies: metadata.dependencyUrls,
+      dependencies: metadata.dependencyUrls.map(
+        ({ urlSpecifier }) => urlSpecifier,
+      ),
       code: transformResult.code,
       map: transformResult.map,
     },

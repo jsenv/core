@@ -11,13 +11,17 @@ export const babelPluginMetadataUrlDependencies = () => {
     visitor: {
       Program(path, state) {
         const urlDependencies = []
-        collectProgramUrlReferences(path).forEach(({ urlSpecifierPath }) => {
-          const specifierNode = urlSpecifierPath.node
-          if (specifierNode.type === "StringLiteral") {
-            const specifier = specifierNode.value
-            urlDependencies.push(specifier)
-          }
-        })
+        collectProgramUrlReferences(path).forEach(
+          ({ type, urlSpecifierPath }) => {
+            const urlSpecifierNode = urlSpecifierPath.node
+            if (urlSpecifierNode.type === "StringLiteral") {
+              urlDependencies.push({
+                type,
+                urlSpecifier: urlSpecifierNode.value,
+              })
+            }
+          },
+        )
         state.file.metadata.urlDependencies = urlDependencies
       },
     },

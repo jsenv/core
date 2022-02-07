@@ -18,7 +18,6 @@ import {
 } from "@jsenv/core/src/jsenv_file_urls.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
 import { createRessourceGraph } from "@jsenv/core/src/internal/hmr/ressource_graph.js"
-import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
@@ -32,6 +31,7 @@ import { createCompiledFileService } from "./compiled_file_service.js"
 import { createJsenvDistFileService } from "./jsenv_dist_file_service.js"
 import { createSourceFileService } from "./source_file_service.js"
 import { modifyHtml } from "./html/modify_html.js"
+import { modifyJs } from "./js/modify_js.js"
 import { loadBabelPluginMap } from "./js/babel_plugin_map.js"
 
 let compileServerId = 0
@@ -92,7 +92,7 @@ export const startCompileServer = async ({
   customServices = {},
   plugins,
 
-  transformHtmlSourceFiles = true,
+  preserveHtmlSourceFiles = false,
   hmr = false,
   eventSourceClient = false,
   htmlSupervisor = false,
@@ -105,6 +105,11 @@ export const startCompileServer = async ({
     throw new TypeError(
       `projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`,
     )
+  }
+  if (preserveHtmlSourceFiles) {
+    eventSourceClient = false
+    htmlSupervisor = false
+    toolbar = false
   }
   jsenvDirectoryRelativeUrl = assertAndNormalizeJsenvDirectoryRelativeUrl({
     projectDirectoryUrl,
@@ -308,20 +313,24 @@ export const startCompileServer = async ({
       jsenvRemoteDirectory,
       projectFileCacheStrategy,
       modifiers: {
-        ...(transformHtmlSourceFiles || hmr
+        ...(eventSourceClient || htmlSupervisor || toolbar || hmr
           ? {
               "text/html": async ({ url, code }) => {
                 return modifyHtml({
                   logger,
                   projectDirectoryUrl,
+                  ressourceGraph,
                   jsenvRemoteDirectory,
                   jsenvFileSelector,
-                  transformHtmlSourceFiles,
+
+                  preserveHtmlSourceFiles,
                   eventSourceClient,
                   htmlSupervisor,
                   toolbar,
+                  hmr,
+
                   url,
-                  code,
+                  html: code,
                 })
               },
             }
@@ -330,9 +339,10 @@ export const startCompileServer = async ({
           ? {
               "application/javascript": async ({ url, code }) => {
                 const content = await modifyJs({
+                  projectDirectoryUrl,
                   ressourceGraph,
                   url,
-                  code,
+                  js: code,
                 })
                 return {
                   content,

@@ -34,32 +34,39 @@ import {
 } from "@jsenv/core/src/internal/transform_html/html_inlining.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
+import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
 
 export const modifyHtml = async ({
   logger,
   projectDirectoryUrl,
+  ressourceGraph,
   jsenvRemoteDirectory,
   jsenvFileSelector,
 
+  preserveHtmlSourceFiles,
   eventSourceClient,
   htmlSupervisor,
   toolbar,
+  hmr,
+
   url,
-  code,
+  html,
 }) => {
   url = urlWithoutSearch(url)
-  const htmlAst = parseHtmlString(code)
+  const htmlAst = parseHtmlString(html)
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const artifacts = []
 
-  await mutateImportmapScripts({
-    logger,
-    projectDirectoryUrl,
-    url,
-    canUseScriptTypeImportmap: true,
-    htmlAst,
-    scripts,
-  })
+  if (!preserveHtmlSourceFiles) {
+    await mutateImportmapScripts({
+      logger,
+      projectDirectoryUrl,
+      url,
+      canUseScriptTypeImportmap: true,
+      htmlAst,
+      scripts,
+    })
+  }
   const isJsenvToolbar =
     url ===
     new URL(
@@ -106,13 +113,18 @@ export const modifyHtml = async ({
       }
     })
   }
-  await forceInlineRessources({
-    logger,
-    htmlAst,
-    htmlFileUrl: url,
-    projectDirectoryUrl,
-  })
+  if (!preserveHtmlSourceFiles) {
+    await forceInlineRessources({
+      logger,
+      htmlAst,
+      htmlFileUrl: url,
+      projectDirectoryUrl,
+    })
+  }
   const htmlModified = stringifyHtmlAst(htmlAst)
+  if (hmr) {
+    scanHtml({ ressourceGraph, url, html: htmlModified })
+  }
   return {
     content: htmlModified,
     artifacts,
