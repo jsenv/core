@@ -72,7 +72,7 @@ const cssBuildRelativeUrl =
   const cssString = await readFile(cssBuildUrl)
   const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
 
-  const actual = cssUrls.urlDeclarations[0].specifier
+  const actual = cssUrls[0].specifier
   const expected = urlToRelativeUrl(imgBuildUrl, cssBuildUrl)
   assert({ actual, expected })
 }

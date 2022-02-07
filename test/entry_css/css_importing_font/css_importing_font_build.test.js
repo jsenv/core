@@ -37,7 +37,7 @@ const cssString = await readFile(cssBuildUrl)
 
 // ensure font urls properly updated in css file
 const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
-const fontSpecifier = cssUrls.urlDeclarations[0].specifier
+const fontSpecifier = cssUrls[0].specifier
 const fontBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}roboto_thin.ttf`]
 const fontBuildUrl = resolveUrl(fontBuildRelativeUrl, buildDirectoryUrl)

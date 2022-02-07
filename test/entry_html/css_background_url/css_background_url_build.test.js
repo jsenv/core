@@ -45,6 +45,6 @@ const styleUrls = await parseCssUrls({
   url: styleBuildUrl,
 })
 
-const actual = styleUrls.urlDeclarations[0].specifier
+const actual = styleUrls[0].specifier
 const expected = urlToRelativeUrl(imgBuildUrl, styleBuildUrl)
 assert({ actual, expected })

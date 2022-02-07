@@ -65,7 +65,7 @@ const depCssBuildUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
     code: mainCssString,
     url: mainCssBuildUrl,
   })
-  const actual = mainCssUrls.atImports[0].specifier
+  const actual = mainCssUrls[0].specifier
   const expected = urlToRelativeUrl(depCssBuildUrl, mainCssBuildUrl)
   assert({ actual, expected })
 

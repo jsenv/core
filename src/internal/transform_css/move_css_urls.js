@@ -24,13 +24,13 @@ export const moveCssUrls = async ({
     sourcemapMethod,
     plugins: [
       postCssPluginUrlVisitor({
-        urlVisitor: ({ specifier }) => {
+        urlVisitor: ({ specifier, replace }) => {
           if (specifier[0] === "#") {
-            return null
+            return
           }
           const url = new URL(specifier, fromDirectoryUrl).href
           const relativeUrl = urlToRelativeUrl(url, toDirectoryUrl)
-          return relativeUrl
+          replace(relativeUrl)
         },
       }),
     ],

@@ -10,9 +10,9 @@ import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
 export const replaceCssUrls = async ({
   url,
-  code,
-  map,
   urlVisitor,
+  map,
+  code,
   cssConcatenation = false,
   cssConcatenationLoadImport,
   cssMinification = false,

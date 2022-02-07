@@ -92,33 +92,31 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               return
             }
 
-            const urlReference = {
-              type: "import",
+            urlVisitor({
+              type: "@import",
               specifier,
               url,
-              atImportNode,
+              declarationNode: atImportNode,
               urlNode,
-            }
-            const urlVisitorReturnValue = urlVisitor(urlReference)
-            if (
-              urlVisitorReturnValue &&
-              urlVisitorReturnValue !== urlNode.value
-            ) {
-              urlNode.value = urlVisitorReturnValue
-              const newParams = parsed.toString()
-              const newAtImportRule = new AtRule({
-                name: "import",
-                params: newParams,
-                source: atImportNode.source,
-              })
-              atImportNode.replaceWith(newAtImportRule)
-            }
+              replace: (newUrlSpecifier) => {
+                if (newUrlSpecifier === urlNode.value) {
+                  return
+                }
+                urlNode.value = newUrlSpecifier
+                const newParams = parsed.toString()
+                const newAtImportRule = new AtRule({
+                  name: "import",
+                  params: newParams,
+                  source: atImportNode.source,
+                })
+                atImportNode.replaceWith(newAtImportRule)
+              },
+            })
           },
         },
         Declaration: (declarationNode) => {
           const parsed = parseCssValue(declarationNode.value)
           const urlMutations = []
-
           walkUrls(parsed, {
             stringifyCssNodes,
             visitor: ({ url, urlNode }) => {
@@ -138,21 +136,18 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
 
               const specifier = url
               url = resolveUrl(specifier, fileSystemPathToUrl(from))
-
-              const urlReference = {
-                type: "asset",
+              urlVisitor({
+                type: "url",
                 specifier,
                 url,
                 declarationNode,
                 urlNode,
-              }
-
-              const urlVisitorReturnValue = urlVisitor(urlReference)
-              if (urlVisitorReturnValue) {
-                urlMutations.push(() => {
-                  urlNode.value = urlVisitorReturnValue
-                })
-              }
+                replace: (newUrlSpecifier) => {
+                  urlMutations.push(() => {
+                    urlNode.value = newUrlSpecifier
+                  })
+                },
+              })
             },
           })
 

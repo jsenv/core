@@ -61,31 +61,25 @@ export const parseCssRessource = async (
     })
   }
 
-  const { atImports, urlDeclarations } = await parseCssUrls({
+  const urlMentions = await parseCssUrls({
     code,
     url: cssUrl,
   })
   const urlNodeReferenceMapping = new Map()
   const atImportReferences = []
-  atImports.forEach((atImport) => {
-    const importReference = notifyReferenceFound({
-      referenceLabel: "css @import",
-      ressourceSpecifier: atImport.specifier,
-      ...cssNodeToReferenceLocation(atImport.urlDeclarationNode),
-    })
-    urlNodeReferenceMapping.set(atImport.urlNode, importReference)
-    atImportReferences.push(importReference)
-  })
-  urlDeclarations.forEach((urlDeclaration) => {
-    if (urlDeclaration.specifier[0] === "#") {
+  urlMentions.forEach((urlMention) => {
+    if (urlMention.specifier[0] === "#") {
       return
     }
     const urlReference = notifyReferenceFound({
-      referenceLabel: "css url",
-      ressourceSpecifier: urlDeclaration.specifier,
-      ...cssNodeToReferenceLocation(urlDeclaration.urlDeclarationNode),
+      referenceLabel: urlMention.type === "@import" ? "css @import" : "css url",
+      ressourceSpecifier: urlMention.specifier,
+      ...cssNodeToReferenceLocation(urlMention.declarationNode),
     })
-    urlNodeReferenceMapping.set(urlDeclaration.urlNode, urlReference)
+    urlNodeReferenceMapping.set(urlMention.urlNode, urlReference)
+    if (urlMention.type === "import") {
+      atImportReferences.push(urlReference)
+    }
   })
 
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
@@ -97,26 +91,27 @@ export const parseCssRessource = async (
       url: asProjectUrl(cssCompiledUrl),
       code,
       map,
-      urlVisitor: ({ urlNode }) => {
+      urlVisitor: ({ urlNode, replace }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
           isSameCssDocumentUrlNode(urlNodeCandidate, urlNode),
         )
         if (!urlNodeFound) {
-          return urlNode.value
+          return
         }
         // url node nous dit quel référence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
         const cssUrlRessource = urlNodeReference.ressource
         const { isExternal } = cssUrlRessource
         if (isExternal) {
-          return urlNode.value
+          return
         }
         const { isInline } = cssUrlRessource
         if (isInline) {
-          return getRessourceAsBase64Url(cssUrlRessource)
+          replace(getRessourceAsBase64Url(cssUrlRessource))
+          return
         }
-        return getUrlRelativeToImporter(cssUrlRessource)
+        replace(getUrlRelativeToImporter(cssUrlRessource))
       },
       cssConcatenation,
       cssConcatenationLoadImport: async (path) => {

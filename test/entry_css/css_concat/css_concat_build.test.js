@@ -39,8 +39,8 @@ const cssBuildUrl = resolveUrl("main_build.css", buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
 const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
-const imgSpecifier = cssUrls.urlDeclarations[0].specifier
-const filterSpecifier = cssUrls.urlDeclarations[1].specifier
+const imgSpecifier = cssUrls[0].specifier
+const filterSpecifier = cssUrls[1].specifier
 const imgBuildRelativeUrl =
   buildMappings[`${testDirectoryRelativeUrl}jsenv.png`]
 const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
