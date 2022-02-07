@@ -1,4 +1,4 @@
-import { fetchFileSystem } from "@jsenv/server"
+import { fetchFileSystem, urlToContentType } from "@jsenv/server"
 import {
   resolveUrl,
   resolveDirectoryUrl,
@@ -8,23 +8,12 @@ import {
 
 import { redirectorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
-import { injectQuery, setUrlExtension } from "../url_utils.js"
+import { injectQuery } from "../url_utils.js"
 
 import { compileFile } from "./compile_file.js"
 import { compileHtml } from "./html/compile_html.js"
 import { compileImportmap } from "./importmap/compile_importmap.js"
 import { compileJavascript } from "./js/compile_js.js"
-
-const jsenvCompilers = {
-  "**/*.js": compileJavascript,
-  "**/*.jsx": compileJavascript,
-  "**/*.ts": compileJavascript,
-  "**/*.tsx": compileJavascript,
-  "**/*.mjs": compileJavascript,
-
-  "**/*.html": compileHtml,
-  "**/*.importmap": compileImportmap,
-}
 
 export const createCompiledFileService = ({
   compileServerOperation,
@@ -59,9 +48,8 @@ export const createCompiledFileService = ({
       )
     }
   })
-  const compileMeta = normalizeStructuredMetaMap(
+  const customCompilerMeta = normalizeStructuredMetaMap(
     {
-      jsenvCompiler: jsenvCompilers,
       customCompiler: customCompilers,
     },
     projectDirectoryUrl,
@@ -125,7 +113,7 @@ export const createCompiledFileService = ({
       originalFileRelativeUrl,
       compileDirectoryUrl,
     )
-    const compiler = getCompiler({ originalFileUrl, compileMeta })
+    const compiler = getCompiler({ originalFileUrl, customCompilerMeta })
     // no compiler -> serve original file
     // we redirect "internally" (we dont send 304 to the browser)
     // to keep ressource tracking and url resolution simple
@@ -190,7 +178,7 @@ export const createCompiledFileService = ({
   }
 }
 
-const getCompiler = ({ originalFileUrl, compileMeta }) => {
+const getCompiler = ({ originalFileUrl, customCompilerMeta }) => {
   // we remove eventual query param from the url
   // Without this a pattern like "**/*.js" would not match "file.js?t=1"
   // This would result in file not being compiled when they should
@@ -198,33 +186,25 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
   const urlObject = new URL(originalFileUrl)
   urlObject.search = ""
   originalFileUrl = urlObject.href
-  const { jsenvCompiler, customCompiler } = urlToMeta({
+  const { customCompiler } = urlToMeta({
     url: originalFileUrl,
-    structuredMetaMap: compileMeta,
+    structuredMetaMap: customCompilerMeta,
   })
-  if (!jsenvCompiler && !customCompiler) {
-    return null
+  if (!customCompiler) {
+    const contentType = urlToContentType(originalFileUrl)
+    const jsenvCompiler = jsenvCompilers[contentType]
+    return jsenvCompiler || null
   }
-  // there is only a jsenvCompiler
-  if (jsenvCompiler && !customCompiler) {
-    return jsenvCompiler
-  }
-  // there is a custom compiler and potentially a jsenv compiler
   return async (params) => {
     // do custom compilation first
     const customCompilerReturnValue = await customCompiler(params)
-    // then check if jsenv compiler should apply
-    // to the new result contentType
-    const jsenvCompilerAfterCustomCompilation =
-      getJsenvCompilerAfterCustomCompilation({
-        url: originalFileUrl,
-        compileMeta,
-        customCompilerReturnValue,
-      })
-    if (!jsenvCompilerAfterCustomCompilation) {
+    const contentType = customCompilerReturnValue.contentType
+    // check if there is a jsenv compiler for this contentType
+    const jsenvCompiler = jsenvCompilers[contentType]
+    if (!jsenvCompiler) {
       return customCompilerReturnValue
     }
-    const jsenvCompilerReturnValue = await jsenvCompilerAfterCustomCompilation({
+    const jsenvCompilerReturnValue = await jsenvCompiler({
       ...params,
       code: customCompilerReturnValue.compiledSource,
       map: customCompilerReturnValue.sourcemap,
@@ -236,31 +216,8 @@ const getCompiler = ({ originalFileUrl, compileMeta }) => {
   }
 }
 
-const getJsenvCompilerAfterCustomCompilation = ({
-  url,
-  compileMeta,
-  customCompilerReturnValue,
-}) => {
-  if (customCompilerReturnValue.isBuild) {
-    return null
-  }
-  const extensionToForce =
-    contentTypeExtensions[customCompilerReturnValue.contentType]
-  const urlForcingExtension = extensionToForce
-    ? setUrlExtension(url, extensionToForce)
-    : url
-  const { jsenvCompiler } = urlToMeta({
-    url: urlForcingExtension,
-    structuredMetaMap: compileMeta,
-  })
-  return jsenvCompiler
-}
-
-// should match contentType where there is a jsenv compiler
-// back to an extension
-const contentTypeExtensions = {
-  "application/javascript": ".js",
-  "text/html": ".html",
-  "application/importmap+json": ".importmap",
-  // "text/css": ".css",
+const jsenvCompilers = {
+  "text/html": compileHtml,
+  "application/importmap+json": compileImportmap,
+  "application/javascript": compileJavascript,
 }
