@@ -7,10 +7,10 @@ import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/htm
 
 export const scanHtml = ({ ressourceGraph, url, html }) => {
   const htmlAst = parseHtmlString(html)
-  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
+  const htmlUrlMentions = collectHtmlUrlMentions(htmlAst)
   const dependencyUrls = []
   const hotAcceptDependencies = []
-  htmlDependencies.forEach(({ specifier, hotAccepted }) => {
+  htmlUrlMentions.forEach(({ specifier, hotAccepted }) => {
     const ressourceUrl = ressourceGraph.applyUrlResolution(specifier, url)
     // adding url to "dependencyUrls" means html uses an url
     // and should reload (hot or full) when an url changes
@@ -41,14 +41,14 @@ export const scanHtml = ({ ressourceGraph, url, html }) => {
   return dependencyUrls
 }
 
-const collectHtmlDependenciesFromAst = (htmlAst) => {
-  const dependencies = []
+const collectHtmlUrlMentions = (htmlAst) => {
+  const htmlUrlMentions = []
   const addDependency = ({ node, attribute, specifier, hotAccepted }) => {
     // ignore local url specifier (<use href="#logo"> or <a href="#">)
     if (specifier[0] === "#") {
       return
     }
-    dependencies.push({
+    htmlUrlMentions.push({
       htmlNode: node,
       attribute,
       specifier,
@@ -215,5 +215,5 @@ const collectHtmlDependenciesFromAst = (htmlAst) => {
     }
   }
   iterate(htmlAst, {})
-  return dependencies
+  return htmlUrlMentions
 }
