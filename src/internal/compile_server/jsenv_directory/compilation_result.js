@@ -23,7 +23,7 @@ import { testFilePresence } from "./fs_optimized_for_cache.js"
 const isWindows = process.platform === "win32"
 
 export const asCompilationResult = async (
-  { contentType, metadata = {}, code, map },
+  { contentType, coverage, dependencies = [], code, map },
   {
     projectDirectoryUrl,
     jsenvRemoteDirectory,
@@ -172,7 +172,6 @@ export const asCompilationResult = async (
     })
   }
 
-  const { coverage } = metadata
   if (coverage) {
     const coverageAssetFileUrl = generateCompilationAssetUrl(
       compiledFileUrl,
@@ -183,8 +182,6 @@ export const asCompilationResult = async (
       content: stringifyCoverage(coverage),
     })
   }
-
-  const { dependencies = [] } = metadata
 
   return {
     contentType,

@@ -2,7 +2,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 
-import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
+import { collectProgramUrlReferences } from "@jsenv/core/src/internal/transform_js/program_url_references.js"
 
 export const babelPluginImportAssertions = (
   babel,
@@ -15,63 +15,62 @@ export const babelPluginImportAssertions = (
     // will throw an error when browser will execute the code
     visitor: {
       Program: (path) => {
-        traverseProgramImports(path, ({ importPath, specifierPath }) => {
-          const importNode = importPath.node
-          let assertionsDescriptor
-          if (importNode.type === "CallExpression") {
-            const args = importNode.arguments
-            const secondArg = args[1]
-            if (!secondArg) {
+        const urlReferences = collectProgramUrlReferences(path)
+        urlReferences
+          .filter(({ type }) => type === "import_exports")
+          .forEach(({ urlSpecifierPath, path }) => {
+            const importNode = path.node
+            let assertionsDescriptor
+            if (importNode.type === "CallExpression") {
+              const args = importNode.arguments
+              const secondArg = args[1]
+              if (!secondArg) {
+                return
+              }
+              const { properties } = secondArg
+              const assertProperty = properties.find((property) => {
+                return property.key.name === "assert"
+              })
+              if (!assertProperty) {
+                return
+              }
+              const assertProperties = assertProperty.value.properties
+              const typePropertyNode = assertProperties.find((property) => {
+                return property.key.name === "type"
+              })
+              if (!typePropertyNode) {
+                return
+              }
+              const typePropertyValue = typePropertyNode.value
+              if (typePropertyValue.type !== "StringLiteral") {
+                return
+              }
+              assertionsDescriptor = {
+                type: typePropertyValue.value,
+              }
+            } else {
+              assertionsDescriptor = getImportAssertionsDescriptor(
+                path.node.assertions,
+              )
+            }
+            const { type } = assertionsDescriptor
+            if (type === "json" && transformJson) {
+              forceImportTypeOnSpecifier({
+                urlSpecifierPath,
+                babel,
+                importType: "json",
+              })
               return
             }
-
-            const { properties } = secondArg
-            const assertProperty = properties.find((property) => {
-              return property.key.name === "assert"
-            })
-            if (!assertProperty) {
+            if (type === "css" && transformCss) {
+              forceImportTypeOnSpecifier({
+                urlSpecifierPath,
+                babel,
+                importType: "css",
+              })
               return
             }
-
-            const assertProperties = assertProperty.value.properties
-            const typePropertyNode = assertProperties.find((property) => {
-              return property.key.name === "type"
-            })
-            if (!typePropertyNode) {
-              return
-            }
-
-            const typePropertyValue = typePropertyNode.value
-            if (typePropertyValue.type !== "StringLiteral") {
-              return
-            }
-
-            assertionsDescriptor = {
-              type: typePropertyValue.value,
-            }
-          } else {
-            assertionsDescriptor = getImportAssertionsDescriptor(
-              importPath.node.assertions,
-            )
-          }
-          const { type } = assertionsDescriptor
-          if (type === "json" && transformJson) {
-            forceImportTypeOnSpecifier({
-              specifierPath,
-              babel,
-              importType: "json",
-            })
-            return
-          }
-          if (type === "css" && transformCss) {
-            forceImportTypeOnSpecifier({
-              specifierPath,
-              babel,
-              importType: "css",
-            })
-            return
-          }
-        })
+          })
       },
     },
   }
@@ -88,8 +87,12 @@ const getImportAssertionsDescriptor = (importAssertions) => {
   return importAssertionsDescriptor
 }
 
-const forceImportTypeOnSpecifier = ({ specifierPath, babel, importType }) => {
-  const specifier = specifierPath.node.value
+const forceImportTypeOnSpecifier = ({
+  urlSpecifierPath,
+  babel,
+  importType,
+}) => {
+  const specifier = urlSpecifierPath.node.value
   const fakeOrigin = "http://jsenv.com"
   const url = new URL(specifier, fakeOrigin)
   const urlWithImportType = injectQuery(url, {
@@ -103,18 +106,18 @@ const forceImportTypeOnSpecifier = ({ specifierPath, babel, importType }) => {
     )
 
     replaceSpecifierUsingBabel(`./${specifierWithImportType}`, {
-      specifierPath,
+      urlSpecifierPath,
       babel,
     })
     return
   }
 
   replaceSpecifierUsingBabel(urlWithImportType, {
-    specifierPath,
+    urlSpecifierPath,
     babel,
   })
 }
 
-const replaceSpecifierUsingBabel = (value, { specifierPath, babel }) => {
-  specifierPath.replaceWith(babel.types.stringLiteral(value))
+const replaceSpecifierUsingBabel = (value, { urlSpecifierPath, babel }) => {
+  urlSpecifierPath.replaceWith(babel.types.stringLiteral(value))
 }

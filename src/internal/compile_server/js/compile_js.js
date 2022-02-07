@@ -47,17 +47,20 @@ export const compileJavascript = async ({
     map,
   })
   const metadata = transformResult.metadata
-  ressourceGraph.updateRessourceDependencies({
-    url,
-    type: "js",
-    dependencyUrls: metadata.dependencies.map((dependencyUrlSpecifier) => {
+  const dependencyUrls = metadata.dependencyUrls.map(
+    (dependencyUrlSpecifier) => {
       // TODO: use ressourceGraph.resolveAssetUrl
       // for import.meta.url + new URL)
       return ressourceGraph.applyImportmapResolution(
         dependencyUrlSpecifier,
         url,
       )
-    }),
+    },
+  )
+  ressourceGraph.updateRessourceDependencies({
+    url,
+    type: "js",
+    dependencyUrls,
     hotDecline: metadata.importMetaHotDecline,
     hotAcceptSelf: metadata.importMetaHotAcceptSelf,
     hotAcceptDependencies: metadata.importMetaHotAcceptDependencies.map(
@@ -71,7 +74,8 @@ export const compileJavascript = async ({
   return asCompilationResult(
     {
       contentType: "application/javascript",
-      metadata,
+      coverage: metadata.coverage,
+      dependencies: metadata.dependencyUrls,
       code: transformResult.code,
       map: transformResult.map,
     },

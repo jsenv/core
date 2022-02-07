@@ -1,17 +1,18 @@
 import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { traverseProgramImports } from "@jsenv/core/src/internal/transform_js/traverse_program_imports.js"
+import { collectProgramUrlReferences } from "@jsenv/core/src/internal/transform_js/program_url_references.js"
 
-export const babelPluginProxyExternalImports = (
+export const babelPluginProxyExternalUrls = (
   babel,
   { jsenvRemoteDirectory },
 ) => {
   return {
-    name: "proxy-external-imports",
+    name: "proxy-external-urls",
     visitor: {
-      Program: (path) => {
-        traverseProgramImports(path, ({ specifierPath, state }) => {
-          const specifierNode = specifierPath.node
+      Program: (path, state) => {
+        const urlReferences = collectProgramUrlReferences(path)
+        urlReferences.forEach(({ urlSpecifierPath }) => {
+          const specifierNode = urlSpecifierPath.node
           if (specifierNode.type === "StringLiteral") {
             const specifier = specifierNode.value
             if (
@@ -26,7 +27,7 @@ export const babelPluginProxyExternalImports = (
                 importerFileUrl,
               )
               const specifierProxy = `./${urlRelativeToProject}`
-              specifierPath.replaceWith(
+              urlSpecifierPath.replaceWith(
                 babel.types.stringLiteral(specifierProxy),
               )
             }

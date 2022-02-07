@@ -12,7 +12,6 @@ export const visitImportReferences = async ({
         })
         return
       }
-
       if (node.type === "ImportDeclaration") {
         const { assertions = [] } = node
         if (assertions.length === 0) {
@@ -25,7 +24,6 @@ export const visitImportReferences = async ({
         })
         return
       }
-
       if (
         node.type === "ObjectExpression" &&
         parent.type === "ImportExpression"
@@ -37,7 +35,6 @@ export const visitImportReferences = async ({
         if (!assertProperty) {
           return
         }
-
         const assertProperties = assertProperty.value.properties
         const typePropertyNode = assertProperties.find((property) => {
           return property.key.name === "type"
@@ -45,7 +42,6 @@ export const visitImportReferences = async ({
         if (!typePropertyNode) {
           return
         }
-
         await onReferenceWithImportAssertion({
           importNode: parent,
           typePropertyNode,

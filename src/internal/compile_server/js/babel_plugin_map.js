@@ -3,8 +3,8 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { loadBabelPluginMapFromFile } from "./load_babel_plugin_map_from_file.js"
 
 import { babelPluginSyntaxes } from "./babel_plugin_syntaxes.js"
-import { babelPluginImportMetadata } from "./babel_plugin_import_metadata.js"
-import { babelPluginProxyExternalImports } from "./babel_plugin_proxy_external_imports.js"
+import { babelPluginMetadataUrlDependencies } from "./babel_plugin_metadata_url_dependencies.js"
+import { babelPluginProxyExternalUrls } from "./babel_plugin_proxy_external_urls.js"
 import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./babel_plugin_global_this_as_jsenv_import.js"
@@ -71,9 +71,9 @@ export const loadBabelPluginMap = async ({
   // - BUT they cannot be missing features
   const babelPluginMapForJsenv = {
     "syntaxes": [babelPluginSyntaxes],
-    "import-metadata": [babelPluginImportMetadata],
-    "proxy-external-imports": [
-      babelPluginProxyExternalImports,
+    "metadata-url-dependencies": [babelPluginMetadataUrlDependencies],
+    "proxy-external-urls": [
+      babelPluginProxyExternalUrls,
       { jsenvRemoteDirectory },
     ],
     // When code should be compatible with browsers, ensure
@@ -121,8 +121,8 @@ export const isBabelPluginForJsenv = (babelPluginName) =>
 
 const BABEL_PLUGIN_NAMES_FOR_JSENV = [
   "syntaxes",
-  "import-metadata",
-  "proxy-external-imports",
+  "metadata-url-dependencies",
+  "proxy-external-urls",
   "transform-replace-expressions",
 ]
 

@@ -348,6 +348,18 @@ export const startCompileServer = async ({
               },
             }
           : {}),
+        ...(hmr
+          ? {
+              "application/javascript": async ({ url, code }) => {
+                // deux choses a faire:
+                // 1. parcourir le js pour y trouver les import.meta.hot
+                // 2. parcourir le js pour y trouver les dépendences et
+                // mettre a jour le ressourceGraph
+                // il faudra que new URL('./file.txt', import.meta.url)
+                // compte aussi comme une dep
+              },
+            }
+          : {}),
       },
     }),
   }
