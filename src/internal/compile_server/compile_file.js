@@ -110,8 +110,7 @@ export const compileFile = async ({
         request,
       })
       if (dependencyResolver) {
-        compileResult.dependencies.forEach((dependency) => {
-          const dependencyUrl = dependencyResolver.resolve(dependency)
+        compileResult.dependencies.forEach((dependencyUrl) => {
           if (!urlIsInsideOf(dependencyUrl, request.origin)) {
             // ignore external urls
             return

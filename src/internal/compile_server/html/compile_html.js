@@ -8,13 +8,13 @@ import {
   setJavaScriptSourceMappingUrl,
   sourcemapToBase64Url,
 } from "@jsenv/core/src/internal/sourcemap_utils.js"
+import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
 
 import { transformJs } from "../js/js_transformer.js"
 import {
   injectBeforeFirstHeadScript,
   parseHtmlString,
   parseHtmlAstRessources,
-  collectHtmlDependenciesFromAst,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   removeHtmlNodeAttribute,
@@ -82,7 +82,6 @@ export const compileHtml = async ({
   addHtmlSourceFile({ url, content: code })
 
   const { scripts } = parseHtmlAstRessources(htmlAst)
-  const htmlDependencies = collectHtmlDependenciesFromAst(htmlAst)
 
   const htmlAssetGenerators = []
   const htmlMutations = []
@@ -91,14 +90,6 @@ export const compileHtml = async ({
   }
   const addHtmlMutation = (htmlMutation) => {
     htmlMutations.push(htmlMutation)
-  }
-  // this will likely disappear, instead we'll put something special
-  // on supervised tag to allow html to discover the dependency
-  const injectHtmlDependency = ({ htmlNode, specifier }) => {
-    htmlDependencies.push({
-      htmlNode,
-      specifier,
-    })
   }
   if (compileProfile.moduleOutFormat !== "esmodule") {
     const ressourceHints = collectRessourceHints(htmlAst)
@@ -150,7 +141,6 @@ export const compileHtml = async ({
     addHtmlSourceFile,
     addHtmlAssetGenerator,
     addHtmlMutation,
-    injectHtmlDependency,
   })
   await Promise.all(
     htmlAssetGenerators.map(async (htmlAssetGenerator) => {
@@ -167,35 +157,10 @@ export const compileHtml = async ({
   })
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
-  const dependencyUrls = []
-  const hotAcceptDependencies = []
-  htmlDependencies.forEach(({ specifier, hotAccepted }) => {
-    const ressourceUrl = ressourceGraph.applyUrlResolution(specifier, url)
-    // adding url to "dependencyUrls" means html uses an url
-    // and should reload (hot or full) when an url changes
-    dependencyUrls.push(ressourceUrl)
-    // Adding url to "hotAcceptDependencies" means html hot_reload these ressources:
-    // something like this: link.href = `${link.href}?hmr=${Date.now()}`)
-    // If some url must trigger a full reload of the html page it should be excluded from
-    // "hotAcceptDependencies".
-    // There is some "smart" default applied in "collectHtmlDependenciesFromAst"
-    // to decide what should hot reload / fullreload:
-    // By default:
-    //   - hot reload on <img src="./image.png" />
-    //   - fullreload on <script src="./file.js" />
-    // Can be controlled by [hot-decline] and [hot-accept]:
-    //   - fullreload on <img src="./image.png" hot-decline />
-    //   - hot reload on <script src="./file.js" hot-accept />
-    if (hotAccepted) {
-      hotAcceptDependencies.push(ressourceUrl)
-    }
-  })
-  ressourceGraph.updateRessourceDependencies({
+  const dependencyUrls = scanHtml({
     url,
-    type: "html",
-    dependencyUrls,
-    hotAcceptSelf: false,
-    hotAcceptDependencies,
+    html: htmlAfterTransformation,
+    ressourceGraph,
   })
   return {
     contentType: "text/html",
@@ -204,9 +169,7 @@ export const compileHtml = async ({
     sourcesContent,
     assets,
     assetsContent,
-    dependencies: htmlDependencies.map(({ specifier }) => {
-      return specifier
-    }),
+    dependencies: dependencyUrls,
   }
 }
 
@@ -268,7 +231,6 @@ const visitScripts = async ({
 
   scripts,
   addHtmlAssetGenerator,
-  injectHtmlDependency,
 }) => {
   const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
   const supervisedScripts = superviseScripts({
@@ -308,10 +270,6 @@ const visitScripts = async ({
             sourcemapMethod,
             code: textContent,
           })
-        })
-        injectHtmlDependency({
-          htmlNode: script,
-          specifier: inlineSrc,
         })
       }
     },

@@ -9,6 +9,7 @@ import {
   getHtmlNodeTextNode,
   removeHtmlNodeAttribute,
   setHtmlNodeText,
+  addHtmlNodeAttribute,
   createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
@@ -85,6 +86,7 @@ export const mutateImportmapScripts = async ({
     )
     const importmapAsText = JSON.stringify(importmap, null, "  ")
     removeHtmlNodeAttribute(firstImportmapScript, srcAttribute)
+    addHtmlNodeAttribute(firstImportmapScript, "content-src", src)
     setHtmlNodeText(firstImportmapScript, importmapAsText)
     if (!canUseScriptTypeImportmap) {
       const typeAttribute = getHtmlNodeAttributeByName(

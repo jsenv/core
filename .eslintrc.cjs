@@ -103,6 +103,7 @@ const eslintConfig = composeEslintConfig(
       {
         files: [
           "**/**/*.html",
+          "dev_exploring/**/*.js",
           "**/html_supervisor/**/*.js",
           "**/browser_utils/**/*.js",
           "**/browser_detection/**/*.js",
