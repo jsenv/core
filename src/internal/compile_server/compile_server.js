@@ -315,7 +315,7 @@ export const startCompileServer = async ({
       modifiers: {
         ...(transformHtmlSourceFiles || hmr
           ? {
-              "text/html": async ({ code }) => {
+              "text/html": async ({ url, code }) => {
                 let content = code
                 let artifacts = []
                 if (transformHtmlSourceFiles) {
@@ -328,6 +328,7 @@ export const startCompileServer = async ({
                     eventSourceClient,
                     htmlSupervisor,
                     toolbar,
+                    url,
                     code,
                   })
                   content = modifyResult.content
@@ -335,8 +336,9 @@ export const startCompileServer = async ({
                 }
                 if (hmr) {
                   await scanHtml({
-                    code: content,
                     ressourceGraph,
+                    url,
+                    html: content,
                   })
                 }
                 return {

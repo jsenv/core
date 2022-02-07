@@ -89,21 +89,24 @@ export const removeHtmlNodeAttribute = (htmlNode, attributeToRemove) => {
   return true
 }
 
-export const addHtmlNodeAttribute = (htmlNode, attributeToSet) => {
-  if (typeof attributeToSet !== "object") {
-    throw new TypeError(
-      `addHtmlNodeAttribute attribute must be an object {name, value}`,
+export const assignHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
+  if (typeof attributesToAssign !== "object") {
+    throw new TypeError(`assignHtmlNodeAttributes second arg must be an object`)
+  }
+  Object.keys(attributesToAssign).forEach((key) => {
+    const existingAttributeIndex = htmlNode.attrs.findIndex(
+      ({ name }) => name === key,
     )
-  }
-
-  const existingAttributeIndex = htmlNode.attrs.findIndex(
-    (attr) => attr.name === attributeToSet.name,
-  )
-  if (existingAttributeIndex === -1) {
-    htmlNode.attrs.push(attributeToSet)
-  } else {
-    htmlNode.attrs[existingAttributeIndex] = attributeToSet
-  }
+    const value = attributesToAssign[key]
+    if (existingAttributeIndex === -1) {
+      htmlNode.attrs.push({
+        name: key,
+        value,
+      })
+    } else {
+      htmlNode.attrs[existingAttributeIndex].value = value
+    }
+  })
 }
 
 export const getHtmlNodeTextNode = (htmlNode) => {

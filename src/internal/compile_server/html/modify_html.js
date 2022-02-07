@@ -36,28 +36,28 @@ export const modifyHtml = async ({
   projectDirectoryUrl,
   jsenvRemoteDirectory,
   jsenvFileSelector,
-  fileUrl,
-  fileContent,
 
   eventSourceClient,
   htmlSupervisor,
   toolbar,
+  url,
+  code,
 }) => {
-  fileUrl = urlWithoutSearch(fileUrl)
-  const htmlAst = parseHtmlString(fileContent)
+  url = urlWithoutSearch(url)
+  const htmlAst = parseHtmlString(code)
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const artifacts = []
 
   await mutateImportmapScripts({
     logger,
     projectDirectoryUrl,
-    url: fileUrl,
+    url,
     canUseScriptTypeImportmap: true,
     htmlAst,
     scripts,
   })
   const isJsenvToolbar =
-    fileUrl ===
+    url ===
     new URL(
       "./src/internal/dev_server/toolbar/toolbar.html",
       jsenvCoreDirectoryUrl,
@@ -88,7 +88,7 @@ export const modifyHtml = async ({
     const supervisedScripts = superviseScripts({
       jsenvRemoteDirectory,
       jsenvFileSelector,
-      url: fileUrl,
+      url,
       canUseScriptTypeModule: true,
       scripts,
     })
@@ -105,7 +105,7 @@ export const modifyHtml = async ({
   await forceInlineRessources({
     logger,
     htmlAst,
-    htmlFileUrl: fileUrl,
+    htmlFileUrl: url,
     projectDirectoryUrl,
   })
   const htmlModified = stringifyHtmlAst(htmlAst)

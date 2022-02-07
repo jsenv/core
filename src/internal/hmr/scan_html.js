@@ -163,7 +163,7 @@ const collectHtmlDependenciesFromAst = (htmlAst) => {
       addDependency({
         node,
         attribute,
-        value,
+        specifier: value,
         hotAccepted,
       })
     } else if (attributeName === "src") {
@@ -183,7 +183,7 @@ const collectHtmlDependenciesFromAst = (htmlAst) => {
         addDependency({
           node,
           attribute: srcsetAttribute,
-          value: srcCandidate.specifier,
+          specifier: srcCandidate.specifier,
           hotAccepted,
         })
       })

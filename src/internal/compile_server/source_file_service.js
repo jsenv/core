@@ -51,6 +51,7 @@ export const createSourceFileService = ({
     }
     const buffer = await readNodeStream(response.body)
     const { content, artifacts } = await modifier({
+      url,
       code: String(buffer),
     })
     ressourceArtifacts.updateRessourceArtifacts(url, artifacts)

@@ -31,7 +31,7 @@ import {
   getHtmlNodeTextNode,
   getHtmlNodeLocation,
   removeHtmlNode,
-  addHtmlNodeAttribute,
+  assignHtmlNodeAttributes,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
 import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_urls.js"
@@ -629,7 +629,7 @@ const linkHrefVisitor = (
       const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
       relAttribute.value = "preload"
       hrefAttribute.value = urlRelativeToImporter
-      addHtmlNodeAttribute(link, { name: "as", value: "script" })
+      assignHtmlNodeAttributes(link, { as: "script" })
       return
     }
     if (shouldInline({ ressource, htmlNode: link })) {

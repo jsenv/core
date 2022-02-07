@@ -7,7 +7,7 @@ import {
   getIdForInlineHtmlNode,
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
-  addHtmlNodeAttribute,
+  assignHtmlNodeAttributes,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlSupervisorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 
@@ -65,7 +65,7 @@ export const superviseScripts = ({
         crossorigin,
       })
       removeHtmlNodeAttributeByName(script, "src")
-      addHtmlNodeAttribute(script, "content-src", src)
+      assignHtmlNodeAttributes(script, { "content-src": src })
       setHtmlNodeText(
         script,
         generateCodeToSuperviseScript({

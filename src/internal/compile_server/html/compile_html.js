@@ -19,7 +19,7 @@ import {
   getHtmlNodeAttributeByName,
   removeHtmlNodeAttribute,
   visitHtmlAst,
-  addHtmlNodeAttribute,
+  assignHtmlNodeAttributes,
   removeHtmlNodeAttributeByName,
   createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
@@ -202,7 +202,7 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
           if (asAttribute) {
             asAttribute.value = "script"
           } else {
-            addHtmlNodeAttribute(ressourceHint, { name: "as", value: "script" })
+            assignHtmlNodeAttributes(ressourceHint, { as: "script" })
           }
         })
         return
