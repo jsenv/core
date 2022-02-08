@@ -1,6 +1,6 @@
 import { replaceCssUrls } from "@jsenv/core/src/internal/transform_css/replace_css_urls.js"
 
-export const injectHmrInCssUrls = async ({ ressourceGraph, url, code }) => {
+export const injectHmrInCssUrls = async ({ ressourceGraph, url, content }) => {
   const result = await replaceCssUrls({
     url,
     urlVisitor: ({ specifier, replace }) => {
@@ -12,7 +12,7 @@ export const injectHmrInCssUrls = async ({ ressourceGraph, url, code }) => {
         replace(urlSpecifierWithHmr)
       }
     },
-    code,
+    content,
   })
-  return result.code
+  return result.content
 }

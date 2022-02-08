@@ -101,7 +101,7 @@ export const compileFile = async ({
         url: originalFileUrl,
         contentType,
         moduleFormat: compileProfile.moduleOutFormat,
-        code: content,
+        content,
       })
       return {
         status: 200,

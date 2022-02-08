@@ -144,13 +144,12 @@ const computeCompileReport = async ({
       throw error
     }
     const buffer = await readNodeStream(response.body)
-    const code = String(buffer)
     const [compileTiming, compileResult] = await timeFunction(
       "compile",
       async () => {
         logger.debug(`compile ${originalFileUrl}`)
         const compileReturnValue = await compile({
-          code,
+          content: String(buffer),
         })
         if (
           typeof compileReturnValue !== "object" ||

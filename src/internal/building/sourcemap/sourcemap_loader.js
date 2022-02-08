@@ -8,12 +8,11 @@ import { validateResponse } from "@jsenv/core/src/internal/response_validation.j
 export const loadSourcemap = async ({
   signal,
   logger,
-
-  code,
-  url,
   getSourceMappingUrl,
+  url,
+  content,
 } = {}) => {
-  const sourcemapSpecifier = getSourceMappingUrl(code)
+  const sourcemapSpecifier = getSourceMappingUrl(content)
   if (!sourcemapSpecifier) {
     return null
   }

@@ -44,11 +44,11 @@ export const compileHtml = async ({
   toolbar,
 
   sourcemapMethod,
-  html,
+  content,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
   // ideally we should try/catch html syntax error
-  const htmlAst = parseHtmlString(html)
+  const htmlAst = parseHtmlString(content)
   const scriptsToInject = getScriptsToInject({
     jsenvFileSelector,
     canUseScriptTypeModule: compileProfile.moduleOutFormat === "esmodule",
@@ -75,7 +75,7 @@ export const compileHtml = async ({
     sources.push(url)
     sourcesContent.push(content)
   }
-  addHtmlSourceFile({ url, content: html })
+  addHtmlSourceFile({ url, content })
 
   const { scripts } = parseHtmlAstRessources(htmlAst)
 

@@ -1,4 +1,4 @@
-export const esToSystem = async ({ code, url, map }) => {
+export const esToSystem = async ({ url, map, content }) => {
   const { rollup } = await import("rollup")
   const rollupBuild = await rollup({
     input: url,
@@ -13,7 +13,7 @@ export const esToSystem = async ({ code, url, map }) => {
         },
         load: (id) => {
           if (id === url) {
-            return code
+            return content
           }
           return null
         },
@@ -25,10 +25,10 @@ export const esToSystem = async ({ code, url, map }) => {
     sourcemap: true,
   })
   const firstChunk = output[0]
-  code = firstChunk.code
   map = firstChunk.map
+  content = firstChunk.code
   return {
-    code,
     map,
+    content,
   }
 }

@@ -132,7 +132,7 @@ export const createCompiledFileService = ({
 
       compileProfile,
       compileCacheStrategy,
-      compile: ({ code }) => {
+      compile: ({ content }) => {
         return compiler({
           logger,
 
@@ -150,7 +150,7 @@ export const createCompiledFileService = ({
 
           sourcemapMethod,
           sourcemapExcludeSources,
-          code,
+          content,
         })
       },
     })
@@ -191,7 +191,7 @@ const getCompiler = ({
     const jsenvCompilerReturnValue = await jsenvCompiler({
       ...params,
       map: customCompilerReturnValue.sourcemap,
-      code: customCompilerReturnValue.content,
+      content: customCompilerReturnValue.content,
     })
     return {
       ...customCompilerReturnValue,

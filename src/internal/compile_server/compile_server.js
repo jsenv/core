@@ -255,7 +255,7 @@ export const startCompileServer = async ({
           compiledUrl,
           compileProfile,
           compileId,
-          code,
+          content,
         }) => {
           return compileHtml({
             logger,
@@ -278,14 +278,14 @@ export const startCompileServer = async ({
             toolbar,
 
             sourcemapMethod,
-            html: code,
+            content,
           })
         },
         "application/importmap+json": ({
           url,
           compiledUrl,
           compileId,
-          code,
+          content,
         }) => {
           return compileImportmap({
             projectDirectoryUrl,
@@ -293,7 +293,7 @@ export const startCompileServer = async ({
             url,
             compiledUrl,
             compileId,
-            importmapText: code,
+            content,
           })
         },
         "application/javascript": ({
@@ -301,7 +301,7 @@ export const startCompileServer = async ({
           compiledUrl,
           compileProfile,
           map,
-          code,
+          content,
         }) => {
           return compileJavascript({
             projectDirectoryUrl,
@@ -318,7 +318,7 @@ export const startCompileServer = async ({
             sourcemapExcludeSources,
             sourcemapMethod,
             map,
-            js: code,
+            content,
           })
         },
       },
@@ -335,7 +335,7 @@ export const startCompileServer = async ({
       modifiers: {
         ...(eventSourceClient || htmlSupervisor || toolbar || hmr
           ? {
-              "text/html": async ({ url, code }) => {
+              "text/html": async ({ url, content }) => {
                 return modifyHtml({
                   logger,
                   projectDirectoryUrl,
@@ -350,27 +350,27 @@ export const startCompileServer = async ({
                   hmr,
 
                   url,
-                  html: code,
+                  content,
                 })
               },
             }
           : {}),
         ...(hmr
           ? {
-              "text/css": async ({ url, code }) => {
+              "text/css": async ({ url, content }) => {
                 return modifyCss({
                   projectDirectoryUrl,
                   ressourceGraph,
                   url,
-                  css: code,
+                  content,
                 })
               },
-              "application/javascript": async ({ url, code }) => {
+              "application/javascript": async ({ url, content }) => {
                 return modifyJs({
                   projectDirectoryUrl,
                   ressourceGraph,
                   url,
-                  js: code,
+                  content,
                 })
               },
             }

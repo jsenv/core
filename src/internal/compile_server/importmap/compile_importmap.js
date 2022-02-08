@@ -8,20 +8,20 @@ export const compileImportmap = async ({
   url,
   compiledUrl,
   compileId,
-  importmapText,
+  content,
 }) => {
   const jsenvImportmap = getDefaultImportmap(compiledUrl, {
     projectDirectoryUrl,
     compileDirectoryUrl: `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`,
   })
-  const projectImportmap = JSON.parse(importmapText)
+  const projectImportmap = JSON.parse(content)
   const importmap = composeTwoImportMaps(jsenvImportmap, projectImportmap)
 
   return {
     contentType: "application/importmap+json",
     content: JSON.stringify(importmap, null, "  "),
     sources: [url],
-    sourcesContent: [importmapText],
+    sourcesContent: [content],
     assets: [],
     assetsContent: [],
   }

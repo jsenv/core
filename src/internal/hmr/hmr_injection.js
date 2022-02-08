@@ -7,7 +7,7 @@ export const injectHmr = ({
   url,
   contentType,
   moduleFormat,
-  code,
+  content,
 }) => {
   if (contentType === "application/javascript") {
     if (moduleFormat === "esmodule") {
@@ -15,10 +15,10 @@ export const injectHmr = ({
         projectDirectoryUrl,
         ressourceGraph,
         url,
-        code,
+        content,
       })
     }
-    return code
+    return content
     // we could also support file written using systemjs
     // and replace the urls found in System.register and System.resolve calls
     // if moduleOutFormat === 'systemjs'){
@@ -29,8 +29,8 @@ export const injectHmr = ({
     return injectHmrInCssUrls({
       ressourceGraph,
       url,
-      code,
+      content,
     })
   }
-  return code
+  return content
 }

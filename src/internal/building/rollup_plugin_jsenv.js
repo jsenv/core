@@ -20,7 +20,6 @@ import {
 import { UNICODE } from "@jsenv/log"
 
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/jsenv_file_urls.js"
-import { require } from "@jsenv/core/src/internal/require.js"
 import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlContext } from "@jsenv/core/src/internal/url_context.js"
@@ -34,6 +33,7 @@ import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compile_server/jse
 import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
 import { convertCssTextToJavascriptModule } from "./import_assertions/css_module.js"
 import { importMapsFromHtml } from "./html/importmaps_from_html.js"
+import { esToIIFE } from "./global_format/es_to_iife.js"
 import { esToSystem } from "./global_format/es_to_system.js"
 import { createUrlFetcher } from "./url_fetcher.js"
 import { createUrlLoader } from "./url_loader.js"
@@ -281,7 +281,6 @@ export const createRollupPlugins = async ({
     rollupPlugins.push({
       name: "jsenv_fix_async_await",
       async renderChunk(code, chunk) {
-        let map = chunk.map
         const result = await transformWithBabel({
           projectDirectoryUrl,
           jsenvRemoteDirectory,
@@ -297,13 +296,12 @@ export const createRollupPlugins = async ({
           moduleOutFormat: undefined,
           babelHelpersInjectionAsImport: false,
           transformGenerator: false,
+          map: chunk.map,
           content: code,
         })
-        map = result.map
-        code = result.code
         return {
-          code,
-          map,
+          code: result.content,
+          map: result.map,
         }
       },
     })
@@ -319,7 +317,7 @@ export const createRollupPlugins = async ({
         globalsForRollup[key] = globals[key]
       }
     })
-    const ESIIFE = require("es-iife")
+
     const globalNameFromChunkInfo = (chunkInfo) => {
       const originalUrl = asOriginalUrl(chunkInfo.facadeModuleId)
       const originalPath = urlToFileSystemPath(originalUrl)
@@ -399,31 +397,20 @@ export const createRollupPlugins = async ({
           (ressource) => ressource.url === serverUrl,
         )
         if (jsRessource.isEntryPoint) {
-          const name = globalNameFromChunkInfo(chunkInfo)
-          const out = ESIIFE.transform({
-            code,
-            parse: this.parse,
-            name,
-            sourcemap: true,
-            resolveGlobal: (specifier) => {
-              const url = resolveUrl(specifier, chunkInfo.facadeModuleId)
-              const globalName = urlToBasename(url)
-              return globalName
-            },
-            strict: true,
+          const toIIFEResult = await esToIIFE({
+            name: globalNameFromChunkInfo(chunkInfo),
+            url: chunkInfo.facadeModuleId,
+            ast: this.parse(code),
+            content: code,
           })
-          code = out.code
-          const map = out.map
-          return {
-            code,
-            map,
-          }
+          return { code: toIIFEResult.content, map: toIIFEResult.map }
         }
-        return esToSystem({
-          code,
+        const toSystemResult = await esToSystem({
           url: serverUrl,
           map: chunkInfo.map,
+          content: code,
         })
+        return { code: toSystemResult.content, map: toSystemResult.map }
       },
     })
   }
@@ -1107,8 +1094,8 @@ export const createRollupPlugins = async ({
         })
       })
       // if (loadResult.url) url = loadResult.url
-      const code = loadResult.code
       const map = loadResult.map
+      const content = loadResult.content
       if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)) {
         map.sources.forEach((source, index) => {
           if (jsenvRemoteDirectory.isRemoteUrl(source)) {
@@ -1139,10 +1126,10 @@ export const createRollupPlugins = async ({
         isJsenvHelperFile,
         contentType: "application/javascript",
         isJsModule: true,
-        bufferBeforeBuild: Buffer.from(code),
+        bufferBeforeBuild: Buffer.from(content),
       })
       return {
-        code,
+        code: content,
         map,
       }
     },
@@ -1323,19 +1310,19 @@ export const createRollupPlugins = async ({
           )
           const jsUrl = url
           urlCustomLoaders[ressourceUrlAsJsModule] = async () => {
-            let code
             let map
+            let content
 
             if (type === "json") {
               await fileReference.ressource.getReadyPromise()
-              code = String(fileReference.ressource.bufferAfterBuild)
+              content = String(fileReference.ressource.bufferAfterBuild)
               const jsModuleConversionResult =
                 await convertJsonTextToJavascriptModule({
-                  code,
                   map,
+                  content,
                 })
-              code = jsModuleConversionResult.code
               map = jsModuleConversionResult.map
+              content = jsModuleConversionResult.content
             } else if (type === "css") {
               await fileReference.ressource.getReadyPromise()
               const cssBuildUrl = resolveUrl(
@@ -1346,7 +1333,7 @@ export const createRollupPlugins = async ({
                 urlToFilename(jsUrl),
                 buildDirectoryUrl,
               )
-              code = String(fileReference.ressource.bufferAfterBuild)
+              content = String(fileReference.ressource.bufferAfterBuild)
               const sourcemapReference =
                 fileReference.ressource.dependencies.find((dependency) => {
                   return dependency.ressource.isSourcemap
@@ -1360,14 +1347,14 @@ export const createRollupPlugins = async ({
                 await convertCssTextToJavascriptModule({
                   cssUrl: cssBuildUrl,
                   jsUrl: jsBuildUrl,
-                  code,
                   map,
+                  content,
                 })
-              code = jsModuleConversionResult.code
+              content = jsModuleConversionResult.content
               map = jsModuleConversionResult.map
             }
 
-            return { code, map }
+            return { code: content, map }
           }
 
           mutations.push((magicString) => {
@@ -1495,10 +1482,7 @@ export const createRollupPlugins = async ({
         magicString.prepend(systemjsCode)
         code = magicString.toString()
         const map = magicString.generateMap({ hires: true })
-        return {
-          code,
-          map,
-        }
+        return { code, map }
       }
       return null
     },

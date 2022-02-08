@@ -7,13 +7,13 @@ export const applyPostCss = async ({
   sourcemapMethod = "comment",
   url,
   map,
-  code,
+  content,
 }) => {
   const { default: postcss } = await import("postcss")
 
   try {
     const cssFileUrl = urlToFileUrl(url)
-    const result = await postcss(plugins).process(code, {
+    const result = await postcss(plugins).process(content, {
       collectUrls: true,
       from: urlToFileSystemPath(cssFileUrl),
       to: urlToFileSystemPath(cssFileUrl),
@@ -26,9 +26,9 @@ export const applyPostCss = async ({
       ...options,
     })
     return {
-      code: result.css,
-      map: result.map.toJSON(),
       postCssMessages: result.messages,
+      map: result.map.toJSON(),
+      content: result.css,
     }
   } catch (error) {
     if (error.name === "CssSyntaxError") {

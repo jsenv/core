@@ -1,4 +1,4 @@
-export const convertJsonTextToJavascriptModule = ({ code }) => {
+export const convertJsonTextToJavascriptModule = ({ content }) => {
   // here we could do the following
   // return export default jsonText
   // This would return valid js, that would be minified later
@@ -6,6 +6,6 @@ export const convertJsonTextToJavascriptModule = ({ code }) => {
   // for js engine to parse JSON than JS
 
   return {
-    code: `export default JSON.parse(${JSON.stringify(code.trim())})`,
+    content: `export default JSON.parse(${JSON.stringify(content.trim())})`,
   }
 }

@@ -4,24 +4,19 @@ import { applyPostCss } from "./apply_post_css.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
 export const moveCssUrls = async ({
-  code,
   from,
   to,
-  map,
   sourcemapMethod,
+  map,
+  content,
 } = {}) => {
   const fromDirectoryUrl = new URL("./", from).href
   const toDirectoryUrl = new URL("./", to).href
   // same directory, nothing to do
   if (fromDirectoryUrl === toDirectoryUrl) {
-    return { code, map }
+    return { map, content }
   }
-
   const result = await applyPostCss({
-    code,
-    url: from,
-    map,
-    sourcemapMethod,
     plugins: [
       postCssPluginUrlVisitor({
         urlVisitor: ({ specifier, replace }) => {
@@ -34,11 +29,12 @@ export const moveCssUrls = async ({
         },
       }),
     ],
-  })
-  code = result.code
-  map = result.map
-  return {
-    code,
+    url: from,
+    sourcemapMethod,
     map,
-  }
+    content,
+  })
+  map = result.map
+  content = result.content
+  return { map, content }
 }

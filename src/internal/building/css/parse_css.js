@@ -32,8 +32,8 @@ export const parseCssRessource = async (
   const cssString = String(cssRessource.bufferBeforeBuild)
   const cssSourcemapUrl = getCssSourceMappingUrl(cssString)
   const cssUrl = cssRessource.url
-  let code = cssString
   let map
+  let content = cssString
   let sourcemapReference
   if (cssSourcemapUrl) {
     sourcemapReference = notifyReferenceFound({
@@ -62,8 +62,8 @@ export const parseCssRessource = async (
   }
 
   const urlMentions = await parseCssUrls({
-    code,
     url: cssUrl,
+    content,
   })
   const urlNodeReferenceMapping = new Map()
   const atImportReferences = []
@@ -88,9 +88,6 @@ export const parseCssRessource = async (
     const cssOriginalUrl = asOriginalUrl(cssCompiledUrl)
 
     const replaceCssResult = await replaceCssUrls({
-      url: asProjectUrl(cssCompiledUrl),
-      code,
-      map,
       urlVisitor: ({ urlNode, replace }) => {
         const nodeCandidates = Array.from(urlNodeReferenceMapping.keys())
         const urlNodeFound = nodeCandidates.find((urlNodeCandidate) =>
@@ -126,7 +123,7 @@ export const parseCssRessource = async (
           },
         )
         atImportReference.inlinedCallback()
-        let code = String(atImportReference.ressource.bufferAfterBuild)
+
         const from = resolveUrl(
           atImportReference.ressource.buildRelativeUrl,
           buildDirectoryUrl,
@@ -135,8 +132,8 @@ export const parseCssRessource = async (
           cssRessource.buildRelativeUrlWithoutHash,
           buildDirectoryUrl,
         )
+        const content = String(atImportReference.ressource.bufferAfterBuild)
         const moveResult = await moveCssUrls({
-          code,
           from,
           to,
           // moveCssUrls will change the css source code
@@ -147,16 +144,19 @@ export const parseCssRessource = async (
           // sourcemap comment, othwise css would reference a sourcemap
           // that won't by in the build directory
           sourcemapMethod: null,
+          content,
         })
-        code = moveResult.code
-        return code
+        return moveResult.content
       },
       cssMinification: minify,
       cssMinificationOptions: minifyCssOptions,
+      url: asProjectUrl(cssCompiledUrl),
+      map,
+      content,
     })
-    code = replaceCssResult.code
     map = replaceCssResult.map
-    cssRessource.buildEnd(code)
+    content = replaceCssResult.content
+    cssRessource.buildEnd(content)
 
     // In theory code should never be modified once buildEnd() is called
     // because buildRelativeUrl might be versioned based on file content
@@ -195,11 +195,11 @@ export const parseCssRessource = async (
       buildDirectoryUrl,
     )
     const sourcemapUrlForCss = urlToRelativeUrl(sourcemapBuildUrl, cssBuildUrl)
-    const codeWithSourcemapComment = setCssSourceMappingUrl(
-      code,
+    const cssWithSourcemapComment = setCssSourceMappingUrl(
+      content,
       sourcemapUrlForCss,
     )
-    cssRessource.bufferAfterBuild = codeWithSourcemapComment
+    cssRessource.bufferAfterBuild = cssWithSourcemapComment
   }
 }
 

@@ -35,8 +35,8 @@ export const transformWithBabel = async ({
       `babelPluginMap must be an object, got ${babelPluginMap}`,
     )
   }
-  if (typeof js === "undefined") {
-    throw new TypeError(`js missing, received ${js}`)
+  if (typeof content === "undefined") {
+    throw new TypeError(`content missing, received ${content}`)
   }
   if (typeof url !== "string") {
     throw new TypeError(`url must be a string, got ${url}`)

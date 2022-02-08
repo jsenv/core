@@ -25,10 +25,10 @@ const compileServer = await startCompileServer({
     }),
   },
   customCompilers: {
-    "**/dir/file.js": async ({ code, request }) => {
+    "**/dir/file.js": async ({ request, content }) => {
       ressourceBeforeAlias = request.ressourceBeforeAlias
       return {
-        content: code,
+        content,
       }
     },
   },

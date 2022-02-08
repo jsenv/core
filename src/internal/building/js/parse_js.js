@@ -42,8 +42,8 @@ export const parseJsRessource = async (
 
   return async ({ buildDirectoryUrl }) => {
     const sourcemapRessource = sourcemapReference.ressource
-    let code
     let map
+    let content
     if (!sourcemapRessource.isPlaceholder) {
       map = JSON.parse(String(sourcemapRessource.bufferBeforeBuild))
     }
@@ -55,13 +55,13 @@ export const parseJsRessource = async (
     if (jsRessource.isWorker || jsRessource.isServiceWorker) {
       const transformResult = await transformWorker({
         url: asOriginalUrl(jsUrl),
-        code: String(jsRessource.bufferBeforeBuild),
         map,
+        content: String(jsRessource.bufferBeforeBuild),
       })
-      code = transformResult.code
       map = transformResult.map
+      content = transformResult.content
     } else {
-      code = jsString
+      content = jsString
     }
 
     const jsCompiledUrl = jsRessource.url
@@ -69,15 +69,15 @@ export const parseJsRessource = async (
 
     if (minify) {
       const result = await minifyJs({
-        url: map ? asProjectUrl(jsCompiledUrl) : jsOriginalUrl,
-        code,
-        map,
         toplevel: false,
+        url: map ? asProjectUrl(jsCompiledUrl) : jsOriginalUrl,
+        map,
+        content,
       })
-      code = result.code
+      content = result.content
       map = result.map
     }
-    jsRessource.buildEnd(code)
+    jsRessource.buildEnd(content)
     if (!map) {
       return
     }
@@ -113,10 +113,10 @@ export const parseJsRessource = async (
       buildDirectoryUrl,
     )
     const sourcemapUrlForJs = urlToRelativeUrl(sourcemapBuildUrl, jsBuildUrl)
-    const codeWithSourcemapComment = setJavaScriptSourceMappingUrl(
-      code,
+    const jsWithSourcemapComment = setJavaScriptSourceMappingUrl(
+      content,
       sourcemapUrlForJs,
     )
-    jsRessource.bufferAfterBuild = codeWithSourcemapComment
+    jsRessource.bufferAfterBuild = jsWithSourcemapComment
   }
 }

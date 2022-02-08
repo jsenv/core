@@ -50,10 +50,10 @@ export const modifyHtml = async ({
   hmr,
 
   url,
-  html,
+  content,
 }) => {
   url = urlWithoutSearch(url)
-  const htmlAst = parseHtmlString(html)
+  const htmlAst = parseHtmlString(content)
   const { scripts } = parseHtmlAstRessources(htmlAst)
   const artifacts = []
 

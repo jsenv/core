@@ -8,10 +8,10 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { babelPluginInlineWorkerImports } from "./babel_plugin_inline_worker_imports.js"
 
-export const transformWorker = async ({ url, code, map }) => {
+export const transformWorker = async ({ url, map, content }) => {
   const { transformSync } = await import("@babel/core")
 
-  const transformResult = transformSync(code, {
+  const transformResult = transformSync(content, {
     filename: urlToFileSystemPath(url),
     configFile: false,
     babelrc: false, // trust only these options, do not read any babelrc config file
@@ -28,9 +28,9 @@ export const transformWorker = async ({ url, code, map }) => {
       ],
     ],
   })
-  code = transformResult.code
   map = transformResult.map
-  return { code, map }
+  content = transformResult.code
+  return { map, content }
 }
 
 export const readWorkerFile = (url, importerUrl) => {

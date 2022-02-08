@@ -503,16 +503,15 @@ const linkStylesheetHrefVisitor = (
       return
     }
     if (shouldInline({ ressource, htmlNode: link })) {
-      const { bufferAfterBuild } = ressource
-      let code = String(bufferAfterBuild)
       const { buildRelativeUrl } = ressource
       const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
       const htmlBuildUrl = resolveUrl(
         htmlRessource.buildRelativeUrlWithoutHash,
         buildDirectoryUrl,
       )
+      const { bufferAfterBuild } = ressource
+      let content = String(bufferAfterBuild)
       const moveResult = await moveCssUrls({
-        code,
         from: cssBuildUrl,
         to: htmlBuildUrl,
         // moveCssUrls will change the css source code
@@ -523,9 +522,10 @@ const linkStylesheetHrefVisitor = (
         // sourcemap comment, othwise css would reference a sourcemap
         // that won't by in the build directory
         sourcemapMethod: null,
+        content,
       })
-      code = moveResult.code
-      const sourcemapRelativeUrl = getCssSourceMappingUrl(code)
+      content = moveResult.content
+      const sourcemapRelativeUrl = getCssSourceMappingUrl(content)
       if (sourcemapRelativeUrl) {
         const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
         const sourcemapBuildUrl = resolveUrl(sourcemapRelativeUrl, cssBuildUrl)
@@ -533,9 +533,9 @@ const linkStylesheetHrefVisitor = (
           sourcemapBuildUrl,
           htmlBuildUrl,
         )
-        code = setCssSourceMappingUrl(code, sourcemapInlineUrl)
+        content = setCssSourceMappingUrl(content, sourcemapInlineUrl)
       }
-      inlineLinkStylesheet(link, code)
+      inlineLinkStylesheet(link, content)
       cssReference.inlinedCallback()
       return
     }

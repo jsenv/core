@@ -24,7 +24,7 @@ export const modifyJs = async ({
     content,
   })
   const { metadata } = transformResult
-  js = transformResult.content
+  content = transformResult.content
   scanJs({
     ressourceGraph,
     url,

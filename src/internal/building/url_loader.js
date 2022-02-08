@@ -45,15 +45,14 @@ export const createUrlLoader = ({
       const map = await loadSourcemap({
         signal,
         logger,
-
-        url,
-        code: jsText,
         getSourceMappingUrl: getJavaScriptSourceMappingUrl,
+        url,
+        content: jsText,
       })
       return {
         url: response.url,
-        code: jsText,
         map,
+        content: jsText,
       }
     }
 
@@ -63,11 +62,11 @@ export const createUrlLoader = ({
     // param and this is only possible in Node.js where minification is less (not?) important
     const jsonText = await response.text()
     saveUrlResponseBody(response.url, jsonText)
-    const { code } = convertJsonTextToJavascriptModule({ code: jsonText })
+    const { content } = convertJsonTextToJavascriptModule({ code: jsonText })
     return {
       url: response.url,
-      code,
       map: null,
+      content,
     }
   }
 

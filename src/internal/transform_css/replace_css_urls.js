@@ -12,15 +12,13 @@ export const replaceCssUrls = async ({
   url,
   urlVisitor,
   map,
-  code,
+  content,
   cssConcatenation = false,
   cssConcatenationLoadImport,
   cssMinification = false,
   cssMinificationOptions,
 } = {}) => {
   const result = await applyPostCss({
-    code,
-    url,
     plugins: [
       postCssPluginUrlVisitor({ urlVisitor }),
       ...(cssConcatenation
@@ -30,12 +28,14 @@ export const replaceCssUrls = async ({
         ? [await getCssMinificationPlugin(cssMinificationOptions)]
         : []),
     ],
+    url,
+    content,
   })
-  code = result.code
   map = result.map
+  content = result.content
   return {
-    code,
     map,
+    content,
   }
 }
 

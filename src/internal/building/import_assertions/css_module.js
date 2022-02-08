@@ -10,8 +10,8 @@ import { moveCssUrls } from "@jsenv/core/src/internal/transform_css/move_css_url
 export const convertCssTextToJavascriptModule = async ({
   cssUrl,
   jsUrl,
-  code,
   map,
+  content,
 }) => {
   const directoryUrl = resolveUrl("./", cssUrl)
   const jsDirectoryUrl = resolveUrl("./", jsUrl)
@@ -19,21 +19,19 @@ export const convertCssTextToJavascriptModule = async ({
     const moveUrlResult = await moveCssUrls({
       from: cssUrl,
       to: jsUrl,
-      code,
       map,
+      content,
     })
-    code = moveUrlResult.code
     map = moveUrlResult.map
-    const sourcemapUrlSpecifier = getCssSourceMappingUrl(code)
+    content = moveUrlResult.content
+    const sourcemapUrlSpecifier = getCssSourceMappingUrl(content)
     const sourcemapUrlForCss = resolveUrl(sourcemapUrlSpecifier, cssUrl)
     const sourcemapUrlForJs = urlToRelativeUrl(sourcemapUrlForCss, jsUrl)
-    code = setCssSourceMappingUrl(code, sourcemapUrlForJs)
+    content = setCssSourceMappingUrl(content, sourcemapUrlForJs)
   }
-
-  const cssTextEscaped = escapeTemplateStringSpecialCharacters(code)
-
+  const cssTextEscaped = escapeTemplateStringSpecialCharacters(content)
   return {
-    code: `
+    content: `
 const stylesheet = new CSSStyleSheet()
 
 stylesheet.replaceSync(\`${cssTextEscaped}\`)

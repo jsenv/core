@@ -1,16 +1,15 @@
 export const minifyJs = async ({
   url,
-  code,
   map,
   sourcemapIncludeSources = true,
+  content,
   ...rest
 }) => {
   // https://github.com/terser-js/terser#minify-options
   const { minify } = await import("terser")
-
   const terserResult = await minify(
     {
-      [url]: code,
+      [url]: content,
     },
     {
       sourceMap: {
@@ -21,13 +20,10 @@ export const minifyJs = async ({
       ...rest,
     },
   )
-
-  code = terserResult.code
+  content = terserResult.code
   map = terserResult.map
-
   if (!map.sourcesContent) {
-    map.sourcesContent = [code]
+    map.sourcesContent = [content]
   }
-
-  return { code, map }
+  return { map, content }
 }

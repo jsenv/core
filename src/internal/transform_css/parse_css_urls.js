@@ -1,11 +1,9 @@
 import { applyPostCss } from "./apply_post_css.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
-export const parseCssUrls = async ({ url = "file:///file.css", code }) => {
+export const parseCssUrls = async ({ url = "file:///file.css", content }) => {
   const urlMentions = []
   await applyPostCss({
-    code,
-    url,
     plugins: [
       postCssPluginUrlVisitor({
         urlVisitor: (urlMention) => {
@@ -13,6 +11,8 @@ export const parseCssUrls = async ({ url = "file:///file.css", code }) => {
         },
       }),
     ],
+    url,
+    content,
   })
   return urlMentions
 }

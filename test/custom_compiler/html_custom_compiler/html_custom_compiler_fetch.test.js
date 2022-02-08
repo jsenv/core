@@ -23,8 +23,8 @@ const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   customCompilers: {
-    [`${testDirectoryRelativeUrl}main.html`]: ({ code, request }) => {
-      const htmlWithAnswer = code.replace(
+    [`${testDirectoryRelativeUrl}main.html`]: ({ request, content }) => {
+      const htmlWithAnswer = content.replace(
         /__data_from_server__/,
         JSON.stringify({
           answer: 42,

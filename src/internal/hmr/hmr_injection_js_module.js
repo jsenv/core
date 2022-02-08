@@ -9,10 +9,10 @@ export const injectHmrInJsModuleUrls = async ({
   projectDirectoryUrl,
   ressourceGraph,
   url,
-  code,
+  content,
 }) => {
   const result = await babelTransform({
-    code,
+    code: content,
     options: {
       filename: urlToFileSystemPath(url),
       filenameRelative: urlToRelativeUrl(url, projectDirectoryUrl),
