@@ -287,7 +287,6 @@ const transformHtmlScript = async ({
   content,
 }) => {
   let map
-  let js
   try {
     const transformResult = await transformWithBabel({
       projectDirectoryUrl,
@@ -304,7 +303,7 @@ const transformHtmlScript = async ({
       content,
     })
     map = transformResult.map
-    js = transformResult.code
+    content = transformResult.content
   } catch (e) {
     // If there is a syntax error in inline script
     // we put the raw script without transformation.
@@ -318,7 +317,7 @@ const transformHtmlScript = async ({
         {
           // inline script do actually exists on the filesystem
           url: isInline ? compiledUrl : url,
-          content: js,
+          content,
         },
       ]
     }
@@ -326,20 +325,20 @@ const transformHtmlScript = async ({
   }
   const sourcemapUrl = generateSourcemapUrl(compiledUrl)
   if (sourcemapMethod === "inline") {
-    js = setJavaScriptSourceMappingUrl(js, sourcemapToBase64Url(map))
+    content = setJavaScriptSourceMappingUrl(content, sourcemapToBase64Url(map))
     return [
       {
         url: compiledUrl,
-        content: js,
+        content,
       },
     ]
   }
   const sourcemapSpecifier = urlToRelativeUrl(sourcemapUrl, compiledUrl)
-  js = setJavaScriptSourceMappingUrl(js, sourcemapSpecifier)
+  content = setJavaScriptSourceMappingUrl(content, sourcemapSpecifier)
   return [
     {
       url: compiledUrl,
-      content: js,
+      content,
     },
     {
       url: sourcemapUrl,

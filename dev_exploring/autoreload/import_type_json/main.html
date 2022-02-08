@@ -14,6 +14,9 @@
         },
       })
       console.log(json.default)
+      if (import.meta.hot) {
+        import.meta.hot.accept()
+      }
     </script>
   </body>
 </html>
