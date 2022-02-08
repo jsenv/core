@@ -3,13 +3,12 @@ import { urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
-import { babelPluginsFromBabelPluginMap } from "./babel_plugin_map.js"
 import { babelHelperNameFromUrl } from "./babel_helper.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { babelPluginTransformImportMeta } from "./babel_plugin_transform_import_meta.js"
 import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 
-export const transformJs = async ({
+export const transformWithBabel = async ({
   projectDirectoryUrl,
   url,
 
@@ -24,7 +23,7 @@ export const transformJs = async ({
 
   map,
   ast,
-  code,
+  content,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -36,8 +35,8 @@ export const transformJs = async ({
       `babelPluginMap must be an object, got ${babelPluginMap}`,
     )
   }
-  if (typeof code === "undefined") {
-    throw new TypeError(`code missing, received ${code}`)
+  if (typeof js === "undefined") {
+    throw new TypeError(`js missing, received ${js}`)
   }
   if (typeof url !== "string") {
     throw new TypeError(`url must be a string, got ${url}`)
@@ -115,17 +114,24 @@ export const transformJs = async ({
   }
   const babelTransformReturnValue = await babelTransform({
     ast,
-    code,
+    code: content,
     options: {
       ...options,
-      plugins: babelPluginsFromBabelPluginMap(babelPluginMap),
+      plugins: Object.keys(babelPluginMap).map(
+        (babelPluginName) => babelPluginMap[babelPluginName],
+      ),
     },
   })
-  code = babelTransformReturnValue.code
-  map = babelTransformReturnValue.map
   ast = babelTransformReturnValue.ast
   const { metadata } = babelTransformReturnValue
-  return { code, map, metadata, ast }
+  map = babelTransformReturnValue.map
+  content = babelTransformReturnValue.code
+  return {
+    ast,
+    metadata,
+    map,
+    content,
+  }
 }
 
 const computeInputPath = (url) => {

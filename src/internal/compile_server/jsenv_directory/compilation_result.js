@@ -23,7 +23,7 @@ import { testFilePresence } from "./fs_optimized_for_cache.js"
 const isWindows = process.platform === "win32"
 
 export const asCompilationResult = async (
-  { contentType, coverage, dependencies = [], code, map },
+  { coverage, dependencies = [], map, contentType, content },
   {
     projectDirectoryUrl,
     jsenvRemoteDirectory,
@@ -86,7 +86,7 @@ export const asCompilationResult = async (
     assetsContent.push(content)
   }
 
-  let output = code
+  let output = content
   if (sourcemapEnabled && map) {
     if (map.sources.length === 0) {
       // may happen in some cases where babel returns a wrong sourcemap

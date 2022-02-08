@@ -156,11 +156,10 @@ export const commonJsToJsModule = async ({
 
   const { output } = await rollupBuild.generate(generateOptions)
   const { code, map } = output[0]
-
   return asCompilationResult(
     {
       contentType: "application/javascript",
-      code,
+      content: code,
       map,
     },
     {

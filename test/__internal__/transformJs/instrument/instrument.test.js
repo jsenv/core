@@ -4,7 +4,7 @@ import { assert } from "@jsenv/assert"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { babelPluginInstrument } from "@jsenv/core/src/internal/coverage/babel_plugin_instrument.js"
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
-import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import {
   TRANSFORM_JS_TEST_PARAMS,
   TRANSFORM_RESULT_TEST_PARAMS,
@@ -19,10 +19,8 @@ const originalFileUrl = resolveUrl(`./instrument.js`, testDirectoryUrl)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/instrument.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
 const originalFileContent = await readFile(originalFileUrl)
-const transformResult = await transformJs({
+const transformResult = await transformWithBabel({
   ...TRANSFORM_JS_TEST_PARAMS,
-  code: originalFileContent,
-  url: originalFileUrl,
   babelPluginMap: {
     ...TRANSFORM_RESULT_TEST_PARAMS.babelPluginMap,
     "transform-instrument": [
@@ -30,6 +28,8 @@ const transformResult = await transformJs({
       { projectDirectoryUrl: jsenvCoreDirectoryUrl },
     ],
   },
+  url: originalFileUrl,
+  content: originalFileContent,
 })
 
 const actual = await asCompilationResult(

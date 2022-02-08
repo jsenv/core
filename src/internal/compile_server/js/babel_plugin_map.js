@@ -126,12 +126,6 @@ const BABEL_PLUGIN_NAMES_FOR_JSENV = [
   "transform-replace-expressions",
 ]
 
-export const babelPluginsFromBabelPluginMap = (babelPluginMap) => {
-  return Object.keys(babelPluginMap).map(
-    (babelPluginName) => babelPluginMap[babelPluginName],
-  )
-}
-
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
 
 const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`

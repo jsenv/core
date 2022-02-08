@@ -1,20 +1,20 @@
 import { readFile, urlToFileSystemPath, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
-import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const fileUrl = new URL(`./import_meta.js`, import.meta.url).href
 const fileDistUrl = new URL("./dist/import_meta.js", import.meta.url).href
 const originalFileContent = await readFile(fileUrl)
 const test = async (params) => {
-  const { code } = await transformJs({
+  const { content } = await transformWithBabel({
     ...TRANSFORM_JS_TEST_PARAMS,
-    code: originalFileContent,
     url: fileUrl,
+    content: originalFileContent,
     ...params,
   })
-  await writeFile(fileDistUrl, code)
+  await writeFile(fileDistUrl, content)
 }
 
 // esmodule

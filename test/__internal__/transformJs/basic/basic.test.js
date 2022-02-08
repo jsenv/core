@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
-import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import {
   TRANSFORM_JS_TEST_PARAMS,
   TRANSFORM_RESULT_TEST_PARAMS,
@@ -19,10 +19,10 @@ const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jse
 const sourcemapFileUrl = `${compiledFileUrl}.map`
 const originalFileContent = await readFile(originalFileUrl)
 
-const transformResult = await transformJs({
+const transformResult = await transformWithBabel({
   ...TRANSFORM_JS_TEST_PARAMS,
-  code: originalFileContent,
   url: originalFileUrl,
+  content: originalFileContent,
 })
 const compilationResult = await asCompilationResult(
   {

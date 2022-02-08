@@ -21,7 +21,7 @@ import { UNICODE } from "@jsenv/log"
 
 import { jsenvHelpersDirectoryInfo } from "@jsenv/core/src/jsenv_file_urls.js"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import { createUrlConverter } from "@jsenv/core/src/internal/url_conversion.js"
 import { createUrlContext } from "@jsenv/core/src/internal/url_context.js"
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import_resolution/import_resolver_node.js"
@@ -282,13 +282,12 @@ export const createRollupPlugins = async ({
       name: "jsenv_fix_async_await",
       async renderChunk(code, chunk) {
         let map = chunk.map
-        const result = await transformJs({
+        const result = await transformWithBabel({
           projectDirectoryUrl,
           jsenvRemoteDirectory,
           url: chunk.facadeModuleId
             ? asOriginalUrl(chunk.facadeModuleId)
             : resolveUrl(chunk.fileName, buildDirectoryUrl),
-          code,
           babelPluginMap: {
             "transform-async-to-promises":
               babelPluginMap["transform-async-to-promises"],
@@ -298,9 +297,10 @@ export const createRollupPlugins = async ({
           moduleOutFormat: undefined,
           babelHelpersInjectionAsImport: false,
           transformGenerator: false,
+          content: code,
         })
-        code = result.code
         map = result.map
+        code = result.code
         return {
           code,
           map,
@@ -838,8 +838,8 @@ export const createRollupPlugins = async ({
                 inlineModuleScripts[jsModuleUrl] = ressource
                 urlCustomLoaders[jsModuleUrl] = async () => {
                   const url = asOriginalUrl(jsModuleUrl) // transformJs expect a file:// url
-                  let code = String(ressource.bufferBeforeBuild)
-                  const transformResult = await transformJs({
+                  const content = String(ressource.bufferBeforeBuild)
+                  const transformResult = await transformWithBabel({
                     projectDirectoryUrl,
                     jsenvRemoteDirectory,
                     url,
@@ -851,11 +851,11 @@ export const createRollupPlugins = async ({
                     // if we put babel helpers, rollup might try to share them and a file
                     // might try to import from an inline script resulting in 404.
                     babelHelpersInjectionAsImport: false,
-                    code,
+                    content,
                   })
                   return {
-                    code: transformResult.code,
                     map: transformResult.map,
+                    code: transformResult.code,
                   }
                 }
               }

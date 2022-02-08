@@ -1,16 +1,5 @@
 import { resolveUrl, urlToRelativeUrl, urlToFilename } from "@jsenv/filesystem"
 
-import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
-import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
-import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
-import {
-  generateSourcemapUrl,
-  setJavaScriptSourceMappingUrl,
-  sourcemapToBase64Url,
-} from "@jsenv/core/src/internal/sourcemap_utils.js"
-import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
-
-import { transformJs } from "../js/js_transformer.js"
 import {
   injectBeforeFirstHeadScript,
   parseHtmlString,
@@ -23,6 +12,16 @@ import {
   removeHtmlNodeAttributeByName,
   createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
+import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
+import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
+import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
+import {
+  generateSourcemapUrl,
+  setJavaScriptSourceMappingUrl,
+  sourcemapToBase64Url,
+} from "@jsenv/core/src/internal/sourcemap_utils.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
+import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
 
 export const compileHtml = async ({
   // cancellationToken,
@@ -260,7 +259,7 @@ const visitScripts = async ({
             topLevelAwait,
 
             sourcemapMethod,
-            code: textContent,
+            content: textContent,
           })
         })
       }
@@ -280,12 +279,13 @@ const transformHtmlScript = async ({
   babelPluginMap,
   topLevelAwait,
 
-  code,
   sourcemapMethod,
+  content,
 }) => {
-  let transformResult
+  let map
+  let js
   try {
-    transformResult = await transformJs({
+    const transformResult = await transformWithBabel({
       projectDirectoryUrl,
       jsenvRemoteDirectory,
       url,
@@ -297,8 +297,10 @@ const transformHtmlScript = async ({
       topLevelAwait: type === "module" ? topLevelAwait : false,
       babelHelpersInjectionAsImport: type === "module" ? undefined : false,
 
-      code,
+      content,
     })
+    map = transformResult.map
+    js = transformResult.code
   } catch (e) {
     // If there is a syntax error in inline script
     // we put the raw script without transformation.
@@ -312,31 +314,28 @@ const transformHtmlScript = async ({
         {
           // inline script do actually exists on the filesystem
           url: isInline ? compiledUrl : url,
-          content: code,
+          content: js,
         },
       ]
     }
     throw e
   }
-
-  code = transformResult.code
-  let map = transformResult.map
   const sourcemapUrl = generateSourcemapUrl(compiledUrl)
   if (sourcemapMethod === "inline") {
-    code = setJavaScriptSourceMappingUrl(code, sourcemapToBase64Url(map))
+    js = setJavaScriptSourceMappingUrl(js, sourcemapToBase64Url(map))
     return [
       {
         url: compiledUrl,
-        content: code,
+        content: js,
       },
     ]
   }
   const sourcemapSpecifier = urlToRelativeUrl(sourcemapUrl, compiledUrl)
-  code = setJavaScriptSourceMappingUrl(code, sourcemapSpecifier)
+  js = setJavaScriptSourceMappingUrl(js, sourcemapSpecifier)
   return [
     {
       url: compiledUrl,
-      content: code,
+      content: js,
     },
     {
       url: sourcemapUrl,

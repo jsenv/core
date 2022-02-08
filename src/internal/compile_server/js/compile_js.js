@@ -1,9 +1,9 @@
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import { scanJs } from "@jsenv/core/src/internal/hmr/scan_js.js"
 
 import { asCompilationResult } from "../jsenv_directory/compilation_result.js"
 import { shakeBabelPluginMap } from "../jsenv_directory/compile_profile.js"
-import { transformJs } from "./js_transformer.js"
 
 export const compileJavascript = async ({
   projectDirectoryUrl,
@@ -20,14 +20,14 @@ export const compileJavascript = async ({
   sourcemapExcludeSources,
   sourcemapMethod,
   map,
-  js,
+  content,
 }) => {
   const { searchParams } = new URL(url)
   if (prependSystemJs === undefined) {
     prependSystemJs =
       searchParams.has("worker") || searchParams.has("service_worker")
   }
-  const transformResult = await transformJs({
+  const transformResult = await transformWithBabel({
     projectDirectoryUrl,
     jsenvRemoteDirectory,
     url,
@@ -44,7 +44,7 @@ export const compileJavascript = async ({
     prependSystemJs,
 
     map,
-    code: js,
+    content,
   })
   const metadata = transformResult.metadata
   scanJs({
@@ -55,9 +55,9 @@ export const compileJavascript = async ({
   return asCompilationResult(
     {
       contentType: "application/javascript",
+      content: transformResult.code,
       coverage: metadata.coverage,
       dependencies: metadata.urlMentions.map(({ specifier }) => specifier),
-      code: transformResult.code,
       map: transformResult.map,
     },
     {
@@ -70,7 +70,7 @@ export const compileJavascript = async ({
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
       sourcemapMethod,
-      originalFileContent: js,
+      originalFileContent: content,
     },
   )
 }
