@@ -14,7 +14,7 @@ export const updateJsHotMeta = ({
   })
   ressourceGraph.updateRessourceDependencies({
     url,
-    type: "js",
+    type: "js_module",
     dependencyUrls,
     hotDecline: importMetaHotDecline,
     hotAcceptSelf: importMetaHotAcceptSelf,

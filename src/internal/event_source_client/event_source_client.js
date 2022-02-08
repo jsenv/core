@@ -73,10 +73,7 @@ const applyHotReload = async ({ updates }) => {
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         await urlHotMeta.disposeCallback()
       }
-      // maybe rename "js" into "import"
-      // "js" is too generic it could apply to a regular js file
-      // or "js_module"
-      if (type === "js") {
+      if (type === "js_module") {
         const namespace = await reloadJsImport(urlToFetch)
         console.log(`[jsenv] hot updated: ${relativeUrl}`)
         return namespace
@@ -89,6 +86,7 @@ const applyHotReload = async ({ updates }) => {
         const urlToReload = urlContext.asUrlToFetch(acceptedByRelativeUrl)
         const sourceUrlToReload = urlContext.asSourceUrl(acceptedByRelativeUrl)
         reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload])
+        console.log(`[jsenv] hot updated: ${relativeUrl}`)
         return null
       }
       throw new Error(`unknown update type: "${type}"`)
