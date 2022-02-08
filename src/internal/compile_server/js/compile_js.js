@@ -73,7 +73,7 @@ export const compileJavascript = async ({
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
       sourcemapMethod,
-      originalFileContent: content,
+      sourceFileContent: content,
     },
   )
 }

@@ -18,7 +18,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
 const sourceFileUrl = resolveUrl(`./instrument.js`, testDirectoryUrl)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/instrument.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
-const originalFileContent = await readFile(sourceFileUrl)
+const sourceFileContent = await readFile(sourceFileUrl)
 const transformResult = await transformWithBabel({
   ...TRANSFORM_JS_TEST_PARAMS,
   babelPluginMap: {
@@ -29,7 +29,7 @@ const transformResult = await transformWithBabel({
     ],
   },
   url: sourceFileUrl,
-  content: originalFileContent,
+  content: sourceFileContent,
 })
 
 const actual = await asCompilationResult(
@@ -39,7 +39,7 @@ const actual = await asCompilationResult(
   },
   {
     ...TRANSFORM_RESULT_TEST_PARAMS,
-    originalFileContent,
+    sourceFileContent,
     sourceFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
@@ -50,7 +50,7 @@ const expected = {
   content: actual.content,
   sourcemap: assert.any(Object),
   sources: [sourceFileUrl],
-  sourcesContent: [originalFileContent],
+  sourcesContent: [sourceFileContent],
   assets: [sourcemapFileUrl, `${compiledFileUrl}__asset__coverage.json`],
   assetsContent: [actual.assetsContent[0], actual.assetsContent[1]],
   dependencies: [],

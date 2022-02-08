@@ -7,7 +7,7 @@ import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const sourceFileUrl = resolveUrl(`./top_level_await.js`, testDirectoryUrl)
-const originalFileContent = await readFile(sourceFileUrl)
+const sourceFileContent = await readFile(sourceFileUrl)
 const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
   projectDirectoryUrl: testDirectoryUrl,
   // babelConfigFileUrl,
@@ -20,7 +20,7 @@ const { content } = await transformWithBabel({
   },
   moduleOutFormat: "systemjs",
   url: sourceFileUrl,
-  content: originalFileContent,
+  content: sourceFileContent,
 })
 const actual = content.indexOf("async function")
 const expected = -1

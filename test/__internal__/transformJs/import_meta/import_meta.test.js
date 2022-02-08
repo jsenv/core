@@ -6,12 +6,12 @@ import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const fileUrl = new URL(`./import_meta.js`, import.meta.url).href
 const fileDistUrl = new URL("./dist/import_meta.js", import.meta.url).href
-const originalFileContent = await readFile(fileUrl)
+const sourceFileContent = await readFile(fileUrl)
 const test = async (params) => {
   const { content } = await transformWithBabel({
     ...TRANSFORM_JS_TEST_PARAMS,
     url: fileUrl,
-    content: originalFileContent,
+    content: sourceFileContent,
     ...params,
   })
   await writeFile(fileDistUrl, content)

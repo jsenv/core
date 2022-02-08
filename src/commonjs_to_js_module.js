@@ -169,7 +169,7 @@ export const commonJsToJsModule = async ({
       compiledFileUrl: compiledUrl,
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
-      originalFileContent: code,
+      sourceFileContent: code,
     },
   )
 }

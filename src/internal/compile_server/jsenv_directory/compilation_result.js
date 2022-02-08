@@ -41,7 +41,7 @@ export const asCompilationResult = async (
     // For these reasons it's simpler to keep source content in sourcemap.
     sourcemapExcludeSources = false,
     sourcemapMethod = "comment", // "comment", "inline"
-    originalFileContent,
+    sourceFileContent,
   },
 ) => {
   if (typeof contentType !== "string") {
@@ -52,9 +52,9 @@ export const asCompilationResult = async (
       `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
     )
   }
-  if (typeof originalFileContent !== "string") {
+  if (typeof sourceFileContent !== "string") {
     throw new TypeError(
-      `originalFileContent must be a string, got ${originalFileContent}`,
+      `sourceFileContent must be a string, got ${sourceFileContent}`,
     )
   }
   if (typeof sourceFileUrl !== "string") {
@@ -92,7 +92,7 @@ export const asCompilationResult = async (
       // a file with only import './whatever.js' inside
       addSource({
         url: sourceFileUrl,
-        content: originalFileContent,
+        content: sourceFileContent,
       })
     } else {
       map.sources.forEach((source, index) => {
@@ -120,7 +120,7 @@ export const asCompilationResult = async (
         // in that case we'll don't know how to find the source file
         addSource({
           url: sourceFileUrl,
-          content: originalFileContent,
+          content: sourceFileContent,
         })
       }
       await Promise.all(
@@ -165,8 +165,8 @@ export const asCompilationResult = async (
     }
   } else {
     addSource({
-      url: sourceFileUrl,
-      content: originalFileContent,
+      url: sourceFileContent,
+      content: sourceFileContent,
     })
   }
 
