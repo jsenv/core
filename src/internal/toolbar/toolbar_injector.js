@@ -1,4 +1,4 @@
-import { fetchExploringJson } from "@jsenv/core/src/internal/dev_server/exploring/fetch_exploring_json.js"
+import { fetchExploringJson } from "@jsenv/core/src/internal/exploring/fetch_exploring_json.js"
 
 import { setAttributes, setStyles } from "./util/dom.js"
 

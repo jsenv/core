@@ -1,5 +1,5 @@
+import { htmlAttributeSrcSet } from "../transform_html/html_attribute_src_set.js"
 import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
-import { htmlAttributeSrcSet } from "../../transform_html/html_attribute_src_set.js"
 
 export const reloadHtmlPage = () => {
   window.parent.location.reload(true)

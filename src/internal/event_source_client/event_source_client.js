@@ -1,4 +1,4 @@
-import { inferContextFrom, createUrlContext } from "../../url_context.js"
+import { inferContextFrom, createUrlContext } from "../url_context.js"
 import { createEventSourceConnection } from "./event_source_connection.js"
 import {
   isLivereloadEnabled,

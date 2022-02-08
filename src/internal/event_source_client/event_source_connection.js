@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 export const createEventSourceConnection = (
   eventSourceUrl,
   events = {},

@@ -3,8 +3,6 @@
  * https://modern-web.dev/docs/dev-server/plugins/hmr/
  */
 
-/* eslint-env browser */
-
 export default (url) => {
   const data = {}
   const { urlHotMetas } = window.__jsenv_event_source_client__

@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 export const isLivereloadEnabled = () => {
   const value = window.localStorage.getItem("livereload")
   if (value === "0") {

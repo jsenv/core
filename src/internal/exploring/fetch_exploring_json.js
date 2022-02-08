@@ -1,4 +1,4 @@
-import { fetchJson } from "../../browser_utils/fetch_json.js"
+import { fetchJson } from "../browser_utils/fetch_json.js"
 
 export const fetchExploringJson = async ({ signal } = {}) => {
   try {
