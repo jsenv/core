@@ -1,17 +1,168 @@
 (function () {
 'use strict';
-const fetchUsingXHR = async (url, {
-  signal,
-  method = "GET",
-  credentials = "same-origin",
-  headers = {},
-  body = null
-} = {}) => {
-  const headersPromise = createPromiseAndHooks();
-  const bodyPromise = createPromiseAndHooks();
-  const xhr = new XMLHttpRequest();
+var defineProperty = (function (obj, key, value) {
+  // Shortcircuit the slow defineProperty path when possible.
+  // We are trying to avoid issues where setters defined on the
+  // prototype cause side effects under the fast path of simple
+  // assignment. By checking for existence of the property with
+  // the in operator, we can optimize most of this overhead away.
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
 
-  const failure = error => {
+  return obj;
+});
+
+// filters on symbol properties only. Returned string properties are always
+// enumerable. It is good to use in objectSpread.
+
+function ownKeys(object, enumerableOnly) {
+  var keys = Object.keys(object);
+
+  if (Object.getOwnPropertySymbols) {
+    var symbols = Object.getOwnPropertySymbols(object);
+
+    if (enumerableOnly) {
+      symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+    }
+
+    keys.push.apply(keys, symbols);
+  }
+
+  return keys;
+}
+
+function _objectSpread2(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+
+    if (i % 2) {
+      ownKeys(Object(source), true).forEach(function (key) {
+        defineProperty(target, key, source[key]);
+      });
+    } else if (Object.getOwnPropertyDescriptors) {
+      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+    } else {
+      ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+  }
+
+  return target;
+}
+
+var objectWithoutPropertiesLoose = (function (source, excluded) {
+  if (source === null) return {};
+  var target = {};
+  var sourceKeys = Object.keys(source);
+  var key;
+  var i;
+
+  for (i = 0; i < sourceKeys.length; i++) {
+    key = sourceKeys[i];
+    if (excluded.indexOf(key) >= 0) continue;
+    target[key] = source[key];
+  }
+
+  return target;
+});
+
+var _objectWithoutProperties = (function (source, excluded) {
+  if (source === null) return {};
+  var target = objectWithoutPropertiesLoose(source, excluded);
+  var key;
+  var i;
+
+  if (Object.getOwnPropertySymbols) {
+    var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+    for (i = 0; i < sourceSymbolKeys.length; i++) {
+      key = sourceSymbolKeys[i];
+      if (excluded.indexOf(key) >= 0) continue;
+      if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+      target[key] = source[key];
+    }
+  }
+
+  return target;
+});
+
+var nativeTypeOf = function nativeTypeOf(obj) {
+  return typeof obj;
+};
+
+var customTypeOf = function customTypeOf(obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
+function _await$3(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _async$3(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+function _call(body, then, direct) {
+  if (direct) {
+    return then ? then(body()) : body();
+  }
+
+  try {
+    var result = Promise.resolve(body());
+    return then ? result.then(then) : result;
+  } catch (e) {
+    return Promise.reject(e);
+  }
+}
+
+var fetchUsingXHR = _async$3(function (url) {
+  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+      signal = _ref.signal,
+      _ref$method = _ref.method,
+      method = _ref$method === void 0 ? "GET" : _ref$method,
+      _ref$credentials = _ref.credentials,
+      credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
+      _ref$headers = _ref.headers,
+      headers = _ref$headers === void 0 ? {} : _ref$headers,
+      _ref$body = _ref.body,
+      body = _ref$body === void 0 ? null : _ref$body;
+
+  var headersPromise = createPromiseAndHooks();
+  var bodyPromise = createPromiseAndHooks();
+  var xhr = new XMLHttpRequest();
+
+  var failure = function failure(error) {
     // if it was already resolved, we must reject the body promise
     if (headersPromise.settled) {
       bodyPromise.reject(error);
@@ -20,44 +171,42 @@ const fetchUsingXHR = async (url, {
     }
   };
 
-  const cleanup = () => {
+  var cleanup = function cleanup() {
     xhr.ontimeout = null;
     xhr.onerror = null;
     xhr.onload = null;
     xhr.onreadystatechange = null;
   };
 
-  xhr.ontimeout = () => {
+  xhr.ontimeout = function () {
     cleanup();
-    failure(new Error(`xhr request timeout on ${url}.`));
+    failure(new Error("xhr request timeout on ".concat(url, ".")));
   };
 
-  xhr.onerror = error => {
+  xhr.onerror = function (error) {
     cleanup(); // unfortunately with have no clue why it fails
     // might be cors for instance
 
     failure(createRequestError(error, {
-      url
+      url: url
     }));
   };
 
-  xhr.onload = () => {
+  xhr.onload = function () {
     cleanup();
     bodyPromise.resolve();
   };
 
-  signal.addEventListener("abort", () => {
+  signal.addEventListener("abort", function () {
     xhr.abort();
-    const abortError = new Error("aborted");
+    var abortError = new Error("aborted");
     abortError.name = "AbortError";
     failure(abortError);
   });
 
-  xhr.onreadystatechange = () => {
+  xhr.onreadystatechange = function () {
     // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-    const {
-      readyState
-    } = xhr;
+    var readyState = xhr.readyState;
 
     if (readyState === 2) {
       headersPromise.resolve();
@@ -68,12 +217,12 @@ const fetchUsingXHR = async (url, {
   };
 
   xhr.open(method, url, true);
-  Object.keys(headers).forEach(key => {
+  Object.keys(headers).forEach(function (key) {
     xhr.setRequestHeader(key, headers[key]);
   });
   xhr.withCredentials = computeWithCredentials({
-    credentials,
-    url
+    credentials: credentials,
+    url: url
   });
 
   if ("responseType" in xhr && hasBlob) {
@@ -81,129 +230,110 @@ const fetchUsingXHR = async (url, {
   }
 
   xhr.send(body);
-  await headersPromise; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+  return _await$3(headersPromise, function () {
+    // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+    var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+    var responseStatus = xhr.status;
+    var responseStatusText = xhr.statusText;
+    var responseHeaders = getHeadersFromXHR(xhr);
 
-  const responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
-  let responseStatus = xhr.status;
-  const responseStatusText = xhr.statusText;
-  const responseHeaders = getHeadersFromXHR(xhr);
+    var readBody = function readBody() {
+      return _await$3(bodyPromise, function () {
+        var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
-  const readBody = async () => {
-    await bodyPromise;
-    const {
-      status
-    } = xhr; // in Chrome on file:/// URLs, status is 0
+        if (status === 0) {
+          responseStatus = 200;
+        }
 
-    if (status === 0) {
-      responseStatus = 200;
-    }
-
-    const body = "response" in xhr ? xhr.response : xhr.responseText;
-    return {
-      responseBody: body,
-      responseBodyType: detectBodyType(body)
+        var body = "response" in xhr ? xhr.response : xhr.responseText;
+        return {
+          responseBody: body,
+          responseBodyType: detectBodyType(body)
+        };
+      });
     };
-  };
 
-  const text = async () => {
-    const {
-      responseBody,
-      responseBodyType
-    } = await readBody();
+    var text = function text() {
+      return _call(readBody, function (_ref2) {
+        var responseBody = _ref2.responseBody,
+            responseBodyType = _ref2.responseBodyType;
 
-    if (responseBodyType === "blob") {
-      return blobToText(responseBody);
-    }
+        if (responseBodyType === "blob") {
+          return blobToText(responseBody);
+        }
 
-    if (responseBodyType === "formData") {
-      throw new Error("could not read FormData body as text");
-    }
+        if (responseBodyType === "formData") {
+          throw new Error("could not read FormData body as text");
+        }
 
-    if (responseBodyType === "dataView") {
-      return arrayBufferToText(responseBody.buffer);
-    }
+        return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
+      });
+    };
 
-    if (responseBodyType === "arrayBuffer") {
-      return arrayBufferToText(responseBody);
-    } // if (responseBodyType === "text" || responseBodyType === 'searchParams') {
-    //   return body
-    // }
+    var json = function json() {
+      return _call(text, JSON.parse);
+    };
 
+    var blob = _async$3(function () {
+      if (!hasBlob) {
+        throw new Error("blob not supported");
+      }
 
-    return String(responseBody);
-  };
+      return _call(readBody, function (_ref3) {
+        var responseBody = _ref3.responseBody,
+            responseBodyType = _ref3.responseBodyType;
 
-  const json = async () => {
-    const responseText = await text();
-    return JSON.parse(responseText);
-  };
+        if (responseBodyType === "blob") {
+          return responseBody;
+        }
 
-  const blob = async () => {
-    if (!hasBlob) {
-      throw new Error(`blob not supported`);
-    }
+        if (responseBodyType === "dataView") {
+          return new Blob([cloneBuffer(responseBody.buffer)]);
+        }
 
-    const {
-      responseBody,
-      responseBodyType
-    } = await readBody();
+        if (responseBodyType === "arrayBuffer") {
+          return new Blob([cloneBuffer(responseBody)]);
+        }
 
-    if (responseBodyType === "blob") {
-      return responseBody;
-    }
+        if (responseBodyType === "formData") {
+          throw new Error("could not read FormData body as blob");
+        }
 
-    if (responseBodyType === "dataView") {
-      return new Blob([cloneBuffer(responseBody.buffer)]);
-    }
+        return new Blob([String(responseBody)]);
+      });
+    });
 
-    if (responseBodyType === "arrayBuffer") {
-      return new Blob([cloneBuffer(responseBody)]);
-    }
+    var arrayBuffer = function arrayBuffer() {
+      return _call(readBody, function (_ref4) {
+        var responseBody = _ref4.responseBody,
+            responseBodyType = _ref4.responseBodyType;
+        return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call(blob, blobToArrayBuffer);
+      });
+    };
 
-    if (responseBodyType === "formData") {
-      throw new Error("could not read FormData body as blob");
-    }
+    var formData = _async$3(function () {
+      if (!hasFormData) {
+        throw new Error("formData not supported");
+      }
 
-    return new Blob([String(responseBody)]);
-  };
+      return _call(text, textToFormData);
+    });
 
-  const arrayBuffer = async () => {
-    const {
-      responseBody,
-      responseBodyType
-    } = await readBody();
+    return {
+      url: responseUrl,
+      status: responseStatus,
+      statusText: responseStatusText,
+      headers: responseHeaders,
+      text: text,
+      json: json,
+      blob: blob,
+      arrayBuffer: arrayBuffer,
+      formData: formData
+    };
+  });
+});
 
-    if (responseBodyType === "arrayBuffer") {
-      return cloneBuffer(responseBody);
-    }
-
-    const responseBlob = await blob();
-    return blobToArrayBuffer(responseBlob);
-  };
-
-  const formData = async () => {
-    if (!hasFormData) {
-      throw new Error(`formData not supported`);
-    }
-
-    const responseText = await text();
-    return textToFormData(responseText);
-  };
-
-  return {
-    url: responseUrl,
-    status: responseStatus,
-    statusText: responseStatusText,
-    headers: responseHeaders,
-    text,
-    json,
-    blob,
-    arrayBuffer,
-    formData
-  };
-};
-
-const canUseBlob = () => {
+var canUseBlob = function canUseBlob() {
   if (typeof window.FileReader !== "function") return false;
   if (typeof window.Blob !== "function") return false;
 
@@ -216,29 +346,26 @@ const canUseBlob = () => {
   }
 };
 
-const hasBlob = canUseBlob();
-const hasFormData = typeof window.FormData === "function";
-const hasArrayBuffer = typeof window.ArrayBuffer === "function";
-const hasSearchParams = typeof window.URLSearchParams === "function";
+var hasBlob = canUseBlob();
+var hasFormData = typeof window.FormData === "function";
+var hasArrayBuffer = typeof window.ArrayBuffer === "function";
+var hasSearchParams = typeof window.URLSearchParams === "function";
 
-const createRequestError = (error, {
-  url
-}) => {
-  return new Error(`error during xhr request on ${url}.
---- error stack ---
-${error.stack}`);
+var createRequestError = function createRequestError(error, _ref5) {
+  var url = _ref5.url;
+  return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
 };
 
-const createPromiseAndHooks = () => {
-  let resolve;
-  let reject;
-  const promise = new Promise((res, rej) => {
-    resolve = value => {
+var createPromiseAndHooks = function createPromiseAndHooks() {
+  var resolve;
+  var reject;
+  var promise = new Promise(function (res, rej) {
+    resolve = function resolve(value) {
       promise.settled = true;
       res(value);
     };
 
-    reject = value => {
+    reject = function reject(value) {
       promise.settled = true;
       rej(value);
     };
@@ -249,10 +376,10 @@ const createPromiseAndHooks = () => {
 }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 
 
-const computeWithCredentials = ({
-  credentials,
-  url
-}) => {
+var computeWithCredentials = function computeWithCredentials(_ref6) {
+  var credentials = _ref6.credentials,
+      url = _ref6.url;
+
   if (credentials === "same-origin") {
     return originSameAsGlobalOrigin(url);
   }
@@ -260,16 +387,16 @@ const computeWithCredentials = ({
   return credentials === "include";
 };
 
-const originSameAsGlobalOrigin = url => {
+var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
   // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
-  if (typeof window !== "object") return true;
-  if (typeof window.location !== "object") return true;
-  const globalOrigin = window.location.origin;
+  if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
+  if (_typeof(window.location) !== "object") return true;
+  var globalOrigin = window.location.origin;
   if (globalOrigin === "null") return true;
   return hrefToOrigin(url) === globalOrigin;
 };
 
-const detectBodyType = body => {
+var detectBodyType = function detectBodyType(body) {
   if (!body) {
     return "";
   }
@@ -288,11 +415,11 @@ const detectBodyType = body => {
 
   if (hasArrayBuffer) {
     if (hasBlob && isDataView(body)) {
-      return `dataView`;
+      return "dataView";
     }
 
     if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
-      return `arrayBuffer`;
+      return "arrayBuffer";
     }
   }
 
@@ -304,30 +431,30 @@ const detectBodyType = body => {
 }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
 
 
-const getHeadersFromXHR = xhr => {
-  const headerMap = {};
-  const headersString = xhr.getAllResponseHeaders();
+var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
+  var headerMap = {};
+  var headersString = xhr.getAllResponseHeaders();
   if (headersString === "") return headerMap;
-  const lines = headersString.trim().split(/[\r\n]+/);
-  lines.forEach(line => {
-    const parts = line.split(": ");
-    const name = parts.shift();
-    const value = parts.join(": ");
+  var lines = headersString.trim().split(/[\r\n]+/);
+  lines.forEach(function (line) {
+    var parts = line.split(": ");
+    var name = parts.shift();
+    var value = parts.join(": ");
     headerMap[name.toLowerCase()] = value;
   });
   return headerMap;
 };
 
-const hrefToOrigin = href => {
-  const scheme = hrefToScheme(href);
+var hrefToOrigin = function hrefToOrigin(href) {
+  var scheme = hrefToScheme(href);
 
   if (scheme === "file") {
     return "file://";
   }
 
   if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+    var secondProtocolSlashIndex = scheme.length + "://".length;
+    var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
     if (pathnameSlashIndex === -1) return href;
     return href.slice(0, pathnameSlashIndex);
   }
@@ -335,54 +462,54 @@ const hrefToOrigin = href => {
   return href.slice(0, scheme.length + 1);
 };
 
-const hrefToScheme = href => {
-  const colonIndex = href.indexOf(":");
+var hrefToScheme = function hrefToScheme(href) {
+  var colonIndex = href.indexOf(":");
   if (colonIndex === -1) return "";
   return href.slice(0, colonIndex);
 };
 
-const isDataView = obj => {
+var isDataView = function isDataView(obj) {
   return obj && DataView.prototype.isPrototypeOf(obj);
 };
 
-const isArrayBufferView = ArrayBuffer.isView || (() => {
-  const viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
-  return value => {
+var isArrayBufferView = ArrayBuffer.isView || function () {
+  var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+  return function (value) {
     return value && viewClasses.includes(Object.prototype.toString.call(value));
   };
-})();
+}();
 
-const textToFormData = text => {
-  const form = new FormData();
+var textToFormData = function textToFormData(text) {
+  var form = new FormData();
   text.trim().split("&").forEach(function (bytes) {
     if (bytes) {
-      const split = bytes.split("=");
-      const name = split.shift().replace(/\+/g, " ");
-      const value = split.join("=").replace(/\+/g, " ");
+      var split = bytes.split("=");
+      var name = split.shift().replace(/\+/g, " ");
+      var value = split.join("=").replace(/\+/g, " ");
       form.append(decodeURIComponent(name), decodeURIComponent(value));
     }
   });
   return form;
 };
 
-const blobToArrayBuffer = async blob => {
-  const reader = new FileReader();
-  const promise = fileReaderReady(reader);
+var blobToArrayBuffer = _async$3(function (blob) {
+  var reader = new FileReader();
+  var promise = fileReaderReady(reader);
   reader.readAsArrayBuffer(blob);
   return promise;
-};
+});
 
-const blobToText = blob => {
-  const reader = new FileReader();
-  const promise = fileReaderReady(reader);
+var blobToText = function blobToText(blob) {
+  var reader = new FileReader();
+  var promise = fileReaderReady(reader);
   reader.readAsText(blob);
   return promise;
 };
 
-const arrayBufferToText = arrayBuffer => {
-  const view = new Uint8Array(arrayBuffer);
-  const chars = new Array(view.length);
-  let i = 0;
+var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
+  var view = new Uint8Array(arrayBuffer);
+  var chars = new Array(view.length);
+  var i = 0;
 
   while (i < view.length) {
     chars[i] = String.fromCharCode(view[i]);
@@ -392,7 +519,7 @@ const arrayBufferToText = arrayBuffer => {
   return chars.join("");
 };
 
-const fileReaderReady = reader => {
+var fileReaderReady = function fileReaderReady(reader) {
   return new Promise(function (resolve, reject) {
     reader.onload = function () {
       resolve(reader.result);
@@ -404,85 +531,191 @@ const fileReaderReady = reader => {
   });
 };
 
-const cloneBuffer = buffer => {
+var cloneBuffer = function cloneBuffer(buffer) {
   if (buffer.slice) {
     return buffer.slice(0);
   }
 
-  const view = new Uint8Array(buffer.byteLength);
+  var view = new Uint8Array(buffer.byteLength);
   view.set(new Uint8Array(buffer));
   return view.buffer;
 };
 
-const fetchNative = async (url, {
-  mode = "cors",
-  ...options
-} = {}) => {
-  const response = await window.fetch(url, {
-    mode,
-    ...options
-  });
-  return {
-    url: response.url,
-    status: response.status,
-    statusText: "",
-    headers: responseToHeaders(response),
-    text: () => response.text(),
-    json: () => response.json(),
-    blob: () => response.blob(),
-    arrayBuffer: () => response.arrayBuffer(),
-    formData: () => response.formData()
-  };
-};
+var _excluded = ["mode"];
 
-const responseToHeaders = response => {
-  const headers = {};
-  response.headers.forEach((value, name) => {
+function _await$2(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _async$2(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var fetchNative = _async$2(function (url) {
+  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+  var _ref$mode = _ref.mode,
+      mode = _ref$mode === void 0 ? "cors" : _ref$mode,
+      options = _objectWithoutProperties(_ref, _excluded);
+
+  return _await$2(window.fetch(url, _objectSpread2({
+    mode: mode
+  }, options)), function (response) {
+    return {
+      url: response.url,
+      status: response.status,
+      statusText: "",
+      headers: responseToHeaders(response),
+      text: function text() {
+        return response.text();
+      },
+      json: function json() {
+        return response.json();
+      },
+      blob: function blob() {
+        return response.blob();
+      },
+      arrayBuffer: function arrayBuffer() {
+        return response.arrayBuffer();
+      },
+      formData: function formData() {
+        return response.formData();
+      }
+    };
+  });
+});
+
+var responseToHeaders = function responseToHeaders(response) {
+  var headers = {};
+  response.headers.forEach(function (value, name) {
     headers[name] = value;
   });
   return headers;
 };
 
-const fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-const fetchJson = async (url, options = {}) => {
-  const response = await fetchUrl(url, options);
-  const object = await response.json();
-  return object;
-};
+function _await$1(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
 
-const fetchExploringJson = async ({
-  signal
-} = {}) => {
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _async$1(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var fetchJson = _async$1(function (url) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  return _await$1(fetchUrl(url, options), function (response) {
+    return _await$1(response.json());
+  });
+});
+
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+
+  return then ? value.then(then) : value;
+}
+
+function _catch(body, recover) {
   try {
-    const exploringInfo = await fetchJson("/.jsenv/exploring.json", {
-      signal
-    });
-    return exploringInfo;
+    var result = body();
   } catch (e) {
+    return recover(e);
+  }
+
+  if (result && result.then) {
+    return result.then(void 0, recover);
+  }
+
+  return result;
+}
+
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+
+var fetchExploringJson = _async(function () {
+  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      signal = _ref.signal;
+
+  return _catch(function () {
+    return _await(fetchJson("/.jsenv/exploring.json", {
+      signal: signal
+    }));
+  }, function (e) {
     if (signal && signal.aborted && e.name === "AbortError") {
       throw e;
     }
 
-    throw new Error(`Cannot communicate with exploring server due to a network error
---- error stack ---
-${e.stack}`);
-  }
-};
+    throw new Error("Cannot communicate with exploring server due to a network error\n--- error stack ---\n".concat(e.stack));
+  });
+});
 
-const setStyles = (element, styles) => {
-  const elementStyle = element.style;
-  const restoreStyles = Object.keys(styles).map(styleName => {
-    let restore;
+var setStyles = function setStyles(element, styles) {
+  var elementStyle = element.style;
+  var restoreStyles = Object.keys(styles).map(function (styleName) {
+    var restore;
 
     if (styleName in elementStyle) {
-      const currentStyle = elementStyle[styleName];
+      var currentStyle = elementStyle[styleName];
 
-      restore = () => {
+      restore = function restore() {
         elementStyle[styleName] = currentStyle;
       };
     } else {
-      restore = () => {
+      restore = function restore() {
         delete elementStyle[styleName];
       };
     }
@@ -490,41 +723,41 @@ const setStyles = (element, styles) => {
     elementStyle[styleName] = styles[styleName];
     return restore;
   });
-  return () => {
-    restoreStyles.forEach(restore => restore());
+  return function () {
+    restoreStyles.forEach(function (restore) {
+      return restore();
+    });
   };
 };
-const setAttributes = (element, attributes) => {
-  Object.keys(attributes).forEach(name => {
+var setAttributes = function setAttributes(element, attributes) {
+  Object.keys(attributes).forEach(function (name) {
     element.setAttribute(name, attributes[name]);
   });
 };
 
 /* eslint-disable no-undef */
-
-const TOOLBAR_HTML_RELATIVE_URL = __TOOLBAR_BUILD_RELATIVE_URL_;
+const TOOLBAR_HTML_RELATIVE_URL =
+  __TOOLBAR_BUILD_RELATIVE_URL_;
 /* eslint-enable no-undef */
-
 const jsenvLogoSvgUrl = new URL("assets/jsenv_logo_192011c2.svg", document.currentScript && document.currentScript.src || document.baseURI);
 
 const injectToolbar = async () => {
-  await new Promise(resolve => {
+  await new Promise((resolve) => {
     if (window.requestIdleCallback) {
-      window.requestIdleCallback(resolve, {
-        timeout: 400
-      });
+      window.requestIdleCallback(resolve, { timeout: 400 });
     } else {
       window.requestAnimationFrame(resolve);
     }
   });
   const exploringJSON = await fetchExploringJson();
   const placeholder = getToolbarPlaceholder();
+
   const iframe = document.createElement("iframe");
   setAttributes(iframe, {
     tabindex: -1,
     // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
     // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-    allowtransparency: true
+    allowtransparency: true,
   });
   setStyles(iframe, {
     "position": "fixed",
@@ -533,26 +766,32 @@ const injectToolbar = async () => {
     "left": 0,
     "width": "100%",
     "height": 0,
-
     /* ensure toolbar children are not focusable when hidden */
     "visibility": "hidden",
     "transition-duration": "300ms",
     "transition-property": "height, visibility",
-    "border": "none"
+    "border": "none",
   });
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
-  const jsenvCoreDirectoryServerUrl = new URL(exploringJSON.jsenvCoreDirectoryRelativeUrl, document.location.origin).href;
-  const jsenvToolbarHtmlServerUrl = new URL(TOOLBAR_HTML_RELATIVE_URL, jsenvCoreDirectoryServerUrl); // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-
+  const jsenvCoreDirectoryServerUrl = new URL(
+    exploringJSON.jsenvCoreDirectoryRelativeUrl,
+    document.location.origin,
+  ).href;
+  const jsenvToolbarHtmlServerUrl = new URL(
+    TOOLBAR_HTML_RELATIVE_URL,
+    jsenvCoreDirectoryServerUrl,
+  );
+  // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", jsenvToolbarHtmlServerUrl);
   placeholder.parentNode.replaceChild(iframe, placeholder);
+
   addToolbarEventCallback(iframe, "toolbar_ready", () => {
-    sendCommandToToolbar(iframe, "renderToolbar", {
-      exploringJSON
-    });
+    sendCommandToToolbar(iframe, "renderToolbar", { exploringJSON });
   });
+
   await iframeLoadedPromise;
   iframe.removeAttribute("tabindex");
+
   const div = document.createElement("div");
   div.innerHTML = `
 <div id="jsenv-toolbar-trigger">
@@ -602,29 +841,25 @@ const injectToolbar = async () => {
 </div>`;
   const toolbarTrigger = div.firstElementChild;
   iframe.parentNode.appendChild(toolbarTrigger);
-  let timer;
 
+  let timer;
   toolbarTrigger.onmouseenter = () => {
     toolbarTrigger.setAttribute("data-animate", "");
     timer = setTimeout(expandToolbarTrigger, 500);
   };
-
   toolbarTrigger.onmouseleave = () => {
     clearTimeout(timer);
     collapseToolbarTrigger();
   };
-
   toolbarTrigger.onfocus = () => {
     toolbarTrigger.removeAttribute("data-animate");
     expandToolbarTrigger();
   };
-
   toolbarTrigger.onblur = () => {
     toolbarTrigger.removeAttribute("data-animate");
     clearTimeout(timer);
     collapseToolbarTrigger();
   };
-
   toolbarTrigger.onclick = () => {
     sendCommandToToolbar(iframe, "showToolbar");
   };
@@ -646,97 +881,91 @@ const injectToolbar = async () => {
   };
 
   hideToolbarTrigger();
-  addToolbarEventCallback(iframe, "toolbar-visibility-change", visible => {
+  addToolbarEventCallback(iframe, "toolbar-visibility-change", (visible) => {
     if (visible) {
       hideToolbarTrigger();
     } else {
       showToolbarTrigger();
     }
   });
-  return iframe;
+
+  return iframe
 };
 
 const addToolbarEventCallback = (iframe, eventName, callback) => {
-  const messageEventCallback = messageEvent => {
-    const {
-      data
-    } = messageEvent;
-
+  const messageEventCallback = (messageEvent) => {
+    const { data } = messageEvent;
     if (typeof data !== "object") {
-      return;
+      return
     }
-
-    const {
-      __jsenv__
-    } = data;
-
+    const { __jsenv__ } = data;
     if (!__jsenv__) {
-      return;
+      return
     }
-
     if (__jsenv__.event !== eventName) {
-      return;
+      return
     }
-
     callback(__jsenv__.data);
   };
 
   window.addEventListener("message", messageEventCallback, false);
   return () => {
     window.removeEventListener("message", messageEventCallback, false);
-  };
+  }
 };
 
 const sendCommandToToolbar = (iframe, command, ...args) => {
-  iframe.contentWindow.postMessage({
-    __jsenv__: {
-      command,
-      args
-    }
-  }, window.origin);
+  iframe.contentWindow.postMessage(
+    {
+      __jsenv__: {
+        command,
+        args,
+      },
+    },
+    window.origin,
+  );
 };
 
 const getToolbarPlaceholder = () => {
   const placeholder = queryPlaceholder();
-
   if (placeholder) {
     if (document.body.contains(placeholder)) {
-      return placeholder;
-    } // otherwise iframe would not be visible because in <head>
-
-
-    console.warn("element with [data-jsenv-toolbar-placeholder] must be inside document.body");
-    return createTooolbarPlaceholder();
+      return placeholder
+    }
+    // otherwise iframe would not be visible because in <head>
+    console.warn(
+      "element with [data-jsenv-toolbar-placeholder] must be inside document.body",
+    );
+    return createTooolbarPlaceholder()
   }
-
-  return createTooolbarPlaceholder();
+  return createTooolbarPlaceholder()
 };
 
 const queryPlaceholder = () => {
-  return document.querySelector("[data-jsenv-toolbar-placeholder]");
+  return document.querySelector("[data-jsenv-toolbar-placeholder]")
 };
 
 const createTooolbarPlaceholder = () => {
   const placeholder = document.createElement("span");
   document.body.appendChild(placeholder);
-  return placeholder;
+  return placeholder
 };
 
-const iframeToLoadedPromise = iframe => {
-  return new Promise(resolve => {
+const iframeToLoadedPromise = (iframe) => {
+  return new Promise((resolve) => {
     const onload = () => {
       iframe.removeEventListener("load", onload, true);
       resolve();
     };
-
     iframe.addEventListener("load", onload, true);
-  });
+  })
 };
 
 if (document.readyState === "complete") {
   injectToolbar();
 } else {
-  window.addEventListener("load", injectToolbar); // document.addEventListener("readystatechange", () => {
+  window.addEventListener("load", injectToolbar);
+  // document.addEventListener("readystatechange", () => {
   //   if (document.readyState === "complete") {
   //     injectToolbar()
   //   }

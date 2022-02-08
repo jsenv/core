@@ -38,7 +38,7 @@ const buildDirectoryUrl = resolveUrl(
 const cssBuildUrl = resolveUrl("main_build.css", buildDirectoryUrl)
 const cssString = await readFile(cssBuildUrl)
 
-const cssUrls = await parseCssUrls({ code: cssString, url: cssBuildUrl })
+const cssUrls = await parseCssUrls({ url: cssBuildUrl, content: cssString })
 const imgSpecifier = cssUrls[0].specifier
 const filterSpecifier = cssUrls[1].specifier
 const imgBuildRelativeUrl =

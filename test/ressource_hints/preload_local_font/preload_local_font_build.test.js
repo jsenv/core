@@ -59,7 +59,10 @@ const cssString = await readFile(cssFileBuildUrl)
 
 // ensure font urls properly updated in css file
 {
-  const cssUrls = await parseCssUrls({ code: cssString, url: cssFileBuildUrl })
+  const cssUrls = await parseCssUrls({
+    url: cssFileBuildUrl,
+    content: cssString,
+  })
   const fontSpecifier = cssUrls[0].specifier
 
   const actual = fontSpecifier

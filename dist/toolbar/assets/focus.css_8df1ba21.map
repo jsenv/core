@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "../../../src/internal/dev_server/toolbar/focus/focus.css"
+    "../../../src/internal/toolbar/focus/focus.css"
   ],
   "names": [],
   "mappings": "AAAA;;;;EAIE,mBAAmB;EACnB,oBAAoB;AACtB;;AAEA;EACE,kBAAkB;EAClB,oBAAoB;AACtB;;AAEA;;;;;;;EAOE,mBAAmB;AACrB;;AAEA;;;;EAIE,+BAA+B;AACjC;;AAEA;;;;;;;;CAQC;;AACD;EACE;;;;;;;IAOE,kBAAkB;IAClB,iBAAiB;IACjB,oBAAoB;IACpB;;;;KAIC;IACD,+BAA+B;EACjC;AACF;;AACA;EACE,SAAS;AACX",

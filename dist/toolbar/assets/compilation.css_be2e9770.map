@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "../../../src/internal/dev_server/toolbar/compilation/compilation.css"
+    "../../../src/internal/toolbar/compilation/compilation.css"
   ],
   "names": [],
   "mappings": "AAAA;EACE,WAAW;EACX,YAAY;EACZ,YAAY;EACZ,cAAc;AAChB;;AAEA;EACE,SAAS;EACT,oBAAoB;EACpB,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;AAClB;;AAEA;;EAEE,cAAc;EACd,kBAAkB;EAClB,cAAc;AAChB",

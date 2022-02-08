@@ -3,7 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     
-    <style>/* Loader icon */
+    <style content-href="./toolbar_main.css">/* Loader icon */
 #loader-icon {
   width: 20px;
   height: 20px;
@@ -790,8 +790,8 @@ html[data-toolbar-visible] #toolbar-trigger {
   color: inherit;
 }
 
-/*# sourceMappingURL=assets/toolbar_main.css_b1c67dd7.map */</style>
-  <script id="jsenv_inject_systemjs">/*
+/*# sourceMappingURL=assets/toolbar_main.css_58e23c43.map */</style>
+  <script id="jsenv_inject_systemjs" content-src="/src/internal/runtime_client/s.js">/*
 * SJS 6.11.0
 * Minimal SystemJS Build
 */
@@ -1654,8 +1654,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       }
     }
   }
-}());</script>
-      </head>
+}());</script></head>
   <body>
     <div id="toolbar-overlay"></div>
     <!-- toolbar -->
@@ -1895,8 +1894,6 @@ html[data-toolbar-visible] #toolbar-trigger {
                   <div class="category-subtitle">
                     <div>
                       <span class="browser_support_text" data-when="browserSupport:no">No browser support</span>
-                      <span class="browser_support_text" data-when="browserSupport:partial">Excellent browser support
-                        <span class="emoji">❤️</span></span>
                       <span class="browser_support_text" data-when="browserSupport:full">Perfect browser support
                         <span class="emoji">❤️</span></span>
                     </div>
@@ -1914,7 +1911,6 @@ html[data-toolbar-visible] #toolbar-trigger {
                   </div>
                   <div class="category-subtitle">
                     <div class="files_compilation_text">
-                      <span data-when="filesCompilation:no">Files shown are source files</span>
                       <span data-when="filesCompilation:html_only">Files shown are source files, except html</span>
                       <span data-when="filesCompilation:yes">Files shown are compiled for {runtime}</span>
                       <span data-when="filesCompilation:mismatch">Files shown are compiled for an other runtime</span>
@@ -2013,7 +2009,7 @@ html[data-toolbar-visible] #toolbar-trigger {
     module approach wil be faster because
     no compilation will be necessary
     -->
-    <script type="systemjs-importmap">{
+    <script type="systemjs-importmap" content-src="../../../node_resolution.importmap">{
   "imports": {}
 }</script>
     <script>
@@ -2021,38 +2017,87 @@ html[data-toolbar-visible] #toolbar-trigger {
       // and a promise the toolbar injector can listen to act on the toolbar
       // or we could just consider all communication should pass by postmessage
     </script>
-    <script>System.register([], (function () {
+    <script content-src="./toolbar_main.js">System.register([], function () {
   'use strict';
-  return {
-    execute: (function () {
 
-      const urlIsInsideOf = (url, otherUrl) => {
-        const urlObject = new URL(url);
-        const otherUrlObject = new URL(otherUrl);
+  return {
+    execute: function () {
+      /* eslint-disable no-eq-null, eqeqeq */
+      function arrayLikeToArray(arr, len) {
+        if (len == null || len > arr.length) len = arr.length;
+        var arr2 = new Array(len);
+
+        for (var i = 0; i < len; i++) {
+          arr2[i] = arr[i];
+        }
+
+        return arr2;
+      }
+
+      var arrayWithoutHoles = function (arr) {
+        if (Array.isArray(arr)) return arrayLikeToArray(arr);
+      };
+
+      function _iterableToArray(iter) {
+        if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+      }
+      /* eslint-disable consistent-return */
+
+
+      function unsupportedIterableToArray(o, minLen) {
+        if (!o) return;
+        if (typeof o === "string") return arrayLikeToArray(o, minLen);
+        var n = Object.prototype.toString.call(o).slice(8, -1);
+        if (n === "Object" && o.constructor) n = o.constructor.name;
+        if (n === "Map" || n === "Set") return Array.from(o);
+        if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+      }
+
+      var nonIterableSpread = function () {
+        throw new TypeError("Invalid attempt to spread non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+      };
+
+      var _toConsumableArray = function (arr) {
+        return arrayWithoutHoles(arr) || _iterableToArray(arr) || unsupportedIterableToArray(arr) || nonIterableSpread();
+      };
+
+      var nativeTypeOf = function nativeTypeOf(obj) {
+        return typeof obj;
+      };
+
+      var customTypeOf = function customTypeOf(obj) {
+        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+      };
+
+      var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
+      var urlIsInsideOf = function urlIsInsideOf(url, otherUrl) {
+        var urlObject = new URL(url);
+        var otherUrlObject = new URL(otherUrl);
 
         if (urlObject.origin !== otherUrlObject.origin) {
           return false;
         }
 
-        const urlPathname = urlObject.pathname;
-        const otherUrlPathname = otherUrlObject.pathname;
+        var urlPathname = urlObject.pathname;
+        var otherUrlPathname = otherUrlObject.pathname;
 
         if (urlPathname === otherUrlPathname) {
           return false;
         }
 
-        const isInside = urlPathname.startsWith(otherUrlPathname);
+        var isInside = urlPathname.startsWith(otherUrlPathname);
         return isInside;
       };
 
-      const getCommonPathname = (pathname, otherPathname) => {
-        const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex(pathname, otherPathname); // pathname and otherpathname are exactly the same
+      var getCommonPathname = function getCommonPathname(pathname, otherPathname) {
+        var firstDifferentCharacterIndex = findFirstDifferentCharacterIndex(pathname, otherPathname); // pathname and otherpathname are exactly the same
 
         if (firstDifferentCharacterIndex === -1) {
           return pathname;
         }
 
-        const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
+        var commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
 
         if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
           return commonString;
@@ -2062,17 +2107,17 @@ html[data-toolbar-visible] #toolbar-trigger {
           return commonString;
         }
 
-        const firstDifferentSlashIndex = commonString.lastIndexOf("/");
+        var firstDifferentSlashIndex = commonString.lastIndexOf("/");
         return pathname.slice(0, firstDifferentSlashIndex + 1);
       };
 
-      const findFirstDifferentCharacterIndex = (string, otherString) => {
-        const maxCommonLength = Math.min(string.length, otherString.length);
-        let i = 0;
+      var findFirstDifferentCharacterIndex = function findFirstDifferentCharacterIndex(string, otherString) {
+        var maxCommonLength = Math.min(string.length, otherString.length);
+        var i = 0;
 
         while (i < maxCommonLength) {
-          const char = string.charAt(i);
-          const otherChar = otherString.charAt(i);
+          var char = string.charAt(i);
+          var otherChar = otherString.charAt(i);
 
           if (char !== otherChar) {
             return i;
@@ -2089,8 +2134,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         return maxCommonLength;
       };
 
-      const pathnameToParentPathname = pathname => {
-        const slashLastIndex = pathname.lastIndexOf("/");
+      var pathnameToParentPathname = function pathnameToParentPathname(pathname) {
+        var slashLastIndex = pathname.lastIndexOf("/");
 
         if (slashLastIndex === -1) {
           return "/";
@@ -2099,61 +2144,98 @@ html[data-toolbar-visible] #toolbar-trigger {
         return pathname.slice(0, slashLastIndex + 1);
       };
 
-      const urlToRelativeUrl = (url, baseUrl) => {
-        const urlObject = new URL(url);
-        const baseUrlObject = new URL(baseUrl);
+      var urlToRelativeUrl = function urlToRelativeUrl(url, baseUrl) {
+        var urlObject = new URL(url);
+        var baseUrlObject = new URL(baseUrl);
 
         if (urlObject.protocol !== baseUrlObject.protocol) {
-          const urlAsString = String(url);
+          var urlAsString = String(url);
           return urlAsString;
         }
 
         if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
-          const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+          var afterUrlScheme = String(url).slice(urlObject.protocol.length);
           return afterUrlScheme;
         }
 
-        const {
-          pathname,
-          hash,
-          search
-        } = urlObject;
+        var pathname = urlObject.pathname,
+            hash = urlObject.hash,
+            search = urlObject.search;
 
         if (pathname === "/") {
-          const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+          var baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
           return baseUrlRessourceWithoutLeadingSlash;
         }
 
-        const basePathname = baseUrlObject.pathname;
-        const commonPathname = getCommonPathname(pathname, basePathname);
+        var basePathname = baseUrlObject.pathname;
+        var commonPathname = getCommonPathname(pathname, basePathname);
 
         if (!commonPathname) {
-          const urlAsString = String(url);
-          return urlAsString;
+          var _urlAsString = String(url);
+
+          return _urlAsString;
         }
 
-        const specificPathname = pathname.slice(commonPathname.length);
-        const baseSpecificPathname = basePathname.slice(commonPathname.length);
+        var specificPathname = pathname.slice(commonPathname.length);
+        var baseSpecificPathname = basePathname.slice(commonPathname.length);
 
         if (baseSpecificPathname.includes("/")) {
-          const baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
-          const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
-          const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
-          return relativeUrl;
+          var baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
+          var relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
+
+          var _relativeUrl = "".concat(relativeDirectoriesNotation).concat(specificPathname).concat(search).concat(hash);
+
+          return _relativeUrl;
         }
 
-        const relativeUrl = `${specificPathname}${search}${hash}`;
+        var relativeUrl = "".concat(specificPathname).concat(search).concat(hash);
         return relativeUrl;
       };
 
-      const updateIframeOverflowOnParentWindow = () => {
+      var objectWithoutPropertiesLoose = function (source, excluded) {
+        if (source === null) return {};
+        var target = {};
+        var sourceKeys = Object.keys(source);
+        var key;
+        var i;
+
+        for (i = 0; i < sourceKeys.length; i++) {
+          key = sourceKeys[i];
+          if (excluded.indexOf(key) >= 0) continue;
+          target[key] = source[key];
+        }
+
+        return target;
+      };
+
+      var _objectWithoutProperties = function (source, excluded) {
+        if (source === null) return {};
+        var target = objectWithoutPropertiesLoose(source, excluded);
+        var key;
+        var i;
+
+        if (Object.getOwnPropertySymbols) {
+          var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+          for (i = 0; i < sourceSymbolKeys.length; i++) {
+            key = sourceSymbolKeys[i];
+            if (excluded.indexOf(key) >= 0) continue;
+            if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+            target[key] = source[key];
+          }
+        }
+
+        return target;
+      };
+
+      var updateIframeOverflowOnParentWindow = function updateIframeOverflowOnParentWindow() {
         if (!window.parent) {
           // can happen while parent iframe reloads
           return;
         }
 
-        const aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
-        const settingsAreOpened = document.querySelector("#settings[data-active]");
+        var aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
+        var settingsAreOpened = document.querySelector("#settings[data-active]");
 
         if (aTooltipIsOpened || settingsAreOpened) {
           enableIframeOverflowOnParentWindow();
@@ -2161,20 +2243,21 @@ html[data-toolbar-visible] #toolbar-trigger {
           disableIframeOverflowOnParentWindow();
         }
       };
-      let iframeOverflowEnabled = false;
 
-      const enableIframeOverflowOnParentWindow = () => {
+      var iframeOverflowEnabled = false;
+
+      var enableIframeOverflowOnParentWindow = function enableIframeOverflowOnParentWindow() {
         if (iframeOverflowEnabled) return;
         iframeOverflowEnabled = true;
-        const iframe = getToolbarIframe();
-        const transitionDuration = iframe.style.transitionDuration;
+        var iframe = getToolbarIframe();
+        var transitionDuration = iframe.style.transitionDuration;
         setStyles(iframe, {
           "height": "100%",
           "transition-duration": "0ms"
         });
 
         if (transitionDuration) {
-          setTimeout(() => {
+          setTimeout(function () {
             setStyles(iframe, {
               "transition-duration": transitionDuration
             });
@@ -2182,18 +2265,18 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      const disableIframeOverflowOnParentWindow = () => {
+      var disableIframeOverflowOnParentWindow = function disableIframeOverflowOnParentWindow() {
         if (!iframeOverflowEnabled) return;
         iframeOverflowEnabled = false;
-        const iframe = getToolbarIframe();
-        const transitionDuration = iframe.style.transitionDuration;
+        var iframe = getToolbarIframe();
+        var transitionDuration = iframe.style.transitionDuration;
         setStyles(iframe, {
           "height": "40px",
           "transition-duration": "0ms"
         });
 
         if (transitionDuration) {
-          setTimeout(() => {
+          setTimeout(function () {
             setStyles(iframe, {
               "transition-duration": transitionDuration
             });
@@ -2201,29 +2284,34 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      const getToolbarIframe = () => {
-        const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
-        return iframes.find(iframe => iframe.contentWindow === window);
+      var getToolbarIframe = function getToolbarIframe() {
+        var iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
+        return iframes.find(function (iframe) {
+          return iframe.contentWindow === window;
+        });
       };
-      const forceHideElement = element => {
+
+      var forceHideElement = function forceHideElement(element) {
         element.setAttribute("data-force-hide", "");
       };
-      const removeForceHideElement = element => {
+
+      var removeForceHideElement = function removeForceHideElement(element) {
         element.removeAttribute("data-force-hide");
       };
-      const setStyles = (element, styles) => {
-        const elementStyle = element.style;
-        const restoreStyles = Object.keys(styles).map(styleName => {
-          let restore;
+
+      var setStyles = function setStyles(element, styles) {
+        var elementStyle = element.style;
+        var restoreStyles = Object.keys(styles).map(function (styleName) {
+          var restore;
 
           if (styleName in elementStyle) {
-            const currentStyle = elementStyle[styleName];
+            var currentStyle = elementStyle[styleName];
 
-            restore = () => {
+            restore = function restore() {
               elementStyle[styleName] = currentStyle;
             };
           } else {
-            restore = () => {
+            restore = function restore() {
               delete elementStyle[styleName];
             };
           }
@@ -2231,49 +2319,61 @@ html[data-toolbar-visible] #toolbar-trigger {
           elementStyle[styleName] = styles[styleName];
           return restore;
         });
-        return () => {
-          restoreStyles.forEach(restore => restore());
+        return function () {
+          restoreStyles.forEach(function (restore) {
+            return restore();
+          });
         };
       };
-      const toolbarSectionIsActive = element => {
+
+      var toolbarSectionIsActive = function toolbarSectionIsActive(element) {
         return element.hasAttribute("data-active");
       };
-      const activateToolbarSection = element => {
+
+      var activateToolbarSection = function activateToolbarSection(element) {
         element.setAttribute("data-active", "");
       };
-      const deactivateToolbarSection = element => {
+
+      var deactivateToolbarSection = function deactivateToolbarSection(element) {
         element.removeAttribute("data-active");
       };
 
-      const startJavaScriptAnimation = ({
-        duration = 300,
-        timingFunction = t => t,
-        onProgress = () => {},
-        onCancel = () => {},
-        onComplete = () => {}
-      }) => {
+      var startJavaScriptAnimation = function startJavaScriptAnimation(_ref6) {
+        var _ref6$duration = _ref6.duration,
+            duration = _ref6$duration === void 0 ? 300 : _ref6$duration,
+            _ref6$timingFunction = _ref6.timingFunction,
+            timingFunction = _ref6$timingFunction === void 0 ? function (t) {
+          return t;
+        } : _ref6$timingFunction,
+            _ref6$onProgress = _ref6.onProgress,
+            onProgress = _ref6$onProgress === void 0 ? function () {} : _ref6$onProgress,
+            _ref6$onCancel = _ref6.onCancel,
+            onCancel = _ref6$onCancel === void 0 ? function () {} : _ref6$onCancel,
+            _ref6$onComplete = _ref6.onComplete,
+            onComplete = _ref6$onComplete === void 0 ? function () {} : _ref6$onComplete;
+
         if (isNaN(duration)) {
           // console.warn(`duration must be a number, received ${duration}`)
-          return () => {};
+          return function () {};
         }
 
         duration = parseInt(duration, 10);
-        const startMs = performance.now();
-        let currentRequestAnimationFrameId;
-        let done = false;
-        let rawProgress = 0;
-        let progress = 0;
+        var startMs = performance.now();
+        var currentRequestAnimationFrameId;
+        var done = false;
+        var rawProgress = 0;
+        var progress = 0;
 
-        const handler = () => {
+        var handler = function handler() {
           currentRequestAnimationFrameId = null;
-          const nowMs = performance.now();
+          var nowMs = performance.now();
           rawProgress = Math.min((nowMs - startMs) / duration, 1);
           progress = timingFunction(rawProgress);
           done = rawProgress === 1;
           onProgress({
-            done,
-            rawProgress,
-            progress
+            done: done,
+            rawProgress: rawProgress,
+            progress: progress
           });
 
           if (done) {
@@ -2285,7 +2385,7 @@ html[data-toolbar-visible] #toolbar-trigger {
 
         handler();
 
-        const stop = () => {
+        var stop = function stop() {
           if (currentRequestAnimationFrameId) {
             window.cancelAnimationFrame(currentRequestAnimationFrameId);
             currentRequestAnimationFrameId = null;
@@ -2294,31 +2394,31 @@ html[data-toolbar-visible] #toolbar-trigger {
           if (!done) {
             done = true;
             onCancel({
-              rawProgress,
-              progress
+              rawProgress: rawProgress,
+              progress: progress
             });
           }
         };
 
         return stop;
-      };
+      }; // handle data-last-interaction attr on html (focusring)
 
-      // handle data-last-interaction attr on html (focusring)
-      window.addEventListener("mousedown", mousedownEvent => {
+
+      window.addEventListener("mousedown", function (mousedownEvent) {
         if (mousedownEvent.defaultPrevented) {
           return;
         }
 
         document.documentElement.setAttribute("data-last-interaction", "mouse");
       });
-      window.addEventListener("touchstart", touchstartEvent => {
+      window.addEventListener("touchstart", function (touchstartEvent) {
         if (touchstartEvent.defaultPrevented) {
           return;
         }
 
         document.documentElement.setAttribute("data-last-interaction", "mouse");
       });
-      window.addEventListener("keydown", keydownEvent => {
+      window.addEventListener("keydown", function (keydownEvent) {
         if (keydownEvent.defaultPrevented) {
           return;
         }
@@ -2326,10 +2426,10 @@ html[data-toolbar-visible] #toolbar-trigger {
         document.documentElement.setAttribute("data-last-interaction", "keyboard");
       });
 
-      const setLinkHrefForParentWindow = (a, href) => {
+      var setLinkHrefForParentWindow = function setLinkHrefForParentWindow(a, href) {
         a.href = href;
 
-        a.onclick = e => {
+        a.onclick = function (e) {
           if (e.ctrlKey || e.metaKey) {
             return;
           }
@@ -2339,59 +2439,70 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       };
 
-      const createPreference = name => {
+      var createPreference = function createPreference(name) {
         return {
-          has: () => localStorage.hasOwnProperty(name),
-          get: () => localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined,
-          set: value => localStorage.setItem(name, JSON.stringify(value))
+          has: function has() {
+            return localStorage.hasOwnProperty(name);
+          },
+          get: function get() {
+            return localStorage.hasOwnProperty(name) ? JSON.parse(localStorage.getItem(name)) : undefined;
+          },
+          set: function set(value) {
+            return localStorage.setItem(name, JSON.stringify(value));
+          }
         };
       };
 
-      const toggleTooltip = element => {
+      var toggleTooltip = function toggleTooltip(element) {
         if (element.hasAttribute("data-tooltip-visible")) {
           hideTooltip(element);
         } else {
           showTooltip(element);
         }
       };
-      const hideTooltip = element => {
+
+      var hideTooltip = function hideTooltip(element) {
         element.removeAttribute("data-tooltip-visible");
         element.removeAttribute("data-tooltip-auto-visible");
         updateIframeOverflowOnParentWindow();
       };
-      const showTooltip = element => {
+
+      var showTooltip = function showTooltip(element) {
         element.setAttribute("data-tooltip-visible", "");
         updateIframeOverflowOnParentWindow();
       };
-      const autoShowTooltip = element => {
+
+      var autoShowTooltip = function autoShowTooltip(element) {
         element.setAttribute("data-tooltip-auto-visible", "");
         updateIframeOverflowOnParentWindow();
       };
-      const removeAutoShowTooltip = element => {
+
+      var removeAutoShowTooltip = function removeAutoShowTooltip(element) {
         element.removeAttribute("data-tooltip-auto-visible");
         updateIframeOverflowOnParentWindow();
       };
-      const hideAllTooltip = () => {
-        const elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"));
-        elementsWithTooltip.forEach(elementWithTooltip => {
+
+      var hideAllTooltip = function hideAllTooltip() {
+        var elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"));
+        elementsWithTooltip.forEach(function (elementWithTooltip) {
           hideTooltip(elementWithTooltip);
         });
       };
 
-      const enableVariant = (rootNode, variables) => {
-        const nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`));
-        nodesNotMatching.forEach(nodeNotMatching => {
-          const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
-          const matches = testCondition(conditionAttributeValue, variables);
+      var enableVariant = function enableVariant(rootNode, variables) {
+        var nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
+        nodesNotMatching.forEach(function (nodeNotMatching) {
+          var conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
+          var matches = testCondition(conditionAttributeValue, variables);
 
           if (matches) {
             renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
           }
         });
-        const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`));
-        nodesMatching.forEach(nodeMatching => {
-          const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
-          const matches = testCondition(conditionAttributeValue, variables);
+        var nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
+        nodesMatching.forEach(function (nodeMatching) {
+          var conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
+          var matches = testCondition(conditionAttributeValue, variables);
 
           if (!matches) {
             renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
@@ -2399,9 +2510,9 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       };
 
-      const testCondition = (conditionAttributeValue, variables) => {
-        const condition = parseCondition(conditionAttributeValue);
-        return Object.keys(variables).some(key => {
+      var testCondition = function testCondition(conditionAttributeValue, variables) {
+        var condition = parseCondition(conditionAttributeValue);
+        return Object.keys(variables).some(function (key) {
           if (condition.key !== key) {
             return false;
           } // the condition do not specify a value, any value is ok
@@ -2419,8 +2530,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         });
       };
 
-      const parseCondition = conditionAttributeValue => {
-        const colonIndex = conditionAttributeValue.indexOf(":");
+      var parseCondition = function parseCondition(conditionAttributeValue) {
+        var colonIndex = conditionAttributeValue.indexOf(":");
 
         if (colonIndex === -1) {
           return {
@@ -2435,20 +2546,20 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       };
 
-      const attributeIndicatingACondition = `data-when`;
-      const attributeIndicatingAMatch = `data-when-active`;
+      var attributeIndicatingACondition = "data-when";
+      var attributeIndicatingAMatch = "data-when-active";
 
-      const renameAttribute = (node, name, newName) => {
+      var renameAttribute = function renameAttribute(node, name, newName) {
         node.setAttribute(newName, node.getAttribute(name));
         node.removeAttribute(name);
       };
 
-      const renderToolbarSettings = () => {
+      var renderToolbarSettings = function renderToolbarSettings() {
         document.querySelector("#settings-button").onclick = toggleSettings;
         document.querySelector("#button-close-settings").onclick = toggleSettings;
       };
 
-      const toggleSettings = () => {
+      var toggleSettings = function toggleSettings() {
         if (settingsAreVisible()) {
           hideSettings();
         } else {
@@ -2456,32 +2567,125 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      const enableWarningStyle = () => {
+      var enableWarningStyle = function enableWarningStyle() {
         enableVariant(document.querySelector("#settings-button"), {
           has_warning: "yes"
         });
       };
-      const disableWarningStyle = () => {
+
+      var disableWarningStyle = function disableWarningStyle() {
         enableVariant(document.querySelector("#settings-button"), {
           has_warning: "no"
         });
       };
-      const settingsAreVisible = () => {
-        return toolbarSectionIsActive(document.querySelector(`#settings`));
+
+      var settingsAreVisible = function settingsAreVisible() {
+        return toolbarSectionIsActive(document.querySelector("#settings"));
       };
-      const hideSettings = () => {
-        deactivateToolbarSection(document.querySelector(`#settings`));
-        updateIframeOverflowOnParentWindow();
-      };
-      const showSettings = () => {
-        activateToolbarSection(document.querySelector(`#settings`));
+
+      var hideSettings = function hideSettings() {
+        deactivateToolbarSection(document.querySelector("#settings"));
         updateIframeOverflowOnParentWindow();
       };
 
-      const notificationAvailable = typeof window.Notification === "function";
-      const notificationPreference = createPreference("notification");
-      const arrayOfOpenedNotifications = [];
-      const renderToolbarNotification = () => {
+      var showSettings = function showSettings() {
+        activateToolbarSection(document.querySelector("#settings"));
+        updateIframeOverflowOnParentWindow();
+      };
+
+      var _defineProperty = function (obj, key, value) {
+        // Shortcircuit the slow defineProperty path when possible.
+        // We are trying to avoid issues where setters defined on the
+        // prototype cause side effects under the fast path of simple
+        // assignment. By checking for existence of the property with
+        // the in operator, we can optimize most of this overhead away.
+        if (key in obj) {
+          Object.defineProperty(obj, key, {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        } else {
+          obj[key] = value;
+        }
+
+        return obj;
+      }; // filters on symbol properties only. Returned string properties are always
+      // enumerable. It is good to use in objectSpread.
+
+
+      function ownKeys(object, enumerableOnly) {
+        var keys = Object.keys(object);
+
+        if (Object.getOwnPropertySymbols) {
+          var symbols = Object.getOwnPropertySymbols(object);
+
+          if (enumerableOnly) {
+            symbols = symbols.filter(function (sym) {
+              return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+            });
+          }
+
+          keys.push.apply(keys, symbols);
+        }
+
+        return keys;
+      }
+
+      function _objectSpread2(target) {
+        for (var i = 1; i < arguments.length; i++) {
+          var source = arguments[i] != null ? arguments[i] : {};
+
+          if (i % 2) {
+            ownKeys(Object(source), true).forEach(function (key) {
+              _defineProperty(target, key, source[key]);
+            });
+          } else if (Object.getOwnPropertyDescriptors) {
+            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+          } else {
+            ownKeys(Object(source)).forEach(function (key) {
+              Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+            });
+          }
+        }
+
+        return target;
+      }
+
+      var _excluded$1 = ["clickToFocus", "clickToClose"];
+
+      function _async$b(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _await$b(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      var notificationAvailable = typeof window.Notification === "function";
+      var notificationPreference = createPreference("notification");
+      var arrayOfOpenedNotifications = [];
+
+      var renderToolbarNotification = function renderToolbarNotification() {
         if (!notificationAvailable) {
           applyNotificationNotAvailableEffects();
           return;
@@ -2490,8 +2694,8 @@ html[data-toolbar-visible] #toolbar-trigger {
         updatePermission();
       };
 
-      const updatePermission = () => {
-        const notifPermission = Notification.permission;
+      var updatePermission = function updatePermission() {
+        var notifPermission = Notification.permission;
 
         if (notifPermission === "default") {
           applyNotificationDefaultEffects();
@@ -2509,67 +2713,67 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      const notifCheckbox = document.querySelector("#toggle-notifs");
+      var notifCheckbox = document.querySelector("#toggle-notifs");
 
-      const applyNotificationNotAvailableEffects = () => {
-        const notifSetting = document.querySelector(".settings-notification");
+      var applyNotificationNotAvailableEffects = function applyNotificationNotAvailableEffects() {
+        var notifSetting = document.querySelector(".settings-notification");
         notifSetting.setAttribute("data-disabled", "true");
-        notifSetting.setAttribute("title", `Notification not available in the browser`);
+        notifSetting.setAttribute("title", "Notification not available in the browser");
         notifCheckbox.disabled = true;
       };
 
-      const applyNotificationDefaultEffects = () => {
+      var applyNotificationDefaultEffects = function applyNotificationDefaultEffects() {
         applyNotificationNOTGrantedEffects();
-        const notifSetting = document.querySelector(".settings-notification");
+        var notifSetting = document.querySelector(".settings-notification");
         notifSetting.removeAttribute("data-disabled");
         notifSetting.removeAttribute("title");
       };
 
-      const applyNotificationDeniedEffects = () => {
+      var applyNotificationDeniedEffects = function applyNotificationDeniedEffects() {
         applyNotificationNOTGrantedEffects();
-        const notifSetting = document.querySelector(".settings-notification");
+        var notifSetting = document.querySelector(".settings-notification");
         notifSetting.setAttribute("data-disabled", "true");
-        notifSetting.setAttribute("title", `Notification denied`);
+        notifSetting.setAttribute("title", "Notification denied");
       };
 
-      const applyNotificationGrantedEffects = () => {
+      var applyNotificationGrantedEffects = function applyNotificationGrantedEffects() {
         enableVariant(document.querySelector(".notification-text"), {
           notif_granted: "yes"
         });
         notifCheckbox.disabled = false;
         notifCheckbox.checked = getNotificationPreference();
 
-        notifCheckbox.onchange = () => {
+        notifCheckbox.onchange = function () {
           setNotificationPreference(notifCheckbox.checked);
 
           if (!notifCheckbox.checked) {
             // slice because arrayOfOpenedNotifications can be mutated while looping
-            arrayOfOpenedNotifications.slice().forEach(notification => {
+            arrayOfOpenedNotifications.slice().forEach(function (notification) {
               notification.close();
             });
           }
         };
       };
 
-      const applyNotificationNOTGrantedEffects = () => {
+      var applyNotificationNOTGrantedEffects = function applyNotificationNOTGrantedEffects() {
         enableVariant(document.querySelector(".notification-text"), {
           notif_granted: "no"
         });
         notifCheckbox.disabled = true;
         notifCheckbox.checked = false;
 
-        document.querySelector("a.request_notification_permission").onclick = () => {
-          requestPermission().then(() => {
+        document.querySelector("a.request_notification_permission").onclick = function () {
+          requestPermission().then(function () {
             setNotificationPreference(true);
             updatePermission();
           });
         };
       };
 
-      const notifyExecutionResult = (executedFileRelativeUrl, execution, previousExecution) => {
-        const notificationEnabled = getNotificationPreference();
+      var notifyExecutionResult = function notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution) {
+        var notificationEnabled = getNotificationPreference();
         if (!notificationEnabled) return;
-        const notificationOptions = {
+        var notificationOptions = {
           lang: "en",
           icon: getFaviconHref(),
           clickToFocus: true,
@@ -2579,49 +2783,57 @@ html[data-toolbar-visible] #toolbar-trigger {
         if (execution.status === "errored") {
           if (previousExecution) {
             if (previousExecution.status === "completed") {
-              notify("Broken", { ...notificationOptions,
-                body: `${executedFileRelativeUrl} execution now failing.`
-              });
+              notify("Broken", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
+                body: "".concat(executedFileRelativeUrl, " execution now failing.")
+              }));
             } else {
-              notify("Still failing", { ...notificationOptions,
-                body: `${executedFileRelativeUrl} execution still failing.`
-              });
+              notify("Still failing", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
+                body: "".concat(executedFileRelativeUrl, " execution still failing.")
+              }));
             }
           } else {
-            notify("Failing", { ...notificationOptions,
-              body: `${executedFileRelativeUrl} execution failed.`
-            });
+            notify("Failing", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
+              body: "".concat(executedFileRelativeUrl, " execution failed.")
+            }));
           }
         } else if (previousExecution && previousExecution.status === "errored") {
-          notify("Fixed", { ...notificationOptions,
-            body: `${executedFileRelativeUrl} execution fixed.`
-          });
+          notify("Fixed", _objectSpread2(_objectSpread2({}, notificationOptions), {}, {
+            body: "".concat(executedFileRelativeUrl, " execution fixed.")
+          }));
         }
       };
 
-      const getNotificationPreference = () => notificationPreference.has() ? notificationPreference.get() : true;
+      var getNotificationPreference = function getNotificationPreference() {
+        return notificationPreference.has() ? notificationPreference.get() : true;
+      };
 
-      const setNotificationPreference = value => notificationPreference.set(value);
+      var setNotificationPreference = function setNotificationPreference(value) {
+        return notificationPreference.set(value);
+      };
 
-      const getFaviconHref = () => {
-        const link = document.querySelector('link[rel="icon"]');
+      var getFaviconHref = function getFaviconHref() {
+        var link = document.querySelector('link[rel="icon"]');
         return link ? link.href : undefined;
       };
 
-      let permission = "default";
-      const notify = notificationAvailable ? async (title, {
-        clickToFocus = false,
-        clickToClose = false,
-        ...options
-      } = {}) => {
+      var permission = "default";
+      var notify = notificationAvailable ? _async$b(function (title) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+        var _ref$clickToFocus = _ref.clickToFocus,
+            clickToFocus = _ref$clickToFocus === void 0 ? false : _ref$clickToFocus,
+            _ref$clickToClose = _ref.clickToClose,
+            clickToClose = _ref$clickToClose === void 0 ? false : _ref$clickToClose,
+            options = _objectWithoutProperties(_ref, _excluded$1);
+
         if (permission !== "granted") {
           return null;
         }
 
-        const notification = new Notification(title, options);
+        var notification = new Notification(title, options);
         arrayOfOpenedNotifications.push(notification);
 
-        notification.onclick = () => {
+        notification.onclick = function () {
           // but if the user navigated inbetween
           // focusing window will show something else
           // in that case it could be great to do something
@@ -2634,8 +2846,8 @@ html[data-toolbar-visible] #toolbar-trigger {
           if (clickToClose) notification.close();
         };
 
-        notification.onclose = () => {
-          const index = arrayOfOpenedNotifications.indexOf(notification);
+        notification.onclose = function () {
+          var index = arrayOfOpenedNotifications.indexOf(notification);
 
           if (index > -1) {
             arrayOfOpenedNotifications.splice(index, 1);
@@ -2643,26 +2855,30 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
 
         return notification;
-      } : () => {};
-      let requestPromise;
-      const requestPermission = notificationAvailable ? async () => {
+      }) : function () {};
+      var requestPromise;
+      var requestPermission = notificationAvailable ? _async$b(function () {
         if (requestPromise) return requestPromise;
         requestPromise = Notification.requestPermission();
-        permission = await requestPromise;
-        requestPromise = undefined;
-        return permission;
-      } : () => Promise.resolve("default");
+        return _await$b(requestPromise, function (_requestPromise) {
+          permission = _requestPromise;
+          requestPromise = undefined;
+          return permission;
+        });
+      }) : function () {
+        return Promise.resolve("default");
+      };
+      var DARK_THEME = "dark";
+      var LIGHT_THEME = "light";
+      var themePreference = createPreference("theme");
 
-      const DARK_THEME = "dark";
-      const LIGHT_THEME = "light";
-      const themePreference = createPreference("theme");
-      const renderToolbarTheme = () => {
-        const theme = getThemePreference();
-        const checkbox = document.querySelector("#checkbox-dark-theme");
+      var renderToolbarTheme = function renderToolbarTheme() {
+        var theme = getThemePreference();
+        var checkbox = document.querySelector("#checkbox-dark-theme");
         checkbox.checked = theme === DARK_THEME;
         setTheme(theme);
 
-        checkbox.onchange = () => {
+        checkbox.onchange = function () {
           if (checkbox.checked) {
             setThemePreference(DARK_THEME);
             setTheme(DARK_THEME);
@@ -2673,37 +2889,40 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
       };
 
-      const getThemePreference = () => {
+      var getThemePreference = function getThemePreference() {
         return themePreference.has() ? themePreference.get() : DARK_THEME;
       };
 
-      const setThemePreference = value => {
+      var setThemePreference = function setThemePreference(value) {
         themePreference.set(value);
         setTheme(value);
       };
 
-      const setTheme = theme => {
+      var setTheme = function setTheme(theme) {
         document.querySelector("html").setAttribute("data-theme", theme);
       };
 
-      const animationPreference = createPreference("animation");
-      const renderToolbarAnimation = () => {
-        const animCheckbox = document.querySelector("#toggle-anims");
+      var animationPreference = createPreference("animation");
+
+      var renderToolbarAnimation = function renderToolbarAnimation() {
+        var animCheckbox = document.querySelector("#toggle-anims");
         animCheckbox.checked = getAnimationPreference();
 
-        animCheckbox.onchange = () => {
+        animCheckbox.onchange = function () {
           setAnimationPreference(animCheckbox.checked);
           onPreferenceChange(animCheckbox.checked);
         };
 
         onPreferenceChange(); // enable toolbar transition only after first render
 
-        setTimeout(() => {
+        setTimeout(function () {
           document.querySelector("#toolbar").setAttribute("data-animate", "");
         });
       };
 
-      const onPreferenceChange = (value = getAnimationPreference()) => {
+      var onPreferenceChange = function onPreferenceChange() {
+        var value = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : getAnimationPreference();
+
         if (value) {
           enableAnimation();
         } else {
@@ -2711,40 +2930,45 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      const getAnimationPreference = () => animationPreference.has() ? animationPreference.get() : true;
+      var getAnimationPreference = function getAnimationPreference() {
+        return animationPreference.has() ? animationPreference.get() : true;
+      };
 
-      const setAnimationPreference = value => animationPreference.set(value);
+      var setAnimationPreference = function setAnimationPreference(value) {
+        return animationPreference.set(value);
+      };
 
-      const enableAnimation = () => {
+      var enableAnimation = function enableAnimation() {
         document.documentElement.removeAttribute("data-animation-disabled");
       };
 
-      const disableAnimation = () => {
+      var disableAnimation = function disableAnimation() {
         document.documentElement.setAttribute("data-animation-disabled", "");
       };
 
-      const createHorizontalBreakpoint = breakpointValue => {
+      var createHorizontalBreakpoint = function createHorizontalBreakpoint(breakpointValue) {
         return createBreakpoint(windowWidthMeasure, breakpointValue);
       };
 
-      const createMeasure = ({
-        compute,
-        register
-      }) => {
-        let currentValue = compute();
+      var createMeasure = function createMeasure(_ref) {
+        var compute = _ref.compute,
+            register = _ref.register;
+        var currentValue = compute();
 
-        const get = () => compute();
+        var get = function get() {
+          return compute();
+        };
 
-        const changed = createSignal();
+        var changed = createSignal();
 
-        let unregister = () => {};
+        var unregister = function unregister() {};
 
         if (register) {
-          unregister = register(() => {
-            const value = compute();
+          unregister = register(function () {
+            var value = compute();
 
             if (value !== currentValue) {
-              const previousValue = value;
+              var previousValue = value;
               currentValue = value;
               changed.notify(value, previousValue);
             }
@@ -2752,19 +2976,19 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         return {
-          get,
-          changed,
-          unregister
+          get: get,
+          changed: changed,
+          unregister: unregister
         };
       };
 
-      const createSignal = () => {
-        const callbackArray = [];
+      var createSignal = function createSignal() {
+        var callbackArray = [];
 
-        const listen = callback => {
+        var listen = function listen(callback) {
           callbackArray.push(callback);
-          return () => {
-            const index = callbackArray.indexOf(callback);
+          return function () {
+            var index = callbackArray.indexOf(callback);
 
             if (index > -1) {
               callbackArray.splice(index, 1);
@@ -2772,34 +2996,40 @@ html[data-toolbar-visible] #toolbar-trigger {
           };
         };
 
-        const notify = (...args) => {
-          callbackArray.slice().forEach(callback => {
-            callback(...args);
+        var notify = function notify() {
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+
+          callbackArray.slice().forEach(function (callback) {
+            callback.apply(void 0, args);
           });
         };
 
         return {
-          listen,
-          notify
+          listen: listen,
+          notify: notify
         };
       };
 
-      const windowWidthMeasure = createMeasure({
+      var windowWidthMeasure = createMeasure({
         name: "window-width",
-        compute: () => window.innerWidth,
-        register: onchange => {
+        compute: function compute() {
+          return window.innerWidth;
+        },
+        register: function register(onchange) {
           window.addEventListener("resize", onchange);
           window.addEventListener("orientationchange", onchange);
-          return () => {
+          return function () {
             window.removeEventListener("resize", onchange);
             window.removeEventListener("orientationchange", onchange);
           };
         }
       });
 
-      const createBreakpoint = (measure, breakpointValue) => {
-        const getBreakpointState = () => {
-          const value = measure.get();
+      var createBreakpoint = function createBreakpoint(measure, breakpointValue) {
+        var getBreakpointState = function getBreakpointState() {
+          var value = measure.get();
 
           if (value < breakpointValue) {
             return "below";
@@ -2812,29 +3042,29 @@ html[data-toolbar-visible] #toolbar-trigger {
           return "equals";
         };
 
-        let currentBreakpointState = getBreakpointState();
+        var currentBreakpointState = getBreakpointState();
 
-        const isAbove = () => {
+        var isAbove = function isAbove() {
           return measure.get() > breakpointValue;
         };
 
-        const isBelow = () => {
+        var isBelow = function isBelow() {
           return measure.get() < breakpointValue;
         };
 
-        const breakpointChanged = createSignal();
-        measure.changed.listen(() => {
-          const breakpointState = getBreakpointState();
+        var breakpointChanged = createSignal();
+        measure.changed.listen(function () {
+          var breakpointState = getBreakpointState();
 
           if (breakpointState !== currentBreakpointState) {
-            const breakpointStatePrevious = currentBreakpointState;
+            var breakpointStatePrevious = currentBreakpointState;
             currentBreakpointState = breakpointState;
             breakpointChanged.notify(breakpointState, breakpointStatePrevious);
           }
         });
         return {
-          isAbove,
-          isBelow,
+          isAbove: isAbove,
+          isBelow: isBelow,
           changed: breakpointChanged
         };
       }; // const windowScrollTop = createMeasure({
@@ -2848,18 +3078,45 @@ html[data-toolbar-visible] #toolbar-trigger {
       //   },
       // })
 
-      const WINDOW_MEDIUM_WIDTH = 570;
-      const renderExecutionInToolbar = ({
-        executedFileRelativeUrl
-      }) => {
-        // reset file execution indicator ui
+
+      function _await$a(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      var WINDOW_MEDIUM_WIDTH = 570;
+
+      function _async$a(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var renderExecutionInToolbar = _async$a(function (_ref) {
+        var executedFileRelativeUrl = _ref.executedFileRelativeUrl; // reset file execution indicator ui
+
         applyExecutionIndicator();
         removeForceHideElement(document.querySelector("#execution-indicator")); // apply responsive design on fileInput if needed + add listener on resize screen
 
-        const input = document.querySelector("#file-input");
-        const fileWidthBreakpoint = createHorizontalBreakpoint(WINDOW_MEDIUM_WIDTH);
+        var input = document.querySelector("#file-input");
+        var fileWidthBreakpoint = createHorizontalBreakpoint(WINDOW_MEDIUM_WIDTH);
 
-        const handleFileWidthBreakpoint = () => {
+        var handleFileWidthBreakpoint = function handleFileWidthBreakpoint() {
           resizeInput(input, fileWidthBreakpoint);
         };
 
@@ -2869,56 +3126,58 @@ html[data-toolbar-visible] #toolbar-trigger {
         resizeInput(input, fileWidthBreakpoint);
         activateToolbarSection(document.querySelector("#file"));
         removeForceHideElement(document.querySelector("#file"));
-
-        window.parent.__jsenv__.executionResultPromise.then(({
-          status,
-          startTime,
-          endTime
-        }) => {
-          const execution = {
-            status,
-            startTime,
-            endTime
+        return _await$a(window.parent.__html_supervisor__.getScriptExecutionResults(), function (_ref2) {
+          var status = _ref2.status,
+              startTime = _ref2.startTime,
+              endTime = _ref2.endTime;
+          var execution = {
+            status: status,
+            startTime: startTime,
+            endTime: endTime
           };
           applyExecutionIndicator(execution);
-          const executionStorageKey = executedFileRelativeUrl;
-          const previousExecution = sessionStorage.hasOwnProperty(executionStorageKey) ? JSON.parse(sessionStorage.getItem(executionStorageKey)) : undefined;
+          var executionStorageKey = executedFileRelativeUrl;
+          var previousExecution = sessionStorage.hasOwnProperty(executionStorageKey) ? JSON.parse(sessionStorage.getItem(executionStorageKey)) : undefined;
           notifyExecutionResult(executedFileRelativeUrl, execution, previousExecution);
           sessionStorage.setItem(executedFileRelativeUrl, JSON.stringify(execution));
         });
-      };
+      });
 
-      const applyExecutionIndicator = ({
-        status = "running",
-        startTime,
-        endTime
-      } = {}) => {
-        const executionIndicator = document.querySelector("#execution-indicator");
+      var applyExecutionIndicator = function applyExecutionIndicator() {
+        var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref3$status = _ref3.status,
+            status = _ref3$status === void 0 ? "running" : _ref3$status,
+            startTime = _ref3.startTime,
+            endTime = _ref3.endTime;
+
+        var executionIndicator = document.querySelector("#execution-indicator");
         enableVariant(executionIndicator, {
           execution: status
         });
-        const variantNode = executionIndicator.querySelector("[data-when-active]");
+        var variantNode = executionIndicator.querySelector("[data-when-active]");
 
-        variantNode.querySelector("button").onclick = () => toggleTooltip(executionIndicator);
+        variantNode.querySelector("button").onclick = function () {
+          return toggleTooltip(executionIndicator);
+        };
 
         variantNode.querySelector(".tooltip").textContent = computeText({
-          status,
-          startTime,
-          endTime
+          status: status,
+          startTime: startTime,
+          endTime: endTime
         });
       };
 
-      const computeText = ({
-        status,
-        startTime,
-        endTime
-      }) => {
+      var computeText = function computeText(_ref4) {
+        var status = _ref4.status,
+            startTime = _ref4.startTime,
+            endTime = _ref4.endTime;
+
         if (status === "completed") {
-          return `Execution completed in ${endTime - startTime}ms`;
+          return "Execution completed in ".concat(endTime - startTime, "ms");
         }
 
         if (status === "errored") {
-          return `Execution failed in ${endTime - startTime}ms`;
+          return "Execution failed in ".concat(endTime - startTime, "ms");
         }
 
         if (status === "running") {
@@ -2928,28 +3187,72 @@ html[data-toolbar-visible] #toolbar-trigger {
         return "";
       };
 
-      const resizeInput = (input, fileWidthBreakpoint) => {
-        const size = fileWidthBreakpoint.isBelow() ? 20 : 40;
+      var resizeInput = function resizeInput(input, fileWidthBreakpoint) {
+        var size = fileWidthBreakpoint.isBelow() ? 20 : 40;
 
         if (input.value.length > size) {
-          input.style.width = `${size}ch`;
+          input.style.width = "".concat(size, "ch");
         } else {
-          input.style.width = `${input.value.length}ch`;
+          input.style.width = "".concat(input.value.length, "ch");
         }
       };
 
-      const fetchUsingXHR = async (url, {
-        signal,
-        method = "GET",
-        credentials = "same-origin",
-        headers = {},
-        body = null
-      } = {}) => {
-        const headersPromise = createPromiseAndHooks();
-        const bodyPromise = createPromiseAndHooks();
-        const xhr = new XMLHttpRequest();
+      function _await$9(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
-        const failure = error => {
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$9(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _call$2(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var fetchUsingXHR = _async$9(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            signal = _ref.signal,
+            _ref$method = _ref.method,
+            method = _ref$method === void 0 ? "GET" : _ref$method,
+            _ref$credentials = _ref.credentials,
+            credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
+            _ref$headers = _ref.headers,
+            headers = _ref$headers === void 0 ? {} : _ref$headers,
+            _ref$body = _ref.body,
+            body = _ref$body === void 0 ? null : _ref$body;
+
+        var headersPromise = createPromiseAndHooks();
+        var bodyPromise = createPromiseAndHooks();
+        var xhr = new XMLHttpRequest();
+
+        var failure = function failure(error) {
           // if it was already resolved, we must reject the body promise
           if (headersPromise.settled) {
             bodyPromise.reject(error);
@@ -2958,44 +3261,42 @@ html[data-toolbar-visible] #toolbar-trigger {
           }
         };
 
-        const cleanup = () => {
+        var cleanup = function cleanup() {
           xhr.ontimeout = null;
           xhr.onerror = null;
           xhr.onload = null;
           xhr.onreadystatechange = null;
         };
 
-        xhr.ontimeout = () => {
+        xhr.ontimeout = function () {
           cleanup();
-          failure(new Error(`xhr request timeout on ${url}.`));
+          failure(new Error("xhr request timeout on ".concat(url, ".")));
         };
 
-        xhr.onerror = error => {
+        xhr.onerror = function (error) {
           cleanup(); // unfortunately with have no clue why it fails
           // might be cors for instance
 
           failure(createRequestError(error, {
-            url
+            url: url
           }));
         };
 
-        xhr.onload = () => {
+        xhr.onload = function () {
           cleanup();
           bodyPromise.resolve();
         };
 
-        signal.addEventListener("abort", () => {
+        signal.addEventListener("abort", function () {
           xhr.abort();
-          const abortError = new Error("aborted");
+          var abortError = new Error("aborted");
           abortError.name = "AbortError";
           failure(abortError);
         });
 
-        xhr.onreadystatechange = () => {
+        xhr.onreadystatechange = function () {
           // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-          const {
-            readyState
-          } = xhr;
+          var readyState = xhr.readyState;
 
           if (readyState === 2) {
             headersPromise.resolve();
@@ -3006,12 +3307,12 @@ html[data-toolbar-visible] #toolbar-trigger {
         };
 
         xhr.open(method, url, true);
-        Object.keys(headers).forEach(key => {
+        Object.keys(headers).forEach(function (key) {
           xhr.setRequestHeader(key, headers[key]);
         });
         xhr.withCredentials = computeWithCredentials({
-          credentials,
-          url
+          credentials: credentials,
+          url: url
         });
 
         if ("responseType" in xhr && hasBlob) {
@@ -3019,129 +3320,110 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
 
         xhr.send(body);
-        await headersPromise; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+        return _await$9(headersPromise, function () {
+          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+          var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+          var responseStatus = xhr.status;
+          var responseStatusText = xhr.statusText;
+          var responseHeaders = getHeadersFromXHR(xhr);
 
-        const responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
-        let responseStatus = xhr.status;
-        const responseStatusText = xhr.statusText;
-        const responseHeaders = getHeadersFromXHR(xhr);
+          var readBody = function readBody() {
+            return _await$9(bodyPromise, function () {
+              var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
-        const readBody = async () => {
-          await bodyPromise;
-          const {
-            status
-          } = xhr; // in Chrome on file:/// URLs, status is 0
+              if (status === 0) {
+                responseStatus = 200;
+              }
 
-          if (status === 0) {
-            responseStatus = 200;
-          }
-
-          const body = "response" in xhr ? xhr.response : xhr.responseText;
-          return {
-            responseBody: body,
-            responseBodyType: detectBodyType(body)
+              var body = "response" in xhr ? xhr.response : xhr.responseText;
+              return {
+                responseBody: body,
+                responseBodyType: detectBodyType(body)
+              };
+            });
           };
-        };
 
-        const text = async () => {
-          const {
-            responseBody,
-            responseBodyType
-          } = await readBody();
+          var text = function text() {
+            return _call$2(readBody, function (_ref2) {
+              var responseBody = _ref2.responseBody,
+                  responseBodyType = _ref2.responseBodyType;
 
-          if (responseBodyType === "blob") {
-            return blobToText(responseBody);
-          }
+              if (responseBodyType === "blob") {
+                return blobToText(responseBody);
+              }
 
-          if (responseBodyType === "formData") {
-            throw new Error("could not read FormData body as text");
-          }
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as text");
+              }
 
-          if (responseBodyType === "dataView") {
-            return arrayBufferToText(responseBody.buffer);
-          }
+              return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
+            });
+          };
 
-          if (responseBodyType === "arrayBuffer") {
-            return arrayBufferToText(responseBody);
-          } // if (responseBodyType === "text" || responseBodyType === 'searchParams') {
-          //   return body
-          // }
+          var json = function json() {
+            return _call$2(text, JSON.parse);
+          };
 
+          var blob = _async$9(function () {
+            if (!hasBlob) {
+              throw new Error("blob not supported");
+            }
 
-          return String(responseBody);
-        };
+            return _call$2(readBody, function (_ref3) {
+              var responseBody = _ref3.responseBody,
+                  responseBodyType = _ref3.responseBodyType;
 
-        const json = async () => {
-          const responseText = await text();
-          return JSON.parse(responseText);
-        };
+              if (responseBodyType === "blob") {
+                return responseBody;
+              }
 
-        const blob = async () => {
-          if (!hasBlob) {
-            throw new Error(`blob not supported`);
-          }
+              if (responseBodyType === "dataView") {
+                return new Blob([cloneBuffer(responseBody.buffer)]);
+              }
 
-          const {
-            responseBody,
-            responseBodyType
-          } = await readBody();
+              if (responseBodyType === "arrayBuffer") {
+                return new Blob([cloneBuffer(responseBody)]);
+              }
 
-          if (responseBodyType === "blob") {
-            return responseBody;
-          }
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as blob");
+              }
 
-          if (responseBodyType === "dataView") {
-            return new Blob([cloneBuffer(responseBody.buffer)]);
-          }
+              return new Blob([String(responseBody)]);
+            });
+          });
 
-          if (responseBodyType === "arrayBuffer") {
-            return new Blob([cloneBuffer(responseBody)]);
-          }
+          var arrayBuffer = function arrayBuffer() {
+            return _call$2(readBody, function (_ref4) {
+              var responseBody = _ref4.responseBody,
+                  responseBodyType = _ref4.responseBodyType;
+              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$2(blob, blobToArrayBuffer);
+            });
+          };
 
-          if (responseBodyType === "formData") {
-            throw new Error("could not read FormData body as blob");
-          }
+          var formData = _async$9(function () {
+            if (!hasFormData) {
+              throw new Error("formData not supported");
+            }
 
-          return new Blob([String(responseBody)]);
-        };
+            return _call$2(text, textToFormData);
+          });
 
-        const arrayBuffer = async () => {
-          const {
-            responseBody,
-            responseBodyType
-          } = await readBody();
+          return {
+            url: responseUrl,
+            status: responseStatus,
+            statusText: responseStatusText,
+            headers: responseHeaders,
+            text: text,
+            json: json,
+            blob: blob,
+            arrayBuffer: arrayBuffer,
+            formData: formData
+          };
+        });
+      });
 
-          if (responseBodyType === "arrayBuffer") {
-            return cloneBuffer(responseBody);
-          }
-
-          const responseBlob = await blob();
-          return blobToArrayBuffer(responseBlob);
-        };
-
-        const formData = async () => {
-          if (!hasFormData) {
-            throw new Error(`formData not supported`);
-          }
-
-          const responseText = await text();
-          return textToFormData(responseText);
-        };
-
-        return {
-          url: responseUrl,
-          status: responseStatus,
-          statusText: responseStatusText,
-          headers: responseHeaders,
-          text,
-          json,
-          blob,
-          arrayBuffer,
-          formData
-        };
-      };
-
-      const canUseBlob = () => {
+      var canUseBlob = function canUseBlob() {
         if (typeof window.FileReader !== "function") return false;
         if (typeof window.Blob !== "function") return false;
 
@@ -3154,29 +3436,26 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      const hasBlob = canUseBlob();
-      const hasFormData = typeof window.FormData === "function";
-      const hasArrayBuffer = typeof window.ArrayBuffer === "function";
-      const hasSearchParams = typeof window.URLSearchParams === "function";
+      var hasBlob = canUseBlob();
+      var hasFormData = typeof window.FormData === "function";
+      var hasArrayBuffer = typeof window.ArrayBuffer === "function";
+      var hasSearchParams = typeof window.URLSearchParams === "function";
 
-      const createRequestError = (error, {
-        url
-      }) => {
-        return new Error(`error during xhr request on ${url}.
---- error stack ---
-${error.stack}`);
+      var createRequestError = function createRequestError(error, _ref5) {
+        var url = _ref5.url;
+        return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
       };
 
-      const createPromiseAndHooks = () => {
-        let resolve;
-        let reject;
-        const promise = new Promise((res, rej) => {
-          resolve = value => {
+      var createPromiseAndHooks = function createPromiseAndHooks() {
+        var resolve;
+        var reject;
+        var promise = new Promise(function (res, rej) {
+          resolve = function resolve(value) {
             promise.settled = true;
             res(value);
           };
 
-          reject = value => {
+          reject = function reject(value) {
             promise.settled = true;
             rej(value);
           };
@@ -3187,10 +3466,10 @@ ${error.stack}`);
       }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 
 
-      const computeWithCredentials = ({
-        credentials,
-        url
-      }) => {
+      var computeWithCredentials = function computeWithCredentials(_ref6) {
+        var credentials = _ref6.credentials,
+            url = _ref6.url;
+
         if (credentials === "same-origin") {
           return originSameAsGlobalOrigin(url);
         }
@@ -3198,16 +3477,16 @@ ${error.stack}`);
         return credentials === "include";
       };
 
-      const originSameAsGlobalOrigin = url => {
+      var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
         // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
-        if (typeof window !== "object") return true;
-        if (typeof window.location !== "object") return true;
-        const globalOrigin = window.location.origin;
+        if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
+        if (_typeof(window.location) !== "object") return true;
+        var globalOrigin = window.location.origin;
         if (globalOrigin === "null") return true;
         return hrefToOrigin(url) === globalOrigin;
       };
 
-      const detectBodyType = body => {
+      var detectBodyType = function detectBodyType(body) {
         if (!body) {
           return "";
         }
@@ -3226,11 +3505,11 @@ ${error.stack}`);
 
         if (hasArrayBuffer) {
           if (hasBlob && isDataView(body)) {
-            return `dataView`;
+            return "dataView";
           }
 
           if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
-            return `arrayBuffer`;
+            return "arrayBuffer";
           }
         }
 
@@ -3242,30 +3521,30 @@ ${error.stack}`);
       }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
 
 
-      const getHeadersFromXHR = xhr => {
-        const headerMap = {};
-        const headersString = xhr.getAllResponseHeaders();
+      var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
+        var headerMap = {};
+        var headersString = xhr.getAllResponseHeaders();
         if (headersString === "") return headerMap;
-        const lines = headersString.trim().split(/[\r\n]+/);
-        lines.forEach(line => {
-          const parts = line.split(": ");
-          const name = parts.shift();
-          const value = parts.join(": ");
+        var lines = headersString.trim().split(/[\r\n]+/);
+        lines.forEach(function (line) {
+          var parts = line.split(": ");
+          var name = parts.shift();
+          var value = parts.join(": ");
           headerMap[name.toLowerCase()] = value;
         });
         return headerMap;
       };
 
-      const hrefToOrigin = href => {
-        const scheme = hrefToScheme(href);
+      var hrefToOrigin = function hrefToOrigin(href) {
+        var scheme = hrefToScheme(href);
 
         if (scheme === "file") {
           return "file://";
         }
 
         if (scheme === "http" || scheme === "https") {
-          const secondProtocolSlashIndex = scheme.length + "://".length;
-          const pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+          var secondProtocolSlashIndex = scheme.length + "://".length;
+          var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
           if (pathnameSlashIndex === -1) return href;
           return href.slice(0, pathnameSlashIndex);
         }
@@ -3273,54 +3552,54 @@ ${error.stack}`);
         return href.slice(0, scheme.length + 1);
       };
 
-      const hrefToScheme = href => {
-        const colonIndex = href.indexOf(":");
+      var hrefToScheme = function hrefToScheme(href) {
+        var colonIndex = href.indexOf(":");
         if (colonIndex === -1) return "";
         return href.slice(0, colonIndex);
       };
 
-      const isDataView = obj => {
+      var isDataView = function isDataView(obj) {
         return obj && DataView.prototype.isPrototypeOf(obj);
       };
 
-      const isArrayBufferView = ArrayBuffer.isView || (() => {
-        const viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
-        return value => {
+      var isArrayBufferView = ArrayBuffer.isView || function () {
+        var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+        return function (value) {
           return value && viewClasses.includes(Object.prototype.toString.call(value));
         };
-      })();
+      }();
 
-      const textToFormData = text => {
-        const form = new FormData();
+      var textToFormData = function textToFormData(text) {
+        var form = new FormData();
         text.trim().split("&").forEach(function (bytes) {
           if (bytes) {
-            const split = bytes.split("=");
-            const name = split.shift().replace(/\+/g, " ");
-            const value = split.join("=").replace(/\+/g, " ");
+            var split = bytes.split("=");
+            var name = split.shift().replace(/\+/g, " ");
+            var value = split.join("=").replace(/\+/g, " ");
             form.append(decodeURIComponent(name), decodeURIComponent(value));
           }
         });
         return form;
       };
 
-      const blobToArrayBuffer = async blob => {
-        const reader = new FileReader();
-        const promise = fileReaderReady(reader);
+      var blobToArrayBuffer = _async$9(function (blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
         reader.readAsArrayBuffer(blob);
         return promise;
-      };
+      });
 
-      const blobToText = blob => {
-        const reader = new FileReader();
-        const promise = fileReaderReady(reader);
+      var blobToText = function blobToText(blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
         reader.readAsText(blob);
         return promise;
       };
 
-      const arrayBufferToText = arrayBuffer => {
-        const view = new Uint8Array(arrayBuffer);
-        const chars = new Array(view.length);
-        let i = 0;
+      var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
+        var view = new Uint8Array(arrayBuffer);
+        var chars = new Array(view.length);
+        var i = 0;
 
         while (i < view.length) {
           chars[i] = String.fromCharCode(view[i]);
@@ -3330,7 +3609,7 @@ ${error.stack}`);
         return chars.join("");
       };
 
-      const fileReaderReady = reader => {
+      var fileReaderReady = function fileReaderReady(reader) {
         return new Promise(function (resolve, reject) {
           reader.onload = function () {
             resolve(reader.result);
@@ -3342,83 +3621,147 @@ ${error.stack}`);
         });
       };
 
-      const cloneBuffer = buffer => {
+      var cloneBuffer = function cloneBuffer(buffer) {
         if (buffer.slice) {
           return buffer.slice(0);
         }
 
-        const view = new Uint8Array(buffer.byteLength);
+        var view = new Uint8Array(buffer.byteLength);
         view.set(new Uint8Array(buffer));
         return view.buffer;
       };
 
-      const fetchNative = async (url, {
-        mode = "cors",
-        ...options
-      } = {}) => {
-        const response = await window.fetch(url, {
-          mode,
-          ...options
-        });
-        return {
-          url: response.url,
-          status: response.status,
-          statusText: "",
-          headers: responseToHeaders(response),
-          text: () => response.text(),
-          json: () => response.json(),
-          blob: () => response.blob(),
-          arrayBuffer: () => response.arrayBuffer(),
-          formData: () => response.formData()
-        };
-      };
+      var _excluded = ["mode"];
 
-      const responseToHeaders = response => {
-        const headers = {};
-        response.headers.forEach((value, name) => {
+      function _await$8(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$8(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchNative = _async$8(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+        var _ref$mode = _ref.mode,
+            mode = _ref$mode === void 0 ? "cors" : _ref$mode,
+            options = _objectWithoutProperties(_ref, _excluded);
+
+        return _await$8(window.fetch(url, _objectSpread2({
+          mode: mode
+        }, options)), function (response) {
+          return {
+            url: response.url,
+            status: response.status,
+            statusText: "",
+            headers: responseToHeaders(response),
+            text: function text() {
+              return response.text();
+            },
+            json: function json() {
+              return response.json();
+            },
+            blob: function blob() {
+              return response.blob();
+            },
+            arrayBuffer: function arrayBuffer() {
+              return response.arrayBuffer();
+            },
+            formData: function formData() {
+              return response.formData();
+            }
+          };
+        });
+      });
+
+      var responseToHeaders = function responseToHeaders(response) {
+        var headers = {};
+        response.headers.forEach(function (value, name) {
           headers[name] = value;
         });
         return headers;
       };
 
-      const fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+      var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-      const fetchJson = async (url, options = {}) => {
-        const response = await fetchUrl(url, options);
-        const object = await response.json();
-        return object;
-      };
+      function _await$7(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$7(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchJson = _async$7(function (url) {
+        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        return _await$7(fetchUrl(url, options), function (response) {
+          return _await$7(response.json());
+        });
+      });
       /*
        * Prefer window.navigator.userAgentData before resorting to
        * window.navigator.userAgent because of
        * https://blog.chromium.org/2021/09/user-agent-reduction-origin-trial-and-dates.html
        */
-      const detectFromUserAgentData = () => {
-        const {
-          userAgentData
-        } = window.navigator;
+
+
+      var detectFromUserAgentData = function detectFromUserAgentData() {
+        var userAgentData = window.navigator.userAgentData;
 
         if (!userAgentData) {
           return null;
         }
 
-        const {
-          brands
-        } = userAgentData;
-        let i = 0;
+        var brands = userAgentData.brands;
+        var i = 0;
 
         while (i < brands.length) {
-          const {
-            brand,
-            version
-          } = brands[i];
+          var _brands$i = brands[i],
+              brand = _brands$i.brand,
+              version = _brands$i.version;
           i++;
 
           if (brand === "chromium" || brand === "Google Chrome") {
             return {
               name: "chrome",
-              version
+              version: version
             };
           }
         }
@@ -3426,24 +3769,28 @@ ${error.stack}`);
         return null;
       };
 
-      const firstMatch = (regexp, string) => {
-        const match = string.match(regexp);
+      var firstMatch = function firstMatch(regexp, string) {
+        var match = string.match(regexp);
         return match && match.length > 0 ? match[1] || undefined : undefined;
       };
-      const secondMatch = (regexp, string) => {
-        const match = string.match(regexp);
+
+      var secondMatch = function secondMatch(regexp, string) {
+        var match = string.match(regexp);
         return match && match.length > 1 ? match[2] || undefined : undefined;
       };
-      const userAgentToVersion = userAgent => {
+
+      var userAgentToVersion = function userAgentToVersion(userAgent) {
         return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
       };
 
-      const detectAndroid = () => navigatorToBrowser$1(window.navigator);
+      var detectAndroid = function detectAndroid() {
+        return navigatorToBrowser$1(window.navigator);
+      };
 
-      const navigatorToBrowser$1 = ({
-        userAgent,
-        appVersion
-      }) => {
+      var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
+        var userAgent = _ref.userAgent,
+            appVersion = _ref.appVersion;
+
         if (/(android)/i.test(userAgent)) {
           return {
             name: "android",
@@ -3454,9 +3801,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectInternetExplorer = () => userAgentToBrowser$5(window.navigator.userAgent);
+      var detectInternetExplorer = function detectInternetExplorer() {
+        return userAgentToBrowser$5(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$5 = userAgent => {
+      var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
         if (/msie|trident/i.test(userAgent)) {
           return {
             name: "ie",
@@ -3467,9 +3816,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectOpera = () => userAgentToBrowser$4(window.navigator.userAgent);
+      var detectOpera = function detectOpera() {
+        return userAgentToBrowser$4(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$4 = userAgent => {
+      var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
         // opera below 13
         if (/opera/i.test(userAgent)) {
           return {
@@ -3489,9 +3840,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectEdge = () => userAgentToBrowser$3(window.navigator.userAgent);
+      var detectEdge = function detectEdge() {
+        return userAgentToBrowser$3(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$3 = userAgent => {
+      var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
         if (/edg([ea]|ios)/i.test(userAgent)) {
           return {
             name: "edge",
@@ -3502,9 +3855,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectFirefox = () => userAgentToBrowser$2(window.navigator.userAgent);
+      var detectFirefox = function detectFirefox() {
+        return userAgentToBrowser$2(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$2 = userAgent => {
+      var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
         if (/firefox|iceweasel|fxios/i.test(userAgent)) {
           return {
             name: "firefox",
@@ -3515,11 +3870,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectChrome = () => {
+      var detectChrome = function detectChrome() {
         return userAgentToBrowser$1(window.navigator.userAgent);
       };
 
-      const userAgentToBrowser$1 = userAgent => {
+      var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
         if (/chromium/i.test(userAgent)) {
           return {
             name: "chrome",
@@ -3537,9 +3892,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectSafari = () => userAgentToBrowser(window.navigator.userAgent);
+      var detectSafari = function detectSafari() {
+        return userAgentToBrowser(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser = userAgent => {
+      var userAgentToBrowser = function userAgentToBrowser(userAgent) {
         if (/safari|applewebkit/i.test(userAgent)) {
           return {
             name: "safari",
@@ -3550,14 +3907,19 @@ ${error.stack}`);
         return null;
       };
 
-      const detectElectron = () => null; // TODO
+      var detectElectron = function detectElectron() {
+        return null;
+      }; // TODO
 
-      const detectIOS = () => navigatorToBrowser(window.navigator);
 
-      const navigatorToBrowser = ({
-        userAgent,
-        appVersion
-      }) => {
+      var detectIOS = function detectIOS() {
+        return navigatorToBrowser(window.navigator);
+      };
+
+      var navigatorToBrowser = function navigatorToBrowser(_ref) {
+        var userAgent = _ref.userAgent,
+            appVersion = _ref.appVersion;
+
         if (/iPhone;/.test(userAgent)) {
           return {
             name: "ios",
@@ -3573,69 +3935,75 @@ ${error.stack}`);
         }
 
         return null;
-      };
+      }; // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
-      // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
-      const detectorCompose = detectors => () => {
-        let i = 0;
+      var detectorCompose = function detectorCompose(detectors) {
+        return function () {
+          var i = 0;
 
-        while (i < detectors.length) {
-          const detector = detectors[i];
-          i++;
-          const result = detector();
+          while (i < detectors.length) {
+            var _detector = detectors[i];
+            i++;
 
-          if (result) {
-            return result;
+            var result = _detector();
+
+            if (result) {
+              return result;
+            }
           }
-        }
 
-        return null;
+          return null;
+        };
       };
 
-      const detector = detectorCompose([detectFromUserAgentData, // keep this first
+      var detector = detectorCompose([detectFromUserAgentData, // keep this first
       detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-      const detectBrowser = () => {
-        const {
-          name = "other",
-          version = "unknown"
-        } = detector() || {};
+
+      var detectBrowser = function detectBrowser() {
+        var _ref = detector() || {},
+            _ref$name = _ref.name,
+            name = _ref$name === void 0 ? "other" : _ref$name,
+            _ref$version = _ref.version,
+            version = _ref$version === void 0 ? "unknown" : _ref$version;
+
         return {
           name: normalizeName(name),
           version: normalizeVersion(version)
         };
       };
 
-      const normalizeName = name => {
+      var normalizeName = function normalizeName(name) {
         return name.toLowerCase();
       };
 
-      const normalizeVersion = version => {
+      var normalizeVersion = function normalizeVersion(version) {
         if (version.indexOf(".") > -1) {
-          const parts = version.split("."); // remove extraneous .
+          var parts = version.split("."); // remove extraneous .
 
           return parts.slice(0, 3).join(".");
         }
 
         if (version.indexOf("_") > -1) {
-          const parts = version.split("_"); // remove extraneous _
+          var _parts = version.split("_"); // remove extraneous _
 
-          return parts.slice(0, 3).join("_");
+
+          return _parts.slice(0, 3).join("_");
         }
 
         return version;
       };
 
-      const executeWithScriptModuleInjection = code => {
-        const scriptModule = document.createElement("script");
+      var executeWithScriptModuleInjection = function executeWithScriptModuleInjection(code) {
+        var scriptModule = document.createElement("script");
         scriptModule.type = "module";
-        const loadPromise = new Promise((resolve, reject) => {
-          scriptModule.onload = () => {
+        var loadPromise = new Promise(function (resolve, reject) {
+          scriptModule.onload = function () {
             document.body.removeChild(scriptModule);
             resolve();
           };
 
-          scriptModule.onerror = () => {
+          scriptModule.onerror = function () {
             document.body.removeChild(scriptModule);
             reject();
           };
@@ -3645,102 +4013,292 @@ ${error.stack}`);
         scriptModule.src = asBase64Url(code);
         return loadPromise;
       };
-      const asBase64Url = (text, mimeType = "application/javascript") => {
-        return `data:${mimeType};base64,${window.btoa(text)}`;
+
+      var asBase64Url = function asBase64Url(text) {
+        var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
+        return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
       };
 
-      const supportsImportmap = async ({
-        remote = true
-      } = {}) => {
+      function _await$6(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$4(body, recover) {
+        try {
+          var result = body();
+        } catch (e) {
+          return recover(e);
+        }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$6(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsImportmap = _async$6(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref$remote = _ref.remote,
+            remote = _ref$remote === void 0 ? true : _ref$remote;
+
         if (HTMLScriptElement.supports("importmap")) {
           return true;
         }
 
-        const specifier = asBase64Url(`export default false`);
-        const importMap = {
-          imports: {
-            [specifier]: asBase64Url(`export default true`)
-          }
+        var specifier = asBase64Url("export default false");
+        var importMap = {
+          imports: _defineProperty({}, specifier, asBase64Url("export default true"))
         };
-        const importmapScript = document.createElement("script");
-        const importmapString = JSON.stringify(importMap, null, "  ");
+        var importmapScript = document.createElement("script");
+        var importmapString = JSON.stringify(importMap, null, "  ");
         importmapScript.type = "importmap";
 
         if (remote) {
-          importmapScript.src = `data:application/json;base64,${window.btoa(importmapString)}`;
+          importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
         } else {
           importmapScript.textContent = importmapString;
         }
 
         document.body.appendChild(importmapScript);
-
-        try {
-          await executeWithScriptModuleInjection(`import supported from "${specifier}"; window.__jsenv_runtime_test_importmap__ = supported`);
+        return _catch$4(function () {
+          return _await$6(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+            document.body.removeChild(importmapScript);
+            var supported = window.__jsenv_runtime_test_importmap__;
+            delete window.__jsenv_runtime_test_importmap__;
+            return supported;
+          });
+        }, function () {
           document.body.removeChild(importmapScript);
-          const supported = window.__jsenv_runtime_test_importmap__;
-          delete window.__jsenv_runtime_test_importmap__;
-          return supported;
-        } catch (e) {
-          document.body.removeChild(importmapScript);
           return false;
+        });
+      });
+
+      function _await$5(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
         }
-      };
 
-      const supportsDynamicImport = async () => {
-        const moduleSource = asBase64Url(`export default 42`);
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
 
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$3(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_dynamic_import__ = import(${JSON.stringify(moduleSource)})`);
-          const namespace = await window.__jsenv_runtime_test_dynamic_import__;
-          delete window.__jsenv_runtime_test_dynamic_import__;
-          return namespace.default === 42;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
-      };
 
-      const supportsTopLevelAwait = async () => {
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$5(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsDynamicImport = _async$5(function () {
+        var moduleSource = asBase64Url("export default 42");
+        return _catch$3(function () {
+          return _await$5(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$5(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+              delete window.__jsenv_runtime_test_dynamic_import__;
+              return namespace.default === 42;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      function _await$4(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$2(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)`);
-          const supported = window.__jsenv_runtime_test_top_level_await__ === 42;
-          delete window.__jsenv_runtime_test_top_level_await__;
-          return supported;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      var supportsTopLevelAwait = function supportsTopLevelAwait() {
+        return _await$4(_catch$2(function () {
+          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+            var supported = window.__jsenv_runtime_test_top_level_await__ === 42;
+            delete window.__jsenv_runtime_test_top_level_await__;
+            return supported;
+          });
+        }, function () {
+          return false;
+        }));
       };
 
-      const supportsJsonImportAssertions = async () => {
-        const jsonBase64Url = asBase64Url("42", "application/json");
-        const moduleSource = asBase64Url(`import data from "${jsonBase64Url}" assert { type: "json" }
-  export default data`);
+      function _await$3(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$1(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_json_import_assertion__ = import(${JSON.stringify(moduleSource)})`);
-          const namespace = await window.__jsenv_runtime_test_json_import_assertion__;
-          const supported = namespace.default === 42;
-          delete window.__jsenv_runtime_test_json_import_assertion__;
-          return supported;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
-      };
 
-      const supportsCssImportAssertions = async () => {
-        const cssBase64Url = asBase64Url("p { color: red; }", "text/css");
-        const moduleSource = asBase64Url(`import css from "${cssBase64Url}" assert { type: "css" }
-  export default css`);
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
 
+        return result;
+      }
+
+      function _async$4(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsJsonImportAssertions = _async$4(function () {
+        var jsonBase64Url = asBase64Url("42", "application/json");
+        var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\n  export default data"));
+        return _catch$1(function () {
+          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$3(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+              var supported = namespace.default === 42;
+              delete window.__jsenv_runtime_test_json_import_assertion__;
+              return supported;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      function _await$2(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_css_import_assertion__ = import(${JSON.stringify(moduleSource)})`);
-          const namespace = await window.__jsenv_runtime_test_css_import_assertion__;
-          return namespace.default instanceof CSSStyleSheet;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
-      };
 
-      const supportsNewStylesheet = () => {
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$3(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsCssImportAssertions = _async$3(function () {
+        var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
+        var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\n  export default css"));
+        return _catch(function () {
+          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$2(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+              return namespace.default instanceof CSSStyleSheet;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      var supportsNewStylesheet = function supportsNewStylesheet() {
         try {
           // eslint-disable-next-line no-new
           new CSSStyleSheet();
@@ -3750,60 +4308,100 @@ ${error.stack}`);
         }
       };
 
-      const scanBrowserRuntimeFeatures = async ({
-        coverageHandledFromOutside = false,
-        forceCompilation = false,
-        forceSource = false
-      } = {}) => {
-        const jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
-        const {
-          jsenvDirectoryRelativeUrl,
-          inlineImportMapIntoHTML,
-          availableCompileIds
-        } = await fetchJson(jsenvCompileProfileUrl);
-        const {
-          name,
-          version
-        } = detectBrowser();
-        const featuresReport = await detectSupportedFeatures({
-          coverageHandledFromOutside,
-          inlineImportMapIntoHTML
-        });
-        const runtimeReport = {
-          env: {
-            browser: true
-          },
-          name,
-          version,
-          featuresReport,
-          forceSource,
-          forceCompilation
-        };
-        const {
-          compileProfile,
-          compileId
-        } = await fetchJson(jsenvCompileProfileUrl, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify(runtimeReport)
-        });
-        return {
-          jsenvDirectoryRelativeUrl,
-          inlineImportMapIntoHTML,
-          availableCompileIds,
-          runtimeReport,
-          compileProfile,
-          compileId
-        };
-      };
+      function _await$1(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
-      const detectSupportedFeatures = async ({
-        coverageHandledFromOutside,
-        inlineImportMapIntoHTML
-      }) => {
-        const featuresReport = {};
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$2(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _call$1(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var scanBrowserRuntimeFeatures = _async$2(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref$coverageHandledF = _ref.coverageHandledFromOutside,
+            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
+            _ref$forceCompilation = _ref.forceCompilation,
+            forceCompilation = _ref$forceCompilation === void 0 ? false : _ref$forceCompilation,
+            _ref$forceSource = _ref.forceSource,
+            forceSource = _ref$forceSource === void 0 ? false : _ref$forceSource;
+
+        var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
+        return _await$1(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
+          var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
+              availableCompileIds = _ref2.availableCompileIds;
+
+          var _detectBrowser = detectBrowser(),
+              name = _detectBrowser.name,
+              version = _detectBrowser.version;
+
+          return _await$1(detectSupportedFeatures({
+            coverageHandledFromOutside: coverageHandledFromOutside
+          }), function (featuresReport) {
+            var runtimeReport = {
+              env: {
+                browser: true
+              },
+              name: name,
+              version: version,
+              featuresReport: featuresReport,
+              forceSource: forceSource,
+              forceCompilation: forceCompilation
+            };
+            return _await$1(fetchJson(jsenvCompileProfileUrl, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify(runtimeReport)
+            }), function (_ref3) {
+              var compileProfile = _ref3.compileProfile,
+                  compileId = _ref3.compileId;
+              return {
+                jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+                availableCompileIds: availableCompileIds,
+                runtimeReport: runtimeReport,
+                compileProfile: compileProfile,
+                compileId: compileId
+              };
+            });
+          });
+        });
+      });
+
+      var detectSupportedFeatures = _async$2(function (_ref4) {
+        var coverageHandledFromOutside = _ref4.coverageHandledFromOutside;
+        var featuresReport = {};
         featuresReport["import_http"] = true;
         featuresReport["coverage_js"] = coverageHandledFromOutside; // new CSSStyleSheet
 
@@ -3812,7 +4410,7 @@ ${error.stack}`);
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
 
-        featuresReport.importmap = await supportsImportmap({
+        return _await$1(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -3821,79 +4419,104 @@ ${error.stack}`);
           // But there exploring server can inline importmap by transforming html
           // and in that case we can test only the local importmap support
           // so we test importmap support and the remote one
-          remote: !inlineImportMapIntoHTML
-        }); // dynamic import
+          remote: false
+        }), function (_supportsImportmap) {
+          featuresReport.importmap = _supportsImportmap; // dynamic import
 
-        featuresReport["import_dynamic"] = await supportsDynamicImport(); // top level await
+          return _call$1(supportsDynamicImport, function (_supportsDynamicImpor) {
+            featuresReport["import_dynamic"] = _supportsDynamicImpor; // top level await
 
-        featuresReport["top_level_await"] = await supportsTopLevelAwait(); // import assertions
+            return _call$1(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
+              featuresReport["top_level_await"] = _supportsTopLevelAwai; // import assertions
 
-        featuresReport["import_assertion_type_json"] = await supportsJsonImportAssertions();
-        featuresReport["import_assertion_type_css"] = await supportsCssImportAssertions();
-        return featuresReport;
-      };
+              return _call$1(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
+                featuresReport["import_assertion_type_json"] = _supportsJsonImportAs;
+                return _call$1(supportsCssImportAssertions, function (_supportsCssImportAss) {
+                  featuresReport["import_assertion_type_css"] = _supportsCssImportAss;
+                  return featuresReport;
+                });
+              });
+            });
+          });
+        });
+      });
 
-      const renderCompilationInToolbar = ({
-        compileGroup
-      }) => {
-        const browserSupportRootNode = document.querySelector("#browser_support");
-        const filesCompilationRootNode = document.querySelector("#files_compilation");
+      function _call(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      function _async$1(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var renderCompilationInToolbar = _async$1(function (_ref) {
+        var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
+            compileGroup = _ref.compileGroup;
+        var browserSupportRootNode = document.querySelector("#browser_support");
+        var filesCompilationRootNode = document.querySelector("#files_compilation");
         removeForceHideElement(browserSupportRootNode);
         removeForceHideElement(filesCompilationRootNode);
-        scanBrowserRuntimeFeatures().then(({
-          jsenvDirectoryRelativeUrl,
-          inlineImportMapIntoHTML,
-          compileProfile,
-          compileId,
-          runtimeReport
-        }) => {
-          const browserSupport = compileId ? "no" : inlineImportMapIntoHTML ? "partial" : "full";
+        return _call(scanBrowserRuntimeFeatures, function (_ref2) {
+          var compileProfile = _ref2.compileProfile,
+              compileId = _ref2.compileId,
+              runtimeReport = _ref2.runtimeReport;
+          var browserSupport = compileId ? "no" : "full";
           enableVariant(browserSupportRootNode, {
-            browserSupport
+            browserSupport: browserSupport
           });
 
           if (browserSupport === "no") {
-            browserSupportRootNode.querySelector(`a.browser_support_read_more_link`).onclick = () => {
+            browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
               // eslint-disable-next-line no-alert
-              window.alert(`Source files needs to be compiled to be executable in this browser because: ${listWhatIsMissing({
-          compileProfile
-        })}`);
-            };
-          } else if (browserSupport === "partial") {
-            browserSupportRootNode.querySelector(`a.browser_support_read_more_link`).onclick = () => {
-              // eslint-disable-next-line no-alert
-              window.alert(`Source files (except html) can be executed directly in this browser because: ${listWhatIsSupported({
-          inlineImportMapIntoHTML
-        })}`);
+              window.alert("Source files needs to be compiled to be executable in this browser because: ".concat(listWhatIsMissing({
+                compileProfile: compileProfile
+              })));
             };
           } else if (browserSupport === "full") {
-            browserSupportRootNode.querySelector(`a.browser_support_read_more_link`).onclick = () => {
+            browserSupportRootNode.querySelector("a.browser_support_read_more_link").onclick = function () {
               // eslint-disable-next-line no-alert
-              window.alert(`Source files can be executed directly in this browser because: ${listWhatIsSupported({
-          inlineImportMapIntoHTML
-        })}`);
+              window.alert("Source files can be executed directly in this browser because: ".concat(listWhatIsSupported()));
             };
           }
 
-          const actualCompileId = compileGroup.compileId;
-          const expectedCompiledId = compileId;
-          const shouldSwitchCompileId = expectedCompiledId && actualCompileId && actualCompileId !== expectedCompiledId;
-          const shouldCompile = !actualCompileId && browserSupport === "no";
-          const filesCompilation = shouldSwitchCompileId ? "mismatch" : actualCompileId ? "yes" : inlineImportMapIntoHTML ? "html_only" : "no";
-          const hasWarning = shouldCompile || shouldSwitchCompileId;
+          var actualCompileId = compileGroup.compileId;
+          var expectedCompiledId = compileId;
+          var shouldSwitchCompileId = expectedCompiledId && actualCompileId && actualCompileId !== expectedCompiledId;
+          var shouldCompile = !actualCompileId && browserSupport === "no";
+          var filesCompilation = shouldSwitchCompileId ? "mismatch" : actualCompileId ? "yes" : "html_only";
+          var hasWarning = shouldCompile || shouldSwitchCompileId;
           enableVariant(filesCompilationRootNode, {
-            filesCompilation,
+            filesCompilation: filesCompilation,
             compilation_link: shouldSwitchCompileId ? "mismatch" : actualCompileId ? "source" : expectedCompiledId ? "compiled" : "force"
           });
 
           if (filesCompilation === "yes") {
-            document.querySelector(".files_compilation_text").innerHTML = `Files shown are compiled for ${runtimeReport.name}@${runtimeReport.version}`;
+            document.querySelector(".files_compilation_text").innerHTML = "Files shown are compiled for ".concat(runtimeReport.name, "@").concat(runtimeReport.version);
           }
 
-          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_source_files"), `/${compileGroup.fileRelativeUrl}`);
-          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compiled_files"), `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`);
-          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compilation_forced_files"), `/${jsenvDirectoryRelativeUrl}force/${compileGroup.fileRelativeUrl}`);
-          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_appropriate_files"), `/${jsenvDirectoryRelativeUrl}${expectedCompiledId}/${compileGroup.fileRelativeUrl}`);
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_source_files"), "/".concat(compileGroup.fileRelativeUrl));
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compiled_files"), "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl));
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_compilation_forced_files"), "/".concat(jsenvDirectoryRelativeUrl, "force/").concat(compileGroup.fileRelativeUrl));
+          setLinkHrefForParentWindow(filesCompilationRootNode.querySelector("a.link_to_appropriate_files"), "/".concat(jsenvDirectoryRelativeUrl).concat(expectedCompiledId, "/").concat(compileGroup.fileRelativeUrl));
 
           if (hasWarning) {
             enableWarningStyle();
@@ -3907,93 +4530,76 @@ ${error.stack}`);
             document.querySelector("#settings-button").removeAttribute("data-warning");
           }
         });
+      });
+
+      var listWhatIsSupported = function listWhatIsSupported() {
+        var parts = [];
+        parts.push("importmaps are supported");
+        parts.push("dynamic imports are supported");
+        parts.push("top level await is supported");
+        parts.push("all features are natively supported");
+        return "\n- ".concat(parts.join("\n- "));
       };
 
-      const listWhatIsSupported = ({
-        inlineImportMapIntoHTML
-      }) => {
-        const parts = [];
-
-        if (inlineImportMapIntoHTML) {
-          parts.push(`importmaps are supported (only when inlined in html files)`);
-        } else {
-          parts.push(`importmaps are supported`);
-        }
-
-        parts.push(`dynamic imports are supported`);
-        parts.push(`top level await is supported`);
-        parts.push(`all features are natively supported`);
-        return `
-- ${parts.join(`
-- `)}`;
-      };
-
-      const listWhatIsMissing = ({
-        compileProfile
-      }) => {
-        const parts = [];
-        const {
-          missingFeatures
-        } = compileProfile;
+      var listWhatIsMissing = function listWhatIsMissing(_ref3) {
+        var compileProfile = _ref3.compileProfile;
+        var parts = [];
+        var missingFeatures = compileProfile.missingFeatures;
 
         if (missingFeatures.importmap) {
-          parts.push(`importmaps are not supported`);
+          parts.push("importmaps are not supported");
         }
 
         if (missingFeatures.dynamicImport) {
-          parts.push(`dynamic imports are not supported`);
+          parts.push("dynamic imports are not supported");
         }
 
         if (missingFeatures.topLevelAwait) {
-          parts.push(`top level await is not supported`);
+          parts.push("top level await is not supported");
         }
 
-        const missingFeatureNames = Object.keys(missingFeatures).filter(name => {
+        var missingFeatureNames = Object.keys(missingFeatures).filter(function (name) {
           return name !== "importmap" && name !== "dynamicImport" && name !== "topLevelAwait" && name !== "custom_compiler_patterns";
         });
-        const missingFeatureCount = missingFeatureNames.length;
+        var missingFeatureCount = missingFeatureNames.length;
 
         if (missingFeatureCount > 0) {
-          parts.push(`${missingFeatureCount} features are missing: ${missingFeatureNames}`);
+          parts.push("".concat(missingFeatureCount, " features are missing: ").concat(missingFeatureNames));
         }
 
-        const {
-          custom_compiler_patterns
-        } = missingFeatures;
+        var custom_compiler_patterns = missingFeatures.custom_compiler_patterns;
 
         if (custom_compiler_patterns) {
-          parts.push(`${custom_compiler_patterns.length} custom compilers enabled: ${custom_compiler_patterns}`);
+          parts.push("".concat(custom_compiler_patterns.length, " custom compilers enabled: ").concat(custom_compiler_patterns));
         }
 
-        return `
-- ${parts.join(`
-- `)}`;
+        return "\n- ".concat(parts.join("\n- "));
       };
 
-      let livereloadingAvailableOnServer = false;
-      const parentEventSourceClient = window.parent.__jsenv_event_source_client__;
-      const initToolbarEventSource = ({
-        livereloading
-      }) => {
-        removeForceHideElement(document.querySelector("#eventsource-indicator"));
-        livereloadingAvailableOnServer = livereloading;
+      var autoreloadAvailableOnServer = false;
+      var parentEventSourceClient = window.parent.__jsenv_event_source_client__;
 
-        if (!livereloadingAvailableOnServer) {
+      var initToolbarEventSource = function initToolbarEventSource(_ref) {
+        var hmr = _ref.hmr;
+        removeForceHideElement(document.querySelector("#eventsource-indicator"));
+        autoreloadAvailableOnServer = hmr;
+
+        if (!autoreloadAvailableOnServer) {
           disableLivereloadSetting();
         }
 
-        parentEventSourceClient.status.onchange = () => {
+        parentEventSourceClient.status.onchange = function () {
           updateEventSourceIndicator();
         };
 
-        parentEventSourceClient.reloadMessagesSignal.onchange = () => {
+        parentEventSourceClient.reloadMessagesSignal.onchange = function () {
           updateEventSourceIndicator();
         };
 
-        const livereloadCheckbox = document.querySelector("#toggle-livereload");
+        var livereloadCheckbox = document.querySelector("#toggle-livereload");
         livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled();
 
-        livereloadCheckbox.onchange = () => {
+        livereloadCheckbox.onchange = function () {
           parentEventSourceClient.setLivereloadPreference(livereloadCheckbox.checked);
           updateEventSourceIndicator();
         };
@@ -4001,78 +4607,88 @@ ${error.stack}`);
         updateEventSourceIndicator();
       };
 
-      const updateEventSourceIndicator = () => {
-        const eventSourceIndicator = document.querySelector("#eventsource-indicator");
-        const reloadMessages = parentEventSourceClient.reloadMessages;
-        const reloadMessageCount = reloadMessages.length;
-        const eventSourceConnectionState = parentEventSourceClient.status.value;
+      var updateEventSourceIndicator = function updateEventSourceIndicator() {
+        var eventSourceIndicator = document.querySelector("#eventsource-indicator");
+        var reloadMessages = parentEventSourceClient.reloadMessages;
+        var reloadMessageCount = reloadMessages.length;
+        var eventSourceConnectionState = parentEventSourceClient.status.value;
         enableVariant(eventSourceIndicator, {
           eventsource: eventSourceConnectionState,
           livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
           changes: reloadMessageCount > 0 ? "yes" : "no"
         });
-        const variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
+        var variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
 
-        variantNode.querySelector("button").onclick = () => {
+        variantNode.querySelector("button").onclick = function () {
           toggleTooltip(eventSourceIndicator);
         };
 
         if (eventSourceConnectionState === "connecting") {
-          variantNode.querySelector("a").onclick = () => {
+          variantNode.querySelector("a").onclick = function () {
             parentEventSourceClient.disconnect();
           };
         } else if (eventSourceConnectionState === "connected") {
           removeAutoShowTooltip(eventSourceIndicator);
 
           if (reloadMessageCount > 0) {
-            const changeLink = variantNode.querySelector(".eventsource-changes-link");
+            var changeLink = variantNode.querySelector(".eventsource-changes-link");
             changeLink.innerHTML = reloadMessageCount;
 
-            changeLink.onclick = () => {
+            changeLink.onclick = function () {
               console.log(reloadMessages); // eslint-disable-next-line no-alert
 
               window.parent.alert(JSON.stringify(reloadMessages, null, "  "));
             };
 
-            const somePending = reloadMessages.some(m => m.status === "pending");
-            const applyLink = variantNode.querySelector(".eventsource-reload-link");
-            applyLink.innerHTML = somePending ? "applying..." : "apply changes";
-            applyLink.onclick = somePending ? () => {} : () => {
+            var someFailed = reloadMessages.some(function (m) {
+              return m.status === "failed";
+            });
+            var somePending = reloadMessages.some(function (m) {
+              return m.status === "pending";
+            });
+            var applyLink = variantNode.querySelector(".eventsource-reload-link");
+            applyLink.innerHTML = someFailed ? "failed" : somePending ? "applying..." : "apply changes";
+            applyLink.onclick = someFailed ? function () {
+              parentEventSourceClient.applyReloadMessageEffects();
+            } : somePending ? function () {} : function () {
               parentEventSourceClient.applyReloadMessageEffects();
             };
           }
         } else if (eventSourceConnectionState === "disconnected") {
           autoShowTooltip(eventSourceIndicator);
 
-          variantNode.querySelector("a").onclick = () => {
+          variantNode.querySelector("a").onclick = function () {
             parentEventSourceClient.connect();
           };
         }
       };
 
-      const disableLivereloadSetting = () => {
+      var disableLivereloadSetting = function disableLivereloadSetting() {
         document.querySelector(".settings-livereload").setAttribute("data-disabled", "true");
-        document.querySelector(".settings-livereload").setAttribute("title", `Livereload not available: disabled by server`);
+        document.querySelector(".settings-livereload").setAttribute("title", "Livereload not available: disabled by server");
         document.querySelector("#toggle-livereload").disabled = true;
       };
 
-      const WINDOW_SMALL_WIDTH = 420;
-      const makeToolbarResponsive = () => {
+      var WINDOW_SMALL_WIDTH = 420;
+
+      var makeToolbarResponsive = function makeToolbarResponsive() {
         // apply responsive design on toolbar icons if needed + add listener on resize screen
         // ideally we should listen breakpoint once, for now restore toolbar
-        const overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH);
+        var overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH);
 
-        const handleOverflowMenuBreakpoint = () => {
+        var handleOverflowMenuBreakpoint = function handleOverflowMenuBreakpoint() {
           responsiveToolbar(overflowMenuBreakpoint);
         };
 
         handleOverflowMenuBreakpoint();
         overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint); // overflow menu
 
-        document.querySelector("#overflow-menu-button").onclick = () => toggleOverflowMenu();
+        document.querySelector("#overflow-menu-button").onclick = function () {
+          return toggleOverflowMenu();
+        };
       };
 
-      const responsiveToolbar = overflowMenuBreakpoint => {
+      var responsiveToolbar = function responsiveToolbar(overflowMenuBreakpoint) {
         // close all tooltips in case opened
         hideTooltip(document.querySelector("#eventsource-indicator"));
         hideTooltip(document.querySelector("#execution-indicator")); // close settings box in case opened
@@ -4086,36 +4702,35 @@ ${error.stack}`);
         }
       };
 
-      let moves = [];
+      var moves = [];
 
-      const enableOverflow = () => {
+      var enableOverflow = function enableOverflow() {
         // move elements from toolbar to overflow menu
-        const responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]");
-        const overflowMenu = document.querySelector("#overflow-menu"); // keep a placeholder element to know where to move them back
+        var responsiveToolbarElements = document.querySelectorAll("[data-responsive-toolbar-element]");
+        var overflowMenu = document.querySelector("#overflow-menu"); // keep a placeholder element to know where to move them back
 
-        moves = Array.from(responsiveToolbarElements).map(element => {
-          const placeholder = document.createElement("div");
+        moves = Array.from(responsiveToolbarElements).map(function (element) {
+          var placeholder = document.createElement("div");
           placeholder.style.display = "none";
           placeholder.setAttribute("data-placeholder", "");
           element.parentNode.replaceChild(placeholder, element);
           overflowMenu.appendChild(element);
           return {
-            element,
-            placeholder
+            element: element,
+            placeholder: placeholder
           };
         });
         document.querySelector("#toolbar").setAttribute("data-overflow-menu-enabled", "");
         removeForceHideElement(document.querySelector("#overflow-menu-button"));
       };
 
-      const disableOverflow = () => {
+      var disableOverflow = function disableOverflow() {
         // close overflow menu in case it's open & unselect toggleOverflowMenu button in case it's selected
         hideOverflowMenu();
         deactivateToolbarSection(document.querySelector("#overflow-menu"));
-        moves.forEach(({
-          element,
-          placeholder
-        }) => {
+        moves.forEach(function (_ref) {
+          var element = _ref.element,
+              placeholder = _ref.placeholder;
           placeholder.parentNode.replaceChild(element, placeholder);
         });
         moves = [];
@@ -4123,7 +4738,7 @@ ${error.stack}`);
         forceHideElement(document.querySelector("#overflow-menu-button"));
       };
 
-      const toggleOverflowMenu = () => {
+      var toggleOverflowMenu = function toggleOverflowMenu() {
         if (overflowMenuIsVisible()) {
           hideOverflowMenu();
         } else {
@@ -4131,49 +4746,71 @@ ${error.stack}`);
         }
       };
 
-      const overflowMenuIsVisible = () => {
-        const toolbar = document.querySelector("#toolbar");
+      var overflowMenuIsVisible = function overflowMenuIsVisible() {
+        var toolbar = document.querySelector("#toolbar");
         return toolbar.hasAttribute("data-overflow-menu-visible");
       };
 
-      const showOverflowMenu = () => {
-        const toolbar = document.querySelector("#toolbar");
+      var showOverflowMenu = function showOverflowMenu() {
+        var toolbar = document.querySelector("#toolbar");
         document.querySelector("#overflow-menu").setAttribute("data-animate", "");
         toolbar.setAttribute("data-overflow-menu-visible", "");
       };
 
-      const hideOverflowMenu = () => {
-        const toolbar = document.querySelector("#toolbar");
+      var hideOverflowMenu = function hideOverflowMenu() {
+        var toolbar = document.querySelector("#toolbar");
         toolbar.removeAttribute("data-overflow-menu-visible");
         document.querySelector("#overflow-menu").removeAttribute("data-animate");
       };
 
-      const toolbarVisibilityPreference = createPreference("toolbar");
+      function _await(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
-      const renderToolbar = async ({
-        exploringJSON
-      }) => {
-        const executedFileCompiledUrl = window.parent.location.href;
-        const compileServerOrigin = window.parent.location.origin; // this should not block the whole toolbar rendering + interactivity
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
 
-        const {
-          jsenvDirectoryRelativeUrl,
-          livereloading
-        } = exploringJSON;
-        const compileGroup = getCompileGroup({
-          executedFileCompiledUrl,
-          jsenvDirectoryRelativeUrl,
-          compileServerOrigin
+        return then ? value.then(then) : value;
+      }
+
+      var toolbarVisibilityPreference = createPreference("toolbar");
+
+      function _async(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var renderToolbar = _async(function (_ref) {
+        var exploringJSON = _ref.exploringJSON;
+        var jsenvDirectoryRelativeUrl = exploringJSON.jsenvDirectoryRelativeUrl,
+            hmr = exploringJSON.hmr;
+        var executedFileCompiledUrl = window.parent.location.href;
+        var compileServerOrigin = window.parent.location.origin;
+        var compileGroup = getCompileGroup({
+          executedFileCompiledUrl: executedFileCompiledUrl,
+          jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+          compileServerOrigin: compileServerOrigin
         });
-        const executedFileRelativeUrl = compileGroup.fileRelativeUrl;
-        const toolbarOverlay = document.querySelector("#toolbar-overlay");
+        var executedFileRelativeUrl = compileGroup.fileRelativeUrl;
+        var toolbarOverlay = document.querySelector("#toolbar-overlay");
 
-        toolbarOverlay.onclick = () => {
+        toolbarOverlay.onclick = function () {
           hideAllTooltip();
           hideSettings();
         };
 
-        const toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
+        var toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
 
         if (toolbarVisible) {
           showToolbar({
@@ -4192,24 +4829,29 @@ ${error.stack}`);
         renderToolbarAnimation();
         renderToolbarTheme();
         renderExecutionInToolbar({
-          executedFileRelativeUrl
+          executedFileRelativeUrl: executedFileRelativeUrl
         });
         renderCompilationInToolbar({
-          compileGroup
+          jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+          compileGroup: compileGroup
         }); // this might become active but we need to detect this somehow
 
         deactivateToolbarSection(document.querySelector("#file-list-link"));
         initToolbarEventSource({
-          executedFileRelativeUrl,
-          livereloading
+          executedFileRelativeUrl: executedFileRelativeUrl,
+          hmr: hmr
         }); // if user click enter or space quickly while closing toolbar
         // it will cancel the closing
         // that's why I used toggleToolbar and not hideToolbar
 
-        document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar();
-      };
+        document.querySelector("#button-close-toolbar").onclick = function () {
+          return toogleToolbar();
+        };
 
-      const toogleToolbar = () => {
+        return _await();
+      });
+
+      var toogleToolbar = function toogleToolbar() {
         if (toolbarIsVisible()) {
           hideToolbar();
         } else {
@@ -4217,18 +4859,22 @@ ${error.stack}`);
         }
       };
 
-      const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible");
+      var toolbarIsVisible = function toolbarIsVisible() {
+        return document.documentElement.hasAttribute("data-toolbar-visible");
+      };
 
-      let hideToolbar = () => {
+      var hideToolbar = function hideToolbar() {
         // toolbar hidden by default, nothing to do to hide it by default
         sendEventToParent("toolbar-visibility-change", false);
       }; // (by the way it might be cool to have the toolbar auto show when)
       // it has something to say (being disconnected from livereload server)
 
 
-      const showToolbar = ({
-        animate = true
-      } = {}) => {
+      var showToolbar = function showToolbar() {
+        var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref2$animate = _ref2.animate,
+            animate = _ref2$animate === void 0 ? true : _ref2$animate;
+
         toolbarVisibilityPreference.set(true);
 
         if (animate) {
@@ -4239,43 +4885,42 @@ ${error.stack}`);
 
         document.documentElement.setAttribute("data-toolbar-visible", "");
         sendEventToParent("toolbar-visibility-change", true);
-        const toolbarIframe = getToolbarIframe();
-        const toolbarIframeParent = toolbarIframe.parentNode;
-        const parentWindow = window.parent;
-        const parentDocumentElement = parentWindow.document.compatMode === "CSS1Compat" ? parentWindow.document.documentElement : parentWindow.document.body;
-        const scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight;
-        const scrollY = parentDocumentElement.scrollTop;
-        const scrollYRemaining = scrollYMax - scrollY;
+        var toolbarIframe = getToolbarIframe();
+        var toolbarIframeParent = toolbarIframe.parentNode;
+        var parentWindow = window.parent;
+        var parentDocumentElement = parentWindow.document.compatMode === "CSS1Compat" ? parentWindow.document.documentElement : parentWindow.document.body;
+        var scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight;
+        var scrollY = parentDocumentElement.scrollTop;
+        var scrollYRemaining = scrollYMax - scrollY;
         setStyles(toolbarIframeParent, {
           "transition-property": "padding-bottom",
           "transition-duration": "300ms"
         }); // maybe we should use js animation here because we would not conflict with css
 
-        const restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
+        var restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
           "scroll-padding-bottom": "40px",
           // same here we should add 40px
           "padding-bottom": "40px" // if there is already one we should add 40px
 
         });
-        const restoreToolbarIframeStyles = setStyles(toolbarIframe, {
+        var restoreToolbarIframeStyles = setStyles(toolbarIframe, {
           height: "40px",
           visibility: "visible"
         });
 
         if (scrollYRemaining < 40 && scrollYMax > 0) {
-          const scrollEnd = scrollY + 40;
+          var scrollEnd = scrollY + 40;
           startJavaScriptAnimation({
             duration: 300,
-            onProgress: ({
-              progress
-            }) => {
-              const value = scrollY + (scrollEnd - scrollY) * progress;
+            onProgress: function onProgress(_ref3) {
+              var progress = _ref3.progress;
+              var value = scrollY + (scrollEnd - scrollY) * progress;
               parentDocumentElement.scrollTop = value;
             }
           });
         }
 
-        hideToolbar = () => {
+        hideToolbar = function hideToolbar() {
           restoreToolbarIframeParentStyles();
           restoreToolbarIframeStyles();
           hideTooltip(document.querySelector("#eventsource-indicator"));
@@ -4293,19 +4938,18 @@ ${error.stack}`);
         };
       };
 
-      const getCompileGroup = ({
-        executedFileCompiledUrl,
-        jsenvDirectoryRelativeUrl,
-        compileServerOrigin
-      }) => {
-        const jsenvDirectoryServerUrl = new URL(jsenvDirectoryRelativeUrl, compileServerOrigin).href;
+      var getCompileGroup = function getCompileGroup(_ref4) {
+        var executedFileCompiledUrl = _ref4.executedFileCompiledUrl,
+            jsenvDirectoryRelativeUrl = _ref4.jsenvDirectoryRelativeUrl,
+            compileServerOrigin = _ref4.compileServerOrigin;
+        var jsenvDirectoryServerUrl = new URL(jsenvDirectoryRelativeUrl, compileServerOrigin).href;
 
         if (urlIsInsideOf(executedFileCompiledUrl, jsenvDirectoryServerUrl)) {
-          const afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, jsenvDirectoryServerUrl);
-          const slashIndex = afterCompileDirectory.indexOf("/");
-          const fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
+          var afterCompileDirectory = urlToRelativeUrl(executedFileCompiledUrl, jsenvDirectoryServerUrl);
+          var slashIndex = afterCompileDirectory.indexOf("/");
+          var fileRelativeUrl = afterCompileDirectory.slice(slashIndex + 1);
           return {
-            fileRelativeUrl,
+            fileRelativeUrl: fileRelativeUrl,
             compileId: afterCompileDirectory.slice(0, slashIndex)
           };
         }
@@ -4316,19 +4960,15 @@ ${error.stack}`);
         };
       };
 
-      const addExternalCommandCallback = (command, callback) => {
-        const messageEventCallback = messageEvent => {
-          const {
-            data
-          } = messageEvent;
+      var addExternalCommandCallback = function addExternalCommandCallback(command, callback) {
+        var messageEventCallback = function messageEventCallback(messageEvent) {
+          var data = messageEvent.data;
 
-          if (typeof data !== "object") {
+          if (_typeof(data) !== "object") {
             return;
           }
 
-          const {
-            __jsenv__
-          } = data;
+          var __jsenv__ = data.__jsenv__;
 
           if (!__jsenv__) {
             return;
@@ -4338,44 +4978,50 @@ ${error.stack}`);
             return;
           }
 
-          callback(...__jsenv__.args);
+          callback.apply(void 0, _toConsumableArray(__jsenv__.args));
         };
 
         window.addEventListener("message", messageEventCallback);
-        return () => {
+        return function () {
           window.removeEventListener("message", messageEventCallback);
         };
       };
 
-      const sendEventToParent = (name, data) => {
+      var sendEventToParent = function sendEventToParent(name, data) {
         window.parent.postMessage({
           __jsenv__: {
             event: name,
-            data
+            data: data
           }
         }, "*");
       };
 
       window.toolbar = {
         show: showToolbar,
-        hide: () => hideToolbar()
-      };
-      addExternalCommandCallback("renderToolbar", data => {
-        renderToolbar(data);
+        hide: function hide() {
+          return hideToolbar();
+        }
+      }; // const { currentScript } = document
+
+      addExternalCommandCallback("renderToolbar", function (_ref5) {
+        var exploringJSON = _ref5.exploringJSON;
+        renderToolbar({
+          exploringJSON: exploringJSON //  toolbarScript: currentScript,
+
+        });
       });
-      addExternalCommandCallback("showToolbar", () => {
+      addExternalCommandCallback("showToolbar", function () {
         showToolbar();
       });
-      addExternalCommandCallback("hideToolbar", () => {
+      addExternalCommandCallback("hideToolbar", function () {
         hideToolbar();
       });
       sendEventToParent("toolbar_ready");
-
-    })
+    }
   };
-}));
+});
 
-//# sourceMappingURL=toolbar_main_ac126ee3.js.map</script>
+//# sourceMappingURL=toolbar_main_d6af5fda.js.map</script>
   
 
 </body></html>

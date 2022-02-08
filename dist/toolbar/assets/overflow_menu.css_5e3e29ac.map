@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "../../../src/internal/dev_server/toolbar/responsive/overflow_menu.css"
+    "../../../src/internal/toolbar/responsive/overflow_menu.css"
   ],
   "names": [],
   "mappings": "AAAA;EACE,aAAa;EACb,kBAAkB;EAClB,MAAM;EACN,QAAQ;EACR,WAAW;EACX,mBAAmB;AACrB;;AAEA;EACE,WAAW;AACb;;AAEA;EACE,kBAAkB,EAAE,gCAAgC;EACpD,aAAa;EACb,kBAAkB;EAClB,UAAU;EACV,MAAM;EACN,SAAS;EACT,WAAW;EACX,YAAY;EACZ,mBAAmB;EACnB,UAAU;AACZ;;AAEA;EACE,kCAAkC;EAClC,yBAAyB;AAC3B;;AAEA;EACE,mBAAmB;EACnB,sBAAsB;EACtB,kBAAkB;AACpB;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,mBAAmB;AACrB;;AAEA;;EAEE,kBAAkB,EAAE,gCAAgC;AACtD;;AAEA;EACE,mBAAmB,EAAE,gCAAgC;EACrD,cAAc;EACd,UAAU;EACV,OAAO;EACP,kBAAkB;AACpB;;AAEA;EACE,YAAY;AACd",

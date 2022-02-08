@@ -62,8 +62,8 @@ const depCssBuildUrl = resolveUrl(depcssBuildRelativeUrl, buildDirectoryUrl)
 {
   const mainCssString = await readFile(mainCssBuildUrl)
   const mainCssUrls = await parseCssUrls({
-    code: mainCssString,
     url: mainCssBuildUrl,
+    content: mainCssString,
   })
   const actual = mainCssUrls[0].specifier
   const expected = urlToRelativeUrl(depCssBuildUrl, mainCssBuildUrl)
