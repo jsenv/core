@@ -135,10 +135,9 @@ const computeCompileReport = async ({
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
-    const response = await jsenvRemoteDirectory.fetchUrl(
-      originalFileUrl,
+    const response = await jsenvRemoteDirectory.fetchUrl(originalFileUrl, {
       request,
-    )
+    })
     if (response.status !== 200) {
       const error = { asResponse: () => response }
       throw error
