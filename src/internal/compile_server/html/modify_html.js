@@ -34,7 +34,10 @@ import {
 } from "@jsenv/core/src/internal/transform_html/html_inlining.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
-import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
+import {
+  collectHtmlUrlMentions,
+  updateHtmlHotMeta,
+} from "@jsenv/core/src/internal/hmr/hot_html.js"
 
 export const modifyHtml = async ({
   logger,
@@ -120,7 +123,12 @@ export const modifyHtml = async ({
   }
   const htmlModified = stringifyHtmlAst(htmlAst)
   if (hmr) {
-    scanHtml({ ressourceGraph, url, html: htmlModified })
+    const urlMentions = collectHtmlUrlMentions(htmlAst)
+    updateHtmlHotMeta({
+      ressourceGraph,
+      url,
+      urlMentions,
+    })
   }
   return {
     content: htmlModified,

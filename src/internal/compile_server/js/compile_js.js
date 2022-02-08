@@ -1,6 +1,6 @@
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
-import { scanJs } from "@jsenv/core/src/internal/hmr/scan_js.js"
+import { updateJsHotMeta } from "@jsenv/core/src/internal/hmr/hot_js.js"
 
 import { asCompilationResult } from "../jsenv_directory/compilation_result.js"
 import { shakeBabelPluginMap } from "../jsenv_directory/compile_profile.js"
@@ -46,11 +46,14 @@ export const compileJavascript = async ({
     map,
     content,
   })
-  const metadata = transformResult.metadata
-  scanJs({
+  const { metadata } = transformResult
+  updateJsHotMeta({
     ressourceGraph,
     url,
-    metadata,
+    urlMentions: metadata.urlMentions,
+    importMetaHotDecline: metadata.importMetaHotDecline,
+    importMetaHotAcceptSelf: metadata.importMetaHotAcceptSelf,
+    importMetaHotAcceptDependencies: metadata.importMetaHotAcceptDependencies,
   })
   return asCompilationResult(
     {

@@ -1,16 +1,13 @@
 import {
-  parseHtmlString,
   parseLinkNode,
   getHtmlNodeAttributeByName,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
 
-export const scanHtml = ({ ressourceGraph, url, html }) => {
-  const htmlAst = parseHtmlString(html)
-  const htmlUrlMentions = collectHtmlUrlMentions(htmlAst)
+export const updateHtmlHotMeta = ({ ressourceGraph, url, urlMentions }) => {
   const dependencyUrls = []
   const hotAcceptDependencies = []
-  htmlUrlMentions.forEach(({ specifier, hotAccepted }) => {
+  urlMentions.forEach(({ specifier, hotAccepted }) => {
     const ressourceUrl = ressourceGraph.applyUrlResolution(specifier, url)
     // adding url to "dependencyUrls" means html uses an url
     // and should reload (hot or full) when an url changes
@@ -41,7 +38,7 @@ export const scanHtml = ({ ressourceGraph, url, html }) => {
   return dependencyUrls
 }
 
-const collectHtmlUrlMentions = (htmlAst) => {
+export const collectHtmlUrlMentions = (htmlAst) => {
   const htmlUrlMentions = []
   const addDependency = ({ node, attribute, specifier, hotAccepted }) => {
     // ignore local url specifier (<use href="#logo"> or <a href="#">)

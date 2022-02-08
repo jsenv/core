@@ -21,7 +21,10 @@ import {
   sourcemapToBase64Url,
 } from "@jsenv/core/src/internal/sourcemap_utils.js"
 import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
-import { scanHtml } from "@jsenv/core/src/internal/hmr/scan_html.js"
+import {
+  collectHtmlUrlMentions,
+  updateHtmlHotMeta,
+} from "@jsenv/core/src/internal/hmr/hot_html.js"
 
 export const compileHtml = async ({
   // cancellationToken,
@@ -148,10 +151,11 @@ export const compileHtml = async ({
   })
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
-  const dependencyUrls = scanHtml({
-    url,
-    html: htmlAfterTransformation,
+  const urlMentions = collectHtmlUrlMentions(htmlAst)
+  const dependencyUrls = updateHtmlHotMeta({
     ressourceGraph,
+    url,
+    urlMentions,
   })
   return {
     contentType: "text/html",

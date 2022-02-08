@@ -1,5 +1,5 @@
 import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
-import { scanJs } from "@jsenv/core/src/internal/hmr/scan_js.js"
+import { updateJsHotMeta } from "@jsenv/core/src/internal/hmr/hot_js.js"
 
 import { babelPluginSyntaxes } from "./babel_plugin_syntaxes.js"
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
@@ -24,12 +24,15 @@ export const modifyJs = async ({
     content,
   })
   const { metadata } = transformResult
-  content = transformResult.content
-  scanJs({
+  updateJsHotMeta({
     ressourceGraph,
     url,
-    metadata,
+    urlMentions: metadata.urlMentions,
+    importMetaHotDecline: metadata.importMetaHotDecline,
+    importMetaHotAcceptSelf: metadata.importMetaHotAcceptSelf,
+    importMetaHotAcceptDependencies: metadata.importMetaHotAcceptDependencies,
   })
+  content = transformResult.content
   return {
     content,
   }

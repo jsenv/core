@@ -1,5 +1,12 @@
-export const scanJs = ({ ressourceGraph, url, metadata }) => {
-  const dependencyUrls = metadata.urlMentions.map(({ type, specifier }) => {
+export const updateJsHotMeta = ({
+  ressourceGraph,
+  url,
+  urlMentions,
+  importMetaHotDecline,
+  importMetaHotAcceptSelf,
+  importMetaHotAcceptDependencies,
+}) => {
+  const dependencyUrls = urlMentions.map(({ type, specifier }) => {
     if (type === "url") {
       return ressourceGraph.applyUrlResolution(specifier, url)
     }
@@ -9,9 +16,9 @@ export const scanJs = ({ ressourceGraph, url, metadata }) => {
     url,
     type: "js",
     dependencyUrls,
-    hotDecline: metadata.importMetaHotDecline,
-    hotAcceptSelf: metadata.importMetaHotAcceptSelf,
-    hotAcceptDependencies: metadata.importMetaHotAcceptDependencies.map(
+    hotDecline: importMetaHotDecline,
+    hotAcceptSelf: importMetaHotAcceptSelf,
+    hotAcceptDependencies: importMetaHotAcceptDependencies.map(
       (acceptDependencyUrlSpecifier) =>
         ressourceGraph.applyImportmapResolution(
           acceptDependencyUrlSpecifier,
