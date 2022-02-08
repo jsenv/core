@@ -12,20 +12,20 @@ export const compileJavascript = async ({
   url,
   compiledUrl,
 
+  type,
   compileProfile,
   babelPluginMap,
   topLevelAwait,
   prependSystemJs,
+  importMetaHot,
 
   sourcemapExcludeSources,
   sourcemapMethod,
   map,
   content,
 }) => {
-  const { searchParams } = new URL(url)
   if (prependSystemJs === undefined) {
-    prependSystemJs =
-      searchParams.has("worker") || searchParams.has("service_worker")
+    prependSystemJs = type === "worker" || type === "service_worker"
   }
   const transformResult = await transformWithBabel({
     projectDirectoryUrl,
@@ -37,10 +37,10 @@ export const compileJavascript = async ({
       babelPluginMap,
       compileProfile,
     }),
-    moduleOutFormat: searchParams.has("script")
-      ? "global"
-      : compileProfile.moduleOutFormat,
-    topLevelAwait,
+    moduleOutFormat:
+      type === "script" ? "global" : compileProfile.moduleOutFormat,
+    importMetaHot,
+    topLevelAwait: type === "script" ? false : topLevelAwait,
     prependSystemJs,
 
     map,

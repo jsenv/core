@@ -216,6 +216,20 @@ export const startCompileServer = async ({
   }
 
   const jsenvServices = {
+    "service:gressource graph": (request) => {
+      if (request.ressource === "/__ressource_graph__") {
+        const graphJson = JSON.stringify(ressourceGraph)
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(graphJson),
+          },
+          body: graphJson,
+        }
+      }
+      return null
+    },
     "service:redirector": createCompileRedirectorService({
       jsenvFileSelector,
       mainFileRelativeUrl,
@@ -267,6 +281,7 @@ export const startCompileServer = async ({
 
             babelPluginMap,
             topLevelAwait,
+            importMetaHot: autoreload,
 
             eventSourceClient,
             htmlSupervisor,
@@ -298,6 +313,14 @@ export const startCompileServer = async ({
           map,
           content,
         }) => {
+          const { searchParams } = new URL(url)
+          const type = searchParams.has("script")
+            ? "script"
+            : searchParams.has("worker")
+            ? "worker"
+            : searchParams.has("service_worker")
+            ? "service_worker"
+            : "module"
           return compileJavascript({
             projectDirectoryUrl,
             ressourceGraph,
@@ -305,10 +328,12 @@ export const startCompileServer = async ({
             url,
             compiledUrl,
 
+            type,
             compileProfile,
             babelPluginMap,
             topLevelAwait,
             prependSystemJs,
+            importMetaHot: autoreload,
 
             sourcemapExcludeSources,
             sourcemapMethod,

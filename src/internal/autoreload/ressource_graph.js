@@ -70,6 +70,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
           existingRessource.dependencies,
         ).filter((depUrl) => !dependencyUrls.includes(depUrl))
         oldDependencyUrls.forEach((oldDependencyUrl) => {
+          ressource.dependencies.delete(oldDependencyUrl)
           const oldDependency = ressources[oldDependencyUrl]
           if (oldDependency) {
             oldDependency.dependents.delete(url)
@@ -222,6 +223,20 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     updateRessourceDependencies,
     onFileChange,
     injectHmrIntoUrlSpecifier,
+
+    toJSON: () => {
+      const data = {}
+      Object.keys(ressources).forEach((url) => {
+        const dependencyUrls = Array.from(ressources[url].dependencies)
+        if (dependencyUrls.length) {
+          const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
+          data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
+            urlToRelativeUrl(dependencyUrl, projectDirectoryUrl),
+          )
+        }
+      })
+      return data
+    },
   }
 }
 

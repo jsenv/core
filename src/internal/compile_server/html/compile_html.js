@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl, urlToFilename } from "@jsenv/filesystem"
+import { resolveUrl, urlToFilename } from "@jsenv/filesystem"
 
 import {
   injectBeforeFirstHeadScript,
@@ -16,15 +16,11 @@ import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_impor
 import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/supervise_scripts.js"
 import { getScriptsToInject } from "@jsenv/core/src/internal/transform_html/html_script_injection.js"
 import {
-  generateSourcemapUrl,
-  setJavaScriptSourceMappingUrl,
-  sourcemapToBase64Url,
-} from "@jsenv/core/src/internal/sourcemap_utils.js"
-import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
-import {
   collectHtmlUrlMentions,
   updateHtmlHotMeta,
 } from "@jsenv/core/src/internal/autoreload/hot_html.js"
+
+import { compileJavascript } from "../js/compile_js.js"
 
 export const compileHtml = async ({
   // cancellationToken,
@@ -41,6 +37,7 @@ export const compileHtml = async ({
   compileId,
   babelPluginMap,
   topLevelAwait,
+  importMetaHot,
 
   eventSourceClient,
   htmlSupervisor,
@@ -121,6 +118,7 @@ export const compileHtml = async ({
   await visitScripts({
     logger,
     projectDirectoryUrl,
+    ressourceGraph,
     jsenvFileSelector,
     jsenvRemoteDirectory,
     url,
@@ -129,6 +127,7 @@ export const compileHtml = async ({
     compileProfile,
     babelPluginMap,
     topLevelAwait,
+    importMetaHot,
     sourcemapMethod,
 
     scripts,
@@ -214,6 +213,7 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
 
 const visitScripts = async ({
   projectDirectoryUrl,
+  ressourceGraph,
   jsenvFileSelector,
   jsenvRemoteDirectory,
   url,
@@ -222,6 +222,7 @@ const visitScripts = async ({
   compileProfile,
   babelPluginMap,
   topLevelAwait,
+  importMetaHot,
   sourcemapMethod,
 
   scripts,
@@ -248,15 +249,17 @@ const visitScripts = async ({
       addHtmlAssetGenerator(async () => {
         return transformHtmlScript({
           projectDirectoryUrl,
+          ressourceGraph,
           jsenvRemoteDirectory,
           url: inlineScriptSourceUrl,
           compiledUrl: inlineScriptCompiledUrl,
           isInline: true,
 
-          type,
+          type: type === "module" ? "module" : "script",
           compileProfile,
           babelPluginMap,
           topLevelAwait,
+          importMetaHot,
 
           sourcemapMethod,
           content: textContent,
@@ -268,6 +271,7 @@ const visitScripts = async ({
 
 const transformHtmlScript = async ({
   projectDirectoryUrl,
+  ressourceGraph,
   jsenvRemoteDirectory,
   url,
   compiledUrl,
@@ -277,28 +281,41 @@ const transformHtmlScript = async ({
   compileProfile,
   babelPluginMap,
   topLevelAwait,
+  importMetaHot,
 
   sourcemapMethod,
   content,
 }) => {
-  let map
   try {
-    const transformResult = await transformWithBabel({
+    const compileResult = await compileJavascript({
       projectDirectoryUrl,
+      ressourceGraph,
       jsenvRemoteDirectory,
       url,
       compiledUrl,
 
+      type,
+      compileProfile,
       babelPluginMap,
-      moduleOutFormat:
-        type === "module" ? compileProfile.moduleOutFormat : "global",
-      topLevelAwait: type === "module" ? topLevelAwait : false,
-      babelHelpersInjectionAsImport: type === "module" ? undefined : false,
+      topLevelAwait,
+      importMetaHot,
 
+      sourcemapMethod,
       content,
     })
-    map = transformResult.map
-    content = transformResult.content
+    content = compileResult.content
+    const files = []
+    files.push({
+      url: compiledUrl,
+      content,
+    })
+    compileResult.assets.forEach((url, index) => {
+      files.push({
+        url,
+        content: compileResult.assetsContent[index],
+      })
+    })
+    return files
   } catch (e) {
     // If there is a syntax error in inline script
     // we put the raw script without transformation.
@@ -318,28 +335,6 @@ const transformHtmlScript = async ({
     }
     throw e
   }
-  const sourcemapUrl = generateSourcemapUrl(compiledUrl)
-  if (sourcemapMethod === "inline") {
-    content = setJavaScriptSourceMappingUrl(content, sourcemapToBase64Url(map))
-    return [
-      {
-        url: compiledUrl,
-        content,
-      },
-    ]
-  }
-  const sourcemapSpecifier = urlToRelativeUrl(sourcemapUrl, compiledUrl)
-  content = setJavaScriptSourceMappingUrl(content, sourcemapSpecifier)
-  return [
-    {
-      url: compiledUrl,
-      content,
-    },
-    {
-      url: sourcemapUrl,
-      content: JSON.stringify(map, null, "  "),
-    },
-  ]
 }
 
 const collectRessourceHints = (htmlAst) => {
