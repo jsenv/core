@@ -34,17 +34,12 @@ export const createSourceFileService = ({
   const ressourceArtifacts = createRessourceArtifacts()
 
   return async (request) => {
-    const url = new URL(request.ressource.slice(1), projectDirectoryUrl).href
-    // artifacts are inline ressource found in HTML (inline scripts, styles, ...)
-    const artifactResponse = ressourceArtifacts.getResponseForUrl(url)
-    if (artifactResponse) {
-      return artifactResponse
-    }
-    try {
-      const response = await jsenvRemoteDirectory.fetchUrl(url, {
-        request,
-        projectFileCacheStrategy,
-      })
+    const urlObject = new URL(request.ressource.slice(1), projectDirectoryUrl)
+    const hmr = urlObject.searchParams.get("hmr")
+    urlObject.searchParams.delete("hmr")
+    const url = urlObject.href
+
+    const handleResponse = async (response) => {
       if (response.status !== 200) {
         return response
       }
@@ -53,14 +48,16 @@ export const createSourceFileService = ({
       if (!modifier) {
         return response
       }
-      const buffer = await readNodeStream(response.body)
+      const responseBodyAsString =
+        typeof response.body === "string"
+          ? response.body
+          : String(await readNodeStream(response.body))
       const { content, artifacts = [] } = await modifier({
         url,
-        content: String(buffer),
+        content: responseBodyAsString,
       })
       ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
 
-      const hmr = new URL(url).searchParams.get("hmr")
       if (hmr) {
         const body = await injectHmr({
           projectDirectoryUrl,
@@ -88,6 +85,19 @@ export const createSourceFileService = ({
         },
         body: content,
       }
+    }
+
+    // artifacts are inline ressource found in HTML (inline scripts, styles, ...)
+    const artifactResponse = ressourceArtifacts.getResponseForUrl(url)
+    if (artifactResponse) {
+      return handleResponse(artifactResponse)
+    }
+    try {
+      const response = await jsenvRemoteDirectory.fetchUrl(url, {
+        request,
+        projectFileCacheStrategy,
+      })
+      return handleResponse(response)
     } catch (error) {
       if (error && error.asResponse) {
         return error.asResponse()
