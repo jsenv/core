@@ -206,7 +206,7 @@
               </div>
               <div data-when="changes:yes">
                 <svg
-                  class="event-source-autoreloadF iconToolbar"
+                  class="event-source-autoreload iconToolbar"
                   data-variant="disabled"
                 >
                   <use xlink:href="#loading_svg"></use>
@@ -256,6 +256,24 @@
             </div>
             <div id="settings-box-body">
               <div class="settings-box-items-wrapper">
+                <div class="settings-box-item settings-autoreload">
+                  <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="#loading_svg"></use>
+                    </svg>
+                    <span>Autoreload</span>
+                  </div>
+                  <label class="switch" data-contains-hidden-input>
+                    <input id="toggle-autoreload" type="checkbox" />
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Auto reload when a file is modified, deleted or created.
+                  </div>
+                </div>
                 <div class="settings-box-item settings-notification">
                   <div class="category-title">
                     <svg
@@ -289,24 +307,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="settings-box-item settings-autoreload">
-                  <div class="category-title">
-                    <svg width="20px" height="20px">
-                      <use xlink:href="#loading_svg"></use>
-                    </svg>
-                    <span>Autoreload</span>
-                  </div>
-                  <label class="switch" data-contains-hidden-input>
-                    <input id="toggle-autoreload" type="checkbox" />
-                    <div>
-                      <div class="slider"></div>
-                      <div class="square"></div>
-                    </div>
-                  </label>
-                  <div class="category-subtitle">
-                    Auto reload when a file is modified, deleted or created.
-                  </div>
-                </div>
+
                 <div class="settings-box-item">
                   <div class="category-title">
                     <svg
