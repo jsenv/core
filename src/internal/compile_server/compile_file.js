@@ -174,21 +174,6 @@ export const compileFile = async ({
     }
     return respondUsingRAM()
   } catch (error) {
-    if (error && error.code === "PARSE_ERROR") {
-      const { data } = error
-      // on the correspondig file
-      const json = JSON.stringify(data)
-      return {
-        status: 500,
-        statusText: "parse error",
-        headers: {
-          "cache-control": "no-store",
-          "content-length": Buffer.byteLength(json),
-          "content-type": "application/json",
-        },
-        body: json,
-      }
-    }
     if (error && error.asResponse) {
       return error.asResponse()
     }

@@ -18,6 +18,7 @@
  * qui se charge de servir les fichiers inlines
  */
 
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { resolveUrl } from "@jsenv/filesystem"
 
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
@@ -39,52 +40,59 @@ export const createSourceFileService = ({
     if (artifactResponse) {
       return artifactResponse
     }
-    const response = await jsenvRemoteDirectory.fetchUrl(url, {
-      request,
-      projectFileCacheStrategy,
-    })
-    if (response.status !== 200) {
-      return response
-    }
-    const responseContentType = response.headers["content-type"]
-    const modifier = modifiers[responseContentType]
-    if (!modifier) {
-      return response
-    }
-    const buffer = await readNodeStream(response.body)
-    const { content, artifacts = [] } = await modifier({
-      url,
-      content: String(buffer),
-    })
-    ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
-
-    const hmr = new URL(url).searchParams.get("hmr")
-    if (hmr) {
-      const body = await injectHmr({
-        projectDirectoryUrl,
-        ressourceGraph,
-        url,
-        contentType: responseContentType,
-        moduleFormat: "esmodule",
-        content,
+    try {
+      const response = await jsenvRemoteDirectory.fetchUrl(url, {
+        request,
+        projectFileCacheStrategy,
       })
+      if (response.status !== 200) {
+        return response
+      }
+      const responseContentType = response.headers["content-type"]
+      const modifier = modifiers[responseContentType]
+      if (!modifier) {
+        return response
+      }
+      const buffer = await readNodeStream(response.body)
+      const { content, artifacts = [] } = await modifier({
+        url,
+        content: String(buffer),
+      })
+      ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
+
+      const hmr = new URL(url).searchParams.get("hmr")
+      if (hmr) {
+        const body = await injectHmr({
+          projectDirectoryUrl,
+          ressourceGraph,
+          url,
+          contentType: responseContentType,
+          moduleFormat: "esmodule",
+          content,
+        })
+        return {
+          status: 200,
+          headers: {
+            "content-type": responseContentType,
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      }
       return {
         status: 200,
         headers: {
           "content-type": responseContentType,
-          "content-length": Buffer.byteLength(body),
+          "content-length": Buffer.byteLength(content),
+          "cache-control": "no-cache",
         },
-        body,
+        body: content,
       }
-    }
-    return {
-      status: 200,
-      headers: {
-        "content-type": responseContentType,
-        "content-length": Buffer.byteLength(content),
-        "cache-control": "no-cache",
-      },
-      body: content,
+    } catch (error) {
+      if (error && error.asResponse) {
+        return error.asResponse()
+      }
+      return convertFileSystemErrorToResponseProperties(error)
     }
   }
 }
