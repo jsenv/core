@@ -159,7 +159,7 @@ const computeCompileReport = async ({
           )
         }
         const {
-          contentType,
+          contentType = response.headers["content-type"],
           content,
           sources = [],
           sourcesContent = [],

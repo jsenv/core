@@ -77,7 +77,7 @@ export const parseCssRessource = async (
       ...cssNodeToReferenceLocation(urlMention.declarationNode),
     })
     urlNodeReferenceMapping.set(urlMention.urlNode, urlReference)
-    if (urlMention.type === "import") {
+    if (urlMention.type === "@import") {
       atImportReferences.push(urlReference)
     }
   })

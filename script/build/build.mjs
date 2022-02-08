@@ -73,8 +73,8 @@ await buildInternalFile({
     "./src/internal/toolbar/toolbar_injector.js": "toolbar_injector.js",
   },
   customCompilers: {
-    "./src/internal/toolbar/toolbar_injector.js": ({ code }) => {
-      const content = code.replace(
+    "./src/internal/toolbar/toolbar_injector.js": ({ content }) => {
+      content = content.replace(
         "__TOOLBAR_BUILD_RELATIVE_URL_",
         JSON.stringify(`dist/toolbar/toolbar.html`),
       )

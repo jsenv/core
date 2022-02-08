@@ -9,14 +9,14 @@ import { applyPostCss } from "./apply_post_css.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
 export const replaceCssUrls = async ({
-  url,
-  urlVisitor,
-  map,
-  content,
   cssConcatenation = false,
   cssConcatenationLoadImport,
   cssMinification = false,
   cssMinificationOptions,
+  url,
+  urlVisitor,
+  map,
+  content,
 } = {}) => {
   const result = await applyPostCss({
     plugins: [
