@@ -3,9 +3,10 @@
  * https://modern-web.dev/docs/dev-server/plugins/hmr/
  */
 
+export const urlHotMetas = {}
+
 export default (url) => {
   const data = {}
-  const { urlHotMetas } = window.__jsenv_event_source_client__
 
   return {
     data,

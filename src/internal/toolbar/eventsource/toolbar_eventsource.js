@@ -9,11 +9,11 @@ import {
 let autoreloadAvailableOnServer = false
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
-export const initToolbarEventSource = ({ hmr }) => {
+export const initToolbarEventSource = ({ autoreload }) => {
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
-  autoreloadAvailableOnServer = hmr
+  autoreloadAvailableOnServer = autoreload
   if (!autoreloadAvailableOnServer) {
-    disableLivereloadSetting()
+    disableAutoreloadSetting()
   }
   parentEventSourceClient.status.onchange = () => {
     updateEventSourceIndicator()
@@ -21,10 +21,10 @@ export const initToolbarEventSource = ({ hmr }) => {
   parentEventSourceClient.reloadMessagesSignal.onchange = () => {
     updateEventSourceIndicator()
   }
-  const livereloadCheckbox = document.querySelector("#toggle-livereload")
-  livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled()
-  livereloadCheckbox.onchange = () => {
-    parentEventSourceClient.setLivereloadPreference(livereloadCheckbox.checked)
+  const autoreloadCheckbox = document.querySelector("#toggle-autoreload")
+  autoreloadCheckbox.checked = parentEventSourceClient.isAutoreloadEnabled()
+  autoreloadCheckbox.onchange = () => {
+    parentEventSourceClient.setAutoreloadPreference(autoreloadCheckbox.checked)
     updateEventSourceIndicator()
   }
   updateEventSourceIndicator()
@@ -38,7 +38,7 @@ const updateEventSourceIndicator = () => {
   const eventSourceConnectionState = parentEventSourceClient.status.value
   enableVariant(eventSourceIndicator, {
     eventsource: eventSourceConnectionState,
-    livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
+    autoreload: parentEventSourceClient.isAutoreloadEnabled() ? "on" : "off",
     changes: reloadMessageCount > 0 ? "yes" : "no",
   })
 
@@ -90,12 +90,12 @@ const updateEventSourceIndicator = () => {
   }
 }
 
-const disableLivereloadSetting = () => {
+const disableAutoreloadSetting = () => {
   document
-    .querySelector(".settings-livereload")
+    .querySelector(".settings-autoreload")
     .setAttribute("data-disabled", "true")
   document
-    .querySelector(".settings-livereload")
-    .setAttribute("title", `Livereload not available: disabled by server`)
-  document.querySelector("#toggle-livereload").disabled = true
+    .querySelector(".settings-autoreload")
+    .setAttribute("title", `Autoreload not available: disabled by server`)
+  document.querySelector("#toggle-autoreload").disabled = true
 }

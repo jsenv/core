@@ -37,7 +37,7 @@ import { superviseScripts } from "@jsenv/core/src/internal/html_supervisor/super
 import {
   collectHtmlUrlMentions,
   updateHtmlHotMeta,
-} from "@jsenv/core/src/internal/hmr/hot_html.js"
+} from "@jsenv/core/src/internal/autoreload/hot_html.js"
 
 export const modifyHtml = async ({
   logger,
@@ -50,7 +50,7 @@ export const modifyHtml = async ({
   eventSourceClient,
   htmlSupervisor,
   toolbar,
-  hmr,
+  autoreload,
 
   url,
   content,
@@ -122,7 +122,7 @@ export const modifyHtml = async ({
     })
   }
   const htmlModified = stringifyHtmlAst(htmlAst)
-  if (hmr) {
+  if (autoreload) {
     const urlMentions = collectHtmlUrlMentions(htmlAst)
     updateHtmlHotMeta({
       ressourceGraph,

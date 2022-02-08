@@ -26,7 +26,7 @@ import { makeToolbarResponsive } from "./responsive/toolbar_responsive.js"
 const toolbarVisibilityPreference = createPreference("toolbar")
 
 const renderToolbar = async ({ exploringJSON }) => {
-  const { jsenvDirectoryRelativeUrl, hmr } = exploringJSON
+  const { jsenvDirectoryRelativeUrl, autoreload } = exploringJSON
   const executedFileCompiledUrl = window.parent.location.href
   const compileServerOrigin = window.parent.location.origin
   const compileGroup = getCompileGroup({
@@ -73,7 +73,7 @@ const renderToolbar = async ({ exploringJSON }) => {
   deactivateToolbarSection(document.querySelector("#file-list-link"))
   initToolbarEventSource({
     executedFileRelativeUrl,
-    hmr,
+    autoreload,
   })
 
   // if user click enter or space quickly while closing toolbar
@@ -100,7 +100,7 @@ let hideToolbar = () => {
 }
 
 // (by the way it might be cool to have the toolbar auto show when)
-// it has something to say (being disconnected from livereload server)
+// it has something to say (being disconnected from server)
 const showToolbar = ({ animate = true } = {}) => {
   toolbarVisibilityPreference.set(true)
   if (animate) {

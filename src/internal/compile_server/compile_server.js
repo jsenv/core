@@ -17,7 +17,7 @@ import {
   sourcemapMappingFileInfo,
 } from "@jsenv/core/src/jsenv_file_urls.js"
 import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
-import { createRessourceGraph } from "@jsenv/core/src/internal/hmr/ressource_graph.js"
+import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
@@ -97,7 +97,7 @@ export const startCompileServer = async ({
   plugins,
 
   preserveHtmlSourceFiles = false,
-  hmr = false,
+  autoreload = false,
   eventSourceClient = false,
   htmlSupervisor = false,
   toolbar = false,
@@ -186,7 +186,7 @@ export const startCompileServer = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       watchConfig,
-      hmr,
+      autoreload,
       ressourceGraph,
       serverStopCallbackList,
     }),
@@ -333,7 +333,7 @@ export const startCompileServer = async ({
       jsenvRemoteDirectory,
       projectFileCacheStrategy,
       modifiers: {
-        ...(eventSourceClient || htmlSupervisor || toolbar || hmr
+        ...(eventSourceClient || htmlSupervisor || toolbar || autoreload
           ? {
               "text/html": async ({ url, content }) => {
                 return modifyHtml({
@@ -347,7 +347,7 @@ export const startCompileServer = async ({
                   eventSourceClient,
                   htmlSupervisor,
                   toolbar,
-                  hmr,
+                  autoreload,
 
                   url,
                   content,
@@ -355,7 +355,7 @@ export const startCompileServer = async ({
               },
             }
           : {}),
-        ...(hmr
+        ...(autoreload
           ? {
               "text/css": async ({ url, content }) => {
                 return modifyCss({

@@ -1,7 +1,7 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { bufferToEtag } from "@jsenv/filesystem"
 
-import { injectHmr } from "@jsenv/core/src/internal/hmr/hmr_injection.js"
+import { injectHmr } from "@jsenv/core/src/internal/autoreload/hmr_injection.js"
 
 import { reuseOrCreateCompiledFile } from "./jsenv_directory/reuse_or_create_compiled_file.js"
 import { updateCompileCache } from "./jsenv_directory/update_compile_cache.js"

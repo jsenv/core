@@ -172,9 +172,9 @@
             <div class="tooltip">
               Connected to server
               <br />
-              Livereload:
-              <span data-when="livereload:on" style="color: green">ON</span
-              ><span data-when="livereload:off" style="color: grey">OFF</span>
+              Autoreload:
+              <span data-when="autoreload:on" style="color: green">ON</span
+              ><span data-when="autoreload:off" style="color: grey">OFF</span>
               <br />
               Changes:
               <span data-when="changes:yes"
@@ -196,9 +196,9 @@
               </div>
             </div>
             <button>
-              <div data-when="livereload:on">
+              <div data-when="autoreload:on">
                 <svg
-                  class="event-source-livereload iconToolbar"
+                  class="event-source-autoreload iconToolbar"
                   data-variant="enabled"
                 >
                   <use xlink:href="#loading_svg"></use>
@@ -206,7 +206,7 @@
               </div>
               <div data-when="changes:yes">
                 <svg
-                  class="event-source-livereload iconToolbar"
+                  class="event-source-autoreloadF iconToolbar"
                   data-variant="disabled"
                 >
                   <use xlink:href="#loading_svg"></use>
@@ -289,22 +289,22 @@
                     </div>
                   </div>
                 </div>
-                <div class="settings-box-item settings-livereload">
+                <div class="settings-box-item settings-autoreload">
                   <div class="category-title">
                     <svg width="20px" height="20px">
                       <use xlink:href="#loading_svg"></use>
                     </svg>
-                    <span>Livereload</span>
+                    <span>Autoreload</span>
                   </div>
                   <label class="switch" data-contains-hidden-input>
-                    <input id="toggle-livereload" type="checkbox" />
+                    <input id="toggle-autoreload" type="checkbox" />
                     <div>
                       <div class="slider"></div>
                       <div class="square"></div>
                     </div>
                   </label>
                   <div class="category-subtitle">
-                    Reload page when a file is modified, deleted or created.
+                    Auto reload when a file is modified, deleted or created.
                   </div>
                 </div>
                 <div class="settings-box-item">

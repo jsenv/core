@@ -1,15 +1,16 @@
 import { inferContextFrom, createUrlContext } from "../url_context.js"
 import { createEventSourceConnection } from "./event_source_connection.js"
 import {
-  isLivereloadEnabled,
-  setLivereloadPreference,
-} from "./livereload_preference.js"
+  isAutoreloadEnabled,
+  setAutoreloadPreference,
+} from "./autoreload_preference.js"
 import { compareTwoUrlPaths } from "./url_helpers.js"
 import {
   reloadHtmlPage,
   reloadDOMNodesUsingUrls,
   reloadJsImport,
 } from "./reload.js"
+import { urlHotMetas } from "./import_meta_hot_module.js"
 
 const urlContext = createUrlContext(
   inferContextFrom({
@@ -18,7 +19,6 @@ const urlContext = createUrlContext(
 )
 
 const reloadMessages = []
-const urlHotMetas = {}
 const reloadMessagesSignal = { onchange: () => {} }
 const applyReloadMessageEffects = async () => {
   const someEffectIsFullReload = reloadMessages.some(
@@ -97,7 +97,7 @@ const applyHotReload = async ({ updates }) => {
 
 const addReloadMessage = (reloadMessage) => {
   reloadMessages.push(reloadMessage)
-  if (isLivereloadEnabled()) {
+  if (isAutoreloadEnabled()) {
     applyReloadMessageEffects()
   } else {
     reloadMessagesSignal.onchange()
@@ -124,8 +124,8 @@ window.__jsenv_event_source_client__ = {
   status,
   connect,
   disconnect,
-  isLivereloadEnabled,
-  setLivereloadPreference,
+  isAutoreloadEnabled,
+  setAutoreloadPreference,
   urlHotMetas,
   reloadMessages,
   reloadMessagesSignal,

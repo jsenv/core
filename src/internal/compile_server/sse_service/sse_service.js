@@ -11,12 +11,12 @@ export const createSSEService = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   watchConfig,
-  hmr,
+  autoreload,
   ressourceGraph,
   serverStopCallbackList,
 }) => {
   let handleSSEClientRequest
-  if (hmr) {
+  if (autoreload) {
     handleSSEClientRequest = createSSEServiceWithHmr({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
@@ -25,10 +25,10 @@ export const createSSEService = ({
       serverStopCallbackList,
     })
   } else {
-    const roomWhenHmrIsDisabled = createSSERoom()
-    roomWhenHmrIsDisabled.open()
+    const roomWhenAutoreloadIsDisabled = createSSERoom()
+    roomWhenAutoreloadIsDisabled.open()
     handleSSEClientRequest = (request) => {
-      return roomWhenHmrIsDisabled.join(request)
+      return roomWhenAutoreloadIsDisabled.join(request)
     }
   }
   return (request) => {

@@ -1,5 +1,5 @@
 import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
-import { updateJsHotMeta } from "@jsenv/core/src/internal/hmr/hot_js.js"
+import { updateJsHotMeta } from "@jsenv/core/src/internal/autoreload/hot_js.js"
 
 import { babelPluginSyntaxes } from "./babel_plugin_syntaxes.js"
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"

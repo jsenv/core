@@ -1,6 +1,6 @@
 import { generateSourcemapUrl } from "@jsenv/core/src/internal/sourcemap_utils.js"
 import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
-import { updateJsHotMeta } from "@jsenv/core/src/internal/hmr/hot_js.js"
+import { updateJsHotMeta } from "@jsenv/core/src/internal/autoreload/hot_js.js"
 
 import { asCompilationResult } from "../jsenv_directory/compilation_result.js"
 import { shakeBabelPluginMap } from "../jsenv_directory/compile_profile.js"

@@ -10,15 +10,6 @@ html[data-theme="jsenv"] .iconToolbar:hover {
 html[data-theme="jsenv"] #loader-icon {
   color: #404040;
 }
-html[data-theme="jsenv"] .livereload-circle[data-variant="off"] {
-  fill: #757575;
-}
-html[data-theme="jsenv"] .livereload-circle[data-variant="connecting"] {
-  fill: #717171;
-}
-html[data-theme="jsenv"] .livereload-ring {
-  stroke: rgba(138, 136, 136, 0.46);
-}
 
 /* settings */
 html[data-theme="jsenv"] #settings-box,

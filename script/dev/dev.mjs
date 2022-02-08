@@ -26,6 +26,9 @@ startDevServer({
     main: {
       "./dev_exploring/main/**/*.html": true,
     },
+    autoreload: {
+      "./dev_exploring/autoreload/**/*.html": true,
+    },
     errors: {
       "./dev_exploring/errors/**/*.html": true,
     },

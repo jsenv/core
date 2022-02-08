@@ -15,15 +15,6 @@ html[data-theme="light"] .iconToolbar:hover {
 html[data-theme="light"] #loader-icon {
   color: #404040;
 }
-html[data-theme="light"] .livereload-circle[data-variant="off"] {
-  fill: #757575;
-}
-html[data-theme="light"] .livereload-circle[data-variant="connecting"] {
-  fill: #717171;
-}
-html[data-theme="light"] .livereload-ring {
-  stroke: rgba(138, 136, 136, 0.46);
-}
 
 /* settings */
 html[data-theme="light"] #settings-box,

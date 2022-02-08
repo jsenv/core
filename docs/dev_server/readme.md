@@ -50,9 +50,9 @@ For instance you might want to have a tab for source files and one for test file
 
 ![explorableConfig and tabs screenshot](./exploring-tabs.png)
 
-## hmr
+## autoreload
 
-`hmr` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
+`autoreload` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
 
 Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger reload when saved.
 
@@ -175,7 +175,7 @@ Control if a notification is shown when:
 
 Useful to disable temporarily autoreload.
 
-If autoreload is fully disabled using [hmr](#hmr) parameter, this switch cannot be used and looks as below:
+If autoreload is fully disabled using [autoreload](#autoreload) parameter, this switch cannot be used and looks as below:
 
 ![settings autoreload disabled](./settings_livereload_disabled.png)
 

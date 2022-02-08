@@ -1,5 +1,5 @@
 import { parseCssUrls } from "@jsenv/core/src/internal/transform_css/parse_css_urls.js"
-import { updateCssHotMetas } from "@jsenv/core/src/internal/hmr/hot_css.js"
+import { updateCssHotMetas } from "@jsenv/core/src/internal/autoreload/hot_css.js"
 
 export const modifyCss = async ({ ressourceGraph, url, content }) => {
   const urlMentions = await parseCssUrls({ url, content })

@@ -48,7 +48,7 @@ export const startDevServer = async ({
   mainFileRelativeUrl,
   jsenvDirectoryRelativeUrl,
 
-  hmr = true,
+  autoreload = true,
   eventSourceClient = true,
   htmlSupervisor = true,
   toolbar = true,
@@ -71,8 +71,7 @@ export const startDevServer = async ({
   compileServerCanReadFromFilesystem,
   compileServerCanWriteOnFilesystem,
   sourcemapMethod,
-  livereloadWatchConfig,
-  livereloadLogLevel,
+  watchConfig,
   jsenvDirectoryClean,
 }) => {
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -106,7 +105,7 @@ export const startDevServer = async ({
         jsenvDirectoryRelativeUrl,
         mainFileRelativeUrl,
         explorableConfig,
-        hmr,
+        autoreload,
       }),
       "jsenv:explorables_json": createExplorableJsonService({
         projectDirectoryUrl,
@@ -119,7 +118,7 @@ export const startDevServer = async ({
     jsenvDirectoryRelativeUrl,
 
     mainFileRelativeUrl,
-    hmr,
+    autoreload,
     eventSourceClient,
     htmlSupervisor,
     toolbar,
@@ -134,8 +133,7 @@ export const startDevServer = async ({
     serviceWorkers,
     importMapInWebWorkers,
     runtimeSupport: runtimeSupportDuringDev,
-    livereloadWatchConfig,
-    livereloadLogLevel,
+    watchConfig,
     jsenvDirectoryClean,
   })
 
@@ -146,7 +144,7 @@ const createExploringJsonService = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   explorableConfig,
-  hmr,
+  autoreload,
   mainFileRelativeUrl,
 }) => {
   return (request) => {
@@ -173,7 +171,7 @@ const createExploringJsonService = ({
         jsenvCoreDirectoryUrl,
       ),
       explorableConfig,
-      hmr,
+      autoreload,
     }
     const json = JSON.stringify(data)
     return {

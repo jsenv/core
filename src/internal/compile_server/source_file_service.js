@@ -22,7 +22,7 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { resolveUrl } from "@jsenv/filesystem"
 
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
-import { injectHmr } from "@jsenv/core/src/internal/hmr/hmr_injection.js"
+import { injectHmr } from "@jsenv/core/src/internal/autoreload/hmr_injection.js"
 
 export const createSourceFileService = ({
   projectDirectoryUrl,

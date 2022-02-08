@@ -24,7 +24,7 @@ import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transf
 import {
   collectHtmlUrlMentions,
   updateHtmlHotMeta,
-} from "@jsenv/core/src/internal/hmr/hot_html.js"
+} from "@jsenv/core/src/internal/autoreload/hot_html.js"
 
 export const compileHtml = async ({
   // cancellationToken,

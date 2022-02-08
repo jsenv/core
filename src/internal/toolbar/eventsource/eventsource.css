@@ -7,7 +7,7 @@
   height: 40px;
 }
 
-#eventsource-indicator .event-source-livereload {
+#eventsource-indicator .event-source-autoreload {
   position: absolute;
   width: 32px;
   height: 32px;
@@ -16,7 +16,7 @@
   top: 0;
 }
 
-.event-source-livereload[data-variant="enabled"] {
+.event-source-autoreload[data-variant="enabled"] {
   color: green;
 }
 
