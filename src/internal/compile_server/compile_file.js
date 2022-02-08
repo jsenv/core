@@ -57,13 +57,11 @@ export const compileFile = async ({
         compileCacheAssetsValidation,
         compile,
       })
-    if (compileCacheStrategy === "etag" && !compileResult.compiledEtag) {
+    if (compileCacheStrategy === "etag" && !compileResult.etag) {
       // happens when file was just compiled so etag was not computed
-      compileResult.compiledEtag = bufferToEtag(
-        Buffer.from(compileResult.compiledSource),
-      )
+      compileResult.etag = bufferToEtag(Buffer.from(compileResult.content))
     }
-    if (compileCacheStrategy === "mtime" && !compileResult.compiledMtime) {
+    if (compileCacheStrategy === "mtime" && !compileResult.mtime) {
       // happens when file was just compiled so it's not yet written on filesystem
       // Here we know the compiled file will be written on the filesystem
       // We could wait for the file to be written before responding to the client
@@ -73,17 +71,16 @@ export const compileFile = async ({
       // From this side of the code we would like to be agnostic about this to allow
       // eventual perf improvments in that field.
       // For this reason the "mtime" we send to the client is decided here
-      // by "compileResult.compiledMtime = Date.now()"
+      // by "compileResult.mtime = Date.now()"
       // "updateMeta" will respect this and when it will write the compiled file it will
       // use "utimes" to ensure the file mtime is the one we sent to the client
       // This is important so that a request sending an mtime
       // can be compared with the compiled file mtime on the filesystem
       // In the end etag is preffered over mtime by default so this will rarely
       // be useful
-      compileResult.compiledMtime = Date.now()
+      compileResult.mtime = Date.now()
     }
-    let { contentType, compiledEtag, compiledMtime, compiledSource } =
-      compileResult
+    let { contentType, content, etag, mtime } = compileResult
     if (compileResult.responseHeaders) {
       responseHeaders = {
         ...responseHeaders,
@@ -134,7 +131,7 @@ export const compileFile = async ({
         url: originalFileUrl,
         contentType,
         moduleFormat: compileProfile.moduleOutFormat,
-        code: compiledSource,
+        code: content,
       })
       return {
         status: 200,
@@ -156,12 +153,12 @@ export const compileFile = async ({
       const response = {
         status: 200,
         headers: {
-          "content-length": Buffer.byteLength(compiledSource),
+          "content-length": Buffer.byteLength(content),
           "content-type": contentType,
           "cache-control": "no-store",
           ...responseHeaders,
         },
-        body: compiledSource,
+        body: content,
         timing,
       }
       finalizeResponse(response)
@@ -183,7 +180,7 @@ export const compileFile = async ({
       }
       return respondUsingRAM((response) => {
         // eslint-disable-next-line dot-notation
-        response.headers["etag"] = compiledEtag
+        response.headers["etag"] = etag
         response.headers["cache-control"] = "private,max-age=0,must-revalidate"
       })
     }
@@ -201,9 +198,7 @@ export const compileFile = async ({
         }
       }
       return respondUsingRAM((response) => {
-        response.headers["last-modified"] = new Date(
-          compiledMtime,
-        ).toUTCString()
+        response.headers["last-modified"] = new Date(mtime).toUTCString()
         response.headers["cache-control"] = "private,max-age=0,must-revalidate"
       })
     }

@@ -114,14 +114,14 @@ const validateCompiledFile = async ({
   const clientCacheDisabled = request.headers["cache-control"] === "no-cache"
 
   try {
-    const compiledSourceBuffer = readFileSync(fileURLToPath(compiledFileUrl))
-    validity.data.compiledSourceBuffer = compiledSourceBuffer
+    const buffer = readFileSync(fileURLToPath(compiledFileUrl))
+    validity.data.buffer = buffer
 
     if (!clientCacheDisabled && compileCacheStrategy === "etag") {
-      const compiledEtag = bufferToEtag(compiledSourceBuffer)
-      validity.data.compiledEtag = compiledEtag
+      const etag = bufferToEtag(buffer)
+      validity.data.etag = etag
       const ifNoneMatch = request.headers["if-none-match"]
-      if (ifNoneMatch && ifNoneMatch !== compiledEtag) {
+      if (ifNoneMatch && ifNoneMatch !== etag) {
         validity.isValid = false
         validity.code = "COMPILED_FILE_ETAG_MISMATCH"
         return validity
@@ -130,8 +130,8 @@ const validateCompiledFile = async ({
 
     if (!clientCacheDisabled && compileCacheStrategy === "mtime") {
       const stats = statSync(fileURLToPath(compiledFileUrl))
-      const compiledMtime = Math.floor(stats.mtimeMs)
-      validity.data.compiledMtime = compiledMtime
+      const mtime = Math.floor(stats.mtimeMs)
+      validity.data.mtime = mtime
 
       const ifModifiedSince = request.headers["if-modified-since"]
       let ifModifiedSinceDate
@@ -145,7 +145,7 @@ const validateCompiledFile = async ({
 
       if (
         ifModifiedSinceDate &&
-        ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)
+        ifModifiedSinceDate < dateToSecondsPrecision(mtime)
       ) {
         validity.isValid = false
         validity.code = "COMPILED_FILE_MTIME_OUTDATED"

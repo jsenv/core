@@ -28,7 +28,7 @@ const compileServer = await startCompileServer({
     "**/dir/file.js": async ({ code, request }) => {
       ressourceBeforeAlias = request.ressourceBeforeAlias
       return {
-        compiledSource: code,
+        content: code,
       }
     },
   },

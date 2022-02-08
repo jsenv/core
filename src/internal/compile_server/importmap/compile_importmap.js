@@ -19,7 +19,7 @@ export const compileImportmap = async ({
 
   return {
     contentType: "application/importmap+json",
-    compiledSource: JSON.stringify(importmap, null, "  "),
+    content: JSON.stringify(importmap, null, "  "),
     sources: [url],
     sourcesContent: [code],
     assets: [],

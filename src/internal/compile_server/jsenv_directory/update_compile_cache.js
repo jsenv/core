@@ -22,7 +22,7 @@ export const updateCompileCache = async ({
     return
   }
   const {
-    compiledSource,
+    content,
     contentType,
     sources,
     sourcesContent,
@@ -59,11 +59,11 @@ ${sourcesToRemove.join(`\n`)}`)
       `write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`,
     )
     promises.push(
-      writeFileContent(compiledFileUrl, compiledSource, {
+      writeFileContent(compiledFileUrl, content, {
         fileLikelyNotFound: isNew,
       }).then(() => {
-        const mtime = compileResult.compiledMtime
-        // when compileResult.compiledMtime do not exists it means
+        const mtime = compileResult.mtime
+        // when compileResult.mtime do not exists it means
         // the client is not interested in it so
         // -> moment we write the file is not important
         // -> There is no need to update mtime

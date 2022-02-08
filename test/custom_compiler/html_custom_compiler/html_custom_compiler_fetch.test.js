@@ -32,8 +32,8 @@ const compileServer = await startCompileServer({
       )
       callCount++
       return {
-        compiledSource: htmlWithAnswer,
         contentType: "text/html",
+        content: htmlWithAnswer,
         responseHeaders: {
           "x-request-user-agent": request.headers["user-agent"],
           "cache-control": "no-store",

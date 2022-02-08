@@ -75,12 +75,12 @@ await buildInternalFile({
   },
   customCompilers: {
     "./src/internal/dev_server/toolbar/toolbar_injector.js": ({ code }) => {
-      const compiledSource = code.replace(
+      const content = code.replace(
         "__TOOLBAR_BUILD_RELATIVE_URL_",
         JSON.stringify(`dist/toolbar/toolbar.html`),
       )
       return {
-        compiledSource,
+        content,
         responseHeaders: {
           "cache-control": "no-store",
         },

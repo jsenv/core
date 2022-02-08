@@ -96,7 +96,7 @@ export const compilationResultFromBuild = (
 
   return {
     contentType: "application/javascript",
-    compiledSource: mainFile.content,
+    content: mainFile.content,
     sources,
     sourcesContent,
     assets,

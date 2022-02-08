@@ -166,12 +166,10 @@ const computeCompileReport = async ({
   const meta = cacheValidity.meta.data
   const { contentType, sources, assets, dependencies } = meta
   const compileResult = {
-    compiledSource: String(
-      cacheValidity.compiledFile.data.compiledSourceBuffer,
-    ),
-    compiledEtag: cacheValidity.compiledFile.data.compiledEtag,
-    compiledMtime: cacheValidity.compiledFile.data.compiledMtime,
     contentType,
+    content: String(cacheValidity.compiledFile.data.buffer),
+    etag: cacheValidity.compiledFile.data.etag,
+    mtime: cacheValidity.compiledFile.data.mtime,
     sources,
     assets,
     dependencies,
@@ -196,7 +194,7 @@ const callCompile = async ({ logger, code, originalFileUrl, compile }) => {
   }
   const {
     contentType,
-    compiledSource,
+    content,
     sources = [],
     sourcesContent = [],
     assets = [],
@@ -209,14 +207,12 @@ const callCompile = async ({ logger, code, originalFileUrl, compile }) => {
       `compile must return a contentType string, got ${contentType}`,
     )
   }
-  if (typeof compiledSource !== "string") {
-    throw new TypeError(
-      `compile must return a compiledSource string, got ${compiledSource}`,
-    )
+  if (typeof content !== "string") {
+    throw new TypeError(`compile must return a content string, got ${content}`)
   }
   return {
     contentType,
-    compiledSource,
+    content,
     sources,
     sourcesContent,
     assets,

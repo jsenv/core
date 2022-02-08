@@ -31,7 +31,7 @@ const { status, namespace } = await execute({
         }),
       )
       return {
-        compiledSource: htmlWithAnswer,
+        content: htmlWithAnswer,
         responseHeaders: {
           "cache-control": "no-store",
         },

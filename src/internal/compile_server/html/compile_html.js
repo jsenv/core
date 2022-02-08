@@ -164,7 +164,7 @@ export const compileHtml = async ({
   })
   return {
     contentType: "text/html",
-    compiledSource: htmlAfterTransformation,
+    content: htmlAfterTransformation,
     sources,
     sourcesContent,
     assets,

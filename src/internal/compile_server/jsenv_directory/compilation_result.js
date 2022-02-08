@@ -185,7 +185,7 @@ export const asCompilationResult = async (
 
   return {
     contentType,
-    compiledSource: output,
+    content: output,
     sourcemap: map,
     sources,
     sourcesContent,
