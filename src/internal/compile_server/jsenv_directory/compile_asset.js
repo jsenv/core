@@ -2,13 +2,11 @@ import { urlToFilename, urlToOrigin, urlToPathname } from "@jsenv/filesystem"
 
 export const urlIsCompilationAsset = (url) => {
   const filename = urlToFilename(url)
-
   // sourcemap are not inside the asset folder because
   // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
   if (filename.endsWith(".map")) {
     return true
   }
-
   return filename.includes("__asset__")
 }
 

@@ -96,22 +96,22 @@ export const asCompilationResult = async (
       })
     } else {
       map.sources.forEach((source, index) => {
-        const sourceFileUrl = resolveSourceFile({
+        const sourceUrl = resolveSourceFile({
           source,
           sourcemapFileUrl,
           sourceFileUrl,
           compiledFileUrl,
           projectDirectoryUrl,
         })
-        if (sourceFileUrl) {
+        if (sourceUrl) {
           // In case the file comes from a remote url
           // we prefer to consider remote url as the real source for this code
           map.sources[index] =
             jsenvRemoteDirectory &&
-            jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceFileUrl)
-              ? jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceFileUrl)
-              : urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
-          sources[index] = sourceFileUrl
+            jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceUrl)
+              ? jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceUrl)
+              : urlToRelativeUrl(sourceUrl, sourcemapFileUrl)
+          sources[index] = sourceUrl
         }
       })
       if (sources.length === 0) {

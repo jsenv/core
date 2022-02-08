@@ -57,33 +57,31 @@ export const createSourceFileService = ({
         content: responseBodyAsString,
       })
       ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
-
-      if (hmr) {
-        const body = await injectHmr({
-          projectDirectoryUrl,
-          ressourceGraph,
-          url,
-          contentType: responseContentType,
-          moduleFormat: "esmodule",
-          content,
-        })
+      if (!hmr) {
         return {
-          status: 200,
+          ...response,
           headers: {
-            "content-type": responseContentType,
-            "content-length": Buffer.byteLength(body),
+            ...response.headers,
+            "content-length": Buffer.byteLength(content),
           },
-          body,
+          body: content,
         }
       }
+      const body = await injectHmr({
+        projectDirectoryUrl,
+        ressourceGraph,
+        url,
+        contentType: responseContentType,
+        moduleFormat: "esmodule",
+        content,
+      })
       return {
         status: 200,
         headers: {
           "content-type": responseContentType,
-          "content-length": Buffer.byteLength(content),
-          "cache-control": "no-cache",
+          "content-length": Buffer.byteLength(body),
         },
-        body: content,
+        body,
       }
     }
 

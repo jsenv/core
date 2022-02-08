@@ -238,37 +238,32 @@ const visitScripts = async ({
       return `./${urlToFilename(url)}__asset__${inlineScriptId}.js`
     },
   })
-  supervisedScripts.forEach(
-    ({ script, type, src, integrity, textContent, inlineSrc }) => {
-      if (type === "module" && !canUseScriptTypeModule) {
-        removeHtmlNodeAttributeByName(script, "type")
-      }
-      if (src && integrity) {
-        removeHtmlNodeAttribute(script, "integrity")
-      }
-      if (inlineSrc) {
-        const inlineScriptOriginalUrl = resolveUrl(inlineSrc, url)
-        const inlineScriptCompiledUrl = resolveUrl(inlineSrc, compiledUrl)
-        addHtmlAssetGenerator(async () => {
-          return transformHtmlScript({
-            projectDirectoryUrl,
-            jsenvRemoteDirectory,
-            url: inlineScriptOriginalUrl,
-            compiledUrl: inlineScriptCompiledUrl,
-            isInline: true,
+  supervisedScripts.forEach(({ script, type, textContent, inlineSrc }) => {
+    if (type === "module" && !canUseScriptTypeModule) {
+      removeHtmlNodeAttributeByName(script, "type")
+    }
+    if (inlineSrc) {
+      const inlineScriptSourceUrl = resolveUrl(inlineSrc, url)
+      const inlineScriptCompiledUrl = resolveUrl(inlineSrc, compiledUrl)
+      addHtmlAssetGenerator(async () => {
+        return transformHtmlScript({
+          projectDirectoryUrl,
+          jsenvRemoteDirectory,
+          url: inlineScriptSourceUrl,
+          compiledUrl: inlineScriptCompiledUrl,
+          isInline: true,
 
-            type,
-            compileProfile,
-            babelPluginMap,
-            topLevelAwait,
+          type,
+          compileProfile,
+          babelPluginMap,
+          topLevelAwait,
 
-            sourcemapMethod,
-            content: textContent,
-          })
+          sourcemapMethod,
+          content: textContent,
         })
-      }
-    },
-  )
+      })
+    }
+  })
 }
 
 const transformHtmlScript = async ({
