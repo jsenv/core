@@ -842,7 +842,7 @@ export const createRollupPlugins = async ({
                   })
                   return {
                     map: transformResult.map,
-                    code: transformResult.code,
+                    content: transformResult.content,
                   }
                 }
               }
@@ -1312,7 +1312,6 @@ export const createRollupPlugins = async ({
           urlCustomLoaders[ressourceUrlAsJsModule] = async () => {
             let map
             let content
-
             if (type === "json") {
               await fileReference.ressource.getReadyPromise()
               content = String(fileReference.ressource.bufferAfterBuild)
@@ -1353,8 +1352,7 @@ export const createRollupPlugins = async ({
               content = jsModuleConversionResult.content
               map = jsModuleConversionResult.map
             }
-
-            return { code: content, map }
+            return { map, content }
           }
 
           mutations.push((magicString) => {

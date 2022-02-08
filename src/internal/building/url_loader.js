@@ -37,7 +37,6 @@ export const createUrlLoader = ({
         })
       },
     })
-
     const contentType = response.headers["content-type"]
     if (contentType === "application/javascript") {
       const jsText = await response.text()
@@ -55,7 +54,6 @@ export const createUrlLoader = ({
         content: jsText,
       }
     }
-
     // When json is referenced from js without import assertion and minify is enabled
     // you can get non-minified json (json with spaces)
     // We could fix that by removing white spaces here but that means forwarding minify

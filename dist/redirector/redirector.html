@@ -3,7 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     
-  <script id="jsenv_inject_systemjs">/*
+  <script id="jsenv_inject_systemjs" content-src="/src/internal/runtime_client/s.js">/*
 * SJS 6.11.0
 * Minimal SystemJS Build
 */
@@ -866,30 +866,179 @@
       }
     }
   }
-}());</script>
-      </head>
+}());</script></head>
 
   <body>
-    <script type="systemjs-importmap">{
+    <script type="systemjs-importmap" content-src="../../../node_resolution.importmap">{
   "imports": {}
 }</script>
-    <script>System.register("redirector.html__inline__12.js", [], (function () {
+    <script>System.register("redirector.html__inline__12.js", [], function () {
   'use strict';
+
   return {
-    execute: (function () {
+    execute: function () {
+      var _defineProperty = function (obj, key, value) {
+        // Shortcircuit the slow defineProperty path when possible.
+        // We are trying to avoid issues where setters defined on the
+        // prototype cause side effects under the fast path of simple
+        // assignment. By checking for existence of the property with
+        // the in operator, we can optimize most of this overhead away.
+        if (key in obj) {
+          Object.defineProperty(obj, key, {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        } else {
+          obj[key] = value;
+        }
 
-      const fetchUsingXHR = async (url, {
-        signal,
-        method = "GET",
-        credentials = "same-origin",
-        headers = {},
-        body = null
-      } = {}) => {
-        const headersPromise = createPromiseAndHooks();
-        const bodyPromise = createPromiseAndHooks();
-        const xhr = new XMLHttpRequest();
+        return obj;
+      }; // filters on symbol properties only. Returned string properties are always
+      // enumerable. It is good to use in objectSpread.
 
-        const failure = error => {
+
+      function ownKeys(object, enumerableOnly) {
+        var keys = Object.keys(object);
+
+        if (Object.getOwnPropertySymbols) {
+          var symbols = Object.getOwnPropertySymbols(object);
+
+          if (enumerableOnly) {
+            symbols = symbols.filter(function (sym) {
+              return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+            });
+          }
+
+          keys.push.apply(keys, symbols);
+        }
+
+        return keys;
+      }
+
+      function _objectSpread2(target) {
+        for (var i = 1; i < arguments.length; i++) {
+          var source = arguments[i] != null ? arguments[i] : {};
+
+          if (i % 2) {
+            ownKeys(Object(source), true).forEach(function (key) {
+              _defineProperty(target, key, source[key]);
+            });
+          } else if (Object.getOwnPropertyDescriptors) {
+            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+          } else {
+            ownKeys(Object(source)).forEach(function (key) {
+              Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+            });
+          }
+        }
+
+        return target;
+      }
+
+      var objectWithoutPropertiesLoose = function (source, excluded) {
+        if (source === null) return {};
+        var target = {};
+        var sourceKeys = Object.keys(source);
+        var key;
+        var i;
+
+        for (i = 0; i < sourceKeys.length; i++) {
+          key = sourceKeys[i];
+          if (excluded.indexOf(key) >= 0) continue;
+          target[key] = source[key];
+        }
+
+        return target;
+      };
+
+      var _objectWithoutProperties = function (source, excluded) {
+        if (source === null) return {};
+        var target = objectWithoutPropertiesLoose(source, excluded);
+        var key;
+        var i;
+
+        if (Object.getOwnPropertySymbols) {
+          var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+          for (i = 0; i < sourceSymbolKeys.length; i++) {
+            key = sourceSymbolKeys[i];
+            if (excluded.indexOf(key) >= 0) continue;
+            if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+            target[key] = source[key];
+          }
+        }
+
+        return target;
+      };
+
+      var nativeTypeOf = function nativeTypeOf(obj) {
+        return typeof obj;
+      };
+
+      var customTypeOf = function customTypeOf(obj) {
+        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+      };
+
+      var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? nativeTypeOf : customTypeOf;
+
+      function _await$9(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$8(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _call$1(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var fetchUsingXHR = _async$8(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+            signal = _ref.signal,
+            _ref$method = _ref.method,
+            method = _ref$method === void 0 ? "GET" : _ref$method,
+            _ref$credentials = _ref.credentials,
+            credentials = _ref$credentials === void 0 ? "same-origin" : _ref$credentials,
+            _ref$headers = _ref.headers,
+            headers = _ref$headers === void 0 ? {} : _ref$headers,
+            _ref$body = _ref.body,
+            body = _ref$body === void 0 ? null : _ref$body;
+
+        var headersPromise = createPromiseAndHooks();
+        var bodyPromise = createPromiseAndHooks();
+        var xhr = new XMLHttpRequest();
+
+        var failure = function failure(error) {
           // if it was already resolved, we must reject the body promise
           if (headersPromise.settled) {
             bodyPromise.reject(error);
@@ -898,44 +1047,42 @@
           }
         };
 
-        const cleanup = () => {
+        var cleanup = function cleanup() {
           xhr.ontimeout = null;
           xhr.onerror = null;
           xhr.onload = null;
           xhr.onreadystatechange = null;
         };
 
-        xhr.ontimeout = () => {
+        xhr.ontimeout = function () {
           cleanup();
-          failure(new Error(`xhr request timeout on ${url}.`));
+          failure(new Error("xhr request timeout on ".concat(url, ".")));
         };
 
-        xhr.onerror = error => {
+        xhr.onerror = function (error) {
           cleanup(); // unfortunately with have no clue why it fails
           // might be cors for instance
 
           failure(createRequestError(error, {
-            url
+            url: url
           }));
         };
 
-        xhr.onload = () => {
+        xhr.onload = function () {
           cleanup();
           bodyPromise.resolve();
         };
 
-        signal.addEventListener("abort", () => {
+        signal.addEventListener("abort", function () {
           xhr.abort();
-          const abortError = new Error("aborted");
+          var abortError = new Error("aborted");
           abortError.name = "AbortError";
           failure(abortError);
         });
 
-        xhr.onreadystatechange = () => {
+        xhr.onreadystatechange = function () {
           // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-          const {
-            readyState
-          } = xhr;
+          var readyState = xhr.readyState;
 
           if (readyState === 2) {
             headersPromise.resolve();
@@ -946,12 +1093,12 @@
         };
 
         xhr.open(method, url, true);
-        Object.keys(headers).forEach(key => {
+        Object.keys(headers).forEach(function (key) {
           xhr.setRequestHeader(key, headers[key]);
         });
         xhr.withCredentials = computeWithCredentials({
-          credentials,
-          url
+          credentials: credentials,
+          url: url
         });
 
         if ("responseType" in xhr && hasBlob) {
@@ -959,129 +1106,110 @@
         }
 
         xhr.send(body);
-        await headersPromise; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+        return _await$9(headersPromise, function () {
+          // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+          var responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
+          var responseStatus = xhr.status;
+          var responseStatusText = xhr.statusText;
+          var responseHeaders = getHeadersFromXHR(xhr);
 
-        const responseUrl = "responseURL" in xhr ? xhr.responseURL : headers["x-request-url"];
-        let responseStatus = xhr.status;
-        const responseStatusText = xhr.statusText;
-        const responseHeaders = getHeadersFromXHR(xhr);
+          var readBody = function readBody() {
+            return _await$9(bodyPromise, function () {
+              var status = xhr.status; // in Chrome on file:/// URLs, status is 0
 
-        const readBody = async () => {
-          await bodyPromise;
-          const {
-            status
-          } = xhr; // in Chrome on file:/// URLs, status is 0
+              if (status === 0) {
+                responseStatus = 200;
+              }
 
-          if (status === 0) {
-            responseStatus = 200;
-          }
-
-          const body = "response" in xhr ? xhr.response : xhr.responseText;
-          return {
-            responseBody: body,
-            responseBodyType: detectBodyType(body)
+              var body = "response" in xhr ? xhr.response : xhr.responseText;
+              return {
+                responseBody: body,
+                responseBodyType: detectBodyType(body)
+              };
+            });
           };
-        };
 
-        const text = async () => {
-          const {
-            responseBody,
-            responseBodyType
-          } = await readBody();
+          var text = function text() {
+            return _call$1(readBody, function (_ref2) {
+              var responseBody = _ref2.responseBody,
+                  responseBodyType = _ref2.responseBodyType;
 
-          if (responseBodyType === "blob") {
-            return blobToText(responseBody);
-          }
+              if (responseBodyType === "blob") {
+                return blobToText(responseBody);
+              }
 
-          if (responseBodyType === "formData") {
-            throw new Error("could not read FormData body as text");
-          }
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as text");
+              }
 
-          if (responseBodyType === "dataView") {
-            return arrayBufferToText(responseBody.buffer);
-          }
+              return responseBodyType === "dataView" ? arrayBufferToText(responseBody.buffer) : responseBodyType === "arrayBuffer" ? arrayBufferToText(responseBody) : String(responseBody);
+            });
+          };
 
-          if (responseBodyType === "arrayBuffer") {
-            return arrayBufferToText(responseBody);
-          } // if (responseBodyType === "text" || responseBodyType === 'searchParams') {
-          //   return body
-          // }
+          var json = function json() {
+            return _call$1(text, JSON.parse);
+          };
 
+          var blob = _async$8(function () {
+            if (!hasBlob) {
+              throw new Error("blob not supported");
+            }
 
-          return String(responseBody);
-        };
+            return _call$1(readBody, function (_ref3) {
+              var responseBody = _ref3.responseBody,
+                  responseBodyType = _ref3.responseBodyType;
 
-        const json = async () => {
-          const responseText = await text();
-          return JSON.parse(responseText);
-        };
+              if (responseBodyType === "blob") {
+                return responseBody;
+              }
 
-        const blob = async () => {
-          if (!hasBlob) {
-            throw new Error(`blob not supported`);
-          }
+              if (responseBodyType === "dataView") {
+                return new Blob([cloneBuffer(responseBody.buffer)]);
+              }
 
-          const {
-            responseBody,
-            responseBodyType
-          } = await readBody();
+              if (responseBodyType === "arrayBuffer") {
+                return new Blob([cloneBuffer(responseBody)]);
+              }
 
-          if (responseBodyType === "blob") {
-            return responseBody;
-          }
+              if (responseBodyType === "formData") {
+                throw new Error("could not read FormData body as blob");
+              }
 
-          if (responseBodyType === "dataView") {
-            return new Blob([cloneBuffer(responseBody.buffer)]);
-          }
+              return new Blob([String(responseBody)]);
+            });
+          });
 
-          if (responseBodyType === "arrayBuffer") {
-            return new Blob([cloneBuffer(responseBody)]);
-          }
+          var arrayBuffer = function arrayBuffer() {
+            return _call$1(readBody, function (_ref4) {
+              var responseBody = _ref4.responseBody,
+                  responseBodyType = _ref4.responseBodyType;
+              return responseBodyType === "arrayBuffer" ? cloneBuffer(responseBody) : _call$1(blob, blobToArrayBuffer);
+            });
+          };
 
-          if (responseBodyType === "formData") {
-            throw new Error("could not read FormData body as blob");
-          }
+          var formData = _async$8(function () {
+            if (!hasFormData) {
+              throw new Error("formData not supported");
+            }
 
-          return new Blob([String(responseBody)]);
-        };
+            return _call$1(text, textToFormData);
+          });
 
-        const arrayBuffer = async () => {
-          const {
-            responseBody,
-            responseBodyType
-          } = await readBody();
+          return {
+            url: responseUrl,
+            status: responseStatus,
+            statusText: responseStatusText,
+            headers: responseHeaders,
+            text: text,
+            json: json,
+            blob: blob,
+            arrayBuffer: arrayBuffer,
+            formData: formData
+          };
+        });
+      });
 
-          if (responseBodyType === "arrayBuffer") {
-            return cloneBuffer(responseBody);
-          }
-
-          const responseBlob = await blob();
-          return blobToArrayBuffer(responseBlob);
-        };
-
-        const formData = async () => {
-          if (!hasFormData) {
-            throw new Error(`formData not supported`);
-          }
-
-          const responseText = await text();
-          return textToFormData(responseText);
-        };
-
-        return {
-          url: responseUrl,
-          status: responseStatus,
-          statusText: responseStatusText,
-          headers: responseHeaders,
-          text,
-          json,
-          blob,
-          arrayBuffer,
-          formData
-        };
-      };
-
-      const canUseBlob = () => {
+      var canUseBlob = function canUseBlob() {
         if (typeof window.FileReader !== "function") return false;
         if (typeof window.Blob !== "function") return false;
 
@@ -1094,29 +1222,26 @@
         }
       };
 
-      const hasBlob = canUseBlob();
-      const hasFormData = typeof window.FormData === "function";
-      const hasArrayBuffer = typeof window.ArrayBuffer === "function";
-      const hasSearchParams = typeof window.URLSearchParams === "function";
+      var hasBlob = canUseBlob();
+      var hasFormData = typeof window.FormData === "function";
+      var hasArrayBuffer = typeof window.ArrayBuffer === "function";
+      var hasSearchParams = typeof window.URLSearchParams === "function";
 
-      const createRequestError = (error, {
-        url
-      }) => {
-        return new Error(`error during xhr request on ${url}.
---- error stack ---
-${error.stack}`);
+      var createRequestError = function createRequestError(error, _ref5) {
+        var url = _ref5.url;
+        return new Error("error during xhr request on ".concat(url, ".\n--- error stack ---\n").concat(error.stack));
       };
 
-      const createPromiseAndHooks = () => {
-        let resolve;
-        let reject;
-        const promise = new Promise((res, rej) => {
-          resolve = value => {
+      var createPromiseAndHooks = function createPromiseAndHooks() {
+        var resolve;
+        var reject;
+        var promise = new Promise(function (res, rej) {
+          resolve = function resolve(value) {
             promise.settled = true;
             res(value);
           };
 
-          reject = value => {
+          reject = function reject(value) {
             promise.settled = true;
             rej(value);
           };
@@ -1127,10 +1252,10 @@ ${error.stack}`);
       }; // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 
 
-      const computeWithCredentials = ({
-        credentials,
-        url
-      }) => {
+      var computeWithCredentials = function computeWithCredentials(_ref6) {
+        var credentials = _ref6.credentials,
+            url = _ref6.url;
+
         if (credentials === "same-origin") {
           return originSameAsGlobalOrigin(url);
         }
@@ -1138,16 +1263,16 @@ ${error.stack}`);
         return credentials === "include";
       };
 
-      const originSameAsGlobalOrigin = url => {
+      var originSameAsGlobalOrigin = function originSameAsGlobalOrigin(url) {
         // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
-        if (typeof window !== "object") return true;
-        if (typeof window.location !== "object") return true;
-        const globalOrigin = window.location.origin;
+        if ((typeof window === "undefined" ? "undefined" : _typeof(window)) !== "object") return true;
+        if (_typeof(window.location) !== "object") return true;
+        var globalOrigin = window.location.origin;
         if (globalOrigin === "null") return true;
         return hrefToOrigin(url) === globalOrigin;
       };
 
-      const detectBodyType = body => {
+      var detectBodyType = function detectBodyType(body) {
         if (!body) {
           return "";
         }
@@ -1166,11 +1291,11 @@ ${error.stack}`);
 
         if (hasArrayBuffer) {
           if (hasBlob && isDataView(body)) {
-            return `dataView`;
+            return "dataView";
           }
 
           if (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body)) {
-            return `arrayBuffer`;
+            return "arrayBuffer";
           }
         }
 
@@ -1182,30 +1307,30 @@ ${error.stack}`);
       }; // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
 
 
-      const getHeadersFromXHR = xhr => {
-        const headerMap = {};
-        const headersString = xhr.getAllResponseHeaders();
+      var getHeadersFromXHR = function getHeadersFromXHR(xhr) {
+        var headerMap = {};
+        var headersString = xhr.getAllResponseHeaders();
         if (headersString === "") return headerMap;
-        const lines = headersString.trim().split(/[\r\n]+/);
-        lines.forEach(line => {
-          const parts = line.split(": ");
-          const name = parts.shift();
-          const value = parts.join(": ");
+        var lines = headersString.trim().split(/[\r\n]+/);
+        lines.forEach(function (line) {
+          var parts = line.split(": ");
+          var name = parts.shift();
+          var value = parts.join(": ");
           headerMap[name.toLowerCase()] = value;
         });
         return headerMap;
       };
 
-      const hrefToOrigin = href => {
-        const scheme = hrefToScheme(href);
+      var hrefToOrigin = function hrefToOrigin(href) {
+        var scheme = hrefToScheme(href);
 
         if (scheme === "file") {
           return "file://";
         }
 
         if (scheme === "http" || scheme === "https") {
-          const secondProtocolSlashIndex = scheme.length + "://".length;
-          const pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
+          var secondProtocolSlashIndex = scheme.length + "://".length;
+          var pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
           if (pathnameSlashIndex === -1) return href;
           return href.slice(0, pathnameSlashIndex);
         }
@@ -1213,54 +1338,54 @@ ${error.stack}`);
         return href.slice(0, scheme.length + 1);
       };
 
-      const hrefToScheme = href => {
-        const colonIndex = href.indexOf(":");
+      var hrefToScheme = function hrefToScheme(href) {
+        var colonIndex = href.indexOf(":");
         if (colonIndex === -1) return "";
         return href.slice(0, colonIndex);
       };
 
-      const isDataView = obj => {
+      var isDataView = function isDataView(obj) {
         return obj && DataView.prototype.isPrototypeOf(obj);
       };
 
-      const isArrayBufferView = ArrayBuffer.isView || (() => {
-        const viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
-        return value => {
+      var isArrayBufferView = ArrayBuffer.isView || function () {
+        var viewClasses = ["[object Int8Array]", "[object Uint8Array]", "[object Uint8ClampedArray]", "[object Int16Array]", "[object Uint16Array]", "[object Int32Array]", "[object Uint32Array]", "[object Float32Array]", "[object Float64Array]"];
+        return function (value) {
           return value && viewClasses.includes(Object.prototype.toString.call(value));
         };
-      })();
+      }();
 
-      const textToFormData = text => {
-        const form = new FormData();
+      var textToFormData = function textToFormData(text) {
+        var form = new FormData();
         text.trim().split("&").forEach(function (bytes) {
           if (bytes) {
-            const split = bytes.split("=");
-            const name = split.shift().replace(/\+/g, " ");
-            const value = split.join("=").replace(/\+/g, " ");
+            var split = bytes.split("=");
+            var name = split.shift().replace(/\+/g, " ");
+            var value = split.join("=").replace(/\+/g, " ");
             form.append(decodeURIComponent(name), decodeURIComponent(value));
           }
         });
         return form;
       };
 
-      const blobToArrayBuffer = async blob => {
-        const reader = new FileReader();
-        const promise = fileReaderReady(reader);
+      var blobToArrayBuffer = _async$8(function (blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
         reader.readAsArrayBuffer(blob);
         return promise;
-      };
+      });
 
-      const blobToText = blob => {
-        const reader = new FileReader();
-        const promise = fileReaderReady(reader);
+      var blobToText = function blobToText(blob) {
+        var reader = new FileReader();
+        var promise = fileReaderReady(reader);
         reader.readAsText(blob);
         return promise;
       };
 
-      const arrayBufferToText = arrayBuffer => {
-        const view = new Uint8Array(arrayBuffer);
-        const chars = new Array(view.length);
-        let i = 0;
+      var arrayBufferToText = function arrayBufferToText(arrayBuffer) {
+        var view = new Uint8Array(arrayBuffer);
+        var chars = new Array(view.length);
+        var i = 0;
 
         while (i < view.length) {
           chars[i] = String.fromCharCode(view[i]);
@@ -1270,7 +1395,7 @@ ${error.stack}`);
         return chars.join("");
       };
 
-      const fileReaderReady = reader => {
+      var fileReaderReady = function fileReaderReady(reader) {
         return new Promise(function (resolve, reject) {
           reader.onload = function () {
             resolve(reader.result);
@@ -1282,83 +1407,147 @@ ${error.stack}`);
         });
       };
 
-      const cloneBuffer = buffer => {
+      var cloneBuffer = function cloneBuffer(buffer) {
         if (buffer.slice) {
           return buffer.slice(0);
         }
 
-        const view = new Uint8Array(buffer.byteLength);
+        var view = new Uint8Array(buffer.byteLength);
         view.set(new Uint8Array(buffer));
         return view.buffer;
       };
 
-      const fetchNative = async (url, {
-        mode = "cors",
-        ...options
-      } = {}) => {
-        const response = await window.fetch(url, {
-          mode,
-          ...options
-        });
-        return {
-          url: response.url,
-          status: response.status,
-          statusText: "",
-          headers: responseToHeaders(response),
-          text: () => response.text(),
-          json: () => response.json(),
-          blob: () => response.blob(),
-          arrayBuffer: () => response.arrayBuffer(),
-          formData: () => response.formData()
-        };
-      };
+      var _excluded = ["mode"];
 
-      const responseToHeaders = response => {
-        const headers = {};
-        response.headers.forEach((value, name) => {
+      function _await$8(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$7(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchNative = _async$7(function (url) {
+        var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+        var _ref$mode = _ref.mode,
+            mode = _ref$mode === void 0 ? "cors" : _ref$mode,
+            options = _objectWithoutProperties(_ref, _excluded);
+
+        return _await$8(window.fetch(url, _objectSpread2({
+          mode: mode
+        }, options)), function (response) {
+          return {
+            url: response.url,
+            status: response.status,
+            statusText: "",
+            headers: responseToHeaders(response),
+            text: function text() {
+              return response.text();
+            },
+            json: function json() {
+              return response.json();
+            },
+            blob: function blob() {
+              return response.blob();
+            },
+            arrayBuffer: function arrayBuffer() {
+              return response.arrayBuffer();
+            },
+            formData: function formData() {
+              return response.formData();
+            }
+          };
+        });
+      });
+
+      var responseToHeaders = function responseToHeaders(response) {
+        var headers = {};
+        response.headers.forEach(function (value, name) {
           headers[name] = value;
         });
         return headers;
       };
 
-      const fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
+      var fetchUrl = typeof window.fetch === "function" && typeof window.AbortController === "function" ? fetchNative : fetchUsingXHR;
 
-      const fetchJson = async (url, options = {}) => {
-        const response = await fetchUrl(url, options);
-        const object = await response.json();
-        return object;
-      };
+      function _await$7(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$6(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var fetchJson = _async$6(function (url) {
+        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        return _await$7(fetchUrl(url, options), function (response) {
+          return _await$7(response.json());
+        });
+      });
       /*
        * Prefer window.navigator.userAgentData before resorting to
        * window.navigator.userAgent because of
        * https://blog.chromium.org/2021/09/user-agent-reduction-origin-trial-and-dates.html
        */
-      const detectFromUserAgentData = () => {
-        const {
-          userAgentData
-        } = window.navigator;
+
+
+      var detectFromUserAgentData = function detectFromUserAgentData() {
+        var userAgentData = window.navigator.userAgentData;
 
         if (!userAgentData) {
           return null;
         }
 
-        const {
-          brands
-        } = userAgentData;
-        let i = 0;
+        var brands = userAgentData.brands;
+        var i = 0;
 
         while (i < brands.length) {
-          const {
-            brand,
-            version
-          } = brands[i];
+          var _brands$i = brands[i],
+              brand = _brands$i.brand,
+              version = _brands$i.version;
           i++;
 
           if (brand === "chromium" || brand === "Google Chrome") {
             return {
               name: "chrome",
-              version
+              version: version
             };
           }
         }
@@ -1366,24 +1555,28 @@ ${error.stack}`);
         return null;
       };
 
-      const firstMatch = (regexp, string) => {
-        const match = string.match(regexp);
+      var firstMatch = function firstMatch(regexp, string) {
+        var match = string.match(regexp);
         return match && match.length > 0 ? match[1] || undefined : undefined;
       };
-      const secondMatch = (regexp, string) => {
-        const match = string.match(regexp);
+
+      var secondMatch = function secondMatch(regexp, string) {
+        var match = string.match(regexp);
         return match && match.length > 1 ? match[2] || undefined : undefined;
       };
-      const userAgentToVersion = userAgent => {
+
+      var userAgentToVersion = function userAgentToVersion(userAgent) {
         return firstMatch(/version\/(\d+(\.?_?\d+)+)/i, userAgent) || undefined;
       };
 
-      const detectAndroid = () => navigatorToBrowser$1(window.navigator);
+      var detectAndroid = function detectAndroid() {
+        return navigatorToBrowser$1(window.navigator);
+      };
 
-      const navigatorToBrowser$1 = ({
-        userAgent,
-        appVersion
-      }) => {
+      var navigatorToBrowser$1 = function navigatorToBrowser(_ref) {
+        var userAgent = _ref.userAgent,
+            appVersion = _ref.appVersion;
+
         if (/(android)/i.test(userAgent)) {
           return {
             name: "android",
@@ -1394,9 +1587,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectInternetExplorer = () => userAgentToBrowser$5(window.navigator.userAgent);
+      var detectInternetExplorer = function detectInternetExplorer() {
+        return userAgentToBrowser$5(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$5 = userAgent => {
+      var userAgentToBrowser$5 = function userAgentToBrowser(userAgent) {
         if (/msie|trident/i.test(userAgent)) {
           return {
             name: "ie",
@@ -1407,9 +1602,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectOpera = () => userAgentToBrowser$4(window.navigator.userAgent);
+      var detectOpera = function detectOpera() {
+        return userAgentToBrowser$4(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$4 = userAgent => {
+      var userAgentToBrowser$4 = function userAgentToBrowser(userAgent) {
         // opera below 13
         if (/opera/i.test(userAgent)) {
           return {
@@ -1429,9 +1626,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectEdge = () => userAgentToBrowser$3(window.navigator.userAgent);
+      var detectEdge = function detectEdge() {
+        return userAgentToBrowser$3(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$3 = userAgent => {
+      var userAgentToBrowser$3 = function userAgentToBrowser(userAgent) {
         if (/edg([ea]|ios)/i.test(userAgent)) {
           return {
             name: "edge",
@@ -1442,9 +1641,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectFirefox = () => userAgentToBrowser$2(window.navigator.userAgent);
+      var detectFirefox = function detectFirefox() {
+        return userAgentToBrowser$2(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser$2 = userAgent => {
+      var userAgentToBrowser$2 = function userAgentToBrowser(userAgent) {
         if (/firefox|iceweasel|fxios/i.test(userAgent)) {
           return {
             name: "firefox",
@@ -1455,11 +1656,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectChrome = () => {
+      var detectChrome = function detectChrome() {
         return userAgentToBrowser$1(window.navigator.userAgent);
       };
 
-      const userAgentToBrowser$1 = userAgent => {
+      var userAgentToBrowser$1 = function userAgentToBrowser(userAgent) {
         if (/chromium/i.test(userAgent)) {
           return {
             name: "chrome",
@@ -1477,9 +1678,11 @@ ${error.stack}`);
         return null;
       };
 
-      const detectSafari = () => userAgentToBrowser(window.navigator.userAgent);
+      var detectSafari = function detectSafari() {
+        return userAgentToBrowser(window.navigator.userAgent);
+      };
 
-      const userAgentToBrowser = userAgent => {
+      var userAgentToBrowser = function userAgentToBrowser(userAgent) {
         if (/safari|applewebkit/i.test(userAgent)) {
           return {
             name: "safari",
@@ -1490,14 +1693,19 @@ ${error.stack}`);
         return null;
       };
 
-      const detectElectron = () => null; // TODO
+      var detectElectron = function detectElectron() {
+        return null;
+      }; // TODO
 
-      const detectIOS = () => navigatorToBrowser(window.navigator);
 
-      const navigatorToBrowser = ({
-        userAgent,
-        appVersion
-      }) => {
+      var detectIOS = function detectIOS() {
+        return navigatorToBrowser(window.navigator);
+      };
+
+      var navigatorToBrowser = function navigatorToBrowser(_ref) {
+        var userAgent = _ref.userAgent,
+            appVersion = _ref.appVersion;
+
         if (/iPhone;/.test(userAgent)) {
           return {
             name: "ios",
@@ -1513,69 +1721,75 @@ ${error.stack}`);
         }
 
         return null;
-      };
+      }; // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
-      // https://github.com/Ahmdrza/detect-browser/blob/26254f85cf92795655a983bfd759d85f3de850c6/detect-browser.js#L1
 
-      const detectorCompose = detectors => () => {
-        let i = 0;
+      var detectorCompose = function detectorCompose(detectors) {
+        return function () {
+          var i = 0;
 
-        while (i < detectors.length) {
-          const detector = detectors[i];
-          i++;
-          const result = detector();
+          while (i < detectors.length) {
+            var _detector = detectors[i];
+            i++;
 
-          if (result) {
-            return result;
+            var result = _detector();
+
+            if (result) {
+              return result;
+            }
           }
-        }
 
-        return null;
+          return null;
+        };
       };
 
-      const detector = detectorCompose([detectFromUserAgentData, // keep this first
+      var detector = detectorCompose([detectFromUserAgentData, // keep this first
       detectOpera, detectInternetExplorer, detectEdge, detectFirefox, detectChrome, detectSafari, detectElectron, detectIOS, detectAndroid]);
-      const detectBrowser = () => {
-        const {
-          name = "other",
-          version = "unknown"
-        } = detector() || {};
+
+      var detectBrowser = function detectBrowser() {
+        var _ref = detector() || {},
+            _ref$name = _ref.name,
+            name = _ref$name === void 0 ? "other" : _ref$name,
+            _ref$version = _ref.version,
+            version = _ref$version === void 0 ? "unknown" : _ref$version;
+
         return {
           name: normalizeName(name),
           version: normalizeVersion(version)
         };
       };
 
-      const normalizeName = name => {
+      var normalizeName = function normalizeName(name) {
         return name.toLowerCase();
       };
 
-      const normalizeVersion = version => {
+      var normalizeVersion = function normalizeVersion(version) {
         if (version.indexOf(".") > -1) {
-          const parts = version.split("."); // remove extraneous .
+          var parts = version.split("."); // remove extraneous .
 
           return parts.slice(0, 3).join(".");
         }
 
         if (version.indexOf("_") > -1) {
-          const parts = version.split("_"); // remove extraneous _
+          var _parts = version.split("_"); // remove extraneous _
 
-          return parts.slice(0, 3).join("_");
+
+          return _parts.slice(0, 3).join("_");
         }
 
         return version;
       };
 
-      const executeWithScriptModuleInjection = code => {
-        const scriptModule = document.createElement("script");
+      var executeWithScriptModuleInjection = function executeWithScriptModuleInjection(code) {
+        var scriptModule = document.createElement("script");
         scriptModule.type = "module";
-        const loadPromise = new Promise((resolve, reject) => {
-          scriptModule.onload = () => {
+        var loadPromise = new Promise(function (resolve, reject) {
+          scriptModule.onload = function () {
             document.body.removeChild(scriptModule);
             resolve();
           };
 
-          scriptModule.onerror = () => {
+          scriptModule.onerror = function () {
             document.body.removeChild(scriptModule);
             reject();
           };
@@ -1585,102 +1799,292 @@ ${error.stack}`);
         scriptModule.src = asBase64Url(code);
         return loadPromise;
       };
-      const asBase64Url = (text, mimeType = "application/javascript") => {
-        return `data:${mimeType};base64,${window.btoa(text)}`;
+
+      var asBase64Url = function asBase64Url(text) {
+        var mimeType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "application/javascript";
+        return "data:".concat(mimeType, ";base64,").concat(window.btoa(text));
       };
 
-      const supportsImportmap = async ({
-        remote = true
-      } = {}) => {
+      function _await$6(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$4(body, recover) {
+        try {
+          var result = body();
+        } catch (e) {
+          return recover(e);
+        }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$5(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsImportmap = _async$5(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref$remote = _ref.remote,
+            remote = _ref$remote === void 0 ? true : _ref$remote;
+
         if (HTMLScriptElement.supports("importmap")) {
           return true;
         }
 
-        const specifier = asBase64Url(`export default false`);
-        const importMap = {
-          imports: {
-            [specifier]: asBase64Url(`export default true`)
-          }
+        var specifier = asBase64Url("export default false");
+        var importMap = {
+          imports: _defineProperty({}, specifier, asBase64Url("export default true"))
         };
-        const importmapScript = document.createElement("script");
-        const importmapString = JSON.stringify(importMap, null, "  ");
+        var importmapScript = document.createElement("script");
+        var importmapString = JSON.stringify(importMap, null, "  ");
         importmapScript.type = "importmap";
 
         if (remote) {
-          importmapScript.src = `data:application/json;base64,${window.btoa(importmapString)}`;
+          importmapScript.src = "data:application/json;base64,".concat(window.btoa(importmapString));
         } else {
           importmapScript.textContent = importmapString;
         }
 
         document.body.appendChild(importmapScript);
-
-        try {
-          await executeWithScriptModuleInjection(`import supported from "${specifier}"; window.__jsenv_runtime_test_importmap__ = supported`);
+        return _catch$4(function () {
+          return _await$6(executeWithScriptModuleInjection("import supported from \"".concat(specifier, "\"; window.__jsenv_runtime_test_importmap__ = supported")), function () {
+            document.body.removeChild(importmapScript);
+            var supported = window.__jsenv_runtime_test_importmap__;
+            delete window.__jsenv_runtime_test_importmap__;
+            return supported;
+          });
+        }, function () {
           document.body.removeChild(importmapScript);
-          const supported = window.__jsenv_runtime_test_importmap__;
-          delete window.__jsenv_runtime_test_importmap__;
-          return supported;
-        } catch (e) {
-          document.body.removeChild(importmapScript);
           return false;
+        });
+      });
+
+      function _await$5(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
         }
-      };
 
-      const supportsDynamicImport = async () => {
-        const moduleSource = asBase64Url(`export default 42`);
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
 
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$3(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_dynamic_import__ = import(${JSON.stringify(moduleSource)})`);
-          const namespace = await window.__jsenv_runtime_test_dynamic_import__;
-          delete window.__jsenv_runtime_test_dynamic_import__;
-          return namespace.default === 42;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
-      };
 
-      const supportsTopLevelAwait = async () => {
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$4(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsDynamicImport = _async$4(function () {
+        var moduleSource = asBase64Url("export default 42");
+        return _catch$3(function () {
+          return _await$5(executeWithScriptModuleInjection("window.__jsenv_runtime_test_dynamic_import__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$5(window.__jsenv_runtime_test_dynamic_import__, function (namespace) {
+              delete window.__jsenv_runtime_test_dynamic_import__;
+              return namespace.default === 42;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      function _await$4(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$2(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)`);
-          const supported = window.__jsenv_runtime_test_top_level_await__ === 42;
-          delete window.__jsenv_runtime_test_top_level_await__;
-          return supported;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
+
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      var supportsTopLevelAwait = function supportsTopLevelAwait() {
+        return _await$4(_catch$2(function () {
+          return _await$4(executeWithScriptModuleInjection("window.__jsenv_runtime_test_top_level_await__ = await Promise.resolve(42)"), function () {
+            var supported = window.__jsenv_runtime_test_top_level_await__ === 42;
+            delete window.__jsenv_runtime_test_top_level_await__;
+            return supported;
+          });
+        }, function () {
+          return false;
+        }));
       };
 
-      const supportsJsonImportAssertions = async () => {
-        const jsonBase64Url = asBase64Url("42", "application/json");
-        const moduleSource = asBase64Url(`import data from "${jsonBase64Url}" assert { type: "json" }
-  export default data`);
+      function _await$3(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch$1(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_json_import_assertion__ = import(${JSON.stringify(moduleSource)})`);
-          const namespace = await window.__jsenv_runtime_test_json_import_assertion__;
-          const supported = namespace.default === 42;
-          delete window.__jsenv_runtime_test_json_import_assertion__;
-          return supported;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
-      };
 
-      const supportsCssImportAssertions = async () => {
-        const cssBase64Url = asBase64Url("p { color: red; }", "text/css");
-        const moduleSource = asBase64Url(`import css from "${cssBase64Url}" assert { type: "css" }
-  export default css`);
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
 
+        return result;
+      }
+
+      function _async$3(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsJsonImportAssertions = _async$3(function () {
+        var jsonBase64Url = asBase64Url("42", "application/json");
+        var moduleSource = asBase64Url("import data from \"".concat(jsonBase64Url, "\" assert { type: \"json\" }\n  export default data"));
+        return _catch$1(function () {
+          return _await$3(executeWithScriptModuleInjection("window.__jsenv_runtime_test_json_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$3(window.__jsenv_runtime_test_json_import_assertion__, function (namespace) {
+              var supported = namespace.default === 42;
+              delete window.__jsenv_runtime_test_json_import_assertion__;
+              return supported;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      function _await$2(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _catch(body, recover) {
         try {
-          await executeWithScriptModuleInjection(`window.__jsenv_runtime_test_css_import_assertion__ = import(${JSON.stringify(moduleSource)})`);
-          const namespace = await window.__jsenv_runtime_test_css_import_assertion__;
-          return namespace.default instanceof CSSStyleSheet;
+          var result = body();
         } catch (e) {
-          return false;
+          return recover(e);
         }
-      };
 
-      const supportsNewStylesheet = () => {
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+
+        return result;
+      }
+
+      function _async$2(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var supportsCssImportAssertions = _async$2(function () {
+        var cssBase64Url = asBase64Url("p { color: red; }", "text/css");
+        var moduleSource = asBase64Url("import css from \"".concat(cssBase64Url, "\" assert { type: \"css\" }\n  export default css"));
+        return _catch(function () {
+          return _await$2(executeWithScriptModuleInjection("window.__jsenv_runtime_test_css_import_assertion__ = import(".concat(JSON.stringify(moduleSource), ")")), function () {
+            return _await$2(window.__jsenv_runtime_test_css_import_assertion__, function (namespace) {
+              return namespace.default instanceof CSSStyleSheet;
+            });
+          });
+        }, function () {
+          return false;
+        });
+      });
+
+      var supportsNewStylesheet = function supportsNewStylesheet() {
         try {
           // eslint-disable-next-line no-new
           new CSSStyleSheet();
@@ -1690,60 +2094,100 @@ ${error.stack}`);
         }
       };
 
-      const scanBrowserRuntimeFeatures = async ({
-        coverageHandledFromOutside = false,
-        forceCompilation = false,
-        forceSource = false
-      } = {}) => {
-        const jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
-        const {
-          jsenvDirectoryRelativeUrl,
-          inlineImportMapIntoHTML,
-          availableCompileIds
-        } = await fetchJson(jsenvCompileProfileUrl);
-        const {
-          name,
-          version
-        } = detectBrowser();
-        const featuresReport = await detectSupportedFeatures({
-          coverageHandledFromOutside,
-          inlineImportMapIntoHTML
-        });
-        const runtimeReport = {
-          env: {
-            browser: true
-          },
-          name,
-          version,
-          featuresReport,
-          forceSource,
-          forceCompilation
-        };
-        const {
-          compileProfile,
-          compileId
-        } = await fetchJson(jsenvCompileProfileUrl, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify(runtimeReport)
-        });
-        return {
-          jsenvDirectoryRelativeUrl,
-          inlineImportMapIntoHTML,
-          availableCompileIds,
-          runtimeReport,
-          compileProfile,
-          compileId
-        };
-      };
+      function _await$1(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
 
-      const detectSupportedFeatures = async ({
-        coverageHandledFromOutside,
-        inlineImportMapIntoHTML
-      }) => {
-        const featuresReport = {};
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      function _async$1(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      function _call(body, then, direct) {
+        if (direct) {
+          return then ? then(body()) : body();
+        }
+
+        try {
+          var result = Promise.resolve(body());
+          return then ? result.then(then) : result;
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+
+      var scanBrowserRuntimeFeatures = _async$1(function () {
+        var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            _ref$coverageHandledF = _ref.coverageHandledFromOutside,
+            coverageHandledFromOutside = _ref$coverageHandledF === void 0 ? false : _ref$coverageHandledF,
+            _ref$forceCompilation = _ref.forceCompilation,
+            forceCompilation = _ref$forceCompilation === void 0 ? false : _ref$forceCompilation,
+            _ref$forceSource = _ref.forceSource,
+            forceSource = _ref$forceSource === void 0 ? false : _ref$forceSource;
+
+        var jsenvCompileProfileUrl = "/__jsenv_compile_profile__";
+        return _await$1(fetchJson(jsenvCompileProfileUrl), function (_ref2) {
+          var jsenvDirectoryRelativeUrl = _ref2.jsenvDirectoryRelativeUrl,
+              availableCompileIds = _ref2.availableCompileIds;
+
+          var _detectBrowser = detectBrowser(),
+              name = _detectBrowser.name,
+              version = _detectBrowser.version;
+
+          return _await$1(detectSupportedFeatures({
+            coverageHandledFromOutside: coverageHandledFromOutside
+          }), function (featuresReport) {
+            var runtimeReport = {
+              env: {
+                browser: true
+              },
+              name: name,
+              version: version,
+              featuresReport: featuresReport,
+              forceSource: forceSource,
+              forceCompilation: forceCompilation
+            };
+            return _await$1(fetchJson(jsenvCompileProfileUrl, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify(runtimeReport)
+            }), function (_ref3) {
+              var compileProfile = _ref3.compileProfile,
+                  compileId = _ref3.compileId;
+              return {
+                jsenvDirectoryRelativeUrl: jsenvDirectoryRelativeUrl,
+                availableCompileIds: availableCompileIds,
+                runtimeReport: runtimeReport,
+                compileProfile: compileProfile,
+                compileId: compileId
+              };
+            });
+          });
+        });
+      });
+
+      var detectSupportedFeatures = _async$1(function (_ref4) {
+        var coverageHandledFromOutside = _ref4.coverageHandledFromOutside;
+        var featuresReport = {};
         featuresReport["import_http"] = true;
         featuresReport["coverage_js"] = coverageHandledFromOutside; // new CSSStyleSheet
 
@@ -1752,7 +2196,7 @@ ${error.stack}`);
         // so that there is not module script loaded beore importmap is injected
         // it would log an error in chrome console and return undefined
 
-        featuresReport.importmap = await supportsImportmap({
+        return _await$1(supportsImportmap({
           // chrome supports inline but not remote importmap
           // https://github.com/WICG/import-maps/issues/235
           // at this stage we won't know if the html file will use
@@ -1761,49 +2205,85 @@ ${error.stack}`);
           // But there exploring server can inline importmap by transforming html
           // and in that case we can test only the local importmap support
           // so we test importmap support and the remote one
-          remote: !inlineImportMapIntoHTML
-        }); // dynamic import
+          remote: false
+        }), function (_supportsImportmap) {
+          featuresReport.importmap = _supportsImportmap; // dynamic import
 
-        featuresReport["import_dynamic"] = await supportsDynamicImport(); // top level await
+          return _call(supportsDynamicImport, function (_supportsDynamicImpor) {
+            featuresReport["import_dynamic"] = _supportsDynamicImpor; // top level await
 
-        featuresReport["top_level_await"] = await supportsTopLevelAwait(); // import assertions
+            return _call(supportsTopLevelAwait, function (_supportsTopLevelAwai) {
+              featuresReport["top_level_await"] = _supportsTopLevelAwai; // import assertions
 
-        featuresReport["import_assertion_type_json"] = await supportsJsonImportAssertions();
-        featuresReport["import_assertion_type_css"] = await supportsCssImportAssertions();
-        return featuresReport;
-      };
-
-      const redirect = async () => {
-        const searchParams = new URLSearchParams(window.location.search);
-        const redirectTarget = searchParams.get("redirect");
-        const forceCompilation = searchParams.get("force_compilation");
-        const browserRuntimeProfile = await scanBrowserRuntimeFeatures({
-          forceCompilation: forceCompilation === "1"
+              return _call(supportsJsonImportAssertions, function (_supportsJsonImportAs) {
+                featuresReport["import_assertion_type_json"] = _supportsJsonImportAs;
+                return _call(supportsCssImportAssertions, function (_supportsCssImportAss) {
+                  featuresReport["import_assertion_type_css"] = _supportsCssImportAss;
+                  return featuresReport;
+                });
+              });
+            });
+          });
         });
-        const href = `${getDirectoryUrl(browserRuntimeProfile)}${redirectTarget}`; // It's IMPORTANT to use location.replace and NOT location.href = url
-        // otherwise it would break the back button
+      });
 
-        window.location.replace(href);
-      };
-
-      const getDirectoryUrl = ({
-        jsenvDirectoryRelativeUrl,
-        compileId
-      }) => {
-        if (compileId) {
-          return `/${jsenvDirectoryRelativeUrl}${compileId}/`;
+      function _await(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
         }
 
-        return `/`;
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+
+        return then ? value.then(then) : value;
+      }
+
+      var redirect = _async(function () {
+        var searchParams = new URLSearchParams(window.location.search);
+        var redirectTarget = searchParams.get("redirect");
+        var forceCompilation = searchParams.get("force_compilation");
+        return _await(scanBrowserRuntimeFeatures({
+          forceCompilation: forceCompilation === "1"
+        }), function (browserRuntimeProfile) {
+          var href = "".concat(getDirectoryUrl(browserRuntimeProfile)).concat(redirectTarget); // It's IMPORTANT to use location.replace and NOT location.href = url
+          // otherwise it would break the back button
+
+          window.location.replace(href);
+        });
+      });
+
+      function _async(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+
+      var getDirectoryUrl = function getDirectoryUrl(_ref) {
+        var jsenvDirectoryRelativeUrl = _ref.jsenvDirectoryRelativeUrl,
+            compileId = _ref.compileId;
+
+        if (compileId) {
+          return "/".concat(jsenvDirectoryRelativeUrl).concat(compileId, "/");
+        }
+
+        return "/";
       };
 
       redirect();
-
-    })
+    }
   };
-}));
+});
 
-//# sourceMappingURL=redirector.html__inline__12_290bc6e4.js.map</script>
+//# sourceMappingURL=redirector.html__inline__12_b26b31c0.js.map</script>
   
 
 </body></html>
