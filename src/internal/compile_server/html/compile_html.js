@@ -28,13 +28,12 @@ export const compileHtml = async ({
   // cancellationToken,
   logger,
   projectDirectoryUrl,
+  ressourceGraph,
   jsenvFileSelector,
   jsenvRemoteDirectory,
-  compileServerOrigin,
   jsenvDirectoryRelativeUrl,
   url,
   compiledUrl,
-  ressourceGraph,
 
   compileProfile,
   compileId,
@@ -45,14 +44,12 @@ export const compileHtml = async ({
   htmlSupervisor,
   toolbar,
 
-  onHtmlImportmapInfo,
-
   sourcemapMethod,
-  code,
+  html,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
   // ideally we should try/catch html syntax error
-  const htmlAst = parseHtmlString(code)
+  const htmlAst = parseHtmlString(html)
   const scriptsToInject = getScriptsToInject({
     jsenvFileSelector,
     canUseScriptTypeModule: compileProfile.moduleOutFormat === "esmodule",
@@ -79,7 +76,7 @@ export const compileHtml = async ({
     sources.push(url)
     sourcesContent.push(content)
   }
-  addHtmlSourceFile({ url, content: code })
+  addHtmlSourceFile({ url, content: html })
 
   const { scripts } = parseHtmlAstRessources(htmlAst)
 
@@ -118,17 +115,12 @@ export const compileHtml = async ({
       content: importmapInfo.sourceText,
     })
   }
-  onHtmlImportmapInfo({
-    url: importmapInfo.url || compiledUrl,
-    text: importmapInfo.text,
-  })
 
   await visitScripts({
     logger,
     projectDirectoryUrl,
     jsenvFileSelector,
     jsenvRemoteDirectory,
-    compileServerOrigin,
     url,
     compiledUrl,
 

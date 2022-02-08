@@ -14,14 +14,14 @@ export const reuseOrCreateCompiledFile = async ({
   logger,
 
   projectDirectoryUrl,
+  jsenvRemoteDirectory,
+  request,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
-  jsenvRemoteDirectory,
 
   compileCacheStrategy,
   compileCacheSourcesValidation,
   compileCacheAssetsValidation,
-  request,
   compile,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -145,13 +145,52 @@ const computeCompileReport = async ({
     }
     const buffer = await readNodeStream(response.body)
     const code = String(buffer)
-    const [compileTiming, compileResult] = await timeFunction("compile", () =>
-      callCompile({
-        logger,
-        originalFileUrl,
-        code,
-        compile,
-      }),
+    const [compileTiming, compileResult] = await timeFunction(
+      "compile",
+      async () => {
+        logger.debug(`compile ${originalFileUrl}`)
+        const compileReturnValue = await compile({
+          code,
+        })
+        if (
+          typeof compileReturnValue !== "object" ||
+          compileReturnValue === null
+        ) {
+          throw new TypeError(
+            `compile must return an object, got ${compileReturnValue}`,
+          )
+        }
+        const {
+          contentType,
+          content,
+          sources = [],
+          sourcesContent = [],
+          assets = [],
+          assetsContent = [],
+          dependencies = [],
+          responseHeaders,
+        } = compileReturnValue
+        if (typeof contentType !== "string") {
+          throw new TypeError(
+            `compile must return a contentType string, got ${contentType}`,
+          )
+        }
+        if (typeof content !== "string") {
+          throw new TypeError(
+            `compile must return a content string, got ${content}`,
+          )
+        }
+        return {
+          contentType,
+          content,
+          sources,
+          sourcesContent,
+          assets,
+          assetsContent,
+          dependencies,
+          responseHeaders,
+        }
+      },
     )
     return {
       meta: metaIsValid ? cacheValidity.meta.data : null,
@@ -181,44 +220,6 @@ const computeCompileReport = async ({
     timing: {
       ...readCacheTiming,
     },
-  }
-}
-
-const callCompile = async ({ logger, code, originalFileUrl, compile }) => {
-  logger.debug(`compile ${originalFileUrl}`)
-  const compileReturnValue = await compile({ code })
-  if (typeof compileReturnValue !== "object" || compileReturnValue === null) {
-    throw new TypeError(
-      `compile must return an object, got ${compileReturnValue}`,
-    )
-  }
-  const {
-    contentType,
-    content,
-    sources = [],
-    sourcesContent = [],
-    assets = [],
-    assetsContent = [],
-    dependencies = [],
-    responseHeaders,
-  } = compileReturnValue
-  if (typeof contentType !== "string") {
-    throw new TypeError(
-      `compile must return a contentType string, got ${contentType}`,
-    )
-  }
-  if (typeof content !== "string") {
-    throw new TypeError(`compile must return a content string, got ${content}`)
-  }
-  return {
-    contentType,
-    content,
-    sources,
-    sourcesContent,
-    assets,
-    assetsContent,
-    dependencies,
-    responseHeaders,
   }
 }
 

@@ -7,20 +7,20 @@ import { transformJs } from "./js_transformer.js"
 
 export const compileJavascript = async ({
   projectDirectoryUrl,
+  ressourceGraph,
   jsenvRemoteDirectory,
   url,
   compiledUrl,
-  ressourceGraph,
 
   compileProfile,
   babelPluginMap,
   topLevelAwait,
   prependSystemJs,
 
-  code,
-  map,
   sourcemapExcludeSources,
   sourcemapMethod,
+  map,
+  js,
 }) => {
   const { searchParams } = new URL(url)
   if (prependSystemJs === undefined) {
@@ -43,8 +43,8 @@ export const compileJavascript = async ({
     topLevelAwait,
     prependSystemJs,
 
-    code,
     map,
+    code: js,
   })
   const metadata = transformResult.metadata
   scanJs({
@@ -70,7 +70,7 @@ export const compileJavascript = async ({
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,
       sourcemapMethod,
-      originalFileContent: code,
+      originalFileContent: js,
     },
   )
 }

@@ -28,6 +28,9 @@ import { createSSEService } from "./sse_service/sse_service.js"
 
 import { createCompileRedirectorService } from "./compile_redirector_service.js"
 import { createCompiledFileService } from "./compiled_file_service.js"
+import { compileHtml } from "./html/compile_html.js"
+import { compileImportmap } from "./importmap/compile_importmap.js"
+import { compileJavascript } from "./js/compile_js.js"
 import { createJsenvDistFileService } from "./jsenv_dist_file_service.js"
 import { createSourceFileService } from "./source_file_service.js"
 import { modifyHtml } from "./html/modify_html.js"
@@ -219,63 +222,13 @@ export const startCompileServer = async ({
       jsenvFileSelector,
       mainFileRelativeUrl,
     }),
-    "service:compile profile": async (request) => {
-      if (request.ressource !== `/__jsenv_compile_profile__`) {
-        return null
-      }
-      if (request.method === "GET") {
-        const body = JSON.stringify(
-          {
-            jsenvDirectoryRelativeUrl,
-            errorStackRemapping,
-            sourcemapMainFileRelativeUrl: urlToRelativeUrl(
-              sourcemapMainFileInfo.url,
-              projectDirectoryUrl,
-            ),
-            sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
-              sourcemapMappingFileInfo.url,
-              projectDirectoryUrl,
-            ),
-            availableCompileIds: Object.keys(jsenvDirectory.compileDirectories),
-          },
-          null,
-          "  ",
-        )
-        return {
-          status: 200,
-          headers: {
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body),
-          },
-          body,
-        }
-      }
-      if (request.method === "POST") {
-        const runtimeReport = await readRequestBody(request, {
-          as: "json",
-        })
-        const { compileProfile, compileId } =
-          await createCompileIdFromRuntimeReport(runtimeReport)
-        const responseBodyAsObject = {
-          compileProfile,
-          compileId,
-        }
-        const responseBodyAsString = JSON.stringify(
-          responseBodyAsObject,
-          null,
-          "  ",
-        )
-        return {
-          status: 200,
-          headers: {
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(responseBodyAsString),
-          },
-          body: responseBodyAsString,
-        }
-      }
-      return null
-    },
+    "service:compile profile": createCompileProfileService({
+      projectDirectoryUrl,
+      jsenvDirectory,
+      jsenvDirectoryRelativeUrl,
+      errorStackRemapping,
+      createCompileIdFromRuntimeReport,
+    }),
     "service:compilation asset": createCompilationAssetFileService({
       projectDirectoryUrl,
     }),
@@ -283,27 +236,92 @@ export const startCompileServer = async ({
       logger,
 
       projectDirectoryUrl,
+      ressourceGraph,
       jsenvFileSelector,
       jsenvDirectoryRelativeUrl,
       jsenvDirectory,
       jsenvRemoteDirectory,
-
-      topLevelAwait,
-      babelPluginMap,
-      customCompilers,
-      prependSystemJs,
-
-      eventSourceClient,
-      htmlSupervisor,
-      toolbar,
-
-      ressourceGraph,
 
       sourcemapMethod,
       sourcemapExcludeSources,
       compileCacheStrategy: compileServerCanReadFromFilesystem
         ? compileCacheStrategy
         : "none",
+      customCompilers,
+      jsenvCompilers: {
+        "text/html": ({
+          request,
+          url,
+          compiledUrl,
+          compileProfile,
+          compileId,
+          code,
+        }) => {
+          return compileHtml({
+            logger,
+            projectDirectoryUrl,
+            ressourceGraph,
+            jsenvFileSelector,
+            jsenvRemoteDirectory,
+            jsenvDirectoryRelativeUrl,
+            request,
+            url,
+            compiledUrl,
+            compileProfile,
+            compileId,
+
+            babelPluginMap,
+            topLevelAwait,
+
+            eventSourceClient,
+            htmlSupervisor,
+            toolbar,
+
+            sourcemapMethod,
+            html: code,
+          })
+        },
+        "application/importmap+json": ({
+          url,
+          compiledUrl,
+          compileId,
+          code,
+        }) => {
+          return compileImportmap({
+            projectDirectoryUrl,
+            jsenvDirectoryRelativeUrl,
+            url,
+            compiledUrl,
+            compileId,
+            importmapText: code,
+          })
+        },
+        "application/javascript": ({
+          url,
+          compiledUrl,
+          compileProfile,
+          map,
+          code,
+        }) => {
+          return compileJavascript({
+            projectDirectoryUrl,
+            ressourceGraph,
+            jsenvRemoteDirectory,
+            url,
+            compiledUrl,
+
+            compileProfile,
+            babelPluginMap,
+            topLevelAwait,
+            prependSystemJs,
+
+            sourcemapExcludeSources,
+            sourcemapMethod,
+            map,
+            js: code,
+          })
+        },
+      },
     }),
     "service:jsenv dist file": createJsenvDistFileService({
       projectDirectoryUrl,
@@ -445,6 +463,72 @@ export const assertAndNormalizeJsenvDirectoryRelativeUrl = ({
     projectDirectoryUrl,
   )
   return jsenvDirectoryRelativeUrl
+}
+
+const createCompileProfileService = ({
+  projectDirectoryUrl,
+  jsenvDirectory,
+  jsenvDirectoryRelativeUrl,
+  errorStackRemapping,
+  createCompileIdFromRuntimeReport,
+}) => {
+  return async (request) => {
+    if (request.ressource !== `/__jsenv_compile_profile__`) {
+      return null
+    }
+    if (request.method === "GET") {
+      const body = JSON.stringify(
+        {
+          jsenvDirectoryRelativeUrl,
+          errorStackRemapping,
+          sourcemapMainFileRelativeUrl: urlToRelativeUrl(
+            sourcemapMainFileInfo.url,
+            projectDirectoryUrl,
+          ),
+          sourcemapMappingFileRelativeUrl: urlToRelativeUrl(
+            sourcemapMappingFileInfo.url,
+            projectDirectoryUrl,
+          ),
+          availableCompileIds: Object.keys(jsenvDirectory.compileDirectories),
+        },
+        null,
+        "  ",
+      )
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body),
+        },
+        body,
+      }
+    }
+    if (request.method === "POST") {
+      const runtimeReport = await readRequestBody(request, {
+        as: "json",
+      })
+      const { compileProfile, compileId } =
+        await createCompileIdFromRuntimeReport(runtimeReport)
+      const responseBodyAsObject = {
+        compileProfile,
+        compileId,
+      }
+      const responseBodyAsString = JSON.stringify(
+        responseBodyAsObject,
+        null,
+        "  ",
+      )
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(responseBodyAsString),
+        },
+        body: responseBodyAsString,
+      }
+    }
+    return null
+  }
 }
 
 const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {

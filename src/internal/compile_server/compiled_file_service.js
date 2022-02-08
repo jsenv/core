@@ -11,9 +11,6 @@ import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.
 import { injectQuery } from "../url_utils.js"
 
 import { compileFile } from "./compile_file.js"
-import { compileHtml } from "./html/compile_html.js"
-import { compileImportmap } from "./importmap/compile_importmap.js"
-import { compileJavascript } from "./js/compile_js.js"
 
 export const createCompiledFileService = ({
   compileServerOperation,
@@ -26,18 +23,12 @@ export const createCompiledFileService = ({
   jsenvRemoteDirectory,
   ressourceGraph,
 
-  babelPluginMap,
-  topLevelAwait,
-  prependSystemJs,
   customCompilers,
+  jsenvCompilers,
 
   compileCacheStrategy,
   sourcemapMethod,
   sourcemapExcludeSources,
-
-  eventSourceClient,
-  htmlSupervisor,
-  toolbar,
 }) => {
   Object.keys(customCompilers).forEach((key) => {
     const value = customCompilers[key]
@@ -53,7 +44,6 @@ export const createCompiledFileService = ({
     },
     projectDirectoryUrl,
   )
-  const importmapInfos = {}
   const redirectorFile = jsenvFileSelector.select(redirectorFiles, {
     canUseScriptTypeModule: false,
   })
@@ -112,7 +102,11 @@ export const createCompiledFileService = ({
       originalFileRelativeUrl,
       compileDirectoryUrl,
     )
-    const compiler = getCompiler({ originalFileUrl, customCompilerMeta })
+    const compiler = getCompiler({
+      originalFileUrl,
+      customCompilerMeta,
+      jsenvCompilers,
+    })
     // no compiler -> serve original file
     // we redirect "internally" (we dont send 304 to the browser)
     // to keep ressource tracking and url resolution simple
@@ -132,7 +126,6 @@ export const createCompiledFileService = ({
       ressourceGraph,
       originalFileUrl,
       compiledFileUrl,
-      importmapInfos,
 
       request,
       pushResponse,
@@ -144,31 +137,20 @@ export const createCompiledFileService = ({
           logger,
 
           projectDirectoryUrl,
+          ressourceGraph,
           jsenvFileSelector,
           jsenvRemoteDirectory,
-          compileServerOrigin: request.origin,
           jsenvDirectoryRelativeUrl,
           url: originalFileUrl,
           compiledUrl: compiledFileUrl,
-          ressourceGraph,
           request,
 
           compileProfile,
           compileId,
-          babelPluginMap,
-          topLevelAwait,
-          prependSystemJs,
 
-          code,
           sourcemapMethod,
           sourcemapExcludeSources,
-
-          eventSourceClient,
-          htmlSupervisor,
-          toolbar,
-          onHtmlImportmapInfo: ({ htmlUrl, importmapInfo }) => {
-            importmapInfos[htmlUrl] = importmapInfo
-          },
+          code,
         })
       },
     })
@@ -176,7 +158,11 @@ export const createCompiledFileService = ({
   }
 }
 
-const getCompiler = ({ originalFileUrl, customCompilerMeta }) => {
+const getCompiler = ({
+  originalFileUrl,
+  customCompilerMeta,
+  jsenvCompilers,
+}) => {
   // we remove eventual query param from the url
   // Without this a pattern like "**/*.js" would not match "file.js?t=1"
   // This would result in file not being compiled when they should
@@ -204,18 +190,12 @@ const getCompiler = ({ originalFileUrl, customCompilerMeta }) => {
     }
     const jsenvCompilerReturnValue = await jsenvCompiler({
       ...params,
-      code: customCompilerReturnValue.compiledSource,
       map: customCompilerReturnValue.sourcemap,
+      code: customCompilerReturnValue.content,
     })
     return {
       ...customCompilerReturnValue,
       ...jsenvCompilerReturnValue,
     }
   }
-}
-
-const jsenvCompilers = {
-  "text/html": compileHtml,
-  "application/importmap+json": compileImportmap,
-  "application/javascript": compileJavascript,
 }

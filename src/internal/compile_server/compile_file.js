@@ -1,10 +1,5 @@
-import {
-  urlToRelativeUrl,
-  resolveUrl,
-  bufferToEtag,
-  urlIsInsideOf,
-} from "@jsenv/filesystem"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
+import { bufferToEtag } from "@jsenv/filesystem"
 
 import { injectHmr } from "@jsenv/core/src/internal/hmr/hmr_injection.js"
 
@@ -20,11 +15,9 @@ export const compileFile = async ({
   ressourceGraph,
   originalFileUrl,
   compiledFileUrl,
-  importmapInfos,
 
   request,
   responseHeaders = {},
-  pushResponse,
 
   compileProfile,
 
@@ -47,11 +40,11 @@ export const compileFile = async ({
       await reuseOrCreateCompiledFile({
         logger,
         projectDirectoryUrl,
+        jsenvRemoteDirectory,
+        request,
         originalFileUrl,
         compiledFileUrl,
-        jsenvRemoteDirectory,
 
-        request,
         compileCacheStrategy,
         compileCacheSourcesValidation,
         compileCacheAssetsValidation,
@@ -99,29 +92,6 @@ export const compileFile = async ({
         compiledFileUrl,
         // originalFileUrl,
       })
-    }
-    if (request.http2) {
-      const dependencyResolver = getDependencyResolver({
-        compileResult,
-        importmapInfos,
-        request,
-      })
-      if (dependencyResolver) {
-        compileResult.dependencies.forEach((dependencyUrl) => {
-          if (!urlIsInsideOf(dependencyUrl, request.origin)) {
-            // ignore external urls
-            return
-          }
-          if (dependencyUrl.startsWith("data:")) {
-            return
-          }
-          const dependencyRelativeUrl = urlToRelativeUrl(
-            dependencyUrl,
-            request.origin,
-          )
-          pushResponse({ path: `/${dependencyRelativeUrl}` })
-        })
-      }
     }
     const hmr = new URL(originalFileUrl).searchParams.get("hmr")
     if (hmr) {
@@ -228,31 +198,5 @@ export const compileFile = async ({
       }
     }
     return convertFileSystemErrorToResponseProperties(error)
-  }
-}
-
-const getDependencyResolver = ({ compileResult, importmapInfos, request }) => {
-  const importmapKeys = Object.keys(importmapInfos)
-  const requestUrl = resolveUrl(request.ressource, request.origin)
-  if (
-    compileResult.contentType === "application/javascript" &&
-    // we cannot trust importmapKeys because when html is restored from cache
-    // it would be empty
-    importmapKeys.length > 0
-  ) {
-    // js resolution is special, we cannot just do resolveUrl of the import specifier
-    // because there can be importmap (bare specifier, import without extension, custom remapping, ...)
-    // And we would push 404 to the browser
-    // BUT I tried to push everything to the browser and it was a big fail:
-    // server is trying to push streams but browser rejects most push streams
-    // either because main file is already fetched or an other file request the same ressource
-    return null
-  }
-  return {
-    type: "url_resolution",
-    resolve: (dependency) => {
-      const dependencyUrl = resolveUrl(dependency, requestUrl)
-      return dependencyUrl
-    },
   }
 }
