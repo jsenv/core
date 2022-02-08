@@ -38,7 +38,7 @@ export const updateHtmlHotMeta = ({ ressourceGraph, url, urlMentions }) => {
   return dependencyUrls
 }
 
-export const collectHtmlUrlMentions = (htmlAst) => {
+export const collectHtmlUrlMentions = (htmlAst, url) => {
   const htmlUrlMentions = []
   const addDependency = ({ node, attribute, specifier, hotAccepted }) => {
     // ignore local url specifier (<use href="#logo"> or <a href="#">)
@@ -152,7 +152,8 @@ export const collectHtmlUrlMentions = (htmlAst) => {
       addDependency({
         node,
         attribute,
-        specifier: value,
+        specifier:
+          attributeName === "content-src" ? new URL(value, url).href : value,
         hotAccepted,
       })
     } else if (attributeName === "src") {

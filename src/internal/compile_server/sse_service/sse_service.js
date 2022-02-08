@@ -130,7 +130,7 @@ const createSSEServiceWithHmr = ({
           type: "reload",
           data: JSON.stringify({
             reason: `${fileRelativeUrl} ${event}`,
-            instruction: reloadInstruction,
+            ...reloadInstruction,
           }),
         })
       }

@@ -22,7 +22,7 @@ const reloadMessages = []
 const reloadMessagesSignal = { onchange: () => {} }
 const applyReloadMessageEffects = async () => {
   const someEffectIsFullReload = reloadMessages.some(
-    (reloadMessage) => reloadMessage.instruction.type === "full_reload",
+    (reloadMessage) => reloadMessage.type === "full_reload",
   )
   if (someEffectIsFullReload) {
     reloadHtmlPage()
@@ -51,11 +51,8 @@ This could be due to syntax errors or importing non-existent modules (see errors
     )
   }
   reloadMessages.forEach((reloadMessage) => {
-    if (reloadMessage.instruction.type === "hot_reload") {
-      setReloadMessagePromise(
-        reloadMessage,
-        applyHotReload(reloadMessage.instruction),
-      )
+    if (reloadMessage.type === "hot_reload") {
+      setReloadMessagePromise(reloadMessage, applyHotReload(reloadMessage))
       return
     }
     setReloadMessagePromise(reloadMessage, Promise.resolve())
@@ -63,8 +60,8 @@ This could be due to syntax errors or importing non-existent modules (see errors
   reloadMessagesSignal.onchange() // reload status is "pending"
 }
 
-const applyHotReload = async ({ updates }) => {
-  await updates.reduce(
+const applyHotReload = async ({ instructions }) => {
+  await instructions.reduce(
     async (previous, { type, relativeUrl, acceptedByRelativeUrl }) => {
       await previous
 

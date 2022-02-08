@@ -151,7 +151,7 @@ export const compileHtml = async ({
   })
   htmlMutations.length = 0
   const htmlAfterTransformation = stringifyHtmlAst(htmlAst)
-  const urlMentions = collectHtmlUrlMentions(htmlAst)
+  const urlMentions = collectHtmlUrlMentions(htmlAst, compiledUrl)
   const dependencyUrls = updateHtmlHotMeta({
     ressourceGraph,
     url,

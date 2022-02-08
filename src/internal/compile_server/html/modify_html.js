@@ -123,7 +123,7 @@ export const modifyHtml = async ({
   }
   const htmlModified = stringifyHtmlAst(htmlAst)
   if (autoreload) {
-    const urlMentions = collectHtmlUrlMentions(htmlAst)
+    const urlMentions = collectHtmlUrlMentions(htmlAst, url)
     updateHtmlHotMeta({
       ressourceGraph,
       url,

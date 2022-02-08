@@ -81,7 +81,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       }
       dependencyUrls.forEach((dependencyUrl) => {
         const dependency = reuseOrCreateRessource(dependencyUrl)
-        ressource.dependencies.add(url)
+        ressource.dependencies.add(dependencyUrl)
         dependency.dependents.add(url)
       })
     }
@@ -119,7 +119,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return {
       type: "hot_reload",
       timestamp: Date.now(),
-      updates: updatePropagationResult.boundaries.map(
+      instructions: updatePropagationResult.boundaries.map(
         ({ boundary, acceptedBy }) => {
           return {
             type: ressources[boundary].type,

@@ -1,4 +1,6 @@
 import { fetchFileSystem, urlToContentType } from "@jsenv/server"
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
+
 import {
   resolveUrl,
   resolveDirectoryUrl,
@@ -6,10 +8,12 @@ import {
   urlToMeta,
 } from "@jsenv/filesystem"
 
+import { injectHmr } from "@jsenv/core/src/internal/autoreload/hmr_injection.js"
 import { redirectorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { injectQuery } from "../url_utils.js"
 
+import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { compileFile } from "./compile_file.js"
 
 export const createCompiledFileService = ({
@@ -91,28 +95,8 @@ export const createCompiledFileService = ({
       return null
     }
     const { compileProfile } = compileDirectory
-
-    if (urlIsCompilationAsset(requestUrl)) {
-      return fetchFileSystem(
-        new URL(request.ressource.slice(1), projectDirectoryUrl),
-        {
-          headers: request.headers,
-          etagEnabled: true,
-        },
-      )
-    }
-
     const sourceFileRelativeUrl = afterCompileId
     const sourceFileUrl = `${projectDirectoryUrl}${sourceFileRelativeUrl}`
-    const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
-    const compileDirectoryUrl = resolveDirectoryUrl(
-      compileDirectoryRelativeUrl,
-      projectDirectoryUrl,
-    )
-    const compiledFileUrl = resolveUrl(
-      sourceFileRelativeUrl,
-      compileDirectoryUrl,
-    )
     const compiler = getCompiler({
       sourceFileUrl,
       customCompilerMeta,
@@ -126,46 +110,101 @@ export const createCompiledFileService = ({
         pathname: `/${sourceFileRelativeUrl}`,
       })
     }
-    // compile this if needed
-    const compileResponsePromise = compileFile({
-      compileServerOperation,
-      logger,
+    const hmr = new URL(sourceFileUrl).searchParams.get("hmr")
+    const handleResponse = async (response) => {
+      if (!hmr) {
+        return response
+      }
+      const responseBodyAsString = response.body
+      const contentType = response.headers["content-type"]
+      const body = await injectHmr({
+        projectDirectoryUrl,
+        ressourceGraph,
+        url: sourceFileUrl,
+        contentType,
+        moduleFormat: compileProfile.moduleOutFormat,
+        content: responseBodyAsString,
+      })
+      return {
+        status: 200,
+        headers: {
+          "content-length": Buffer.byteLength(body),
+          "cache-control": "no-store", // not really needed thanks to the query param
+          ...response.headers,
+        },
+        body,
+        timing: response.timing,
+      }
+    }
+    if (urlIsCompilationAsset(requestUrl)) {
+      const response = await fetchFileSystem(
+        new URL(request.ressource.slice(1), projectDirectoryUrl),
+        {
+          headers: request.headers,
+          etagEnabled: true,
+        },
+      )
+      return handleResponse(response)
+    }
 
+    const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
+    const compileDirectoryUrl = resolveDirectoryUrl(
+      compileDirectoryRelativeUrl,
       projectDirectoryUrl,
-      jsenvDirectory,
-      jsenvRemoteDirectory,
-      ressourceGraph,
-      sourceFileUrl,
-      compiledFileUrl,
+    )
+    const compiledFileUrl = resolveUrl(
+      sourceFileRelativeUrl,
+      compileDirectoryUrl,
+    )
+    try {
+      const response = await compileFile({
+        compileServerOperation,
+        logger,
 
-      request,
-      pushResponse,
+        projectDirectoryUrl,
+        jsenvDirectory,
+        jsenvRemoteDirectory,
+        sourceFileUrl,
+        compiledFileUrl,
 
-      compileProfile,
-      compileCacheStrategy,
-      compile: ({ content }) => {
-        return compiler({
-          logger,
+        request,
+        pushResponse,
 
-          projectDirectoryUrl,
-          ressourceGraph,
-          jsenvFileSelector,
-          jsenvRemoteDirectory,
-          jsenvDirectoryRelativeUrl,
-          url: sourceFileUrl,
-          compiledUrl: compiledFileUrl,
-          request,
+        compileCacheStrategy,
+        compile: ({ content }) => {
+          return compiler({
+            logger,
 
-          compileProfile,
-          compileId,
+            projectDirectoryUrl,
+            ressourceGraph,
+            jsenvFileSelector,
+            jsenvRemoteDirectory,
+            jsenvDirectoryRelativeUrl,
+            url: sourceFileUrl,
+            compiledUrl: compiledFileUrl,
+            request,
 
-          sourcemapMethod,
-          sourcemapExcludeSources,
-          content,
-        })
-      },
-    })
-    return compileResponsePromise
+            compileProfile,
+            compileId,
+
+            sourcemapMethod,
+            sourcemapExcludeSources,
+            content,
+          })
+        },
+      })
+      return handleResponse(response)
+    } catch (error) {
+      if (error && error.asResponse) {
+        return error.asResponse()
+      }
+      if (error && error.statusText === "Unexpected directory operation") {
+        return {
+          status: 403,
+        }
+      }
+      return convertFileSystemErrorToResponseProperties(error)
+    }
   }
 }
 

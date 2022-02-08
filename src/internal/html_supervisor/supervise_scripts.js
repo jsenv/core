@@ -93,6 +93,7 @@ export const superviseScripts = ({
         textContent: textNode.value,
         inlineSrc,
       })
+      assignHtmlNodeAttributes(script, { "content-src": inlineSrc })
       setHtmlNodeText(
         script,
         generateCodeToSuperviseScript({
