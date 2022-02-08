@@ -66,7 +66,7 @@ export const compileJavascript = async ({
     {
       projectDirectoryUrl,
       jsenvRemoteDirectory,
-      originalFileUrl: url,
+      sourceFileUrl: url,
       compiledFileUrl: compiledUrl,
       // sourcemap are not inside the asset folder because
       // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544

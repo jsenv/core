@@ -71,7 +71,7 @@ export const compilationResultFromBuild = (
       compiledFileUrl,
     ),
   })
-  // mainFile.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
+  // mainFile.sourcemap.file = fileUrlToRelativePath(sourceFileUrl, sourcemapFileUrl)
   trackDependencies(mainFile.dependencyMap)
   assets.push(sourcemapFileUrl)
   assetsContent.push(JSON.stringify(mainFile.sourcemap, null, "  "))

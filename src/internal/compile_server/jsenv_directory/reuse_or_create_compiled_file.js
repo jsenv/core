@@ -16,8 +16,8 @@ export const reuseOrCreateCompiledFile = async ({
   projectDirectoryUrl,
   jsenvRemoteDirectory,
   request,
-  originalFileUrl,
-  compiledFileUrl = originalFileUrl,
+  sourceFileUrl,
+  compiledFileUrl = sourceFileUrl,
 
   compileCacheStrategy,
   compileCacheSourcesValidation,
@@ -29,15 +29,13 @@ export const reuseOrCreateCompiledFile = async ({
       `projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`,
     )
   }
-  if (typeof originalFileUrl !== "string") {
-    throw new TypeError(
-      `originalFileUrl must be a string, got ${originalFileUrl}`,
-    )
+  if (typeof sourceFileUrl !== "string") {
+    throw new TypeError(`sourceFileUrl must be a string, got ${sourceFileUrl}`)
   }
-  if (!originalFileUrl.startsWith(projectDirectoryUrl)) {
+  if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
     throw new Error(
-      createDetailedMessage(`origin file must be inside project`, {
-        ["original file url"]: originalFileUrl,
+      createDetailedMessage(`source file must be inside project`, {
+        ["source file url"]: sourceFileUrl,
         ["project directory url"]: projectDirectoryUrl,
       }),
     )
@@ -66,7 +64,7 @@ export const reuseOrCreateCompiledFile = async ({
       const { meta, compileResult, compileResultStatus, timing } =
         await computeCompileReport({
           projectDirectoryUrl,
-          originalFileUrl,
+          sourceFileUrl,
           compiledFileUrl,
           jsenvRemoteDirectory,
 
@@ -97,7 +95,7 @@ export const reuseOrCreateCompiledFile = async ({
 const computeCompileReport = async ({
   // projectDirectoryUrl,
   logger,
-  originalFileUrl,
+  sourceFileUrl,
   compiledFileUrl,
   jsenvRemoteDirectory,
 
@@ -135,7 +133,7 @@ const computeCompileReport = async ({
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
-    const response = await jsenvRemoteDirectory.fetchUrl(originalFileUrl, {
+    const response = await jsenvRemoteDirectory.fetchUrl(sourceFileUrl, {
       request,
     })
     if (response.status !== 200) {
@@ -146,7 +144,7 @@ const computeCompileReport = async ({
     const [compileTiming, compileResult] = await timeFunction(
       "compile",
       async () => {
-        logger.debug(`compile ${originalFileUrl}`)
+        logger.debug(`compile ${sourceFileUrl}`)
         const compileReturnValue = await compile({
           content: String(buffer),
         })

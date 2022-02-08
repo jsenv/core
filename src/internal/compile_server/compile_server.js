@@ -1,7 +1,6 @@
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
-  fetchFileSystem,
   composeServices,
   pluginServerTiming,
   pluginRequestWaitingCheck,
@@ -23,7 +22,6 @@ import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
 import { createJsenvFileSelector } from "../jsenv_file_selector.js"
 import { setupJsenvDirectory } from "./jsenv_directory/jsenv_directory.js"
-import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
 import { createSSEService } from "./sse_service/sse_service.js"
 
 import { createCompileRedirectorService } from "./compile_redirector_service.js"
@@ -228,9 +226,6 @@ export const startCompileServer = async ({
       jsenvDirectoryRelativeUrl,
       errorStackRemapping,
       createCompileIdFromRuntimeReport,
-    }),
-    "service:compilation asset": createCompilationAssetFileService({
-      projectDirectoryUrl,
     }),
     "service:compiled file": createCompiledFileService({
       logger,
@@ -526,23 +521,6 @@ const createCompileProfileService = ({
         },
         body: responseBodyAsString,
       }
-    }
-    return null
-  }
-}
-
-const createCompilationAssetFileService = ({ projectDirectoryUrl }) => {
-  return (request) => {
-    const { origin, ressource } = request
-    const requestUrl = `${origin}${ressource}`
-    if (urlIsCompilationAsset(requestUrl)) {
-      return fetchFileSystem(
-        new URL(request.ressource.slice(1), projectDirectoryUrl),
-        {
-          headers: request.headers,
-          etagEnabled: true,
-        },
-      )
     }
     return null
   }

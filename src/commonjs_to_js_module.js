@@ -165,7 +165,7 @@ export const commonJsToJsModule = async ({
     {
       projectDirectoryUrl,
       jsenvRemoteDirectory,
-      originalFileUrl: url,
+      sourceFileUrl: url,
       compiledFileUrl: compiledUrl,
       sourcemapFileUrl: generateSourcemapUrl(compiledUrl),
       sourcemapExcludeSources,

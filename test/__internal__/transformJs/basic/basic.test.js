@@ -14,14 +14,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const originalFileUrl = resolveUrl(`./basic.js`, testDirectoryUrl)
+const sourceFileUrl = resolveUrl(`./basic.js`, testDirectoryUrl)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/basic.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
-const originalFileContent = await readFile(originalFileUrl)
+const originalFileContent = await readFile(sourceFileUrl)
 
 const transformResult = await transformWithBabel({
   ...TRANSFORM_JS_TEST_PARAMS,
-  url: originalFileUrl,
+  url: sourceFileUrl,
   content: originalFileContent,
 })
 const compilationResult = await asCompilationResult(
@@ -32,7 +32,7 @@ const compilationResult = await asCompilationResult(
   {
     ...TRANSFORM_RESULT_TEST_PARAMS,
     originalFileContent,
-    originalFileUrl,
+    sourceFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
   },
@@ -43,7 +43,7 @@ const compilationResult = await asCompilationResult(
     contentType: "application/javascript",
     content: actual.content,
     sourcemap: assert.any(Object),
-    sources: [originalFileUrl],
+    sources: [sourceFileUrl],
     sourcesContent: [originalFileContent],
     assets: [sourcemapFileUrl],
     assetsContent: [actual.assetsContent[0]],

@@ -91,19 +91,30 @@ export const createCompiledFileService = ({
       return null
     }
     const { compileProfile } = compileDirectory
-    const originalFileRelativeUrl = afterCompileId
-    const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+
+    if (urlIsCompilationAsset(requestUrl)) {
+      return fetchFileSystem(
+        new URL(request.ressource.slice(1), projectDirectoryUrl),
+        {
+          headers: request.headers,
+          etagEnabled: true,
+        },
+      )
+    }
+
+    const sourceFileRelativeUrl = afterCompileId
+    const sourceFileUrl = `${projectDirectoryUrl}${sourceFileRelativeUrl}`
     const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`
     const compileDirectoryUrl = resolveDirectoryUrl(
       compileDirectoryRelativeUrl,
       projectDirectoryUrl,
     )
     const compiledFileUrl = resolveUrl(
-      originalFileRelativeUrl,
+      sourceFileRelativeUrl,
       compileDirectoryUrl,
     )
     const compiler = getCompiler({
-      originalFileUrl,
+      sourceFileUrl,
       customCompilerMeta,
       jsenvCompilers,
     })
@@ -112,7 +123,7 @@ export const createCompiledFileService = ({
     // to keep ressource tracking and url resolution simple
     if (!compiler) {
       return redirectRequest({
-        pathname: `/${originalFileRelativeUrl}`,
+        pathname: `/${sourceFileRelativeUrl}`,
       })
     }
     // compile this if needed
@@ -124,7 +135,7 @@ export const createCompiledFileService = ({
       jsenvDirectory,
       jsenvRemoteDirectory,
       ressourceGraph,
-      originalFileUrl,
+      sourceFileUrl,
       compiledFileUrl,
 
       request,
@@ -141,7 +152,7 @@ export const createCompiledFileService = ({
           jsenvFileSelector,
           jsenvRemoteDirectory,
           jsenvDirectoryRelativeUrl,
-          url: originalFileUrl,
+          url: sourceFileUrl,
           compiledUrl: compiledFileUrl,
           request,
 
@@ -158,24 +169,20 @@ export const createCompiledFileService = ({
   }
 }
 
-const getCompiler = ({
-  originalFileUrl,
-  customCompilerMeta,
-  jsenvCompilers,
-}) => {
+const getCompiler = ({ sourceFileUrl, customCompilerMeta, jsenvCompilers }) => {
   // we remove eventual query param from the url
   // Without this a pattern like "**/*.js" would not match "file.js?t=1"
   // This would result in file not being compiled when they should
   // Ideally we would do a first pass with the query param and a second without
-  const urlObject = new URL(originalFileUrl)
+  const urlObject = new URL(sourceFileUrl)
   urlObject.search = ""
-  originalFileUrl = urlObject.href
+  sourceFileUrl = urlObject.href
   const { customCompiler } = urlToMeta({
-    url: originalFileUrl,
+    url: sourceFileUrl,
     structuredMetaMap: customCompilerMeta,
   })
   if (!customCompiler) {
-    const contentType = urlToContentType(originalFileUrl)
+    const contentType = urlToContentType(sourceFileUrl)
     const jsenvCompiler = jsenvCompilers[contentType]
     return jsenvCompiler || null
   }

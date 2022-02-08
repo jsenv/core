@@ -14,14 +14,14 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const originalFileUrl = resolveUrl(`./import_only.js`, testDirectoryUrl)
+const sourceFileUrl = resolveUrl(`./import_only.js`, testDirectoryUrl)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/import_only.js`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
-const originalFileContent = await readFile(originalFileUrl)
+const originalFileContent = await readFile(sourceFileUrl)
 
 const transformResult = await transformWithBabel({
   ...TRANSFORM_JS_TEST_PARAMS,
-  url: originalFileUrl,
+  url: sourceFileUrl,
   content: originalFileContent,
 })
 const actual = await asCompilationResult(
@@ -32,7 +32,7 @@ const actual = await asCompilationResult(
   {
     ...TRANSFORM_RESULT_TEST_PARAMS,
     originalFileContent,
-    originalFileUrl,
+    sourceFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
   },
@@ -41,7 +41,7 @@ const expected = {
   contentType: "application/javascript",
   content: actual.content,
   sourcemap: assert.any(Object),
-  sources: [originalFileUrl],
+  sources: [sourceFileUrl],
   sourcesContent: [originalFileContent],
   assets: [sourcemapFileUrl],
   assetsContent: [actual.assetsContent[0]],

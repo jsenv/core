@@ -27,7 +27,7 @@ export const asCompilationResult = async (
   {
     projectDirectoryUrl,
     jsenvRemoteDirectory,
-    originalFileUrl,
+    sourceFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
     sourcemapEnabled = true,
@@ -57,10 +57,8 @@ export const asCompilationResult = async (
       `originalFileContent must be a string, got ${originalFileContent}`,
     )
   }
-  if (typeof originalFileUrl !== "string") {
-    throw new TypeError(
-      `originalFileUrl must be a string, got ${originalFileUrl}`,
-    )
+  if (typeof sourceFileUrl !== "string") {
+    throw new TypeError(`sourceFileUrl must be a string, got ${sourceFileUrl}`)
   }
   if (typeof compiledFileUrl !== "string") {
     throw new TypeError(
@@ -93,7 +91,7 @@ export const asCompilationResult = async (
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
       addSource({
-        url: originalFileUrl,
+        url: sourceFileUrl,
         content: originalFileContent,
       })
     } else {
@@ -101,7 +99,7 @@ export const asCompilationResult = async (
         const sourceFileUrl = resolveSourceFile({
           source,
           sourcemapFileUrl,
-          originalFileUrl,
+          sourceFileUrl,
           compiledFileUrl,
           projectDirectoryUrl,
         })
@@ -121,7 +119,7 @@ export const asCompilationResult = async (
         // webpack://Package./src/file.js
         // in that case we'll don't know how to find the source file
         addSource({
-          url: originalFileUrl,
+          url: sourceFileUrl,
           content: originalFileContent,
         })
       }
@@ -167,7 +165,7 @@ export const asCompilationResult = async (
     }
   } else {
     addSource({
-      url: originalFileUrl,
+      url: sourceFileUrl,
       content: originalFileContent,
     })
   }
@@ -198,24 +196,24 @@ export const asCompilationResult = async (
 const resolveSourceFile = ({
   source,
   sourcemapFileUrl,
-  originalFileUrl,
+  sourceFileUrl,
   compiledFileUrl,
   projectDirectoryUrl,
 }) => {
-  const sourceFileUrl = resolveSourceUrl({ source, sourcemapFileUrl })
-  if (!urlIsInsideOf(sourceFileUrl, projectDirectoryUrl)) {
+  const url = resolveSourceUrl({ source, sourcemapFileUrl })
+  if (!urlIsInsideOf(url, projectDirectoryUrl)) {
     // do not track dependency outside project
     // it means cache stays valid for those external sources
     return null
   }
-  const fileFound = testFilePresence(sourceFileUrl)
+  const fileFound = testFilePresence(url)
   if (fileFound) {
-    return sourceFileUrl
+    return url
   }
   // prefer original source file
-  const relativeUrl = urlToRelativeUrl(sourceFileUrl, compiledFileUrl)
-  const originalSourceUrl = resolveUrl(relativeUrl, originalFileUrl)
-  return originalSourceUrl
+  const sourceRelativeUrl = urlToRelativeUrl(url, compiledFileUrl)
+  const sourceUrl = resolveUrl(sourceRelativeUrl, sourceFileUrl)
+  return sourceUrl
 }
 
 const resolveSourceUrl = ({ source, sourcemapFileUrl }) => {

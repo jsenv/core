@@ -13,7 +13,7 @@ export const compileFile = async ({
   jsenvDirectory,
   jsenvRemoteDirectory,
   ressourceGraph,
-  originalFileUrl,
+  sourceFileUrl,
   compiledFileUrl,
 
   request,
@@ -42,7 +42,7 @@ export const compileFile = async ({
         projectDirectoryUrl,
         jsenvRemoteDirectory,
         request,
-        originalFileUrl,
+        sourceFileUrl,
         compiledFileUrl,
 
         compileCacheStrategy,
@@ -90,15 +90,15 @@ export const compileFile = async ({
         compileResult,
         compileResultStatus,
         compiledFileUrl,
-        // originalFileUrl,
+        // sourceFileUrl,
       })
     }
-    const hmr = new URL(originalFileUrl).searchParams.get("hmr")
+    const hmr = new URL(sourceFileUrl).searchParams.get("hmr")
     if (hmr) {
       const body = await injectHmr({
         projectDirectoryUrl,
         ressourceGraph,
-        url: originalFileUrl,
+        url: sourceFileUrl,
         contentType,
         moduleFormat: compileProfile.moduleOutFormat,
         content,

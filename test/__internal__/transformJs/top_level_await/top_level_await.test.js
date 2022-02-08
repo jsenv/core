@@ -6,8 +6,8 @@ import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transf
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS_TRANSFORM_JS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const originalFileUrl = resolveUrl(`./top_level_await.js`, testDirectoryUrl)
-const originalFileContent = await readFile(originalFileUrl)
+const sourceFileUrl = resolveUrl(`./top_level_await.js`, testDirectoryUrl)
+const originalFileContent = await readFile(sourceFileUrl)
 const babelPluginMapFromFile = await loadBabelPluginMapFromFile({
   projectDirectoryUrl: testDirectoryUrl,
   // babelConfigFileUrl,
@@ -19,7 +19,7 @@ const { content } = await transformWithBabel({
     ...babelPluginMapFromFile,
   },
   moduleOutFormat: "systemjs",
-  url: originalFileUrl,
+  url: sourceFileUrl,
   content: originalFileContent,
 })
 const actual = content.indexOf("async function")
