@@ -1,4 +1,4 @@
-import { memoize } from "../../../memoize.js"
+import { memoize } from "../../memoize.js"
 
 const fetchPolyfill = async (...args) => {
   const { fetchUsingXHR } = await loadPolyfill()
@@ -6,7 +6,7 @@ const fetchPolyfill = async (...args) => {
 }
 
 const loadPolyfill = memoize(() =>
-  import("../../../browser_utils/fetch_using_xhr.js"),
+  import("../../browser_utils/fetch_using_xhr.js"),
 )
 
 export const fetchUrl =
