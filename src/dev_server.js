@@ -19,7 +19,7 @@ import {
 } from "./jsenv_file_urls.js"
 
 const EXPLORING_HTML_URL = new URL(
-  "./src/internal/dev_server/exploring/exploring.html",
+  "./src/internal/exploring/exploring.html",
   jsenvCoreDirectoryUrl,
 ).href
 

@@ -5,7 +5,7 @@ import { setAttributes, setStyles } from "./util/dom.js"
 /* eslint-disable no-undef */
 const TOOLBAR_HTML_RELATIVE_URL =
   typeof __TOOLBAR_BUILD_RELATIVE_URL_ === "undefined"
-    ? "./src/internal/dev_server/toolbar/toolbar.html"
+    ? "./src/internal/toolbar/toolbar.html"
     : __TOOLBAR_BUILD_RELATIVE_URL_
 /* eslint-enable no-undef */
 const jsenvLogoSvgUrl = new URL("./jsenv_logo.svg", import.meta.url)

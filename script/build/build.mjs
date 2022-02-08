@@ -48,11 +48,11 @@ await buildInternalFile({
   format: "global",
   buildDirectoryRelativeUrl: "./dist/event_source_client/",
   entryPoints: {
-    "./src/internal/dev_server/event_source_client/event_source_client.js":
+    "./src/internal/event_source_client/event_source_client.js":
       "event_source_client.js",
   },
   preservedDynamicImports: {
-    "./src/internal/dev_server/event_source_client/event_source_client.js": true,
+    "./src/internal/event_source_client/event_source_client.js": true,
   },
 })
 
@@ -60,7 +60,7 @@ await buildInternalFile({
   format: "systemjs",
   buildDirectoryRelativeUrl: "./dist/toolbar/",
   entryPoints: {
-    "./src/internal/dev_server/toolbar/toolbar.html": "toolbar.html",
+    "./src/internal/toolbar/toolbar.html": "toolbar.html",
   },
   cssConcatenation: true,
 })
@@ -70,11 +70,10 @@ await buildInternalFile({
   buildDirectoryRelativeUrl: "./dist/toolbar_injector/",
   importMapFileRelativeUrl: "./node_resolution.importmap",
   entryPoints: {
-    "./src/internal/dev_server/toolbar/toolbar_injector.js":
-      "toolbar_injector.js",
+    "./src/internal/toolbar/toolbar_injector.js": "toolbar_injector.js",
   },
   customCompilers: {
-    "./src/internal/dev_server/toolbar/toolbar_injector.js": ({ code }) => {
+    "./src/internal/toolbar/toolbar_injector.js": ({ code }) => {
       const content = code.replace(
         "__TOOLBAR_BUILD_RELATIVE_URL_",
         JSON.stringify(`dist/toolbar/toolbar.html`),

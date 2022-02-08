@@ -92,7 +92,7 @@ export const compileProxyFiles = {
 
 export const eventSourceClientFiles = {
   source_module: new URL(
-    "./src/internal/dev_server/event_source_client/event_source_client.js",
+    "./src/internal/event_source_client/event_source_client.js",
     jsenvCoreDirectoryUrl,
   ),
   // dist_module: '', // not yet available but will be soon
@@ -116,7 +116,7 @@ export const htmlSupervisorSetupFiles = {
 
 export const toolbarInjectorFiles = {
   source_module: new URL(
-    "./src/internal/dev_server/toolbar/toolbar_injector.js",
+    "./src/internal/toolbar/toolbar_injector.js",
     jsenvCoreDirectoryUrl,
   ),
   dist_classic: TOOLBAR_INJECTOR_DIST_URL,

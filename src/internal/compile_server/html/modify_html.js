@@ -69,10 +69,7 @@ export const modifyHtml = async ({
   }
   const isJsenvToolbar =
     url ===
-    new URL(
-      "./src/internal/dev_server/toolbar/toolbar.html",
-      jsenvCoreDirectoryUrl,
-    ).href
+    new URL("./src/internal/toolbar/toolbar.html", jsenvCoreDirectoryUrl).href
   if (isJsenvToolbar) {
     eventSourceClient = false
     htmlSupervisor = false
