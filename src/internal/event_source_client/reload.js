@@ -28,7 +28,7 @@ export const reloadDOMNodesUsingUrls = (urlsToReload) => {
       return
     }
     mutations.push(() => {
-      node[attributeName] = injectQuery(attribute, { t: Date.now() })
+      node[attributeName] = injectQuery(attribute, { hmr: Date.now() })
     })
   }
   Array.from(document.querySelector("script")).forEach((script) => {

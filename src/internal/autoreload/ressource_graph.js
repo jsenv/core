@@ -196,10 +196,18 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
           ...trace,
           dependentUrl,
         ])
-        if (dependentPropagationResult.declined) {
+        if (dependentPropagationResult.accepted) {
+          boundaries.push(...dependentPropagationResult.boundaries)
+          continue
+        }
+        if (
+          // declined explicitely by an other ressource, it must decline the whole update
+          dependentPropagationResult.declinedBy
+        ) {
           return dependentPropagationResult
         }
-        boundaries.push(...dependentPropagationResult.boundaries)
+        // declined by absence of boundary, we can keep searching
+        continue
       }
       if (boundaries.length === 0) {
         return {

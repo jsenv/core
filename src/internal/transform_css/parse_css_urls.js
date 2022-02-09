@@ -1,9 +1,14 @@
 import { applyPostCss } from "./apply_post_css.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
-export const parseCssUrls = async ({ url = "file:///file.css", content }) => {
+export const parseCssUrls = async ({
+  sourcemapMethod,
+  url = "file:///file.css",
+  content,
+}) => {
   const urlMentions = []
   await applyPostCss({
+    sourcemapMethod,
     plugins: [
       postCssPluginUrlVisitor({
         urlVisitor: (urlMention) => {

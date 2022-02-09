@@ -1,10 +1,10 @@
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 export const applyPostCss = async ({
+  sourcemapMethod = "comment",
   plugins,
   // https://github.com/postcss/postcss#options
   options = {},
-  sourcemapMethod = "comment",
   url,
   map,
   content,

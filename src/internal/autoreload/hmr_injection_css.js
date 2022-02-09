@@ -2,6 +2,7 @@ import { replaceCssUrls } from "@jsenv/core/src/internal/transform_css/replace_c
 
 export const injectHmrInCssUrls = async ({ ressourceGraph, url, content }) => {
   const result = await replaceCssUrls({
+    sourcemapMethod: null,
     url,
     urlVisitor: ({ specifier, replace }) => {
       const urlSpecifierWithHmr = ressourceGraph.injectHmrIntoUrlSpecifier(

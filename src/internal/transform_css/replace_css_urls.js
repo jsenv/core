@@ -9,6 +9,7 @@ import { applyPostCss } from "./apply_post_css.js"
 import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 
 export const replaceCssUrls = async ({
+  sourcemapMethod,
   cssConcatenation = false,
   cssConcatenationLoadImport,
   cssMinification = false,
@@ -19,6 +20,7 @@ export const replaceCssUrls = async ({
   content,
 } = {}) => {
   const result = await applyPostCss({
+    sourcemapMethod,
     plugins: [
       postCssPluginUrlVisitor({ urlVisitor }),
       ...(cssConcatenation
