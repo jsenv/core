@@ -7,6 +7,7 @@ import {
   pluginCORS,
   readRequestBody,
 } from "@jsenv/server"
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { urlToRelativeUrl, resolveDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
@@ -431,6 +432,42 @@ export const startCompileServer = async ({
       ...pluginRequestWaitingCheck({
         requestWaitingMs: 60 * 1000,
       }),
+    },
+    errorToResponse: (error, { request }) => {
+      const getResponseForError = () => {
+        if (error && error.asResponse) {
+          return error.asResponse()
+        }
+        if (error && error.statusText === "Unexpected directory operation") {
+          return {
+            status: 403,
+          }
+        }
+        return convertFileSystemErrorToResponseProperties(error)
+      }
+
+      const isInspectRequest = new URL(
+        request.ressource,
+        request.origin,
+      ).searchParams.has("__inspect__")
+      const response = getResponseForError()
+      if (!isInspectRequest) {
+        return response
+      }
+      const body = JSON.stringify({
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        body: response.body,
+      })
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body),
+        },
+        body,
+      }
     },
     requestToResponse: composeServices({
       ...customServices,

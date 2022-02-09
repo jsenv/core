@@ -58,12 +58,13 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         }
         let errorExposureInConsole = true
         if (e.name === "SyntaxError") {
-          improveErrorWithFetch = false
           errorExposureInConsole = false
         }
         if (improveErrorWithFetch) {
-          const url = new URL(src, window.location.href).href
-          const errorFromServer = await getErrorFromServer({ url, urlContext })
+          const errorFromServer = await getErrorFromServer({
+            src,
+            urlContext,
+          })
           if (errorFromServer) {
             executionResult.error = errorFromServer
           }
@@ -115,7 +116,10 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
   }
 }
 
-const getErrorFromServer = async ({ url, urlContext }) => {
+const getErrorFromServer = async ({ src, urlContext }) => {
+  const urlObject = new URL(src, window.location.href)
+  urlObject.searchParams.set("__inspect__", "")
+  const url = urlObject.href
   let response
   try {
     response = await fetchUrl(url)
@@ -123,13 +127,22 @@ const getErrorFromServer = async ({ url, urlContext }) => {
     e.code = "NETWORK_FAILURE"
     return e
   }
+  if (response.status !== 200) {
+    return null
+  }
+  const realResponseData = await response.json()
   const responseError = await getRessourceResponseError({
     urlContext,
     contentTypeExpected: "application/javascript",
     type: "js_module",
-    url,
+    url: urlObject.href,
     importerUrl: window.location.href,
-    response,
+    response: {
+      status: realResponseData.status,
+      statustext: realResponseData.statusText,
+      headers: realResponseData.headers,
+      json: () => JSON.parse(realResponseData.body),
+    },
   })
   return responseError
 }

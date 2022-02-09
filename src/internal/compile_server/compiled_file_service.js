@@ -1,5 +1,4 @@
 import { fetchFileSystem, urlToContentType } from "@jsenv/server"
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
 import {
   resolveUrl,
@@ -156,55 +155,44 @@ export const createCompiledFileService = ({
       sourceFileRelativeUrl,
       compileDirectoryUrl,
     )
-    try {
-      const response = await compileFile({
-        compileServerOperation,
-        logger,
 
-        projectDirectoryUrl,
-        jsenvDirectory,
-        jsenvRemoteDirectory,
-        sourceFileUrl,
-        compiledFileUrl,
+    const response = await compileFile({
+      compileServerOperation,
+      logger,
 
-        request,
-        pushResponse,
+      projectDirectoryUrl,
+      jsenvDirectory,
+      jsenvRemoteDirectory,
+      sourceFileUrl,
+      compiledFileUrl,
 
-        compileCacheStrategy,
-        compile: ({ content }) => {
-          return compiler({
-            logger,
+      request,
+      pushResponse,
 
-            projectDirectoryUrl,
-            ressourceGraph,
-            jsenvFileSelector,
-            jsenvRemoteDirectory,
-            jsenvDirectoryRelativeUrl,
-            url: sourceFileUrl,
-            compiledUrl: compiledFileUrl,
-            request,
+      compileCacheStrategy,
+      compile: ({ content }) => {
+        return compiler({
+          logger,
 
-            compileProfile,
-            compileId,
+          projectDirectoryUrl,
+          ressourceGraph,
+          jsenvFileSelector,
+          jsenvRemoteDirectory,
+          jsenvDirectoryRelativeUrl,
+          url: sourceFileUrl,
+          compiledUrl: compiledFileUrl,
+          request,
 
-            sourcemapMethod,
-            sourcemapExcludeSources,
-            content,
-          })
-        },
-      })
-      return handleResponse(response)
-    } catch (error) {
-      if (error && error.asResponse) {
-        return error.asResponse()
-      }
-      if (error && error.statusText === "Unexpected directory operation") {
-        return {
-          status: 403,
-        }
-      }
-      return convertFileSystemErrorToResponseProperties(error)
-    }
+          compileProfile,
+          compileId,
+
+          sourcemapMethod,
+          sourcemapExcludeSources,
+          content,
+        })
+      },
+    })
+    return handleResponse(response)
   }
 }
 

@@ -8,6 +8,7 @@ import {
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
   assignHtmlNodeAttributes,
+  getHtmlNodeLocation,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlSupervisorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 
@@ -92,6 +93,7 @@ export const superviseScripts = ({
         type,
         textContent: textNode.value,
         inlineSrc,
+        ...getHtmlNodeLocation(script),
       })
       assignHtmlNodeAttributes(script, { "content-src": inlineSrc })
       setHtmlNodeText(

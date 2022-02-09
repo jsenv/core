@@ -5,7 +5,6 @@ const fetchNative = async (url, { mode = "cors", ...options } = {}) => {
     mode,
     ...options,
   })
-
   return {
     url: response.url,
     status: response.status,

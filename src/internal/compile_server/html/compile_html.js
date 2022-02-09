@@ -322,7 +322,7 @@ const transformHtmlScript = async ({
     // when systemjs will try to instantiate to script it
     // will re-throw this syntax error.
     // Thanks to this we see the syntax error in the
-    // document and livereloading still works
+    // document and autoreload still works
     // because we gracefully handle this error
     if (e.code === "PARSE_ERROR") {
       return [

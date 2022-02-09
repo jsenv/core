@@ -1,5 +1,11 @@
 import { urlToOrigin, urlToRessource, urlToExtension } from "@jsenv/filesystem"
 
+export const urlWithoutSearch = (url) => {
+  const urlObject = new URL(url)
+  urlObject.search = ""
+  return urlObject.href
+}
+
 export const setUrlExtension = (url, extension) => {
   const origin = urlToOrigin(url)
   const currentExtension = urlToExtension(url)
