@@ -35,7 +35,5 @@ export const modifyJs = async ({
     importMetaHotAcceptDependencies: metadata.importMetaHotAcceptDependencies,
   })
   content = transformResult.content
-  return {
-    content,
-  }
+  return content
 }

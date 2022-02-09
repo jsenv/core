@@ -8,5 +8,5 @@ export const modifyCss = async ({ ressourceGraph, url, content }) => {
     url,
     urlMentions,
   })
-  return { content }
+  return content
 }

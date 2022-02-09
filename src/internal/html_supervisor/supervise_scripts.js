@@ -1,4 +1,4 @@
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/filesystem"
+import { urlToFilename } from "@jsenv/filesystem"
 
 import { injectQueryIntoUrlSpecifier } from "@jsenv/core/src/internal/url_utils.js"
 import {
@@ -13,17 +13,15 @@ import {
 import { htmlSupervisorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 
 export const superviseScripts = ({
+  sourceFileFetcher,
   jsenvFileSelector,
-  jsenvRemoteDirectory,
   url,
   canUseScriptTypeModule,
   scripts,
-  generateSrcForInlineScript = (inlineScriptId) => {
-    return `./${urlToFilename(url)}__inline__${inlineScriptId}.js`
-  },
   htmlContent,
 }) => {
   const supervisedScripts = []
+  const inlineRessources = []
   scripts.forEach((script) => {
     const dataInjectedAttribute = getHtmlNodeAttributeByName(
       script,
@@ -36,15 +34,6 @@ export const superviseScripts = ({
     const type = typeAttribute ? typeAttribute.value : "application/javascript"
     const srcAttribute = getHtmlNodeAttributeByName(script, "src")
     let src = srcAttribute ? srcAttribute.value : undefined
-    if (
-      src &&
-      jsenvRemoteDirectory.isRemoteUrl(src) &&
-      !jsenvRemoteDirectory.isPreservedUrl(src)
-    ) {
-      const fileUrl = jsenvRemoteDirectory.fileUrlFromRemoteUrl(src)
-      const fileUrlRelativeToHtml = urlToRelativeUrl(fileUrl, url)
-      src = `./${fileUrlRelativeToHtml}`
-    }
     const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
     const integrity = integrityAttribute ? integrityAttribute.value : undefined
     const crossoriginAttribute = getHtmlNodeAttributeByName(
@@ -56,7 +45,12 @@ export const superviseScripts = ({
       : undefined
     const textNode = getHtmlNodeTextNode(script)
     if (src) {
-      if (type !== "module") {
+      src = sourceFileFetcher.asFileUrlSpecifierIfRemote(src, url)
+      if (type === "module") {
+        if (!canUseScriptTypeModule) {
+          removeHtmlNodeAttributeByName(script, "type")
+        }
+      } else {
         src = injectQueryIntoUrlSpecifier(src, { script: "" })
       }
       supervisedScripts.push({
@@ -83,24 +77,31 @@ export const superviseScripts = ({
     }
     if (textNode) {
       const inlineScriptId = getIdForInlineHtmlNode(script, scripts)
-      let inlineSrc = generateSrcForInlineScript(inlineScriptId)
-      if (type !== "module") {
-        inlineSrc = injectQueryIntoUrlSpecifier(inlineSrc, {
-          script: "",
-        })
+      let inlineSrc = `./${urlToFilename(url)}__inline__${inlineScriptId}.js`
+      if (type === "module") {
+        if (!canUseScriptTypeModule) {
+          removeHtmlNodeAttributeByName(script, "type")
+        }
+      } else {
+        inlineSrc = injectQueryIntoUrlSpecifier(inlineSrc, { script: "" })
       }
       const { line, column } = getHtmlNodeLocation(script)
-      supervisedScripts.push({
-        script,
-        type,
-        textContent: textNode.value,
-        inlineSrc,
+      inlineRessources.push({
         inlineUrlSite: {
           url,
           line,
           column,
           source: htmlContent,
         },
+        specifier: inlineSrc,
+        contentType: "application/javascript",
+        content: textNode.value,
+      })
+      supervisedScripts.push({
+        script,
+        type,
+        textContent: textNode.value,
+        inlineSrc,
       })
       assignHtmlNodeAttributes(script, { "content-src": inlineSrc })
       setHtmlNodeText(
@@ -115,6 +116,7 @@ export const superviseScripts = ({
       return
     }
   })
+  sourceFileFetcher.updateInlineRessources(url, inlineRessources)
   return supervisedScripts
 }
 

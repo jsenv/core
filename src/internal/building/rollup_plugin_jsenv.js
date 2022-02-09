@@ -26,7 +26,7 @@ import { createUrlContext } from "@jsenv/core/src/internal/url_context.js"
 import { createImportResolverForNode } from "@jsenv/core/src/internal/import_resolution/import_resolver_node.js"
 import { createImportResolverForImportmap } from "@jsenv/core/src/internal/import_resolution/import_resolver_importmap.js"
 import { getDefaultImportmap } from "@jsenv/core/src/internal/import_resolution/importmap_default.js"
-import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
+import { createSourceFileFetcher } from "@jsenv/core/src/internal/source_file_fetcher/source_file_fetcher.js"
 import { injectQuery } from "@jsenv/core/src/internal/url_utils.js"
 import { shakeBabelPluginMap } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compile_profile.js"
 
@@ -116,7 +116,7 @@ export const createRollupPlugins = async ({
       !compileProfile.missingFeatures["import_assertion_type_css"],
   }
 
-  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+  const sourceFileFetcher = createSourceFileFetcher({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     preservedUrls,
@@ -181,7 +181,7 @@ export const createRollupPlugins = async ({
   })
 
   const urlFetcher = createUrlFetcher({
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
     asOriginalUrl,
     asProjectUrl,
     applyUrlMappings,
@@ -205,7 +205,7 @@ export const createRollupPlugins = async ({
 
   const urlMetaGetter = createUrlMetaGetter({
     projectDirectoryUrl,
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
     preservedUrls,
   })
 
@@ -283,7 +283,7 @@ export const createRollupPlugins = async ({
       async renderChunk(code, chunk) {
         const result = await transformWithBabel({
           projectDirectoryUrl,
-          jsenvRemoteDirectory,
+          sourceFileFetcher,
           url: chunk.facadeModuleId
             ? asOriginalUrl(chunk.facadeModuleId)
             : resolveUrl(chunk.fileName, buildDirectoryUrl),
@@ -657,7 +657,7 @@ export const createRollupPlugins = async ({
               format,
               systemJsUrl,
               projectDirectoryUrl,
-              jsenvRemoteDirectory,
+              sourceFileFetcher,
               asProjectUrl,
               asOriginalUrl,
               asOriginalServerUrl,
@@ -777,9 +777,9 @@ export const createRollupPlugins = async ({
             const urlMeta = urlMetaGetter(ressourceOriginalUrl)
             if (urlMeta.preserve) {
               resolutionResult.isExternal = true
-            } else if (jsenvRemoteDirectory.isRemoteUrl(ressourceOriginalUrl)) {
+            } else if (sourceFileFetcher.isRemoteUrl(ressourceOriginalUrl)) {
               const fileUrl =
-                jsenvRemoteDirectory.fileUrlFromRemoteUrl(ressourceOriginalUrl)
+                sourceFileFetcher.fileUrlFromRemoteUrl(ressourceOriginalUrl)
               const compiledFileUrl = asCompiledServerUrl(fileUrl)
               resolutionResult.url = compiledFileUrl
             }
@@ -828,7 +828,7 @@ export const createRollupPlugins = async ({
                   const content = String(ressource.bufferBeforeBuild)
                   const transformResult = await transformWithBabel({
                     projectDirectoryUrl,
-                    jsenvRemoteDirectory,
+                    sourceFileFetcher,
                     url,
                     babelPluginMap,
                     // moduleOutFormat: format // we are compiling for rollup output must be "esmodule"
@@ -1006,7 +1006,7 @@ export const createRollupPlugins = async ({
       if (urlMeta.preserve) {
         if (urlMeta.remote) {
           specifier =
-            jsenvRemoteDirectory.remoteUrlFromFileUrl(specifierOriginalUrl)
+            sourceFileFetcher.remoteUrlFromFileUrl(specifierOriginalUrl)
         }
         onExternal({
           specifier,
@@ -1096,17 +1096,11 @@ export const createRollupPlugins = async ({
       // if (loadResult.url) url = loadResult.url
       const map = loadResult.map
       const content = loadResult.content
-      if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalUrl)) {
+      if (sourceFileFetcher.isFileUrlForRemoteUrl(originalUrl)) {
         map.sources.forEach((source, index) => {
-          if (jsenvRemoteDirectory.isRemoteUrl(source)) {
-            const sourceFileUrl =
-              jsenvRemoteDirectory.fileUrlFromRemoteUrl(source)
-            const sourceRelativeUrl = urlToRelativeUrl(
-              sourceFileUrl,
-              projectUrl,
-            )
-            map.sources[index] = sourceRelativeUrl
-          }
+          const sourceUrlSpecifier =
+            sourceFileFetcher.asFileUrlSpecifierIfRemote(source, projectUrl)
+          map.sources[index] = sourceUrlSpecifier
         })
       }
       const importer = urlImporterMap[url]
@@ -1447,9 +1441,9 @@ export const createRollupPlugins = async ({
           urlFetcher.getUrlBeforeRedirection(sourceServerUrl) || sourceServerUrl
         const sourceProjectUrl = asProjectUrl(sourceUrl)
 
-        if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceProjectUrl)) {
+        if (sourceFileFetcher.isFileUrlForRemoteUrl(sourceProjectUrl)) {
           const remoteUrl =
-            jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceProjectUrl)
+            sourceFileFetcher.remoteUrlFromFileUrl(sourceProjectUrl)
           return remoteUrl
         }
         if (sourceProjectUrl) {
@@ -1565,9 +1559,9 @@ export const createRollupPlugins = async ({
           // }
         } else {
           const originalProjectUrl = asOriginalUrl(ressourceUrl)
-          if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(originalProjectUrl)) {
+          if (sourceFileFetcher.isFileUrlForRemoteUrl(originalProjectUrl)) {
             const remoteUrl =
-              jsenvRemoteDirectory.remoteUrlFromFileUrl(originalProjectUrl)
+              sourceFileFetcher.remoteUrlFromFileUrl(originalProjectUrl)
             buildMappings[remoteUrl] = jsRessource.buildRelativeUrl
           } else {
             const originalProjectRelativeUrl = urlToRelativeUrl(
@@ -1848,14 +1842,14 @@ const normalizeRollupResolveReturnValue = (resolveReturnValue) => {
 
 const createUrlMetaGetter = ({
   projectDirectoryUrl,
-  jsenvRemoteDirectory,
+  sourceFileFetcher,
   preservedUrls,
 }) => {
   const preservedFileUrls = {}
   const remoteFileUrls = {}
   Object.keys(preservedUrls).forEach((pattern) => {
-    if (jsenvRemoteDirectory.isRemoteUrl(pattern)) {
-      const fileUrlPattern = jsenvRemoteDirectory.fileUrlFromRemoteUrl(pattern)
+    if (sourceFileFetcher.isRemoteUrl(pattern)) {
+      const fileUrlPattern = sourceFileFetcher.fileUrlFromRemoteUrl(pattern)
       preservedFileUrls[fileUrlPattern] = preservedUrls[pattern]
       remoteFileUrls[fileUrlPattern] = true
     }

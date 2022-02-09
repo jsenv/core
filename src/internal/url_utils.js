@@ -1,6 +1,6 @@
 import { urlToOrigin, urlToRessource, urlToExtension } from "@jsenv/filesystem"
 
-export const urlWithoutSearch = (url) => {
+export const asUrlWithoutSearch = (url) => {
   const urlObject = new URL(url)
   urlObject.search = ""
   return urlObject.href

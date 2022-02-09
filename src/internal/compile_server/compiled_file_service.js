@@ -12,7 +12,7 @@ import { redirectorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js
 import { serverUrlToCompileInfo } from "@jsenv/core/src/internal/url_conversion.js"
 import { injectQuery } from "../url_utils.js"
 
-import { urlIsCompilationAsset } from "./jsenv_directory/compile_asset.js"
+import { inferCompilationAssetFromUrl } from "./jsenv_directory/compile_asset.js"
 import { compileFile } from "./compile_file.js"
 
 export const createCompiledFileService = ({
@@ -20,11 +20,11 @@ export const createCompiledFileService = ({
   logger,
 
   projectDirectoryUrl,
+  ressourceGraph,
+  sourceFileFetcher,
   jsenvFileSelector,
   jsenvDirectoryRelativeUrl,
   jsenvDirectory,
-  jsenvRemoteDirectory,
-  ressourceGraph,
 
   customCompilers,
   jsenvCompilers,
@@ -135,7 +135,8 @@ export const createCompiledFileService = ({
         timing: response.timing,
       }
     }
-    if (urlIsCompilationAsset(requestUrl)) {
+    const compilationAsset = inferCompilationAssetFromUrl(requestUrl)
+    if (compilationAsset) {
       const response = await fetchFileSystem(
         new URL(request.ressource.slice(1), projectDirectoryUrl),
         {
@@ -155,14 +156,13 @@ export const createCompiledFileService = ({
       sourceFileRelativeUrl,
       compileDirectoryUrl,
     )
-
     const response = await compileFile({
       compileServerOperation,
       logger,
 
       projectDirectoryUrl,
+      sourceFileFetcher,
       jsenvDirectory,
-      jsenvRemoteDirectory,
       sourceFileUrl,
       compiledFileUrl,
 
@@ -176,8 +176,8 @@ export const createCompiledFileService = ({
 
           projectDirectoryUrl,
           ressourceGraph,
+          sourceFileFetcher,
           jsenvFileSelector,
-          jsenvRemoteDirectory,
           jsenvDirectoryRelativeUrl,
           url: sourceFileUrl,
           compiledUrl: compiledFileUrl,

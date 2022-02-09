@@ -16,7 +16,6 @@
 import { resolveUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
-import { urlWithoutSearch } from "@jsenv/core/src/internal/url_utils.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
@@ -44,7 +43,7 @@ export const modifyHtml = async ({
   logger,
   projectDirectoryUrl,
   ressourceGraph,
-  jsenvRemoteDirectory,
+  sourceFileFetcher,
   jsenvFileSelector,
 
   preserveHtmlSourceFiles,
@@ -56,11 +55,8 @@ export const modifyHtml = async ({
   url,
   content,
 }) => {
-  url = urlWithoutSearch(url)
   const htmlAst = parseHtmlString(content)
   const { scripts } = parseHtmlAstRessources(htmlAst)
-  const artifacts = []
-
   if (!preserveHtmlSourceFiles) {
     await mutateImportmapScripts({
       logger,
@@ -97,23 +93,13 @@ export const modifyHtml = async ({
     )
   })
   if (htmlSupervisor) {
-    const supervisedScripts = superviseScripts({
-      jsenvRemoteDirectory,
+    superviseScripts({
+      sourceFileFetcher,
       jsenvFileSelector,
       url,
       canUseScriptTypeModule: true,
       scripts,
       htmlContent: content,
-    })
-    supervisedScripts.forEach(({ inlineSrc, inlineUrlSite, textContent }) => {
-      if (inlineSrc) {
-        artifacts.push({
-          inlineUrlSite,
-          specifier: inlineSrc,
-          contentType: "application/javascript",
-          content: textContent,
-        })
-      }
     })
   }
   if (!preserveHtmlSourceFiles) {
@@ -133,10 +119,7 @@ export const modifyHtml = async ({
       urlMentions,
     })
   }
-  return {
-    content: htmlModified,
-    artifacts,
-  }
+  return htmlModified
 }
 
 const forceInlineRessources = async ({

@@ -1,13 +1,20 @@
 import { urlToFilename, urlToOrigin, urlToPathname } from "@jsenv/filesystem"
 
-export const urlIsCompilationAsset = (url) => {
+export const inferCompilationAssetFromUrl = (url) => {
   const filename = urlToFilename(url)
   // sourcemap are not inside the asset folder because
   // of https://github.com/microsoft/vscode-chrome-debug-core/issues/544
   if (filename.endsWith(".map")) {
-    return true
+    return {
+      type: "sourcemap",
+    }
   }
-  return filename.includes("__asset__")
+  if (filename.includes("__asset__")) {
+    return {
+      type: "something",
+    }
+  }
+  return null
 }
 
 export const getMetaJsonFileUrl = (compileFileUrl) =>

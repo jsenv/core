@@ -18,134 +18,66 @@
  * qui se charge de servir les fichiers inlines
  */
 
-import { resolveUrl } from "@jsenv/filesystem"
-
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
-import { urlWithoutSearch } from "@jsenv/core/src/internal/url_utils.js"
 import { injectHmr } from "@jsenv/core/src/internal/autoreload/hmr_injection.js"
 
 export const createSourceFileService = ({
   projectDirectoryUrl,
   ressourceGraph,
-  jsenvRemoteDirectory,
-  projectFileCacheStrategy,
+  sourceFileFetcher,
   modifiers,
 }) => {
-  const ressourceArtifacts = createRessourceArtifacts()
-
   return async (request) => {
     const urlObject = new URL(request.ressource.slice(1), projectDirectoryUrl)
     const hmr = urlObject.searchParams.get("hmr")
     urlObject.searchParams.delete("hmr")
     const url = urlObject.href
 
-    const handleResponse = async (response, { inlineUrlSite } = {}) => {
-      if (response.status !== 200) {
-        return response
-      }
-      const responseContentType = response.headers["content-type"]
-      const modifier = modifiers[responseContentType]
-      if (!modifier) {
-        return response
-      }
-      const responseBodyAsString =
-        typeof response.body === "string"
-          ? response.body
-          : String(await readNodeStream(response.body))
-      const { content, artifacts = [] } = await modifier({
-        url,
-        inlineUrlSite,
-        content: responseBodyAsString,
-      })
-      ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
-      if (!hmr) {
-        return {
-          ...response,
-          headers: {
-            ...response.headers,
-            "content-length": Buffer.byteLength(content),
-          },
-          body: content,
-        }
-      }
-      const body = await injectHmr({
-        projectDirectoryUrl,
-        ressourceGraph,
-        url,
-        contentType: responseContentType,
-        moduleFormat: "esmodule",
-        content,
-      })
-      return {
-        status: 200,
-        headers: {
-          "content-type": responseContentType,
-          "content-length": Buffer.byteLength(body),
-        },
-        body,
-      }
-    }
-    // artifacts are inline ressource found in HTML (inline scripts, styles, ...)
-    const artifact = ressourceArtifacts.getArtifactForUrl(url)
-    if (artifact) {
-      const response = {
-        status: 200,
-        headers: {
-          "content-type": artifact.contentType,
-          "content-length": Buffer.byteLength(artifact.content),
-        },
-        body: artifact.content,
-      }
-      return handleResponse(response, {
-        inlineUrlSite: artifact.inlineUrlSite,
-      })
-    }
-    const response = await jsenvRemoteDirectory.fetchUrl(url, {
+    const response = await sourceFileFetcher.fetchAsSourceFile(url, {
       request,
-      projectFileCacheStrategy,
     })
-    return handleResponse(response)
-  }
-}
-
-/**
- * artifacts can be represented as below
- * "file:///project_directory/index.html.10.js": {
- *   "ownerUrl": "file:///project_directory/index.html",
- *   "contentType": "application/javascript",
- *   "content": "console.log(`Hello world`)"
- * }
- * It is used to serve inline ressources as if they where inside a file
- * Every time the html file is retransformed, the list of inline ressources inside it
- * are deleted so that when html file and page is reloaded, the inline ressources are updated
- */
-const createRessourceArtifacts = () => {
-  const artifactMap = new Map()
-
-  const getArtifactForUrl = (url) => {
-    url = urlWithoutSearch(url)
-    const artifact = artifactMap.get(urlWithoutSearch(url))
-    return artifact
-  }
-
-  const updateRessourceArtifacts = (ownerUrl, artifacts) => {
-    artifactMap.forEach((artifact, artifactUrl) => {
-      if (artifact.ownerUrl === ownerUrl) {
-        artifactMap.delete(artifactUrl)
+    if (response.status !== 200) {
+      return response
+    }
+    const responseContentType = response.headers["content-type"]
+    const modifier = modifiers[responseContentType]
+    if (!modifier) {
+      return response
+    }
+    const responseBodyAsString =
+      typeof response.body === "string"
+        ? response.body
+        : String(await readNodeStream(response.body))
+    const content = await modifier({
+      sourceFileFetcher,
+      url,
+      content: responseBodyAsString,
+    })
+    if (!hmr) {
+      return {
+        ...response,
+        headers: {
+          ...response.headers,
+          "content-length": Buffer.byteLength(content),
+        },
+        body: content,
       }
+    }
+    const body = await injectHmr({
+      projectDirectoryUrl,
+      ressourceGraph,
+      url,
+      contentType: responseContentType,
+      moduleFormat: "esmodule",
+      content,
     })
-    artifacts.forEach(({ specifier, contentType, content, inlineUrlSite }) => {
-      artifactMap.set(resolveUrl(specifier, ownerUrl), {
-        ownerUrl,
-        inlineUrlSite,
-        contentType,
-        content,
-      })
-    })
-  }
-
-  return {
-    getArtifactForUrl,
-    updateRessourceArtifacts,
+    return {
+      status: 200,
+      headers: {
+        "content-type": responseContentType,
+        "content-length": Buffer.byteLength(body),
+      },
+      body,
+    }
   }
 }

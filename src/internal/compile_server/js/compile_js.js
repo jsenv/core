@@ -8,7 +8,7 @@ import { shakeBabelPluginMap } from "../jsenv_directory/compile_profile.js"
 export const compileJavascript = async ({
   projectDirectoryUrl,
   ressourceGraph,
-  jsenvRemoteDirectory,
+  sourceFileFetcher,
   url,
   compiledUrl,
 
@@ -29,7 +29,7 @@ export const compileJavascript = async ({
   }
   const transformResult = await transformWithBabel({
     projectDirectoryUrl,
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
     url,
     compiledUrl,
 
@@ -65,7 +65,7 @@ export const compileJavascript = async ({
     },
     {
       projectDirectoryUrl,
-      jsenvRemoteDirectory,
+      sourceFileFetcher,
       sourceFileUrl: url,
       compiledFileUrl: compiledUrl,
       // sourcemap are not inside the asset folder because

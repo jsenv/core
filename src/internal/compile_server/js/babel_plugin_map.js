@@ -14,7 +14,7 @@ import { babelPluginReplaceExpressions } from "./babel_plugin_replace_expression
 export const loadBabelPluginMap = async ({
   logger,
   projectDirectoryUrl,
-  jsenvRemoteDirectory,
+  sourceFileFetcher,
 
   babelPluginMap,
   babelConfigFile,
@@ -74,7 +74,7 @@ export const loadBabelPluginMap = async ({
     "metadata-url-mentions": [babelPluginMetadataUrlMentions],
     "proxy-external-urls": [
       babelPluginProxyExternalUrls,
-      { jsenvRemoteDirectory },
+      { sourceFileFetcher },
     ],
     // When code should be compatible with browsers, ensure
     // process.env.NODE_ENV is replaced to be executable in a browser by forcing

@@ -8,7 +8,7 @@ export const compileFile = async ({
 
   projectDirectoryUrl,
   jsenvDirectory,
-  jsenvRemoteDirectory,
+  sourceFileFetcher,
   sourceFileUrl,
   compiledFileUrl,
 
@@ -33,7 +33,7 @@ export const compileFile = async ({
     await reuseOrCreateCompiledFile({
       logger,
       projectDirectoryUrl,
-      jsenvRemoteDirectory,
+      sourceFileFetcher,
       request,
       sourceFileUrl,
       compiledFileUrl,

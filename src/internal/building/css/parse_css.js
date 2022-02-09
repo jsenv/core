@@ -21,7 +21,7 @@ export const parseCssRessource = async (
   cssRessource,
   { notifyReferenceFound },
   {
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
     asProjectUrl,
     asOriginalUrl,
     minify,
@@ -175,9 +175,9 @@ export const parseCssRessource = async (
     if (map.sources) {
       map.sources = map.sources.map((source) => {
         const sourceUrl = resolveUrl(source, cssOriginalUrl)
-        if (jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceUrl)) {
+        if (sourceFileFetcher.isFileUrlForRemoteUrl(sourceUrl)) {
           const sourceRemoteUrl =
-            jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceUrl)
+            sourceFileFetcher.remoteUrlFromFileUrl(sourceUrl)
           return sourceRemoteUrl
         }
         const sourceUrlRelativeToSourceMap = urlToRelativeUrl(

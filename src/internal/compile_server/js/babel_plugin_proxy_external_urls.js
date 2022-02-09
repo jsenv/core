@@ -1,11 +1,8 @@
-import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/filesystem"
+import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
 import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
 
-export const babelPluginProxyExternalUrls = (
-  babel,
-  { jsenvRemoteDirectory },
-) => {
+export const babelPluginProxyExternalUrls = (babel, { sourceFileFetcher }) => {
   return {
     name: "proxy-external-urls",
     visitor: {
@@ -15,21 +12,13 @@ export const babelPluginProxyExternalUrls = (
           const specifierNode = specifierPath.node
           if (specifierNode.type === "StringLiteral") {
             const specifier = specifierNode.value
-            if (
-              jsenvRemoteDirectory.isRemoteUrl(specifier) &&
-              !jsenvRemoteDirectory.isPreservedUrl(specifier)
-            ) {
-              const fileUrl =
-                jsenvRemoteDirectory.fileUrlFromRemoteUrl(specifier)
-              const importerFileUrl = fileSystemPathToUrl(state.filename)
-              const urlRelativeToProject = urlToRelativeUrl(
-                fileUrl,
-                importerFileUrl,
-              )
-              const specifierProxy = `./${urlRelativeToProject}`
-              specifierPath.replaceWith(
-                babel.types.stringLiteral(specifierProxy),
-              )
+            const importerFileUrl = fileSystemPathToUrl(state.filename)
+            const newSpecifier = sourceFileFetcher.asFileUrlSpecifierIfRemote(
+              specifier,
+              importerFileUrl,
+            )
+            if (newSpecifier !== specifier) {
+              specifierPath.replaceWith(babel.types.stringLiteral(newSpecifier))
             }
           }
         })

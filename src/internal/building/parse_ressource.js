@@ -28,7 +28,7 @@ export const parseRessource = async (
   notifiers,
   {
     projectDirectoryUrl,
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
     format,
     systemJsUrl,
     asProjectUrl,
@@ -126,7 +126,7 @@ export const parseRessource = async (
 
   if (contentType === "text/css") {
     return parseCssRessource(ressource, notifiers, {
-      jsenvRemoteDirectory,
+      sourceFileFetcher,
       asProjectUrl,
       asOriginalUrl,
       asOriginalServerUrl,
@@ -158,7 +158,7 @@ export const parseRessource = async (
   ) {
     return parseJsRessource(ressource, notifiers, {
       projectDirectoryUrl,
-      jsenvRemoteDirectory,
+      sourceFileFetcher,
       asProjectUrl,
       asOriginalUrl,
       asOriginalServerUrl,

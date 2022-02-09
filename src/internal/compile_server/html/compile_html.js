@@ -1,5 +1,3 @@
-import { resolveUrl, urlToFilename } from "@jsenv/filesystem"
-
 import {
   injectBeforeFirstHeadScript,
   parseHtmlString,
@@ -9,7 +7,6 @@ import {
   removeHtmlNodeAttribute,
   visitHtmlAst,
   assignHtmlNodeAttributes,
-  removeHtmlNodeAttributeByName,
   createHtmlNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
@@ -20,30 +17,24 @@ import {
   updateHtmlHotMeta,
 } from "@jsenv/core/src/internal/autoreload/hot_html.js"
 
-import { compileJavascript } from "../js/compile_js.js"
-
 export const compileHtml = async ({
   // cancellationToken,
   logger,
   projectDirectoryUrl,
   ressourceGraph,
+  sourceFileFetcher,
   jsenvFileSelector,
-  jsenvRemoteDirectory,
   jsenvDirectoryRelativeUrl,
   url,
   compiledUrl,
 
   compileProfile,
   compileId,
-  babelPluginMap,
-  topLevelAwait,
-  importMetaHot,
 
   eventSourceClient,
   htmlSupervisor,
   toolbar,
 
-  sourcemapMethod,
   content,
 }) => {
   const compileDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}${compileId}/`
@@ -79,11 +70,7 @@ export const compileHtml = async ({
 
   const { scripts } = parseHtmlAstRessources(htmlAst)
 
-  const htmlAssetGenerators = []
   const htmlMutations = []
-  const addHtmlAssetGenerator = (htmlAssetGenerator) => {
-    htmlAssetGenerators.push(htmlAssetGenerator)
-  }
   const addHtmlMutation = (htmlMutation) => {
     htmlMutations.push(htmlMutation)
   }
@@ -116,56 +103,15 @@ export const compileHtml = async ({
   }
 
   const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
-  const supervisedScripts = superviseScripts({
-    jsenvRemoteDirectory,
+  superviseScripts({
+    sourceFileFetcher,
     jsenvFileSelector,
     url: compiledUrl,
     canUseScriptTypeModule,
     scripts,
-    generateSrcForInlineScript: (inlineScriptId) => {
-      return `./${urlToFilename(url)}__asset__${inlineScriptId}.js`
-    },
     htmlContent: content,
   })
-  supervisedScripts.forEach(({ script, type, textContent, inlineSrc }) => {
-    if (type === "module" && !canUseScriptTypeModule) {
-      removeHtmlNodeAttributeByName(script, "type")
-    }
-    if (inlineSrc) {
-      const inlineScriptSourceUrl = resolveUrl(inlineSrc, url)
-      const inlineScriptCompiledUrl = resolveUrl(inlineSrc, compiledUrl)
-      addHtmlAssetGenerator(async () => {
-        return transformHtmlScript({
-          projectDirectoryUrl,
-          ressourceGraph,
-          jsenvRemoteDirectory,
-          url: inlineScriptSourceUrl,
-          compiledUrl: inlineScriptCompiledUrl,
-          isInline: true,
 
-          type: type === "module" ? "module" : "script",
-          compileProfile,
-          babelPluginMap,
-          topLevelAwait,
-          importMetaHot,
-
-          sourcemapMethod,
-          content: textContent,
-        })
-      })
-    }
-  })
-
-  await Promise.all(
-    htmlAssetGenerators.map(async (htmlAssetGenerator) => {
-      const assetInfos = await htmlAssetGenerator()
-      assetInfos.forEach((assetInfo) => {
-        assets.push(assetInfo.url)
-        assetsContent.push(assetInfo.content)
-      })
-    }),
-  )
-  htmlAssetGenerators.length = 0
   htmlMutations.forEach((htmlMutation) => {
     htmlMutation()
   })
@@ -230,74 +176,6 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
       // }
     }),
   )
-}
-
-const transformHtmlScript = async ({
-  projectDirectoryUrl,
-  ressourceGraph,
-  jsenvRemoteDirectory,
-  url,
-  compiledUrl,
-  isInline,
-
-  type,
-  compileProfile,
-  babelPluginMap,
-  topLevelAwait,
-  importMetaHot,
-
-  sourcemapMethod,
-  content,
-}) => {
-  try {
-    const compileResult = await compileJavascript({
-      projectDirectoryUrl,
-      ressourceGraph,
-      jsenvRemoteDirectory,
-      url,
-      compiledUrl,
-
-      type,
-      compileProfile,
-      babelPluginMap,
-      topLevelAwait,
-      importMetaHot,
-
-      sourcemapMethod,
-      content,
-    })
-    content = compileResult.content
-    const files = []
-    files.push({
-      url: compiledUrl,
-      content,
-    })
-    compileResult.assets.forEach((url, index) => {
-      files.push({
-        url,
-        content: compileResult.assetsContent[index],
-      })
-    })
-    return files
-  } catch (e) {
-    // If there is a syntax error in inline script
-    // we put the raw script without transformation.
-    // when systemjs will try to instantiate to script it
-    // will re-throw this syntax error.
-    // Thanks to this we see the syntax error in the
-    // document and autoreload still works
-    // because we gracefully handle this error
-    if (e.code === "PARSE_ERROR") {
-      return [
-        {
-          // inline script do actually exists on the filesystem
-          url: isInline ? compiledUrl : url,
-          content,
-        },
-      ]
-    }
-    throw e
-  }
 }
 
 const collectRessourceHints = (htmlAst) => {

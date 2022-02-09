@@ -16,8 +16,8 @@ import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
 } from "@jsenv/core/src/jsenv_file_urls.js"
-import { createJsenvRemoteDirectory } from "@jsenv/core/src/internal/jsenv_remote_directory.js"
 import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
+import { createSourceFileFetcher } from "@jsenv/core/src/internal/source_file_fetcher/source_file_fetcher.js"
 
 import { createCompileContext } from "./jsenv_directory/compile_context.js"
 import { createCompileProfile } from "./jsenv_directory/compile_profile.js"
@@ -140,10 +140,11 @@ export const startCompileServer = async ({
      */
     ...preservedUrls,
   }
-  const jsenvRemoteDirectory = createJsenvRemoteDirectory({
+  const sourceFileFetcher = createSourceFileFetcher({
     projectDirectoryUrl,
     jsenvDirectoryRelativeUrl,
     preservedUrls,
+    projectFileCacheStrategy,
   })
   const compileContext = await createCompileContext({
     preservedUrls,
@@ -164,7 +165,7 @@ export const startCompileServer = async ({
   babelPluginMap = await loadBabelPluginMap({
     logger,
     projectDirectoryUrl,
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
 
     babelPluginMap,
     babelConfigFile,
@@ -247,10 +248,10 @@ export const startCompileServer = async ({
 
       projectDirectoryUrl,
       ressourceGraph,
+      sourceFileFetcher,
       jsenvFileSelector,
       jsenvDirectoryRelativeUrl,
       jsenvDirectory,
-      jsenvRemoteDirectory,
 
       sourcemapMethod,
       sourcemapExcludeSources,
@@ -271,8 +272,8 @@ export const startCompileServer = async ({
             logger,
             projectDirectoryUrl,
             ressourceGraph,
+            sourceFileFetcher,
             jsenvFileSelector,
-            jsenvRemoteDirectory,
             jsenvDirectoryRelativeUrl,
             request,
             url,
@@ -325,7 +326,7 @@ export const startCompileServer = async ({
           return compileJavascript({
             projectDirectoryUrl,
             ressourceGraph,
-            jsenvRemoteDirectory,
+            sourceFileFetcher,
             url,
             compiledUrl,
 
@@ -351,8 +352,7 @@ export const startCompileServer = async ({
     "service:source file": createSourceFileService({
       projectDirectoryUrl,
       ressourceGraph,
-      jsenvRemoteDirectory,
-      projectFileCacheStrategy,
+      sourceFileFetcher,
       modifiers: {
         ...(eventSourceClient || htmlSupervisor || toolbar || autoreload
           ? {
@@ -361,7 +361,7 @@ export const startCompileServer = async ({
                   logger,
                   projectDirectoryUrl,
                   ressourceGraph,
-                  jsenvRemoteDirectory,
+                  sourceFileFetcher,
                   jsenvFileSelector,
 
                   preserveHtmlSourceFiles,

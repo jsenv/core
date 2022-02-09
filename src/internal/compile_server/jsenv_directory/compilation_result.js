@@ -26,7 +26,7 @@ export const asCompilationResult = async (
   { coverage, dependencies = [], map, contentType, content },
   {
     projectDirectoryUrl,
-    jsenvRemoteDirectory,
+    sourceFileFetcher,
     sourceFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
@@ -107,9 +107,9 @@ export const asCompilationResult = async (
           // In case the file comes from a remote url
           // we prefer to consider remote url as the real source for this code
           map.sources[index] =
-            jsenvRemoteDirectory &&
-            jsenvRemoteDirectory.isFileUrlForRemoteUrl(sourceUrl)
-              ? jsenvRemoteDirectory.remoteUrlFromFileUrl(sourceUrl)
+            sourceFileFetcher &&
+            sourceFileFetcher.isFileUrlForRemoteUrl(sourceUrl)
+              ? sourceFileFetcher.remoteUrlFromFileUrl(sourceUrl)
               : urlToRelativeUrl(sourceUrl, sourcemapFileUrl)
           sources[index] = sourceUrl
         }

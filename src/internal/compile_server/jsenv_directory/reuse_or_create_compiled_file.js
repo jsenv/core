@@ -14,7 +14,7 @@ export const reuseOrCreateCompiledFile = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvRemoteDirectory,
+  sourceFileFetcher,
   request,
   sourceFileUrl,
   compiledFileUrl = sourceFileUrl,
@@ -64,9 +64,9 @@ export const reuseOrCreateCompiledFile = async ({
       const { meta, compileResult, compileResultStatus, timing } =
         await computeCompileReport({
           projectDirectoryUrl,
+          sourceFileFetcher,
           sourceFileUrl,
           compiledFileUrl,
-          jsenvRemoteDirectory,
 
           compile,
           compileCacheStrategy,
@@ -95,9 +95,9 @@ export const reuseOrCreateCompiledFile = async ({
 const computeCompileReport = async ({
   // projectDirectoryUrl,
   logger,
+  sourceFileFetcher,
   sourceFileUrl,
   compiledFileUrl,
-  jsenvRemoteDirectory,
 
   compile,
   compileCacheStrategy,
@@ -133,7 +133,7 @@ const computeCompileReport = async ({
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
-    const response = await jsenvRemoteDirectory.fetchUrl(sourceFileUrl, {
+    const response = await sourceFileFetcher.fetchAsSourceFile(sourceFileUrl, {
       request,
     })
     if (response.status !== 200) {
