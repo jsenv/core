@@ -8,6 +8,7 @@ export const modifyJs = async ({
   projectDirectoryUrl,
   ressourceGraph,
   url,
+  inlineUrlSite,
   content,
 }) => {
   const transformResult = await transformWithBabel({
@@ -21,6 +22,7 @@ export const modifyJs = async ({
     importMetaHot: true,
     sourcemapEnabled: false,
     url,
+    inlineUrlSite,
     content,
   })
   const { metadata } = transformResult

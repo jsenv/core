@@ -67,6 +67,12 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
           })
           if (errorFromServer) {
             executionResult.error = errorFromServer
+            if (
+              errorFromServer.cause &&
+              errorFromServer.cause.code === "PARSE_ERROR"
+            ) {
+              errorExposureInConsole = false
+            }
           }
         }
         if (errorTransformer) {
@@ -118,6 +124,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
 
 const getErrorFromServer = async ({ src, urlContext }) => {
   const urlObject = new URL(src, window.location.href)
+  const urlWithoutInspect = urlObject.href
   urlObject.searchParams.set("__inspect__", "")
   const url = urlObject.href
   let response
@@ -135,8 +142,13 @@ const getErrorFromServer = async ({ src, urlContext }) => {
     urlContext,
     contentTypeExpected: "application/javascript",
     type: "js_module",
-    url: urlObject.href,
-    importerUrl: window.location.href,
+    url: urlWithoutInspect,
+    // at some point the importer is the HTML of course but here "importer"
+    // means "last ressource to import that file before encountering an error"
+    // so it might be an intermediate file.
+    // I guess this information is available server side and could be returned
+    // inside the __inspect__ response
+    // importerUrl: window.location.href,
     response: {
       status: realResponseData.status,
       statustext: realResponseData.statusText,
@@ -163,19 +175,11 @@ const onExecutionError = (
       currentScript.dispatchEvent(errorEvent)
     }
   } else if (typeof error === "object") {
-    const { parsingError } = error
     const globalErrorEvent = new Event("error")
-    if (parsingError) {
-      globalErrorEvent.filename = parsingError.filename
-      globalErrorEvent.lineno = parsingError.lineNumber
-      globalErrorEvent.message = parsingError.message
-      globalErrorEvent.colno = parsingError.columnNumber
-    } else {
-      globalErrorEvent.filename = error.filename
-      globalErrorEvent.lineno = error.lineno
-      globalErrorEvent.message = error.message
-      globalErrorEvent.colno = error.columnno
-    }
+    globalErrorEvent.filename = error.filename
+    globalErrorEvent.lineno = error.line || error.lineno
+    globalErrorEvent.colno = error.column || error.columnno
+    globalErrorEvent.message = error.message
     window.dispatchEvent(globalErrorEvent)
   }
   if (errorExposureInConsole) {

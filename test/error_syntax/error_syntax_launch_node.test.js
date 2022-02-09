@@ -64,16 +64,6 @@ const test = async ({ runtimeParams } = {}) => {
     status,
     error,
   }
-  const parsingError = {
-    message: `${filePath}: Unexpected token (1:11)
-
-> 1 | const a = (
-    |            ^`,
-    messageHTML: assert.any(String),
-    filename: filePath,
-    lineNumber: 1,
-    columnNumber: 11,
-  }
   const expectedError = Object.assign(
     new Error(`JavaScript module file cannot be parsed
 --- parsing error message ---
@@ -86,7 +76,6 @@ ${fileRelativeUrl}
 --- file url ---
 ${compiledFileUrl}`),
     {
-      parsingError,
       filename: error.filename,
       lineno: error.lineno,
       columnno: error.columnno,

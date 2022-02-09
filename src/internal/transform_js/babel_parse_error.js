@@ -1,13 +1,27 @@
-export const createParseError = ({ message, cause, ...data }) => {
+export const createParseError = ({
+  cause,
+  filename,
+  line,
+  column,
+  message,
+  messageHTML,
+}) => {
   const parseError = new Error(message, { cause })
-  parseError.code = "PARSE_ERROR"
-  parseError.data = {
-    message,
-    ...data,
-  }
+  const code = "PARSE_ERROR"
+  parseError.code = code
+  parseError.filename = filename
+  parseError.line = line
+  parseError.column = column
   parseError.asResponse = () => {
     // on the correspondig file
-    const json = JSON.stringify(parseError.data)
+    const json = JSON.stringify({
+      code,
+      filename,
+      line,
+      column,
+      message,
+      messageHTML,
+    })
     return {
       status: 500,
       statusText: "parse error",

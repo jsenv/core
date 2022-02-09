@@ -386,11 +386,16 @@ export const startCompileServer = async ({
                   content,
                 })
               },
-              "application/javascript": async ({ url, content }) => {
+              "application/javascript": async ({
+                url,
+                inlineUrlSite,
+                content,
+              }) => {
                 return modifyJs({
                   projectDirectoryUrl,
                   ressourceGraph,
                   url,
+                  inlineUrlSite,
                   content,
                 })
               },
@@ -445,12 +450,14 @@ export const startCompileServer = async ({
         }
         return convertFileSystemErrorToResponseProperties(error)
       }
-
+      const response = getResponseForError()
+      if (!response) {
+        return null
+      }
       const isInspectRequest = new URL(
         request.ressource,
         request.origin,
       ).searchParams.has("__inspect__")
-      const response = getResponseForError()
       if (!isInspectRequest) {
         return response
       }

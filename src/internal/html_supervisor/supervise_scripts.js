@@ -21,6 +21,7 @@ export const superviseScripts = ({
   generateSrcForInlineScript = (inlineScriptId) => {
     return `./${urlToFilename(url)}__inline__${inlineScriptId}.js`
   },
+  htmlContent,
 }) => {
   const supervisedScripts = []
   scripts.forEach((script) => {
@@ -88,12 +89,18 @@ export const superviseScripts = ({
           script: "",
         })
       }
+      const { line, column } = getHtmlNodeLocation(script)
       supervisedScripts.push({
         script,
         type,
         textContent: textNode.value,
         inlineSrc,
-        ...getHtmlNodeLocation(script),
+        inlineUrlSite: {
+          url,
+          line,
+          column,
+          source: htmlContent,
+        },
       })
       assignHtmlNodeAttributes(script, { "content-src": inlineSrc })
       setHtmlNodeText(

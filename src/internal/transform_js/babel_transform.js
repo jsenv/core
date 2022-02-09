@@ -1,7 +1,10 @@
+import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { stringifyUrlSite } from "../building/url_trace.js"
+
 import { ansiToHTML } from "./ansi_to_html.js"
 import { createParseError } from "./babel_parse_error.js"
 
-export const babelTransform = async ({ ast, code, options }) => {
+export const babelTransform = async ({ options, ast, inlineUrlSite, code }) => {
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
 
   try {
@@ -12,15 +15,33 @@ export const babelTransform = async ({ ast, code, options }) => {
     return await transformAsync(code, options)
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      const message = error.message
+      let message = error.message
+      let line = error.loc.line
+      let column = error.loc.column
+      if (inlineUrlSite) {
+        line = inlineUrlSite.line + line - 2 // remove 2 lines
+        column = inlineUrlSite.column + column
+        message = `${error.reasonCode}
+${stringifyUrlSite({
+  ...inlineUrlSite,
+  line,
+  column,
+})}`
+        throw createParseError({
+          filename: urlToFileSystemPath(inlineUrlSite.url),
+          line,
+          column,
+          message,
+        })
+      }
       const messageWithoutAnsi = message.replace(ansiRegex, "")
       throw createParseError({
         cause: error,
+        filename: options.filename,
+        line,
+        column,
         message: messageWithoutAnsi,
         messageHTML: ansiToHTML(message),
-        filename: options.filename,
-        lineNumber: error.loc.line,
-        columnNumber: error.loc.column,
       })
     }
     throw error

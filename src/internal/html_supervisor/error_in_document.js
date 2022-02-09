@@ -1,19 +1,10 @@
 export const displayErrorInDocument = (error) => {
   const title = "An error occured"
-  let theme
-  let message
-
-  if (error && error.parsingError) {
-    theme = "light"
-    const { parsingError } = error
-    message = errorToHTML(
-      parsingError.messageHTML || escapeHtml(parsingError.message),
-    )
-  } else {
-    theme = "dark"
-    message = errorToHTML(error)
-  }
-
+  let theme =
+    error && error.cause && error.cause.code === "PARSE_ERROR"
+      ? "light"
+      : "dark"
+  let message = errorToHTML(error)
   const css = `
     .jsenv-console {
       background: rgba(0, 0, 0, 0.95);
@@ -90,8 +81,11 @@ const errorToHTML = (error) => {
   let html
 
   if (error && error instanceof Error) {
-    //  stackTrace formatted by V8
-    if (Error.captureStackTrace) {
+    if (error.cause && error.cause.code === "PARSE_ERROR") {
+      html = error.messageHTML || escapeHtml(error.message)
+    }
+    // stackTrace formatted by V8
+    else if (Error.captureStackTrace) {
       html = escapeHtml(error.stack)
     } else {
       // other stack trace such as firefox do not contain error.message

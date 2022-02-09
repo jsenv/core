@@ -26,11 +26,7 @@ export const getRessourceResponseError = async ({
   const contentType = response.headers["content-type"] || ""
   if (response.status === 500 && contentType === "application/json") {
     const bodyAsJson = await response.json()
-    if (
-      bodyAsJson.message &&
-      bodyAsJson.filename &&
-      "columnNumber" in bodyAsJson
-    ) {
+    if (bodyAsJson.code === "PARSE_ERROR") {
       const error = new Error(
         createDetailedMessage("file cannot be parsed", {
           "parsing error message": bodyAsJson.message,
@@ -42,7 +38,7 @@ export const getRessourceResponseError = async ({
           }),
         }),
       )
-      error.parsingError = bodyAsJson
+      error.cause = bodyAsJson
       return error
     }
   }

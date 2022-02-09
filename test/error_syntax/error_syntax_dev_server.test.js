@@ -63,27 +63,19 @@ const { pageLogs, pageErrors, executionResult, devServer, compileId } =
   })
 const compiledImportedFileUrl = `${devServer.origin}/${devServer.jsenvDirectoryRelativeUrl}${compileId}/${importedFileRelativeUrl}`
 const actual = { pageLogs, pageErrors, executionResult }
-const expectedParsingErrorMessage = `${importedFilePath}: Unexpected token (1:11)
 
-> 1 | const a = (
-    |            ^`
-const expectedParsingError = {
-  message: expectedParsingErrorMessage,
-  messageHTML: assert.any(String),
-  filename: importedFilePath,
-  lineNumber: 1,
-  columnNumber: 11,
-}
 const expectedError = Object.assign(
   new Error(`JavaScript module file cannot be parsed
 --- parsing error message ---
-${expectedParsingError.message}
+${importedFilePath}: Unexpected token (1:11)
+
+  > 1 | const a = (
+      |            ^
 --- file ---
 ${importedFileRelativeUrl}
 --- file url ---
 ${compiledImportedFileUrl}`),
   {
-    parsingError: expectedParsingError,
     filename: actual.executionResult.error.filename,
     lineno: actual.executionResult.error.lineno,
     columnno: actual.executionResult.error.columnno,

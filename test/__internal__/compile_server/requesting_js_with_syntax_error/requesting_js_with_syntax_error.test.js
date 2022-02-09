@@ -45,8 +45,8 @@ const expected = {
     filename: urlToFileSystemPath(
       resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl),
     ),
-    lineNumber: 1,
-    columnNumber: 11,
+    line: 1,
+    column: 11,
   },
 }
 assert({ actual, expected })

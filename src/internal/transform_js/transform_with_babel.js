@@ -10,7 +10,6 @@ import { babelPluginSystemJsPrepend } from "./babel_plugin_systemjs_prepend.js"
 
 export const transformWithBabel = async ({
   projectDirectoryUrl,
-  url,
 
   babelPluginMap,
   moduleOutFormat = "esmodule",
@@ -21,6 +20,8 @@ export const transformWithBabel = async ({
   topLevelAwait,
   sourcemapEnabled = true,
 
+  url,
+  inlineUrlSite,
   map,
   ast,
   content,
@@ -113,14 +114,15 @@ export const transformWithBabel = async ({
     asyncToPromise.options.topLevelAwait = topLevelAwait
   }
   const babelTransformReturnValue = await babelTransform({
-    ast,
-    code: content,
     options: {
       ...options,
       plugins: Object.keys(babelPluginMap).map(
         (babelPluginName) => babelPluginMap[babelPluginName],
       ),
     },
+    ast,
+    inlineUrlSite,
+    code: content,
   })
   ast = babelTransformReturnValue.ast
   const { metadata } = babelTransformReturnValue

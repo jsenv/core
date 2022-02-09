@@ -18,10 +18,10 @@
  * qui se charge de servir les fichiers inlines
  */
 
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { resolveUrl } from "@jsenv/filesystem"
 
 import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
+import { urlWithoutSearch } from "@jsenv/core/src/internal/url_utils.js"
 import { injectHmr } from "@jsenv/core/src/internal/autoreload/hmr_injection.js"
 
 export const createSourceFileService = ({
@@ -39,7 +39,7 @@ export const createSourceFileService = ({
     urlObject.searchParams.delete("hmr")
     const url = urlObject.href
 
-    const handleResponse = async (response) => {
+    const handleResponse = async (response, { inlineUrlSite } = {}) => {
       if (response.status !== 200) {
         return response
       }
@@ -54,6 +54,7 @@ export const createSourceFileService = ({
           : String(await readNodeStream(response.body))
       const { content, artifacts = [] } = await modifier({
         url,
+        inlineUrlSite,
         content: responseBodyAsString,
       })
       ressourceArtifacts.updateRessourceArtifacts(url, artifacts)
@@ -84,24 +85,26 @@ export const createSourceFileService = ({
         body,
       }
     }
-
     // artifacts are inline ressource found in HTML (inline scripts, styles, ...)
-    const artifactResponse = ressourceArtifacts.getResponseForUrl(url)
-    if (artifactResponse) {
-      return handleResponse(artifactResponse)
-    }
-    try {
-      const response = await jsenvRemoteDirectory.fetchUrl(url, {
-        request,
-        projectFileCacheStrategy,
-      })
-      return handleResponse(response)
-    } catch (error) {
-      if (error && error.asResponse) {
-        return error.asResponse()
+    const artifact = ressourceArtifacts.getArtifactForUrl(url)
+    if (artifact) {
+      const response = {
+        status: 200,
+        headers: {
+          "content-type": artifact.contentType,
+          "content-length": Buffer.byteLength(artifact.content),
+        },
+        body: artifact.content,
       }
-      return convertFileSystemErrorToResponseProperties(error)
+      return handleResponse(response, {
+        inlineUrlSite: artifact.inlineUrlSite,
+      })
     }
+    const response = await jsenvRemoteDirectory.fetchUrl(url, {
+      request,
+      projectFileCacheStrategy,
+    })
+    return handleResponse(response)
   }
 }
 
@@ -119,19 +122,10 @@ export const createSourceFileService = ({
 const createRessourceArtifacts = () => {
   const artifactMap = new Map()
 
-  const getResponseForUrl = (url) => {
-    const artifact = artifactMap.get(url)
-    if (!artifact) {
-      return null
-    }
-    return {
-      status: 200,
-      headers: {
-        "content-type": artifact.contentType,
-        "content-length": Buffer.byteLength(artifact.content),
-      },
-      body: artifact.content,
-    }
+  const getArtifactForUrl = (url) => {
+    url = urlWithoutSearch(url)
+    const artifact = artifactMap.get(urlWithoutSearch(url))
+    return artifact
   }
 
   const updateRessourceArtifacts = (ownerUrl, artifacts) => {
@@ -140,9 +134,10 @@ const createRessourceArtifacts = () => {
         artifactMap.delete(artifactUrl)
       }
     })
-    artifacts.forEach(({ specifier, contentType, content }) => {
+    artifacts.forEach(({ specifier, contentType, content, inlineUrlSite }) => {
       artifactMap.set(resolveUrl(specifier, ownerUrl), {
         ownerUrl,
+        inlineUrlSite,
         contentType,
         content,
       })
@@ -150,7 +145,7 @@ const createRessourceArtifacts = () => {
   }
 
   return {
-    getResponseForUrl,
+    getArtifactForUrl,
     updateRessourceArtifacts,
   }
 }

@@ -16,6 +16,7 @@
 import { resolveUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
+import { urlWithoutSearch } from "@jsenv/core/src/internal/url_utils.js"
 import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import { mutateImportmapScripts } from "@jsenv/core/src/internal/transform_importmap/importmap_mutation.js"
@@ -102,10 +103,12 @@ export const modifyHtml = async ({
       url,
       canUseScriptTypeModule: true,
       scripts,
+      htmlContent: content,
     })
-    supervisedScripts.forEach(({ inlineSrc, textContent }) => {
+    supervisedScripts.forEach(({ inlineSrc, inlineUrlSite, textContent }) => {
       if (inlineSrc) {
         artifacts.push({
+          inlineUrlSite,
           specifier: inlineSrc,
           contentType: "application/javascript",
           content: textContent,
@@ -229,10 +232,4 @@ const getJsenvForceInlineAttribute = (htmlNode) => {
     "data-jsenv-force-inline",
   )
   return jsenvForceInlineAttribute
-}
-
-const urlWithoutSearch = (url) => {
-  const urlObject = new URL(url)
-  urlObject.search = ""
-  return urlObject.href
 }

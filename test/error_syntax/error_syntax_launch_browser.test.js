@@ -67,7 +67,6 @@ await launchBrowsers(
     const actual = {
       status,
       errorMessage: error.message,
-      errorParsingErrror: error.parsingError,
     }
     const expected = {
       status: "errored",
@@ -81,16 +80,6 @@ ${jsPath}: Unexpected token (1:11)
 ${jsRelativeUrl}
 --- file url ---
 ${jsCompiledUrl}`,
-      errorParsingErrror: {
-        message: `${jsPath}: Unexpected token (1:11)
-
-> 1 | const a = (
-    |            ^`,
-        messageHTML: assert.any(String),
-        filename: jsPath,
-        lineNumber: 1,
-        columnNumber: 11,
-      },
     }
     assert({ actual, expected })
   },

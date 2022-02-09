@@ -115,26 +115,47 @@ export const compileHtml = async ({
     })
   }
 
-  await visitScripts({
-    logger,
-    projectDirectoryUrl,
-    ressourceGraph,
-    jsenvFileSelector,
+  const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
+  const supervisedScripts = superviseScripts({
     jsenvRemoteDirectory,
-    url,
-    compiledUrl,
-
-    compileProfile,
-    babelPluginMap,
-    topLevelAwait,
-    importMetaHot,
-    sourcemapMethod,
-
+    jsenvFileSelector,
+    url: compiledUrl,
+    canUseScriptTypeModule,
     scripts,
-    addHtmlSourceFile,
-    addHtmlAssetGenerator,
-    addHtmlMutation,
+    generateSrcForInlineScript: (inlineScriptId) => {
+      return `./${urlToFilename(url)}__asset__${inlineScriptId}.js`
+    },
+    htmlContent: content,
   })
+  supervisedScripts.forEach(({ script, type, textContent, inlineSrc }) => {
+    if (type === "module" && !canUseScriptTypeModule) {
+      removeHtmlNodeAttributeByName(script, "type")
+    }
+    if (inlineSrc) {
+      const inlineScriptSourceUrl = resolveUrl(inlineSrc, url)
+      const inlineScriptCompiledUrl = resolveUrl(inlineSrc, compiledUrl)
+      addHtmlAssetGenerator(async () => {
+        return transformHtmlScript({
+          projectDirectoryUrl,
+          ressourceGraph,
+          jsenvRemoteDirectory,
+          url: inlineScriptSourceUrl,
+          compiledUrl: inlineScriptCompiledUrl,
+          isInline: true,
+
+          type: type === "module" ? "module" : "script",
+          compileProfile,
+          babelPluginMap,
+          topLevelAwait,
+          importMetaHot,
+
+          sourcemapMethod,
+          content: textContent,
+        })
+      })
+    }
+  })
+
   await Promise.all(
     htmlAssetGenerators.map(async (htmlAssetGenerator) => {
       const assetInfos = await htmlAssetGenerator()
@@ -209,64 +230,6 @@ const visitRessourceHints = async ({ ressourceHints, addHtmlMutation }) => {
       // }
     }),
   )
-}
-
-const visitScripts = async ({
-  projectDirectoryUrl,
-  ressourceGraph,
-  jsenvFileSelector,
-  jsenvRemoteDirectory,
-  url,
-  compiledUrl,
-
-  compileProfile,
-  babelPluginMap,
-  topLevelAwait,
-  importMetaHot,
-  sourcemapMethod,
-
-  scripts,
-  addHtmlAssetGenerator,
-}) => {
-  const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
-  const supervisedScripts = superviseScripts({
-    jsenvRemoteDirectory,
-    jsenvFileSelector,
-    url: compiledUrl,
-    canUseScriptTypeModule,
-    scripts,
-    generateSrcForInlineScript: (inlineScriptId) => {
-      return `./${urlToFilename(url)}__asset__${inlineScriptId}.js`
-    },
-  })
-  supervisedScripts.forEach(({ script, type, textContent, inlineSrc }) => {
-    if (type === "module" && !canUseScriptTypeModule) {
-      removeHtmlNodeAttributeByName(script, "type")
-    }
-    if (inlineSrc) {
-      const inlineScriptSourceUrl = resolveUrl(inlineSrc, url)
-      const inlineScriptCompiledUrl = resolveUrl(inlineSrc, compiledUrl)
-      addHtmlAssetGenerator(async () => {
-        return transformHtmlScript({
-          projectDirectoryUrl,
-          ressourceGraph,
-          jsenvRemoteDirectory,
-          url: inlineScriptSourceUrl,
-          compiledUrl: inlineScriptCompiledUrl,
-          isInline: true,
-
-          type: type === "module" ? "module" : "script",
-          compileProfile,
-          babelPluginMap,
-          topLevelAwait,
-          importMetaHot,
-
-          sourcemapMethod,
-          content: textContent,
-        })
-      })
-    }
-  })
 }
 
 const transformHtmlScript = async ({
