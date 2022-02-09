@@ -7,12 +7,13 @@ import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_ment
 export const modifyJs = async ({
   projectDirectoryUrl,
   ressourceGraph,
+  sourceFileFetcher,
   url,
-  inlineUrlSite,
   content,
 }) => {
   const transformResult = await transformWithBabel({
     projectDirectoryUrl,
+    sourceFileFetcher,
     babelPluginMap: {
       "syntaxes": [babelPluginSyntaxes],
       "metadata-url-mentions": [babelPluginMetadataUrlMentions],
@@ -22,7 +23,6 @@ export const modifyJs = async ({
     importMetaHot: true,
     sourcemapEnabled: false,
     url,
-    inlineUrlSite,
     content,
   })
   const { metadata } = transformResult

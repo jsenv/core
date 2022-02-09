@@ -3,6 +3,7 @@ import { injectHmrInCssUrls } from "./hmr_injection_css.js"
 
 export const injectHmr = ({
   projectDirectoryUrl,
+  sourceFileFetcher,
   ressourceGraph,
   url,
   contentType,
@@ -13,6 +14,7 @@ export const injectHmr = ({
     if (moduleFormat === "esmodule") {
       return injectHmrInJsModuleUrls({
         projectDirectoryUrl,
+        sourceFileFetcher,
         ressourceGraph,
         url,
         content,

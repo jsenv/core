@@ -18,7 +18,6 @@
  * qui se charge de servir les fichiers inlines
  */
 
-import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
 import { injectHmr } from "@jsenv/core/src/internal/autoreload/hmr_injection.js"
 
 export const createSourceFileService = ({
@@ -33,21 +32,18 @@ export const createSourceFileService = ({
     urlObject.searchParams.delete("hmr")
     const url = urlObject.href
 
-    const response = await sourceFileFetcher.fetchAsSourceFile(url, {
+    const fileInterface = await sourceFileFetcher.loadSourceFile(url, {
       request,
     })
-    if (response.status !== 200) {
-      return response
+    if (fileInterface.response.status !== 200) {
+      return fileInterface.response
     }
-    const responseContentType = response.headers["content-type"]
+    const responseContentType = fileInterface.response.headers["content-type"]
     const modifier = modifiers[responseContentType]
     if (!modifier) {
-      return response
+      return fileInterface.response
     }
-    const responseBodyAsString =
-      typeof response.body === "string"
-        ? response.body
-        : String(await readNodeStream(response.body))
+    const responseBodyAsString = await fileInterface.readAsString()
     const content = await modifier({
       sourceFileFetcher,
       url,
@@ -55,9 +51,9 @@ export const createSourceFileService = ({
     })
     if (!hmr) {
       return {
-        ...response,
+        ...fileInterface.response,
         headers: {
-          ...response.headers,
+          ...fileInterface.response.headers,
           "content-length": Buffer.byteLength(content),
         },
         body: content,
@@ -66,6 +62,7 @@ export const createSourceFileService = ({
     const body = await injectHmr({
       projectDirectoryUrl,
       ressourceGraph,
+      sourceFileFetcher,
       url,
       contentType: responseContentType,
       moduleFormat: "esmodule",

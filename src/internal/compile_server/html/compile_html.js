@@ -17,6 +17,8 @@ import {
   updateHtmlHotMeta,
 } from "@jsenv/core/src/internal/autoreload/hot_html.js"
 
+import { generateCompilationAssetUrl } from "../jsenv_directory/compile_asset.js"
+
 export const compileHtml = async ({
   // cancellationToken,
   logger,
@@ -103,14 +105,18 @@ export const compileHtml = async ({
   }
 
   const canUseScriptTypeModule = compileProfile.moduleOutFormat === "esmodule"
-  superviseScripts({
+  const { inlineRessources } = superviseScripts({
     sourceFileFetcher,
     jsenvFileSelector,
-    url: compiledUrl,
+    url,
     canUseScriptTypeModule,
     scripts,
     htmlContent: content,
   })
+  assets.push(
+    generateCompilationAssetUrl(compiledUrl, "inline_ressources.json"),
+  )
+  assetsContent.push(JSON.stringify(inlineRessources, null, "  "))
 
   htmlMutations.forEach((htmlMutation) => {
     htmlMutation()

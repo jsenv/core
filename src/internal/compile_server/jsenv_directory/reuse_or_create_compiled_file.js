@@ -1,8 +1,6 @@
 import { timeStart, timeFunction } from "@jsenv/server"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { readFile, urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
-
-import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
 
 import { validateCompileCache } from "./validate_compile_cache.js"
 import { getMetaJsonFileUrl } from "./compile_asset.js"
@@ -133,21 +131,22 @@ const computeCompileReport = async ({
       logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
     }
     const metaIsValid = cacheValidity.meta ? cacheValidity.meta.isValid : false
-    const response = await sourceFileFetcher.fetchAsSourceFile(sourceFileUrl, {
-      request,
-    })
-    if (response.status !== 200) {
-      const error = { asResponse: () => response }
+    const fileInterface = await sourceFileFetcher.loadSourceFile(
+      sourceFileUrl,
+      {
+        request,
+      },
+    )
+    if (fileInterface.response.status !== 200) {
+      const error = { asResponse: () => fileInterface.response }
       throw error
     }
-    const buffer = await readNodeStream(response.body)
+    const string = await fileInterface.readAsString()
     const [compileTiming, compileResult] = await timeFunction(
       "compile",
       async () => {
         logger.debug(`compile ${sourceFileUrl}`)
-        const compileReturnValue = await compile({
-          content: String(buffer),
-        })
+        const compileReturnValue = await compile({ content: string })
         if (
           typeof compileReturnValue !== "object" ||
           compileReturnValue === null
@@ -157,7 +156,7 @@ const computeCompileReport = async ({
           )
         }
         const {
-          contentType = response.headers["content-type"],
+          contentType = fileInterface.response.headers["content-type"],
           content,
           sources = [],
           sourcesContent = [],
@@ -209,6 +208,26 @@ const computeCompileReport = async ({
     assets,
     dependencies,
   }
+
+  if (contentType === "text/html") {
+    const inlineRessources = await readFile(
+      new URL(
+        assets.find((asset) => asset.endsWith("inline_ressources.json")),
+        compiledFileUrl,
+      ),
+      { as: "json" },
+    )
+    const { sources } = cacheValidity
+    const sourceKey = Object.keys(sources).find((source) =>
+      source.endsWith(".html"),
+    )
+    sourceFileFetcher.updateInlineRessources({
+      htmlUrl: sourceFileUrl,
+      htmlContent: String(sources[sourceKey].data.sourceBuffer),
+      inlineRessources,
+    })
+  }
+
   return {
     meta,
     compileResult,

@@ -87,12 +87,8 @@ export const superviseScripts = ({
       }
       const { line, column } = getHtmlNodeLocation(script)
       inlineRessources.push({
-        inlineUrlSite: {
-          url,
-          line,
-          column,
-          source: htmlContent,
-        },
+        htmlLine: line,
+        htmlColumn: column,
         specifier: inlineSrc,
         contentType: "application/javascript",
         content: textNode.value,
@@ -116,8 +112,12 @@ export const superviseScripts = ({
       return
     }
   })
-  sourceFileFetcher.updateInlineRessources(url, inlineRessources)
-  return supervisedScripts
+  sourceFileFetcher.updateInlineRessources({
+    htmlUrl: url,
+    htmlContent,
+    inlineRessources,
+  })
+  return { supervisedScripts, inlineRessources }
 }
 
 // Ideally jsenv should take into account eventual

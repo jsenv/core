@@ -50,7 +50,6 @@ export const createUrlContext = ({
   const compileDirectoryServerUrl = `${projectDirectoryServerUrl}${compileDirectoryRelativeUrl}`
   return {
     asSourceRelativeUrl: (url) => {
-      console.log(url, compileDirectoryServerUrl)
       if (url.startsWith(compileDirectoryServerUrl)) {
         return url.slice(compileDirectoryServerUrl.length)
       }

@@ -7,12 +7,13 @@ import { babelPluginHmrEsm } from "./babel_plugin_hmr_esm.js"
 
 export const injectHmrInJsModuleUrls = async ({
   projectDirectoryUrl,
+  sourceFileFetcher,
   ressourceGraph,
   url,
   content,
 }) => {
   const result = await babelTransform({
-    code: content,
+    sourceFileFetcher,
     options: {
       filename: urlToFileSystemPath(url),
       filenameRelative: urlToRelativeUrl(url, projectDirectoryUrl),
@@ -27,6 +28,8 @@ export const injectHmrInJsModuleUrls = async ({
       },
       plugins: [[babelPluginSyntaxes], [babelPluginHmrEsm, { ressourceGraph }]],
     },
+    url,
+    code: content,
   })
   return result.code
 }

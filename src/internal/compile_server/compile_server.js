@@ -386,16 +386,12 @@ export const startCompileServer = async ({
                   content,
                 })
               },
-              "application/javascript": async ({
-                url,
-                inlineUrlSite,
-                content,
-              }) => {
+              "application/javascript": async ({ url, content }) => {
                 return modifyJs({
                   projectDirectoryUrl,
                   ressourceGraph,
+                  sourceFileFetcher,
                   url,
-                  inlineUrlSite,
                   content,
                 })
               },
@@ -410,7 +406,6 @@ export const startCompileServer = async ({
     stopOnExit: false,
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
-    sendServerInternalErrorDetails: true,
     keepProcessAlive,
 
     logLevel,
@@ -438,6 +433,7 @@ export const startCompileServer = async ({
         requestWaitingMs: 60 * 1000,
       }),
     },
+    sendErrorDetails: true,
     errorToResponse: (error, { request }) => {
       const getResponseForError = () => {
         if (error && error.asResponse) {

@@ -4,7 +4,13 @@ import { stringifyUrlSite } from "../building/url_trace.js"
 import { ansiToHTML } from "./ansi_to_html.js"
 import { createParseError } from "./babel_parse_error.js"
 
-export const babelTransform = async ({ options, ast, inlineUrlSite, code }) => {
+export const babelTransform = async ({
+  sourceFileFetcher,
+  options,
+  url,
+  ast,
+  code,
+}) => {
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
 
   try {
@@ -18,6 +24,7 @@ export const babelTransform = async ({ options, ast, inlineUrlSite, code }) => {
       let message = error.message
       let line = error.loc.line
       let column = error.loc.column
+      const inlineUrlSite = sourceFileFetcher.getInlineUrlSite(url)
       if (inlineUrlSite) {
         line = inlineUrlSite.line + line - 2 // remove 2 lines
         column = inlineUrlSite.column + column

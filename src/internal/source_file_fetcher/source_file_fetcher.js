@@ -13,6 +13,7 @@ import { validateResponseIntegrity } from "@jsenv/integrity"
 
 import { asUrlWithoutSearch } from "@jsenv/core/src/internal/url_utils.js"
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
+import { readNodeStream } from "@jsenv/core/src/internal/read_node_stream.js"
 
 import { originDirectoryConverter } from "./origin_directory_converter.js"
 
@@ -92,38 +93,42 @@ export const createSourceFileFetcher = ({
     return remoteUrl
   }
 
-  const updateInlineRessources = (ownerUrl, inlineRessources) => {
+  const updateInlineRessources = ({
+    htmlUrl,
+    htmlContent,
+    inlineRessources,
+  }) => {
     inlineRessourceMap.forEach((inlineRessource, inlineRessourceUrl) => {
-      if (inlineRessource.ownerUrl === ownerUrl) {
+      if (inlineRessource.htmlUrl === htmlUrl) {
         inlineRessourceMap.delete(inlineRessourceUrl)
       }
     })
-    inlineRessources.forEach(
-      ({ specifier, contentType, content, inlineUrlSite }) => {
-        const inlineRessourceUrl = new URL(specifier, ownerUrl).href
-        inlineRessourceMap.set(inlineRessourceUrl, {
-          ownerUrl,
-          inlineUrlSite,
-          contentType,
-          content,
-        })
-      },
-    )
+    inlineRessources.forEach((inlineRessource) => {
+      const inlineRessourceUrl = new URL(inlineRessource.specifier, htmlUrl)
+        .href
+      inlineRessourceMap.set(inlineRessourceUrl, {
+        ...inlineRessource,
+        htmlUrl,
+        htmlContent,
+      })
+    })
   }
 
-  const fetchAsSourceFile = async (url, { request }) => {
+  const loadSourceFile = async (url, { request }) => {
     const urlWithoutSearch = asUrlWithoutSearch(url)
     const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
     if (inlineRessource) {
-      const response = {
-        status: 200,
-        headers: {
-          "content-type": inlineRessource.contentType,
-          "content-length": Buffer.byteLength(inlineRessource.content),
+      return {
+        response: {
+          status: 200,
+          headers: {
+            "content-type": inlineRessource.contentType,
+            "content-length": Buffer.byteLength(inlineRessource.content),
+          },
+          body: inlineRessource.content,
         },
-        body: inlineRessource.content,
+        readAsString: () => inlineRessource.content,
       }
-      return response
     }
     if (isFileUrlForRemoteUrl(url)) {
       if (!existsSync(new URL(url))) {
@@ -136,22 +141,44 @@ export const createSourceFileFetcher = ({
       }
       // re-fetch filesystem instead to ensure response headers are correct
     }
-    return fetchFileSystem(url, {
+    const response = await fetchFileSystem(url, {
       headers: request.headers,
       etagEnabled: projectFileCacheStrategy === "etag",
       mtimeEnabled: projectFileCacheStrategy === "mtime",
     })
+    return {
+      response,
+      readAsString: async () => {
+        const buffer = await readNodeStream(response.body)
+        return String(buffer)
+      },
+    }
+  }
+
+  const getInlineUrlSite = (url) => {
+    const urlWithoutSearch = asUrlWithoutSearch(url)
+    const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
+    return inlineRessource
+      ? {
+          url: inlineRessource.htmlUrl,
+          line: inlineRessource.htmlLine,
+          column: inlineRessource.htmlColumn,
+          source: inlineRessource.htmlContent,
+        }
+      : null
   }
 
   return {
+    getInlineUrlSite,
+    updateInlineRessources,
+
     isRemoteUrl,
     isFileUrlForRemoteUrl,
     fileUrlFromRemoteUrl,
     asFileUrlSpecifierIfRemote,
     remoteUrlFromFileUrl,
 
-    updateInlineRessources,
-    fetchAsSourceFile,
+    loadSourceFile,
   }
 }
 

@@ -119,6 +119,7 @@ export const createCompiledFileService = ({
       const body = await injectHmr({
         projectDirectoryUrl,
         ressourceGraph,
+        sourceFileFetcher,
         url: sourceFileUrl,
         contentType,
         moduleFormat: compileProfile.moduleOutFormat,
