@@ -128,9 +128,9 @@ export const createCompiledFileService = ({
       return {
         status: 200,
         headers: {
+          ...response.headers,
           "content-length": Buffer.byteLength(body),
           "cache-control": "no-store", // not really needed thanks to the query param
-          ...response.headers,
         },
         body,
         timing: response.timing,

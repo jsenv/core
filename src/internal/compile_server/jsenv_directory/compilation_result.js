@@ -97,6 +97,7 @@ export const asCompilationResult = async (
     } else {
       map.sources.forEach((source, index) => {
         const sourceUrl = resolveSourceFile({
+          sourceFileFetcher,
           source,
           sourcemapFileUrl,
           sourceFileUrl,
@@ -194,6 +195,7 @@ export const asCompilationResult = async (
 }
 
 const resolveSourceFile = ({
+  sourceFileFetcher,
   source,
   sourcemapFileUrl,
   sourceFileUrl,
@@ -206,7 +208,7 @@ const resolveSourceFile = ({
     // it means cache stays valid for those external sources
     return null
   }
-  const fileFound = testFilePresence(url)
+  const fileFound = sourceFileFetcher.isInlineUrl(url) || testFilePresence(url)
   if (fileFound) {
     return url
   }

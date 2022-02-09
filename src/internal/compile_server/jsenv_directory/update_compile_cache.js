@@ -10,6 +10,7 @@ import { getMetaJsonFileUrl } from "./compile_asset.js"
 
 export const updateCompileCache = async ({
   logger,
+  sourceFileFetcher,
   jsenvDirectory,
   meta,
   compiledFileUrl,
@@ -24,17 +25,22 @@ export const updateCompileCache = async ({
   const {
     content,
     contentType,
-    sources,
     sourcesContent,
     assets,
     assetsContent,
     dependencies,
   } = compileResult
+  let sources = compileResult.sources
   const promises = []
+  sources = sources.filter((source) => {
+    return !sourceFileFetcher.isInlineUrl(source)
+  })
   // ensure source that does not leads to concrete files are not capable to invalidate the cache
   const sourcesToRemove = sources.filter((sourceFileUrl) => {
     return (
-      sourceFileUrl.startsWith("file://") && !testFilePresence(sourceFileUrl)
+      sourceFileUrl.startsWith("file://") &&
+      !sourceFileFetcher.isInlineUrl(sourceFileUrl) &&
+      !testFilePresence(sourceFileUrl)
     )
   })
   const sourceNotFoundCount = sourcesToRemove.length

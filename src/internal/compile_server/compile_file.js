@@ -78,6 +78,7 @@ export const compileFile = async ({
     // when serving sourcemap files
     await updateCompileCache({
       logger,
+      sourceFileFetcher,
       jsenvDirectory,
       meta,
       compileResult,

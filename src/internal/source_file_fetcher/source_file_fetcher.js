@@ -37,62 +37,6 @@ export const createSourceFileFetcher = ({
    * are deleted so that when html file and page is reloaded, the inline ressources are updated
    */
   const inlineRessourceMap = new Map()
-
-  const jsenvRemoteDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}.remote/`
-  const structuredMetaMap = normalizeStructuredMetaMap(
-    { preserved: preservedUrls },
-    projectDirectoryUrl,
-  )
-  const isPreservedUrl = (url) => {
-    const meta = urlToMeta({ url, structuredMetaMap })
-    return Boolean(meta.preserved)
-  }
-
-  const isRemoteUrl = (url) => {
-    return url.startsWith("http://") || url.startsWith("https://")
-  }
-
-  const isFileUrlForRemoteUrl = (url) => {
-    return urlIsInsideOf(url, jsenvRemoteDirectoryUrl)
-  }
-
-  const fileUrlFromRemoteUrl = (remoteUrl) => {
-    const origin = originFromUrlOrUrlPattern(remoteUrl)
-    const ressource = urlToRessource(remoteUrl)
-    const [pathname, search = ""] = ressource.split("?")
-    const directoryName = originDirectoryConverter.toDirectoryName(origin)
-    const fileRelativeUrl = `${directoryName}${
-      pathname === "" ? "/" : pathname
-    }`
-    const fileUrl = `${jsenvRemoteDirectoryUrl}${fileRelativeUrl}${search}`
-    return fileUrl
-  }
-
-  const asFileUrlSpecifierIfRemote = (urlSpecifier, baseUrl) => {
-    const url = resolveUrl(urlSpecifier, baseUrl)
-    if (!isRemoteUrl(url)) {
-      return urlSpecifier
-    }
-    if (isPreservedUrl(url)) {
-      return urlSpecifier
-    }
-    const fileUrl = fileUrlFromRemoteUrl(url)
-    const relativeUrl = urlToRelativeUrl(fileUrl, baseUrl)
-    return `./${relativeUrl}`
-  }
-
-  const remoteUrlFromFileUrl = (fileUrl) => {
-    const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvRemoteDirectoryUrl)
-    const firstSlashIndex = fileRelativeUrl.indexOf("/")
-    const directoryName = fileRelativeUrl.slice(0, firstSlashIndex)
-    const origin = originDirectoryConverter.fromDirectoryName(directoryName)
-    const ressource = fileRelativeUrl.slice(firstSlashIndex)
-    const remoteUrlObject = new URL(ressource, origin)
-    remoteUrlObject.searchParams.delete("integrity")
-    const remoteUrl = remoteUrlObject.href
-    return remoteUrl
-  }
-
   const updateInlineRessources = ({
     htmlUrl,
     htmlContent,
@@ -112,6 +56,72 @@ export const createSourceFileFetcher = ({
         htmlContent,
       })
     })
+  }
+  const isInlineUrl = (url) => {
+    const urlWithoutSearch = asUrlWithoutSearch(url)
+    return inlineRessourceMap.has(urlWithoutSearch)
+  }
+  const getInlineUrlSite = (url) => {
+    const urlWithoutSearch = asUrlWithoutSearch(url)
+    const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
+    return inlineRessource
+      ? {
+          url: inlineRessource.htmlUrl,
+          line: inlineRessource.htmlLine,
+          column: inlineRessource.htmlColumn,
+          source: inlineRessource.htmlContent,
+        }
+      : null
+  }
+
+  const jsenvRemoteDirectoryUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}.remote/`
+  const structuredMetaMap = normalizeStructuredMetaMap(
+    { preserved: preservedUrls },
+    projectDirectoryUrl,
+  )
+  const isPreservedUrl = (url) => {
+    const meta = urlToMeta({ url, structuredMetaMap })
+    return Boolean(meta.preserved)
+  }
+  const isRemoteUrl = (url) => {
+    return url.startsWith("http://") || url.startsWith("https://")
+  }
+  const isFileUrlForRemoteUrl = (url) => {
+    return urlIsInsideOf(url, jsenvRemoteDirectoryUrl)
+  }
+  const fileUrlFromRemoteUrl = (remoteUrl) => {
+    const origin = originFromUrlOrUrlPattern(remoteUrl)
+    const ressource = urlToRessource(remoteUrl)
+    const [pathname, search = ""] = ressource.split("?")
+    const directoryName = originDirectoryConverter.toDirectoryName(origin)
+    const fileRelativeUrl = `${directoryName}${
+      pathname === "" ? "/" : pathname
+    }`
+    const fileUrl = `${jsenvRemoteDirectoryUrl}${fileRelativeUrl}${search}`
+    return fileUrl
+  }
+  const asFileUrlSpecifierIfRemote = (urlSpecifier, baseUrl) => {
+    const url = resolveUrl(urlSpecifier, baseUrl)
+    if (!isRemoteUrl(url)) {
+      return urlSpecifier
+    }
+    if (isPreservedUrl(url)) {
+      return urlSpecifier
+    }
+    const fileUrl = fileUrlFromRemoteUrl(url)
+    const relativeUrl = urlToRelativeUrl(fileUrl, baseUrl)
+    return `./${relativeUrl}`
+  }
+  const remoteUrlFromFileUrl = (fileUrl) => {
+    const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvRemoteDirectoryUrl)
+    const firstSlashIndex = fileRelativeUrl.indexOf("/")
+    const directoryName = fileRelativeUrl.slice(0, firstSlashIndex)
+    const origin = originDirectoryConverter.fromDirectoryName(directoryName)
+    const ressource = fileRelativeUrl.slice(firstSlashIndex)
+    const remoteUrlObject = new URL(ressource, origin)
+    remoteUrlObject.searchParams.delete("integrity")
+    const remoteUrl = remoteUrlObject.href
+    return remoteUrl
   }
 
   const loadSourceFile = async (url, { request }) => {
@@ -155,20 +165,8 @@ export const createSourceFileFetcher = ({
     }
   }
 
-  const getInlineUrlSite = (url) => {
-    const urlWithoutSearch = asUrlWithoutSearch(url)
-    const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
-    return inlineRessource
-      ? {
-          url: inlineRessource.htmlUrl,
-          line: inlineRessource.htmlLine,
-          column: inlineRessource.htmlColumn,
-          source: inlineRessource.htmlContent,
-        }
-      : null
-  }
-
   return {
+    isInlineUrl,
     getInlineUrlSite,
     updateInlineRessources,
 
