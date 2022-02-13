@@ -2,18 +2,22 @@
 
 This is an in-depth documentation about jsenv test runner. For a quick overview go to [test runner overview](../../readme.md#Test-runner-overview).
 
-This documentation list [key features](#key-features) and gives the [definition of a test for jsenv](#Definition-of-a-test-for-jsenv) to get an idea of how things where designed. Then it documents [How tests are executed?](#How-tests-are-executed), [How to test async code?](#How-to-test-async-code) and finally the [executeTestPlan](#executeTestPlan) function.
+This documentation contains: 
+
+- [Key features](#key-features)
+- [Definition of a test for jsenv](#Definition-of-a-test-for-jsenv)
+- [How tests are executed?](#How-tests-are-executed)
+- [How to test async code?](#How-to-test-async-code)
+- [executeTestPlan](#executeTestPlan)
 
 # Key features
 
-- Test files are "normal" files:
-  - **Almost zero context switching when opening a test file**
-  - Tests are written like the rest of the codebase
-  - Tests are debugged like the rest of the codebase
-  - Tests can be executed independently
 - Tests can be executed on Chrome, Firefox, Safari and Node.js
 - Tests are executed in total isolation: a dedicated browser or node process per test
-- Tests have a configurable amount of ms to end; This is also configurable per test
+- Tests can be written like the rest of the codebase
+- Tests are executed and debugged   
+- Tests are debugged like the rest of the codebase
+- Tests can be executed independently
 
 # Definition of a test for jsenv
 
