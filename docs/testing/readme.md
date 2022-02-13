@@ -14,7 +14,7 @@ This documentation contains:
 
 - Tests can be executed on Chrome, Firefox, Safari and Node.js
 - Tests are executed in total isolation: a dedicated browser or node process per test
-- Tests can be written like the rest of the codebase; Experience gained on the rest of the codebase can be reused in tests; less context switching.
+- Tests can be written like other files; experience gained on the rest of the codebase can be reused in tests; less context switching.
 - Tests can be executed independently
 
 # Definition of a test for jsenv
