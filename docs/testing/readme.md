@@ -28,19 +28,32 @@ Jsenv provides an api to execute your test files inside one or many environments
 
 # How tests are executed?
 
-Each test file will be executed in his own browser or node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
+Each test file will be executed in his own browser or Node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
 
-jsenv provides several test execution environments, called _runtime_.
+jsenv provides the following test execution environments, called _runtime_.
 
-- A chromium browser per test
-- A chromium browser tab per test
-- A firefox browser per test
-- A firefox tab per test
-- A webkit browser per test
-- A webkit tab per test
-- A node process per test
+```js
+import {
+  chromiumRuntime, // engine used by chrome
+  firefoxRuntime,
+  webkitRuntime, // engine used by safari
+  nodeRuntime,
+} from "@jsenv/core"
+```
 
-Test is executed by something equivalent to a dynamic import.
+You can also use the "tab runtime" versions for browser runtimes.
+They are executing tests in a browser tab instead of a whole browser instance;
+which is enough for most tests. 
+
+```js
+import {
+  chromiumTabRuntime,
+  firefoxTabRuntime,
+  webkitTabRuntime,
+} from "@jsenv/core"
+```
+
+Each test is executed by something equivalent to a dynamic import.
 
 ```js
 await import("file:///file.test.js")
