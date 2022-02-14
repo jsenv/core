@@ -38,7 +38,7 @@ As documented in [2. Remap package with importmap](../npm_package/readme.md#2-re
 
 3 - Convert react from CommonJS to JS modules
 
-As documented in [3. Adapt to the module format](./npm_package.md#3-adapt-to-module-format), convert "react" and "react-dom" to import/export.
+As documented in [3. Adapt to the module format](../npm_package/readme.md#3-adapt-to-module-format), convert "react" and "react-dom" to import/export.
 
 ```js
 import { commonJsToJsModule } from "@jsenv/core"
