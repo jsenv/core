@@ -31,6 +31,7 @@ Jsenv provides an api to execute your test files inside one or many environments
 Each test file will be executed in his own browser or Node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
 
 jsenv provides the following test execution environments, called _runtime_.
+You can use one, some or all of them depending what you want to achieve. 
 
 ```js
 import {
