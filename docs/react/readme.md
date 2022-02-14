@@ -23,7 +23,7 @@ npm i react-dom
 
 2 - Remap react imports using an importmap
 
-As documented in [2. Remap package with importmap](./npm_package.md#2-remap-package-with-importmap), remap "react" and "react-dom" using an importmap.
+As documented in [2. Remap package with importmap](../npm_package/readme.md#2-remap-package-with-importmap), remap "react" and "react-dom" using an importmap.
 
 ```html
 <script type="importmap">
