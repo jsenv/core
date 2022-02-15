@@ -7,7 +7,7 @@ This documentation contains:
 - [Key features](#key-features)
 - [Definition of a test for jsenv](#Definition-of-a-test-for-jsenv)
 - [How tests are executed?](#How-tests-are-executed)
-- [How to test async code?](#How-to-test-async-code)
+- [How to write tests?](#How-to-write-tests)
 - [executeTestPlan](#executeTestPlan)
 
 # Key features
@@ -113,7 +113,23 @@ Note: An empty file is a completed execution.
 
 You can abort test execution from the terminal. Hit Ctrl+C and test executions will stop immediatly.
 
-# How to test async code?
+# How to write tests?
+
+Jsenv provides a powerful and simple assertion library, a typical test looks like this:
+
+```js
+import { assert } from "@jsenv/assert"
+import { getCircleArea } from "./circle.js"
+
+const actual = getCircleArea(1)
+const expected = Math.PI
+assert({ actual, expected })
+```
+
+You can read more about it at [@jsenv/assert](https://github.com/jsenv/assert).
+You are free to use other way to write tests; @jsenv/assert is just an helper.
+
+## top level await
 
 Top level await is a standard (and damn cool) way to make your top level code execution asynchronous. Use it to test async code.
 
