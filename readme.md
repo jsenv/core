@@ -1,4 +1,4 @@
-# jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
+# @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
 _@jsenv/core_ is a quick start pack to launch a js project. It provides what you need from the beginning: develoment, testing and building all in one.
 
