@@ -5,13 +5,6 @@
 
 export const urlHotMetas = {}
 
-const addUrlMeta = (url, meta) => {
-  urlHotMetas[url] = {
-    ...urlHotMetas[url],
-    ...meta,
-  }
-}
-
 export default (url) => {
   const data = {}
 
@@ -66,4 +59,18 @@ export default (url) => {
       })
     },
   }
+}
+
+const addUrlMeta = (url, meta) => {
+  const urlWithoutHmrQuery = asUrlWithoutHmrQuery(url)
+  urlHotMetas[urlWithoutHmrQuery] = {
+    ...urlHotMetas[urlWithoutHmrQuery],
+    ...meta,
+  }
+}
+
+const asUrlWithoutHmrQuery = (url) => {
+  const urlObject = new URL(url)
+  urlObject.searchParams.delete("hmr")
+  return urlObject.href
 }

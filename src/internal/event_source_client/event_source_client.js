@@ -72,8 +72,8 @@ const applyHotReload = async ({ hotInstructions }) => {
       const urlToFetch = urlContext.asUrlToFetch(boundary)
       const urlHotMeta = urlHotMetas[urlToFetch]
       if (urlHotMeta && urlHotMeta.disposeCallback) {
-        console.log(`[jsenv] dispose: ${boundary}`)
         await urlHotMeta.disposeCallback()
+        console.log(`[jsenv] hot disposed: ${boundary}`)
       }
       if (type === "prune") {
         delete urlHotMetas[urlToFetch]
