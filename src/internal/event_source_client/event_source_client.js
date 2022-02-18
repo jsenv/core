@@ -69,15 +69,16 @@ const applyHotReload = async ({ hotInstructions }) => {
       const urlToFetch = urlContext.asUrlToFetch(boundary)
       const urlHotMeta = urlHotMetas[urlToFetch]
       if (urlHotMeta && urlHotMeta.disposeCallback) {
+        console.log(`[jsenv] dispose: ${boundary}`)
         await urlHotMeta.disposeCallback()
       }
       if (type === "prune") {
-        console.log(`[jsenv] hot prune: ${boundary}`)
+        delete urlHotMetas[urlToFetch]
         return null
       }
       if (type === "js_module") {
         const namespace = await reloadJsImport(urlToFetch)
-        console.log(`[jsenv] hot updated: ${boundary}`)
+        console.log(`[jsenv] hot updated: ${boundary}`, namespace)
         return namespace
       }
       if (type === "html") {

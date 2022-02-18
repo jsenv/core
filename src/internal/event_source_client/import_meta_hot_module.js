@@ -5,6 +5,13 @@
 
 export const urlHotMetas = {}
 
+const addUrlMeta = (url, meta) => {
+  urlHotMetas[url] = {
+    ...urlHotMetas[url],
+    ...meta,
+  }
+}
+
 export default (url) => {
   const data = {}
 
@@ -12,47 +19,51 @@ export default (url) => {
     data,
     accept: (firstArg, secondArg) => {
       if (!firstArg) {
-        urlHotMetas[url] = {
+        addUrlMeta(url, {
           dependencies: [url],
           acceptCallback: () => {},
-        }
+        })
         return
       }
       if (typeof firstArg === "function") {
-        urlHotMetas[url] = {
+        addUrlMeta(url, {
           dependencies: [url],
           acceptCallback: firstArg,
-        }
+        })
         return
       }
       if (typeof firstArg === "string") {
-        urlHotMetas[url] = {
+        addUrlMeta(url, {
           dependencies: [firstArg],
           acceptCallback: secondArg,
-        }
+        })
         return
       }
       if (Array.isArray(firstArg)) {
-        urlHotMetas[url] = {
+        addUrlMeta(url, {
           dependencies: firstArg,
           acceptCallback: secondArg,
-        }
+        })
         return
       }
       throw new Error(`invalid call to hot.accept()`)
     },
     dispose: (callback) => {
-      urlHotMetas[url] = {
+      addUrlMeta(url, {
         disposeCallback: () => {
           return callback(data)
         },
-      }
+      })
     },
     decline: () => {
-      urlHotMetas[url] = "decline"
+      addUrlMeta(url, {
+        declined: true,
+      })
     },
     invalidate: () => {
-      urlHotMetas[url] = "invalid"
+      addUrlMeta(url, {
+        invalidated: true,
+      })
     },
   }
 }
