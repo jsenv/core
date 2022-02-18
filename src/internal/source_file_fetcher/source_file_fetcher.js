@@ -124,7 +124,10 @@ export const createSourceFileFetcher = ({
     return remoteUrl
   }
 
-  const loadSourceFile = async (url, { request }) => {
+  const loadSourceFile = async (
+    url,
+    { request, cacheStrategy = projectFileCacheStrategy },
+  ) => {
     const urlWithoutSearch = asUrlWithoutSearch(url)
     const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
     if (inlineRessource) {
@@ -153,8 +156,8 @@ export const createSourceFileFetcher = ({
     }
     const response = await fetchFileSystem(url, {
       headers: request.headers,
-      etagEnabled: projectFileCacheStrategy === "etag",
-      mtimeEnabled: projectFileCacheStrategy === "mtime",
+      etagEnabled: cacheStrategy === "etag",
+      mtimeEnabled: cacheStrategy === "mtime",
     })
     return {
       response,

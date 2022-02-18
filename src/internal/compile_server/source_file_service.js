@@ -34,8 +34,12 @@ export const createSourceFileService = ({
 
     const fileInterface = await sourceFileFetcher.loadSourceFile(url, {
       request,
+      cacheStrategy:
+        // disable 304 for html files otherwise the html inline ressources are not parsed
+        urlObject.pathname.endsWith(".html") ? "none" : undefined,
     })
     if (fileInterface.response.status !== 200) {
+      // for 304 it means html files are not re-parsed
       return fileInterface.response
     }
     const responseContentType = fileInterface.response.headers["content-type"]
