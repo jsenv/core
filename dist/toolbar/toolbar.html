@@ -164,7 +164,7 @@ Because for some element we set the focus outline on a div which would not match
   width: 40px;
   height: 40px;
 }
-#eventsource-indicator .event-source-livereload {
+#eventsource-indicator .event-source-autoreload {
   position: absolute;
   width: 32px;
   height: 32px;
@@ -172,7 +172,7 @@ Because for some element we set the focus outline on a div which would not match
   left: 0;
   top: 0;
 }
-.event-source-livereload[data-variant="enabled"] {
+.event-source-autoreload[data-variant="enabled"] {
   color: green;
 }
 #eventsource-indicator .event-source-icon {
@@ -478,15 +478,6 @@ html[data-theme="light"] .iconToolbar:hover {
 html[data-theme="light"] #loader-icon {
   color: #404040;
 }
-html[data-theme="light"] .livereload-circle[data-variant="off"] {
-  fill: #757575;
-}
-html[data-theme="light"] .livereload-circle[data-variant="connecting"] {
-  fill: #717171;
-}
-html[data-theme="light"] .livereload-ring {
-  stroke: rgba(138, 136, 136, 0.46);
-}
 /* settings */
 html[data-theme="light"] #settings-box,
 html[data-theme="light"] #settings[data-active] button {
@@ -790,7 +781,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   color: inherit;
 }
 
-/*# sourceMappingURL=assets/toolbar_main.css_58e23c43.map */</style>
+/*# sourceMappingURL=assets/toolbar_main.css_769a3d27.map */</style>
   <script id="jsenv_inject_systemjs" content-src="/src/internal/runtime_client/s.js">/*
 * SJS 6.11.0
 * Minimal SystemJS Build
@@ -1760,8 +1751,8 @@ html[data-toolbar-visible] #toolbar-trigger {
             <div class="tooltip">
               Connected to server
               <br>
-              Livereload:
-              <span data-when="livereload:on" style="color: green">ON</span><span data-when="livereload:off" style="color: grey">OFF</span>
+              Autoreload:
+              <span data-when="autoreload:on" style="color: green">ON</span><span data-when="autoreload:off" style="color: grey">OFF</span>
               <br>
               Changes:
               <span data-when="changes:yes"><a class="eventsource-changes-link" style="color: inherit" href="javascript:void(0);">X</a></span><span data-when="changes:no">none</span>
@@ -1771,13 +1762,13 @@ html[data-toolbar-visible] #toolbar-trigger {
               </div>
             </div>
             <button>
-              <div data-when="livereload:on">
-                <svg class="event-source-livereload iconToolbar" data-variant="enabled">
+              <div data-when="autoreload:on">
+                <svg class="event-source-autoreload iconToolbar" data-variant="enabled">
                   <use xlink:href="#loading_svg"></use>
                 </svg>
               </div>
               <div data-when="changes:yes">
-                <svg class="event-source-livereload iconToolbar" data-variant="disabled">
+                <svg class="event-source-autoreload iconToolbar" data-variant="disabled">
                   <use xlink:href="#loading_svg"></use>
                 </svg>
               </div>
@@ -1804,6 +1795,24 @@ html[data-toolbar-visible] #toolbar-trigger {
             </div>
             <div id="settings-box-body">
               <div class="settings-box-items-wrapper">
+                <div class="settings-box-item settings-autoreload">
+                  <div class="category-title">
+                    <svg width="20px" height="20px">
+                      <use xlink:href="#loading_svg"></use>
+                    </svg>
+                    <span>Autoreload</span>
+                  </div>
+                  <label class="switch" data-contains-hidden-input="">
+                    <input id="toggle-autoreload" type="checkbox">
+                    <div>
+                      <div class="slider"></div>
+                      <div class="square"></div>
+                    </div>
+                  </label>
+                  <div class="category-subtitle">
+                    Auto reload when a file is modified, deleted or created.
+                  </div>
+                </div>
                 <div class="settings-box-item settings-notification">
                   <div class="category-title">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px">
@@ -1825,24 +1834,7 @@ html[data-toolbar-visible] #toolbar-trigger {
                     </div>
                   </div>
                 </div>
-                <div class="settings-box-item settings-livereload">
-                  <div class="category-title">
-                    <svg width="20px" height="20px">
-                      <use xlink:href="#loading_svg"></use>
-                    </svg>
-                    <span>Livereload</span>
-                  </div>
-                  <label class="switch" data-contains-hidden-input="">
-                    <input id="toggle-livereload" type="checkbox">
-                    <div>
-                      <div class="slider"></div>
-                      <div class="square"></div>
-                    </div>
-                  </label>
-                  <div class="category-subtitle">
-                    Reload page when a file is modified, deleted or created.
-                  </div>
-                </div>
+
                 <div class="settings-box-item">
                   <div class="category-title">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px">
@@ -4580,12 +4572,12 @@ html[data-toolbar-visible] #toolbar-trigger {
       var parentEventSourceClient = window.parent.__jsenv_event_source_client__;
 
       var initToolbarEventSource = function initToolbarEventSource(_ref) {
-        var hmr = _ref.hmr;
+        var autoreload = _ref.autoreload;
         removeForceHideElement(document.querySelector("#eventsource-indicator"));
-        autoreloadAvailableOnServer = hmr;
+        autoreloadAvailableOnServer = autoreload;
 
         if (!autoreloadAvailableOnServer) {
-          disableLivereloadSetting();
+          disableAutoreloadSetting();
         }
 
         parentEventSourceClient.status.onchange = function () {
@@ -4596,11 +4588,11 @@ html[data-toolbar-visible] #toolbar-trigger {
           updateEventSourceIndicator();
         };
 
-        var livereloadCheckbox = document.querySelector("#toggle-livereload");
-        livereloadCheckbox.checked = parentEventSourceClient.isLivereloadEnabled();
+        var autoreloadCheckbox = document.querySelector("#toggle-autoreload");
+        autoreloadCheckbox.checked = parentEventSourceClient.isAutoreloadEnabled();
 
-        livereloadCheckbox.onchange = function () {
-          parentEventSourceClient.setLivereloadPreference(livereloadCheckbox.checked);
+        autoreloadCheckbox.onchange = function () {
+          parentEventSourceClient.setAutoreloadPreference(autoreloadCheckbox.checked);
           updateEventSourceIndicator();
         };
 
@@ -4614,7 +4606,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         var eventSourceConnectionState = parentEventSourceClient.status.value;
         enableVariant(eventSourceIndicator, {
           eventsource: eventSourceConnectionState,
-          livereload: parentEventSourceClient.isLivereloadEnabled() ? "on" : "off",
+          autoreload: parentEventSourceClient.isAutoreloadEnabled() ? "on" : "off",
           changes: reloadMessageCount > 0 ? "yes" : "no"
         });
         var variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
@@ -4663,10 +4655,10 @@ html[data-toolbar-visible] #toolbar-trigger {
         }
       };
 
-      var disableLivereloadSetting = function disableLivereloadSetting() {
-        document.querySelector(".settings-livereload").setAttribute("data-disabled", "true");
-        document.querySelector(".settings-livereload").setAttribute("title", "Livereload not available: disabled by server");
-        document.querySelector("#toggle-livereload").disabled = true;
+      var disableAutoreloadSetting = function disableAutoreloadSetting() {
+        document.querySelector(".settings-autoreload").setAttribute("data-disabled", "true");
+        document.querySelector(".settings-autoreload").setAttribute("title", "Autoreload not available: disabled by server");
+        document.querySelector("#toggle-autoreload").disabled = true;
       };
 
       var WINDOW_SMALL_WIDTH = 420;
@@ -4794,7 +4786,7 @@ html[data-toolbar-visible] #toolbar-trigger {
       var renderToolbar = _async(function (_ref) {
         var exploringJSON = _ref.exploringJSON;
         var jsenvDirectoryRelativeUrl = exploringJSON.jsenvDirectoryRelativeUrl,
-            hmr = exploringJSON.hmr;
+            autoreload = exploringJSON.autoreload;
         var executedFileCompiledUrl = window.parent.location.href;
         var compileServerOrigin = window.parent.location.origin;
         var compileGroup = getCompileGroup({
@@ -4839,7 +4831,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         deactivateToolbarSection(document.querySelector("#file-list-link"));
         initToolbarEventSource({
           executedFileRelativeUrl: executedFileRelativeUrl,
-          hmr: hmr
+          autoreload: autoreload
         }); // if user click enter or space quickly while closing toolbar
         // it will cancel the closing
         // that's why I used toggleToolbar and not hideToolbar
@@ -4867,7 +4859,7 @@ html[data-toolbar-visible] #toolbar-trigger {
         // toolbar hidden by default, nothing to do to hide it by default
         sendEventToParent("toolbar-visibility-change", false);
       }; // (by the way it might be cool to have the toolbar auto show when)
-      // it has something to say (being disconnected from livereload server)
+      // it has something to say (being disconnected from server)
 
 
       var showToolbar = function showToolbar() {
@@ -5021,7 +5013,7 @@ html[data-toolbar-visible] #toolbar-trigger {
   };
 });
 
-//# sourceMappingURL=toolbar_main_d6af5fda.js.map</script>
+//# sourceMappingURL=toolbar_main_1983cd17.js.map</script>
   
 
 </body></html>

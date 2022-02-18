@@ -59,8 +59,6 @@ var createUrlContext = function createUrlContext(_ref2) {
   var compileDirectoryServerUrl = "".concat(projectDirectoryServerUrl).concat(compileDirectoryRelativeUrl);
   return {
     asSourceRelativeUrl: function asSourceRelativeUrl(url) {
-      console.log(url, compileDirectoryServerUrl);
-
       if (url.startsWith(compileDirectoryServerUrl)) {
         return url.slice(compileDirectoryServerUrl.length);
       }
@@ -291,8 +289,8 @@ var listenEvent = function listenEvent(emitter, event, callback) {
   };
 };
 
-var isLivereloadEnabled = function isLivereloadEnabled() {
-  var value = window.localStorage.getItem("livereload");
+var isAutoreloadEnabled = function isAutoreloadEnabled() {
+  var value = window.localStorage.getItem("autoreload");
 
   if (value === "0") {
     return false;
@@ -300,8 +298,8 @@ var isLivereloadEnabled = function isLivereloadEnabled() {
 
   return true;
 };
-var setLivereloadPreference = function setLivereloadPreference(value) {
-  window.localStorage.setItem("livereload", value ? "1" : "0");
+var setAutoreloadPreference = function setAutoreloadPreference(value) {
+  window.localStorage.setItem("autoreload", value ? "1" : "0");
 };
 
 var compareTwoUrlPaths = function compareTwoUrlPaths(url, otherUrl) {
@@ -470,7 +468,7 @@ var reloadDOMNodesUsingUrls = function reloadDOMNodesUsingUrls(urlsToReload) {
 
     mutations.push(function () {
       node[attributeName] = injectQuery(attribute, {
-        t: Date.now()
+        hmr: Date.now()
       });
     });
   };
@@ -526,6 +524,12 @@ var reloadJsImport = _async$1(function (url) {
   return System.import(urlWithHmr);
 });
 
+/*
+ * https://vitejs.dev/guide/api-hmr.html#hot-accept-deps-cb
+ * https://modern-web.dev/docs/dev-server/plugins/hmr/
+ */
+var urlHotMetas = {};
+
 function _await(value, then, direct) {
   if (direct) {
     return then ? then(value) : value;
@@ -560,7 +564,9 @@ var reloadMessages = [];
 
 function _empty() {}
 
-var urlHotMetas = {};
+var reloadMessagesSignal = {
+  onchange: function onchange() {}
+};
 
 function _awaitIgnored(value, direct) {
   if (!direct) {
@@ -568,23 +574,9 @@ function _awaitIgnored(value, direct) {
   }
 }
 
-var reloadMessagesSignal = {
-  onchange: function onchange() {}
-};
-
-function _invoke(body, then) {
-  var result = body();
-
-  if (result && result.then) {
-    return result.then(then);
-  }
-
-  return then(result);
-}
-
 var applyReloadMessageEffects = _async(function () {
   var someEffectIsFullReload = reloadMessages.some(function (reloadMessage) {
-    return reloadMessage.instruction.type === "full_reload";
+    return reloadMessage.type === "full";
   });
 
   if (someEffectIsFullReload) {
@@ -603,6 +595,7 @@ var applyReloadMessageEffects = _async(function () {
     promise.then(function () {
       onApplied(reloadMessage);
     }, function (e) {
+      // reuse error display from html supervisor?
       console.error(e);
       console.error("[hmr] Failed to reload after ".concat(reloadMessage.reason, ".\nThis could be due to syntax errors or importing non-existent modules (see errors above)"));
       reloadMessage.status = "failed";
@@ -611,8 +604,8 @@ var applyReloadMessageEffects = _async(function () {
   };
 
   reloadMessages.forEach(function (reloadMessage) {
-    if (reloadMessage.instruction.type === "hot_reload") {
-      setReloadMessagePromise(reloadMessage, applyHotReload(reloadMessage.instruction));
+    if (reloadMessage.type === "hot") {
+      setReloadMessagePromise(reloadMessage, applyHotReload(reloadMessage));
       return;
     }
 
@@ -623,12 +616,22 @@ var applyReloadMessageEffects = _async(function () {
   return _await();
 });
 
+function _invoke(body, then) {
+  var result = body();
+
+  if (result && result.then) {
+    return result.then(then);
+  }
+
+  return then(result);
+}
+
 var applyHotReload = _async(function (_ref) {
-  var updates = _ref.updates;
-  return _awaitIgnored(updates.reduce(function (previous, _ref2) {
+  var hotInstructions = _ref.hotInstructions;
+  return _awaitIgnored(hotInstructions.reduce(function (previous, _ref2) {
     var type = _ref2.type,
         relativeUrl = _ref2.relativeUrl,
-        acceptedByRelativeUrl = _ref2.acceptedByRelativeUrl;
+        hotAcceptedByRelativeUrl = _ref2.hotAcceptedByRelativeUrl;
     return _await(previous, function () {
       var urlToFetch = urlContext.asUrlToFetch(relativeUrl);
       var urlHotMeta = urlHotMetas[urlToFetch];
@@ -638,11 +641,14 @@ var applyHotReload = _async(function (_ref) {
         }
       }, function () {
         var _exit = false;
-        // maybe rename "js" into "import"
-        // "js" is too generic it could apply to a regular js file
-        // or "js_module"
+
+        if (type === "prune") {
+          console.log("[jsenv] hot prune: ".concat(relativeUrl));
+          return null;
+        }
+
         return _invoke(function () {
-          if (type === "js") {
+          if (type === "js_module") {
             return _await(reloadJsImport(urlToFetch), function (namespace) {
               console.log("[jsenv] hot updated: ".concat(relativeUrl));
               _exit = true;
@@ -658,9 +664,10 @@ var applyHotReload = _async(function (_ref) {
               return null;
             }
 
-            var urlToReload = urlContext.asUrlToFetch(acceptedByRelativeUrl);
-            var sourceUrlToReload = urlContext.asSourceUrl(acceptedByRelativeUrl);
+            var urlToReload = urlContext.asUrlToFetch(hotAcceptedByRelativeUrl);
+            var sourceUrlToReload = urlContext.asSourceUrl(hotAcceptedByRelativeUrl);
             reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload]);
+            console.log("[jsenv] hot updated: ".concat(relativeUrl));
             return null;
           }
 
@@ -674,7 +681,7 @@ var applyHotReload = _async(function (_ref) {
 var addReloadMessage = function addReloadMessage(reloadMessage) {
   reloadMessages.push(reloadMessage);
 
-  if (isLivereloadEnabled()) {
+  if (isAutoreloadEnabled()) {
     applyReloadMessageEffects();
   } else {
     reloadMessagesSignal.onchange();
@@ -699,8 +706,8 @@ window.__jsenv_event_source_client__ = {
   status: status,
   connect: connect,
   disconnect: disconnect,
-  isLivereloadEnabled: isLivereloadEnabled,
-  setLivereloadPreference: setLivereloadPreference,
+  isAutoreloadEnabled: isAutoreloadEnabled,
+  setAutoreloadPreference: setAutoreloadPreference,
   urlHotMetas: urlHotMetas,
   reloadMessages: reloadMessages,
   reloadMessagesSignal: reloadMessagesSignal,

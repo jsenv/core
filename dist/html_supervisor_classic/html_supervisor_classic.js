@@ -745,8 +745,6 @@ var createUrlContext = function createUrlContext(_ref2) {
   var compileDirectoryServerUrl = "".concat(projectDirectoryServerUrl).concat(compileDirectoryRelativeUrl);
   return {
     asSourceRelativeUrl: function asSourceRelativeUrl(url) {
-      console.log(url, compileDirectoryServerUrl);
-
       if (url.startsWith(compileDirectoryServerUrl)) {
         return url.slice(compileDirectoryServerUrl.length);
       }
@@ -870,7 +868,7 @@ var getRessourceResponseError = _async$8(function (_ref) {
   return _invoke$6(function () {
     if (response.status === 500 && contentType === "application/json") {
       return _await$9(response.json(), function (bodyAsJson) {
-        if (bodyAsJson.message && bodyAsJson.filename && "columnNumber" in bodyAsJson) {
+        if (bodyAsJson.code === "PARSE_ERROR") {
           var error = new Error(createDetailedMessage("file cannot be parsed", _objectSpread2({
             "parsing error message": bodyAsJson.message
           }, getRessourceTrace({
@@ -879,7 +877,7 @@ var getRessourceResponseError = _async$8(function (_ref) {
             importerUrl: importerUrl,
             type: type
           }))));
-          error.parsingError = bodyAsJson;
+          error.cause = bodyAsJson;
           _exit = true;
           return error;
         }
@@ -1750,18 +1748,8 @@ var unevalException = function unevalException(value) {
 
 var displayErrorInDocument = function displayErrorInDocument(error) {
   var title = "An error occured";
-  var theme;
-  var message;
-
-  if (error && error.parsingError) {
-    theme = "light";
-    var parsingError = error.parsingError;
-    message = errorToHTML(parsingError.messageHTML || escapeHtml(parsingError.message));
-  } else {
-    theme = "dark";
-    message = errorToHTML(error);
-  }
-
+  var theme = error && error.cause && error.cause.code === "PARSE_ERROR" ? "light" : "dark";
+  var message = errorToHTML(error);
   var css = "\n    .jsenv-console {\n      background: rgba(0, 0, 0, 0.95);\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      height: 100%;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      z-index: 1000;\n      box-sizing: border-box;\n      padding: 1em;\n    }\n\n    .jsenv-console h1 {\n      color: red;\n      display: flex;\n      align-items: center;\n    }\n\n    #button-close-jsenv-console {\n      margin-left: 10px;\n    }\n\n    .jsenv-console pre {\n      overflow: auto;\n      max-width: 70em;\n      /* avoid scrollbar to hide the text behind it */\n      padding: 20px;\n    }\n\n    .jsenv-console pre[data-theme=\"dark\"] {\n      background: #111;\n      border: 1px solid #333;\n      color: #eee;\n    }\n\n    .jsenv-console pre[data-theme=\"light\"] {\n      background: #1E1E1E;\n      border: 1px solid white;\n      color: #EEEEEE;\n    }\n\n    .jsenv-console pre a {\n      color: inherit;\n    }\n    ";
   var html = "\n      <style type=\"text/css\">".concat(css, "></style>\n      <div class=\"jsenv-console\">\n        <h1>").concat(title, " <button id=\"button-close-jsenv-console\">X</button></h1>\n        <pre data-theme=\"").concat(theme, "\">").concat(message, "</pre>\n      </div>\n      ");
   var removeJsenvConsole = appendHMTLInside(html, document.body);
@@ -1779,8 +1767,10 @@ var errorToHTML = function errorToHTML(error) {
   var html;
 
   if (error && error instanceof Error) {
-    //  stackTrace formatted by V8
-    if (Error.captureStackTrace) {
+    if (error.cause && error.cause.code === "PARSE_ERROR") {
+      html = error.messageHTML || escapeHtml(error.message);
+    } // stackTrace formatted by V8
+    else if (Error.captureStackTrace) {
       html = escapeHtml(error.stack);
     } else {
       // other stack trace such as firefox do not contain error.message
@@ -2069,19 +2059,21 @@ var initHtmlSupervisor = function initHtmlSupervisor() {
       var errorExposureInConsole = true;
 
       if (e.name === "SyntaxError") {
-        improveErrorWithFetch = false;
         errorExposureInConsole = false;
       }
 
       return _invoke$5(function () {
         if (improveErrorWithFetch) {
-          var url = new URL(src, window.location.href).href;
           return _await$8(getErrorFromServer({
-            url: url,
+            src: src,
             urlContext: urlContext
           }), function (errorFromServer) {
             if (errorFromServer) {
               executionResult.error = errorFromServer;
+
+              if (errorFromServer.cause && errorFromServer.cause.code === "PARSE_ERROR") {
+                errorExposureInConsole = false;
+              }
             }
           });
         }
@@ -2145,8 +2137,12 @@ var initHtmlSupervisor = function initHtmlSupervisor() {
 
 var getErrorFromServer = _async$7(function (_ref3) {
   var _exit = false;
-  var url = _ref3.url,
+  var src = _ref3.src,
       urlContext = _ref3.urlContext;
+  var urlObject = new URL(src, window.location.href);
+  var urlWithoutInspect = urlObject.href;
+  urlObject.searchParams.set("__inspect__", "");
+  var url = urlObject.href;
   var response;
   return _continue$2(_catch$3(function () {
     return _await$8(fetchUrl(url), function (_fetchUrl) {
@@ -2157,14 +2153,28 @@ var getErrorFromServer = _async$7(function (_ref3) {
     _exit = true;
     return e;
   }), function (_result) {
-    return _exit ? _result : _await$8(getRessourceResponseError({
-      urlContext: urlContext,
-      contentTypeExpected: "application/javascript",
-      type: "js_module",
-      url: url,
-      importerUrl: window.location.href,
-      response: response
-    }));
+    return _exit ? _result : response.status !== 200 ? null : _await$8(response.json(), function (realResponseData) {
+      return _await$8(getRessourceResponseError({
+        urlContext: urlContext,
+        contentTypeExpected: "application/javascript",
+        type: "js_module",
+        url: urlWithoutInspect,
+        // at some point the importer is the HTML of course but here "importer"
+        // means "last ressource to import that file before encountering an error"
+        // so it might be an intermediate file.
+        // I guess this information is available server side and could be returned
+        // inside the __inspect__ response
+        // importerUrl: window.location.href,
+        response: {
+          status: realResponseData.status,
+          statustext: realResponseData.statusText,
+          headers: realResponseData.headers,
+          json: function json() {
+            return JSON.parse(realResponseData.body);
+          }
+        }
+      }));
+    });
   });
 });
 
@@ -2184,21 +2194,11 @@ var onExecutionError = function onExecutionError(executionResult, _ref4) {
       currentScript.dispatchEvent(errorEvent);
     }
   } else if (_typeof(error) === "object") {
-    var parsingError = error.parsingError;
     var globalErrorEvent = new Event("error");
-
-    if (parsingError) {
-      globalErrorEvent.filename = parsingError.filename;
-      globalErrorEvent.lineno = parsingError.lineNumber;
-      globalErrorEvent.message = parsingError.message;
-      globalErrorEvent.colno = parsingError.columnNumber;
-    } else {
-      globalErrorEvent.filename = error.filename;
-      globalErrorEvent.lineno = error.lineno;
-      globalErrorEvent.message = error.message;
-      globalErrorEvent.colno = error.columnno;
-    }
-
+    globalErrorEvent.filename = error.filename;
+    globalErrorEvent.lineno = error.line || error.lineno;
+    globalErrorEvent.colno = error.column || error.columnno;
+    globalErrorEvent.message = error.message;
     window.dispatchEvent(globalErrorEvent);
   }
 
