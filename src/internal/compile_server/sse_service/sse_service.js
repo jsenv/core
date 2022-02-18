@@ -17,7 +17,7 @@ export const createSSEService = ({
 }) => {
   let handleSSEClientRequest
   if (autoreload) {
-    handleSSEClientRequest = createSSEServiceWithHmr({
+    handleSSEClientRequest = createSSEServiceWithAutoreload({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       watchConfig,
@@ -40,7 +40,7 @@ export const createSSEService = ({
   }
 }
 
-const createSSEServiceWithHmr = ({
+const createSSEServiceWithAutoreload = ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   watchConfig,
@@ -122,21 +122,70 @@ const createSSEServiceWithHmr = ({
       historyLength: 100,
       welcomeEventEnabled: true,
     })
-    const stopWatching = watchProjectFiles(({ event, fileRelativeUrl }) => {
+    const removePruneCallback = ressourceGraph.pruneCallbackList.add((urls) => {
+      sseRoom.sendEvent({
+        type: "reload",
+        data: JSON.stringify({
+          cause: `some files are no longer referenced`,
+          type: "hot",
+          typeReason: "pruned ressources are assumed to be disposable",
+          hotInstructions: urls.map((url) => {
+            return {
+              type: "prune",
+              relativeUrl: urlToRelativeUrl(url, projectDirectoryUrl),
+            }
+          }),
+        }),
+      })
+    })
+    const stopWatching = watchProjectFiles(({ fileRelativeUrl, event }) => {
       const url = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
-      const reloadInstruction = ressourceGraph.onFileChange(url)
-      if (reloadInstruction) {
+      const updatePropagationResult = ressourceGraph.onFileChange(url)
+      // file not part of dependency graph
+      if (!updatePropagationResult) {
+        return
+      }
+      if (updatePropagationResult.declined) {
         sseRoom.sendEvent({
           type: "reload",
           data: JSON.stringify({
-            reason: `${fileRelativeUrl} ${event}`,
-            ...reloadInstruction,
+            cause: `${fileRelativeUrl} ${event}`,
+            type: "full",
+            typeReason: updatePropagationResult.reason,
+            hotDeclinedBy: updatePropagationResult.declinedBy
+              ? urlToRelativeUrl(
+                  updatePropagationResult.declinedBy,
+                  projectDirectoryUrl,
+                )
+              : undefined,
           }),
         })
+        return
       }
+      sseRoom.sendEvent({
+        type: "reload",
+        data: JSON.stringify({
+          cause: `${fileRelativeUrl} ${event}`,
+          type: "hot",
+          typeReason: updatePropagationResult.reason,
+          hotInstructions: updatePropagationResult.boundaries.map(
+            ({ boundary, acceptedBy }) => {
+              return {
+                type: ressourceGraph.getRessourceByUrl(boundary).type,
+                relativeUrl: urlToRelativeUrl(boundary, projectDirectoryUrl),
+                hotAcceptedByRelativeUrl: urlToRelativeUrl(
+                  acceptedBy,
+                  projectDirectoryUrl,
+                ),
+              }
+            },
+          ),
+        }),
+      })
     })
     const removeSSECleanupCallback = serverStopCallbackList.add(() => {
       removeSSECleanupCallback()
+      removePruneCallback()
       sseRoom.close()
       stopWatching()
     })
@@ -145,6 +194,7 @@ const createSSEServiceWithHmr = ({
       sseRoom,
       cleanup: () => {
         removeSSECleanupCallback()
+        removePruneCallback()
         sseRoom.close()
         stopWatching()
       },

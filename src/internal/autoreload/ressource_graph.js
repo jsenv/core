@@ -1,6 +1,10 @@
+import { createCallbackList } from "@jsenv/abort"
+
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
 export const createRessourceGraph = ({ projectDirectoryUrl }) => {
+  const pruneCallbackList = createCallbackList()
+
   const ressources = {}
   const getRessourceByUrl = (url) => ressources[url]
   const reuseOrCreateRessource = (url) => {
@@ -60,31 +64,45 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     const existingRessource = getRessourceByUrl(url)
     const ressource =
       existingRessource || (ressources[url] = createRessource(url))
-    const notUsedAnymore = []
+
     if (type !== undefined) {
       ressource.type = type
     }
     if (dependencyUrls !== undefined) {
-      if (existingRessource) {
-        const oldDependencyUrls = Array.from(
-          existingRessource.dependencies,
-        ).filter((depUrl) => !dependencyUrls.includes(depUrl))
-        oldDependencyUrls.forEach((oldDependencyUrl) => {
-          ressource.dependencies.delete(oldDependencyUrl)
-          const oldDependency = ressources[oldDependencyUrl]
-          if (oldDependency) {
-            oldDependency.dependents.delete(url)
-            if (oldDependency.dependents.size === 0) {
-              notUsedAnymore.push(oldDependencyUrl)
-            }
-          }
-        })
-      }
       dependencyUrls.forEach((dependencyUrl) => {
         const dependency = reuseOrCreateRessource(dependencyUrl)
         ressource.dependencies.add(dependencyUrl)
         dependency.dependents.add(url)
       })
+      if (existingRessource) {
+        const notUsedAnymore = []
+        const pruneDependencies = (ressource, urlsToPrune) => {
+          urlsToPrune.forEach((urlToPrune) => {
+            ressource.dependencies.delete(urlToPrune)
+            const dependency = ressources[urlToPrune]
+            if (dependency) {
+              dependency.dependents.delete(ressource.url)
+              if (dependency.dependents.size === 0) {
+                notUsedAnymore.push(ressource.url)
+                // should we delete ressources[url]? not sure
+                pruneDependencies(
+                  dependency,
+                  Array.from(dependency.dependencies),
+                )
+              }
+            }
+          })
+        }
+        pruneDependencies(
+          existingRessource,
+          Array.from(existingRessource.dependencies).filter(
+            (dep) => !dependencyUrls.includes(dep),
+          ),
+        )
+        if (notUsedAnymore.length) {
+          onPrunedFiles(notUsedAnymore)
+        }
+      }
     }
     if (hotDecline !== undefined) {
       ressource.hotDecline = hotDecline
@@ -95,7 +113,13 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (hotAcceptDependencies !== undefined) {
       ressource.hotAcceptDependencies = hotAcceptDependencies
     }
-    return notUsedAnymore
+  }
+
+  const onPrunedFiles = (urls) => {
+    urls.forEach((url) => {
+      ressources[url].hmrTimestamp = Date.now()
+    })
+    pruneCallbackList.notify(urls)
   }
 
   const onFileChange = (url) => {
@@ -105,34 +129,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     }
     updateHmrTimestamp(ressource, Date.now())
     const updatePropagationResult = propagateUpdate(ressource)
-    if (updatePropagationResult.declined) {
-      return {
-        type: "full_reload",
-        reason: updatePropagationResult.reason,
-        declinedBy: updatePropagationResult.declinedBy
-          ? urlToRelativeUrl(
-              updatePropagationResult.declinedBy,
-              projectDirectoryUrl,
-            )
-          : undefined,
-      }
-    }
-    return {
-      type: "hot_reload",
-      timestamp: Date.now(),
-      instructions: updatePropagationResult.boundaries.map(
-        ({ boundary, acceptedBy }) => {
-          return {
-            type: ressources[boundary].type,
-            relativeUrl: urlToRelativeUrl(boundary, projectDirectoryUrl),
-            acceptedByRelativeUrl: urlToRelativeUrl(
-              acceptedBy,
-              projectDirectoryUrl,
-            ),
-          }
-        },
-      ),
-    }
+    return updatePropagationResult
   }
 
   const updateHmrTimestamp = (ressource, hmr) => {
@@ -154,11 +151,15 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     iterate(ressource.url)
   }
 
-  const propagateUpdate = (ressource) => {
+  const propagateUpdate = (firstRessource) => {
     const iterate = (ressource, trace) => {
       if (ressource.hotAcceptSelf) {
         return {
           accepted: true,
+          reason:
+            ressource === firstRessource
+              ? `ressource accepts hot reload`
+              : `a dependent ressource accepts hot reload`,
           boundaries: [
             {
               boundary: ressource.url,
@@ -174,7 +175,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
         if (dependent.hotDecline) {
           return {
             declined: true,
-            reason: `found ressource declining hot reload while propagating update`,
+            reason: `a dependent ressource declines hot reload`,
             declinedBy: dependentUrl,
           }
         }
@@ -217,14 +218,16 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       }
       return {
         accepted: true,
+        reason: `${boundaries.length} dependent ressource(s) accepts hot reload`,
         boundaries,
       }
     }
     const trace = []
-    return iterate(ressource, trace)
+    return iterate(firstRessource, trace)
   }
 
   return {
+    pruneCallbackList,
     applyImportmapResolution,
     applyUrlResolution,
     getRessourceByUrl,

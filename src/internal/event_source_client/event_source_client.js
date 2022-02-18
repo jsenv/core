@@ -22,7 +22,7 @@ const reloadMessages = []
 const reloadMessagesSignal = { onchange: () => {} }
 const applyReloadMessageEffects = async () => {
   const someEffectIsFullReload = reloadMessages.some(
-    (reloadMessage) => reloadMessage.type === "full_reload",
+    (reloadMessage) => reloadMessage.type === "full",
   )
   if (someEffectIsFullReload) {
     reloadHtmlPage()
@@ -40,6 +40,7 @@ const applyReloadMessageEffects = async () => {
         onApplied(reloadMessage)
       },
       (e) => {
+        // reuse error display from html supervisor?
         console.error(e)
         console.error(
           `[hmr] Failed to reload after ${reloadMessage.reason}.
@@ -51,7 +52,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
     )
   }
   reloadMessages.forEach((reloadMessage) => {
-    if (reloadMessage.type === "hot_reload") {
+    if (reloadMessage.type === "hot") {
       setReloadMessagePromise(reloadMessage, applyHotReload(reloadMessage))
       return
     }
@@ -60,15 +61,19 @@ This could be due to syntax errors or importing non-existent modules (see errors
   reloadMessagesSignal.onchange() // reload status is "pending"
 }
 
-const applyHotReload = async ({ instructions }) => {
-  await instructions.reduce(
-    async (previous, { type, relativeUrl, acceptedByRelativeUrl }) => {
+const applyHotReload = async ({ hotInstructions }) => {
+  await hotInstructions.reduce(
+    async (previous, { type, relativeUrl, hotAcceptedByRelativeUrl }) => {
       await previous
 
       const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
       const urlHotMeta = urlHotMetas[urlToFetch]
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         await urlHotMeta.disposeCallback()
+      }
+      if (type === "prune") {
+        console.log(`[jsenv] hot prune: ${relativeUrl}`)
+        return null
       }
       if (type === "js_module") {
         const namespace = await reloadJsImport(urlToFetch)
@@ -80,8 +85,10 @@ const applyHotReload = async ({ instructions }) => {
           // we are not in that HTML page
           return null
         }
-        const urlToReload = urlContext.asUrlToFetch(acceptedByRelativeUrl)
-        const sourceUrlToReload = urlContext.asSourceUrl(acceptedByRelativeUrl)
+        const urlToReload = urlContext.asUrlToFetch(hotAcceptedByRelativeUrl)
+        const sourceUrlToReload = urlContext.asSourceUrl(
+          hotAcceptedByRelativeUrl,
+        )
         reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload])
         console.log(`[jsenv] hot updated: ${relativeUrl}`)
         return null
