@@ -51,13 +51,16 @@ This could be due to syntax errors or importing non-existent modules (see errors
       },
     )
   }
-  reloadMessages.forEach((reloadMessage) => {
+  reloadMessages.reduce((previous, reloadMessage) => {
     if (reloadMessage.type === "hot") {
-      setReloadMessagePromise(reloadMessage, applyHotReload(reloadMessage))
-      return
+      const promise = previous.then(() => applyHotReload(reloadMessage))
+      setReloadMessagePromise(reloadMessage, promise)
+      return promise
     }
-    setReloadMessagePromise(reloadMessage, Promise.resolve())
-  })
+    setReloadMessagePromise(reloadMessage, previous)
+    return previous
+  }, Promise.resolve())
+
   reloadMessagesSignal.onchange() // reload status is "pending"
 }
 
@@ -77,8 +80,9 @@ const applyHotReload = async ({ hotInstructions }) => {
         return null
       }
       if (type === "js_module") {
+        // console.log(`[jsenv] hot reloading: ${boundary}`)
         const namespace = await reloadJsImport(urlToFetch)
-        console.log(`[jsenv] hot updated: ${boundary}`, namespace)
+        console.log(`[jsenv] hot updated: ${boundary}`)
         return namespace
       }
       if (type === "html") {
