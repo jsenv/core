@@ -126,8 +126,11 @@ export const startCompileServer = async ({
     // because the goal is to build the files into chunks
     "file://": false,
     // But for all other protocols explicitely specified,
-    // the is kept intact by default ("http:", "https:", "about:", "data:", ...)
-    "**/*": true,
+    // url is kept intact
+    "http://": true,
+    "https://": true,
+    "about:**/*": true,
+    "data:**/*": true,
     /*
      * It's possible to selectively overrides the behaviour above:
      * 1. The CDN file needs to be transformed to be executable in dev, build or both

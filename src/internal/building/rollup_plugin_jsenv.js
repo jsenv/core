@@ -392,6 +392,10 @@ export const createRollupPlugins = async ({
         }
       },
       async renderChunk(code, chunkInfo) {
+        const { facadeModuleId } = chunkInfo
+        if (facadeModuleId === EMPTY_CHUNK_URL) {
+          return null
+        }
         const serverUrl = asServerUrl(chunkInfo.facadeModuleId)
         const jsRessource = ressourceBuilder.findRessource(
           (ressource) => ressource.url === serverUrl,
@@ -1455,10 +1459,13 @@ export const createRollupPlugins = async ({
       return outputOptions
     },
 
-    async renderChunk(code, chunk) {
-      const { facadeModuleId } = chunk
+    async renderChunk(code, chunkInfo) {
+      const { facadeModuleId } = chunkInfo
       if (!facadeModuleId) {
         // happens for inline module scripts for instance
+        return null
+      }
+      if (facadeModuleId === EMPTY_CHUNK_URL) {
         return null
       }
       const url = asOriginalUrl(facadeModuleId)

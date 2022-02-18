@@ -101,10 +101,21 @@ export const createCompiledFileService = ({
       customCompilerMeta,
       jsenvCompilers,
     })
-    // no compiler -> serve original file
-    // we redirect "internally" (we dont send 304 to the browser)
-    // to keep ressource tracking and url resolution simple
+    // no compiler
     if (!compiler) {
+      const compilationAsset = inferCompilationAssetFromUrl(requestUrl)
+      if (compilationAsset) {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), projectDirectoryUrl),
+          {
+            headers: request.headers,
+            etagEnabled: true,
+          },
+        )
+      }
+      // -> serve original file
+      // we redirect "internally" (we dont send 304 to the browser)
+      // to keep ressource tracking and url resolution simple
       return redirectRequest({
         pathname: `/${sourceFileRelativeUrl}`,
       })
@@ -135,17 +146,6 @@ export const createCompiledFileService = ({
         body,
         timing: response.timing,
       }
-    }
-    const compilationAsset = inferCompilationAssetFromUrl(requestUrl)
-    if (compilationAsset) {
-      const response = await fetchFileSystem(
-        new URL(request.ressource.slice(1), projectDirectoryUrl),
-        {
-          headers: request.headers,
-          etagEnabled: true,
-        },
-      )
-      return handleResponse(response)
     }
 
     const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${compileId}/`

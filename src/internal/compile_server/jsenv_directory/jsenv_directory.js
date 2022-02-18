@@ -95,7 +95,11 @@ export const setupJsenvDirectory = async ({
       }
       return existingCompileId
     }
-    const compileIdBase = generateCompileId({ compileProfile, runtime })
+    const compileIdBase = generateCompileId({
+      compileProfile,
+      runtimeName,
+      runtimeVersion,
+    })
     let compileId = compileIdBase
     let integer = 1
     while (existingCompileIds.includes(compileId)) {
@@ -117,8 +121,8 @@ export const setupJsenvDirectory = async ({
   }
 }
 
-const generateCompileId = ({ compileProfile, runtime }) => {
-  if (runtime.name === "jsenv_build") {
+const generateCompileId = ({ compileProfile, runtimeName }) => {
+  if (runtimeName === "jsenv_build") {
     return `out_build`
   }
   if (compileProfile.missingFeatures["transform-instrument"]) {
