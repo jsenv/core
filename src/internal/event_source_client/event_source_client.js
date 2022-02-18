@@ -63,21 +63,21 @@ This could be due to syntax errors or importing non-existent modules (see errors
 
 const applyHotReload = async ({ hotInstructions }) => {
   await hotInstructions.reduce(
-    async (previous, { type, relativeUrl, hotAcceptedByRelativeUrl }) => {
+    async (previous, { type, boundary, acceptedBy }) => {
       await previous
 
-      const urlToFetch = urlContext.asUrlToFetch(relativeUrl)
+      const urlToFetch = urlContext.asUrlToFetch(boundary)
       const urlHotMeta = urlHotMetas[urlToFetch]
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         await urlHotMeta.disposeCallback()
       }
       if (type === "prune") {
-        console.log(`[jsenv] hot prune: ${relativeUrl}`)
+        console.log(`[jsenv] hot prune: ${boundary}`)
         return null
       }
       if (type === "js_module") {
         const namespace = await reloadJsImport(urlToFetch)
-        console.log(`[jsenv] hot updated: ${relativeUrl}`)
+        console.log(`[jsenv] hot updated: ${boundary}`)
         return namespace
       }
       if (type === "html") {
@@ -85,12 +85,10 @@ const applyHotReload = async ({ hotInstructions }) => {
           // we are not in that HTML page
           return null
         }
-        const urlToReload = urlContext.asUrlToFetch(hotAcceptedByRelativeUrl)
-        const sourceUrlToReload = urlContext.asSourceUrl(
-          hotAcceptedByRelativeUrl,
-        )
+        const urlToReload = urlContext.asUrlToFetch(acceptedBy)
+        const sourceUrlToReload = urlContext.asSourceUrl(acceptedBy)
         reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload])
-        console.log(`[jsenv] hot updated: ${relativeUrl}`)
+        console.log(`[jsenv] hot updated: ${boundary}`)
         return null
       }
       throw new Error(`unknown update type: "${type}"`)
