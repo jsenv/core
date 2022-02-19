@@ -48,8 +48,9 @@ export const createSourceFileFetcher = ({
       }
     })
     inlineRessources.forEach((inlineRessource) => {
-      const inlineRessourceUrl = new URL(inlineRessource.specifier, htmlUrl)
-        .href
+      const inlineRessourceUrl = asUrlWithoutSearch(
+        new URL(inlineRessource.specifier, htmlUrl),
+      )
       inlineRessourceMap.set(inlineRessourceUrl, {
         ...inlineRessource,
         htmlUrl,
