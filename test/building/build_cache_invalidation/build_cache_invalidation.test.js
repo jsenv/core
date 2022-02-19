@@ -4,7 +4,6 @@ here I want to test that cache is invalidated when a source file is modified.
 
 */
 
-import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import {
   resolveUrl,
@@ -12,6 +11,7 @@ import {
   urlToRelativeUrl,
   writeFile,
 } from "@jsenv/filesystem"
+
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
@@ -25,10 +25,9 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(
   testDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
-const testDirectoryBasename = basename(testDirectoryRelativeUrl)
 const buildDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const mainFilename = `${testDirectoryBasename}.js`
+const mainFilename = `main.js`
 const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFilename}`
 const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
 

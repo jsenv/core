@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { originDirectoryConverter } from "@jsenv/core/src/internal/origin_directory_converter.js"
+import { originDirectoryConverter } from "@jsenv/core/src/internal/source_file_fetcher/origin_directory_converter.js"
 
 {
   const origin = "http://google.com"
