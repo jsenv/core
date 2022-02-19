@@ -122,6 +122,10 @@ const aHrefVisitor = (node, { notifyReferenceFound }) => {
     if (ressource.isPreserved) {
       return
     }
+    const downloadAttribute = getHtmlNodeAttributeByName(node, "download")
+    if (downloadAttribute && downloadAttribute.value === "") {
+      downloadAttribute.value = urlToFilename(ressource.url)
+    }
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
   }
