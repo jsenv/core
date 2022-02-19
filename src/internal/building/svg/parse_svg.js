@@ -1,27 +1,29 @@
 import {
   parseSvgString,
-  parseHtmlAstRessources,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getHtmlNodeLocation,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
 import { getRessourceAsBase64Url } from "../ressource_builder_util.js"
-import { collectNodesMutations } from "../html/html_node_mutations.js"
+import { collectHtmlMutations } from "../html/html_node_mutations.js"
 import { minifyHtml } from "../html/minify_html.js"
 
 export const parseSvgRessource = async (
   svgRessource,
-  notifiers,
-  { minify, minifyHtmlOptions },
+  { notifyReferenceFound, minify, minifyHtmlOptions },
 ) => {
   const svgString = String(svgRessource.bufferBeforeBuild)
   const svgAst = await parseSvgString(svgString)
-  const htmlRessources = parseHtmlAstRessources(svgAst)
-  const mutations = collectSvgMutations(htmlRessources, notifiers, svgRessource)
-
+  const svgMutations = collectHtmlMutations(
+    svgAst,
+    [imageHrefVisitor, useHrefVisitor],
+    {
+      notifyReferenceFound,
+    },
+  )
   return async ({ getUrlRelativeToImporter }) => {
-    mutations.forEach((mutationCallback) => {
+    svgMutations.forEach((mutationCallback) => {
       mutationCallback({ getUrlRelativeToImporter })
     })
     const svgAfterTransformation = stringifyHtmlAst(svgAst)
@@ -36,34 +38,18 @@ export const parseSvgRessource = async (
   }
 }
 
-export const collectSvgMutations = (
-  { images, uses },
-  notifiers,
-  svgRessource,
-) => {
-  const imagesMutations = collectNodesMutations(
-    images,
-    notifiers,
-    svgRessource,
-    [imageHrefVisitor],
-  )
-  const usesMutations = collectNodesMutations(uses, notifiers, svgRessource, [
-    useHrefVisitor,
-  ])
-  const svgMutations = [...imagesMutations, ...usesMutations]
-  return svgMutations
-}
-
-const imageHrefVisitor = (image, { notifyReferenceFound }) => {
-  const hrefAttribute = getHtmlNodeAttributeByName(image, "href")
+export const imageHrefVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName !== "image") {
+    return null
+  }
+  const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
   if (!hrefAttribute) {
     return null
   }
-
   const hrefReference = notifyReferenceFound({
     referenceLabel: "svg image href",
     ressourceSpecifier: hrefAttribute.value,
-    ...referenceLocationFromHtmlNode(image, "href"),
+    ...referenceLocationFromHtmlNode(node, "href"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const hrefNewValue = referenceToUrl(hrefReference, getUrlRelativeToImporter)
@@ -71,8 +57,11 @@ const imageHrefVisitor = (image, { notifyReferenceFound }) => {
   }
 }
 
-const useHrefVisitor = (use, { notifyReferenceFound }) => {
-  const hrefAttribute = getHtmlNodeAttributeByName(use, "href")
+export const useHrefVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName !== "use") {
+    return null
+  }
+  const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
   if (!hrefAttribute) {
     return null
   }
@@ -81,7 +70,7 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
   const hrefReference = notifyReferenceFound({
     referenceLabel: "svg use href",
     ressourceSpecifier: href,
-    ...referenceLocationFromHtmlNode(use, "href"),
+    ...referenceLocationFromHtmlNode(node, "href"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const hrefNewValue = referenceToUrl(hrefReference, getUrlRelativeToImporter)

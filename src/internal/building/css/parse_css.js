@@ -19,8 +19,8 @@ import { getRessourceAsBase64Url } from "@jsenv/core/src/internal/building/resso
 
 export const parseCssRessource = async (
   cssRessource,
-  { notifyReferenceFound },
   {
+    notifyReferenceFound,
     sourceFileFetcher,
     asProjectUrl,
     asOriginalUrl,

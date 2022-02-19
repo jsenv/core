@@ -16,7 +16,6 @@ import { applyAlgoToRepresentationData } from "@jsenv/integrity"
 
 import {
   parseHtmlString,
-  parseHtmlAstRessources,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
   getIdForInlineHtmlNode,
@@ -43,13 +42,14 @@ import {
   getRessourceAsBase64Url,
   isReferencedOnlyByRessourceHint,
 } from "../ressource_builder_util.js"
-import { collectSvgMutations } from "../svg/parse_svg.js"
-import { collectNodesMutations } from "./html_node_mutations.js"
+import { imageHrefVisitor, useHrefVisitor } from "../svg/parse_svg.js"
+import { collectHtmlMutations } from "./html_node_mutations.js"
 
 export const parseHtmlRessource = async (
   htmlRessource,
-  notifiers,
   {
+    format,
+    notifyReferenceFound,
     minify,
     minifyHtml,
     htmlStringToHtmlAst = (htmlString) => parseHtmlString(htmlString),
@@ -59,88 +59,32 @@ export const parseHtmlRessource = async (
 ) => {
   const htmlString = String(htmlRessource.bufferBeforeBuild)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
-  const { aNodes, links, styles, scripts, imgs, images, uses, sources } =
-    parseHtmlAstRessources(htmlAst)
-
-  const aMutations = collectNodesMutations(aNodes, notifiers, htmlRessource, [
+  const candidates = [
     aHrefVisitor,
-  ])
-  const linksMutations = collectNodesMutations(
-    links,
-    {
-      ...notifiers,
-      ressourceHintNeverUsedCallback,
-    },
-    htmlRessource,
-    [linkStylesheetHrefVisitor, linkHrefVisitor],
-  )
-  const scriptsMutations = collectNodesMutations(
-    scripts,
-    {
-      ...notifiers,
-    },
-    htmlRessource,
-    [
-      // regular javascript are not parseable by rollup
-      // and we don't really care about there content
-      // we will handle them as regular asset
-      // but we still want to inline/minify/hash them for performance
-      classicScriptSrcVisitor,
-      classicScriptTextNodeVisitor,
-      moduleScriptSrcVisitor,
-      moduleScriptTextNodeVisitor,
-      importmapScriptSrcVisitor,
-      importmapScriptTextNodeVisitor,
-    ],
-  )
-  const stylesMutations = collectNodesMutations(
-    styles,
-    notifiers,
-    htmlRessource,
-    [styleTextNodeVisitor],
-  )
-  const imgsSrcMutations = collectNodesMutations(
-    imgs,
-    notifiers,
-    htmlRessource,
-    [imgSrcVisitor],
-  )
-  const imgsSrcsetMutations = collectNodesMutations(
-    imgs,
-    notifiers,
-    htmlRessource,
-    [srcsetVisitor],
-  )
-  const sourcesSrcMutations = collectNodesMutations(
-    sources,
-    notifiers,
-    htmlRessource,
-    [sourceSrcVisitor],
-  )
-  const sourcesSrcsetMutations = collectNodesMutations(
-    sources,
-    notifiers,
-    htmlRessource,
-    [srcsetVisitor],
-  )
-  const svgMutations = collectSvgMutations(
-    { images, uses },
-    notifiers,
-    htmlRessource,
-  )
-
-  const htmlMutations = [
-    ...aMutations,
-    ...linksMutations,
-    ...scriptsMutations,
-    ...stylesMutations,
-    ...imgsSrcMutations,
-    ...imgsSrcsetMutations,
-    ...sourcesSrcMutations,
-    ...sourcesSrcsetMutations,
-    ...svgMutations,
+    linkStylesheetHrefVisitor,
+    linkHrefVisitor,
+    // we won't check classic script content, they will be handled as "assets"
+    // but we will still inline/minify/hash them
+    classicScriptSrcVisitor,
+    classicScriptTextNodeVisitor,
+    moduleScriptSrcVisitor,
+    moduleScriptTextNodeVisitor,
+    importmapScriptSrcVisitor,
+    importmapScriptTextNodeVisitor,
+    styleTextNodeVisitor,
+    imgSrcVisitor,
+    sourceSrcVisitor,
+    imgOrSourceSrcsetVisitor,
+    imageHrefVisitor,
+    useHrefVisitor,
   ]
-
+  const htmlMutations = collectHtmlMutations(htmlAst, candidates, {
+    htmlAst,
+    htmlRessource,
+    format,
+    notifyReferenceFound,
+    ressourceHintNeverUsedCallback,
+  })
   return async (params) => {
     await htmlMutations.reduce(async (previous, mutationCallback) => {
       await previous
@@ -148,7 +92,6 @@ export const parseHtmlRessource = async (
         ...params,
       })
     }, Promise.resolve())
-
     const htmlAfterTransformation = htmlAstToHtmlString(htmlAst)
     const html = minify
       ? await minifyHtml(htmlAfterTransformation)
@@ -157,19 +100,22 @@ export const parseHtmlRessource = async (
   }
 }
 
-const aHrefVisitor = (a, { notifyReferenceFound }) => {
-  const hrefAttribute = getHtmlNodeAttributeByName(a, "href")
+const aHrefVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName !== "a") {
+    return null
+  }
+  const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
   const href = hrefAttribute ? hrefAttribute.value : undefined
   if (!href) {
     return null
   }
-  const typeAttribute = getHtmlNodeAttributeByName(a, "type")
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   const type = typeAttribute ? typeAttribute.value : undefined
   const reference = notifyReferenceFound({
     referenceLabel: "a href",
     contentTypeExpected: type,
     ressourceSpecifier: href,
-    ...referenceLocationFromHtmlNode(a, "href"),
+    ...referenceLocationFromHtmlNode(node, "href"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = reference
@@ -182,37 +128,39 @@ const aHrefVisitor = (a, { notifyReferenceFound }) => {
 }
 
 const linkStylesheetHrefVisitor = (
-  link,
-  { notifyReferenceFound },
-  htmlRessource,
+  node,
+  { htmlRessource, notifyReferenceFound },
 ) => {
-  const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
+  if (node.nodeName !== "link") {
+    return null
+  }
+  const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
   if (!hrefAttribute) {
     return null
   }
-  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+  const relAttribute = getHtmlNodeAttributeByName(node, "rel")
   if (!relAttribute) {
     return null
   }
   if (relAttribute.value !== "stylesheet") {
     return null
   }
-  const integrityAttribute = getHtmlNodeAttributeByName(link, "integrity")
+  const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
   const integrity = integrityAttribute ? integrityAttribute.value : ""
   const cssReference = notifyReferenceFound({
     referenceLabel: "html stylesheet link",
     contentTypeExpected: "text/css",
     ressourceSpecifier: hrefAttribute.value,
     integrity,
-    ...crossoriginFromHtmlNode(link),
-    ...referenceLocationFromHtmlNode(link, "href"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "href"),
   })
   return async ({ getUrlRelativeToImporter, buildDirectoryUrl }) => {
     const { ressource } = cssReference
     if (ressource.isPreserved) {
       return
     }
-    if (shouldInline({ ressource, htmlNode: link })) {
+    if (shouldInline({ ressource, htmlNode: node })) {
       const { buildRelativeUrl } = ressource
       const cssBuildUrl = resolveUrl(buildRelativeUrl, buildDirectoryUrl)
       const htmlBuildUrl = resolveUrl(
@@ -245,7 +193,7 @@ const linkStylesheetHrefVisitor = (
         )
         content = setCssSourceMappingUrl(content, sourcemapInlineUrl)
       }
-      inlineLinkStylesheet(link, content)
+      inlineLinkStylesheet(node, content)
       cssReference.inlinedCallback()
       return
     }
@@ -262,15 +210,18 @@ const linkStylesheetHrefVisitor = (
 }
 
 const linkHrefVisitor = (
-  link,
+  node,
   { format, notifyReferenceFound, ressourceHintNeverUsedCallback },
 ) => {
-  const hrefAttribute = getHtmlNodeAttributeByName(link, "href")
+  if (node.nodeName !== "link") {
+    return null
+  }
+  const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
   if (!hrefAttribute) {
     return null
   }
   const href = hrefAttribute.value
-  const relAttribute = getHtmlNodeAttributeByName(link, "rel")
+  const relAttribute = getHtmlNodeAttributeByName(node, "rel")
   const rel = relAttribute ? relAttribute.value : undefined
   const isRessourceHint = [
     "preconnect",
@@ -280,7 +231,7 @@ const linkHrefVisitor = (
     "modulepreload",
   ].includes(rel)
   let contentTypeExpected
-  const typeAttribute = getHtmlNodeAttributeByName(link, "type")
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   const type = typeAttribute ? typeAttribute.value : ""
   let isJsModule = false
   if (type) {
@@ -291,7 +242,7 @@ const linkHrefVisitor = (
     contentTypeExpected = "application/javascript"
     isJsModule = true
   }
-  const integrityAttribute = getHtmlNodeAttributeByName(link, "integrity")
+  const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
   const integrity = integrityAttribute ? integrityAttribute.value : ""
   const linkReference = notifyReferenceFound({
     referenceLabel: rel ? `html ${rel} link href` : `html link href`,
@@ -299,8 +250,8 @@ const linkHrefVisitor = (
     contentTypeExpected,
     ressourceSpecifier: href,
     integrity,
-    ...crossoriginFromHtmlNode(link),
-    ...referenceLocationFromHtmlNode(link, "href"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "href"),
     urlVersioningDisabled: contentTypeExpected === "application/manifest+json",
     isJsModule,
   })
@@ -309,7 +260,7 @@ const linkHrefVisitor = (
     if (isRessourceHint) {
       if (isReferencedOnlyByRessourceHint(ressource)) {
         ressourceHintNeverUsedCallback({
-          htmlNode: link,
+          htmlNode: node,
           rel,
           href: hrefAttribute.value,
           htmlAttributeName: "href",
@@ -318,7 +269,7 @@ const linkHrefVisitor = (
         return
       }
       ressource.inlinedCallbacks.push(() => {
-        removeHtmlNode(link)
+        removeHtmlNode(node)
       })
     }
     if (ressource.isPreserved) {
@@ -328,11 +279,11 @@ const linkHrefVisitor = (
       const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
       relAttribute.value = "preload"
       hrefAttribute.value = urlRelativeToImporter
-      assignHtmlNodeAttributes(link, { as: "script" })
+      assignHtmlNodeAttributes(node, { as: "script" })
       return
     }
-    if (shouldInline({ ressource, htmlNode: link })) {
-      removeHtmlNode(link)
+    if (shouldInline({ ressource, htmlNode: node })) {
+      removeHtmlNode(node)
       linkReference.inlinedCallback()
       return
     }
@@ -349,11 +300,13 @@ const linkHrefVisitor = (
 }
 
 const classicScriptSrcVisitor = (
-  script,
-  { notifyReferenceFound },
-  htmlRessource,
+  node,
+  { htmlRessource, notifyReferenceFound },
 ) => {
-  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (node.nodeName !== "script") {
+    return null
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   if (
     typeAttribute &&
     (typeAttribute.value !== "text/javascript" ||
@@ -361,26 +314,26 @@ const classicScriptSrcVisitor = (
   ) {
     return null
   }
-  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (!srcAttribute) {
     return null
   }
-  const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+  const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
   const integrity = integrityAttribute ? integrityAttribute.value : ""
   const remoteScriptReference = notifyReferenceFound({
     referenceLabel: "html script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     integrity,
-    ...crossoriginFromHtmlNode(script),
-    ...referenceLocationFromHtmlNode(script, "src"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const ressource = remoteScriptReference.ressource
     if (ressource.isPreserved) {
       return
     }
-    if (shouldInline({ ressource, htmlNode: script })) {
+    if (shouldInline({ ressource, htmlNode: node })) {
       const { bufferAfterBuild } = ressource
       let jsString = String(bufferAfterBuild)
 
@@ -393,7 +346,7 @@ const classicScriptSrcVisitor = (
         const sourcemapInlineUrl = urlToRelativeUrl(sourcemapBuildUrl, htmlUrl)
         jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapInlineUrl)
       }
-      inlineScript(script, jsString)
+      inlineScript(node, jsString)
       remoteScriptReference.inlinedCallback()
       return
     }
@@ -410,12 +363,13 @@ const classicScriptSrcVisitor = (
 }
 
 const classicScriptTextNodeVisitor = (
-  script,
-  { notifyReferenceFound },
-  htmlRessource,
-  scripts,
+  node,
+  { htmlAst, htmlRessource, notifyReferenceFound },
 ) => {
-  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (node.nodeName !== "script") {
+    return null
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   if (
     typeAttribute &&
     (typeAttribute.value !== "text/javascript" ||
@@ -423,15 +377,15 @@ const classicScriptTextNodeVisitor = (
   ) {
     return null
   }
-  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (srcAttribute) {
     return null
   }
-  const textNode = getHtmlNodeTextNode(script)
+  const textNode = getHtmlNodeTextNode(node)
   if (!textNode) {
     return null
   }
-  const scriptId = getIdForInlineHtmlNode(script, scripts)
+  const scriptId = getIdForInlineHtmlNode(htmlAst, node)
   const ressourceSpecifier = `${urlToFilename(
     htmlRessource.url,
   )}__inline__${scriptId}.js`
@@ -439,7 +393,7 @@ const classicScriptTextNodeVisitor = (
     referenceLabel: "html inline script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier,
-    ...referenceLocationFromHtmlNode(script),
+    ...referenceLocationFromHtmlNode(node),
     contentType: "application/javascript",
     bufferBeforeBuild: Buffer.from(textNode.value),
     isInline: true,
@@ -450,38 +404,41 @@ const classicScriptTextNodeVisitor = (
   }
 }
 
-const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
-  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+const moduleScriptSrcVisitor = (node, { format, notifyReferenceFound }) => {
+  if (node.nodeName !== "script") {
+    return null
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   if (!typeAttribute) {
     return null
   }
   if (typeAttribute.value !== "module") {
     return null
   }
-  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (!srcAttribute) {
     return null
   }
-  const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+  const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
   const integrity = integrityAttribute ? integrityAttribute.value : ""
   const remoteScriptReference = notifyReferenceFound({
     referenceLabel: "html module script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier: srcAttribute.value,
     integrity,
-    ...crossoriginFromHtmlNode(script),
-    ...referenceLocationFromHtmlNode(script, "src"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "src"),
     isJsModule: true,
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = remoteScriptReference
     if (format === "systemjs") {
-      removeHtmlNodeAttribute(script, typeAttribute)
+      removeHtmlNodeAttribute(node, typeAttribute)
     }
     if (ressource.isPreserved) {
       return
     }
-    if (shouldInline({ ressource, htmlNode: script })) {
+    if (shouldInline({ ressource, htmlNode: node })) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       const { bufferAfterBuild } = ressource
@@ -494,7 +451,7 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
       // with these assumptions we can force the sourcemap url
       const sourcemapUrl = `${ressource.buildRelativeUrl}.map`
       jsString = setJavaScriptSourceMappingUrl(jsString, sourcemapUrl)
-      inlineScript(script, jsString)
+      inlineScript(node, jsString)
       remoteScriptReference.inlinedCallback()
       return
     }
@@ -512,27 +469,28 @@ const moduleScriptSrcVisitor = (script, { format, notifyReferenceFound }) => {
 }
 
 const moduleScriptTextNodeVisitor = (
-  script,
-  { format, notifyReferenceFound },
-  htmlRessource,
-  scripts,
+  node,
+  { format, htmlAst, htmlRessource, notifyReferenceFound },
 ) => {
-  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (node.nodeName !== "script") {
+    return null
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   if (!typeAttribute) {
     return null
   }
   if (typeAttribute.value !== "module") {
     return null
   }
-  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (srcAttribute) {
     return null
   }
-  const textNode = getHtmlNodeTextNode(script)
+  const textNode = getHtmlNodeTextNode(node)
   if (!textNode) {
     return null
   }
-  const scriptId = getIdForInlineHtmlNode(script, scripts)
+  const scriptId = getIdForInlineHtmlNode(htmlAst, node)
   const ressourceSpecifier = `${urlToFilename(
     htmlRessource.url,
   )}__inline__${scriptId}.js`
@@ -540,7 +498,7 @@ const moduleScriptTextNodeVisitor = (
     referenceLabel: "html inline module script",
     contentTypeExpected: "application/javascript",
     ressourceSpecifier,
-    ...referenceLocationFromHtmlNode(script),
+    ...referenceLocationFromHtmlNode(node),
     contentType: "application/javascript",
     bufferBeforeBuild: textNode.value,
     isJsModule: true,
@@ -548,7 +506,7 @@ const moduleScriptTextNodeVisitor = (
   })
   return () => {
     if (format === "systemjs") {
-      removeHtmlNodeAttribute(script, typeAttribute)
+      removeHtmlNodeAttribute(node, typeAttribute)
     }
     const { bufferAfterBuild } = jsReference.ressource
     const jsText = String(bufferAfterBuild)
@@ -556,30 +514,30 @@ const moduleScriptTextNodeVisitor = (
   }
 }
 
-const importmapScriptSrcVisitor = (
-  script,
-  { format, notifyReferenceFound },
-) => {
-  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+const importmapScriptSrcVisitor = (node, { format, notifyReferenceFound }) => {
+  if (node.nodeName !== "script") {
+    return null
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   if (!typeAttribute) {
     return null
   }
   if (typeAttribute.value !== "importmap") {
     return null
   }
-  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (!srcAttribute) {
     return null
   }
-  const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+  const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
   const integrity = integrityAttribute ? integrityAttribute.value : ""
   const importmapReference = notifyReferenceFound({
     referenceLabel: "html importmap",
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: srcAttribute.value,
     integrity,
-    ...crossoriginFromHtmlNode(script),
-    ...referenceLocationFromHtmlNode(script, "src"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const { ressource } = importmapReference
@@ -597,13 +555,13 @@ const importmapScriptSrcVisitor = (
       // for systemjs we inline as well to save http request for the scenario
       // where many ressources are inlined in the HTML file
       format === "systemjs" ||
-      shouldInline({ ressource, htmlNode: script })
+      shouldInline({ ressource, htmlNode: node })
     ) {
       // here put a warning if we cannot inline importmap because it would mess
       // the remapping (note that it's feasible) but not yet supported
       const { bufferAfterBuild } = ressource
       const importmapString = String(bufferAfterBuild)
-      inlineScript(script, importmapString)
+      inlineScript(node, importmapString)
       importmapReference.inlinedCallback()
       return
     }
@@ -620,34 +578,35 @@ const importmapScriptSrcVisitor = (
 }
 
 const importmapScriptTextNodeVisitor = (
-  script,
-  { format, notifyReferenceFound },
-  htmlRessource,
-  scripts,
+  node,
+  { format, htmlAst, htmlRessource, notifyReferenceFound },
 ) => {
-  const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  if (node.nodeName !== "script") {
+    return null
+  }
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   if (!typeAttribute) {
     return null
   }
   if (typeAttribute.value !== "importmap") {
     return null
   }
-  const srcAttribute = getHtmlNodeAttributeByName(script, "src")
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (srcAttribute) {
     return null
   }
-  const textNode = getHtmlNodeTextNode(script)
+  const textNode = getHtmlNodeTextNode(node)
   if (!textNode) {
     return null
   }
-  const importmapScriptId = getIdForInlineHtmlNode(script, scripts)
+  const importmapScriptId = getIdForInlineHtmlNode(htmlAst, node)
   const importmapReference = notifyReferenceFound({
     referenceLabel: "html inline importmap",
     contentTypeExpected: "application/importmap+json",
     ressourceSpecifier: `${urlToFilename(
       htmlRessource.url,
     )}__inline__${importmapScriptId}.importmap`,
-    ...referenceLocationFromHtmlNode(script),
+    ...referenceLocationFromHtmlNode(node),
     contentType: "application/importmap+json",
     bufferBeforeBuild: Buffer.from(textNode.value),
     isInline: true,
@@ -662,23 +621,24 @@ const importmapScriptTextNodeVisitor = (
 }
 
 const styleTextNodeVisitor = (
-  style,
-  { notifyReferenceFound },
-  htmlRessource,
-  styles,
+  node,
+  { htmlAst, htmlRessource, notifyReferenceFound },
 ) => {
-  const textNode = getHtmlNodeTextNode(style)
+  if (node.nodeName !== "style") {
+    return null
+  }
+  const textNode = getHtmlNodeTextNode(node)
   if (!textNode) {
     return null
   }
-  const styleId = getIdForInlineHtmlNode(style, styles)
+  const styleId = getIdForInlineHtmlNode(htmlAst, node)
   const inlineStyleReference = notifyReferenceFound({
     referenceLabel: "html style",
     contentTypeExpected: "text/css",
     ressourceSpecifier: `${urlToFilename(
       htmlRessource.url,
     )}__inline__${styleId}.css`,
-    ...referenceLocationFromHtmlNode(style),
+    ...referenceLocationFromHtmlNode(node),
     contentType: "text/css",
     bufferBeforeBuild: Buffer.from(textNode.value),
     isInline: true,
@@ -689,29 +649,35 @@ const styleTextNodeVisitor = (
   }
 }
 
-const imgSrcVisitor = (img, { notifyReferenceFound }) => {
-  const srcAttribute = getHtmlNodeAttributeByName(img, "src")
+const imgSrcVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName === "img") {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (!srcAttribute) {
     return null
   }
   const srcReference = notifyReferenceFound({
     referenceLabel: "html img src",
     ressourceSpecifier: srcAttribute.value,
-    ...crossoriginFromHtmlNode(img),
-    ...referenceLocationFromHtmlNode(img, "src"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const srcNewValue = referenceToUrl({
       reference: srcReference,
-      htmlNode: img,
+      htmlNode: node,
       getUrlRelativeToImporter,
     })
     srcAttribute.value = srcNewValue
   }
 }
 
-const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
-  const srcsetAttribute = getHtmlNodeAttributeByName(htmlNode, "srcset")
+const imgOrSourceSrcsetVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName !== "img" && node.nodeName !== "source") {
+    return null
+  }
+  const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset")
   if (!srcsetAttribute) {
     return null
   }
@@ -720,8 +686,8 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
     notifyReferenceFound({
       referenceLabel: `html srcset ${index}`,
       ressourceSpecifier: specifier,
-      ...crossoriginFromHtmlNode(htmlNode),
-      ...referenceLocationFromHtmlNode(htmlNode, "srcset"),
+      ...crossoriginFromHtmlNode(node),
+      ...referenceLocationFromHtmlNode(node, "srcset"),
     }),
   )
   if (srcCandidates.length === 0) {
@@ -732,7 +698,7 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
       const reference = srcReferences[index]
       srcCandidate.specifier = referenceToUrl({
         reference,
-        htmlNode,
+        htmlNode: node,
         getUrlRelativeToImporter,
       })
     })
@@ -741,23 +707,26 @@ const srcsetVisitor = (htmlNode, { notifyReferenceFound }) => {
   }
 }
 
-const sourceSrcVisitor = (source, { notifyReferenceFound }) => {
-  const srcAttribute = getHtmlNodeAttributeByName(source, "src")
+const sourceSrcVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName !== "source") {
+    return null
+  }
+  const srcAttribute = getHtmlNodeAttributeByName(node, "src")
   if (!srcAttribute) {
     return null
   }
-  const typeAttribute = getHtmlNodeAttributeByName(source, "type")
+  const typeAttribute = getHtmlNodeAttributeByName(node, "type")
   const srcReference = notifyReferenceFound({
     referenceLabel: "html source",
     contentTypeExpected: typeAttribute ? typeAttribute.value : undefined,
     ressourceSpecifier: srcAttribute.value,
-    ...crossoriginFromHtmlNode(source),
-    ...referenceLocationFromHtmlNode(source, "src"),
+    ...crossoriginFromHtmlNode(node),
+    ...referenceLocationFromHtmlNode(node, "src"),
   })
   return ({ getUrlRelativeToImporter }) => {
     const srcNewValue = referenceToUrl({
       reference: srcReference,
-      htmlNode: source,
+      htmlNode: node,
       getUrlRelativeToImporter,
     })
     srcAttribute.value = srcNewValue

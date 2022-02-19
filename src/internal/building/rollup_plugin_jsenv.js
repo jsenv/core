@@ -657,9 +657,13 @@ export const createRollupPlugins = async ({
         {
           urlFetcher,
           urlLoader,
-          parseRessource: async (ressource, notifiers) => {
-            return parseRessource(ressource, notifiers, {
+          parseRessource: async (
+            ressource,
+            { format, notifyReferenceFound },
+          ) => {
+            return parseRessource(ressource, {
               format,
+              notifyReferenceFound,
               systemJsUrl,
               projectDirectoryUrl,
               sourceFileFetcher,

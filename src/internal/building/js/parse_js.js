@@ -10,8 +10,7 @@ import { transformWorker } from "./transform_worker.js"
 
 export const parseJsRessource = async (
   jsRessource,
-  { notifyReferenceFound },
-  { asProjectUrl, asOriginalUrl, minify, minifyJs },
+  { notifyReferenceFound, asProjectUrl, asOriginalUrl, minify, minifyJs },
 ) => {
   const jsUrl = jsRessource.url
   const jsString = String(jsRessource.bufferBeforeBuild)

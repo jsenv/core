@@ -98,7 +98,7 @@ export const modifyHtml = async ({
       jsenvFileSelector,
       url,
       canUseScriptTypeModule: true,
-      scripts,
+      htmlAst,
       htmlContent: content,
     })
   }

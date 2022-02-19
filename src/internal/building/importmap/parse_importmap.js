@@ -1,6 +1,5 @@
 export const parseImportmapRessource = (
   importmapRessource,
-  notifiers,
   { minify, importMapToInject },
 ) => {
   const importmapString = String(importmapRessource.bufferBeforeBuild)

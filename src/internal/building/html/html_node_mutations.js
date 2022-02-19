@@ -1,24 +1,24 @@
-export const collectNodesMutations = (nodes, params, ressource, candidates) => {
-  const mutations = []
-  nodes.forEach((node) => {
-    mutations.push(
-      ...collectNodeMutations(node, params, ressource, nodes, candidates),
-    )
+import { visitHtmlAst } from "@jsenv/core/src/internal/transform_html/html_ast.js"
+
+export const collectHtmlMutations = (htmlAst, candidates, params) => {
+  const htmlMutations = []
+  visitHtmlAst(htmlAst, (node) => {
+    const nodeMutations = collectNodeMutations(node, candidates, params)
+    htmlMutations.push(...nodeMutations)
   })
-  return mutations
+  return htmlMutations
 }
 
-const collectNodeMutations = (node, params, ressource, nodes, candidates) => {
+const collectNodeMutations = (node, candidates, params) => {
   let firstValueReturned
   candidates.find((candidate) => {
-    const returnValue = candidate(node, params, ressource, nodes)
+    const returnValue = candidate(node, params)
     if (returnValue === null || returnValue === undefined) {
       return false
     }
     firstValueReturned = returnValue
     return true
   })
-
   if (typeof firstValueReturned === "function") {
     return [firstValueReturned]
   }

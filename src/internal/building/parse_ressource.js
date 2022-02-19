@@ -25,11 +25,11 @@ import { parseWebmanifestRessource } from "./webmanifest/parse_webmanifest.js"
 
 export const parseRessource = async (
   ressource,
-  notifiers,
   {
+    format,
+    notifyReferenceFound,
     projectDirectoryUrl,
     sourceFileFetcher,
-    format,
     systemJsUrl,
     asProjectUrl,
     asOriginalUrl,
@@ -50,7 +50,8 @@ export const parseRessource = async (
   }
 
   if (contentType === "text/html") {
-    return parseHtmlRessource(ressource, notifiers, {
+    return parseHtmlRessource(ressource, {
+      notifyReferenceFound,
       minify,
       minifyHtml,
       htmlStringToHtmlAst: async (htmlString) => {
@@ -125,7 +126,8 @@ export const parseRessource = async (
   }
 
   if (contentType === "text/css") {
-    return parseCssRessource(ressource, notifiers, {
+    return parseCssRessource(ressource, {
+      notifyReferenceFound,
       sourceFileFetcher,
       asProjectUrl,
       asOriginalUrl,
@@ -137,7 +139,8 @@ export const parseRessource = async (
   }
 
   if (contentType === "application/importmap+json") {
-    return parseImportmapRessource(ressource, notifiers, {
+    return parseImportmapRessource(ressource, {
+      notifyReferenceFound,
       minify,
       importMapToInject: useImportMapToMaximizeCacheReuse
         ? createImportMapForFilesUsedInJs()
@@ -149,14 +152,18 @@ export const parseRessource = async (
     contentType === "application/manifest+json" ||
     ressource.references[0].contentTypeExpected === "application/manifest+json"
   ) {
-    return parseWebmanifestRessource(ressource, notifiers, { minify })
+    return parseWebmanifestRessource(ressource, {
+      notifyReferenceFound,
+      minify,
+    })
   }
 
   if (
     contentType === "application/javascript" ||
     contentType === "text/javascript"
   ) {
-    return parseJsRessource(ressource, notifiers, {
+    return parseJsRessource(ressource, {
+      notifyReferenceFound,
       projectDirectoryUrl,
       sourceFileFetcher,
       asProjectUrl,
@@ -168,14 +175,18 @@ export const parseRessource = async (
   }
 
   if (contentType === "image/svg+xml") {
-    return parseSvgRessource(ressource, notifiers, {
+    return parseSvgRessource(ressource, {
+      notifyReferenceFound,
       minify,
       minifyHtml,
     })
   }
 
   if (contentType === "application/json" || contentType.endsWith("+json")) {
-    return parseJsonRessource(ressource, notifiers, { minify })
+    return parseJsonRessource(ressource, {
+      notifyReferenceFound,
+      minify,
+    })
   }
 
   return null

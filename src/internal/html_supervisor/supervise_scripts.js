@@ -2,6 +2,7 @@ import { urlToFilename } from "@jsenv/filesystem"
 
 import { injectQueryIntoUrlSpecifier } from "@jsenv/core/src/internal/url_utils.js"
 import {
+  findNodes,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
   getIdForInlineHtmlNode,
@@ -17,11 +18,12 @@ export const superviseScripts = ({
   jsenvFileSelector,
   url,
   canUseScriptTypeModule,
-  scripts,
+  htmlAst,
   htmlContent,
 }) => {
   const supervisedScripts = []
   const inlineRessources = []
+  const scripts = findNodes(htmlAst, (node) => node.nodeName === "script")
   scripts.forEach((script) => {
     const dataInjectedAttribute = getHtmlNodeAttributeByName(
       script,
@@ -76,7 +78,7 @@ export const superviseScripts = ({
       return
     }
     if (textNode) {
-      const inlineScriptId = getIdForInlineHtmlNode(script, scripts)
+      const inlineScriptId = getIdForInlineHtmlNode(htmlAst, script)
       let inlineSrc = `./${urlToFilename(url)}__inline__${inlineScriptId}.js`
       if (type === "module") {
         if (!canUseScriptTypeModule) {

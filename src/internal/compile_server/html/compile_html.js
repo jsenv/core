@@ -110,7 +110,7 @@ export const compileHtml = async ({
     jsenvFileSelector,
     url,
     canUseScriptTypeModule,
-    scripts,
+    htmlAst,
     htmlContent: content,
   })
   assets.push(

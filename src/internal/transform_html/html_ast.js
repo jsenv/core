@@ -346,14 +346,14 @@ export const createInlineScriptHash = (script) => {
   return hash.digest("hex").slice(0, 8)
 }
 
-export const getIdForInlineHtmlNode = (node, nodes) => {
-  const idAttribute = getHtmlNodeAttributeByName(node, "id")
+export const getIdForInlineHtmlNode = (htmlAst, inlineNode) => {
+  const idAttribute = getHtmlNodeAttributeByName(inlineNode, "id")
   if (idAttribute) {
     return idAttribute.value
   }
-  const { line, column } = getHtmlNodeLocation(node) || {}
-  const lineTaken = nodes.some((nodeCandidate) => {
-    if (nodeCandidate === node) return false
+  const { line, column } = getHtmlNodeLocation(inlineNode) || {}
+  const lineTaken = findNode(htmlAst, (nodeCandidate) => {
+    if (nodeCandidate === inlineNode) return false
     const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
     if (!htmlNodeLocation) return false
     return htmlNodeLocation.line === line

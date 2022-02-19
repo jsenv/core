@@ -1,4 +1,4 @@
-export const parseJsonRessource = (jsonRessource, notifiers, { minify }) => {
+export const parseJsonRessource = (jsonRessource, { minify }) => {
   const jsonString = String(jsonRessource.bufferBeforeBuild)
   return () => {
     if (minify) {

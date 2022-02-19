@@ -1,7 +1,6 @@
 export const parseWebmanifestRessource = (
   webmanifestRessource,
-  { notifyReferenceFound },
-  { minify },
+  { notifyReferenceFound, minify },
 ) => {
   // const manifestUrl = manifestTarget.url
   const manifestString = String(webmanifestRessource.bufferBeforeBuild)
