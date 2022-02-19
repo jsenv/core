@@ -119,49 +119,51 @@ const createSSEServiceWithAutoreload = ({
       retryDuration: 2000,
       historyLength: 100,
       welcomeEventEnabled: true,
-    })
-    const removeHotUpdateCallback = ressourceGraph.hotUpdateCallbackList.add(
-      (hotUpdate) => {
-        if (hotUpdate.declined) {
-          sseRoom.sendEvent({
-            type: "reload",
-            data: JSON.stringify({
-              cause: hotUpdate.cause,
-              type: "full",
-              typeReason: hotUpdate.reason,
-              declinedBy: hotUpdate.declinedBy,
-            }),
+      effect: () => {
+        const removeHotUpdateCallback =
+          ressourceGraph.hotUpdateCallbackList.add((hotUpdate) => {
+            if (hotUpdate.declined) {
+              sseRoom.sendEvent({
+                type: "reload",
+                data: JSON.stringify({
+                  cause: hotUpdate.cause,
+                  type: "full",
+                  typeReason: hotUpdate.reason,
+                  declinedBy: hotUpdate.declinedBy,
+                }),
+              })
+            } else {
+              sseRoom.sendEvent({
+                type: "reload",
+                data: JSON.stringify({
+                  cause: hotUpdate.cause,
+                  type: "hot",
+                  typeReason: hotUpdate.reason,
+                  hotInstructions: hotUpdate.instructions,
+                }),
+              })
+            }
           })
-        } else {
-          sseRoom.sendEvent({
-            type: "reload",
-            data: JSON.stringify({
-              cause: hotUpdate.cause,
-              type: "hot",
-              typeReason: hotUpdate.reason,
-              hotInstructions: hotUpdate.instructions,
-            }),
-          })
+        const stopWatching = watchProjectFiles(({ relativeUrl, event }) => {
+          ressourceGraph.onFileChange({ relativeUrl, event })
+        })
+        return () => {
+          removeHotUpdateCallback()
+          stopWatching()
         }
       },
-    )
-    const stopWatching = watchProjectFiles(({ relativeUrl, event }) => {
-      ressourceGraph.onFileChange({ relativeUrl, event })
     })
+
     const removeSSECleanupCallback = serverStopCallbackList.add(() => {
       removeSSECleanupCallback()
-      removeHotUpdateCallback()
       sseRoom.close()
-      stopWatching()
     })
     cache.push({
       mainFileRelativeUrl,
       sseRoom,
       cleanup: () => {
         removeSSECleanupCallback()
-        removeHotUpdateCallback()
         sseRoom.close()
-        stopWatching()
       },
     })
     if (cache.length >= sseRoomLimit) {
