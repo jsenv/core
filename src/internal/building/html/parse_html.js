@@ -59,9 +59,12 @@ export const parseHtmlRessource = async (
 ) => {
   const htmlString = String(htmlRessource.bufferBeforeBuild)
   const htmlAst = await htmlStringToHtmlAst(htmlString)
-  const { links, styles, scripts, imgs, images, uses, sources } =
+  const { aNodes, links, styles, scripts, imgs, images, uses, sources } =
     parseHtmlAstRessources(htmlAst)
 
+  const aMutations = collectNodesMutations(aNodes, notifiers, htmlRessource, [
+    aHrefVisitor,
+  ])
   const linksMutations = collectNodesMutations(
     links,
     {
@@ -69,12 +72,7 @@ export const parseHtmlRessource = async (
       ressourceHintNeverUsedCallback,
     },
     htmlRessource,
-    [
-      aHrefVisitor,
-      aDownloadVisitor,
-      linkStylesheetHrefVisitor,
-      linkHrefVisitor,
-    ],
+    [linkStylesheetHrefVisitor, linkHrefVisitor],
   )
   const scriptsMutations = collectNodesMutations(
     scripts,
@@ -132,6 +130,7 @@ export const parseHtmlRessource = async (
   )
 
   const htmlMutations = [
+    ...aMutations,
     ...linksMutations,
     ...scriptsMutations,
     ...stylesMutations,
@@ -179,30 +178,6 @@ const aHrefVisitor = (a, { notifyReferenceFound }) => {
     }
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
-  }
-}
-
-const aDownloadVisitor = (a, { notifyReferenceFound }) => {
-  const downloadAttribute = getHtmlNodeAttributeByName(a, "download")
-  const download = downloadAttribute ? downloadAttribute.value : undefined
-  if (!download) {
-    return null
-  }
-  const typeAttribute = getHtmlNodeAttributeByName(a, "type")
-  const type = typeAttribute ? typeAttribute.value : undefined
-  const reference = notifyReferenceFound({
-    referenceLabel: "a download",
-    contentTypeExpected: type,
-    ressourceSpecifier: download,
-    ...referenceLocationFromHtmlNode(a, "download"),
-  })
-  return ({ getUrlRelativeToImporter }) => {
-    const { ressource } = reference
-    if (ressource.isPreserved) {
-      return
-    }
-    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
-    downloadAttribute.value = urlRelativeToImporter
   }
 }
 

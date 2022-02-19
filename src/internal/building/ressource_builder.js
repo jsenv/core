@@ -65,9 +65,7 @@ export const createRessourceBuilder = (
       // rollup is handling js entries
       return
     }
-
     await entryReference.ressource.getDependenciesAvailablePromise()
-
     // on await que les assets, pour le js rollup s'en occupe
     await Promise.all(
       entryReference.ressource.dependencies.map(async (dependency) => {
@@ -94,6 +92,9 @@ export const createRessourceBuilder = (
           return
         }
         if (ressource.isPlaceholder) {
+          return
+        }
+        if (ressource.isEntryPoint) {
           return
         }
         await readyPromise
@@ -253,8 +254,15 @@ export const createRessourceBuilder = (
     let isWorker = false
     let isServiceWorker = false
     let isCrossOrigin = false
+    let isFragment = false
     if (typeof ressourceUrlResolution === "object") {
       ressourceUrl = ressourceUrlResolution.url
+      if (ressourceUrlResolution.isEntryPoint) {
+        isEntryPoint = true
+      }
+      if (ressourceUrlResolution.isFragment) {
+        isFragment = true
+      }
       if (ressourceUrlResolution.isCrossOrigin) {
         isCrossOrigin = true
       }
@@ -285,8 +293,10 @@ export const createRessourceBuilder = (
         : decodeURI(data)
     }
 
-    // any hash in the url would mess up with filenames
-    ressourceUrl = removePotentialUrlHash(ressourceUrl)
+    // any fragment (#toto) in the url would mess up with filenames
+    if (!isFragment) {
+      ressourceUrl = removePotentialUrlFragment(ressourceUrl)
+    }
 
     const existingRessource = findRessourceByUrl(ressourceUrl)
     let ressource
@@ -585,10 +595,9 @@ export const createRessourceBuilder = (
 
     const getReadyPromise = memoize(async () => {
       if (ressource.isPreserved) {
-        // external urls are immediatly available and not modified
+        // external urls are kept intact, they are ready
         return
       }
-
       // la transformation d'un asset c'est avant tout la transformation de ses dépendances
       await getDependenciesAvailablePromise()
       const dependencies = ressource.dependencies
@@ -710,14 +719,19 @@ export const createRessourceBuilder = (
         // if nothing references it a warning will be logged
         return effects
       }
-      ressource.getBufferAvailablePromise().then(
-        () => {
-          if (ressource.firstStrongReference) {
-            checkContentType(reference, { logger, showReferenceSourceLocation })
-          }
-        },
-        () => {},
-      )
+      if (!ressource.isPreserved) {
+        ressource.getBufferAvailablePromise().then(
+          () => {
+            if (ressource.firstStrongReference) {
+              checkContentType(reference, {
+                logger,
+                showReferenceSourceLocation,
+              })
+            }
+          },
+          () => {},
+        )
+      }
       if (ressource.firstStrongReference) {
         // this ressource was already strongly referenced by something
         // don't try to load it twice
@@ -1051,7 +1065,7 @@ const createRessourceTrace = ({
   return trace
 }
 
-const removePotentialUrlHash = (url) => {
+const removePotentialUrlFragment = (url) => {
   const urlObject = new URL(url)
   urlObject.hash = ""
   return String(urlObject)
@@ -1079,17 +1093,14 @@ const referenceShouldBeIgnoredWarning = ({
   if (!isJsModule) {
     return false
   }
-
   // js can reference js
   if (ressourceImporter.isJsModule) {
     return false
   }
-
   // entry point can reference js (html)
   if (ressourceImporter.isEntryPoint) {
     return false
   }
-
   return `
 WARNING: Ignoring reference to ${urlToHumanUrl(
     ressourceSpecifier,

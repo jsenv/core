@@ -77,10 +77,6 @@ const useHrefVisitor = (use, { notifyReferenceFound }) => {
     return null
   }
   const href = hrefAttribute.value
-  if (href[0] === "#") {
-    return null
-  }
-
   const { hash } = new URL(href, "file://")
   const hrefReference = notifyReferenceFound({
     referenceLabel: "svg use href",

@@ -205,6 +205,7 @@ export const htmlNodeIsScriptImportmap = (htmlNode) => {
 // <source src> attribute
 // ideally relative iframe should recursively fetch (not needed so lets ignore)
 export const parseHtmlAstRessources = (htmlAst) => {
+  const aNodes = []
   const links = []
   const styles = []
   const scripts = []
@@ -213,6 +214,10 @@ export const parseHtmlAstRessources = (htmlAst) => {
   const uses = []
   const sources = []
   visitHtmlAst(htmlAst, (node) => {
+    if (node.nodeName === "a") {
+      aNodes.push(node)
+      return
+    }
     if (node.nodeName === "link") {
       links.push(node)
       return
@@ -244,6 +249,7 @@ export const parseHtmlAstRessources = (htmlAst) => {
   })
 
   return {
+    aNodes,
     links,
     styles,
     scripts,

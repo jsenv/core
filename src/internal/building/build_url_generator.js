@@ -1,4 +1,4 @@
-import { urlToBasename, urlToExtension } from "@jsenv/filesystem"
+import { urlToBasename, urlToExtension, urlToFilename } from "@jsenv/filesystem"
 
 import { generateContentHash } from "./url_versioning/url_versioning.js"
 
@@ -52,7 +52,7 @@ const getBuildRelativeUrlPattern = ({
   if (ressource.isEntryPoint) {
     const originalUrl = asOriginalUrl(ressource.url)
     const entryPointBuildRelativeUrlPattern = entryPointUrls[originalUrl]
-    return entryPointBuildRelativeUrlPattern
+    return entryPointBuildRelativeUrlPattern || urlToFilename(originalUrl)
   }
 
   // inline ressource

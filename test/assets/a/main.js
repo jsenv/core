@@ -1,1 +1,1 @@
-console.log("42")
+export const answer = 42

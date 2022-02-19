@@ -16,6 +16,7 @@ import {
   urlToFilename,
   readFile,
   urlToFileSystemPath,
+  urlToExtension,
 } from "@jsenv/filesystem"
 import { UNICODE } from "@jsenv/log"
 
@@ -686,9 +687,7 @@ export const createRollupPlugins = async ({
           buildDirectoryUrl,
 
           asOriginalServerUrl,
-          urlToCompiledServerUrl: (url) => {
-            return asCompiledServerUrl(url)
-          },
+          urlToCompiledServerUrl: asCompiledServerUrl,
           urlToHumanUrl: (
             url,
             { showCompiledHint = false, preferRelativeUrls = false } = {},
@@ -700,7 +699,7 @@ export const createRollupPlugins = async ({
             ) {
               return url
             }
-            const originalUrl = asOriginalUrl(url)
+            const originalUrl = asOriginalUrl(url) || url
             const isCompiled = urlIsInsideOf(url, compileServerOrigin)
             const originalRelativeUrl = urlToRelativeUrl(
               originalUrl,
@@ -723,6 +722,14 @@ export const createRollupPlugins = async ({
             // isRessourceHint,
             ressourceImporter,
           }) => {
+            if (ressourceSpecifier[0] === "#") {
+              const url = resolveUrl(ressourceSpecifier, ressourceImporter.url)
+              return {
+                url,
+                isFragment: true,
+                isPreserved: true,
+              }
+            }
             const getRessourceUrl = () => {
               // Entry point is not a JS module and references a js module (html referencing js)
               if (
@@ -748,11 +755,18 @@ export const createRollupPlugins = async ({
                 !ressourceImporter.isJsModule
               ) {
                 if (ressourceSpecifier.endsWith(".importmap")) {
-                  const importmapUrl = resolveUrl(
+                  const importmapSourceUrl = resolveUrl(
                     ressourceSpecifier,
                     ressourceImporter.url,
                   )
-                  return importmapUrl
+                  return importmapSourceUrl
+                }
+                if (ressourceSpecifier.endsWith(".html")) {
+                  const htmlSourceUrl = resolveUrl(
+                    ressourceSpecifier,
+                    ressourceImporter.url,
+                  )
+                  return htmlSourceUrl
                 }
                 const importerCompiled = asCompiledServerUrl(
                   ressourceImporter.url,
@@ -777,9 +791,12 @@ export const createRollupPlugins = async ({
             if (!urlIsInsideOf(ressourceUrl, compileServerOrigin)) {
               resolutionResult.isCrossOrigin = true
             }
+            if (urlToExtension(ressourceUrl) === ".html") {
+              resolutionResult.isEntryPoint = true
+            }
 
             const urlMeta = urlMetaGetter(ressourceOriginalUrl)
-            if (urlMeta.preserve) {
+            if (urlMeta.preserve === undefined || urlMeta.preserve) {
               resolutionResult.isPreserved = true
             } else if (sourceFileFetcher.isRemoteUrl(ressourceOriginalUrl)) {
               const fileUrl =
@@ -905,7 +922,6 @@ export const createRollupPlugins = async ({
               })
               return
             }
-
             if (
               entryContentType !== "text/html" &&
               entryContentType !== "text/css"

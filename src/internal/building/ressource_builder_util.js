@@ -126,9 +126,7 @@ export const formatFoundReference = ({
   const { isEntryPoint } = ressource
   if (isEntryPoint) {
     return `
-Start from entry file ${reference.ressource.relativeUrl}${appendEffects(
-      referenceEffects,
-    )}`
+Entry file ${reference.ressource.relativeUrl}${appendEffects(referenceEffects)}`
   }
 
   const { isPlaceholder } = ressource
