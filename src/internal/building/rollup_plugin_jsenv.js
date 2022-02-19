@@ -780,7 +780,7 @@ export const createRollupPlugins = async ({
 
             const urlMeta = urlMetaGetter(ressourceOriginalUrl)
             if (urlMeta.preserve) {
-              resolutionResult.isExternal = true
+              resolutionResult.isPreserved = true
             } else if (sourceFileFetcher.isRemoteUrl(ressourceOriginalUrl)) {
               const fileUrl =
                 sourceFileFetcher.fileUrlFromRemoteUrl(ressourceOriginalUrl)

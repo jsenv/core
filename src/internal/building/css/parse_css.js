@@ -99,8 +99,8 @@ export const parseCssRessource = async (
         // url node nous dit quel référence y correspond
         const urlNodeReference = urlNodeReferenceMapping.get(urlNodeFound)
         const cssUrlRessource = urlNodeReference.ressource
-        const { isExternal } = cssUrlRessource
-        if (isExternal) {
+        const { isPreserved } = cssUrlRessource
+        if (isPreserved) {
           return
         }
         const { isInline } = cssUrlRessource

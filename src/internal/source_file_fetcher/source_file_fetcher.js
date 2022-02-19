@@ -82,7 +82,9 @@ export const createSourceFileFetcher = ({
   )
   const isPreservedUrl = (url) => {
     const meta = urlToMeta({ url, structuredMetaMap })
-    return Boolean(meta.preserved)
+    // explicitely check !== false
+    // so that undefined counts as a preserved url
+    return meta.preserved !== false
   }
   const isRemoteUrl = (url) => {
     return url.startsWith("http://") || url.startsWith("https://")

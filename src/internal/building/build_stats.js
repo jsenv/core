@@ -62,7 +62,7 @@ const getProjectFileContents = (ressourceBuilder) => {
     const ressource = ressourceMap[url]
     const {
       isInline,
-      isExternal,
+      isPreserved,
       isPlaceholder,
       isSourcemap,
       bufferBeforeBuild,
@@ -71,7 +71,7 @@ const getProjectFileContents = (ressourceBuilder) => {
       // inline ressources are not files
       return
     }
-    if (isExternal) {
+    if (isPreserved) {
       // external ressource are not handled, we would not have the bufferBeforeBuild
       return
     }

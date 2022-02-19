@@ -153,7 +153,7 @@ export const createRessourceBuilder = (
     Object.keys(ressourceMap).forEach((key) => {
       const ressource = ressourceMap[key]
       if (
-        ressource.isExternal ||
+        ressource.isPreserved ||
         ressource.isJsModule ||
         ressource.buildFileNameWithoutHash
       ) {
@@ -249,7 +249,7 @@ export const createRessourceBuilder = (
     })
 
     let ressourceUrl
-    let isExternal = false
+    let isPreserved = false
     let isWorker = false
     let isServiceWorker = false
     let isCrossOrigin = false
@@ -258,8 +258,8 @@ export const createRessourceBuilder = (
       if (ressourceUrlResolution.isCrossOrigin) {
         isCrossOrigin = true
       }
-      if (ressourceUrlResolution.isExternal) {
-        isExternal = true
+      if (ressourceUrlResolution.isPreserved) {
+        isPreserved = true
       }
       if (ressourceUrlResolution.isWorker) {
         isWorker = true
@@ -275,7 +275,7 @@ export const createRessourceBuilder = (
     }
 
     if (ressourceUrl.startsWith("data:")) {
-      isExternal = false
+      isPreserved = false
       isInline = true
       const { mediaType, base64Flag, data } = DataUrl.parse(ressourceUrl)
       contentTypeExpected = mediaType
@@ -310,7 +310,7 @@ export const createRessourceBuilder = (
         isJsModule,
         isSourcemap,
         isCrossOrigin,
-        isExternal,
+        isPreserved,
         isInline,
         isPlaceholder,
         isWorker,
@@ -389,7 +389,7 @@ export const createRessourceBuilder = (
     isJsModule = false,
     isSourcemap = false,
     isCrossOrigin = false,
-    isExternal = false,
+    isPreserved = false,
     isInline = false,
     isPlaceholder = false,
     isWorker = false,
@@ -411,7 +411,7 @@ export const createRessourceBuilder = (
       isSourcemap,
       isInline,
       isCrossOrigin,
-      isExternal,
+      isPreserved,
       isPlaceholder,
       isWorker,
       isServiceWorker,
@@ -584,7 +584,7 @@ export const createRessourceBuilder = (
     })
 
     const getReadyPromise = memoize(async () => {
-      if (ressource.isExternal) {
+      if (ressource.isPreserved) {
         // external urls are immediatly available and not modified
         return
       }
@@ -734,7 +734,7 @@ export const createRessourceBuilder = (
         ressource.isJsModule = infoFromReference.isJsModule
       }
       ressource.usedCallback()
-      if (ressource.isExternal) {
+      if (ressource.isPreserved) {
         // nothing to do
         return effects
       }

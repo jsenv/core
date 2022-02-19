@@ -125,12 +125,12 @@ export const startCompileServer = async ({
     // Authorize jsenv to modify any file url
     // because the goal is to build the files into chunks
     "file://": false,
-    // But for all other protocols explicitely specified,
-    // url is kept intact
-    "http://": true,
-    "https://": true,
-    "about:**/*": true,
-    "data:**/*": true,
+    // But for all other protocols url is kept intact
+    // "http://": true,
+    // "https://": true,
+    // "about:**/*": true,
+    // "data:**/*": true,
+    // "blob:**/*": true
     /*
      * It's possible to selectively overrides the behaviour above:
      * 1. The CDN file needs to be transformed to be executable in dev, build or both
