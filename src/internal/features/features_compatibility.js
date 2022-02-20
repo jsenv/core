@@ -35,11 +35,11 @@ export const featuresCompatMap = {
     opera: "76",
     samsung: "15",
   },
-  import_assertion_type_json: {
+  import_type_json: {
     chrome: "91",
     edge: "91",
   },
-  import_assertion_type_css: {
+  import_type_css: {
     chrome: "93",
     edge: "93",
   },

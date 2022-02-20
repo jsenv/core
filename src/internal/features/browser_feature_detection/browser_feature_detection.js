@@ -74,9 +74,7 @@ const detectSupportedFeatures = async ({ coverageHandledFromOutside }) => {
   // top level await
   featuresReport["top_level_await"] = await supportsTopLevelAwait()
   // import assertions
-  featuresReport["import_assertion_type_json"] =
-    await supportsJsonImportAssertions()
-  featuresReport["import_assertion_type_css"] =
-    await supportsCssImportAssertions()
+  featuresReport["import_type_json"] = await supportsJsonImportAssertions()
+  featuresReport["import_type_css"] = await supportsCssImportAssertions()
   return featuresReport
 }

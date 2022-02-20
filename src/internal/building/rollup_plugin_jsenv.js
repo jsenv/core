@@ -110,11 +110,11 @@ export const createRollupPlugins = async ({
     json:
       format === "esmodule" &&
       compileProfile &&
-      !compileProfile.missingFeatures["import_assertion_type_json"],
+      !compileProfile.missingFeatures["import_type_json"],
     css:
       format === "esmodule" &&
       compileProfile &&
-      !compileProfile.missingFeatures["import_assertion_type_css"],
+      !compileProfile.missingFeatures["import_type_css"],
   }
 
   const sourceFileFetcher = createSourceFileFetcher({

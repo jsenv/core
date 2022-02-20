@@ -67,8 +67,8 @@ export const createCompileProfile = ({
       import_dynamic: true,
       top_level_await: true,
       importmap: true,
-      import_assertion_type_json: true,
-      import_assertion_type_css: true,
+      import_type_json: true,
+      import_type_css: true,
     })
   }
   if (env.browser) {
@@ -121,8 +121,8 @@ export const createCompileProfile = ({
     }
   })
   if (
-    supportedFeatureNames.includes("import_assertion_type_json") &&
-    supportedFeatureNames.includes("import_assertion_type_css")
+    supportedFeatureNames.includes("import_type_json") &&
+    supportedFeatureNames.includes("import_type_css")
   ) {
     supportedFeatureNames.push("syntax-import-assertions")
     supportedFeatureNames.push("transform-import-assertions")
@@ -175,8 +175,8 @@ const featuresRelatedToSystemJs = [
   "import_dynamic",
   "top_level_await",
   "importmap",
-  "import_assertion_type_json",
-  "import_assertion_type_css",
+  "import_type_json",
+  "import_type_css",
   "worker_type_module",
   "worker_importmap",
 ]
