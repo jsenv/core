@@ -56,7 +56,6 @@ export const modifyHtml = async ({
   content,
 }) => {
   const htmlAst = parseHtmlString(content)
-  const { scripts } = parseHtmlAstRessources(htmlAst)
   if (!preserveHtmlSourceFiles) {
     await mutateImportmapScripts({
       logger,
@@ -64,7 +63,6 @@ export const modifyHtml = async ({
       url,
       canUseScriptTypeImportmap: true,
       htmlAst,
-      scripts,
     })
   }
   const isJsenvToolbar =

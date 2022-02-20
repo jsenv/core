@@ -4,6 +4,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { fetchUrl } from "@jsenv/core/src/internal/fetching.js"
 import {
+  findNodes,
   injectBeforeFirstHeadScript,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
@@ -20,10 +21,10 @@ export const mutateImportmapScripts = async ({
   url,
   canUseScriptTypeImportmap,
   htmlAst,
-  scripts,
 }) => {
-  const importmapScripts = scripts.filter((script) => {
-    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
+  const importmapScripts = findNodes(htmlAst, (node) => {
+    if (node.nodeName !== "script") return false
+    const typeAttribute = getHtmlNodeAttributeByName(node, "type")
     const type = typeAttribute ? typeAttribute.value : "application/javascript"
     return type === "importmap"
   })

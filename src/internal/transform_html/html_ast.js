@@ -42,8 +42,11 @@ export const findNode = (htmlStringOrAst, predicate) => {
   return nodeMatching
 }
 
-export const findNodes = (htmlString, predicate) => {
-  const htmlAst = parseHtmlString(htmlString)
+export const findNodes = (htmlStringOrAst, predicate) => {
+  const htmlAst =
+    typeof htmlStringOrAst === "string"
+      ? parseHtmlString(htmlStringOrAst)
+      : htmlStringOrAst
   const nodes = []
   visitHtmlAst(htmlAst, (node) => {
     if (predicate(node)) {

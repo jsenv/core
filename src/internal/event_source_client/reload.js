@@ -31,9 +31,6 @@ export const reloadDOMNodesUsingUrls = (urlsToReload) => {
       node[attributeName] = injectQuery(attribute, { hmr: Date.now() })
     })
   }
-  Array.from(document.querySelector("script")).forEach((script) => {
-    visitNodeAttributeAsUrl(script, "src")
-  })
   Array.from(document.querySelectorAll(`link[rel="stylesheet"]`)).forEach(
     (link) => {
       visitNodeAttributeAsUrl(link, "href")
@@ -42,8 +39,14 @@ export const reloadDOMNodesUsingUrls = (urlsToReload) => {
   Array.from(document.querySelectorAll(`link[rel="icon"]`)).forEach((link) => {
     visitNodeAttributeAsUrl(link, "href")
   })
-  Array.from(document.querySelectorAll("source")).forEach((source) => {
-    visitNodeAttributeAsUrl(source, "src")
+  Array.from(document.querySelector("script")).forEach((script) => {
+    visitNodeAttributeAsUrl(script, "src")
+  })
+  // There is no real need to update a.href because the ressource will be fetched when clicked.
+  // But in a scenario where the ressource was already visited and is in browser cache, adding
+  // the dynamic query param ensure the cache is invalidated
+  Array.from(document.querySelectorAll("a")).forEach((a) => {
+    visitNodeAttributeAsUrl(a, "href")
   })
   Array.from(document.querySelectorAll("img")).forEach((img) => {
     visitNodeAttributeAsUrl(img, "src")
@@ -60,6 +63,9 @@ export const reloadDOMNodesUsingUrls = (urlsToReload) => {
         img.srcset = htmlAttributeSrcSet.stringify(srcCandidates)
       })
     }
+  })
+  Array.from(document.querySelectorAll("source")).forEach((source) => {
+    visitNodeAttributeAsUrl(source, "src")
   })
   // svg image tag
   Array.from(document.querySelectorAll("image")).forEach((image) => {

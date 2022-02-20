@@ -1,7 +1,6 @@
 import {
   injectBeforeFirstHeadScript,
   parseHtmlString,
-  parseHtmlAstRessources,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   removeHtmlNodeAttribute,
@@ -70,8 +69,6 @@ export const compileHtml = async ({
   }
   addHtmlSourceFile({ url, content })
 
-  const { scripts } = parseHtmlAstRessources(htmlAst)
-
   const htmlMutations = []
   const addHtmlMutation = (htmlMutation) => {
     htmlMutations.push(htmlMutation)
@@ -91,7 +88,6 @@ export const compileHtml = async ({
     url: compiledUrl,
     canUseScriptTypeImportmap: compileProfile.moduleOutFormat === "esmodule",
     htmlAst,
-    scripts,
   })
   if (
     importmapInfo.url &&

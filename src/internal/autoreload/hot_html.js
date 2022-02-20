@@ -77,66 +77,62 @@ export const collectHtmlUrlMentions = (htmlAst, url) => {
     //   return
     // }
     if (node.nodeName === "script") {
-      if (hotAccepted === undefined) {
-        hotAccepted = false
-      }
       visitAttributeAsUrlSpecifier({
         node,
         attributeName: "src",
-        hotAccepted,
+        hotAccepted:
+          hotAccepted === undefined
+            ? // script cannot hotreload by default
+              false
+            : hotAccepted,
       })
       return
     }
+    if (node.nodeName === "a") {
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "href",
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+      })
+    }
     if (node.nodeName === "img") {
-      if (hotAccepted === undefined) {
-        hotAccepted = true
-      }
       visitAttributeAsUrlSpecifier({
         node,
         attributeName: "src",
-        hotAccepted,
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       visitSrcset({
         node,
-        hotAccepted,
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       return
     }
     if (node.nodeName === "source") {
-      if (hotAccepted === undefined) {
-        hotAccepted = true
-      }
       visitAttributeAsUrlSpecifier({
         node,
         attributeName: "src",
-        hotAccepted,
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       visitSrcset({
         node,
-        hotAccepted,
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       return
     }
     // svg <image> tag
     if (node.nodeName === "image") {
-      if (hotAccepted === undefined) {
-        hotAccepted = true
-      }
       visitAttributeAsUrlSpecifier({
         node,
         attributeName: "href",
-        hotAccepted,
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       return
     }
     if (node.nodeName === "use") {
-      if (hotAccepted === undefined) {
-        hotAccepted = true
-      }
       visitAttributeAsUrlSpecifier({
         node,
         attributeName: "href",
-        hotAccepted,
+        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       return
     }

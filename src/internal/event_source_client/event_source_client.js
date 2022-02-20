@@ -93,7 +93,7 @@ const applyHotReload = async ({ hotInstructions }) => {
         const urlToReload = urlContext.asUrlToFetch(acceptedBy)
         const sourceUrlToReload = urlContext.asSourceUrl(acceptedBy)
         reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload])
-        console.log(`[jsenv] hot updated: ${boundary}`)
+        console.log(`[jsenv] hot updated ${acceptedBy} inside ${boundary}`)
         return null
       }
       throw new Error(`unknown update type: "${type}"`)
