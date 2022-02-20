@@ -285,6 +285,26 @@ export const parseLinkNode = (linkNode) => {
   }
 }
 
+export const parseScriptNode = (scriptNode) => {
+  const typeAttribute = getHtmlNodeAttributeByName(scriptNode, "type")
+  if (!typeAttribute) {
+    return "classic"
+  }
+  if (
+    typeAttribute.value === "text/javascript" ||
+    typeAttribute.value !== "application/javascript"
+  ) {
+    return "classic"
+  }
+  if (typeAttribute.value === "module") {
+    return "module"
+  }
+  if (typeAttribute.value === "importmap") {
+    return "importmap"
+  }
+  return typeAttribute.value
+}
+
 export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   const html = `<${tagName} ${stringifyAttributes(
     rest,

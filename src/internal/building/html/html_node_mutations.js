@@ -23,7 +23,9 @@ const collectNodeMutations = (node, candidates, params) => {
     return [firstValueReturned]
   }
   if (Array.isArray(firstValueReturned)) {
-    return firstValueReturned
+    return firstValueReturned.filter(
+      (value) => value !== null && value !== undefined,
+    )
   }
   return []
 }

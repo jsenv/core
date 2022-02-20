@@ -17,7 +17,7 @@ export const parseSvgRessource = async (
   const svgAst = await parseSvgString(svgString)
   const svgMutations = collectHtmlMutations(
     svgAst,
-    [imageHrefVisitor, useHrefVisitor],
+    [imageVisitor, useVisitor],
     {
       notifyReferenceFound,
     },
@@ -38,7 +38,7 @@ export const parseSvgRessource = async (
   }
 }
 
-export const imageHrefVisitor = (node, { notifyReferenceFound }) => {
+export const imageVisitor = (node, { notifyReferenceFound }) => {
   if (node.nodeName !== "image") {
     return null
   }
@@ -57,7 +57,7 @@ export const imageHrefVisitor = (node, { notifyReferenceFound }) => {
   }
 }
 
-export const useHrefVisitor = (node, { notifyReferenceFound }) => {
+export const useVisitor = (node, { notifyReferenceFound }) => {
   if (node.nodeName !== "use") {
     return null
   }
