@@ -64,6 +64,7 @@ export const parseHtmlRessource = async (
   const htmlAst = await htmlStringToHtmlAst(htmlString)
   const candidates = [
     aVisitor,
+    iframeVisitor,
     linkVisitor,
     styleVisitor,
     // we won't check classic script content, they will be handled as "assets"
@@ -121,6 +122,30 @@ const aVisitor = (node, { notifyReferenceFound }) => {
     const downloadAttribute = getHtmlNodeAttributeByName(node, "download")
     if (downloadAttribute && downloadAttribute.value === "") {
       downloadAttribute.value = urlToFilename(ressource.url)
+    }
+    const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
+    hrefAttribute.value = urlRelativeToImporter
+  }
+}
+
+const iframeVisitor = (node, { notifyReferenceFound }) => {
+  if (node.nodeName !== "iframe") {
+    return null
+  }
+  const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
+  const href = hrefAttribute ? hrefAttribute.value : undefined
+  if (!href) {
+    return null
+  }
+  const reference = notifyReferenceFound({
+    referenceLabel: "iframe href",
+    ressourceSpecifier: href,
+    ...referenceLocationFromHtmlNode(node, "href"),
+  })
+  return ({ getUrlRelativeToImporter }) => {
+    const { ressource } = reference
+    if (ressource.isPreserved) {
+      return
     }
     const urlRelativeToImporter = getUrlRelativeToImporter(ressource)
     hrefAttribute.value = urlRelativeToImporter
