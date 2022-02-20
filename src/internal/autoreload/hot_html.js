@@ -95,6 +95,20 @@ export const collectHtmlUrlMentions = (htmlAst, url) => {
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
     }
+    if (node.nodeName === "iframe") {
+      // Iframe will have their own event source client
+      // and can hot reload independently
+      // But if the iframe communicates with the parent iframe
+      // then we canot know for sure if the communication is broken
+      // ideally, if the iframe full-reload the page must full-reload too
+      // if the iframe hot-reload we don't know but we could assume there is nothing to do
+      // if there is [hot-accept] on the iframe
+      visitAttributeAsUrlSpecifier({
+        node,
+        attributeName: "src",
+        hotAccepted: hotAccepted === undefined ? false : hotAccepted,
+      })
+    }
     if (node.nodeName === "img") {
       visitAttributeAsUrlSpecifier({
         node,

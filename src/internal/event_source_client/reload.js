@@ -2,7 +2,7 @@ import { htmlAttributeSrcSet } from "../transform_html/html_attribute_src_set.js
 import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
 
 export const reloadHtmlPage = () => {
-  window.parent.location.reload(true)
+  window.location.reload(true)
 }
 
 // This function can consider everything as hot reloadable:
@@ -48,6 +48,12 @@ export const reloadDOMNodesUsingUrls = (urlsToReload) => {
   Array.from(document.querySelectorAll("a")).forEach((a) => {
     visitNodeAttributeAsUrl(a, "href")
   })
+  // About iframes:
+  // - By default iframe itself and everything inside trigger a parent page full-reload
+  // - Adding [hot-accept] on the iframe means parent page won't reload when iframe full/hot reload
+  //   In that case and if there is code in the iframe and parent doing post message communication:
+  //   you must put import.meta.hot.decline() for code involved in communication.
+  //   (both in parent and iframe)
   Array.from(document.querySelectorAll("img")).forEach((img) => {
     visitNodeAttributeAsUrl(img, "src")
     const srcset = img.srcset
