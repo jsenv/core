@@ -307,25 +307,31 @@ const linkVisitor = (
   }
 }
 
-const scriptVisitor = (node, { htmlRessource, notifyReferenceFound }) => {
+const scriptVisitor = (
+  node,
+  { htmlAst, htmlRessource, notifyReferenceFound },
+) => {
   if (node.nodeName !== "script") {
     return null
   }
   const scriptCategory = parseScriptNode(node)
   if (scriptCategory === "classic") {
     return classicScriptVisitor(node, {
+      htmlAst,
       htmlRessource,
       notifyReferenceFound,
     })
   }
   if (scriptCategory === "module") {
     return moduleScriptVisitor(node, {
+      htmlAst,
       htmlRessource,
       notifyReferenceFound,
     })
   }
   if (scriptCategory === "importmap") {
     return importmapScriptVisitor(node, {
+      htmlAst,
       htmlRessource,
       notifyReferenceFound,
     })

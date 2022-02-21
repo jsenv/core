@@ -28,6 +28,7 @@ export const createCompiledFileService = ({
 
   customCompilers,
   jsenvCompilers,
+  hmrPlugins,
 
   compileCacheStrategy,
   sourcemapMethod,
@@ -131,6 +132,7 @@ export const createCompiledFileService = ({
         projectDirectoryUrl,
         ressourceGraph,
         sourceFileFetcher,
+        hmrPlugins,
         url: sourceFileUrl,
         contentType,
         moduleFormat: compileProfile.moduleOutFormat,

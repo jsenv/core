@@ -60,6 +60,7 @@ export const startDevServer = async ({
   serviceWorkers,
   importMapInWebWorkers,
   customCompilers,
+  hmrPlugins,
   preservedUrls,
   runtimeSupportDuringDev = {
     // this allows to compile nothing or almost nothing when opening files
@@ -126,6 +127,7 @@ export const startDevServer = async ({
     compileServerCanReadFromFilesystem,
     compileServerCanWriteOnFilesystem,
     customCompilers,
+    hmrPlugins,
     preservedUrls,
     sourcemapMethod,
     babelPluginMap,

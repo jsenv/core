@@ -1,7 +1,7 @@
 import { injectHmrInJsModuleUrls } from "./hmr_injection_js_module.js"
 import { injectHmrInCssUrls } from "./hmr_injection_css.js"
 
-export const injectHmr = ({
+export const injectHmr = async ({
   projectDirectoryUrl,
   sourceFileFetcher,
   ressourceGraph,

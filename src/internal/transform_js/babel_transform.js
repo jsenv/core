@@ -24,7 +24,9 @@ export const babelTransform = async ({
       let message = error.message
       let line = error.loc.line
       let column = error.loc.column
-      const inlineUrlSite = sourceFileFetcher.getInlineUrlSite(url)
+      const inlineUrlSite = sourceFileFetcher
+        ? sourceFileFetcher.getInlineUrlSite(url)
+        : null
       if (inlineUrlSite) {
         line = inlineUrlSite.line + line - 2 // remove 2 lines
         column = inlineUrlSite.column + column

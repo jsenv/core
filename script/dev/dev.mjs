@@ -2,6 +2,7 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startDevServer } from "@jsenv/core"
 import { require } from "@jsenv/core/src/internal/require.js"
+import { createPrefreshHmrPlugin } from "@jsenv/core/src/internal/autoreload/prefresh/hmr_plugin_prefresh.js"
 import { projectDirectoryUrl } from "../../jsenv.config.mjs"
 
 const { serverCertificate, serverCertificatePrivateKey } =
@@ -23,6 +24,7 @@ startDevServer({
       { pragma: "h" },
     ],
   },
+  hmrPlugins: [createPrefreshHmrPlugin()],
   // importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,

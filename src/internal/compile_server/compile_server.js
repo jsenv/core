@@ -12,6 +12,7 @@ import { urlToRelativeUrl, resolveDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
+import { composeTwoSourcemaps } from "@jsenv/core/src/internal/sourcemap/sourcemap_composition.js"
 import {
   sourcemapMainFileInfo,
   sourcemapMappingFileInfo,
@@ -71,6 +72,7 @@ export const startCompileServer = async ({
   moduleOutFormat,
   topLevelAwait,
   customCompilers = {},
+  hmrPlugins = [],
   preservedUrls,
   importMapInWebWorkers = false,
   babelPluginMap,
@@ -309,13 +311,38 @@ export const startCompileServer = async ({
             content,
           })
         },
-        "application/javascript": ({
+        "application/javascript": async ({
           url,
           compiledUrl,
           compileProfile,
           map,
           content,
         }) => {
+          await hmrPlugins.reduce(async (previous, hmrPlugin) => {
+            await previous
+            const { transform } = hmrPlugin
+            if (!transform) {
+              return
+            }
+            const returnValue = await transform({
+              projectDirectoryUrl,
+              url,
+              contentType: "application/javascript",
+              map,
+              content,
+            })
+            if (!returnValue) {
+              return
+            }
+            if (typeof returnValue === "string") {
+              content = returnValue
+            }
+            if (typeof returnValue === "object") {
+              content = returnValue.code
+              map = composeTwoSourcemaps(map, returnValue.map)
+            }
+          }, Promise.resolve())
+
           const { searchParams } = new URL(url)
           const type = searchParams.has("script")
             ? "script"
@@ -345,6 +372,7 @@ export const startCompileServer = async ({
           })
         },
       },
+      hmrPlugins,
     }),
     "service:jsenv dist file": createJsenvDistFileService({
       projectDirectoryUrl,
