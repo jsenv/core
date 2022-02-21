@@ -102,6 +102,7 @@
     "terser": "5.10.0",
     "v8-to-istanbul": "8.1.1",
     "vm2": "3.9.5",
+    "webpack-sources": "3.2.3",
     "wrap-ansi": "8.0.1"
   },
   "devDependencies": {
