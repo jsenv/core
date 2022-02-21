@@ -82,6 +82,9 @@ const applyHotReload = async ({ hotInstructions }) => {
       if (type === "js_module") {
         // console.log(`[jsenv] hot reloading: ${boundary}`)
         const namespace = await reloadJsImport(urlToFetch)
+        if (urlHotMeta && urlHotMeta.acceptCallback) {
+          await urlHotMeta.acceptCallback(namespace)
+        }
         console.log(`[jsenv] hot updated: ${boundary}`)
         return namespace
       }

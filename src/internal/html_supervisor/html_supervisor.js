@@ -137,6 +137,9 @@ const getErrorFromServer = async ({ src, urlContext }) => {
   if (response.status !== 200) {
     return null
   }
+  if (response.headers["content-type"] !== "application/json") {
+    return null
+  }
   const realResponseData = await response.json()
   const responseError = await getRessourceResponseError({
     urlContext,

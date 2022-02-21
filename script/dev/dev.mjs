@@ -1,7 +1,7 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startDevServer } from "@jsenv/core"
-// import { require } from "@jsenv/core/src/internal/require.js"
+import { require } from "@jsenv/core/src/internal/require.js"
 import { projectDirectoryUrl } from "../../jsenv.config.mjs"
 
 const { serverCertificate, serverCertificatePrivateKey } =
@@ -17,9 +17,12 @@ startDevServer({
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
   // jsenvDirectoryClean: true,
-  // babelPluginMap: {
-  //   "transform-react-jsx": [require("@babel/plugin-transform-react-jsx")],
-  // },
+  babelPluginMap: {
+    "transform-react-jsx": [
+      require("@babel/plugin-transform-react-jsx"),
+      { pragma: "h" },
+    ],
+  },
   // importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,

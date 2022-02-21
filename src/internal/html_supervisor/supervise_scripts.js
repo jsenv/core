@@ -10,6 +10,7 @@ import {
   setHtmlNodeText,
   assignHtmlNodeAttributes,
   getHtmlNodeLocation,
+  parseScriptNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlSupervisorFiles } from "@jsenv/core/src/internal/jsenv_file_selector.js"
 
@@ -32,23 +33,26 @@ export const superviseScripts = ({
     if (dataInjectedAttribute) {
       return
     }
-    const typeAttribute = getHtmlNodeAttributeByName(script, "type")
-    const type = typeAttribute ? typeAttribute.value : "application/javascript"
+    const scriptCategory = parseScriptNode(script)
+    if (scriptCategory !== "classic" && scriptCategory !== "module") {
+      return
+    }
     const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-    let src = srcAttribute ? srcAttribute.value : undefined
-    const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
-    const integrity = integrityAttribute ? integrityAttribute.value : undefined
-    const crossoriginAttribute = getHtmlNodeAttributeByName(
-      script,
-      "crossorigin",
-    )
-    const crossorigin = crossoriginAttribute
-      ? crossoriginAttribute.value
-      : undefined
-    const textNode = getHtmlNodeTextNode(script)
-    if (src) {
+    if (srcAttribute) {
+      let src = srcAttribute ? srcAttribute.value : undefined
+      const integrityAttribute = getHtmlNodeAttributeByName(script, "integrity")
+      const integrity = integrityAttribute
+        ? integrityAttribute.value
+        : undefined
+      const crossoriginAttribute = getHtmlNodeAttributeByName(
+        script,
+        "crossorigin",
+      )
+      const crossorigin = crossoriginAttribute
+        ? crossoriginAttribute.value
+        : undefined
       src = sourceFileFetcher.asFileUrlSpecifierIfRemote(src, url)
-      if (type === "module") {
+      if (scriptCategory === "module") {
         if (!canUseScriptTypeModule) {
           removeHtmlNodeAttributeByName(script, "type")
         }
@@ -57,7 +61,7 @@ export const superviseScripts = ({
       }
       supervisedScripts.push({
         script,
-        type,
+        type: scriptCategory,
         src,
         integrity,
         crossorigin,
@@ -69,7 +73,7 @@ export const superviseScripts = ({
         generateCodeToSuperviseScript({
           jsenvFileSelector,
           canUseScriptTypeModule,
-          type,
+          type: scriptCategory,
           src,
           integrity,
           crossorigin,
@@ -77,10 +81,11 @@ export const superviseScripts = ({
       )
       return
     }
+    const textNode = getHtmlNodeTextNode(script)
     if (textNode) {
       const inlineScriptId = getIdForInlineHtmlNode(htmlAst, script)
       let inlineSrc = `./${urlToFilename(url)}__inline__${inlineScriptId}.js`
-      if (type === "module") {
+      if (scriptCategory === "module") {
         if (!canUseScriptTypeModule) {
           removeHtmlNodeAttributeByName(script, "type")
         }
@@ -97,7 +102,7 @@ export const superviseScripts = ({
       })
       supervisedScripts.push({
         script,
-        type,
+        type: scriptCategory,
         textContent: textNode.value,
         inlineSrc,
       })
@@ -107,7 +112,7 @@ export const superviseScripts = ({
         generateCodeToSuperviseScript({
           jsenvFileSelector,
           canUseScriptTypeModule,
-          type,
+          type: scriptCategory,
           src: inlineSrc,
         }),
       )
