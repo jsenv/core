@@ -10,6 +10,6 @@ const server = await startOmegaServer({
   port: 3589,
 })
 
-const response = await fetchUrl(`${server.origin}/file.js`)
+const response = await fetchUrl(`${server.origin}/main.js`)
 const text = await response.text()
 console.log(text)

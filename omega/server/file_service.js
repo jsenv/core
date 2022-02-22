@@ -155,7 +155,7 @@ const writeIntoRuntimeDirectory = ({
     return
   }
   const outDirectoryUrl = resolveUrl(
-    `.jsenv/${runtimeName}@${runtimeVersion}`,
+    `.jsenv/${runtimeName}@${runtimeVersion}/`,
     projectDirectoryUrl,
   )
   writeFile(moveUrl(url, projectDirectoryUrl, outDirectoryUrl), content)
