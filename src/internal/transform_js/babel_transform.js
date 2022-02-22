@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 import { stringifyUrlSite } from "../building/url_trace.js"
 
 import { ansiToHTML } from "./ansi_to_html.js"
@@ -9,16 +9,35 @@ export const babelTransform = async ({
   options,
   url,
   ast,
-  code,
+  content,
 }) => {
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
-
+  options = {
+    ast: false,
+    sourceMaps: true,
+    sourceFileName: urlToFileSystemPath(url),
+    configFile: false,
+    babelrc: false,
+    parserOpts: {
+      plugins: [
+        "jsx",
+        "classProperties",
+        "classPrivateProperties",
+        "classPrivateMethods",
+        ...([".ts", ".tsx"].includes(urlToExtension(url))
+          ? ["typescript"]
+          : []),
+        ...(options.parserPlugins || []),
+      ].filter(Boolean),
+    },
+    ...options,
+  }
   try {
     if (ast) {
-      const result = await transformFromAstAsync(ast, code, options)
+      const result = await transformFromAstAsync(ast, content, options)
       return result
     }
-    return await transformAsync(code, options)
+    return await transformAsync(content, options)
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       let message = error.message
