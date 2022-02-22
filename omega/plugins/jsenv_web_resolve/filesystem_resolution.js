@@ -4,7 +4,7 @@ import {
   urlToFilename,
 } from "@jsenv/filesystem"
 
-import { findAsync } from "#internal/find_async.js"
+import { findAsync } from "#omega/internal/find_async.js"
 
 export const resolveFile = async (
   fileUrl,

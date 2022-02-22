@@ -7,7 +7,7 @@ import { validateResponse } from "@jsenv/core/src/internal/response_validation.j
 import {
   getCssSourceMappingUrl,
   getJavaScriptSourceMappingUrl,
-} from "#internal/sourcemap/sourcemap_utils.js"
+} from "#omega/internal/sourcemap/sourcemap_utils.js"
 
 export const loadSourcemap = async ({
   signal,

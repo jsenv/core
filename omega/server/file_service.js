@@ -1,10 +1,13 @@
 import { urlToContentType } from "@jsenv/server"
+import { urlIsInsideOf, writeFile, resolveUrl } from "@jsenv/filesystem"
 
-import { callPluginsHook } from "#internal/plugin_utils.js"
-import { loadSourcemap } from "#internal/sourcemap/sourcemap_loader.js"
-import { composeTwoSourcemaps } from "#internal/sourcemap/sourcemap_composition.js"
-import { generateSourcemapUrl } from "#internal/sourcemap/sourcemap_utils.js"
-import { injectSourcemap } from "#internal/sourcemap/sourcemap_injection.js"
+import { moveUrl } from "#omega/internal/url_utils.js"
+import { findAsync } from "#omega/internal/find_async.js"
+import { loadSourcemap } from "#omega/internal/sourcemap/sourcemap_loader.js"
+import { composeTwoSourcemaps } from "#omega/internal/sourcemap/sourcemap_composition.js"
+import { generateSourcemapUrl } from "#omega/internal/sourcemap/sourcemap_utils.js"
+import { injectSourcemap } from "#omega/internal/sourcemap/sourcemap_injection.js"
+import { transformUrlMentions } from "#omega/url_mentions/url_mentions.js"
 
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -13,18 +16,13 @@ export const createFileService = ({
   logger,
   projectDirectoryUrl,
   sourcemapInjectionMethod = "inline",
+  // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
   plugins,
 }) => {
   let context = {
     signal,
     logger,
   }
-  const callHook = (hookName, params) =>
-    callPluginsHook(plugins, hookName, {
-      context,
-      ...params,
-    })
-  context.callHook = callHook
 
   return async (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
@@ -35,8 +33,31 @@ export const createFileService = ({
       runtimeName,
       runtimeVersion,
     }
+    plugins = plugins.filter((plugin) => {
+      return !plugin.shouldSkip(context)
+    })
+    // TODO: memoize by url + baseUrl + type
+    context.resolve = ({ baseUrl, url, type = "url" }) => {
+      return findAsync({
+        array: plugins,
+        start: (plugin) => {
+          if (plugin.resolve) {
+            return plugin.resolve({
+              ...context,
+              baseUrl,
+              type,
+              url,
+            })
+          }
+          return null
+        },
+        predicate: (returnValue) =>
+          returnValue !== null && returnValue !== undefined,
+      })
+    }
+
     try {
-      const url = await callHook("resolve", {
+      const url = await context.resolve({
         baseUrl: projectDirectoryUrl,
         urlSpecifier: request.ressource.slice(1),
       })
@@ -46,9 +67,20 @@ export const createFileService = ({
         }
       }
 
-      const loadResult = await callHook("load", {
-        baseUrl: projectDirectoryUrl,
-        url,
+      const loadResult = await findAsync({
+        array: plugins,
+        start: (plugin) => {
+          if (plugin.load) {
+            return plugin.load({
+              ...context,
+              baseUrl: projectDirectoryUrl,
+              url,
+            })
+          }
+          return null
+        },
+        predicate: (returnValue) =>
+          returnValue !== null && returnValue !== undefined,
       })
       if (loadResult === null) {
         return {
@@ -60,44 +92,71 @@ export const createFileService = ({
         // can be a buffer (used for binary files) or a string
         content,
       } = loadResult
-
-      const references = await callHook("parse", {
+      let sourcemap = await loadSourcemap({
+        context,
         url,
         contentType,
         content,
       })
-      context.references = references
+      const mutateContentAndSourcemap = (transformReturnValue) => {
+        if (!transformReturnValue) {
+          return
+        }
+        content = transformReturnValue.content
+        sourcemap = composeTwoSourcemaps(
+          sourcemap,
+          transformReturnValue.sourcemap,
+        )
+      }
 
-      const transformResult = await callHook("transform", {
-        url,
-        contentType,
-        content,
-      })
-      if (transformResult) {
-        content = transformResult.content
-        let sourcemap = await loadSourcemap({
-          context,
-          url,
+      await plugins.reduce(async (previous, plugin) => {
+        await previous
+        const { transform } = plugin
+        if (!transform) {
+          return
+        }
+        const transformReturnValue = await transform({
+          ...context,
           contentType,
           content,
         })
-        const sourcemapFromPlugin = transformResult.sourcemap
-        if (sourcemap && sourcemapFromPlugin) {
-          sourcemap = composeTwoSourcemaps(sourcemap, transformResult.sourcemap)
-        } else if (sourcemapFromPlugin) {
-          sourcemap = sourcemapFromPlugin
-        }
-        if (sourcemap) {
-          content = injectSourcemap({
-            url,
-            contentType,
-            content,
-            sourcemap,
-            sourcemapUrl: generateSourcemapUrl(url),
-            sourcemapInjectionMethod,
-          })
-        }
+        mutateContentAndSourcemap(transformReturnValue)
+      }, Promise.resolve())
+      const transformUrlMentionsReturnValue = await transformUrlMentions({
+        projectDirectoryUrl,
+        resolve: context.resolve,
+        url,
+        contentType,
+        content,
+      })
+      mutateContentAndSourcemap(transformUrlMentionsReturnValue)
+
+      if (sourcemap) {
+        const sourcemapUrl = generateSourcemapUrl(url)
+        content = injectSourcemap({
+          url,
+          contentType,
+          content,
+          sourcemap,
+          sourcemapUrl,
+          sourcemapInjectionMethod,
+        })
+        writeIntoRuntimeDirectory({
+          projectDirectoryUrl,
+          runtimeName,
+          runtimeVersion,
+          url: sourcemapUrl,
+          content: JSON.stringify(sourcemap, null, "  "),
+        })
       }
+      writeIntoRuntimeDirectory({
+        projectDirectoryUrl,
+        runtimeName,
+        runtimeVersion,
+        url,
+        content,
+      })
+
       return {
         status: 200,
         headers: {
@@ -118,4 +177,22 @@ export const createFileService = ({
       throw e
     }
   }
+}
+
+// this is just for debug (ability to see what is generated)
+const writeIntoRuntimeDirectory = ({
+  projectDirectoryUrl,
+  runtimeName,
+  runtimeVersion,
+  url,
+  content,
+}) => {
+  if (!urlIsInsideOf(url, projectDirectoryUrl)) {
+    return
+  }
+  const outDirectoryUrl = resolveUrl(
+    `.jsenv/${runtimeName}@${runtimeVersion}`,
+    projectDirectoryUrl,
+  )
+  writeFile(moveUrl(url, projectDirectoryUrl, outDirectoryUrl), content)
 }

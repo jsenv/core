@@ -5,8 +5,8 @@ import {
   ensureWindowsDriveLetter,
 } from "@jsenv/filesystem"
 
-import { findAsync } from "#internal/find_async.js"
-import { memoizeAsyncFunctionByUrl } from "#internal/memoize_async.js"
+import { findAsync } from "#omega/internal/find_async.js"
+import { memoizeAsyncFunctionByUrl } from "#omega/internal/memoize_async.js"
 
 import {
   readPackageFile,

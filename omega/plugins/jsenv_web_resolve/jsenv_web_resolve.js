@@ -6,7 +6,7 @@ import { resolveFile } from "./filesystem_resolution.js"
 import { createFindNodeModulePackage } from "./node_package_resolution.js"
 import { resolvePackageEntry } from "./package_entry_resolution.js"
 
-export const jsenvResolvePlugin = ({
+export const jsenvWebResolvePlugin = ({
   magicExtensions = ["inherit"],
   packageConditions = ["import", "browser"],
 }) => {
@@ -14,6 +14,10 @@ export const jsenvResolvePlugin = ({
 
   return {
     name: "jsenv_resolve",
+
+    shouldSkip: ({ runtimeName }) => {
+      return runtimeName === "node"
+    },
 
     resolve: async ({
       projectDirectoryUrl,
