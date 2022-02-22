@@ -31,8 +31,5 @@ export const injectHmrInJsModuleUrls = async ({
     url,
     code: content,
   })
-  return {
-    code: result.code,
-    map: result.map,
-  }
+  return result.code
 }

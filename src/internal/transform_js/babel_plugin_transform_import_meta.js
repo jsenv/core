@@ -108,6 +108,12 @@ export const babelPluginTransformImportMeta = (
 
 const collectImportMetaProperties = (programPath) => {
   const importMetaProperties = {}
+  const storeImportProperty = (name, props) => {
+    importMetaProperties[name] = {
+      ...importMetaProperties[name],
+      ...props,
+    }
+  }
   programPath.traverse({
     MemberExpression(path) {
       const { node } = path
@@ -123,12 +129,10 @@ const collectImportMetaProperties = (programPath) => {
       const { name } = property
 
       const importMetaProperty = importMetaProperties[name]
-      if (importMetaProperty) {
+      if (importMetaProperty && importMetaProperty.paths) {
         importMetaProperty.paths.push(path)
       } else {
-        importMetaProperties[name] = {
-          paths: [path],
-        }
+        storeImportProperty(name, { paths: [path] })
       }
     },
     CallExpression(path) {
@@ -136,12 +140,12 @@ const collectImportMetaProperties = (programPath) => {
         const callNode = path.node
         const args = callNode.arguments
         if (args.length === 0) {
-          importMetaProperties.hot.acceptSelf = true
+          storeImportProperty("hot", { acceptSelf: true })
           return
         }
         const firstArg = args[0]
         if (firstArg.type === "StringLiteral") {
-          importMetaProperties.hot.acceptDependencies = [firstArg.value]
+          storeImportProperty("hot", { acceptDependencies: [firstArg.value] })
           return
         }
         if (firstArg.type === "ArrayExpression") {
@@ -153,24 +157,14 @@ const collectImportMetaProperties = (programPath) => {
             }
             return arrayNode.value
           })
-          importMetaProperties.hot.acceptDependencies = dependencies
+          storeImportProperty("hot", { acceptDependencies: dependencies })
           return
         }
-        if (firstArg.type === "ObjectExpression") {
-          const dependencies = firstArg.properties.map((property) => {
-            if (property.key.type !== "StringLiteral") {
-              throw new Error(
-                `all object key must be strings in "import.meta.hot.accept(object)"`,
-              )
-            }
-            return property.key.value
-          })
-          importMetaProperties.hot.acceptDependencies = dependencies
-          return
-        }
+        // accept first arg can be "anything"
+        storeImportProperty("hot", { acceptSelf: true })
       }
       if (isImportMetaHotMethodCall(path, "decline")) {
-        importMetaProperties.hot.decline = true
+        storeImportProperty("hot", { decline: true })
       }
     },
   })

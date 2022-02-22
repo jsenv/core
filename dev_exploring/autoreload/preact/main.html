@@ -8,7 +8,21 @@
       {
         "imports": {
           "preact": "../../../node_modules/preact/dist/preact.module.js",
-          "preact/hooks": "../../../node_modules/preact/hooks/dist/hooks.module.js"
+          "preact/hooks": "../../../node_modules/preact/hooks/dist/hooks.module.js",
+          "@prefresh/core": "../../../node_modules/@prefresh/core/src/index.js",
+          "@prefresh/utils": "../../../node_modules/@prefresh/utils/src/index.js"
+        },
+        "scopes": {
+          "../../../node_modules/@prefresh/core/": {
+            "../../../node_modules/@prefresh/core/src/runtime/vnodesForComponent": "../../../node_modules/@prefresh/core/src/runtime/vnodesForComponent.js",
+            "../../../node_modules/@prefresh/core/src/runtime/debounceRendering": "../../../node_modules/@prefresh/core/src/runtime/debounceRendering.js",
+            "../../../node_modules/@prefresh/core/src/runtime/signaturesForType": "../../../node_modules/@prefresh/core/src/runtime/signaturesForType.js",
+            "../../../node_modules/@prefresh/core/src/runtime/catchError": "../../../node_modules/@prefresh/core/src/runtime/catchError.js",
+            "../../../node_modules/@prefresh/core/src/runtime/unmount": "../../../node_modules/@prefresh/core/src/runtime/unmount.js",
+            "../../../node_modules/@prefresh/core/src/runtime/vnode": "../../../node_modules/@prefresh/core/src/runtime/vnode.js",
+            "../../../node_modules/@prefresh/core/src/computeKey": "../../../node_modules/@prefresh/core/src/computeKey.js",
+            "../../../node_modules/@prefresh/core/src/constants": "../../../node_modules/@prefresh/core/src/constants.js"
+          }
         }
       }
     </script>

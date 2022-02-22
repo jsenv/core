@@ -25,10 +25,3 @@ export let App = () => {
     </div>
   )
 }
-
-if (import.meta.hot) {
-  import.meta.hot.accept(async (module) => {
-    App = module.App
-    window.renderApp()
-  })
-}
