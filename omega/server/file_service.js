@@ -22,6 +22,7 @@ export const createFileService = ({
   let context = {
     signal,
     logger,
+    projectDirectoryUrl,
   }
 
   return async (request) => {
@@ -37,8 +38,8 @@ export const createFileService = ({
       return !plugin.shouldSkip(context)
     })
     // TODO: memoize by url + baseUrl + type
-    context.resolve = ({ baseUrl, url, type = "url" }) => {
-      return findAsync({
+    context.resolve = async ({ baseUrl, urlSpecifier, type = "url" }) => {
+      const url = await findAsync({
         array: plugins,
         start: (plugin) => {
           if (plugin.resolve) {
@@ -46,7 +47,7 @@ export const createFileService = ({
               ...context,
               baseUrl,
               type,
-              url,
+              urlSpecifier,
             })
           }
           return null
@@ -54,6 +55,7 @@ export const createFileService = ({
         predicate: (returnValue) =>
           returnValue !== null && returnValue !== undefined,
       })
+      return url || resolveUrl(urlSpecifier, baseUrl)
     }
 
     try {
@@ -61,12 +63,6 @@ export const createFileService = ({
         baseUrl: projectDirectoryUrl,
         urlSpecifier: request.ressource.slice(1),
       })
-      if (!url) {
-        return {
-          status: 404,
-        }
-      }
-
       const loadResult = await findAsync({
         array: plugins,
         start: (plugin) => {

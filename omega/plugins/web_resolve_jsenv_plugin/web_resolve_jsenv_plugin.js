@@ -6,11 +6,46 @@ import { resolveFile } from "./filesystem_resolution.js"
 import { createFindNodeModulePackage } from "./node_package_resolution.js"
 import { resolvePackageEntry } from "./package_entry_resolution.js"
 
-export const jsenvWebResolvePlugin = ({
+export const webResolveJsenvPlugin = ({
   magicExtensions = ["inherit"],
   packageConditions = ["import", "browser"],
-}) => {
+  importMap,
+} = {}) => {
   const findNodeModulePackage = createFindNodeModulePackage()
+
+  const handleFileUrl = async ({
+    projectDirectoryUrl,
+    baseUrl,
+    urlSpecifier,
+    fileUrl,
+  }) => {
+    const filesystemResolution = await resolveFile(fileUrl, {
+      magicDirectoryIndexEnabled: true,
+      magicExtensionEnabled: true,
+      extensionsToTry: getExtensionsToTry(magicExtensions, baseUrl),
+    })
+    if (filesystemResolution.found) {
+      return filesystemResolution.url
+    }
+    if (isBareSpecifier(urlSpecifier)) {
+      const packageInfo = await findNodeModulePackage({
+        projectDirectoryUrl,
+        nodeModulesOutsideProjectAllowed: true,
+        packageFileUrl: fileUrl,
+        dependencyName: urlSpecifier,
+      })
+      if (packageInfo) {
+        const packageEntryInfo = await resolvePackageEntry({
+          packageInfo,
+          packageConditions,
+        })
+        if (packageEntryInfo.found) {
+          return packageEntryInfo.url
+        }
+      }
+    }
+    return null
+  }
 
   return {
     name: "jsenv_resolve",
@@ -29,36 +64,24 @@ export const jsenvWebResolvePlugin = ({
         urlSpecifier,
         baseUrl,
         type,
-        // importMap // TODO: get this from html file
+        importMap,
       })
       // http, https, data, about, etc
       if (!url.startsWith("file://")) {
         return url
       }
-      const filesystemResolution = await resolveFile(urlSpecifier, {
-        magicDirectoryIndexEnabled: true,
-        magicExtensionEnabled: true,
-        extensionsToTry: getExtensionsToTry(magicExtensions, baseUrl),
+      const urlObject = new URL(url)
+      const { search, hash } = urlObject
+      urlObject.search = ""
+      urlObject.hash = ""
+      const fileUrl = await handleFileUrl({
+        projectDirectoryUrl,
+        baseUrl,
+        urlSpecifier,
+        fileUrl: urlObject.href,
       })
-      if (filesystemResolution.found) {
-        return filesystemResolution.url
-      }
-      if (isBareSpecifier(urlSpecifier)) {
-        const packageInfo = await findNodeModulePackage({
-          projectDirectoryUrl,
-          nodeModulesOutsideProjectAllowed: true,
-          packageFileUrl: url,
-          dependencyName: urlSpecifier,
-        })
-        if (packageInfo) {
-          const packageEntryInfo = await resolvePackageEntry({
-            packageInfo,
-            packageConditions,
-          })
-          if (packageEntryInfo.found) {
-            return packageEntryInfo.url
-          }
-        }
+      if (fileUrl) {
+        return `${fileUrl}${search}${hash}`
       }
       return null
     },
