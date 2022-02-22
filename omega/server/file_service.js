@@ -19,88 +19,79 @@ export const createFileService = ({
   // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
   plugins,
 }) => {
-  let context = {
+  const contextBase = {
     signal,
     logger,
     projectDirectoryUrl,
+    sourcemapInjectionMethod,
   }
 
   return async (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
     )
-    context = {
-      ...context,
+    const context = {
+      ...contextBase,
       runtimeName,
       runtimeVersion,
     }
     plugins = plugins.filter((plugin) => {
-      return !plugin.shouldSkip(context)
+      return !plugin.shouldSkip || !plugin.shouldSkip(context)
     })
-    // TODO: memoize by url + baseUrl + type
-    context.resolve = async ({ baseUrl, urlSpecifier, type = "url" }) => {
+    // TODO: memoize by url + baseUrl + urlResolutionMethod
+    context.resolve = async ({
+      urlResolutionMethod = "url",
+      baseUrl,
+      urlSpecifier,
+    }) => {
       const url = await findAsync({
         array: plugins,
         start: (plugin) => {
           if (plugin.resolve) {
             return plugin.resolve({
               ...context,
+              urlResolutionMethod,
               baseUrl,
-              type,
               urlSpecifier,
             })
           }
           return null
         },
-        predicate: (returnValue) =>
-          returnValue !== null && returnValue !== undefined,
+        predicate: (returnValue) => Boolean(returnValue),
       })
       return url || resolveUrl(urlSpecifier, baseUrl)
     }
 
     try {
-      const url = await context.resolve({
-        baseUrl: projectDirectoryUrl,
-        urlSpecifier: request.ressource.slice(1),
-      })
+      context.baseUrl = projectDirectoryUrl
+      context.urlSpecifier = request.ressource.slice(1)
+      context.url = await context.resolve(context)
+      context.contentType = urlToContentType(context.url)
       const loadResult = await findAsync({
         array: plugins,
         start: (plugin) => {
           if (plugin.load) {
-            return plugin.load({
-              ...context,
-              baseUrl: projectDirectoryUrl,
-              url,
-            })
+            return plugin.load(context)
           }
           return null
         },
-        predicate: (returnValue) =>
-          returnValue !== null && returnValue !== undefined,
+        predicate: (returnValue) => Boolean(returnValue),
       })
-      if (loadResult === null) {
+      if (!loadResult) {
         return {
           status: 404,
         }
       }
-      let {
-        contentType = urlToContentType(url),
-        // can be a buffer (used for binary files) or a string
-        content,
-      } = loadResult
-      let sourcemap = await loadSourcemap({
-        context,
-        url,
-        contentType,
-        content,
-      })
+      context.content = loadResult.content // can be a buffer (used for binary files) or a string
+      context.contentType = loadResult.contentType || context.contentType
+      context.sourcemap = await loadSourcemap(context)
       const mutateContentAndSourcemap = (transformReturnValue) => {
         if (!transformReturnValue) {
           return
         }
-        content = transformReturnValue.content
-        sourcemap = composeTwoSourcemaps(
-          sourcemap,
+        context.content = transformReturnValue.content
+        context.sourcemap = composeTwoSourcemaps(
+          context.sourcemap,
           transformReturnValue.sourcemap,
         )
       }
@@ -111,55 +102,32 @@ export const createFileService = ({
         if (!transform) {
           return
         }
-        const transformReturnValue = await transform({
-          ...context,
-          contentType,
-          content,
-        })
+        const transformReturnValue = await transform(context)
         mutateContentAndSourcemap(transformReturnValue)
       }, Promise.resolve())
-      const transformUrlMentionsReturnValue = await transformUrlMentions({
-        projectDirectoryUrl,
-        resolve: context.resolve,
-        url,
-        contentType,
-        content,
-      })
+      const transformUrlMentionsReturnValue = await transformUrlMentions(
+        context,
+      )
       mutateContentAndSourcemap(transformUrlMentionsReturnValue)
 
-      if (sourcemap) {
-        const sourcemapUrl = generateSourcemapUrl(url)
-        content = injectSourcemap({
-          url,
-          contentType,
-          content,
-          sourcemap,
-          sourcemapUrl,
-          sourcemapInjectionMethod,
-        })
+      if (context.sourcemap) {
+        context.sourcemapUrl = generateSourcemapUrl(context.url)
+        context.content = injectSourcemap(context)
         writeIntoRuntimeDirectory({
-          projectDirectoryUrl,
-          runtimeName,
-          runtimeVersion,
-          url: sourcemapUrl,
-          content: JSON.stringify(sourcemap, null, "  "),
+          ...context,
+          url: context.sourcemapUrl,
+          content: JSON.stringify(context.sourcemap, null, "  "),
         })
       }
-      writeIntoRuntimeDirectory({
-        projectDirectoryUrl,
-        runtimeName,
-        runtimeVersion,
-        url,
-        content,
-      })
+      writeIntoRuntimeDirectory(context)
 
       return {
         status: 200,
         headers: {
-          "content-type": contentType,
-          "content-length": Buffer.byteLength(content),
+          "content-type": context.contentType,
+          "content-length": Buffer.byteLength(context.content),
         },
-        body: content,
+        body: context.content,
       }
     } catch (e) {
       if (e.code === "ENOENT") {

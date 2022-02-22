@@ -48,7 +48,7 @@ export const webResolveJsenvPlugin = ({
   }
 
   return {
-    name: "jsenv_resolve",
+    name: "jsenv:web_resolve",
 
     shouldSkip: ({ runtimeName }) => {
       return runtimeName === "node"

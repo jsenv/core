@@ -24,7 +24,9 @@ export const javaScriptUrlMentions = {
         start: urlMention.start,
         end: urlMention.end,
         // TODO: inject hmr if needed
-        replacement: `/${urlToRelativeUrl(url, projectDirectoryUrl)}`,
+        replacement: JSON.stringify(
+          `/${urlToRelativeUrl(urlMention.url, projectDirectoryUrl)}`,
+        ),
       })
     })
     return magicSource.toContentAndSourcemap()

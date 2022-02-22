@@ -21,16 +21,17 @@ export const transformUrlMentions = async ({
   })
   await urlMentions.reduce(async (previous, urlMention) => {
     await previous
-    const url = await resolve({
+    const resolvedUrl = await resolve({
+      urlResolutionMethod: urlMention.type, // 'url', 'import_export'
       urlSpecifier: urlMention.specifier,
       baseUrl: url,
-      type: urlMention.type, // 'url', 'import_export'
     })
-    urlMention.url = url
+    urlMention.url = resolvedUrl
   }, Promise.resolve())
   return handler.transform({
     projectDirectoryUrl,
     url,
+    content,
     urlMentions,
   })
 }

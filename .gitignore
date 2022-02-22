@@ -1,4 +1,4 @@
-/.jsenv/
+.jsenv/
 /coverage/
 /docs/**/.jsenv/
 /docs/**/coverage/
