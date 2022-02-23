@@ -7,11 +7,32 @@ import { createFindNodeModulePackage } from "./node_package_resolution.js"
 import { resolvePackageEntry } from "./package_entry_resolution.js"
 
 export const webResolveJsenvPlugin = ({
-  magicExtensions = ["inherit"],
-  packageConditions = ["import", "browser"],
   importMap,
+  magicExtensions = ["inherit"],
+  // TODO: implement properly the following:
+  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  // ideally don't check for file presence on the filesystem
+  // this is an other "feature" that should be an other plugin than this one?
+  // from '../constants'
+  // -> we should first transfrom this to "constants.js" then apply the node reoslution
+  // and "resolve" hooks are exclusive when they return something
+  nodeResolution = "esm",
+  packageConditions = ["import", "browser"],
+  specifierResolution = "node",
 } = {}) => {
   const findNodeModulePackage = createFindNodeModulePackage()
+
+  const tryFilesystem = async (fileUrl, baseUrl) => {
+    const filesystemResolution = await resolveFile(fileUrl, {
+      magicDirectoryIndexEnabled: specifierResolution === "node",
+      magicExtensionEnabled: specifierResolution === "node",
+      extensionsToTry: getExtensionsToTry(magicExtensions, baseUrl),
+    })
+    if (filesystemResolution.found) {
+      return filesystemResolution.url
+    }
+    return null
+  }
 
   const handleFileUrl = async ({
     projectDirectoryUrl,
@@ -19,31 +40,32 @@ export const webResolveJsenvPlugin = ({
     urlSpecifier,
     fileUrl,
   }) => {
-    const filesystemResolution = await resolveFile(fileUrl, {
-      magicDirectoryIndexEnabled: true,
-      magicExtensionEnabled: true,
-      extensionsToTry: getExtensionsToTry(magicExtensions, baseUrl),
+    fileUrl = (await tryFilesystem(fileUrl, baseUrl)) || fileUrl
+    if (nodeResolution !== "esm") {
+      return fileUrl
+    }
+    const packageInfo = await findNodeModulePackage({
+      projectDirectoryUrl,
+      nodeModulesOutsideProjectAllowed: true,
+      packageFileUrl: fileUrl,
+      dependencyName: urlSpecifier,
     })
-    if (filesystemResolution.found) {
-      return filesystemResolution.url
+    // if package is not type module and file extension is not '.mjs' we should apply require.resolve
+    if (!packageInfo) {
+      return fileUrl
     }
     if (isBareSpecifier(urlSpecifier)) {
-      const packageInfo = await findNodeModulePackage({
-        projectDirectoryUrl,
-        nodeModulesOutsideProjectAllowed: true,
-        packageFileUrl: fileUrl,
-        dependencyName: urlSpecifier,
+      const packageEntryInfo = await resolvePackageEntry({
+        packageInfo,
+        packageConditions,
       })
-      if (packageInfo) {
-        const packageEntryInfo = await resolvePackageEntry({
-          packageInfo,
-          packageConditions,
-        })
-        if (packageEntryInfo.found) {
-          return packageEntryInfo.url
-        }
+      if (packageEntryInfo.found) {
+        return packageEntryInfo.url
       }
+      return null
     }
+    // sinon bah on essaye de trouver si y'a un exports pour ce fichier?
+    // si y'a pas de fichier qu'est ce qu'on fait?
     return null
   }
 

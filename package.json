@@ -46,7 +46,8 @@
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "certificate-install": "node ./script/dev/install_certificate_authority.mjs",
-    "sync-workspace-versions": "node ./script/dev/sync_workspace_versions.mjs",
+    "workspace-versions": "node ./script/publish/workspace_versions.mjs",
+    "workspace-publish": "node ./script/publish/workspace_publish.mjs",
     "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {
@@ -62,7 +63,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/useragent_parser": "1.6.0",
     "@jsenv/abort": "4.1.2",
-    "@jsenv/filesystem": "2.7.2",
+    "@jsenv/filesystem": "2.7.1",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "1.5.0",
@@ -126,6 +127,7 @@
     "@jsenv/importmap-eslint-resolver": "5.2.5",
     "@jsenv/importmap-node-module": "5.1.3",
     "@jsenv/package-publish": "1.7.2",
+    "@jsenv/package-workspace": "0.0.3",
     "@jsenv/performance-impact": "2.2.7",
     "@jsenv/pwa": "4.0.1",
     "@prefresh/babel-plugin": "0.4.3",
