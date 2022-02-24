@@ -28,6 +28,7 @@ export const startOmegaServer = async ({
   services,
 
   projectDirectoryUrl,
+  scenario,
   plugins,
   sourcemapInjectionMethod = "inline",
 }) => {
@@ -39,6 +40,7 @@ export const startOmegaServer = async ({
       signal,
       logger,
       projectDirectoryUrl,
+      scenario,
       sourcemapInjectionMethod,
       plugins,
     }),

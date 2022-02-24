@@ -1,5 +1,3 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
-
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 import { createMagicSource } from "#omega/internal/sourcemap/magic_source.js"
 
@@ -17,16 +15,13 @@ export const javaScriptUrlMentions = {
     const { urlMentions } = metadata
     return urlMentions
   },
-  transform: ({ projectDirectoryUrl, url, content, urlMentions }) => {
+  transform: ({ url, content, urlMentions, transformUrlMention }) => {
     const magicSource = createMagicSource({ url, content })
     urlMentions.forEach((urlMention) => {
       magicSource.replace({
         start: urlMention.start,
         end: urlMention.end,
-        // TODO: inject hmr if needed
-        replacement: JSON.stringify(
-          `/${urlToRelativeUrl(urlMention.url, projectDirectoryUrl)}`,
-        ),
+        replacement: JSON.stringify(transformUrlMention(urlMention)),
       })
     })
     return magicSource.toContentAndSourcemap()

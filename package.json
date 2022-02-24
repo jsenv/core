@@ -15,7 +15,7 @@
   },
   "type": "module",
   "imports": {
-    "#omega/*": "./omega/*"
+    "#omega/": "./omega/"
   },
   "exports": {
     ".": {

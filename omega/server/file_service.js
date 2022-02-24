@@ -15,17 +15,22 @@ export const createFileService = ({
   signal,
   logger,
   projectDirectoryUrl,
+  scenario,
   sourcemapInjectionMethod = "inline",
   // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
   plugins,
 }) => {
+  const urlFacadeMappings = {}
+  // const urlRedirections = {}
   const contextBase = {
     signal,
     logger,
     projectDirectoryUrl,
+    scenario,
     sourcemapInjectionMethod,
+    urlFacadeMappings,
+    // urlRedirections,
   }
-
   return async (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
@@ -38,13 +43,12 @@ export const createFileService = ({
     plugins = plugins.filter((plugin) => {
       return !plugin.shouldSkip || !plugin.shouldSkip(context)
     })
-    // TODO: memoize by url + baseUrl + urlResolutionMethod
     context.resolve = async ({
       urlResolutionMethod = "url",
       baseUrl,
       urlSpecifier,
     }) => {
-      const url = await findAsync({
+      const resolveReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
           if (plugin.resolve) {
@@ -59,15 +63,27 @@ export const createFileService = ({
         },
         predicate: (returnValue) => Boolean(returnValue),
       })
-      return url || resolveUrl(urlSpecifier, baseUrl)
+      if (resolveReturnValue) {
+        if (typeof resolveReturnValue === "object") {
+          urlFacadeMappings[resolveReturnValue.urlFacade] =
+            resolveReturnValue.url
+          return resolveReturnValue.url
+        }
+        return resolveReturnValue
+      }
+      return resolveUrl(urlSpecifier, baseUrl)
     }
 
     try {
       context.baseUrl = projectDirectoryUrl
       context.urlSpecifier = request.ressource.slice(1)
-      context.url = await context.resolve(context)
-      context.contentType = urlToContentType(context.url)
-      const loadResult = await findAsync({
+      context.urlFacade = new URL(
+        context.urlSpecifier,
+        projectDirectoryUrl,
+      ).href
+      context.url = urlFacadeMappings[context.urlFacade] || context.urlFacade
+      context.contentType = urlToContentType(context.urlFacade)
+      const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
           if (plugin.load) {
@@ -77,13 +93,18 @@ export const createFileService = ({
         },
         predicate: (returnValue) => Boolean(returnValue),
       })
-      if (!loadResult) {
+      if (!loadReturnValue) {
         return {
           status: 404,
         }
       }
-      context.content = loadResult.content // can be a buffer (used for binary files) or a string
-      context.contentType = loadResult.contentType || context.contentType
+      // if (loadReturnValue.url) {
+      //   // url can be redirected during load
+      //   // (magic extensions for example)
+      //   urlRedirections[context.url] = loadReturnValue.url
+      //   context.url = loadReturnValue.url
+      // }
+      context.content = loadReturnValue.content // can be a buffer (used for binary files) or a string
       context.sourcemap = await loadSourcemap(context)
       const mutateContentAndSourcemap = (transformReturnValue) => {
         if (!transformReturnValue) {
@@ -146,6 +167,7 @@ export const createFileService = ({
 // this is just for debug (ability to see what is generated)
 const writeIntoRuntimeDirectory = ({
   projectDirectoryUrl,
+  scenario,
   runtimeName,
   runtimeVersion,
   url,
@@ -155,7 +177,7 @@ const writeIntoRuntimeDirectory = ({
     return
   }
   const outDirectoryUrl = resolveUrl(
-    `.jsenv/${runtimeName}@${runtimeVersion}/`,
+    `.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
     projectDirectoryUrl,
   )
   writeFile(moveUrl(url, projectDirectoryUrl, outDirectoryUrl), content)
