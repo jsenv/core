@@ -1,5 +1,6 @@
 /*
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
  * deviations from the spec:
  * - the check for isDirectory -> throw is delayed is descoped to the caller
  * - the call to real path ->
@@ -13,16 +14,16 @@ import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierFo
 import { createDetailedMessage } from "@jsenv/logger"
 
 export const applyNodeEsmResolution = ({
-  defaultConditions = ["import", "require"],
+  conditions = ["node", "import"],
   parentUrl,
   specifier,
 }) => {
   const resolution = applyPackageSpecifierResolution({
-    conditions: defaultConditions,
-    parentUrl,
+    conditions,
+    parentUrl: String(parentUrl),
     specifier,
   })
-  const { url } = resolution.url
+  const { url } = resolution
   if (url.startsWith("file:")) {
     if (url.includes("%2F") || url.includes("%5C")) {
       throw new Error("invalid module specifier")
@@ -134,10 +135,10 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
     return selfResolution
   }
   while (parentUrl !== "file:///") {
-    const packageUrl = new URL(`node_modules/${packageSpecifier}`, parentUrl)
+    const packageUrl = new URL(`node_modules/${packageSpecifier}/`, parentUrl)
       .href
-    parentUrl = new URL("./", packageUrl)
-    if (!existsSync(packageUrl)) {
+    if (!existsSync(new URL(packageUrl))) {
+      parentUrl = getParentUrl(parentUrl)
       continue
     }
     const packageJson = readPackageJson(packageUrl)
@@ -211,7 +212,7 @@ const applyPackageExportsResolution = ({
   packageSubpath,
   exports,
 }) => {
-  const exportsInfo = readExports(exports)
+  const exportsInfo = readExports({ exports, packageUrl })
   if (packageSubpath === ".") {
     const mainExport = applyMainExportResolution({ exports, exportsInfo })
     if (!mainExport) {
@@ -297,10 +298,10 @@ const applyPackageTargetResolution = ({
   internal = false,
 }) => {
   if (typeof target === "string") {
-    if (pattern === false && subpath && !target.endsWith("/")) {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
       throw new Error("invalid module specifier")
     }
-    if (!target.startsWith("/")) {
+    if (!target.startsWith("./")) {
       if (!internal || target.startsWith("../") || isValidUrl(target)) {
         throw new Error("invalid package target")
       }
@@ -371,7 +372,7 @@ const applyPackageTargetResolution = ({
         const resolved = applyPackageTargetResolution({
           packageUrl,
           packageJson,
-          targetValue,
+          target: targetValue,
           subpath,
           pattern,
           internal,
@@ -390,13 +391,13 @@ const applyPackageTargetResolution = ({
 const lookupPackageScope = (url) => {
   let scopeUrl = url
   while (scopeUrl !== "file:///") {
-    scopeUrl = new URL("../", scopeUrl).href
+    scopeUrl = getParentUrl(scopeUrl)
     if (scopeUrl.endsWith("node_modules/")) {
       return null
     }
     const packageJsonUrlObject = new URL("package.json", scopeUrl)
     if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl
+      return packageJsonUrlObject.href
     }
   }
   return null
@@ -407,6 +408,9 @@ const readExports = ({ exports, packageUrl }) => {
     return {
       type: "array",
     }
+  }
+  if (exports === null) {
+    return {}
   }
   if (typeof exports === "object") {
     const keys = Object.keys(exports)
@@ -446,7 +450,8 @@ const readExports = ({ exports, packageUrl }) => {
 }
 
 const readPackageJson = (packageUrl) => {
-  const buffer = readFileSync(packageUrl)
+  const packageJsonUrl = new URL("package.json", packageUrl)
+  const buffer = readFileSync(packageJsonUrl)
   const string = String(buffer)
   try {
     return JSON.parse(string)
@@ -542,6 +547,10 @@ const comparePatternKeys = (keyA, keyB) => {
     return 1
   }
   return 0
+}
+
+const getParentUrl = (url) => {
+  return new URL(url.endsWith("/") ? "../" : "./", url).href
 }
 
 const isValidUrl = (url) => {

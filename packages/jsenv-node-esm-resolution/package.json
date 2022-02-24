@@ -1,4 +1,11 @@
 {
+  "name": "@jsenv/node-esm-resolution",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js"
+    },
+    "./*": "./*"
+  },
   "main": "./main.js"
 }

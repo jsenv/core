@@ -88,7 +88,7 @@ export const fileSystemJsenvPlugin = ({
       }
       if (specifierResolution === "node_esm") {
         const url = applyNodeEsmResolution({
-          defaultConditions: packageConditions,
+          conditions: packageConditions,
           parentUrl: baseUrl,
           specifier: urlSpecifier,
         })
