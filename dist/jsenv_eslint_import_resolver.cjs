@@ -897,9 +897,9 @@ const parsePackageSpecifier = (packageSpecifier) => {
       throw new Error("invalid module specifier")
     }
     const packageScope = packageSpecifier.slice(0, firstSlashIndex);
-    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex);
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
     if (secondSlashIndex === -1) {
-      const packageName = packageSpecifier.slice(firstSlashIndex);
+      const packageName = packageSpecifier.slice(firstSlashIndex + 1);
       return {
         packageScope,
         packageName,
@@ -910,7 +910,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
       firstSlashIndex,
       secondSlashIndex,
     );
-    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
     const packageSubpath = `.${afterSecondSlash}`;
     return {
       packageScope,
@@ -926,7 +926,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
     }
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
-  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
   const packageSubpath = `node:${afterFirstSlash}`;
   return {
     packageName,
@@ -1850,7 +1850,6 @@ const handleFileUrl = (
       path: urlToFileSystemPath(fileUrl),
     }
   }
-  console.log({fileUrl, fileResolution})
   fileUrl = fileResolution.url;
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
     // we don't follow link because we care only about the theoric file location
