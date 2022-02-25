@@ -86,7 +86,7 @@ const applyPackageImportsResolution = ({
   if (packageUrl !== null) {
     const packageJson = readPackageJson(packageUrl)
     const { imports } = packageJson
-    if (imports !== null) {
+    if (imports !== null && typeof imports === "object") {
       const resolved = applyPackageImportsExportsResolution({
         conditions,
         packageUrl,
@@ -397,7 +397,7 @@ const lookupPackageScope = (url) => {
     }
     const packageJsonUrlObject = new URL("package.json", scopeUrl)
     if (existsSync(packageJsonUrlObject)) {
-      return packageJsonUrlObject.href
+      return scopeUrl
     }
   }
   return null
