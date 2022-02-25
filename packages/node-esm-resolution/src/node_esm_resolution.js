@@ -109,7 +109,10 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier")
   }
-  if (isSpecifierForNodeBuiltin(packageSpecifier)) {
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
     return {
       type: "node_builtin_specifier",
       url: `node:${packageSpecifier}`,
@@ -262,7 +265,7 @@ const applyPackageImportsExportsResolution = ({
     })
   }
   const expansionKeys = Object.keys(matchObject)
-    .filter((key) => key.split("*").length === 1)
+    .filter((key) => key.split("*").length === 2)
     .sort(comparePatternKeys)
   for (const expansionKey of expansionKeys) {
     const [patternBase, patternTrailer] = expansionKey.split("*")

@@ -1,4 +1,4 @@
-import { statsSync } from "node:fs"
+import { statSync } from "node:fs"
 
 import { urlToFilename } from "./url_utils.js"
 
@@ -69,7 +69,7 @@ const findExtensionLeadingToFile = (fileUrl, magicExtensions) => {
 
 const fileStatsOrNull = (url) => {
   try {
-    return statsSync(new URL(url))
+    return statSync(new URL(url))
   } catch (e) {
     if (e.code === "ENOENT") {
       return null

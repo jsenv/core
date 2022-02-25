@@ -1,6 +1,6 @@
 // https://github.com/vitejs/vite/blob/main/packages/vite/src/node/plugins/resolve.ts
 
-import { realpathSync, statsSync, readFileSync } from "node:fs"
+import { realpathSync, statSync, readFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { urlIsInsideOf, urlToExtension } from "@jsenv/filesystem"
 
@@ -101,7 +101,7 @@ export const fileSystemJsenvPlugin = ({
       if (!url.startsWith("file:")) {
         return null
       }
-      if (statsSync(url).isDirectory()) {
+      if (statSync(url).isDirectory()) {
         throw new Error("Unsupported directory import")
       }
       const fileBuffer = readFileSync(new URL(url))

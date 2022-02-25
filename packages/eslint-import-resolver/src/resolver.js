@@ -11,11 +11,11 @@ import {
 } from "@jsenv/filesystem"
 
 import { createLogger } from "./logger.js"
-import { isSpecifierForNodeBuiltin } from "../../src/node_builtin_specifiers.js"
+import { isSpecifierForNodeBuiltin } from "../../node-esm-resolution/src/node_builtin_specifiers.js"
 import {
   applyNodeEsmResolution,
   applyFileSystemMagicResolution,
-} from "../../main.js"
+} from "../../node-esm-resolution/main.js"
 
 import { applyImportmapResolution } from "./importmap_resolution.js"
 
@@ -87,13 +87,13 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
         return onUrl(urlFromImportmap)
       }
     }
-    const urlFromNodeResolution = applyNodeEsmResolution({
+    const nodeResolution = applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl: importer,
       specifier,
     })
-    if (urlFromNodeResolution) {
-      return onUrl(urlFromNodeResolution)
+    if (nodeResolution) {
+      return onUrl(nodeResolution.url)
     }
     throw new Error("not found")
   } catch (e) {
@@ -118,7 +118,7 @@ const handleFileUrl = (
     logger.debug(`-> file not found at ${fileUrl}`)
     return {
       found: false,
-      path: filePath,
+      path: urlToFileSystemPath(fileUrl),
     }
   }
   fileUrl = fileResolution.url

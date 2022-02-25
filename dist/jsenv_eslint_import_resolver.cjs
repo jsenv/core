@@ -1,0 +1,1890 @@
+'use strict';
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var url = require('url');
+var node_fs = require('fs');
+var fs = require('fs');
+require('crypto');
+require('path');
+var util = require('util');
+
+const ensureUrlTrailingSlash = (url) => {
+  return url.endsWith("/") ? url : `${url}/`
+};
+
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    )
+  }
+
+  if (value[0] === "/") {
+    return true
+  }
+
+  return startsWithWindowsDriveLetter(value)
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false
+
+  return true
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`)
+  }
+  return String(url.pathToFileURL(value))
+};
+
+const assertAndNormalizeDirectoryUrl = (value) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(
+          `directoryUrl must be a valid url, received ${value}`,
+        )
+      }
+    }
+  } else {
+    throw new TypeError(
+      `directoryUrl must be a string or an url, received ${value}`,
+    )
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`)
+  }
+
+  return ensureUrlTrailingSlash(urlString)
+};
+
+const urlToFileSystemPath = (url$1) => {
+  let urlString = String(url$1);
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+  const fileSystemPath = url.fileURLToPath(urlString);
+  return fileSystemPath
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+process.platform === "win32";
+
+const isWindows = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`)
+  }
+
+  if (!isWindows) {
+    return url
+  }
+
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(
+      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    )
+  }
+
+  if (!url.startsWith("file://")) {
+    return url
+  }
+  const afterProtocol = url.slice("file://".length);
+  // we still have the windows drive letter
+  if (extractDriveLetter(afterProtocol)) {
+    return url
+  }
+
+  // drive letter was lost, restore it
+  const baseUrlOrFallback = baseUrl.startsWith("file://")
+    ? baseUrl
+    : baseUrlFallback;
+  const driveLetter = extractDriveLetter(
+    baseUrlOrFallback.slice("file://".length),
+  );
+  if (!driveLetter) {
+    throw new Error(
+      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    )
+  }
+  return `file:///${driveLetter}:${afterProtocol}`
+};
+
+const extractDriveLetter = (ressource) => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
+    return ressource[1]
+  }
+  return null
+};
+
+process.platform === "win32";
+
+const urlIsInsideOf = (url, otherUrl) => {
+  const urlObject = new URL(url);
+  const otherUrlObject = new URL(otherUrl);
+
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false
+  }
+
+  const urlPathname = urlObject.pathname;
+  const otherUrlPathname = otherUrlObject.pathname;
+  if (urlPathname === otherUrlPathname) {
+    return false
+  }
+
+  const isInside = urlPathname.startsWith(otherUrlPathname);
+  return isInside
+};
+
+const getRealFileSystemUrlSync = (
+  fileUrl,
+  { followLink = true } = {},
+) => {
+  const pathname = new URL(fileUrl).pathname;
+  const parts = pathname.slice(1).split("/");
+  let reconstructedFileUrl = `file:///`;
+  if (process.platform === "win32") {
+    const windowsDriveLetter = parts.shift();
+    reconstructedFileUrl += `${windowsDriveLetter}/`;
+  }
+  let i = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const name = parts[i];
+    i++;
+    let namesOnFileSystem;
+    try {
+      namesOnFileSystem = node_fs.readdirSync(
+        // When Node.js receives "C:/" on windows it returns
+        // the process.cwd() directory content...
+        // This can be fixed by passing "file:///C:/" directly but as a url object
+        new URL(reconstructedFileUrl),
+      );
+    } catch (e) {
+      if (e && e.code === "ENOENT") {
+        return null
+      }
+      throw e
+    }
+    const foundOnFilesystem = namesOnFileSystem.includes(name);
+    if (foundOnFilesystem) {
+      reconstructedFileUrl += name;
+    } else {
+      const nameOnFileSystem = namesOnFileSystem.find(
+        (nameCandidate) => nameCandidate.toLowerCase() === name.toLowerCase(),
+      );
+      if (!nameOnFileSystem) {
+        return null
+      }
+      reconstructedFileUrl += nameOnFileSystem;
+    }
+    if (i === parts.length) {
+      if (followLink) {
+        const realPath = node_fs.realpathSync.native(
+          urlToFileSystemPath(reconstructedFileUrl),
+        );
+        return fileSystemPathToUrl(realPath)
+      }
+      return reconstructedFileUrl
+    }
+    reconstructedFileUrl += "/";
+  }
+};
+
+util.promisify(fs.readFile);
+
+process.platform === "win32";
+
+/* eslint-disable import/max-dependencies */
+
+process.platform === "linux";
+
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      debug,
+      info,
+      warn,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    }
+  }
+
+  throw new Error(`unexpected logLevel.
+  --- logLevel ---
+  ${logLevel}
+  --- allowed log levels ---
+  ${LOG_LEVEL_OFF}
+  ${LOG_LEVEL_ERROR}
+  ${LOG_LEVEL_WARN}
+  ${LOG_LEVEL_INFO}
+  ${LOG_LEVEL_DEBUG}`)
+};
+
+const debug = console.debug;
+
+const debugDisabled = () => {};
+
+const info = console.info;
+
+const infoDisabled = () => {};
+
+const warn = console.warn;
+
+const warnDisabled = () => {};
+
+const error = console.error;
+
+const errorDisabled = () => {};
+
+const isSpecifierForNodeBuiltin = (specifier) => {
+  return (
+    specifier.startsWith("node:") ||
+    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
+  )
+};
+
+const NODE_BUILTIN_MODULE_SPECIFIERS = [
+  "assert",
+  "assert/strict",
+  "async_hooks",
+  "buffer_ieee754",
+  "buffer",
+  "child_process",
+  "cluster",
+  "console",
+  "constants",
+  "crypto",
+  "_debugger",
+  "dgram",
+  "dns",
+  "domain",
+  "events",
+  "freelist",
+  "fs",
+  "fs/promises",
+  "_http_agent",
+  "_http_client",
+  "_http_common",
+  "_http_incoming",
+  "_http_outgoing",
+  "_http_server",
+  "http",
+  "http2",
+  "https",
+  "inspector",
+  "_linklist",
+  "module",
+  "net",
+  "node-inspect/lib/_inspect",
+  "node-inspect/lib/internal/inspect_client",
+  "node-inspect/lib/internal/inspect_repl",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "punycode",
+  "querystring",
+  "readline",
+  "repl",
+  "smalloc",
+  "_stream_duplex",
+  "_stream_transform",
+  "_stream_wrap",
+  "_stream_passthrough",
+  "_stream_readable",
+  "_stream_writable",
+  "stream",
+  "stream/promises",
+  "string_decoder",
+  "sys",
+  "timers",
+  "_tls_common",
+  "_tls_legacy",
+  "_tls_wrap",
+  "tls",
+  "trace_events",
+  "tty",
+  "url",
+  "util",
+  "v8/tools/arguments",
+  "v8/tools/codemap",
+  "v8/tools/consarray",
+  "v8/tools/csvparser",
+  "v8/tools/logreader",
+  "v8/tools/profile_view",
+  "v8/tools/splaytree",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib",
+  // global is special
+  "global",
+];
+
+const getParentUrl = (url) => {
+  return new URL(url.endsWith("/") ? "../" : "./", url).href
+};
+
+const isValidUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true
+  } catch (e) {
+    return false
+  }
+};
+
+const urlToFilename = (url) => {
+  const { pathname } = new URL(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1
+      ? pathnameBeforeLastSlash
+      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename
+};
+
+const lookupPackageScope = (url) => {
+  let scopeUrl = url;
+  while (scopeUrl !== "file:///") {
+    scopeUrl = getParentUrl(scopeUrl);
+    if (scopeUrl.endsWith("node_modules/")) {
+      return null
+    }
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
+    if (node_fs.existsSync(packageJsonUrlObject)) {
+      return scopeUrl
+    }
+  }
+  return null
+};
+
+const readPackageJson = (packageUrl) => {
+  const packageJsonUrl = new URL("package.json", packageUrl);
+  const buffer = node_fs.readFileSync(packageJsonUrl);
+  const string = String(buffer);
+  try {
+    return JSON.parse(string)
+  } catch (e) {
+    throw new Error(`Invalid package configuration`)
+  }
+};
+
+/*
+ * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
+ * deviations from the spec:
+ * - the check for isDirectory -> throw is delayed is descoped to the caller
+ * - the call to real path ->
+ *   delayed to the caller so that we can decide to
+ *   maintain symlink as facade url when it's outside project directory
+ *   or use the real path when inside
+ */
+
+const applyNodeEsmResolution = ({
+  conditions = ["node", "import"],
+  parentUrl,
+  specifier,
+}) => {
+  const resolution = applyPackageSpecifierResolution({
+    conditions,
+    parentUrl: String(parentUrl),
+    specifier,
+  });
+  const { url } = resolution;
+  if (url.startsWith("file:")) {
+    if (url.includes("%2F") || url.includes("%5C")) {
+      throw new Error("invalid module specifier")
+    }
+    return resolution
+  }
+  return resolution
+};
+
+const applyPackageSpecifierResolution = ({
+  conditions,
+  parentUrl,
+  specifier,
+}) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return {
+      type: "relative_specifier",
+      url: new URL(specifier, parentUrl).href,
+    }
+  }
+  if (specifier[0] === "#") {
+    return applyPackageImportsResolution({
+      conditions,
+      parentUrl,
+      specifier,
+    })
+  }
+  try {
+    const urlObject = new URL(specifier);
+    return {
+      type: "absolute_specifier",
+      url: urlObject.href,
+    }
+  } catch (e) {
+    // "bare specifier"
+    return applyPackageResolve({
+      conditions,
+      parentUrl,
+      packageSpecifier: specifier,
+    })
+  }
+};
+
+const applyPackageImportsResolution = ({
+  conditions,
+  parentUrl,
+  specifier,
+}) => {
+  if (!specifier.startsWith("#")) {
+    throw new Error("specifier must start with #")
+  }
+  if (specifier === "#" || specifier.startsWith("#/")) {
+    throw new Error("Invalid module specifier")
+  }
+  const packageUrl = lookupPackageScope(parentUrl);
+  if (packageUrl !== null) {
+    const packageJson = readPackageJson(packageUrl);
+    const { imports } = packageJson;
+    if (imports !== null && typeof imports === "object") {
+      const resolved = applyPackageImportsExportsResolution({
+        conditions,
+        packageUrl,
+        packageJson,
+        matchObject: imports,
+        matchKey: specifier,
+        isImports: true,
+      });
+      if (resolved) {
+        return resolved
+      }
+    }
+  }
+  throw new Error(`Package import not defined`)
+};
+
+const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
+  if (packageSpecifier === "") {
+    throw new Error("invalid module specifier")
+  }
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
+    return {
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`,
+    }
+  }
+  const { packageName, packageSubpath } =
+    parsePackageSpecifier(packageSpecifier);
+  if (
+    packageName[0] === "." ||
+    packageName.includes("\\") ||
+    packageName.includes("%")
+  ) {
+    throw new Error("invalid module specifier")
+  }
+  if (packageSubpath.endsWith("/")) {
+    throw new Error("invalid module specifier")
+  }
+  const selfResolution = applyPackageSelfResolution({
+    conditions,
+    parentUrl,
+    packageName,
+    packageSubpath,
+  });
+  if (selfResolution) {
+    return selfResolution
+  }
+  while (parentUrl !== "file:///") {
+    const packageUrl = new URL(`node_modules/${packageSpecifier}/`, parentUrl)
+      .href;
+    if (!node_fs.existsSync(new URL(packageUrl))) {
+      parentUrl = getParentUrl(parentUrl);
+      continue
+    }
+    const packageJson = readPackageJson(packageUrl);
+    if (packageJson !== null) {
+      const { exports } = packageJson;
+      if (exports !== null && exports !== undefined) {
+        return applyPackageExportsResolution({
+          conditions,
+          packageUrl,
+          packageJson,
+          packageSubpath,
+          exports,
+        })
+      }
+    }
+    if (packageSubpath === ".") {
+      const { main } = packageJson;
+      if (typeof main === "string") {
+        return {
+          type: "main",
+          packageUrl,
+          packageJson,
+          url: new URL(main, packageUrl).href,
+        }
+      }
+    }
+    return {
+      type: "subpath",
+      packageUrl,
+      packageJson,
+      url: new URL(packageSubpath, packageUrl).href,
+    }
+  }
+  throw new Error("module not found")
+};
+
+const applyPackageSelfResolution = ({
+  conditions,
+  parentUrl,
+  packageName,
+  packageSubpath,
+}) => {
+  const packageUrl = lookupPackageScope(parentUrl);
+  if (!packageUrl) {
+    return undefined
+  }
+  const packageJson = readPackageJson(packageUrl);
+  if (!packageJson) {
+    return undefined
+  }
+  const { exports } = packageJson;
+  if (!exports) {
+    return undefined
+  }
+  if (packageJson.name !== packageName) {
+    return undefined
+  }
+  return applyPackageExportsResolution({
+    conditions,
+    packageUrl,
+    packageJson,
+    packageSubpath,
+    exports,
+  })
+};
+
+const applyPackageExportsResolution = ({
+  conditions,
+  packageUrl,
+  packageJson,
+  packageSubpath,
+  exports,
+}) => {
+  const exportsInfo = readExports({ exports, packageUrl });
+  if (packageSubpath === ".") {
+    const mainExport = applyMainExportResolution({ exports, exportsInfo });
+    if (!mainExport) {
+      throw new Error("package path not exported")
+    }
+    return applyPackageTargetResolution({
+      conditions,
+      packageUrl,
+      packageJson,
+      target: mainExport,
+    })
+  }
+  if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
+    const resolved = applyPackageImportsExportsResolution({
+      conditions,
+      packageUrl,
+      packageJson,
+      matchObject: exports,
+      matchKey: `./${packageSubpath}`,
+      isImports: false,
+    });
+    if (resolved) {
+      return resolved
+    }
+  }
+  throw new Error("package path not exported")
+};
+
+const applyPackageImportsExportsResolution = ({
+  conditions,
+  packageUrl,
+  packageJson,
+  matchObject,
+  matchKey,
+  isImports,
+}) => {
+  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
+    const target = matchObject[matchKey];
+    return applyPackageTargetResolution({
+      conditions,
+      packageUrl,
+      packageJson,
+      target,
+      internal: isImports,
+    })
+  }
+  const expansionKeys = Object.keys(matchObject)
+    .filter((key) => key.split("*").length === 2)
+    .sort(comparePatternKeys);
+  for (const expansionKey of expansionKeys) {
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue
+    if (!matchKey.startsWith(patternBase)) continue
+    if (patternTrailer.length > 0) {
+      if (!matchKey.endsWith(patternTrailer)) continue
+      if (matchKey.length < expansionKey.length) continue
+    }
+    const target = matchObject[expansionKey];
+    const subpath = matchKey.slice(
+      patternBase.length,
+      matchKey.length - patternTrailer.length,
+    );
+    return applyPackageTargetResolution({
+      conditions,
+      packageUrl,
+      packageJson,
+      target,
+      subpath,
+      pattern: true,
+      internal: isImports,
+    })
+  }
+  return null
+};
+
+const applyPackageTargetResolution = ({
+  conditions,
+  packageUrl,
+  packageJson,
+  target,
+  subpath = "",
+  pattern = false,
+  internal = false,
+}) => {
+  if (typeof target === "string") {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
+      throw new Error("invalid module specifier")
+    }
+    if (!target.startsWith("./")) {
+      if (!internal || target.startsWith("../") || isValidUrl(target)) {
+        throw new Error("invalid package target")
+      }
+      return applyPackageResolve({
+        conditions,
+        parentUrl: `${packageUrl}/`,
+        packageSpecifier: pattern
+          ? target.replaceAll("*", subpath)
+          : `${target}${subpath}`,
+      })
+    }
+    const resolvedTarget = new URL(target, packageUrl).href;
+    if (!resolvedTarget.startsWith(packageUrl)) {
+      throw new Error("invalid package target")
+    }
+    return {
+      type: internal ? "imports_subpath" : "exports_subpath",
+      packageUrl,
+      packageJson,
+      url: pattern
+        ? resolvedTarget.replaceAll("*", subpath)
+        : new URL(subpath, resolvedTarget).href,
+    }
+  }
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
+      return null
+    }
+    let lastResult;
+    for (const targetValue of target) {
+      try {
+        const resolved = applyPackageTargetResolution({
+          packageUrl,
+          packageJson,
+          target: targetValue,
+          subpath,
+          pattern,
+          internal,
+          conditions,
+        });
+        if (resolved) {
+          return resolved
+        }
+        lastResult = resolved;
+      } catch (e) {
+        if (e.message === "Invalid package target") {
+          continue
+        }
+        lastResult = e;
+      }
+    }
+    if (lastResult) {
+      throw lastResult
+    }
+    return null
+  }
+  if (target === null) {
+    return null
+  }
+  if (typeof target === "object") {
+    const keys = Object.keys(target);
+    for (const key of keys) {
+      if (Number.isInteger(key)) {
+        throw new Error("Invalid package configuration")
+      }
+      if (key === "default" || conditions.includes(key)) {
+        const targetValue = target[key];
+        const resolved = applyPackageTargetResolution({
+          packageUrl,
+          packageJson,
+          target: targetValue,
+          subpath,
+          pattern,
+          internal,
+          conditions,
+        });
+        if (resolved) {
+          return resolved
+        }
+      }
+    }
+    return undefined
+  }
+  throw new Error("Invalid package target")
+};
+
+const readExports = ({ exports, packageUrl }) => {
+  if (Array.isArray(exports)) {
+    return {
+      type: "array",
+    }
+  }
+  if (exports === null) {
+    return {}
+  }
+  if (typeof exports === "object") {
+    const keys = Object.keys(exports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
+    keys.forEach((availableKey) => {
+      if (availableKey.startsWith(".")) {
+        relativeKeys.push(availableKey);
+      } else {
+        conditionalKeys.push(availableKey);
+      }
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
+    if (hasRelativeKey && conditionalKeys.length > 0) {
+      throw new Error(
+        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map((key) => `"${key}"`).join("\n")}
+--- package.json ---
+${packageUrl}`,
+      )
+    }
+    return {
+      type: "object",
+      hasRelativeKey,
+      allKeysAreRelative: relativeKeys.length === keys.length,
+    }
+  }
+  if (typeof exports === "string") {
+    return { type: "string" }
+  }
+  return {}
+};
+
+const parsePackageSpecifier = (packageSpecifier) => {
+  if (packageSpecifier[0] === "@") {
+    const firstSlashIndex = packageSpecifier.indexOf("/");
+    if (firstSlashIndex === -1) {
+      throw new Error("invalid module specifier")
+    }
+    const packageScope = packageSpecifier.slice(0, firstSlashIndex);
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex);
+    if (secondSlashIndex === -1) {
+      const packageName = packageSpecifier.slice(firstSlashIndex);
+      return {
+        packageScope,
+        packageName,
+        packageSubpath: ".",
+      }
+    }
+    const packageName = packageSpecifier.slice(
+      firstSlashIndex,
+      secondSlashIndex,
+    );
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex);
+    const packageSubpath = `.${afterSecondSlash}`;
+    return {
+      packageScope,
+      packageName,
+      packageSubpath,
+    }
+  }
+  const firstSlashIndex = packageSpecifier.indexOf("/");
+  if (firstSlashIndex === -1) {
+    return {
+      packageName: packageSpecifier,
+      packageSubpath: ".",
+    }
+  }
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex);
+  const packageSubpath = `node:${afterFirstSlash}`;
+  return {
+    packageName,
+    packageSubpath,
+  }
+};
+
+const applyMainExportResolution = ({ exports, exportsInfo }) => {
+  if (exportsInfo.type === "array" || exportsInfo.type === "string") {
+    return exports
+  }
+  if (exportsInfo.type === "object") {
+    if (exportsInfo.hasRelativeKey) {
+      return exports["."]
+    }
+    return exports
+  }
+  return undefined
+};
+
+const comparePatternKeys = (keyA, keyB) => {
+  if (!keyA.endsWith("/") && !keyA.contains("*")) {
+    throw new Error("Invalid package configuration")
+  }
+  if (!keyB.endsWith("/") && !keyB.contains("*")) {
+    throw new Error("Invalid package configuration")
+  }
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
+  if (baseLengthA > baseLengthB) {
+    return -1
+  }
+  if (baseLengthB > baseLengthA) {
+    return 1
+  }
+  if (aStarIndex === -1) {
+    return 1
+  }
+  if (bStarIndex === -1) {
+    return -1
+  }
+  if (keyA.length > keyB.length) {
+    return -1
+  }
+  if (keyB.length > keyA.length) {
+    return 1
+  }
+  return 0
+};
+
+const applyFileSystemMagicResolution = (
+  fileUrl,
+  { magicDirectoryIndex, magicExtensions },
+) => {
+  const filestats = fileStatsOrNull(fileUrl);
+  if (filestats && filestats.isFile()) {
+    return {
+      found: true,
+      url: fileUrl,
+    }
+  }
+  if (filestats && filestats.isDirectory()) {
+    if (magicDirectoryIndex) {
+      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
+      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
+      const result = applyFileSystemMagicResolution(indexFileUrl, {
+        magicDirectoryIndex: false,
+        magicExtensions,
+      });
+      return {
+        magicDirectoryIndex: true,
+        ...result,
+      }
+    }
+    return {
+      isDirectory: true,
+      found: false,
+      url: fileUrl,
+    }
+  }
+  const extensionLeadingToAFile = findExtensionLeadingToFile(
+    fileUrl,
+    magicExtensions,
+  );
+  // magic extension not found
+  if (extensionLeadingToAFile === null) {
+    return {
+      found: false,
+      url: fileUrl,
+    }
+  }
+  // magic extension worked
+  return {
+    magicExtension: extensionLeadingToAFile,
+    found: true,
+    url: `${fileUrl}${extensionLeadingToAFile}`,
+  }
+};
+
+const findExtensionLeadingToFile = (fileUrl, magicExtensions) => {
+  if (!magicExtensions) {
+    return null
+  }
+  const parentUrl = new URL("./", fileUrl).href;
+  const urlFilename = urlToFilename(fileUrl);
+  const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
+    const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+    const stats = fileStatsOrNull(urlCandidate);
+    return stats && stats.isFile()
+  });
+  return extensionLeadingToFile
+};
+
+const fileStatsOrNull = (url) => {
+  try {
+    return node_fs.statSync(new URL(url))
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null
+    }
+    throw e
+  }
+};
+
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string
+};
+
+const assertImportMap = (value) => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`)
+  }
+
+  const type = typeof value;
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`)
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(
+      `an importMap must be an object, received array ${value}`,
+    )
+  }
+};
+
+const hasScheme = (string) => {
+  return /^[a-zA-Z]{2,}:/.test(string)
+};
+
+const urlToScheme = (urlString) => {
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) return ""
+  return urlString.slice(0, colonIndex)
+};
+
+const urlToPathname = (urlString) => {
+  return ressourceToPathname(urlToRessource(urlString))
+};
+
+const urlToRessource = (urlString) => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return urlString.slice("file://".length)
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex)
+  }
+
+  return urlString.slice(scheme.length + 1)
+};
+
+const ressourceToPathname = (ressource) => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1
+    ? ressource
+    : ressource.slice(0, searchSeparatorIndex)
+};
+
+const urlToOrigin = (urlString) => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return "file://"
+  }
+
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+
+    if (pathnameSlashIndex === -1) return urlString
+    return urlString.slice(0, pathnameSlashIndex)
+  }
+
+  return urlString.slice(0, scheme.length + 1)
+};
+
+const pathnameToParentPathname = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return "/"
+  }
+
+  return pathname.slice(0, slashLastIndex + 1)
+};
+
+// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+
+const resolveUrl = (specifier, baseUrl) => {
+  if (baseUrl) {
+    if (typeof baseUrl !== "string") {
+      throw new TypeError(writeBaseUrlMustBeAString({ baseUrl, specifier }))
+    }
+    if (!hasScheme(baseUrl)) {
+      throw new Error(writeBaseUrlMustBeAbsolute({ baseUrl, specifier }))
+    }
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier
+  }
+
+  if (!baseUrl) {
+    throw new Error(writeBaseUrlRequired({ baseUrl, specifier }))
+  }
+
+  // scheme relative
+  if (specifier.slice(0, 2) === "//") {
+    return `${urlToScheme(baseUrl)}:${specifier}`
+  }
+
+  // origin relative
+  if (specifier[0] === "/") {
+    return `${urlToOrigin(baseUrl)}${specifier}`
+  }
+
+  const baseOrigin = urlToOrigin(baseUrl);
+  const basePathname = urlToPathname(baseUrl);
+
+  if (specifier === ".") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}`
+  }
+
+  // pathname relative inside
+  if (specifier.slice(0, 2) === "./") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`
+  }
+
+  // pathname relative outside
+  if (specifier.slice(0, 3) === "../") {
+    let unresolvedPathname = specifier;
+    const importerFolders = basePathname.split("/");
+    importerFolders.pop();
+
+    while (unresolvedPathname.slice(0, 3) === "../") {
+      unresolvedPathname = unresolvedPathname.slice(3);
+      // when there is no folder left to resolved
+      // we just ignore '../'
+      if (importerFolders.length) {
+        importerFolders.pop();
+      }
+    }
+
+    const resolvedPathname = `${importerFolders.join(
+      "/",
+    )}/${unresolvedPathname}`;
+    return `${baseOrigin}${resolvedPathname}`
+  }
+
+  // bare
+  if (basePathname === "") {
+    return `${baseOrigin}/${specifier}`
+  }
+  if (basePathname[basePathname.length] === "/") {
+    return `${baseOrigin}${basePathname}${specifier}`
+  }
+  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`
+};
+
+const writeBaseUrlMustBeAString = ({
+  baseUrl,
+  specifier,
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlMustBeAbsolute = ({
+  baseUrl,
+  specifier,
+}) => `baseUrl must be absolute.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlRequired = ({
+  baseUrl,
+  specifier,
+}) => `baseUrl required to resolve relative specifier.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const tryUrlResolution = (string, url) => {
+  const result = resolveUrl(string, url);
+  return hasScheme(result) ? result : null
+};
+
+const resolveSpecifier = (specifier, importer) => {
+  if (
+    specifier === "." ||
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return resolveUrl(specifier, importer)
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier
+  }
+
+  return null
+};
+
+const applyImportMap = ({
+  importMap,
+  specifier,
+  importer,
+  createBareSpecifierError = ({ specifier, importer }) => {
+    return new Error(
+      createDetailedMessage(`Unmapped bare specifier.`, {
+        specifier,
+        importer,
+      }),
+    )
+  },
+  onImportMapping = () => {},
+}) => {
+  assertImportMap(importMap);
+  if (typeof specifier !== "string") {
+    throw new TypeError(
+      createDetailedMessage("specifier must be a string.", {
+        specifier,
+        importer,
+      }),
+    )
+  }
+  if (importer) {
+    if (typeof importer !== "string") {
+      throw new TypeError(
+        createDetailedMessage("importer must be a string.", {
+          importer,
+          specifier,
+        }),
+      )
+    }
+    if (!hasScheme(importer)) {
+      throw new Error(
+        createDetailedMessage(`importer must be an absolute url.`, {
+          importer,
+          specifier,
+        }),
+      )
+    }
+  }
+
+  const specifierUrl = resolveSpecifier(specifier, importer);
+  const specifierNormalized = specifierUrl || specifier;
+
+  const { scopes } = importMap;
+  if (scopes && importer) {
+    const scopeSpecifierMatching = Object.keys(scopes).find(
+      (scopeSpecifier) => {
+        return (
+          scopeSpecifier === importer ||
+          specifierIsPrefixOf(scopeSpecifier, importer)
+        )
+      },
+    );
+    if (scopeSpecifierMatching) {
+      const scopeMappings = scopes[scopeSpecifierMatching];
+      const mappingFromScopes = applyMappings(
+        scopeMappings,
+        specifierNormalized,
+        scopeSpecifierMatching,
+        onImportMapping,
+      );
+      if (mappingFromScopes !== null) {
+        return mappingFromScopes
+      }
+    }
+  }
+
+  const { imports } = importMap;
+  if (imports) {
+    const mappingFromImports = applyMappings(
+      imports,
+      specifierNormalized,
+      undefined,
+      onImportMapping,
+    );
+    if (mappingFromImports !== null) {
+      return mappingFromImports
+    }
+  }
+
+  if (specifierUrl) {
+    return specifierUrl
+  }
+
+  throw createBareSpecifierError({ specifier, importer })
+};
+
+const applyMappings = (
+  mappings,
+  specifierNormalized,
+  scope,
+  onImportMapping,
+) => {
+  const specifierCandidates = Object.keys(mappings);
+
+  let i = 0;
+  while (i < specifierCandidates.length) {
+    const specifierCandidate = specifierCandidates[i];
+    i++;
+    if (specifierCandidate === specifierNormalized) {
+      const address = mappings[specifierCandidate];
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: address,
+      });
+      return address
+    }
+    if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+      const address = mappings[specifierCandidate];
+      const afterSpecifier = specifierNormalized.slice(
+        specifierCandidate.length,
+      );
+      const addressFinal = tryUrlResolution(afterSpecifier, address);
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: addressFinal,
+      });
+      return addressFinal
+    }
+  }
+
+  return null
+};
+
+const specifierIsPrefixOf = (specifierHref, href) => {
+  return (
+    specifierHref[specifierHref.length - 1] === "/" &&
+    href.startsWith(specifierHref)
+  )
+};
+
+const sortImports = (imports) => {
+  const mappingsSorted = {};
+
+  Object.keys(imports)
+    .sort(compareLengthOrLocaleCompare)
+    .forEach((name) => {
+      mappingsSorted[name] = imports[name];
+    });
+
+  return mappingsSorted
+};
+
+const sortScopes = (scopes) => {
+  const scopesSorted = {};
+
+  Object.keys(scopes)
+    .sort(compareLengthOrLocaleCompare)
+    .forEach((scopeSpecifier) => {
+      scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
+    });
+
+  return scopesSorted
+};
+
+const compareLengthOrLocaleCompare = (a, b) => {
+  return b.length - a.length || a.localeCompare(b)
+};
+
+const normalizeImportMap = (importMap, baseUrl) => {
+  assertImportMap(importMap);
+
+  if (!isStringOrUrl(baseUrl)) {
+    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({ baseUrl }))
+  }
+
+  const { imports, scopes } = importMap;
+
+  return {
+    imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
+    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined,
+  }
+};
+
+const isStringOrUrl = (value) => {
+  if (typeof value === "string") {
+    return true
+  }
+
+  if (typeof URL === "function" && value instanceof URL) {
+    return true
+  }
+
+  return false
+};
+
+const normalizeMappings = (mappings, baseUrl) => {
+  const mappingsNormalized = {};
+
+  Object.keys(mappings).forEach((specifier) => {
+    const address = mappings[specifier];
+
+    if (typeof address !== "string") {
+      console.warn(
+        formulateAddressMustBeAString({
+          address,
+          specifier,
+        }),
+      );
+      return
+    }
+
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+
+    const addressUrl = tryUrlResolution(address, baseUrl);
+    if (addressUrl === null) {
+      console.warn(
+        formulateAdressResolutionFailed({
+          address,
+          baseUrl,
+          specifier,
+        }),
+      );
+      return
+    }
+
+    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+      console.warn(
+        formulateAddressUrlRequiresTrailingSlash({
+          addressUrl,
+          address,
+          specifier,
+        }),
+      );
+      return
+    }
+    mappingsNormalized[specifierResolved] = addressUrl;
+  });
+
+  return sortImports(mappingsNormalized)
+};
+
+const normalizeScopes = (scopes, baseUrl) => {
+  const scopesNormalized = {};
+
+  Object.keys(scopes).forEach((scopeSpecifier) => {
+    const scopeMappings = scopes[scopeSpecifier];
+    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
+    if (scopeUrl === null) {
+      console.warn(
+        formulateScopeResolutionFailed({
+          scope: scopeSpecifier,
+          baseUrl,
+        }),
+      );
+      return
+    }
+    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
+
+  return sortScopes(scopesNormalized)
+};
+
+const formulateBaseUrlMustBeStringOrUrl = ({
+  baseUrl,
+}) => `baseUrl must be a string or an url.
+--- base url ---
+${baseUrl}`;
+
+const formulateAddressMustBeAString = ({
+  specifier,
+  address,
+}) => `Address must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateAdressResolutionFailed = ({
+  address,
+  baseUrl,
+  specifier,
+}) => `Address url resolution failed.
+--- address ---
+${address}
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const formulateAddressUrlRequiresTrailingSlash = ({
+  addressURL,
+  address,
+  specifier,
+}) => `Address must end with /.
+--- address url ---
+${addressURL}
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateScopeResolutionFailed = ({
+  scope,
+  baseUrl,
+}) => `Scope url resolution failed.
+--- scope ---
+${scope}
+--- base url ---
+${baseUrl}`;
+
+const pathnameToExtension = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""
+  // if (dotLastIndex === pathname.length - 1) return ""
+  return pathname.slice(dotLastIndex)
+};
+
+const resolveImport = ({
+  specifier,
+  importer,
+  importMap,
+  defaultExtension = false,
+  createBareSpecifierError,
+  onImportMapping = () => {},
+}) => {
+  let url;
+  if (importMap) {
+    url = applyImportMap({
+      importMap,
+      specifier,
+      importer,
+      createBareSpecifierError,
+      onImportMapping,
+    });
+  } else {
+    url = resolveUrl(specifier, importer);
+  }
+
+  if (defaultExtension) {
+    url = applyDefaultExtension({ url, importer, defaultExtension });
+  }
+
+  return url
+};
+
+const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
+  if (urlToPathname(url).endsWith("/")) {
+    return url
+  }
+
+  if (typeof defaultExtension === "string") {
+    const extension = pathnameToExtension(url);
+    if (extension === "") {
+      return `${url}${defaultExtension}`
+    }
+    return url
+  }
+
+  if (defaultExtension === true) {
+    const extension = pathnameToExtension(url);
+    if (extension === "" && importer) {
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`
+    }
+  }
+
+  return url
+};
+
+const applyUrlResolution = (specifier, importer) => {
+  const url = new URL(specifier, importer).href;
+  return ensureWindowsDriveLetter(url, importer)
+};
+
+const readImportmap = ({
+  logger,
+  projectDirectoryUrl,
+  importmapFileRelativeUrl,
+}) => {
+  if (typeof importmapFileRelativeUrl === "undefined") {
+    return null
+  }
+  if (typeof importmapFileRelativeUrl !== "string") {
+    throw new TypeError(
+      `importmapFileRelativeUrl must be a string, got ${importmapFileRelativeUrl}`,
+    )
+  }
+  const importmapFileUrl = applyUrlResolution(
+    importmapFileRelativeUrl,
+    projectDirectoryUrl,
+  );
+  if (!urlIsInsideOf(importmapFileUrl, projectDirectoryUrl)) {
+    logger.warn(`import map file is outside project.
+--- import map file ---
+${urlToFileSystemPath(importmapFileUrl)}
+--- project directory ---
+${urlToFileSystemPath(projectDirectoryUrl)}`);
+  }
+  let importmapFileBuffer;
+  const importmapFilePath = urlToFileSystemPath(importmapFileUrl);
+  try {
+    importmapFileBuffer = node_fs.readFileSync(importmapFilePath);
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+      logger.error(`importmap file not found at ${importmapFilePath}`);
+      return null
+    }
+    throw e
+  }
+  let importMap;
+  try {
+    const importmapFileString = String(importmapFileBuffer);
+    importMap = JSON.parse(importmapFileString);
+  } catch (e) {
+    if (e && e.code === "SyntaxError") {
+      logger.error(`syntax error in importmap file
+--- error stack ---
+${e.stack}
+--- importmap file ---
+${importmapFilePath}`);
+      return null
+    }
+    throw e
+  }
+  return normalizeImportMap(importMap, importmapFileUrl)
+};
+
+const applyImportmapResolution = (
+  specifier,
+  {
+    logger,
+    projectDirectoryUrl,
+    importmapFileRelativeUrl,
+    importDefaultExtension,
+    importer,
+  },
+) => {
+  const importmap = readImportmap({
+    logger,
+    projectDirectoryUrl,
+    importmapFileRelativeUrl,
+  });
+  try {
+    return resolveImport({
+      specifier,
+      importer,
+      // by passing importMap to null resolveImport behaves
+      // almost like new URL(specifier, importer)
+      // we want to force the importmap resolution
+      // so that bare specifiers are considered unhandled
+      // even if there is no importmap file
+      importMap: importmap || {},
+      defaultExtension: importDefaultExtension,
+    })
+  } catch (e) {
+    if (e.message.includes("bare specifier")) {
+      logger.debug("unmapped bare specifier");
+      return null
+    }
+    throw e
+  }
+};
+
+// https://github.com/benmosher/eslint-plugin-import/blob/master/resolvers/node/index.js
+
+const interfaceVersion = 2;
+
+const resolve = (
+  source,
+  file,
+  {
+    logLevel,
+    projectDirectoryUrl,
+    packageConditions = ["browser", "import"],
+    importmapFileRelativeUrl,
+    caseSensitive = true,
+    magicDirectoryIndex = false,
+    magicExtensions = false,
+  },
+) => {
+  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
+  const logger = createLogger({ logLevel });
+  logger.debug(`
+resolve import for project.
+--- specifier ---
+${source}
+--- importer ---
+${file}
+--- project directory path ---
+${urlToFileSystemPath(projectDirectoryUrl)}`);
+  const nodeInPackageConditions = packageConditions.includes("node");
+  if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
+    logger.debug(`-> native node module`);
+    return {
+      found: true,
+      path: null,
+    }
+  }
+
+  const onUrl = (url) => {
+    if (url.startsWith("file:")) {
+      url = ensureWindowsDriveLetter(url, importer);
+      return handleFileUrl(url, {
+        logger,
+        projectDirectoryUrl,
+        caseSensitive,
+        magicDirectoryIndex,
+        magicExtensions,
+      })
+    }
+    if (url.startsWith("node:") && !nodeInPackageConditions) {
+      logger.warn(
+        `Warning: ${file} is using "node:" scheme but "node" is not in packageConditions (importing "${source}")`,
+      );
+    }
+    logger.debug(`-> consider found because of scheme ${url}`);
+    return handleRemainingUrl()
+  };
+
+  const specifier = source;
+  const importer = String(fileSystemPathToUrl(file));
+  try {
+    if (importmapFileRelativeUrl) {
+      const urlFromImportmap = applyImportmapResolution(specifier, {
+        logger,
+        projectDirectoryUrl,
+        importmapFileRelativeUrl,
+        importer,
+      });
+      if (urlFromImportmap) {
+        return onUrl(urlFromImportmap)
+      }
+    }
+    const nodeResolution = applyNodeEsmResolution({
+      conditions: packageConditions,
+      parentUrl: importer,
+      specifier,
+    });
+    if (nodeResolution) {
+      return onUrl(nodeResolution.url)
+    }
+    throw new Error("not found")
+  } catch (e) {
+    logger.error(e.stack);
+    return {
+      found: false,
+      path: null,
+    }
+  }
+};
+
+const handleFileUrl = (
+  fileUrl,
+  { logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+) => {
+  fileUrl = `file://${new URL(fileUrl).pathname}`; // remove query params from url
+  const fileResolution = applyFileSystemMagicResolution(fileUrl, {
+    magicDirectoryIndex,
+    magicExtensions,
+  });
+  if (!fileResolution.found) {
+    logger.debug(`-> file not found at ${fileUrl}`);
+    return {
+      found: false,
+      path: urlToFileSystemPath(fileUrl),
+    }
+  }
+  console.log({fileUrl, fileResolution})
+  fileUrl = fileResolution.url;
+  const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
+    // we don't follow link because we care only about the theoric file location
+    // without this realFileUrl and fileUrl can be different
+    // and we would log the warning about case sensitivity
+    followLink: false,
+  });
+  const filePath = urlToFileSystemPath(fileUrl);
+  const realFilePath = urlToFileSystemPath(realFileUrl);
+  if (caseSensitive && realFileUrl !== fileUrl) {
+    logger.warn(
+      `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.
+The real file path is ${realFilePath}.
+You can choose to disable this warning by disabling case sensitivity.
+If you do so keep in mind windows users would not find that file.`,
+    );
+    return {
+      found: false,
+      path: realFilePath,
+    }
+  }
+  logger.debug(`-> found file at ${realFilePath}`);
+  return {
+    found: true,
+    path: realFilePath,
+  }
+};
+
+const handleRemainingUrl = () => {
+  return {
+    found: true,
+    path: null,
+  }
+};
+
+exports.interfaceVersion = interfaceVersion;
+exports.resolve = resolve;

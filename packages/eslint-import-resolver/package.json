@@ -1,5 +1,5 @@
 {
-  "name": "@jsenv/node-esm-resolution",
+  "name": "@jsenv/eslint-import-resolver",
   "version": "0.0.1",
   "type": "module",
   "exports": {
