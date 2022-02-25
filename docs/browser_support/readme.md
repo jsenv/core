@@ -12,7 +12,7 @@ npm i --save-dev @jsenv/babel-preset
 /*
  * This file configure the babel plugins required for this codebase
  *
- * Read more at https://github.com/jsenv/jsenv-core/tree/master/packages/jsenv-babel-preset
+ * Read more at https://github.com/jsenv/jsenv-core/tree/master/packages/babel-preset
  */
 
 module.exports = {

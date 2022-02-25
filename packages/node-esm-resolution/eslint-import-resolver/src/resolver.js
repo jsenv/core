@@ -1,0 +1,157 @@
+// https://github.com/benmosher/eslint-plugin-import/blob/master/resolvers/node/index.js
+// https://github.com/benmosher/eslint-plugin-import/tree/master/resolvers
+// https://github.com/olalonde/eslint-import-resolver-babel-root-import
+
+import {
+  assertAndNormalizeDirectoryUrl,
+  ensureWindowsDriveLetter,
+  urlToFileSystemPath,
+  fileSystemPathToUrl,
+  getRealFileSystemUrlSync,
+} from "@jsenv/filesystem"
+
+import { createLogger } from "./logger.js"
+import { isSpecifierForNodeBuiltin } from "../../src/node_builtin_specifiers.js"
+import {
+  applyNodeEsmResolution,
+  applyFileSystemMagicResolution,
+} from "../../main.js"
+
+import { applyImportmapResolution } from "./importmap_resolution.js"
+
+export const interfaceVersion = 2
+
+export const resolve = (
+  source,
+  file,
+  {
+    logLevel,
+    projectDirectoryUrl,
+    packageConditions = ["browser", "import"],
+    importmapFileRelativeUrl,
+    caseSensitive = true,
+    magicDirectoryIndex = false,
+    magicExtensions = false,
+  },
+) => {
+  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
+  const logger = createLogger({ logLevel })
+  logger.debug(`
+resolve import for project.
+--- specifier ---
+${source}
+--- importer ---
+${file}
+--- project directory path ---
+${urlToFileSystemPath(projectDirectoryUrl)}`)
+  const nodeInPackageConditions = packageConditions.includes("node")
+  if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
+    logger.debug(`-> native node module`)
+    return {
+      found: true,
+      path: null,
+    }
+  }
+
+  const onUrl = (url) => {
+    if (url.startsWith("file:")) {
+      url = ensureWindowsDriveLetter(url, importer)
+      return handleFileUrl(url, {
+        logger,
+        projectDirectoryUrl,
+        caseSensitive,
+        magicDirectoryIndex,
+        magicExtensions,
+      })
+    }
+    if (url.startsWith("node:") && !nodeInPackageConditions) {
+      logger.warn(
+        `Warning: ${file} is using "node:" scheme but "node" is not in packageConditions (importing "${source}")`,
+      )
+    }
+    logger.debug(`-> consider found because of scheme ${url}`)
+    return handleRemainingUrl(url)
+  }
+
+  const specifier = source
+  const importer = String(fileSystemPathToUrl(file))
+  try {
+    if (importmapFileRelativeUrl) {
+      const urlFromImportmap = applyImportmapResolution(specifier, {
+        logger,
+        projectDirectoryUrl,
+        importmapFileRelativeUrl,
+        importer,
+      })
+      if (urlFromImportmap) {
+        return onUrl(urlFromImportmap)
+      }
+    }
+    const urlFromNodeResolution = applyNodeEsmResolution({
+      conditions: packageConditions,
+      parentUrl: importer,
+      specifier,
+    })
+    if (urlFromNodeResolution) {
+      return onUrl(urlFromNodeResolution)
+    }
+    throw new Error("not found")
+  } catch (e) {
+    logger.error(e.stack)
+    return {
+      found: false,
+      path: null,
+    }
+  }
+}
+
+const handleFileUrl = (
+  fileUrl,
+  { logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+) => {
+  fileUrl = `file://${new URL(fileUrl).pathname}` // remove query params from url
+  const fileResolution = applyFileSystemMagicResolution(fileUrl, {
+    magicDirectoryIndex,
+    magicExtensions,
+  })
+  if (!fileResolution.found) {
+    logger.debug(`-> file not found at ${fileUrl}`)
+    return {
+      found: false,
+      path: filePath,
+    }
+  }
+  fileUrl = fileResolution.url
+  const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
+    // we don't follow link because we care only about the theoric file location
+    // without this realFileUrl and fileUrl can be different
+    // and we would log the warning about case sensitivity
+    followLink: false,
+  })
+  const filePath = urlToFileSystemPath(fileUrl)
+  const realFilePath = urlToFileSystemPath(realFileUrl)
+  if (caseSensitive && realFileUrl !== fileUrl) {
+    logger.warn(
+      `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.
+The real file path is ${realFilePath}.
+You can choose to disable this warning by disabling case sensitivity.
+If you do so keep in mind windows users would not find that file.`,
+    )
+    return {
+      found: false,
+      path: realFilePath,
+    }
+  }
+  logger.debug(`-> found file at ${realFilePath}`)
+  return {
+    found: true,
+    path: realFilePath,
+  }
+}
+
+const handleRemainingUrl = () => {
+  return {
+    found: true,
+    path: null,
+  }
+}

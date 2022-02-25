@@ -1,0 +1,22 @@
+{
+  "name": "@jsenv/node-esm-resolution",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./main.js",
+  "dependencies": {
+    "@jsenv/filesystem": "2.7.1",
+    "@jsenv/importmap": "1.2.0"
+  },
+  "devDependencies": {
+    "@jsenv/core": "25.2.1"
+  },
+  "scripts": {
+    "build": "node --experimental-import-meta-resolve ./eslint-import-resolver/script/build/build.mjs"
+  }
+}

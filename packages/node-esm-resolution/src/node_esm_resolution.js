@@ -8,10 +8,12 @@
  *   maintain symlink as facade url when it's outside project directory
  *   or use the real path when inside
  */
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync } from "node:fs"
 
-import { isSpecifierForNodeCoreModule } from "@jsenv/importmap/src/isSpecifierForNodeCoreModule.js"
-import { createDetailedMessage } from "@jsenv/logger"
+import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js"
+import { lookupPackageScope } from "./lookup_package_scope.js"
+import { readPackageJson } from "./read_package_json.js"
+import { getParentUrl, isValidUrl } from "./url_utils.js"
 
 export const applyNodeEsmResolution = ({
   conditions = ["node", "import"],
@@ -107,7 +109,7 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier")
   }
-  if (isSpecifierForNodeCoreModule(packageSpecifier)) {
+  if (isSpecifierForNodeBuiltin(packageSpecifier)) {
     return {
       type: "node_builtin_specifier",
       url: `node:${packageSpecifier}`,
@@ -388,21 +390,6 @@ const applyPackageTargetResolution = ({
   throw new Error("Invalid package target")
 }
 
-const lookupPackageScope = (url) => {
-  let scopeUrl = url
-  while (scopeUrl !== "file:///") {
-    scopeUrl = getParentUrl(scopeUrl)
-    if (scopeUrl.endsWith("node_modules/")) {
-      return null
-    }
-    const packageJsonUrlObject = new URL("package.json", scopeUrl)
-    if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl
-    }
-  }
-  return null
-}
-
 const readExports = ({ exports, packageUrl }) => {
   if (Array.isArray(exports)) {
     return {
@@ -426,15 +413,11 @@ const readExports = ({ exports, packageUrl }) => {
     const hasRelativeKey = relativeKeys.length > 0
     if (hasRelativeKey && conditionalKeys.length > 0) {
       throw new Error(
-        createDetailedMessage(
-          `Invalid package configuration: cannot mix relative and conditional keys in package.exports`,
-          {
-            "unexpected keys": conditionalKeys
-              .map((key) => `"${key}"`)
-              .join("\n"),
-            "package.json": packageUrl,
-          },
-        ),
+        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map((key) => `"${key}"`).join("\n")}
+--- package.json ---
+${packageUrl}`,
       )
     }
     return {
@@ -447,17 +430,6 @@ const readExports = ({ exports, packageUrl }) => {
     return { type: "string" }
   }
   return {}
-}
-
-const readPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl)
-  const buffer = readFileSync(packageJsonUrl)
-  const string = String(buffer)
-  try {
-    return JSON.parse(string)
-  } catch (e) {
-    throw new Error(`Invalid package configuration`)
-  }
 }
 
 const parsePackageSpecifier = (packageSpecifier) => {
@@ -547,18 +519,4 @@ const comparePatternKeys = (keyA, keyB) => {
     return 1
   }
   return 0
-}
-
-const getParentUrl = (url) => {
-  return new URL(url.endsWith("/") ? "../" : "./", url).href
-}
-
-const isValidUrl = (url) => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url)
-    return true
-  } catch (e) {
-    return false
-  }
 }
