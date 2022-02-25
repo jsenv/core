@@ -1,52 +1,38 @@
 import { assert } from "@jsenv/assert"
-import { resolveUrl } from "@jsenv/filesystem"
 
-import { writeImportMapFiles } from "@jsenv/importmap-node-module"
-
-const testDirectoryUrl = resolveUrl("./root/", import.meta.url)
-const test = async ({ runtime, packageUserConditions } = {}) => {
-  const importmaps = await writeImportMapFiles({
-    projectDirectoryUrl: testDirectoryUrl,
-    importMapFiles: {
-      "test.importmap": {
-        mappingsForNodeResolution: true,
-        runtime,
-        packageUserConditions,
-      },
-    },
-    writeFiles: false,
-  })
-  return importmaps["test.importmap"]
-}
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution"
 
 {
-  const actual = await test({
-    runtime: "browser",
-    packageUserConditions: ["development"],
+  const { type, url } = applyNodeEsmResolution({
+    conditions: ["browser", "import", "development"],
+    parentUrl: new URL("./root/main.js", import.meta.url),
+    specifier: "foo",
   })
+  const actual = {
+    type,
+    url,
+  }
   const expected = {
-    imports: {
-      "whatever/": "./",
-      "whatever": "./main.js",
-      "foo": "./node_modules/foo/main.browser.js",
-    },
-    scopes: {},
+    type: "exports_subpath",
+    url: new URL("./root/node_modules/foo/main.browser.js", import.meta.url)
+      .href,
   }
   assert({ actual, expected })
 }
 
 {
-  const actual = await test({
-    runtime: "node",
-    packageUserConditions: ["development"],
+  const { type, url } = applyNodeEsmResolution({
+    conditions: ["import", "development"],
+    parentUrl: new URL("./root/main.js", import.meta.url),
+    specifier: "foo",
   })
+  const actual = {
+    type,
+    url,
+  }
   const expected = {
-    imports: {
-      "whatever/": "./",
-      "whatever": "./main.js",
-      "foo": "./node_modules/foo/main.js",
-    },
-    scopes: {},
+    type: "exports_subpath",
+    url: new URL("./root/node_modules/foo/main.js", import.meta.url).href,
   }
   assert({ actual, expected })
 }
