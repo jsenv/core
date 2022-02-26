@@ -3,9 +3,10 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
 import { findAsync } from "#omega/internal/find_async.js"
 
+import { parseHtmlUrlMentions } from "./html/html_url_mentions.js"
 import { parseJsModuleUrlMentions } from "./js_module/js_module_url_mentions.js"
 
-const urlMentionParsers = [parseJsModuleUrlMentions]
+const urlMentionParsers = [parseHtmlUrlMentions, parseJsModuleUrlMentions]
 
 export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
@@ -43,13 +44,7 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
       if (!parseReturnValue) {
         return null
       }
-      const {
-        urlMentions,
-        hotDecline,
-        hotAcceptSelf,
-        hotAcceptDependencies,
-        transformUrlMentions,
-      } = parseReturnValue
+      const { urlMentions, getHotInfo, transformUrlMentions } = parseReturnValue
       await urlMentions.reduce(async (previous, urlMention) => {
         await previous
         const resolvedUrl = await resolve({
@@ -59,6 +54,11 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
         })
         urlMention.url = resolvedUrl
       }, Promise.resolve())
+      const {
+        hotDecline = false,
+        hotAcceptSelf = false,
+        hotAcceptDependencies = [],
+      } = getHotInfo()
       ressourceGraph.updateRessourceDependencies({
         url,
         type: contentType,

@@ -24,17 +24,18 @@ export const parseJsModuleUrlMentions = async ({ url, urlFacade, content }) => {
     url,
     content,
   })
-  const {
-    urlMentions,
-    hotDecline = false,
-    hotAcceptSelf = false,
-    hotAcceptDependencies = [],
-  } = metadata
+
+  const { urlMentions, hotDecline, hotAcceptSelf, hotAcceptDependencies } =
+    metadata
   return {
     urlMentions,
-    hotDecline,
-    hotAcceptSelf,
-    hotAcceptDependencies,
+    getHotInfo: () => {
+      return {
+        hotDecline,
+        hotAcceptSelf,
+        hotAcceptDependencies,
+      }
+    },
     transformUrlMentions: ({ transformUrlMention }) => {
       const magicSource = createMagicSource({ url, content })
       urlMentions.forEach((urlMention) => {
