@@ -12,16 +12,16 @@ export const injectSourcemap = ({
   content,
   sourcemap,
   sourcemapUrl,
-  sourcemapInjectionMethod,
+  sourcemapInjection,
 }) => {
   if (contentType === "application/javascript") {
-    if (sourcemapInjectionMethod === "comment") {
+    if (sourcemapInjection === "comment") {
       return setJavaScriptSourceMappingUrl(
         content,
         urlToRelativeUrl(sourcemapUrl, url),
       )
     }
-    if (sourcemapInjectionMethod === "inline") {
+    if (sourcemapInjection === "inline") {
       return setJavaScriptSourceMappingUrl(
         content,
         sourcemapToBase64Url(sourcemap),
@@ -30,13 +30,13 @@ export const injectSourcemap = ({
     return content
   }
   if (contentType === "text/css") {
-    if (sourcemapInjectionMethod === "comment") {
+    if (sourcemapInjection === "comment") {
       return setCssSourceMappingUrl(
         content,
         urlToRelativeUrl(sourcemapUrl, url),
       )
     }
-    if (sourcemapInjectionMethod === "inline") {
+    if (sourcemapInjection === "inline") {
       return setCssSourceMappingUrl(content, sourcemapToBase64Url(sourcemap))
     }
   }

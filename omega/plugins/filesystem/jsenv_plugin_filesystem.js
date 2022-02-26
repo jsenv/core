@@ -37,6 +37,7 @@ export const jsenvPluginFileSystem = ({
     appliesDuring: {
       dev: true,
       test: true,
+      preview: true,
       build: true,
     },
 

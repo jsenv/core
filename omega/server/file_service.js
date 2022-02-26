@@ -16,7 +16,7 @@ export const createFileService = ({
   projectDirectoryUrl,
   ressourceGraph,
   scenario,
-  sourcemapInjectionMethod = "inline",
+  sourcemapInjection,
   // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
   plugins,
 }) => {
@@ -28,7 +28,7 @@ export const createFileService = ({
     projectDirectoryUrl,
     ressourceGraph,
     scenario,
-    sourcemapInjectionMethod,
+    sourcemapInjection,
     urlInfoMap,
     // urlRedirections,
   }
@@ -151,13 +151,30 @@ export const createFileService = ({
         mutateContentAndSourcemap(finalizeReturnValue)
       }
 
-      if (context.sourcemap) {
-        context.sourcemapUrl = generateSourcemapUrl(context.url)
+      const { sourcemap } = context
+      if (sourcemap && sourcemapInjection === "comment") {
+        const sourcemapUrl = generateSourcemapUrl(context.url)
+        const sourcemapOutUrl = determineFileUrlForOutDirectory({
+          projectDirectoryUrl,
+          scenario,
+          runtimeName,
+          runtimeVersion,
+          url: sourcemapUrl,
+        })
+        context.sourcemapUrl = sourcemapOutUrl
         context.content = injectSourcemap(context)
         await writeIntoRuntimeDirectory({
           ...context,
+          url: sourcemapUrl,
+          content: JSON.stringify(sourcemap, null, "  "),
+        })
+      } else if (sourcemap && sourcemapInjection === "inline") {
+        context.sourcemapUrl = generateSourcemapUrl(context.url)
+        context.content = injectSourcemap(context)
+        writeIntoRuntimeDirectory({
+          ...context,
           url: context.sourcemapUrl,
-          content: JSON.stringify(context.sourcemap, null, "  "),
+          content: JSON.stringify(sourcemap, null, "  "),
         })
       }
       writeIntoRuntimeDirectory(context)

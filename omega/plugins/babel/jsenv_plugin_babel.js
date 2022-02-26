@@ -16,6 +16,7 @@ export const jsenvPluginBabel = () => {
     appliesDuring: {
       dev: true,
       test: true,
+      preview: true,
       build: true,
     },
 

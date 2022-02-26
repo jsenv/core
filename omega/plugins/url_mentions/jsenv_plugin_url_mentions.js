@@ -17,6 +17,7 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
     appliesDuring: {
       dev: true,
       test: true,
+      preview: true,
       build: true,
     },
 
