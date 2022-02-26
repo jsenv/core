@@ -56,23 +56,46 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
         hotAcceptDependencies,
       })
 
+      const hmr = new URL(url).searchParams.get("hmr")
       const transformReturnValue = await handler.transform({
         url,
         content,
         urlMentions,
         transformUrlMention: (urlMention) => {
-          // TODO: inject hmr, version
-          const { urlFacade } = urlInfoMap.get(urlMention.url)
-          const url = urlFacade || urlMention.url
-          if (isValidUrl(url)) {
-            return `/${urlToRelativeUrl(url, projectDirectoryUrl)}`
+          const { urlFacade, urlVersion } = urlInfoMap.get(urlMention.url)
+          const hmrTimestamp = hmr
+            ? ressourceGraph.getHmrTimestamp(urlMention.url)
+            : null
+          const mentionedUrl = urlFacade || urlMention.url
+          const specifier = isValidUrl(mentionedUrl)
+            ? `/${urlToRelativeUrl(mentionedUrl, projectDirectoryUrl)}`
+            : mentionedUrl
+          const params = {}
+          if (hmrTimestamp) {
+            params.hmr = ""
+            params.v = hmrTimestamp
+          } else if (urlVersion) {
+            params.v = urlVersion
           }
-          return url
+          const specifierWithParams = injectQueryParamsToSpecifier(
+            specifier,
+            params,
+          )
+          return specifierWithParams
         },
       })
       return transformReturnValue
     },
   }
+}
+
+const injectQueryParamsToSpecifier = (specifier, params) => {
+  const urlObject = new URL(specifier, "file://")
+  Object.keys(params).forEach((key) => {
+    urlObject.searchParams.set(key, params[key])
+  })
+  const urlWithParams = urlObject.href
+  return urlToRelativeUrl(urlWithParams, "file://")
 }
 
 const isValidUrl = (url) => {

@@ -29,7 +29,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return removeHmrQuery(url)
   }
 
-  const injectHmrIntoUrlSpecifier = (urlSpecifier, baseUrl) => {
+  const getHmrTimestamp = (urlSpecifier, baseUrl) => {
     const url = applyImportmapResolution(urlSpecifier, baseUrl)
     if (!urlIsInsideOf(url, projectDirectoryUrl)) {
       return null
@@ -42,14 +42,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!hmrTimestamp) {
       return null
     }
-    const urlWithHmr = injectHmrQuery(url, hmrTimestamp)
-    const relativeUrl = urlToRelativeUrl(urlWithHmr, baseUrl)
-    if (relativeUrl.startsWith(".")) {
-      return relativeUrl
-    }
-    // ensure "./" for relative specifiers otherwise we could get
-    // bare specifier errors for js
-    return `./${relativeUrl}`
+    return hmrTimestamp
   }
 
   const updateRessourceDependencies = ({
@@ -305,7 +298,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     getRessourceByUrl,
     updateRessourceDependencies,
     onFileChange,
-    injectHmrIntoUrlSpecifier,
+    getHmrTimestamp,
 
     toJSON: () => {
       const data = {}
@@ -321,12 +314,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       return data
     },
   }
-}
-
-const injectHmrQuery = (url, hmr) => {
-  const urlObject = new URL(url)
-  urlObject.searchParams.set("hmr", hmr)
-  return String(urlObject)
 }
 
 const removeHmrQuery = (url) => {
