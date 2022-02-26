@@ -15,6 +15,7 @@ import { lookupPackageScope } from "./lookup_package_scope.js"
 import { readPackageJson } from "./read_package_json.js"
 import { filesystemRootUrl, getParentUrl, isValidUrl } from "./url_utils.js"
 import {
+  createInvalidModuleSpecifierError,
   createModuleNotFoundError,
   createPackageImportNotDefinedError,
 } from "./errors.js"
@@ -32,7 +33,11 @@ export const applyNodeEsmResolution = ({
   const { url } = resolution
   if (url.startsWith("file:")) {
     if (url.includes("%2F") || url.includes("%5C")) {
-      throw new Error("invalid module specifier")
+      throw createInvalidModuleSpecifierError({
+        specifier,
+        parentUrl,
+        reason: `must not include encoded "/" or "\\" characters`,
+      })
     }
     return resolution
   }
@@ -83,10 +88,18 @@ const applyPackageImportsResolution = ({
   specifier,
 }) => {
   if (!specifier.startsWith("#")) {
-    throw new Error("specifier must start with #")
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "internal imports must start with #",
+    })
   }
   if (specifier === "#" || specifier.startsWith("#/")) {
-    throw new Error("Invalid module specifier")
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "not a valid internal imports specifier name",
+    })
   }
   const packageUrl = lookupPackageScope(parentUrl)
   if (packageUrl !== null) {

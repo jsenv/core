@@ -1,5 +1,19 @@
 import { fileURLToPath } from "node:url"
 
+export const createInvalidModuleSpecifierError = ({
+  specifier,
+  parentUrl,
+  reason,
+}) => {
+  const error = new Error(
+    `Invalid module specifier "${specifier}" in ${fileURLToPath(
+      parentUrl,
+    )}: ${reason}`,
+  )
+  error.code = "INVALID_MODULE_SPECIFIER"
+  return error
+}
+
 export const createModuleNotFoundError = ({ specifier, parentUrl }) => {
   const error = new Error(
     `Cannot find module "${specifier}" imported by ${fileURLToPath(parentUrl)}`,
