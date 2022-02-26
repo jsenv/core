@@ -11,7 +11,6 @@ const server = await startOmegaServer({
     jsenvPluginUrlMentions({
       projectDirectoryUrl: new URL("./client/", import.meta.url),
     }),
-    // jsenv plugin babel will be responsible to transform import meta hot
     jsenvPluginBabel(),
   ],
   keepProcessAlive: true,

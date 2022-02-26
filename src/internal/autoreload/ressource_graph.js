@@ -1,6 +1,7 @@
 import { createCallbackList } from "@jsenv/abort"
-
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
+
+import { asUrlWithoutSearch } from "#omega/internal/url_utils.js"
 
 export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   const hotUpdateCallbackList = createCallbackList()
@@ -15,22 +16,12 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return ressource
   }
 
-  const applyImportmapResolution = (specifier, baseUrl) => {
-    // const ressourceReferencingUrl = ressources[importerUrl]
-    // if (ressourceReferencingUrl) {
-    //   // TODO: find first html file importing this js file and use importmap
-    //   eventually found in that html file
-    // }
-    const url = resolveUrl(specifier, baseUrl)
-    return removeHmrQuery(url)
-  }
   const applyUrlResolution = (specifier, baseUrl) => {
-    const url = resolveUrl(specifier, baseUrl)
-    return removeHmrQuery(url)
+    const url = new URL(specifier, baseUrl).href
+    return asUrlWithoutSearch(url)
   }
 
-  const getHmrTimestamp = (urlSpecifier, baseUrl) => {
-    const url = applyImportmapResolution(urlSpecifier, baseUrl)
+  const getHmrTimestamp = (url) => {
     if (!urlIsInsideOf(url, projectDirectoryUrl)) {
       return null
     }
@@ -53,7 +44,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     hotAcceptSelf,
     hotAcceptDependencies,
   }) => {
-    url = removeHmrQuery(url)
+    url = asUrlWithoutSearch(url)
     const existingRessource = getRessourceByUrl(url)
     const ressource =
       existingRessource || (ressources[url] = createRessource(url))
@@ -293,7 +284,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
 
   return {
     hotUpdateCallbackList,
-    applyImportmapResolution,
     applyUrlResolution,
     getRessourceByUrl,
     updateRessourceDependencies,
@@ -314,12 +304,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       return data
     },
   }
-}
-
-const removeHmrQuery = (url) => {
-  const urlObject = new URL(url)
-  urlObject.searchParams.delete("hmr")
-  return String(urlObject)
 }
 
 const createRessource = (url) => {
