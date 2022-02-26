@@ -1,12 +1,11 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
+import { findAsync } from "#omega/internal/find_async.js"
 
-import { javaScriptUrlMentions } from "./js/javascript_url_mentions.js"
+import { parseJsModuleUrlMentions } from "./js_module/js_module_url_mentions.js"
 
-const handlers = {
-  "application/javascript": javaScriptUrlMentions,
-}
+const urlMentionParsers = [parseJsModuleUrlMentions]
 
 export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
@@ -26,18 +25,31 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
       urlInfoMap,
       resolve,
       url,
+      urlFacade,
       contentType,
       content,
     }) => {
-      const handler = handlers[contentType]
-      if (!handler) {
+      const parseReturnValue = await findAsync({
+        array: urlMentionParsers,
+        start: (urlMentionParser) => {
+          return urlMentionParser({
+            url,
+            urlFacade,
+            content,
+          })
+        },
+        predicate: (returnValue) => Boolean(returnValue),
+      })
+      if (!parseReturnValue) {
         return null
       }
-      const { urlMentions, hotDecline, hotAcceptSelf, hotAcceptDependencies } =
-        await handler.parse({
-          url,
-          content,
-        })
+      const {
+        urlMentions,
+        hotDecline,
+        hotAcceptSelf,
+        hotAcceptDependencies,
+        transformUrlMentions,
+      } = parseReturnValue
       await urlMentions.reduce(async (previous, urlMention) => {
         await previous
         const resolvedUrl = await resolve({
@@ -47,7 +59,6 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
         })
         urlMention.url = resolvedUrl
       }, Promise.resolve())
-
       ressourceGraph.updateRessourceDependencies({
         url,
         type: contentType,
@@ -56,12 +67,8 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
         hotAcceptSelf,
         hotAcceptDependencies,
       })
-
       const hmr = new URL(url).searchParams.get("hmr")
-      const transformReturnValue = await handler.transform({
-        url,
-        content,
-        urlMentions,
+      const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
           const { urlFacade, urlVersion } = urlInfoMap.get(urlMention.url)
           const hmrTimestamp = hmr
