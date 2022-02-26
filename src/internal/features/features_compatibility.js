@@ -28,6 +28,16 @@ export const featuresCompatMap = {
     opera: "50",
     android: "8",
   },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios: "15",
+    node: "14.8",
+  },
   // https://caniuse.com/import-maps
   importmap: {
     edge: "89",
