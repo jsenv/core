@@ -30,6 +30,9 @@ export const babelTransform = async ({
         ...(options.parserPlugins || []),
       ].filter(Boolean),
     },
+    generatorOpts: {
+      compact: false,
+    },
     ...options,
   }
   try {

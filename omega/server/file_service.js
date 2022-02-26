@@ -125,6 +125,7 @@ export const createFileService = ({
       // }
       context.content = loadReturnValue.content // can be a buffer (used for binary files) or a string
       context.sourcemap = await loadSourcemap(context)
+      let finalize
       const mutateContentAndSourcemap = (transformReturnValue) => {
         if (!transformReturnValue) {
           return
@@ -134,8 +135,8 @@ export const createFileService = ({
           context.sourcemap,
           transformReturnValue.sourcemap,
         )
+        finalize = transformReturnValue.finalize
       }
-
       await plugins.reduce(async (previous, plugin) => {
         await previous
         const { transform } = plugin
@@ -145,18 +146,10 @@ export const createFileService = ({
         const transformReturnValue = await transform(context)
         mutateContentAndSourcemap(transformReturnValue)
       }, Promise.resolve())
-
-      const renderReturnValue = await findAsync({
-        array: plugins,
-        start: (plugin) => {
-          if (plugin.render) {
-            return plugin.render(context)
-          }
-          return null
-        },
-        predicate: (returnValue) => Boolean(returnValue),
-      })
-      mutateContentAndSourcemap(renderReturnValue)
+      if (finalize) {
+        const finalizeReturnValue = await finalize()
+        mutateContentAndSourcemap(finalizeReturnValue)
+      }
 
       if (context.sourcemap) {
         context.sourcemapUrl = generateSourcemapUrl(context.url)

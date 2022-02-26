@@ -1,3 +1,4 @@
+import { require } from "@jsenv/core/src/internal/require.js"
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
@@ -46,14 +47,6 @@ export const jsenvPluginBabel = () => {
             ]),
         // "importmap",
       ]
-      const needsSystemJs = featuresRelatedToSystemJs.some((featureName) => {
-        const isRequired = baseFeatureNames.includes(featureName)
-        const isAvailable = featuresCompatFromRuntimeSupport({
-          featureNames: [featureName],
-          runtimeSupport,
-        }).availableFeatureNames.includes(featureName)
-        return isRequired && !isAvailable
-      })
 
       const jsenvBabelPluginStructure = {
         // sometimes code use things specific to Node.js even if it's meant to run
@@ -75,7 +68,7 @@ export const jsenvPluginBabel = () => {
         "transform-import-meta": [
           transformImportMeta,
           {
-            importMetaFormat: needsSystemJs ? "systemjs" : "esmodule",
+            importMetaFormat: "esmodule",
             importMetaHot: scenario === "dev",
           },
         ],
@@ -125,11 +118,42 @@ export const jsenvPluginBabel = () => {
       return {
         content: code,
         sourcemap: map,
+        finalize: async ({ content }) => {
+          const needsSystemJs =
+            (scenario === "dev" || scenario === "test") &&
+            featuresRelatedToSystemJs.some((featureName) => {
+              const isRequired = baseFeatureNames.includes(featureName)
+              const isAvailable = featuresCompatFromRuntimeSupport({
+                featureNames: [featureName],
+                runtimeSupport,
+              }).availableFeatureNames.includes(featureName)
+              return isRequired && !isAvailable
+            })
+          if (!needsSystemJs) {
+            return null
+          }
+          const { code, map } = await babelTransform({
+            options: {
+              plugins: [
+                [require("@babel/plugin-transform-modules-systemjs")],
+                [
+                  transformImportMeta,
+                  {
+                    importMetaFormat: "systemjs",
+                  },
+                ],
+              ],
+            },
+            url,
+            ast,
+            content,
+          })
+          return {
+            content: code,
+            soourcemap: map,
+          }
+        },
       }
-    },
-
-    render: () => {
-      // if needed do the transformation to systemjs (except during build)
     },
   }
 }
