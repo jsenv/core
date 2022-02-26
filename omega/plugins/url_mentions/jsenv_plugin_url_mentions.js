@@ -95,7 +95,11 @@ const injectQueryParamsToSpecifier = (specifier, params) => {
     urlObject.searchParams.set(key, params[key])
   })
   const urlWithParams = urlObject.href
-  return urlToRelativeUrl(urlWithParams, "file://")
+  // specifier was absolute, keep it absolute
+  if (specifier.startsWith("file:") || !urlWithParams.startsWith("file:")) {
+    return urlWithParams
+  }
+  return urlWithParams.slice("file://".length)
 }
 
 const isValidUrl = (url) => {

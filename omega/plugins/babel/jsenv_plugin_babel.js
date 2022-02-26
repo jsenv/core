@@ -122,7 +122,7 @@ export const jsenvPluginBabel = () => {
           const needsSystemJs =
             (scenario === "dev" || scenario === "test") &&
             featuresRelatedToSystemJs.some((featureName) => {
-              const isRequired = baseFeatureNames.includes(featureName)
+              const isRequired = requiredFeatureNames.includes(featureName)
               const isAvailable = featuresCompatFromRuntimeSupport({
                 featureNames: [featureName],
                 runtimeSupport,

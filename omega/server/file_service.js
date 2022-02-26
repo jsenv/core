@@ -147,7 +147,7 @@ export const createFileService = ({
         mutateContentAndSourcemap(transformReturnValue)
       }, Promise.resolve())
       if (finalize) {
-        const finalizeReturnValue = await finalize()
+        const finalizeReturnValue = await finalize(context)
         mutateContentAndSourcemap(finalizeReturnValue)
       }
 

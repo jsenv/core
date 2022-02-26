@@ -27,6 +27,7 @@ export const featuresCompatMap = {
     safari: "11.3",
     opera: "50",
     android: "8",
+    node: "13.2",
   },
   top_level_await: {
     edge: "89",
