@@ -13,7 +13,11 @@ import { existsSync } from "node:fs"
 import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js"
 import { lookupPackageScope } from "./lookup_package_scope.js"
 import { readPackageJson } from "./read_package_json.js"
-import { getParentUrl, isValidUrl } from "./url_utils.js"
+import { filesystemRootUrl, getParentUrl, isValidUrl } from "./url_utils.js"
+import {
+  createModuleNotFoundError,
+  createPackageImportNotDefinedError,
+} from "./errors.js"
 
 export const applyNodeEsmResolution = ({
   conditions = ["node", "import"],
@@ -102,7 +106,10 @@ const applyPackageImportsResolution = ({
       }
     }
   }
-  throw new Error(`Package import not defined`)
+  throw createPackageImportNotDefinedError({
+    specifier,
+    parentUrl,
+  })
 }
 
 const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
@@ -139,11 +146,11 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
   if (selfResolution) {
     return selfResolution
   }
-  while (parentUrl !== "file:///") {
-    const packageUrl = new URL(`node_modules/${packageSpecifier}/`, parentUrl)
-      .href
+  let currentUrl = parentUrl
+  while (currentUrl !== filesystemRootUrl) {
+    const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href
     if (!existsSync(new URL(packageUrl))) {
-      parentUrl = getParentUrl(parentUrl)
+      currentUrl = getParentUrl(currentUrl)
       continue
     }
     const packageJson = readPackageJson(packageUrl)
@@ -177,7 +184,10 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
       url: new URL(packageSubpath, packageUrl).href,
     }
   }
-  throw new Error("module not found")
+  throw createModuleNotFoundError({
+    specifier: packageName,
+    parentUrl,
+  })
 }
 
 const applyPackageSelfResolution = ({
@@ -236,7 +246,7 @@ const applyPackageExportsResolution = ({
       packageUrl,
       packageJson,
       matchObject: exports,
-      matchKey: `./${packageSubpath}`,
+      matchKey: packageSubpath,
       isImports: false,
     })
     if (resolved) {
@@ -441,24 +451,17 @@ const parsePackageSpecifier = (packageSpecifier) => {
     if (firstSlashIndex === -1) {
       throw new Error("invalid module specifier")
     }
-    const packageScope = packageSpecifier.slice(0, firstSlashIndex)
     const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1)
     if (secondSlashIndex === -1) {
-      const packageName = packageSpecifier.slice(firstSlashIndex + 1)
       return {
-        packageScope,
-        packageName,
+        packageName: packageSpecifier,
         packageSubpath: ".",
       }
     }
-    const packageName = packageSpecifier.slice(
-      firstSlashIndex,
-      secondSlashIndex,
-    )
+    const packageName = packageSpecifier.slice(0, secondSlashIndex)
     const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1)
-    const packageSubpath = `.${afterSecondSlash}`
+    const packageSubpath = `./${afterSecondSlash}`
     return {
-      packageScope,
       packageName,
       packageSubpath,
     }

@@ -1,3 +1,6 @@
+export const filesystemRootUrl =
+  process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///"
+
 export const getParentUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href
 }
