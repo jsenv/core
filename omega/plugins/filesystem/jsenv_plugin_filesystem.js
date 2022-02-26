@@ -12,7 +12,7 @@ import {
 
 import { resolveFile } from "./filesystem_resolution.js"
 
-export const fileSystemJsenvPlugin = ({
+export const jsenvPluginFileSystem = ({
   // importMap,
   magicExtensions = ["inherit"],
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
@@ -125,10 +125,11 @@ export const fileSystemJsenvPlugin = ({
       if (!url.startsWith("file:")) {
         return null
       }
-      if (statSync(url).isDirectory()) {
+      const urlObject = new URL(url)
+      if (statSync(urlObject).isDirectory()) {
         throw new Error("Unsupported directory import")
       }
-      const fileBuffer = readFileSync(new URL(url))
+      const fileBuffer = readFileSync(urlObject)
       if (contentTypeIsTextual(contentType)) {
         return {
           content: String(fileBuffer),

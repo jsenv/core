@@ -33,9 +33,6 @@ export const createFileService = ({
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   return async (request) => {
-    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-      request.headers["user-agent"],
-    )
     // serve file inside ".jsenv" directory
     const requestFileUrl = new URL(
       request.ressource.slice(1),
@@ -46,10 +43,18 @@ export const createFileService = ({
         headers: request.headers,
       })
     }
+
+    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
+      request.headers["user-agent"],
+    )
+    const runtimeSupport = {
+      [runtimeName]: runtimeVersion,
+    }
     const context = {
       ...contextBase,
       runtimeName,
       runtimeVersion,
+      runtimeSupport,
     }
     plugins = plugins.filter((plugin) => {
       return plugin.appliesDuring && plugin.appliesDuring[scenario]
@@ -143,6 +148,18 @@ export const createFileService = ({
         context,
       )
       mutateContentAndSourcemap(transformUrlMentionsReturnValue)
+
+      const renderReturnValue = await findAsync({
+        array: plugins,
+        start: (plugin) => {
+          if (plugin.render) {
+            return plugin.render(context)
+          }
+          return null
+        },
+        predicate: (returnValue) => Boolean(returnValue),
+      })
+      mutateContentAndSourcemap(renderReturnValue)
 
       if (context.sourcemap) {
         context.sourcemapUrl = generateSourcemapUrl(context.url)

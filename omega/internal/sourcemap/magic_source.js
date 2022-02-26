@@ -3,6 +3,9 @@ import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { require } from "@jsenv/core/src/internal/require.js"
 
 export const createMagicSource = ({ url, content, sourcemap }) => {
+  if (content === undefined) {
+    throw new Error("content missing")
+  }
   const filename = urlToFileSystemPath(url)
   const {
     OriginalSource,
