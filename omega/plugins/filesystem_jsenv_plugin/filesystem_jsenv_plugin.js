@@ -4,7 +4,11 @@ import { realpathSync, statSync, readFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { urlIsInsideOf, urlToExtension } from "@jsenv/filesystem"
 
-import { applyNodeEsmResolution } from "@jsenv/core/packages/node-esm-resolution"
+import {
+  applyNodeEsmResolution,
+  lookupPackageScope,
+  readPackageJson,
+} from "@jsenv/core/packages/node-esm-resolution/main.js"
 
 import { resolveFile } from "./filesystem_resolution.js"
 
@@ -42,7 +46,7 @@ export const fileSystemJsenvPlugin = ({
       specifierType,
       specifier,
     }) => {
-      const onResolved = async ({ url, packageUrl, packageJson }) => {
+      const onResolved = async ({ url }) => {
         // http, https, data, about, etc
         if (!url.startsWith("file:")) {
           return null
@@ -54,9 +58,10 @@ export const fileSystemJsenvPlugin = ({
         if (!resolved) {
           return null
         }
+        const packageUrl = lookupPackageScope(resolved)
         const urlVersion =
           packageUrl && packageUrl !== projectDirectoryUrl
-            ? packageJson.version
+            ? readPackageJson(packageUrl).version
             : undefined
         const urlObject = new URL(url)
         const { search, hash } = urlObject
