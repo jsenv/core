@@ -1,4 +1,4 @@
-import { urlToContentType } from "@jsenv/server"
+import { fetchFileSystem, urlToContentType } from "@jsenv/server"
 import { urlIsInsideOf, writeFile, resolveUrl } from "@jsenv/filesystem"
 
 import { moveUrl } from "#omega/internal/url_utils.js"
@@ -20,7 +20,7 @@ export const createFileService = ({
   // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
   plugins,
 }) => {
-  const urlFacadeMappings = {}
+  const urlInfoMap = new Map()
   // const urlRedirections = {}
   const contextBase = {
     signal,
@@ -28,25 +28,36 @@ export const createFileService = ({
     projectDirectoryUrl,
     scenario,
     sourcemapInjectionMethod,
-    urlFacadeMappings,
+    urlInfoMap,
     // urlRedirections,
   }
+  const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   return async (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
     )
+    // serve file inside ".jsenv" directory
+    const requestFileUrl = new URL(
+      request.ressource.slice(1),
+      projectDirectoryUrl,
+    ).href
+    if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
+      return fetchFileSystem(requestFileUrl, {
+        headers: request.headers,
+      })
+    }
     const context = {
       ...contextBase,
       runtimeName,
       runtimeVersion,
     }
     plugins = plugins.filter((plugin) => {
-      return !plugin.shouldSkip || !plugin.shouldSkip(context)
+      return plugin.appliesDuring && plugin.appliesDuring[scenario]
     })
     context.resolve = async ({
-      urlResolutionMethod = "url",
-      baseUrl,
-      urlSpecifier,
+      parentUrl,
+      specifierType = "url",
+      specifier,
     }) => {
       const resolveReturnValue = await findAsync({
         array: plugins,
@@ -54,9 +65,9 @@ export const createFileService = ({
           if (plugin.resolve) {
             return plugin.resolve({
               ...context,
-              urlResolutionMethod,
-              baseUrl,
-              urlSpecifier,
+              parentUrl,
+              specifierType,
+              specifier,
             })
           }
           return null
@@ -65,24 +76,28 @@ export const createFileService = ({
       })
       if (resolveReturnValue) {
         if (typeof resolveReturnValue === "object") {
-          urlFacadeMappings[resolveReturnValue.urlFacade] =
-            resolveReturnValue.url
-          return resolveReturnValue.url
+          const { url, ...urlInfo } = resolveReturnValue
+          urlInfoMap.set(url, urlInfo)
+          return url
         }
+        urlInfoMap.set(resolveReturnValue, {})
         return resolveReturnValue
       }
-      return resolveUrl(urlSpecifier, baseUrl)
+      return null
     }
 
     try {
-      context.baseUrl = projectDirectoryUrl
-      context.urlSpecifier = request.ressource.slice(1)
-      context.urlFacade = new URL(
-        context.urlSpecifier,
-        projectDirectoryUrl,
-      ).href
-      context.url = urlFacadeMappings[context.urlFacade] || context.urlFacade
-      context.contentType = urlToContentType(context.urlFacade)
+      context.parentUrl = projectDirectoryUrl
+      context.specifier = request.ressource.slice(1)
+      context.url = await context.resolve({
+        parentUrl: projectDirectoryUrl,
+        specifierType: "http_request",
+        specifier: context.specifier,
+      })
+      context.urlInfo = urlInfoMap.get(context.url)
+      context.contentType = urlToContentType(
+        context.urlInfo.facade || context.url,
+      )
       const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
@@ -134,7 +149,7 @@ export const createFileService = ({
       if (context.sourcemap) {
         context.sourcemapUrl = generateSourcemapUrl(context.url)
         context.content = injectSourcemap(context)
-        writeIntoRuntimeDirectory({
+        await writeIntoRuntimeDirectory({
           ...context,
           url: context.sourcemapUrl,
           content: JSON.stringify(context.sourcemap, null, "  "),
@@ -164,8 +179,22 @@ export const createFileService = ({
   }
 }
 
+const determineFileUrlForOutDirectory = ({
+  projectDirectoryUrl,
+  scenario,
+  runtimeName,
+  runtimeVersion,
+  url,
+}) => {
+  const outDirectoryUrl = resolveUrl(
+    `.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
+    projectDirectoryUrl,
+  )
+  return moveUrl(url, projectDirectoryUrl, outDirectoryUrl)
+}
+
 // this is just for debug (ability to see what is generated)
-const writeIntoRuntimeDirectory = ({
+const writeIntoRuntimeDirectory = async ({
   projectDirectoryUrl,
   scenario,
   runtimeName,
@@ -176,9 +205,14 @@ const writeIntoRuntimeDirectory = ({
   if (!urlIsInsideOf(url, projectDirectoryUrl)) {
     return
   }
-  const outDirectoryUrl = resolveUrl(
-    `.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
-    projectDirectoryUrl,
+  await writeFile(
+    determineFileUrlForOutDirectory({
+      projectDirectoryUrl,
+      scenario,
+      runtimeName,
+      runtimeVersion,
+      url,
+    }),
+    content,
   )
-  writeFile(moveUrl(url, projectDirectoryUrl, outDirectoryUrl), content)
 }

@@ -8,7 +8,7 @@ const handlers = {
 
 export const transformUrlMentions = async ({
   projectDirectoryUrl,
-  urlFacadeMappings,
+  urlInfoMap,
   resolve,
   url,
   contentType,
@@ -25,25 +25,24 @@ export const transformUrlMentions = async ({
   await urlMentions.reduce(async (previous, urlMention) => {
     await previous
     const resolvedUrl = await resolve({
-      urlResolutionMethod: urlMention.type, // 'url', 'import_export'
-      urlSpecifier: urlMention.specifier,
-      baseUrl: url,
+      parentUrl: url,
+      specifierType: urlMention.type, // 'js_import_meta_url_pattern', 'js_import_export'
+      specifier: urlMention.specifier,
     })
     urlMention.url = resolvedUrl
-    urlMention.urlFacade =
-      facadeUrlFromUrl(resolvedUrl, urlFacadeMappings) || resolvedUrl
   }, Promise.resolve())
   return handler.transform({
     url,
     content,
     urlMentions,
     transformUrlMention: (urlMention) => {
-      // TODO: inject hmr if needed
-      const { urlFacade } = urlMention
-      if (isValidUrl(urlFacade)) {
-        return `/${urlToRelativeUrl(urlFacade, projectDirectoryUrl)}`
+      // TODO: inject hmr, version
+      const { facade } = urlInfoMap.get(urlMention.url)
+      const url = facade || urlMention.url
+      if (isValidUrl(url)) {
+        return `/${urlToRelativeUrl(url, projectDirectoryUrl)}`
       }
-      return urlFacade
+      return url
     },
   })
 }
@@ -56,11 +55,4 @@ const isValidUrl = (url) => {
   } catch (e) {
     return false
   }
-}
-
-const facadeUrlFromUrl = (url, urlFacadeMappings) => {
-  const keyFound = Object.keys(urlFacadeMappings).find(
-    (key) => urlFacadeMappings[key] === url,
-  )
-  return keyFound ? urlFacadeMappings[keyFound] : null
 }

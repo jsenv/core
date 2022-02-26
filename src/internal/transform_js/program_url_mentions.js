@@ -14,7 +14,7 @@ export const collectProgramUrlMentions = (programPath) => {
     NewExpression: (path) => {
       if (isNewUrlImportMetaUrl(path.node)) {
         urlMentions.push({
-          type: "url",
+          type: "js_import_meta_url_pattern",
           specifierPath: path.get("arguments")[0],
           path,
         })
@@ -32,14 +32,14 @@ export const collectProgramUrlMentions = (programPath) => {
         return
       }
       urlMentions.push({
-        type: "import_export",
+        type: "js_import_export",
         specifierPath: path.get("arguments")[0],
         path,
       })
     },
     ExportAllDeclaration: (path) => {
       urlMentions.push({
-        type: "import_export",
+        type: "js_import_export",
         specifierPath: path.get("source"),
         path,
       })
@@ -54,14 +54,14 @@ export const collectProgramUrlMentions = (programPath) => {
         return
       }
       urlMentions.push({
-        type: "import_export",
+        type: "js_import_export",
         specifierPath: path.get("source"),
         path,
       })
     },
     ImportDeclaration: (path) => {
       urlMentions.push({
-        type: "import_export",
+        type: "js_import_export",
         specifierPath: path.get("source"),
         path,
       })
