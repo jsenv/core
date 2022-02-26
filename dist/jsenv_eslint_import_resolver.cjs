@@ -2,6 +2,7 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+var node_module = require('module');
 var url = require('url');
 var node_fs = require('fs');
 var fs = require('fs');
@@ -1003,6 +1004,56 @@ const comparePatternKeys = (keyA, keyB) => {
   return 0
 };
 
+// https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
+const determineModuleSystem = (url) => {
+  const inputTypeArgv = process.execArgv.find((argv) =>
+    argv.startsWith("--input-type="),
+  );
+  if (inputTypeArgv) {
+    const value = inputTypeArgv.slice("--input-type=".length);
+    if (value === "module") {
+      return "module"
+    }
+    if (value === "commonjs") {
+      return "commonjs"
+    }
+  }
+  const extension = extensionFromUrl(url);
+  if (extension === ".mjs") {
+    return "module"
+  }
+  if (extension === ".cjs") {
+    return "commonjs"
+  }
+  if (extension === ".json") {
+    return "json"
+  }
+  if (extension === ".js") {
+    const packageUrl = lookupPackageScope(url);
+    if (!packageUrl) {
+      return "commonjs"
+    }
+    const packageJson = readPackageJson(packageUrl);
+    if (packageJson.type === "module") {
+      return "module"
+    }
+    return "commonjs"
+  }
+  throw new Error("unsupported file extension")
+};
+
+const extensionFromUrl = (url) => {
+  const { pathname } = new URL(url);
+  const slashLastIndex = pathname.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension
+};
+
 const applyFileSystemMagicResolution = (
   fileUrl,
   { magicDirectoryIndex, magicExtensions },
@@ -1840,13 +1891,22 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
         return onUrl(urlFromImportmap)
       }
     }
-    const nodeResolution = applyNodeEsmResolution({
-      conditions: packageConditions,
-      parentUrl: importer,
-      specifier,
-    });
-    if (nodeResolution) {
-      return onUrl(nodeResolution.url)
+    const moduleSystem = determineModuleSystem(importer);
+    if (moduleSystem === "commonjs") {
+      return onUrl(node_module.createRequire(importer).resolve(specifier))
+    }
+    if (moduleSystem === "json") {
+      return onUrl(applyUrlResolution(specifier, importer))
+    }
+    if (moduleSystem === "module") {
+      const nodeResolution = applyNodeEsmResolution({
+        conditions: packageConditions,
+        parentUrl: importer,
+        specifier,
+      });
+      if (nodeResolution) {
+        return onUrl(nodeResolution.url)
+      }
     }
     throw new Error("not found")
   } catch (e) {

@@ -2,6 +2,7 @@
 // https://github.com/benmosher/eslint-plugin-import/tree/master/resolvers
 // https://github.com/olalonde/eslint-import-resolver-babel-root-import
 
+import { createRequire } from "node:module"
 import {
   assertAndNormalizeDirectoryUrl,
   ensureWindowsDriveLetter,
@@ -13,11 +14,13 @@ import {
 import { createLogger } from "./logger.js"
 import { isSpecifierForNodeBuiltin } from "../../node-esm-resolution/src/node_builtin_specifiers.js"
 import {
+  determineModuleSystem,
   applyNodeEsmResolution,
   applyFileSystemMagicResolution,
 } from "../../node-esm-resolution/main.js"
 
 import { applyImportmapResolution } from "./importmap_resolution.js"
+import { applyUrlResolution } from "./url_resolution.js"
 
 export const interfaceVersion = 2
 
@@ -87,13 +90,22 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
         return onUrl(urlFromImportmap)
       }
     }
-    const nodeResolution = applyNodeEsmResolution({
-      conditions: packageConditions,
-      parentUrl: importer,
-      specifier,
-    })
-    if (nodeResolution) {
-      return onUrl(nodeResolution.url)
+    const moduleSystem = determineModuleSystem(importer)
+    if (moduleSystem === "commonjs") {
+      return onUrl(createRequire(importer).resolve(specifier))
+    }
+    if (moduleSystem === "json") {
+      return onUrl(applyUrlResolution(specifier, importer))
+    }
+    if (moduleSystem === "module") {
+      const nodeResolution = applyNodeEsmResolution({
+        conditions: packageConditions,
+        parentUrl: importer,
+        specifier,
+      })
+      if (nodeResolution) {
+        return onUrl(nodeResolution.url)
+      }
     }
     throw new Error("not found")
   } catch (e) {
