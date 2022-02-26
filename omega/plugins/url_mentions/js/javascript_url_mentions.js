@@ -2,18 +2,32 @@ import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_tran
 import { createMagicSource } from "#omega/internal/sourcemap/magic_source.js"
 
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
+import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
 export const javaScriptUrlMentions = {
   parse: async ({ url, content }) => {
     const { metadata } = await babelTransform({
       options: {
-        plugins: [[babelPluginMetadataUrlMentions]],
+        plugins: [
+          [babelPluginMetadataUrlMentions],
+          [babelPluginMetadataImportMetaHot],
+        ],
       },
       url,
       content,
     })
-    const { urlMentions } = metadata
-    return urlMentions
+    const {
+      urlMentions,
+      hotDecline = false,
+      hotAcceptSelf = false,
+      hotAcceptDependencies = [],
+    } = metadata
+    return {
+      urlMentions,
+      hotDecline,
+      hotAcceptSelf,
+      hotAcceptDependencies,
+    }
   },
   transform: ({ url, content, urlMentions, transformUrlMention }) => {
     const magicSource = createMagicSource({ url, content })

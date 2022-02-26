@@ -35,11 +35,13 @@ export const startOmegaServer = async ({
   const logger = createLogger({ logLevel })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
+  const ressourceGraph = {}
   const coreServices = {
     "service:file": createFileService({
       signal,
       logger,
       projectDirectoryUrl,
+      ressourceGraph,
       scenario,
       sourcemapInjectionMethod,
       plugins,

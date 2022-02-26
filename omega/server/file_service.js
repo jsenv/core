@@ -7,7 +7,6 @@ import { loadSourcemap } from "#omega/internal/sourcemap/sourcemap_loader.js"
 import { composeTwoSourcemaps } from "#omega/internal/sourcemap/sourcemap_composition.js"
 import { generateSourcemapUrl } from "#omega/internal/sourcemap/sourcemap_utils.js"
 import { injectSourcemap } from "#omega/internal/sourcemap/sourcemap_injection.js"
-import { transformUrlMentions } from "#omega/url_mentions/url_mentions.js"
 
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -15,6 +14,7 @@ export const createFileService = ({
   signal,
   logger,
   projectDirectoryUrl,
+  ressourceGraph,
   scenario,
   sourcemapInjectionMethod = "inline",
   // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
@@ -26,6 +26,7 @@ export const createFileService = ({
     signal,
     logger,
     projectDirectoryUrl,
+    ressourceGraph,
     scenario,
     sourcemapInjectionMethod,
     urlInfoMap,
@@ -144,10 +145,6 @@ export const createFileService = ({
         const transformReturnValue = await transform(context)
         mutateContentAndSourcemap(transformReturnValue)
       }, Promise.resolve())
-      const transformUrlMentionsReturnValue = await transformUrlMentions(
-        context,
-      )
-      mutateContentAndSourcemap(transformUrlMentionsReturnValue)
 
       const renderReturnValue = await findAsync({
         array: plugins,
