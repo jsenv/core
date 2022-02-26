@@ -1,6 +1,14 @@
 export const filesystemRootUrl =
   process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///"
 
+export const asDirectoryUrl = (url) => {
+  const { pathname } = new URL(url)
+  if (pathname.endsWith("/")) {
+    return url
+  }
+  return new URL("./", url).href
+}
+
 export const getParentUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href
 }

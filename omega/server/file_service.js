@@ -94,10 +94,8 @@ export const createFileService = ({
         specifierType: "http_request",
         specifier: context.specifier,
       })
-      context.urlInfo = urlInfoMap.get(context.url)
-      context.contentType = urlToContentType(
-        context.urlInfo.facade || context.url,
-      )
+      Object.assign(context, urlInfoMap.get(context.url))
+      context.contentType = urlToContentType(context.urlFacade || context.url)
       const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {

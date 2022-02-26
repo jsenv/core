@@ -411,6 +411,14 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
 const filesystemRootUrl =
   process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///";
 
+const asDirectoryUrl = (url) => {
+  const { pathname } = new URL(url);
+  if (pathname.endsWith("/")) {
+    return url
+  }
+  return new URL("./", url).href
+};
+
 const getParentUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href
 };
@@ -439,9 +447,8 @@ const urlToFilename = (url) => {
 };
 
 const lookupPackageScope = (url) => {
-  let scopeUrl = url;
+  let scopeUrl = asDirectoryUrl(url);
   while (scopeUrl !== filesystemRootUrl) {
-    scopeUrl = getParentUrl(scopeUrl);
     if (scopeUrl.endsWith("node_modules/")) {
       return null
     }
@@ -449,6 +456,7 @@ const lookupPackageScope = (url) => {
     if (node_fs.existsSync(packageJsonUrlObject)) {
       return scopeUrl
     }
+    scopeUrl = getParentUrl(scopeUrl);
   }
   return null
 };
@@ -464,9 +472,70 @@ const readPackageJson = (packageUrl) => {
   }
 };
 
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
+
+const createInvalidModuleSpecifierError = ({
+  specifier,
+  parentUrl,
+  reason,
+}) => {
+  const error = new Error(
+    `Invalid module "${specifier}" ${reason} imported from ${node_url.fileURLToPath(
+      parentUrl,
+    )}`,
+  );
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error
+};
+
+const createInvalidPackageTargetError = ({
+  parentUrl,
+  packageUrl,
+  target,
+  key,
+  isImport,
+  reason,
+}) => {
+  let message;
+  if (key === ".") {
+    message = `Invalid "exports" main target defined in ${node_url.fileURLToPath(
+      packageUrl,
+    )}package.json imported from ${node_url.fileURLToPath(parentUrl)}; ${reason}`;
+  } else {
+    message = `Invalid "${
+      isImport ? "imports" : "exports"
+    }" target ${JSON.stringify(target)} defined for "${key}" in ${node_url.fileURLToPath(
+      packageUrl,
+    )}package.json imported from ${node_url.fileURLToPath(parentUrl)}; ${reason}`;
+  }
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error
+};
+
+const createPackagePathNotExportedError = ({
+  subpath,
+  parentUrl,
+  packageUrl,
+}) => {
+  let message;
+  if (subpath === ".") {
+    message = `No "exports" main defined in ${node_url.fileURLToPath(
+      packageUrl,
+    )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`;
+  } else {
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${node_url.fileURLToPath(
+      packageUrl,
+    )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`;
+  }
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error
+};
+
 const createModuleNotFoundError = ({ specifier, parentUrl }) => {
   const error = new Error(
-    `Cannot find module "${specifier}" imported by ${node_url.fileURLToPath(parentUrl)}`,
+    `Cannot find "${specifier}" imported from ${node_url.fileURLToPath(parentUrl)}`,
   );
   error.code = "MODULE_NOT_FOUND";
   return error
@@ -474,12 +543,13 @@ const createModuleNotFoundError = ({ specifier, parentUrl }) => {
 
 const createPackageImportNotDefinedError = ({
   specifier,
+  packageUrl,
   parentUrl,
 }) => {
   const error = new Error(
-    `Imports not defined for "${specifier}" imported by ${node_url.fileURLToPath(
-      parentUrl,
-    )}`,
+    `Package import specifier "${specifier}" is not defined in ${node_url.fileURLToPath(
+      packageUrl,
+    )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`,
   );
   error.code = "PACKAGE_IMPORT_NOT_DEFINED";
   return error
@@ -509,7 +579,11 @@ const applyNodeEsmResolution = ({
   const { url } = resolution;
   if (url.startsWith("file:")) {
     if (url.includes("%2F") || url.includes("%5C")) {
-      throw new Error("invalid module specifier")
+      throw createInvalidModuleSpecifierError({
+        specifier,
+        parentUrl,
+        reason: `must not include encoded "/" or "\\" characters`,
+      })
     }
     return resolution
   }
@@ -560,10 +634,18 @@ const applyPackageImportsResolution = ({
   specifier,
 }) => {
   if (!specifier.startsWith("#")) {
-    throw new Error("specifier must start with #")
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "internal imports must start with #",
+    })
   }
   if (specifier === "#" || specifier.startsWith("#/")) {
-    throw new Error("Invalid module specifier")
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "not a valid internal imports specifier name",
+    })
   }
   const packageUrl = lookupPackageScope(parentUrl);
   if (packageUrl !== null) {
@@ -572,6 +654,7 @@ const applyPackageImportsResolution = ({
     if (imports !== null && typeof imports === "object") {
       const resolved = applyPackageImportsExportsResolution({
         conditions,
+        parentUrl,
         packageUrl,
         packageJson,
         matchObject: imports,
@@ -585,6 +668,7 @@ const applyPackageImportsResolution = ({
   }
   throw createPackageImportNotDefinedError({
     specifier,
+    packageUrl,
     parentUrl,
   })
 };
@@ -609,7 +693,11 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
     packageName.includes("\\") ||
     packageName.includes("%")
   ) {
-    throw new Error("invalid module specifier")
+    throw createInvalidModuleSpecifierError({
+      specifier: packageName,
+      parentUrl,
+      reason: `is not a valid package name`,
+    })
   }
   if (packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier")
@@ -636,6 +724,7 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
       if (exports !== null && exports !== undefined) {
         return applyPackageExportsResolution({
           conditions,
+          parentUrl,
           packageUrl,
           packageJson,
           packageSubpath,
@@ -683,6 +772,15 @@ const applyPackageSelfResolution = ({
   }
   const { exports } = packageJson;
   if (!exports) {
+    const { main } = packageJson;
+    if (packageSubpath === "." && typeof main === "string") {
+      return {
+        type: "main",
+        packageUrl,
+        packageJson,
+        url: new URL(main, packageUrl).href,
+      }
+    }
     return undefined
   }
   if (packageJson.name !== packageName) {
@@ -690,6 +788,7 @@ const applyPackageSelfResolution = ({
   }
   return applyPackageExportsResolution({
     conditions,
+    parentUrl,
     packageUrl,
     packageJson,
     packageSubpath,
@@ -697,8 +796,10 @@ const applyPackageSelfResolution = ({
   })
 };
 
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
 const applyPackageExportsResolution = ({
   conditions,
+  parentUrl,
   packageUrl,
   packageJson,
   packageSubpath,
@@ -708,18 +809,25 @@ const applyPackageExportsResolution = ({
   if (packageSubpath === ".") {
     const mainExport = applyMainExportResolution({ exports, exportsInfo });
     if (!mainExport) {
-      throw new Error("package path not exported")
+      throw createPackagePathNotExportedError({
+        subpath: packageSubpath,
+        parentUrl,
+        packageUrl,
+      })
     }
     return applyPackageTargetResolution({
       conditions,
+      parentUrl,
       packageUrl,
       packageJson,
+      key: ".",
       target: mainExport,
     })
   }
   if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
     const resolved = applyPackageImportsExportsResolution({
       conditions,
+      parentUrl,
       packageUrl,
       packageJson,
       matchObject: exports,
@@ -730,11 +838,16 @@ const applyPackageExportsResolution = ({
       return resolved
     }
   }
-  throw new Error("package path not exported")
+  throw createPackagePathNotExportedError({
+    subpath: packageSubpath,
+    parentUrl,
+    packageUrl,
+  })
 };
 
 const applyPackageImportsExportsResolution = ({
   conditions,
+  parentUrl,
   packageUrl,
   packageJson,
   matchObject,
@@ -745,8 +858,10 @@ const applyPackageImportsExportsResolution = ({
     const target = matchObject[matchKey];
     return applyPackageTargetResolution({
       conditions,
+      parentUrl,
       packageUrl,
       packageJson,
+      key: matchKey,
       target,
       internal: isImports,
     })
@@ -769,8 +884,10 @@ const applyPackageImportsExportsResolution = ({
     );
     return applyPackageTargetResolution({
       conditions,
+      parentUrl,
       packageUrl,
       packageJson,
+      key: matchKey,
       target,
       subpath,
       pattern: true,
@@ -782,8 +899,10 @@ const applyPackageImportsExportsResolution = ({
 
 const applyPackageTargetResolution = ({
   conditions,
+  parentUrl,
   packageUrl,
   packageJson,
+  key,
   target,
   subpath = "",
   pattern = false,
@@ -793,53 +912,72 @@ const applyPackageTargetResolution = ({
     if (pattern === false && subpath !== "" && !target.endsWith("/")) {
       throw new Error("invalid module specifier")
     }
-    if (!target.startsWith("./")) {
-      if (!internal || target.startsWith("../") || isValidUrl(target)) {
-        throw new Error("invalid package target")
+    if (target.startsWith("./")) {
+      const targetUrl = new URL(target, packageUrl).href;
+      if (!targetUrl.startsWith(packageUrl)) {
+        throw createInvalidPackageTargetError({
+          parentUrl,
+          packageUrl,
+          target,
+          key,
+          isImport: internal,
+          reason: `target must be inside package`,
+        })
       }
-      return applyPackageResolve({
-        conditions,
-        parentUrl: `${packageUrl}/`,
-        packageSpecifier: pattern
-          ? target.replaceAll("*", subpath)
-          : `${target}${subpath}`,
+      return {
+        type: internal ? "imports_subpath" : "exports_subpath",
+        packageUrl,
+        packageJson,
+        url: pattern
+          ? targetUrl.replaceAll("*", subpath)
+          : new URL(subpath, targetUrl).href,
+      }
+    }
+    if (!internal || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError({
+        parentUrl,
+        packageUrl,
+        target,
+        key,
+        isImport: internal,
+        reason: `target must starst with "./"`,
       })
     }
-    const resolvedTarget = new URL(target, packageUrl).href;
-    if (!resolvedTarget.startsWith(packageUrl)) {
-      throw new Error("invalid package target")
-    }
-    return {
-      type: internal ? "imports_subpath" : "exports_subpath",
-      packageUrl,
-      packageJson,
-      url: pattern
-        ? resolvedTarget.replaceAll("*", subpath)
-        : new URL(subpath, resolvedTarget).href,
-    }
+    return applyPackageResolve({
+      conditions,
+      parentUrl: packageUrl,
+      packageSpecifier: pattern
+        ? target.replaceAll("*", subpath)
+        : `${target}${subpath}`,
+    })
   }
   if (Array.isArray(target)) {
     if (target.length === 0) {
       return null
     }
     let lastResult;
-    for (const targetValue of target) {
+    let i = 0;
+    while (i < target.length) {
+      const targetValue = target[i];
+      i++;
       try {
         const resolved = applyPackageTargetResolution({
+          conditions,
+          parentUrl,
           packageUrl,
           packageJson,
+          key: `${key}[${i}]`,
           target: targetValue,
           subpath,
           pattern,
           internal,
-          conditions,
         });
         if (resolved) {
           return resolved
         }
         lastResult = resolved;
       } catch (e) {
-        if (e.message === "Invalid package target") {
+        if (e.code === "INVALID_PACKAGE_TARGET") {
           continue
         }
         lastResult = e;
@@ -862,13 +1000,15 @@ const applyPackageTargetResolution = ({
       if (key === "default" || conditions.includes(key)) {
         const targetValue = target[key];
         const resolved = applyPackageTargetResolution({
+          conditions,
+          parentUrl,
           packageUrl,
           packageJson,
+          key,
           target: targetValue,
           subpath,
           pattern,
           internal,
-          conditions,
         });
         if (resolved) {
           return resolved
@@ -877,7 +1017,14 @@ const applyPackageTargetResolution = ({
     }
     return undefined
   }
-  throw new Error("Invalid package target")
+  throw createInvalidPackageTargetError({
+    parentUrl,
+    packageUrl,
+    target,
+    key,
+    isImport: internal,
+    reason: `target must be a string, array, object or null`,
+  })
 };
 
 const readExports = ({ exports, packageUrl }) => {
@@ -933,6 +1080,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
       return {
         packageName: packageSpecifier,
         packageSubpath: ".",
+        isScoped: true,
       }
     }
     const packageName = packageSpecifier.slice(0, secondSlashIndex);
@@ -941,6 +1089,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
     return {
       packageName,
       packageSubpath,
+      isScoped: true,
     }
   }
   const firstSlashIndex = packageSpecifier.indexOf("/");
@@ -952,7 +1101,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
-  const packageSubpath = `node:${afterFirstSlash}`;
+  const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,
     packageSubpath,

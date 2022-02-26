@@ -42,7 +42,7 @@ export const fileSystemJsenvPlugin = ({
       specifierType,
       specifier,
     }) => {
-      const onUrl = async (url) => {
+      const onResolved = async ({ url, packageUrl, packageJson }) => {
         // http, https, data, about, etc
         if (!url.startsWith("file:")) {
           return null
@@ -54,6 +54,10 @@ export const fileSystemJsenvPlugin = ({
         if (!resolved) {
           return null
         }
+        const urlVersion =
+          packageUrl && packageUrl !== projectDirectoryUrl
+            ? packageJson.version
+            : undefined
         const urlObject = new URL(url)
         const { search, hash } = urlObject
         // urlObject.search = ""
@@ -66,7 +70,11 @@ export const fileSystemJsenvPlugin = ({
         }
         if (realUrl !== url && urlIsInsideOf(url, projectDirectoryUrl)) {
           // when symlink is inside root directory use it as facadeurl
-          return { url: realUrl, facade: url }
+          return {
+            url: realUrl,
+            urlFacade: url,
+            urlVersion,
+          }
         }
         // if it's a bare specifier (not something like ../ or starting with file)
         // or /, then we'll use this bare specifier to refer to the ressource that is outside
@@ -78,7 +86,8 @@ export const fileSystemJsenvPlugin = ({
         ) {
           return {
             url: realUrl,
-            facade: specifier,
+            urlFacade: specifier,
+            urlVersion,
           }
         }
         throw new Error(
@@ -89,18 +98,20 @@ export const fileSystemJsenvPlugin = ({
         specifierType === "http_request" ||
         specifierType === "js_import_meta_url_pattern"
       ) {
-        return onUrl(new URL(specifier, parentUrl).href)
+        return onResolved({
+          url: new URL(specifier, parentUrl).href,
+        })
       }
       if (
         specifierType === "js_import_export" &&
         specifierResolution === "node_esm"
       ) {
-        const url = applyNodeEsmResolution({
+        const nodeEsmResolution = applyNodeEsmResolution({
           conditions: packageConditions,
           parentUrl,
           specifier,
         })
-        return onUrl(url)
+        return onResolved(nodeEsmResolution)
       }
       return null
     },

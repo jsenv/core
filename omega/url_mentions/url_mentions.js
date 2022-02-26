@@ -37,8 +37,8 @@ export const transformUrlMentions = async ({
     urlMentions,
     transformUrlMention: (urlMention) => {
       // TODO: inject hmr, version
-      const { facade } = urlInfoMap.get(urlMention.url)
-      const url = facade || urlMention.url
+      const { urlFacade } = urlInfoMap.get(urlMention.url)
+      const url = urlFacade || urlMention.url
       if (isValidUrl(url)) {
         return `/${urlToRelativeUrl(url, projectDirectoryUrl)}`
       }
