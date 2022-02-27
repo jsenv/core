@@ -1,3 +1,5 @@
+import { urlToRelativeUrl } from "@jsenv/filesystem"
+
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -16,17 +18,32 @@ export const jsenvPluginEventSourceClient = () => {
       build: false,
     },
 
-    transform: ({ contentType, content }) => {
+    transform: async ({
+      projectDirectoryUrl,
+      resolve,
+      getUrlFacade,
+      contentType,
+      content,
+    }) => {
       if (contentType !== "text/html") {
         return null
       }
       const htmlAst = parseHtmlString(content)
+      const eventSourceFileUrl = await resolve({
+        parentUrl: projectDirectoryUrl,
+        specifierType: "js_import_export",
+        specifier:
+          "@jsenv/core/src/internal/event_source_client/event_source_client.js",
+      })
       injectScriptAsEarlyAsPossible(
         htmlAst,
         createHtmlNode({
           tagName: "script",
           type: "module",
-          src: "@jsenv/core/src/internal/event_source_client/event_source_client.js",
+          src: `/${urlToRelativeUrl(
+            getUrlFacade(eventSourceFileUrl),
+            projectDirectoryUrl,
+          )}`,
         }),
       )
       const htmlModified = stringifyHtmlAst(htmlAst)

@@ -98,6 +98,10 @@ export const createFileService = ({
         }
         return null
       }
+      context.getUrlFacade = (url) => {
+        const urlInfo = urlInfoMap.get(url)
+        return urlInfo.urlFacade || url
+      }
       context.url = await context.resolve({
         parentUrl,
         specifierType,
@@ -110,7 +114,7 @@ export const createFileService = ({
         return context
       }
       Object.assign(context, urlInfoMap.get(context.url))
-      context.urlFacade = context.urlFacade || context.url
+      context.urlFacade = context.getUrlFacade(context.url)
       context.contentType = urlToContentType(context.urlFacade)
       const loadReturnValue = await findAsync({
         array: plugins,
@@ -201,9 +205,10 @@ export const createFileService = ({
         specifierType,
         specifier,
       })
-      if (error && error.code === "FILE_NOT_FOUND") {
+      if (error) {
         logger.warn(
-          createDetailedMessage(`sourcemap not found`, {
+          createDetailedMessage(`Error while handling sourcemap`, {
+            "error message": error.message,
             "sourcemap url": url,
             "referenced by": parentUrl,
           }),

@@ -54,9 +54,7 @@ export const jsenvPluginFileSystem = ({
   const specifierResolvers = {
     "http_request": urlResolver,
     "link_href": urlResolver,
-    // allow some magic on script src
-    "script_src":
-      specifierResolution === "node_esm" ? nodeEsmResolver : urlResolver,
+    "script_src": urlResolver,
     "a_href": urlResolver,
     "iframe_src": urlResolver,
     "img_src": urlResolver,
