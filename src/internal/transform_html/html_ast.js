@@ -314,21 +314,27 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   return fragment.childNodes[0]
 }
 
-export const injectBeforeFirstHeadScript = (htmlAst, htmlNode) => {
-  const headNode = htmlAst.childNodes.find((node) => node.nodeName === "html")
+export const injectScriptAsEarlyAsPossible = (htmlAst, scriptNode) => {
+  const isModule = parseScriptNode(scriptNode) === "module"
+  if (isModule) {
+    const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
+      if (node.nodeName !== "script") return false
+      return parseScriptNode(node) === "importmap"
+    })
+    if (firstImportmapScript) {
+      return insertAfter(
+        scriptNode,
+        firstImportmapScript.parentNode,
+        firstImportmapScript,
+      )
+    }
+  }
+  const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
     .childNodes[0]
-
   const firstHeadScript = findChild(headNode, (node) => {
-    if (node.nodeName !== "script") {
-      return false
-    }
-    const typeAttribute = getHtmlNodeAttributeByName(node, "type")
-    if (typeAttribute && typeAttribute.value === "importmap") {
-      return false
-    }
-    return true
+    return node.nodeName === "script"
   })
-  return insertBefore(htmlNode, headNode, firstHeadScript)
+  return insertBefore(scriptNode, headNode, firstHeadScript)
 }
 
 const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
@@ -339,6 +345,23 @@ const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
       ...childNodes.slice(0, nextSiblingIndex),
       { ...nodeToInsert, parentNode: futureParentNode },
       ...childNodes.slice(nextSiblingIndex),
+    ]
+  } else {
+    futureParentNode.childNodes = [
+      ...childNodes,
+      { ...nodeToInsert, parentNode: futureParentNode },
+    ]
+  }
+}
+
+const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
+  const { childNodes = [] } = futureParentNode
+  if (futurePrevSibling) {
+    const nextSiblingIndex = childNodes.indexOf(futurePrevSibling)
+    futureParentNode.childNodes = [
+      ...childNodes.slice(0, nextSiblingIndex + 1),
+      { ...nodeToInsert, parentNode: futureParentNode },
+      ...childNodes.slice(nextSiblingIndex + 1),
     ]
   } else {
     futureParentNode.childNodes = [

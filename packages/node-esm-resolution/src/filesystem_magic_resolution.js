@@ -28,7 +28,7 @@ export const applyFileSystemMagicResolution = (
     }
     return {
       isDirectory: true,
-      found: false,
+      found: true,
       url: fileUrl,
     }
   }
@@ -37,17 +37,17 @@ export const applyFileSystemMagicResolution = (
     magicExtensions,
   )
   // magic extension not found
-  if (extensionLeadingToAFile === null) {
+  if (extensionLeadingToAFile) {
+    // magic extension worked
     return {
-      found: false,
-      url: fileUrl,
+      magicExtension: extensionLeadingToAFile,
+      found: true,
+      url: `${fileUrl}${extensionLeadingToAFile}`,
     }
   }
-  // magic extension worked
   return {
-    magicExtension: extensionLeadingToAFile,
-    found: true,
-    url: `${fileUrl}${extensionLeadingToAFile}`,
+    found: false,
+    url: fileUrl,
   }
 }
 
@@ -59,10 +59,8 @@ const findExtensionLeadingToFile = (fileUrl, magicExtensions) => {
   const urlFilename = urlToFilename(fileUrl)
   const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
     const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`
-    const stats = fileStatsOrNull(urlCandidate, {
-      nullIfNotFound: true,
-    })
-    return stats && stats.isFile()
+    const stats = fileStatsOrNull(urlCandidate)
+    return stats
   })
   return extensionLeadingToFile
 }

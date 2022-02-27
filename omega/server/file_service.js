@@ -96,6 +96,11 @@ export const createFileService = ({
         specifierType: "http_request",
         specifier: context.specifier,
       })
+      if (!context.url) {
+        return {
+          status: 404,
+        }
+      }
       Object.assign(context, urlInfoMap.get(context.url))
       context.contentType = urlToContentType(context.urlFacade || context.url)
       const loadReturnValue = await findAsync({

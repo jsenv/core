@@ -8,9 +8,8 @@ import {
   applyNodeEsmResolution,
   lookupPackageScope,
   readPackageJson,
+  applyFileSystemMagicResolution,
 } from "@jsenv/core/packages/node-esm-resolution/main.js"
-
-import { resolveFile } from "./filesystem_resolution.js"
 
 export const jsenvPluginFileSystem = ({
   // importMap,
@@ -19,11 +18,10 @@ export const jsenvPluginFileSystem = ({
   specifierResolution = "node_esm",
   packageConditions = ["import", "browser"],
 } = {}) => {
-  const applyFileSystemResolution = async ({ fileUrl, parentUrl }) => {
-    const filesystemResolution = await resolveFile(fileUrl, {
-      magicDirectoryIndexEnabled: true,
-      magicExtensionEnabled: true,
-      extensionsToTry: getExtensionsToTry(magicExtensions, parentUrl),
+  const applyFileSystemResolution = ({ fileUrl, parentUrl }) => {
+    const filesystemResolution = applyFileSystemMagicResolution(fileUrl, {
+      magicDirectoryIndex: false,
+      magicExtensions: getExtensionsToTry(magicExtensions, parentUrl),
     })
     if (filesystemResolution.found) {
       return filesystemResolution.url
@@ -100,7 +98,7 @@ export const jsenvPluginFileSystem = ({
       if (!url.startsWith("file:")) {
         return null
       }
-      const resolved = await applyFileSystemResolution({
+      const resolved = applyFileSystemResolution({
         fileUrl: url,
         parentUrl,
       })
