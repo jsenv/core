@@ -60,11 +60,7 @@ export const createFileService = ({
     plugins = plugins.filter((plugin) => {
       return plugin.appliesDuring && plugin.appliesDuring[scenario]
     })
-    context.resolve = async ({
-      parentUrl,
-      specifierType = "url",
-      specifier,
-    }) => {
+    context.resolve = async ({ parentUrl, specifierType, specifier }) => {
       const resolveReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {

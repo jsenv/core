@@ -10,7 +10,10 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
+import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
+
 import { createFileService } from "./file_service.js"
+import { createSSEService } from "./sse_service.js"
 
 export const startOmegaServer = async ({
   signal = new AbortController().signal,
@@ -30,27 +33,40 @@ export const startOmegaServer = async ({
   projectDirectoryUrl,
   scenario,
   plugins,
-
   sourcemapInjection = {
     dev: "inline",
     test: "inline",
     preview: "comment",
     build: false,
   }[scenario],
+  autoreload = false,
+  autoreloadPatterns = {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
+    "./dist/": false,
+    "./**/node_modules/": false,
+  },
 }) => {
   const logger = createLogger({ logLevel })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-  const ressourceGraph = {}
+  const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
   const coreServices = {
     "service:file": createFileService({
       signal,
       logger,
       projectDirectoryUrl,
-      ressourceGraph,
       scenario,
-      sourcemapInjection,
       plugins,
+      sourcemapInjection,
+      ressourceGraph,
+    }),
+    "jsenv:sse": createSSEService({
+      projectDirectoryUrl,
+      serverStopCallbackList,
+      autoreload,
+      autoreloadPatterns,
+      ressourceGraph,
     }),
   }
   const server = await startServer({
