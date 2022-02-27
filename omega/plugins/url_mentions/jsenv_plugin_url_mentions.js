@@ -75,9 +75,10 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
             ? ressourceGraph.getHmrTimestamp(urlMention.url)
             : null
           const mentionedUrl = urlFacade || urlMention.url
-          const specifier = isValidUrl(mentionedUrl)
-            ? `/${urlToRelativeUrl(mentionedUrl, projectDirectoryUrl)}`
-            : mentionedUrl
+          const specifier = asClientSpecifier({
+            projectDirectoryUrl,
+            url: mentionedUrl,
+          })
           const params = {}
           if (hmrTimestamp) {
             params.hmr = ""
@@ -95,6 +96,13 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
       return transformReturnValue
     },
   }
+}
+
+const asClientSpecifier = ({ projectDirectoryUrl, url }) => {
+  if (isValidUrl(url)) {
+    return `/${urlToRelativeUrl(url, projectDirectoryUrl)}`
+  }
+  return url
 }
 
 const injectQueryParamsToSpecifier = (specifier, params) => {

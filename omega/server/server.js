@@ -52,6 +52,13 @@ export const startOmegaServer = async ({
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
   const coreServices = {
+    "jsenv:sse": createSSEService({
+      projectDirectoryUrl,
+      serverStopCallbackList,
+      autoreload,
+      autoreloadPatterns,
+      ressourceGraph,
+    }),
     "service:file": createFileService({
       signal,
       logger,
@@ -59,13 +66,6 @@ export const startOmegaServer = async ({
       scenario,
       plugins,
       sourcemapInjection,
-      ressourceGraph,
-    }),
-    "jsenv:sse": createSSEService({
-      projectDirectoryUrl,
-      serverStopCallbackList,
-      autoreload,
-      autoreloadPatterns,
       ressourceGraph,
     }),
   }

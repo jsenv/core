@@ -4,6 +4,7 @@ import { realpathSync, statSync, readFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { urlIsInsideOf, urlToExtension } from "@jsenv/filesystem"
 
+import { filesystemRootUrl } from "#omega/internal/url_utils.js"
 import {
   applyNodeEsmResolution,
   lookupPackageScope,
@@ -53,7 +54,9 @@ export const jsenvPluginFileSystem = ({
   const specifierResolvers = {
     "http_request": urlResolver,
     "link_href": urlResolver,
-    "script_src": urlResolver,
+    // allow some magic on script src
+    "script_src":
+      specifierResolution === "node_esm" ? nodeEsmResolver : urlResolver,
     "a_href": urlResolver,
     "iframe_src": urlResolver,
     "img_src": urlResolver,
@@ -85,6 +88,14 @@ export const jsenvPluginFileSystem = ({
       specifierType,
       specifier,
     }) => {
+      if (specifier.startsWith("/@fs/")) {
+        const url = new URL(specifier.slice("/@fs".length), projectDirectoryUrl)
+          .href
+        return {
+          url,
+          urlFacade: `${projectDirectoryUrl}${specifier.slice(1)}`,
+        }
+      }
       const specifierResolver = specifierResolvers[specifierType]
       if (!specifierResolver) {
         return null
@@ -128,23 +139,14 @@ export const jsenvPluginFileSystem = ({
           urlVersion,
         }
       }
-      // if it's a bare specifier (not something like ../ or starting with file)
-      // or /, then we'll use this bare specifier to refer to the ressource that is outside
-      // the root directory
-      if (
-        !specifier.startsWith("../") &&
-        !specifier.startsWith("file:") &&
-        !specifier.startsWith("/")
-      ) {
-        return {
-          url: realUrl,
-          urlFacade: specifier,
-          urlVersion,
-        }
+
+      return {
+        url: realUrl,
+        urlFacade: `${projectDirectoryUrl}@fs/${realUrl.slice(
+          filesystemRootUrl.length,
+        )}`,
+        urlVersion,
       }
-      throw new Error(
-        "invalid ressource specifier: it is outside project directory",
-      )
     },
 
     load: async ({ url, contentType }) => {

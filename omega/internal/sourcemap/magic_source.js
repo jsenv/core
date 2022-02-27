@@ -20,6 +20,7 @@ export const createMagicSource = ({ url, content, sourcemap }) => {
   } else {
     firstSource = new OriginalSource(content, filename)
   }
+
   const mutations = []
   return {
     prepend: (string) => {

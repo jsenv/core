@@ -1,7 +1,7 @@
 import { urlToExtension } from "@jsenv/filesystem"
 
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
-import { createMagicSource } from "#omega/internal/sourcemap/magic_source.js"
+import { createMagicString } from "#omega/internal/sourcemap/magic_string.js"
 
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
@@ -37,15 +37,17 @@ export const parseJsModuleUrlMentions = async ({ url, urlFacade, content }) => {
       }
     },
     transformUrlMentions: ({ transformUrlMention }) => {
-      const magicSource = createMagicSource({ url, content })
+      const magicString = createMagicString({ content })
       urlMentions.forEach((urlMention) => {
-        magicSource.replace({
-          start: urlMention.start,
-          end: urlMention.end,
-          replacement: JSON.stringify(transformUrlMention(urlMention)),
+        const replacement = JSON.stringify(transformUrlMention(urlMention))
+        const { start, end } = urlMention
+        magicString.replace({
+          start,
+          end,
+          replacement,
         })
       })
-      return magicSource.toContentAndSourcemap()
+      return magicString.toContentAndSourcemap()
     },
   }
 }

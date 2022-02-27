@@ -1,11 +1,15 @@
 import { fetchFileSystem, urlToContentType } from "@jsenv/server"
 import { urlIsInsideOf, writeFile, resolveUrl } from "@jsenv/filesystem"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import { moveUrl } from "#omega/internal/url_utils.js"
 import { findAsync } from "#omega/internal/find_async.js"
-import { loadSourcemap } from "#omega/internal/sourcemap/sourcemap_loader.js"
+import {
+  getCssSourceMappingUrl,
+  getJavaScriptSourceMappingUrl,
+  generateSourcemapUrl,
+} from "#omega/internal/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "#omega/internal/sourcemap/sourcemap_composition.js"
-import { generateSourcemapUrl } from "#omega/internal/sourcemap/sourcemap_utils.js"
 import { injectSourcemap } from "#omega/internal/sourcemap/sourcemap_injection.js"
 
 import { parseUserAgentHeader } from "./user_agent.js"
@@ -22,7 +26,7 @@ export const createFileService = ({
 }) => {
   const urlInfoMap = new Map()
   // const urlRedirections = {}
-  const contextBase = {
+  const baseContext = {
     signal,
     logger,
     projectDirectoryUrl,
@@ -51,8 +55,7 @@ export const createFileService = ({
     const runtimeSupport = {
       [runtimeName]: runtimeVersion,
     }
-    const context = {
-      ...contextBase,
+    const requestContext = {
       runtimeName,
       runtimeVersion,
       runtimeSupport,
@@ -60,49 +63,55 @@ export const createFileService = ({
     plugins = plugins.filter((plugin) => {
       return plugin.appliesDuring && plugin.appliesDuring[scenario]
     })
-    context.resolve = async ({ parentUrl, specifierType, specifier }) => {
-      const resolveReturnValue = await findAsync({
-        array: plugins,
-        start: (plugin) => {
-          if (plugin.resolve) {
-            return plugin.resolve({
-              ...context,
-              parentUrl,
-              specifierType,
-              specifier,
-            })
-          }
-          return null
-        },
-        predicate: (returnValue) => Boolean(returnValue),
-      })
-      if (resolveReturnValue) {
-        if (typeof resolveReturnValue === "object") {
-          const { url, ...urlInfo } = resolveReturnValue
-          urlInfoMap.set(url, urlInfo)
-          return url
-        }
-        urlInfoMap.set(resolveReturnValue, {})
-        return resolveReturnValue
+    const cookFile = async ({ parentUrl, specifierType, specifier }) => {
+      const context = {
+        ...baseContext,
+        ...requestContext,
+        parentUrl,
+        specifierType,
+        specifier,
       }
-      return null
-    }
-
-    try {
-      context.parentUrl = projectDirectoryUrl
-      context.specifier = request.ressource.slice(1)
+      context.resolve = async ({ parentUrl, specifierType, specifier }) => {
+        const resolveReturnValue = await findAsync({
+          array: plugins,
+          start: (plugin) => {
+            if (plugin.resolve) {
+              return plugin.resolve({
+                ...context,
+                parentUrl,
+                specifierType,
+                specifier,
+              })
+            }
+            return null
+          },
+          predicate: (returnValue) => Boolean(returnValue),
+        })
+        if (resolveReturnValue) {
+          if (typeof resolveReturnValue === "object") {
+            const { url, ...urlInfo } = resolveReturnValue
+            urlInfoMap.set(url, urlInfo)
+            return url
+          }
+          urlInfoMap.set(resolveReturnValue, {})
+          return resolveReturnValue
+        }
+        return null
+      }
       context.url = await context.resolve({
-        parentUrl: projectDirectoryUrl,
-        specifierType: "http_request",
-        specifier: context.specifier,
+        parentUrl,
+        specifierType,
+        specifier,
       })
       if (!context.url) {
-        return {
-          status: 404,
-        }
+        context.error = createFileNotFoundError(
+          `"${specifier}" specifier found in "${parentUrl}" not resolved`,
+        )
+        return context
       }
       Object.assign(context, urlInfoMap.get(context.url))
-      context.contentType = urlToContentType(context.urlFacade || context.url)
+      context.urlFacade = context.urlFacade || context.url
+      context.contentType = urlToContentType(context.urlFacade)
       const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
@@ -114,18 +123,34 @@ export const createFileService = ({
         predicate: (returnValue) => Boolean(returnValue),
       })
       if (!loadReturnValue) {
-        return {
-          status: 404,
+        context.error = createFileNotFoundError(
+          `"${parentUrl}" cannot be loaded`,
+        )
+        return context
+      }
+      context.content = loadReturnValue.content // can be a buffer (used for binary files) or a string
+      if (context.contentType === "application/javascript") {
+        const sourcemapSpecifier = getJavaScriptSourceMappingUrl(
+          context.content,
+        )
+        if (sourcemapSpecifier) {
+          context.sourcemap = await loadSourcemap({
+            parentUrl: context.url,
+            specifierType: "js_sourcemap_comment",
+            specifier: sourcemapSpecifier,
+          })
+        }
+      } else if (context.contentType === "text/css") {
+        const sourcemapSpecifier = getCssSourceMappingUrl(context.content)
+        if (sourcemapSpecifier) {
+          context.sourcemap = await loadSourcemap({
+            parentUrl: context.url,
+            specifierType: "css_sourcemap_comment",
+            specifier: sourcemapSpecifier,
+          })
         }
       }
-      // if (loadReturnValue.url) {
-      //   // url can be redirected during load
-      //   // (magic extensions for example)
-      //   urlRedirections[context.url] = loadReturnValue.url
-      //   context.url = loadReturnValue.url
-      // }
-      context.content = loadReturnValue.content // can be a buffer (used for binary files) or a string
-      context.sourcemap = await loadSourcemap(context)
+
       let finalize
       const mutateContentAndSourcemap = (transformReturnValue) => {
         if (!transformReturnValue) {
@@ -154,7 +179,7 @@ export const createFileService = ({
 
       const { sourcemap } = context
       if (sourcemap && sourcemapInjection === "comment") {
-        const sourcemapUrl = generateSourcemapUrl(context.url)
+        const sourcemapUrl = generateSourcemapUrl(context.urlFacade)
         const sourcemapOutUrl = determineFileUrlForOutDirectory({
           projectDirectoryUrl,
           scenario,
@@ -164,42 +189,88 @@ export const createFileService = ({
         })
         context.sourcemapUrl = sourcemapOutUrl
         context.content = injectSourcemap(context)
-        await writeIntoRuntimeDirectory({
-          ...context,
-          url: sourcemapUrl,
-          content: JSON.stringify(sourcemap, null, "  "),
-        })
       } else if (sourcemap && sourcemapInjection === "inline") {
-        context.sourcemapUrl = generateSourcemapUrl(context.url)
+        context.sourcemapUrl = generateSourcemapUrl(context.urlFacade)
         context.content = injectSourcemap(context)
-        writeIntoRuntimeDirectory({
-          ...context,
-          url: context.sourcemapUrl,
-          content: JSON.stringify(sourcemap, null, "  "),
-        })
       }
-      writeIntoRuntimeDirectory(context)
-
-      return {
-        status: 200,
-        headers: {
-          "content-type": context.contentType,
-          "content-length": Buffer.byteLength(context.content),
-        },
-        body: context.content,
+      return context
+    }
+    const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {
+      const { error, url, content } = await cookFile({
+        parentUrl,
+        specifierType,
+        specifier,
+      })
+      if (error && error.code === "FILE_NOT_FOUND") {
+        logger.warn(
+          createDetailedMessage(`sourcemap not found`, {
+            "sourcemap url": url,
+            "referenced by": parentUrl,
+          }),
+        )
+        return null
       }
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        return {
-          status: 404,
+      const sourcemapString = content
+      try {
+        return JSON.parse(sourcemapString)
+      } catch (e) {
+        if (e.name === "SyntaxError") {
+          logger.error(
+            createDetailedMessage(`syntax error while parsing sourcemap`, {
+              "syntax error stack": e.stack,
+              "sourcemap url": url,
+              "referenced by": parentUrl,
+            }),
+          )
+          return null
         }
+        throw e
       }
-      if (e.asResponse) {
-        return e.asResponse()
+    }
+    const { error, urlFacade, contentType, content, sourcemapUrl, sourcemap } =
+      await cookFile({
+        parentUrl: projectDirectoryUrl,
+        specifierType: "http_request",
+        specifier: request.ressource,
+      })
+    if (error && error.code === "FILE_NOT_FOUND") {
+      return {
+        status: 404,
       }
-      throw e
+    }
+    if (sourcemapUrl) {
+      writeIntoRuntimeDirectory({
+        projectDirectoryUrl,
+        scenario,
+        runtimeName,
+        runtimeVersion,
+        url: sourcemapUrl,
+        content: JSON.stringify(sourcemap, null, "  "),
+      })
+    }
+    writeIntoRuntimeDirectory({
+      projectDirectoryUrl,
+      scenario,
+      runtimeName,
+      runtimeVersion,
+      url: urlFacade,
+      content,
+    })
+    return {
+      status: 200,
+      headers: {
+        "content-type": contentType,
+        "content-length": Buffer.byteLength(content),
+      },
+      body: content,
     }
   }
+}
+
+const createFileNotFoundError = (message) => {
+  const error = new Error(message)
+  error.code = "FILE_NOT_FOUND"
+  return error
 }
 
 const determineFileUrlForOutDirectory = ({

@@ -8,12 +8,12 @@ import { jsenvPluginEventSourceClient } from "#omega/plugins/event_source_client
 const server = await startOmegaServer({
   projectDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [
+    jsenvPluginEventSourceClient(),
     jsenvPluginFileSystem(),
     jsenvPluginUrlMentions({
       projectDirectoryUrl: new URL("./client/", import.meta.url),
     }),
     jsenvPluginBabel(),
-    jsenvPluginEventSourceClient(),
   ],
   keepProcessAlive: true,
   port: 3589,
