@@ -54,12 +54,13 @@ export const parseHtmlUrlMentions = ({ url, urlFacade, content }) => {
 
 const collectHtmlUrlMentions = ({ url, htmlAst }) => {
   const htmlUrlMentions = []
-  const addDependency = ({ node, attribute, specifier, hotAccepted }) => {
+  const addDependency = ({ type, node, attribute, specifier, hotAccepted }) => {
     // ignore local url specifier (<use href="#logo"> or <a href="#">)
     if (specifier[0] === "#") {
       return
     }
     htmlUrlMentions.push({
+      type,
       htmlNode: node,
       attribute,
       specifier,
@@ -80,6 +81,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         }
       }
       visitAttributeAsUrlSpecifier({
+        type: "link_href",
         node,
         attributeName: "href",
         hotAccepted,
@@ -92,6 +94,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     // }
     if (node.nodeName === "script") {
       visitAttributeAsUrlSpecifier({
+        type: "script_src",
         node,
         attributeName: "src",
         hotAccepted:
@@ -104,6 +107,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     }
     if (node.nodeName === "a") {
       visitAttributeAsUrlSpecifier({
+        type: "a_href",
         node,
         attributeName: "href",
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
@@ -118,6 +122,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       // if the iframe hot-reload we don't know but we could assume there is nothing to do
       // if there is [hot-accept] on the iframe
       visitAttributeAsUrlSpecifier({
+        type: "iframe_src",
         node,
         attributeName: "src",
         hotAccepted: hotAccepted === undefined ? false : hotAccepted,
@@ -125,11 +130,13 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     }
     if (node.nodeName === "img") {
       visitAttributeAsUrlSpecifier({
+        type: "img_src",
         node,
         attributeName: "src",
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       visitSrcset({
+        type: "img_srcset",
         node,
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
@@ -137,11 +144,13 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     }
     if (node.nodeName === "source") {
       visitAttributeAsUrlSpecifier({
+        type: "source_src",
         node,
         attributeName: "src",
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
       visitSrcset({
+        type: "source_srcset",
         node,
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
       })
@@ -150,6 +159,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     // svg <image> tag
     if (node.nodeName === "image") {
       visitAttributeAsUrlSpecifier({
+        type: "image_href",
         node,
         attributeName: "href",
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
@@ -158,6 +168,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     }
     if (node.nodeName === "use") {
       visitAttributeAsUrlSpecifier({
+        type: "use_href",
         node,
         attributeName: "href",
         hotAccepted: hotAccepted === undefined ? true : hotAccepted,
@@ -166,6 +177,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     }
   }
   const visitAttributeAsUrlSpecifier = ({
+    type,
     node,
     attributeName,
     hotAccepted,
@@ -174,6 +186,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     const value = attribute ? attribute.value : undefined
     if (value) {
       addDependency({
+        type,
         node,
         attribute,
         specifier:
@@ -182,25 +195,28 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       })
     } else if (attributeName === "src") {
       visitAttributeAsUrlSpecifier({
+        type,
         node,
         attributeName: "content-src",
         hotAccepted,
       })
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({
+        type,
         node,
         attributeName: "content-href",
         hotAccepted,
       })
     }
   }
-  const visitSrcset = ({ node, hotAccepted }) => {
+  const visitSrcset = ({ type, node, hotAccepted }) => {
     const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset")
     const srcset = srcsetAttribute ? srcsetAttribute.value : undefined
     if (srcset) {
       const srcCandidates = htmlAttributeSrcSet.parse(srcset)
       srcCandidates.forEach((srcCandidate) => {
         addDependency({
+          type,
           node,
           attribute: srcsetAttribute,
           specifier: srcCandidate.specifier,

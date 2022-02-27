@@ -30,6 +30,34 @@ export const jsenvPluginFileSystem = ({
     }
     return null
   }
+  const urlResolver = ({ specifier, parentUrl }) => {
+    return {
+      url: new URL(specifier, parentUrl).href,
+    }
+  }
+  const nodeEsmResolver = ({ specifier, parentUrl }) => {
+    return applyNodeEsmResolution({
+      conditions: packageConditions,
+      parentUrl,
+      specifier,
+    })
+  }
+  const specifierResolvers = {
+    http_request: urlResolver,
+    link_href: urlResolver,
+    script_src: urlResolver,
+    a_href: urlResolver,
+    iframe_src: urlResolver,
+    img_src: urlResolver,
+    img_srcset: urlResolver,
+    source_src: urlResolver,
+    source_srcset: urlResolver,
+    image_href: urlResolver,
+    use_href: urlResolver,
+    js_import_export:
+      specifierResolution === "node_esm" ? nodeEsmResolver : urlResolver,
+    js_import_meta_url_pattern: urlResolver,
+  }
 
   return {
     name: "jsenv:filesystem",
@@ -47,79 +75,62 @@ export const jsenvPluginFileSystem = ({
       specifierType,
       specifier,
     }) => {
-      const onResolved = async ({ url }) => {
-        // http, https, data, about, etc
-        if (!url.startsWith("file:")) {
-          return null
-        }
-        const resolved = await applyFileSystemResolution({
-          fileUrl: url,
-          parentUrl,
-        })
-        if (!resolved) {
-          return null
-        }
-        const packageUrl = lookupPackageScope(resolved)
-        const urlVersion =
-          packageUrl && packageUrl !== projectDirectoryUrl
-            ? readPackageJson(packageUrl).version
-            : undefined
-        const urlObject = new URL(url)
-        const { search, hash } = urlObject
-        // urlObject.search = ""
-        // urlObject.hash = ""
-        const realPath = realpathSync(urlObject)
-        const realFileUrl = pathToFileURL(realPath)
-        const realUrl = `${realFileUrl}${search}${hash}`
-        if (urlIsInsideOf(realUrl, projectDirectoryUrl)) {
-          return realUrl
-        }
-        if (realUrl !== url && urlIsInsideOf(url, projectDirectoryUrl)) {
-          // when symlink is inside root directory use it as facadeurl
-          return {
-            url: realUrl,
-            urlFacade: url,
-            urlVersion,
-          }
-        }
-        // if it's a bare specifier (not something like ../ or starting with file)
-        // or /, then we'll use this bare specifier to refer to the ressource that is outside
-        // the root directory
-        if (
-          !specifier.startsWith("../") &&
-          !specifier.startsWith("file:") &&
-          !specifier.startsWith("/")
-        ) {
-          return {
-            url: realUrl,
-            urlFacade: specifier,
-            urlVersion,
-          }
-        }
-        throw new Error(
-          "invalid ressource specifier: it is outside project directory",
-        )
+      const specifierResolver = specifierResolvers[specifierType]
+      if (!specifierResolver) {
+        return null
       }
+      const { url } = specifierResolver({ specifier, parentUrl })
+      // http, https, data, about, etc
+      if (!url.startsWith("file:")) {
+        return null
+      }
+      const resolved = await applyFileSystemResolution({
+        fileUrl: url,
+        parentUrl,
+      })
+      if (!resolved) {
+        return null
+      }
+      const packageUrl = lookupPackageScope(resolved)
+      const urlVersion =
+        packageUrl && packageUrl !== projectDirectoryUrl
+          ? readPackageJson(packageUrl).version
+          : undefined
+      const urlObject = new URL(url)
+      const { search, hash } = urlObject
+      // urlObject.search = ""
+      // urlObject.hash = ""
+      const realPath = realpathSync(urlObject)
+      const realFileUrl = pathToFileURL(realPath)
+      const realUrl = `${realFileUrl}${search}${hash}`
+      if (urlIsInsideOf(realUrl, projectDirectoryUrl)) {
+        return realUrl
+      }
+      if (realUrl !== url && urlIsInsideOf(url, projectDirectoryUrl)) {
+        // when symlink is inside root directory use it as facadeurl
+        return {
+          url: realUrl,
+          urlFacade: url,
+          urlVersion,
+        }
+      }
+      // if it's a bare specifier (not something like ../ or starting with file)
+      // or /, then we'll use this bare specifier to refer to the ressource that is outside
+      // the root directory
       if (
-        specifierType === "http_request" ||
-        specifierType === "js_import_meta_url_pattern"
+        !specifier.startsWith("../") &&
+        !specifier.startsWith("file:") &&
+        !specifier.startsWith("/")
       ) {
-        return onResolved({
-          url: new URL(specifier, parentUrl).href,
-        })
+        return {
+          url: realUrl,
+          urlFacade: specifier,
+          urlVersion,
+        }
       }
-      if (
-        specifierType === "js_import_export" &&
-        specifierResolution === "node_esm"
-      ) {
-        const nodeEsmResolution = applyNodeEsmResolution({
-          conditions: packageConditions,
-          parentUrl,
-          specifier,
-        })
-        return onResolved(nodeEsmResolution)
-      }
-      return null
+      throw new Error(
+        "invalid ressource specifier: it is outside project directory",
+      )
     },
 
     load: async ({ url, contentType }) => {
