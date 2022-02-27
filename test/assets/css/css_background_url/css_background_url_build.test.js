@@ -8,7 +8,7 @@ import {
 
 import { buildProject } from "@jsenv/core"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
-import { parseCssUrls } from "@jsenv/core/src/internal/transform_css/parse_css_urls.js"
+import { parseCssUrlMentions } from "@jsenv/core/omega/plugins/url_mentions/css/css_url_mentions.js"
 import { GENERATE_ESMODULE_BUILD_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_BUILD_ESMODULE.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -40,7 +40,7 @@ const imgBuildUrl = resolveUrl(imgBuildRelativeUrl, buildDirectoryUrl)
 
 // ensure background image url is properly updated
 const styleCssString = await readFile(styleBuildUrl)
-const styleUrls = await parseCssUrls({
+const styleUrls = await parseCssUrlMentions({
   url: styleBuildUrl,
   content: styleCssString,
 })

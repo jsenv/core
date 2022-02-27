@@ -46,10 +46,11 @@ export const applyPostCss = async ({
 // but in windows it must be file://C:/dir/file.js
 const filesystemRootUrl = new URL("/", import.meta.url)
 const urlToFileUrl = (url) => {
-  if (url.startsWith("file://")) {
-    return url
+  const urlString = String(url)
+  if (urlString.startsWith("file:")) {
+    return urlString
   }
   const origin = new URL(url).origin
-  const afterOrigin = url.slice(origin.length)
+  const afterOrigin = urlString.slice(origin.length)
   return new URL(afterOrigin, filesystemRootUrl).href
 }
