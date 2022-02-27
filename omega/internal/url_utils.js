@@ -14,3 +14,13 @@ export const asUrlWithoutSearch = (url) => {
   urlObject.search = ""
   return urlObject.href
 }
+
+export const isValidUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url)
+    return true
+  } catch (e) {
+    return false
+  }
+}

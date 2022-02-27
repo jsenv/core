@@ -1,8 +1,13 @@
 import { fetchFileSystem, urlToContentType } from "@jsenv/server"
-import { urlIsInsideOf, writeFile, resolveUrl } from "@jsenv/filesystem"
+import {
+  urlIsInsideOf,
+  writeFile,
+  resolveUrl,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { moveUrl } from "#omega/internal/url_utils.js"
+import { isValidUrl, moveUrl } from "#omega/internal/url_utils.js"
 import { findAsync } from "#omega/internal/find_async.js"
 import {
   getCssSourceMappingUrl,
@@ -98,10 +103,15 @@ export const createFileService = ({
         }
         return null
       }
-      context.getUrlFacade = (url) => {
-        const urlInfo = urlInfoMap.get(url)
-        return urlInfo.urlFacade || url
+      context.asClientUrl = (url) => {
+        const urlInfo = urlInfoMap.get(url) || {}
+        const urlFacade = urlInfo.urlFacade || url
+        if (isValidUrl(urlFacade)) {
+          return `/${urlToRelativeUrl(urlFacade, projectDirectoryUrl)}`
+        }
+        return urlFacade
       }
+
       context.url = await context.resolve({
         parentUrl,
         specifierType,
@@ -113,8 +123,9 @@ export const createFileService = ({
         )
         return context
       }
-      Object.assign(context, urlInfoMap.get(context.url))
-      context.urlFacade = context.getUrlFacade(context.url)
+      const urlInfo = urlInfoMap.get(context.url)
+      Object.assign(context, urlInfo)
+      context.urlFacade = urlInfo.urlFacade || context.url
       context.contentType = urlToContentType(context.urlFacade)
       const loadReturnValue = await findAsync({
         array: plugins,

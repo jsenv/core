@@ -1,5 +1,3 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
-
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -21,7 +19,7 @@ export const jsenvPluginEventSourceClient = () => {
     transform: async ({
       projectDirectoryUrl,
       resolve,
-      getUrlFacade,
+      asClientUrl,
       contentType,
       content,
     }) => {
@@ -40,10 +38,7 @@ export const jsenvPluginEventSourceClient = () => {
         createHtmlNode({
           tagName: "script",
           type: "module",
-          src: `/${urlToRelativeUrl(
-            getUrlFacade(eventSourceFileUrl),
-            projectDirectoryUrl,
-          )}`,
+          src: asClientUrl(eventSourceFileUrl),
         }),
       )
       const htmlModified = stringifyHtmlAst(htmlAst)

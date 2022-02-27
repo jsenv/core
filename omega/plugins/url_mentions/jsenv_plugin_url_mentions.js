@@ -1,5 +1,3 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
-
 import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
 import { findAsync } from "#omega/internal/find_async.js"
 
@@ -22,9 +20,9 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
     },
 
     transform: async ({
-      projectDirectoryUrl,
       urlInfoMap,
       resolve,
+      asClientUrl,
       url,
       urlFacade,
       contentType,
@@ -75,10 +73,7 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
             ? ressourceGraph.getHmrTimestamp(urlMention.url)
             : null
           const mentionedUrl = urlFacade || urlMention.url
-          const specifier = asClientSpecifier({
-            projectDirectoryUrl,
-            url: mentionedUrl,
-          })
+          const specifier = asClientUrl(mentionedUrl)
           const params = {}
           if (hmrTimestamp) {
             params.hmr = ""
@@ -98,13 +93,6 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
   }
 }
 
-const asClientSpecifier = ({ projectDirectoryUrl, url }) => {
-  if (isValidUrl(url)) {
-    return `/${urlToRelativeUrl(url, projectDirectoryUrl)}`
-  }
-  return url
-}
-
 const injectQueryParamsToSpecifier = (specifier, params) => {
   const urlObject = new URL(specifier, "file://")
   Object.keys(params).forEach((key) => {
@@ -116,14 +104,4 @@ const injectQueryParamsToSpecifier = (specifier, params) => {
     return urlWithParams
   }
   return urlWithParams.slice("file://".length)
-}
-
-const isValidUrl = (url) => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url)
-    return true
-  } catch (e) {
-    return false
-  }
 }
