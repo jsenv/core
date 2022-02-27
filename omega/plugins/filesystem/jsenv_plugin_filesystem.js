@@ -30,12 +30,22 @@ export const jsenvPluginFileSystem = ({
     }
     return null
   }
-  const urlResolver = ({ specifier, parentUrl }) => {
+  const urlResolver = ({ projectDirectoryUrl, parentUrl, specifier }) => {
+    if (specifier[0] === "/") {
+      return {
+        url: new URL(specifier.slice(1), projectDirectoryUrl).href,
+      }
+    }
     return {
       url: new URL(specifier, parentUrl).href,
     }
   }
-  const nodeEsmResolver = ({ specifier, parentUrl }) => {
+  const nodeEsmResolver = ({ projectDirectoryUrl, parentUrl, specifier }) => {
+    if (specifier[0] === "/") {
+      return {
+        url: new URL(specifier.slice(1), projectDirectoryUrl).href,
+      }
+    }
     return applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl,
@@ -43,20 +53,22 @@ export const jsenvPluginFileSystem = ({
     })
   }
   const specifierResolvers = {
-    http_request: urlResolver,
-    link_href: urlResolver,
-    script_src: urlResolver,
-    a_href: urlResolver,
-    iframe_src: urlResolver,
-    img_src: urlResolver,
-    img_srcset: urlResolver,
-    source_src: urlResolver,
-    source_srcset: urlResolver,
-    image_href: urlResolver,
-    use_href: urlResolver,
-    js_import_export:
+    "http_request": urlResolver,
+    "link_href": urlResolver,
+    "script_src": urlResolver,
+    "a_href": urlResolver,
+    "iframe_src": urlResolver,
+    "img_src": urlResolver,
+    "img_srcset": urlResolver,
+    "source_src": urlResolver,
+    "source_srcset": urlResolver,
+    "image_href": urlResolver,
+    "use_href": urlResolver,
+    "css_@import": urlResolver,
+    "css_url": urlResolver,
+    "js_import_export":
       specifierResolution === "node_esm" ? nodeEsmResolver : urlResolver,
-    js_import_meta_url_pattern: urlResolver,
+    "js_import_meta_url_pattern": urlResolver,
   }
 
   return {
@@ -79,7 +91,11 @@ export const jsenvPluginFileSystem = ({
       if (!specifierResolver) {
         return null
       }
-      const { url } = specifierResolver({ specifier, parentUrl })
+      const { url } = specifierResolver({
+        projectDirectoryUrl,
+        parentUrl,
+        specifier,
+      })
       // http, https, data, about, etc
       if (!url.startsWith("file:")) {
         return null
