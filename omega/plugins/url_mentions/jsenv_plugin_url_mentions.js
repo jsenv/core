@@ -68,10 +68,9 @@ export const jsenvPluginUrlMentions = () => {
         hotAcceptSelf,
         hotAcceptDependencies,
       })
-      const hmr = new URL(url).searchParams.get("hmr")
       const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
-          const clientUrl = asClientUrl(urlMention.url, { hmr })
+          const clientUrl = asClientUrl(urlMention.url, url)
           return clientUrl
         },
       })

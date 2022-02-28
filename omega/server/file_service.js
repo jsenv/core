@@ -67,6 +67,23 @@ export const createFileService = ({
     plugins = plugins.filter((plugin) => {
       return plugin.appliesDuring && plugin.appliesDuring[scenario]
     })
+    const responseFromPlugin = await findAsync({
+      array: plugins,
+      start: (plugin) => {
+        if (plugin.serve) {
+          return plugin.serve({
+            projectDirectoryUrl,
+            request,
+          })
+        }
+        return null
+      },
+      predicate: (returnValue) => Boolean(returnValue),
+    })
+    if (responseFromPlugin) {
+      return responseFromPlugin
+    }
+
     const cookFile = async ({ parentUrl, specifierType, specifier }) => {
       const context = {
         ...baseContext,
@@ -102,7 +119,8 @@ export const createFileService = ({
         }
         return null
       }
-      context.asClientUrl = (url, { hmr } = {}) => {
+      context.asClientUrl = (url, parentUrl) => {
+        const hmr = new URL(parentUrl).searchParams.get("hmr")
         const urlInfo = urlInfoMap.get(url) || {}
         const { urlFacade, urlVersion } = urlInfo
         const clientUrlRaw = urlFacade || url

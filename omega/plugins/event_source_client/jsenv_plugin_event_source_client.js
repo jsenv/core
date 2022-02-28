@@ -20,6 +20,7 @@ export const jsenvPluginEventSourceClient = () => {
       projectDirectoryUrl,
       resolve,
       asClientUrl,
+      url,
       contentType,
       content,
     }) => {
@@ -38,7 +39,7 @@ export const jsenvPluginEventSourceClient = () => {
         createHtmlNode({
           tagName: "script",
           type: "module",
-          src: asClientUrl(eventSourceFileUrl),
+          src: asClientUrl(eventSourceFileUrl, url),
         }),
       )
       const htmlModified = stringifyHtmlAst(htmlAst)

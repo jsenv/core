@@ -1,11 +1,6 @@
-import { getRessourceResponseError } from "@jsenv/core/src/internal/html_supervisor/ressource_response_error.js"
 import "@jsenv/core/src/internal/runtime_client/s.js"
 
-export const createBrowserSystem = ({
-  urlContext,
-  importResolver,
-  fetchSource,
-}) => {
+export const createBrowserSystem = ({ importResolver, fetchSource }) => {
   const browserSystem = window.System
   const resolve = (specifier, importer = document.location.href) => {
     return importResolver.resolveImport(specifier, importer)
@@ -26,41 +21,21 @@ export const createBrowserSystem = ({
       const cssModule = await instantiateAsCssModule(urlWithoutImportType, {
         browserSystem,
         importerUrl,
-        urlContext,
         fetchSource,
       })
       return cssModule
     }
-    try {
-      const registration = await instantiate.call(this, url, importerUrl)
-      if (!registration) {
-        throw new Error(
-          `no registration found for JS at ${url}
+    const registration = await instantiate.call(this, url, importerUrl)
+    if (!registration) {
+      throw new Error(
+        `no registration found for JS at ${url}
 --- importer url ---
 ${importerUrl}
 --- navigator.vendor ---
 ${window.navigator.vendor}`,
-        )
-      }
-      return registration
-    } catch (e) {
-      let response
-      try {
-        response = await fetchSource(url)
-      } catch (e) {
-        e.code = "NETWORK_FAILURE"
-        throw e
-      }
-      const responseError = await getRessourceResponseError({
-        urlContext,
-        contentTypeExpected: "application/javascript",
-        type: "js_module",
-        url,
-        importerUrl,
-        response,
-      })
-      throw responseError || e
+      )
     }
+    return registration
   }
 
   browserSystem.createContext = (importerUrl) => {

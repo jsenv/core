@@ -150,10 +150,12 @@ export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
   }
 
   if (!htmlAttributeName) {
-    const { startLine, startCol } = sourceCodeLocation
+    const { startLine, endLine, startCol, endCol } = sourceCodeLocation
     return {
       line: startLine,
+      lineEnd: endLine,
       column: startCol,
+      columnEnd: endCol,
     }
   }
 
@@ -397,7 +399,8 @@ export const getIdForInlineHtmlNode = (htmlAst, inlineNode) => {
   if (idAttribute) {
     return idAttribute.value
   }
-  const { line, column } = getHtmlNodeLocation(inlineNode) || {}
+  const { line, lineEnd, column, columnEnd } =
+    getHtmlNodeLocation(inlineNode) || {}
   const lineTaken = findNode(htmlAst, (nodeCandidate) => {
     if (nodeCandidate === inlineNode) return false
     const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
@@ -405,9 +408,9 @@ export const getIdForInlineHtmlNode = (htmlAst, inlineNode) => {
     return htmlNodeLocation.line === line
   })
   if (lineTaken) {
-    return `${line}.${column}`
+    return `#L${line}:${column}-L${line}:${columnEnd}`
   }
-  return line
+  return `#L${line}-L${lineEnd}`
 }
 
 export const visitHtmlAst = (htmlAst, callback) => {

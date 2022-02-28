@@ -1,19 +1,9 @@
-import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
-import { inferContextFrom, createUrlContext } from "../url_context.js"
-
-import { getRessourceResponseError } from "./ressource_response_error.js"
 import { unevalException } from "./uneval_exception.js"
 import { displayErrorInDocument } from "./error_in_document.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
 export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
   const scriptExecutionResults = {}
-
-  const urlContext = createUrlContext(
-    inferContextFrom({
-      url: window.location.href,
-    }),
-  )
 
   let collectCalled = false
   let pendingExecutionCount = 0
@@ -34,12 +24,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       resolveScriptExecutionsPromise()
     }
   }
-  const addExecution = async ({
-    src,
-    currentScript,
-    promise,
-    improveErrorWithFetch = false,
-  }) => {
+  const addExecution = async ({ src, currentScript, promise }) => {
     onExecutionStart(src)
     promise.then(
       (namespace) => {
@@ -59,21 +44,6 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         let errorExposureInConsole = true
         if (e.name === "SyntaxError") {
           errorExposureInConsole = false
-        }
-        if (improveErrorWithFetch) {
-          const errorFromServer = await getErrorFromServer({
-            src,
-            urlContext,
-          })
-          if (errorFromServer) {
-            executionResult.error = errorFromServer
-            if (
-              errorFromServer.cause &&
-              errorFromServer.cause.code === "PARSE_ERROR"
-            ) {
-              errorExposureInConsole = false
-            }
-          }
         }
         if (errorTransformer) {
           try {
@@ -120,46 +90,6 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
     addExecution,
     collectScriptResults,
   }
-}
-
-const getErrorFromServer = async ({ src, urlContext }) => {
-  const urlObject = new URL(src, window.location.href)
-  const urlWithoutInspect = urlObject.href
-  urlObject.searchParams.set("__inspect__", "")
-  const url = urlObject.href
-  let response
-  try {
-    response = await fetchUrl(url)
-  } catch (e) {
-    e.code = "NETWORK_FAILURE"
-    return e
-  }
-  if (response.status !== 200) {
-    return null
-  }
-  if (response.headers["content-type"] !== "application/json") {
-    return null
-  }
-  const realResponseData = await response.json()
-  const responseError = await getRessourceResponseError({
-    urlContext,
-    contentTypeExpected: "application/javascript",
-    type: "js_module",
-    url: urlWithoutInspect,
-    // at some point the importer is the HTML of course but here "importer"
-    // means "last ressource to import that file before encountering an error"
-    // so it might be an intermediate file.
-    // I guess this information is available server side and could be returned
-    // inside the __inspect__ response
-    // importerUrl: window.location.href,
-    response: {
-      status: realResponseData.status,
-      statustext: realResponseData.statusText,
-      headers: realResponseData.headers,
-      json: () => JSON.parse(realResponseData.body),
-    },
-  })
-  return responseError
 }
 
 const onExecutionError = (

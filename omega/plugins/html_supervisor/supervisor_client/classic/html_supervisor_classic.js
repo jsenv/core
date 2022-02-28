@@ -1,38 +1,22 @@
 import { memoize } from "@jsenv/core/src/internal/memoize.js"
-import { fetchUrl } from "@jsenv/core/src/internal/browser_utils/fetch_browser.js"
-import { fetchAndEval } from "@jsenv/core/src/internal/browser_utils/fetch_and_eval.js"
 
-import { inferContextFrom, createUrlContext } from "../../url_context.js"
 import { initHtmlSupervisor } from "../html_supervisor.js"
 import { installBrowserErrorStackRemapping } from "./browser_error_stack_remap.js"
 import { createBrowserClient } from "./browser_client_factory.js"
 
-const getCompileProfilePromise = memoize(async () => {
-  const compileServerOrigin = document.location.origin
-  const compileServerResponse = await fetchUrl(
-    `${compileServerOrigin}/__jsenv_compile_profile__`,
-  )
-  const compileServerMeta = await compileServerResponse.json()
-  return compileServerMeta
-})
+const sourcemappingFileUrl = new URL(
+  "source-map/lib/mappings.wasm",
+  import.meta.url,
+)
 
 const getErrorTransformer = memoize(async () => {
   if (!Error.captureStackTrace) {
     return null
   }
-  const {
-    errorStackRemapping,
-    sourcemapMainFileRelativeUrl,
-    sourcemapMappingFileRelativeUrl,
-  } = await getCompileProfilePromise()
-  if (!errorStackRemapping) {
-    return null
-  }
-  const compileServerOrigin = document.location.origin
-  await fetchAndEval(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+  await import("source-map/dist/source-map.js")
   const { SourceMapConsumer } = window.sourceMap
   SourceMapConsumer.initialize({
-    "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,
+    "lib/mappings.wasm": sourcemappingFileUrl,
   })
   const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
     SourceMapConsumer,
@@ -47,19 +31,8 @@ const getErrorTransformer = memoize(async () => {
   }
 })
 
-const getBrowserClient = memoize(async () => {
-  const { jsenvDirectoryRelativeUrl, importDefaultExtension } =
-    await getCompileProfilePromise()
-  const urlContext = createUrlContext(
-    inferContextFrom({
-      url: window.location.origin,
-      jsenvDirectoryRelativeUrl,
-    }),
-  )
-  return createBrowserClient({
-    urlContext,
-    importDefaultExtension,
-  })
+const getBrowserClient = memoize(() => {
+  return createBrowserClient()
 })
 
 const htmlSupervisor = initHtmlSupervisor({
