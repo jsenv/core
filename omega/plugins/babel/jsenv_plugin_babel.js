@@ -1,4 +1,3 @@
-import { require } from "@jsenv/core/src/internal/require.js"
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
@@ -26,7 +25,6 @@ export const jsenvPluginBabel = () => {
       url,
       contentType,
       content,
-      ast,
     }) => {
       if (contentType !== "application/javascript") {
         return null
@@ -66,13 +64,17 @@ export const jsenvPluginBabel = () => {
             allowConflictingReplacements: true,
           },
         ],
-        "transform-import-meta": [
-          transformImportMeta,
-          {
-            importMetaFormat: "esmodule",
-            importMetaHot: scenario === "dev",
-          },
-        ],
+        ...(scenario === "dev"
+          ? {
+              "transform-import-meta": [
+                transformImportMeta,
+                {
+                  importMetaFormat: "esmodule",
+                  importMetaHot: true,
+                },
+              ],
+            }
+          : null),
       }
       const babelPluginStructure = {
         ...baseBabelPluginStructure,
@@ -105,67 +107,23 @@ export const jsenvPluginBabel = () => {
         babelPluginStructure,
         availableFeatureNames,
       })
+      const babelPlugins = Object.keys(babelPluginStructureForRuntime).map(
+        (babelPluginName) => babelPluginStructureForRuntime[babelPluginName],
+      )
+      if (babelPlugins.length === 0) {
+        return null
+      }
       const { code, map } = await babelTransform({
         options: {
-          plugins: Object.keys(babelPluginStructureForRuntime).map(
-            (babelPluginName) =>
-              babelPluginStructureForRuntime[babelPluginName],
-          ),
+          plugins: babelPlugins,
         },
         url,
-        ast,
         content,
       })
       return {
         content: code,
         sourcemap: map,
-        finalize: async ({ content }) => {
-          const needsSystemJs =
-            (scenario === "dev" || scenario === "test") &&
-            featuresRelatedToSystemJs.some((featureName) => {
-              const isRequired = requiredFeatureNames.includes(featureName)
-              const isAvailable = featuresCompatFromRuntimeSupport({
-                featureNames: [featureName],
-                runtimeSupport,
-              }).availableFeatureNames.includes(featureName)
-              return isRequired && !isAvailable
-            })
-          if (!needsSystemJs) {
-            return null
-          }
-          const { code, map } = await babelTransform({
-            options: {
-              plugins: [
-                [require("@babel/plugin-transform-modules-systemjs")],
-                [
-                  transformImportMeta,
-                  {
-                    importMetaFormat: "systemjs",
-                  },
-                ],
-              ],
-            },
-            url,
-            ast,
-            content,
-          })
-          return {
-            content: code,
-            soourcemap: map,
-          }
-        },
       }
     },
   }
 }
-
-const featuresRelatedToSystemJs = [
-  "script_type_module",
-  "worker_type_module",
-  "import_dynamic",
-  "import_type_json",
-  "import_type_css",
-  "top_level_await",
-  // "importmap",
-  // "worker_importmap",
-]

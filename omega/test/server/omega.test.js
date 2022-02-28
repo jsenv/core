@@ -10,10 +10,8 @@ const server = await startOmegaServer({
   plugins: [
     jsenvPluginEventSourceClient(),
     jsenvPluginFileSystem(),
-    jsenvPluginUrlMentions({
-      projectDirectoryUrl: new URL("./client/", import.meta.url),
-    }),
     jsenvPluginBabel(),
+    jsenvPluginUrlMentions(),
   ],
   keepProcessAlive: true,
   port: 3589,
