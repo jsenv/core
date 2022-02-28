@@ -24,3 +24,12 @@ export const isValidUrl = (url) => {
     return false
   }
 }
+
+export const injectQueryParams = (url, params) => {
+  const urlObject = new URL(url)
+  Object.keys(params).forEach((key) => {
+    urlObject.searchParams.set(key, params[key])
+  })
+  const urlWithParams = urlObject.href
+  return urlWithParams
+}

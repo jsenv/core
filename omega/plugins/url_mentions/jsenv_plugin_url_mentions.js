@@ -1,14 +1,16 @@
-import { createRessourceGraph } from "@jsenv/core/src/internal/autoreload/ressource_graph.js"
 import { findAsync } from "#omega/internal/find_async.js"
 
 import { parseHtmlUrlMentions } from "./html/html_url_mentions.js"
+import { parseCssUrlMentions } from "./css/css_url_mentions.js"
 import { parseJsModuleUrlMentions } from "./js_module/js_module_url_mentions.js"
 
-const urlMentionParsers = [parseHtmlUrlMentions, parseJsModuleUrlMentions]
+const urlMentionParsers = [
+  parseHtmlUrlMentions,
+  parseCssUrlMentions,
+  parseJsModuleUrlMentions,
+]
 
-export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
-  const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
-
+export const jsenvPluginUrlMentions = () => {
   return {
     name: "jsenv:url_mentions",
 
@@ -20,7 +22,7 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
     },
 
     transform: async ({
-      urlInfoMap,
+      ressourceGraph,
       resolve,
       asClientUrl,
       url,
@@ -34,6 +36,7 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
           return urlMentionParser({
             url,
             urlFacade,
+            contentType,
             content,
           })
         },
@@ -68,40 +71,11 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
       const hmr = new URL(url).searchParams.get("hmr")
       const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
-          const { urlFacade, urlVersion } = urlInfoMap.get(urlMention.url)
-          const hmrTimestamp = hmr
-            ? ressourceGraph.getHmrTimestamp(urlMention.url)
-            : null
-          const mentionedUrl = urlFacade || urlMention.url
-          const specifier = asClientUrl(mentionedUrl)
-          const params = {}
-          if (hmrTimestamp) {
-            params.hmr = ""
-            params.v = hmrTimestamp
-          } else if (urlVersion) {
-            params.v = urlVersion
-          }
-          const specifierWithParams = injectQueryParamsToSpecifier(
-            specifier,
-            params,
-          )
-          return specifierWithParams
+          const clientUrl = asClientUrl(urlMention.url, { hmr })
+          return clientUrl
         },
       })
       return transformReturnValue
     },
   }
-}
-
-const injectQueryParamsToSpecifier = (specifier, params) => {
-  const urlObject = new URL(specifier, "file://")
-  Object.keys(params).forEach((key) => {
-    urlObject.searchParams.set(key, params[key])
-  })
-  const urlWithParams = urlObject.href
-  // specifier was absolute, keep it absolute
-  if (specifier.startsWith("file:") || !urlWithParams.startsWith("file:")) {
-    return urlWithParams
-  }
-  return urlWithParams.slice("file://".length)
 }

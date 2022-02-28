@@ -7,7 +7,7 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { isValidUrl, moveUrl } from "#omega/internal/url_utils.js"
+import { moveUrl, injectQueryParams } from "#omega/internal/url_utils.js"
 import { findAsync } from "#omega/internal/find_async.js"
 import {
   getCssSourceMappingUrl,
@@ -23,11 +23,10 @@ export const createFileService = ({
   signal,
   logger,
   projectDirectoryUrl,
-  ressourceGraph,
   scenario,
-  sourcemapInjection,
-  // https://github.com/vitejs/vite/blob/7b95f4d8be69a92062372770cf96c3eda140c246/packages/vite/src/node/server/pluginContainer.ts
   plugins,
+  sourcemapInjection,
+  ressourceGraph,
 }) => {
   const urlInfoMap = new Map()
   // const urlRedirections = {}
@@ -35,9 +34,9 @@ export const createFileService = ({
     signal,
     logger,
     projectDirectoryUrl,
-    ressourceGraph,
     scenario,
     sourcemapInjection,
+    ressourceGraph,
     urlInfoMap,
     // urlRedirections,
   }
@@ -103,13 +102,23 @@ export const createFileService = ({
         }
         return null
       }
-      context.asClientUrl = (url) => {
+      context.asClientUrl = (url, { hmr } = {}) => {
         const urlInfo = urlInfoMap.get(url) || {}
-        const urlFacade = urlInfo.urlFacade || url
-        if (isValidUrl(urlFacade)) {
-          return `/${urlToRelativeUrl(urlFacade, projectDirectoryUrl)}`
+        const { urlFacade, urlVersion } = urlInfo
+        const clientUrlRaw = urlFacade || url
+        const hmrTimestamp = hmr ? ressourceGraph.getHmrTimestamp(url) : null
+        const params = {}
+        if (hmrTimestamp) {
+          params.hmr = ""
+          params.v = hmrTimestamp
+        } else if (urlVersion) {
+          params.v = urlVersion
         }
-        return urlFacade
+        const clientUrl = injectQueryParams(clientUrlRaw, params)
+        if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
+          return `/${urlToRelativeUrl(clientUrl, projectDirectoryUrl)}`
+        }
+        return clientUrl
       }
       context.url = await context.resolve({
         parentUrl,

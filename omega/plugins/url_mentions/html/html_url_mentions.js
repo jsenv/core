@@ -1,5 +1,3 @@
-import { urlToExtension } from "@jsenv/filesystem"
-
 import {
   parseHtmlString,
   parseLinkNode,
@@ -8,9 +6,8 @@ import {
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
 
-export const parseHtmlUrlMentions = ({ url, urlFacade, content }) => {
-  urlFacade = urlFacade || url
-  if (urlToExtension(urlFacade) !== ".html") {
+export const parseHtmlUrlMentions = ({ url, contentType, content }) => {
+  if (contentType !== "text/html") {
     return null
   }
   const htmlAst = parseHtmlString(content)

@@ -4,8 +4,12 @@ import { replaceCssUrls } from "@jsenv/core/src/internal/transform_css/replace_c
 
 export const parseCssUrlMentions = async ({
   url = "file:///file.css",
+  contentType,
   content,
 }) => {
+  if (contentType !== "text/css") {
+    return null
+  }
   const cssUrlMentions = []
   await applyPostCss({
     sourcemapMethod: false,

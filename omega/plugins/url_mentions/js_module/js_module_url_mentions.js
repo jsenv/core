@@ -1,14 +1,15 @@
-import { urlToExtension } from "@jsenv/filesystem"
-
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 import { createMagicString } from "#omega/internal/sourcemap/magic_string.js"
 
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-export const parseJsModuleUrlMentions = async ({ url, urlFacade, content }) => {
-  urlFacade = urlFacade || url
-  if (urlToExtension(urlFacade) !== ".js") {
+export const parseJsModuleUrlMentions = async ({
+  urlFacade,
+  contentType,
+  content,
+}) => {
+  if (contentType !== "application/javascript") {
     return null
   }
   if (new URL(urlFacade).searchParams.has("script")) {
@@ -21,7 +22,7 @@ export const parseJsModuleUrlMentions = async ({ url, urlFacade, content }) => {
         [babelPluginMetadataImportMetaHot],
       ],
     },
-    url,
+    url: urlFacade,
     content,
   })
 

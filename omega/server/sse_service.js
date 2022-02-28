@@ -25,6 +25,17 @@ export const createSSEService = ({
     }
   }
   return (request) => {
+    if (request.ressource === "/__ressource_graph__") {
+      const graphJson = JSON.stringify(ressourceGraph)
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(graphJson),
+        },
+        body: graphJson,
+      }
+    }
     const { accept } = request.headers
     if (!accept || !accept.includes("text/event-stream")) {
       return null
