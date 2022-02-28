@@ -111,16 +111,16 @@ export const createFileService = ({
         }
         return urlFacade
       }
-
       context.url = await context.resolve({
         parentUrl,
         specifierType,
         specifier,
       })
       if (!context.url) {
-        context.error = createFileNotFoundError(
-          `"${specifier}" specifier found in "${parentUrl}" not resolved`,
-        )
+        context.response = {
+          status: 404,
+          statusText: `"${specifier}" specifier found in "${parentUrl}" not resolved`,
+        }
         return context
       }
       const urlInfo = urlInfoMap.get(context.url)
@@ -138,12 +138,18 @@ export const createFileService = ({
         predicate: (returnValue) => Boolean(returnValue),
       })
       if (!loadReturnValue) {
-        context.error = createFileNotFoundError(
-          `"${parentUrl}" cannot be loaded`,
-        )
+        context.response = {
+          status: 404,
+          statusText: `"${parentUrl}" cannot be loaded`,
+        }
         return context
       }
-      context.content = loadReturnValue.content // can be a buffer (used for binary files) or a string
+      const { response, content } = loadReturnValue
+      if (response) {
+        context.response = response
+        return context
+      }
+      context.content = content // can be a buffer (used for binary files) or a string
       if (context.contentType === "application/javascript") {
         const sourcemapSpecifier = getJavaScriptSourceMappingUrl(
           context.content,
@@ -211,15 +217,15 @@ export const createFileService = ({
       return context
     }
     const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {
-      const { error, url, content } = await cookFile({
+      const { response, url, content } = await cookFile({
         parentUrl,
         specifierType,
         specifier,
       })
-      if (error) {
+      if (response.status === 404) {
         logger.warn(
           createDetailedMessage(`Error while handling sourcemap`, {
-            "error message": error.message,
+            "error message": response.statusText,
             "sourcemap url": url,
             "referenced by": parentUrl,
           }),
@@ -243,16 +249,20 @@ export const createFileService = ({
         throw e
       }
     }
-    const { error, urlFacade, contentType, content, sourcemapUrl, sourcemap } =
-      await cookFile({
-        parentUrl: projectDirectoryUrl,
-        specifierType: "http_request",
-        specifier: request.ressource,
-      })
-    if (error && error.code === "FILE_NOT_FOUND") {
-      return {
-        status: 404,
-      }
+    const {
+      response,
+      urlFacade,
+      contentType,
+      content,
+      sourcemapUrl,
+      sourcemap,
+    } = await cookFile({
+      parentUrl: projectDirectoryUrl,
+      specifierType: "http_request",
+      specifier: request.ressource,
+    })
+    if (response) {
+      return response
     }
     if (sourcemapUrl) {
       writeIntoRuntimeDirectory({
@@ -281,12 +291,6 @@ export const createFileService = ({
       body: content,
     }
   }
-}
-
-const createFileNotFoundError = (message) => {
-  const error = new Error(message)
-  error.code = "FILE_NOT_FOUND"
-  return error
 }
 
 const determineFileUrlForOutDirectory = ({

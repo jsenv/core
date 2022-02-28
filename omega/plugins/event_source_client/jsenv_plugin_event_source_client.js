@@ -13,7 +13,7 @@ export const jsenvPluginEventSourceClient = () => {
       dev: true,
       test: false,
       preview: false,
-      build: false,
+      prod: false,
     },
 
     transform: async ({

@@ -37,9 +37,14 @@ export const startOmegaServer = async ({
     dev: "inline",
     test: "inline",
     preview: "comment",
-    build: false,
+    prod: false,
   }[scenario],
-  autoreload = false,
+  autoreload = {
+    dev: true,
+    test: false,
+    preview: false,
+    prod: false,
+  }[scenario],
   autoreloadPatterns = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)

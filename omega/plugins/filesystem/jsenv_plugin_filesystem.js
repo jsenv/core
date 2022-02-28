@@ -80,7 +80,7 @@ export const jsenvPluginFileSystem = ({
       dev: true,
       test: true,
       preview: true,
-      build: true,
+      prod: true,
     },
 
     resolve: async ({
@@ -161,7 +161,12 @@ export const jsenvPluginFileSystem = ({
       }
       const urlObject = new URL(url)
       if (statSync(urlObject).isDirectory()) {
-        throw new Error("Unsupported directory import")
+        return {
+          response: {
+            status: 403,
+            statusText: "Not allowed to ready directory",
+          },
+        }
       }
       const fileBuffer = readFileSync(urlObject)
       if (contentTypeIsTextual(contentType)) {

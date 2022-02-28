@@ -17,7 +17,7 @@ export const jsenvPluginBabel = () => {
       dev: true,
       test: true,
       preview: true,
-      build: true,
+      prod: true,
     },
 
     transform: async ({

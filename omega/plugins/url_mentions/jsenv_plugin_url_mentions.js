@@ -16,7 +16,7 @@ export const jsenvPluginUrlMentions = ({ projectDirectoryUrl }) => {
       dev: true,
       test: true,
       preview: true,
-      build: true,
+      prod: true,
     },
 
     transform: async ({
