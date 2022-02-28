@@ -79,7 +79,7 @@ const applyHotReload = async ({ hotInstructions }) => {
         delete urlHotMetas[urlToFetch]
         return null
       }
-      if (type === "js_module") {
+      if (type === "application/javascript") {
         // console.log(`[jsenv] hot reloading: ${boundary}`)
         const namespace = await reloadJsImport(urlToFetch)
         if (urlHotMeta && urlHotMeta.acceptCallback) {
@@ -88,7 +88,7 @@ const applyHotReload = async ({ hotInstructions }) => {
         console.log(`[jsenv] hot updated: ${boundary}`)
         return namespace
       }
-      if (type === "html") {
+      if (type === "text/html") {
         if (!compareTwoUrlPaths(urlToFetch, window.location.href)) {
           // we are not in that HTML page
           return null
