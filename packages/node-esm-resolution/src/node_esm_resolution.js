@@ -2,6 +2,7 @@
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
  * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
  * deviations from the spec:
+ * - take into account "browser", "module" and "jsnext"
  * - the check for isDirectory -> throw is delayed is descoped to the caller
  * - the call to real path ->
  *   delayed to the caller so that we can decide to
@@ -51,11 +52,22 @@ const applyPackageSpecifierResolution = ({
   parentUrl,
   specifier,
 }) => {
+  // relative specifier
   if (
     specifier[0] === "/" ||
     specifier.startsWith("./") ||
     specifier.startsWith("../")
   ) {
+    if (specifier[0] !== "/") {
+      const browserFieldResolution = applyBrowserFieldResolution({
+        conditions,
+        parentUrl,
+        specifier,
+      })
+      if (browserFieldResolution) {
+        return browserFieldResolution
+      }
+    }
     return {
       type: "relative_specifier",
       url: new URL(specifier, parentUrl).href,
@@ -75,13 +87,71 @@ const applyPackageSpecifierResolution = ({
       url: urlObject.href,
     }
   } catch (e) {
-    // "bare specifier"
+    // bare specifier
+    const browserFieldResolution = applyBrowserFieldResolution({
+      conditions,
+      parentUrl,
+      packageSpecifier: specifier,
+    })
+    if (browserFieldResolution) {
+      return browserFieldResolution
+    }
     return applyPackageResolve({
       conditions,
       parentUrl,
       packageSpecifier: specifier,
     })
   }
+}
+
+const applyBrowserFieldResolution = ({ conditions, parentUrl, specifier }) => {
+  const browserCondition = conditions.includes("browser")
+  if (!browserCondition) {
+    return null
+  }
+  const packageUrl = lookupPackageScope(parentUrl)
+  if (!packageUrl) {
+    return null
+  }
+  const packageJson = readPackageJson(packageUrl)
+  if (!packageJson) {
+    return null
+  }
+  const { browser } = packageJson
+  if (!browser) {
+    return null
+  }
+  if (typeof browser !== "object") {
+    return null
+  }
+  let url
+  if (specifier.startsWith(".")) {
+    const specifierUrl = new URL(specifier, parentUrl).href
+    const specifierRelativeToPackage = specifierUrl.slice(packageUrl.length)
+    const specifierRelativeNotation = `./${specifierRelativeToPackage}`
+    const browserMapping = browser[specifierRelativeNotation]
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageUrl).href
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`
+    }
+  } else {
+    const browserMapping = browser[specifier]
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageUrl).href
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifier}`
+    }
+  }
+  if (url) {
+    return {
+      type: "browser",
+      packageUrl,
+      packageJson,
+      url,
+    }
+  }
+  return null
 }
 
 const applyPackageImportsResolution = ({
@@ -188,23 +258,13 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
         })
       }
     }
-    if (packageSubpath === ".") {
-      const { main } = packageJson
-      if (typeof main === "string") {
-        return {
-          type: "main",
-          packageUrl,
-          packageJson,
-          url: new URL(main, packageUrl).href,
-        }
-      }
-    }
-    return {
-      type: "subpath",
+    return applyLegacySubpathResolution({
+      conditions,
+      parentUrl,
       packageUrl,
       packageJson,
-      url: new URL(packageSubpath, packageUrl).href,
-    }
+      packageSubpath,
+    })
   }
   throw createModuleNotFoundError({
     specifier: packageName,
@@ -228,14 +288,15 @@ const applyPackageSelfResolution = ({
   }
   const { exports } = packageJson
   if (!exports) {
-    const { main } = packageJson
-    if (packageSubpath === "." && typeof main === "string") {
-      return {
-        type: "main",
-        packageUrl,
-        packageJson,
-        url: new URL(main, packageUrl).href,
-      }
+    const subpathResolution = applyLegacySubpathResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      packageSubpath,
+    })
+    if (subpathResolution && subpathResolution.type !== "subpath") {
+      return subpathResolution
     }
     return undefined
   }
@@ -575,6 +636,91 @@ const applyMainExportResolution = ({ exports, exportsInfo }) => {
     return exports
   }
   return undefined
+}
+
+const applyLegacySubpathResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  packageSubpath,
+}) => {
+  if (packageSubpath === ".") {
+    return applyLegacyMainResolution({
+      conditions,
+      packageUrl,
+      packageJson,
+    })
+  }
+  const browserFieldResolution = applyBrowserFieldResolution({
+    conditions,
+    parentUrl,
+    specifier: packageSubpath,
+  })
+  if (browserFieldResolution) {
+    return browserFieldResolution
+  }
+  return {
+    type: "subpath",
+    packageUrl,
+    packageJson,
+    url: new URL(packageSubpath, packageUrl).href,
+  }
+}
+
+const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
+  for (const condition of conditions) {
+    const resolved = mainLegacyResolvers[condition](packageJson)
+    if (resolved) {
+      return {
+        type: resolved.type,
+        packageUrl,
+        packageJson,
+        url: new URL(resolved.path, packageUrl).href,
+      }
+    }
+  }
+  return {
+    type: "default",
+    packageUrl,
+    packageJson,
+    url: new URL("index.js", packageUrl).href,
+  }
+}
+const mainLegacyResolvers = {
+  import: ({ module, jsnext }) => {
+    if (typeof module === "string") {
+      return { type: "module", path: module }
+    }
+    if (typeof jsnext === "string") {
+      return { type: "jsnext", path: jsnext }
+    }
+    return null
+  },
+  browser: ({ browser }) => {
+    if (typeof browser === "string") {
+      return {
+        type: "browser",
+        path: browser,
+      }
+    }
+    if (typeof browser === "object" && browser !== null) {
+      return {
+        type: "browser",
+        path: browser["."],
+      }
+    }
+    return null
+  },
+  node: ({ main }) => {
+    if (typeof main === "string") {
+      return {
+        type: "main",
+        path: main,
+      }
+    }
+    return null
+  },
 }
 
 const comparePatternKeys = (keyA, keyB) => {

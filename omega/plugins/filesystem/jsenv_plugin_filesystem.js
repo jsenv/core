@@ -45,11 +45,14 @@ export const jsenvPluginFileSystem = ({
         url: new URL(specifier.slice(1), projectDirectoryUrl).href,
       }
     }
-    return applyNodeEsmResolution({
+    const { url } = applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl,
       specifier,
     })
+    return {
+      url,
+    }
   }
   const specifierResolvers = {
     "http_request": urlResolver,
@@ -150,6 +153,11 @@ export const jsenvPluginFileSystem = ({
     load: async ({ url, contentType }) => {
       if (!url.startsWith("file:")) {
         return null
+      }
+      if (url.startsWith("file:///@ignore/")) {
+        return {
+          content: "export default {}",
+        }
       }
       const urlObject = new URL(url)
       if (statSync(urlObject).isDirectory()) {
