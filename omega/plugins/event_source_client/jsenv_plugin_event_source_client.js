@@ -37,9 +37,10 @@ export const jsenvPluginEventSourceClient = () => {
       injectScriptAsEarlyAsPossible(
         htmlAst,
         createHtmlNode({
-          tagName: "script",
-          type: "module",
-          src: asClientUrl(eventSourceFileUrl, url),
+          "tagName": "script",
+          "type": "module",
+          "src": asClientUrl(eventSourceFileUrl, url),
+          "data-injected": true,
         }),
       )
       const htmlModified = stringifyHtmlAst(htmlAst)
