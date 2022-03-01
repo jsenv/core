@@ -3,6 +3,7 @@ import { startOmegaServer } from "#omega/server/server.js"
 import { jsenvPluginInlineRessources } from "#omega/plugins/inline_ressources/jsenv_plugin_inline_ressources.js"
 import { jsenvPluginEventSourceClient } from "#omega/plugins/event_source_client/jsenv_plugin_event_source_client.js"
 import { jsenvPluginHtmlSupervisor } from "#omega/plugins/html_supervisor/jsenv_plugin_html_supervisor.js"
+import { jsenvPluginDataUrls } from "#omega/plugins/data_urls/jsenv_plugin_data_urls.js"
 import { jsenvPluginFileSystem } from "#omega/plugins/filesystem/jsenv_plugin_filesystem.js"
 import { jsenvPluginBabel } from "#omega/plugins/babel/jsenv_plugin_babel.js"
 import { jsenvPluginUrlMentions } from "#omega/plugins/url_mentions/jsenv_plugin_url_mentions.js"
@@ -13,6 +14,7 @@ const server = await startOmegaServer({
     jsenvPluginInlineRessources(),
     jsenvPluginEventSourceClient(),
     jsenvPluginHtmlSupervisor(),
+    jsenvPluginDataUrls(),
     jsenvPluginFileSystem(),
     jsenvPluginBabel(),
     jsenvPluginUrlMentions(),
