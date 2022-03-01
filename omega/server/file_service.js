@@ -116,8 +116,9 @@ export const createFileService = ({
           urlInfoMap.set(url, urlInfo)
           return url
         }
-        urlInfoMap.set(resolveReturnValue, {})
-        return resolveReturnValue
+        const url = String(resolveReturnValue)
+        urlInfoMap.set(url, {})
+        return url
       }
       context.asClientUrl = (url, parentUrl) => {
         const hmr = new URL(parentUrl).searchParams.get("hmr")
@@ -153,6 +154,14 @@ export const createFileService = ({
       const urlInfo = urlInfoMap.get(context.url)
       Object.assign(context, urlInfo)
       context.urlFacade = urlInfo.urlFacade || context.url
+      // for (const plugin of plugins) {
+      //   const redirectReturnValue = plugin.redirect(context)
+      //   if (redirectReturnValue) {
+      //     // on aura besoin de gérer ces redirections
+      //     context.urlFacade = redirectReturnValue
+      //     break
+      //   }
+      // }
       context.contentType = urlToContentType(context.urlFacade)
       const loadReturnValue = await findAsync({
         array: plugins,

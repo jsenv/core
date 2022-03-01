@@ -53,6 +53,7 @@ export const startOmegaServer = async ({
   },
 }) => {
   const logger = createLogger({ logLevel })
+  plugins = normalizePlugins(plugins)
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
@@ -156,4 +157,16 @@ export const startOmegaServer = async ({
   return {
     ...server,
   }
+}
+
+const normalizePlugins = (plugins) => {
+  const pluginsNormalized = []
+  plugins.forEach((plugin) => {
+    if (Array.isArray(plugin)) {
+      pluginsNormalized.push(...normalizePlugins(plugin))
+    } else {
+      pluginsNormalized.push(plugin)
+    }
+  })
+  return pluginsNormalized
 }

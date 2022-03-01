@@ -7,10 +7,12 @@ import { jsenvPluginDataUrls } from "#omega/plugins/data_urls/jsenv_plugin_data_
 import { jsenvPluginFileSystem } from "#omega/plugins/filesystem/jsenv_plugin_filesystem.js"
 import { jsenvPluginBabel } from "#omega/plugins/babel/jsenv_plugin_babel.js"
 import { jsenvPluginUrlMentions } from "#omega/plugins/url_mentions/jsenv_plugin_url_mentions.js"
+import { jsenvPluginPreact } from "@jsenv/core/packages/jsenv-plugin-preact/index.js"
 
 const server = await startOmegaServer({
   projectDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [
+    jsenvPluginPreact(),
     jsenvPluginInlineRessources(),
     jsenvPluginAutoreload(),
     jsenvPluginHtmlSupervisor(),
