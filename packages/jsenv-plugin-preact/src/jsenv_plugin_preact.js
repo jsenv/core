@@ -1,3 +1,8 @@
+/*
+ * - https://github.com/preactjs/preset-vite/blob/main/src/index.ts
+ * - https://github.com/preactjs/prefresh/blob/main/packages/vite/src/index.js
+ */
+
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
@@ -99,6 +104,20 @@ import.meta.hot.accept(__prefresh__.acceptCallback)`)
       test: true,
       preview: true,
       prod: true,
+    },
+
+    resolve: ({ resolve, parentUrl, specifierType, specifier }) => {
+      if (specifierType !== "js_import_export") {
+        return null
+      }
+      if (specifier === "react" || specifier === "react-dom") {
+        return resolve({
+          parentUrl,
+          specifierType,
+          specifier: "preact/compat",
+        })
+      }
+      return null
     },
 
     transform: async ({ scenario, url, contentType, content }) => {
