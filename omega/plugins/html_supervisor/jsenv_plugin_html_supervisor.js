@@ -8,7 +8,7 @@ import { injectQueryParams } from "#omega/internal/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  findNodes,
+  visitHtmlAst,
   getHtmlNodeAttributeByName,
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
@@ -41,26 +41,64 @@ export const jsenvPluginHtmlSupervisor = () => {
         return null
       }
       const htmlAst = parseHtmlString(content)
-      const scripts = findNodes(
-        content,
-        (node) => node.nodeName === "script",
-      ).filter((script) => {
+      const scriptsToSupervise = []
+      visitHtmlAst(htmlAst, (node) => {
+        if (node.nodeName !== "script") {
+          return
+        }
+        const scriptCategory = parseScriptNode(node)
+        if (scriptCategory !== "classic" && scriptCategory !== "module") {
+          return
+        }
         const dataInjectedAttribute = getHtmlNodeAttributeByName(
-          script,
+          node,
           "data-injected",
         )
         if (dataInjectedAttribute) {
-          return false
+          return
         }
-        const scriptCategory = parseScriptNode(script)
-        if (scriptCategory !== "classic" && scriptCategory !== "module") {
-          return false
+        const srcAttribute = getHtmlNodeAttributeByName(node, "src")
+        if (!srcAttribute) {
+          return
         }
-        return true
+        let src = srcAttribute ? srcAttribute.value : undefined
+        const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
+        const integrity = integrityAttribute
+          ? integrityAttribute.value
+          : undefined
+        const crossoriginAttribute = getHtmlNodeAttributeByName(
+          node,
+          "crossorigin",
+        )
+        const crossorigin = crossoriginAttribute
+          ? crossoriginAttribute.value
+          : undefined
+
+        scriptsToSupervise.push({
+          node,
+          type: scriptCategory,
+          src,
+          integrity,
+          crossorigin,
+        })
       })
-      if (scripts.length === 0) {
+      if (scriptsToSupervise.length === 0) {
         return null
       }
+      const htmlSupervisorSetupFileUrl = await resolve({
+        parentUrl: projectDirectoryUrl,
+        specifierType: "js_import_export",
+        specifier:
+          "@jsenv/core/omega/plugins/html_supervisor/supervisor_client/html_supervisor_setup.js",
+      })
+      injectScriptAsEarlyAsPossible(
+        htmlAst,
+        createHtmlNode({
+          "tagName": "script",
+          "src": asClientUrl(htmlSupervisorSetupFileUrl, url),
+          "data-injected": true,
+        }),
+      )
       const htmlSupervisorFileUrl = await resolve({
         parentUrl: projectDirectoryUrl,
         specifierType: "js_import_export",
@@ -77,57 +115,32 @@ export const jsenvPluginHtmlSupervisor = () => {
           "data-injected": true,
         }),
       )
-      const supervisedScripts = []
-      await scripts.reduce(async (previous, script) => {
-        await previous
-        const scriptCategory = parseScriptNode(script)
-        const srcAttribute = getHtmlNodeAttributeByName(script, "src")
-        if (!srcAttribute) {
-          return
-        }
-        let src = srcAttribute ? srcAttribute.value : undefined
-        const integrityAttribute = getHtmlNodeAttributeByName(
-          script,
-          "integrity",
-        )
-        const integrity = integrityAttribute
-          ? integrityAttribute.value
-          : undefined
-        const crossoriginAttribute = getHtmlNodeAttributeByName(
-          script,
-          "crossorigin",
-        )
-        const crossorigin = crossoriginAttribute
-          ? crossoriginAttribute.value
-          : undefined
-        src = await resolve({
-          parentUrl: url,
-          specifierType: "script_src",
-          specifier: src,
-        })
-        if (scriptCategory === "classic") {
-          src = injectQueryParams(src, { script: "" })
-        }
-        supervisedScripts.push({
-          script,
-          type: scriptCategory,
-          src,
-          integrity,
-          crossorigin,
-        })
-        removeHtmlNodeAttributeByName(script, "src")
-        assignHtmlNodeAttributes(script, { "content-src": src })
-        setHtmlNodeText(
-          script,
-          generateCodeToSuperviseScript({
-            type: scriptCategory,
-            src,
-            integrity,
-            crossorigin,
-            htmlSupervisorClientUrl,
-          }),
-        )
-      }, Promise.resolve())
+      await scriptsToSupervise.reduce(
+        async (previous, { node, type, src, integrity, crossorigin }) => {
+          await previous
+          let scriptUrl = await resolve({
+            parentUrl: url,
+            specifierType: "script_src",
+            specifier: src,
+          })
+          if (type === "classic") {
+            scriptUrl = injectQueryParams(scriptUrl, { script: "" })
+          }
+          removeHtmlNodeAttributeByName(node, "src")
+          assignHtmlNodeAttributes(node, { "content-src": scriptUrl })
+          setHtmlNodeText(
+            node,
+            generateCodeToSuperviseScript({
+              type,
+              src: asClientUrl(scriptUrl, url),
+              integrity,
+              crossorigin,
+              htmlSupervisorClientUrl,
+            }),
+          )
+        },
+        Promise.resolve(),
+      )
       const htmlModified = stringifyHtmlAst(htmlAst)
       return {
         content: htmlModified,

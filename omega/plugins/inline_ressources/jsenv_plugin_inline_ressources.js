@@ -1,3 +1,7 @@
+/*
+ *
+ */
+
 import { urlToFilename } from "@jsenv/filesystem"
 
 import { asUrlWithoutSearch } from "#omega/internal/url_utils.js"
