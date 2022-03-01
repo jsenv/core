@@ -8,7 +8,7 @@ import { asUrlWithoutSearch } from "#omega/internal/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  findNodes,
+  visitHtmlAst,
   getHtmlNodeTextNode,
   getIdForInlineHtmlNode,
   removeHtmlNodeText,
@@ -105,20 +105,48 @@ export const jsenvPluginInlineRessources = () => {
       }
       const htmlAst = parseHtmlString(content)
       const inlineRessources = []
-      const scripts = findNodes(htmlAst, (node) => node.nodeName === "script")
-      await scripts.reduce(async (previous, script) => {
-        await previous
-        const scriptCategory = parseScriptNode(script)
+      const handleInlineStyle = (node) => {
+        if (node.nodeName !== "style") {
+          return
+        }
+        const textNode = getHtmlNodeTextNode(node)
+        if (!textNode) {
+          return
+        }
+        const { line, column } = getHtmlNodeLocation(node)
+        const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
+        let inlineStyleSpecifier = `${urlToFilename(url)}@${inlineStyleId}.js`
+        const inlineStyleUrl = new URL(inlineStyleSpecifier, url).href
+        inlineRessources.push({
+          line,
+          column,
+          url: asUrlWithoutSearch(inlineStyleUrl),
+          contentType: "text/css",
+          content: textNode.value,
+        })
+        node.nodeName = "link"
+        node.tagName = "link"
+        assignHtmlNodeAttributes(node, {
+          rel: "stylesheet",
+          href: inlineStyleSpecifier,
+        })
+        removeHtmlNodeText(node)
+      }
+      const handleInlineScript = (node) => {
+        if (node.nodeName !== "script") {
+          return
+        }
+        const scriptCategory = parseScriptNode(node)
         if (scriptCategory === "importmap") {
           // do not externalize importmap for now
           return
         }
-        const textNode = getHtmlNodeTextNode(script)
+        const textNode = getHtmlNodeTextNode(node)
         if (!textNode) {
           return
         }
-        const { line, column } = getHtmlNodeLocation(script)
-        const inlineScriptId = getIdForInlineHtmlNode(htmlAst, script)
+        const { line, column } = getHtmlNodeLocation(node)
+        const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
         let inlineScriptSpecifier = `${urlToFilename(url)}@${inlineScriptId}.js`
         if (scriptCategory === "classic") {
           inlineScriptSpecifier = `${inlineScriptSpecifier}?script`
@@ -134,10 +162,13 @@ export const jsenvPluginInlineRessources = () => {
               : "application/javascript",
           content: textNode.value,
         })
-        assignHtmlNodeAttributes(script, { src: inlineScriptSpecifier })
-        removeHtmlNodeText(script)
-      }, Promise.resolve())
-      // TODO: <style> tags (that should be turned into <link> tags)
+        assignHtmlNodeAttributes(node, { src: inlineScriptSpecifier })
+        removeHtmlNodeText(node)
+      }
+      visitHtmlAst(htmlAst, (node) => {
+        handleInlineStyle(node)
+        handleInlineScript(node)
+      })
       updateInlineRessources({
         ownerUrl: url,
         ownerContent: content,
