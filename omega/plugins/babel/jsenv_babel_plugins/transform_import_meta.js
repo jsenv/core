@@ -22,7 +22,7 @@ export const transformImportMeta = (
       if (importMetaHot && importMetaPropertyName === "hot") {
         const importMetaHotAst = injectImport({
           programPath,
-          from: "@jsenv/core/src/internal/event_source_client/import_meta_hot_module.js",
+          from: "@jsenv/core/omega/plugins/event_source_client/client/import_meta_hot_module.js",
           nameHint: `createImportMetaHot`,
           // disable interop, useless as we work only with js modules
           importedType: "es6",

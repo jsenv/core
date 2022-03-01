@@ -70,6 +70,10 @@ export const jsenvPluginUrlMentions = () => {
       })
       const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
+          if (!urlMention.url) {
+            // will result in 404
+            return urlMention.specifier
+          }
           const clientUrl = asClientUrl(urlMention.url, url)
           return clientUrl
         },

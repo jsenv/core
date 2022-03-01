@@ -32,7 +32,7 @@ export const jsenvPluginEventSourceClient = () => {
         parentUrl: projectDirectoryUrl,
         specifierType: "js_import_export",
         specifier:
-          "@jsenv/core/src/internal/event_source_client/event_source_client.js",
+          "@jsenv/core/omega/plugins/event_source_client/client/event_source_client.js",
       })
       injectScriptAsEarlyAsPossible(
         htmlAst,
