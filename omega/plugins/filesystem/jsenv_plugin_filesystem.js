@@ -142,7 +142,6 @@ export const jsenvPluginFileSystem = ({
           urlVersion,
         }
       }
-
       return {
         url: realUrl,
         urlFacade: `${projectDirectoryUrl}@fs/${realUrl.slice(

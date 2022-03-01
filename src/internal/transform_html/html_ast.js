@@ -395,22 +395,27 @@ export const createInlineScriptHash = (script) => {
 }
 
 export const getIdForInlineHtmlNode = (htmlAst, inlineNode) => {
-  const idAttribute = getHtmlNodeAttributeByName(inlineNode, "id")
-  if (idAttribute) {
-    return idAttribute.value
-  }
+  // const idAttribute = getHtmlNodeAttributeByName(inlineNode, "id")
+  // if (idAttribute) {
+  //   return idAttribute.value
+  // }
   const { line, lineEnd, column, columnEnd } =
     getHtmlNodeLocation(inlineNode) || {}
   const lineTaken = findNode(htmlAst, (nodeCandidate) => {
     if (nodeCandidate === inlineNode) return false
+    if (
+      nodeCandidate.nodeName === "#text" &&
+      nodeCandidate.parentNode === inlineNode
+    )
+      return false
     const htmlNodeLocation = getHtmlNodeLocation(nodeCandidate)
     if (!htmlNodeLocation) return false
     return htmlNodeLocation.line === line
   })
   if (lineTaken) {
-    return `#L${line}:${column}-L${line}:${columnEnd}`
+    return `L${line}C${column}-L${line}C${columnEnd}`
   }
-  return `#L${line}-L${lineEnd}`
+  return `L${line}-L${lineEnd}`
 }
 
 export const visitHtmlAst = (htmlAst, callback) => {

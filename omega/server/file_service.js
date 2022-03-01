@@ -108,16 +108,16 @@ export const createFileService = ({
           },
           predicate: (returnValue) => Boolean(returnValue),
         })
-        if (resolveReturnValue) {
-          if (typeof resolveReturnValue === "object") {
-            const { url, ...urlInfo } = resolveReturnValue
-            urlInfoMap.set(url, urlInfo)
-            return url
-          }
-          urlInfoMap.set(resolveReturnValue, {})
-          return resolveReturnValue
+        if (!resolveReturnValue) {
+          return null
         }
-        return null
+        if (typeof resolveReturnValue === "object") {
+          const { url, ...urlInfo } = resolveReturnValue
+          urlInfoMap.set(url, urlInfo)
+          return url
+        }
+        urlInfoMap.set(resolveReturnValue, {})
+        return resolveReturnValue
       }
       context.asClientUrl = (url, parentUrl) => {
         const hmr = new URL(parentUrl).searchParams.get("hmr")

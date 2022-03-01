@@ -1,9 +1,6 @@
 import { urlToFilename } from "@jsenv/filesystem"
 
-import {
-  asUrlWithoutSearch,
-  injectQueryParams,
-} from "#omega/internal/url_utils.js"
+import { asUrlWithoutSearch } from "#omega/internal/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -16,12 +13,12 @@ import {
   parseScriptNode,
 } from "@jsenv/core/src/internal/transform_html/html_ast.js"
 
-export const jsenvPluginHtmlInlineRessources = () => {
+export const jsenvPluginInlineRessources = () => {
   /**
    * can be represented as below
-   * "file:///project_directory/index.html.10.js": {
-   *   "htmlUrl": "file:///project_directory/index.html",
-   *   "htmlContent": "console.log(`Hello world`)",
+   * "file:///project_directory/index.html.L10-L12.js": {
+   *   "ownerUrl": "file:///project_directory/index.html",
+   *   "ownerContent": "console.log(`Hello world`)",
    *   "line": 10,
    *   "column": 5,
    *   "contentType": "application/javascript",
@@ -32,48 +29,58 @@ export const jsenvPluginHtmlInlineRessources = () => {
    */
   const inlineRessourceMap = new Map()
   const updateInlineRessources = ({
-    htmlUrl,
-    htmlContent,
+    ownerUrl,
+    ownerContent,
     inlineRessources,
   }) => {
     inlineRessourceMap.forEach((inlineRessource, inlineRessourceUrl) => {
-      if (inlineRessource.htmlUrl === htmlUrl) {
+      if (inlineRessource.ownerUrl === ownerUrl) {
         inlineRessourceMap.delete(inlineRessourceUrl)
       }
     })
     inlineRessources.forEach((inlineRessource) => {
       inlineRessourceMap.set(inlineRessource.url, {
         ...inlineRessource,
-        htmlUrl,
-        htmlContent,
+        ownerUrl,
+        ownerContent,
       })
     })
   }
-  // const isInlineUrl = (url) => {
-  //   const urlWithoutSearch = asUrlWithoutSearch(url)
-  //   return inlineRessourceMap.has(urlWithoutSearch)
-  // }
   // const getInlineUrlSite = (url) => {
   //   const urlWithoutSearch = asUrlWithoutSearch(url)
   //   const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
   //   return inlineRessource
   //     ? {
-  //         url: inlineRessource.htmlUrl,
-  //         line: inlineRessource.htmlLine,
-  //         column: inlineRessource.htmlColumn,
-  //         source: inlineRessource.htmlContent,
+  //         url: inlineRessource.ownerUrl,
+  //         line: inlineRessource.line,
+  //         column: inlineRessource.column,
+  //         source: inlineRessource.ownerContent,
   //       }
   //     : null
   // }
 
   return {
-    name: "jsenv:html_inline_ressources",
+    name: "jsenv:inline_ressources",
 
     appliesDuring: {
       dev: true,
       test: true,
       preview: true,
       prod: true,
+    },
+
+    resolve: ({ projectDirectoryUrl, parentUrl, specifier }) => {
+      const url =
+        specifier[0] === "/"
+          ? new URL(specifier.slice(1), projectDirectoryUrl).href
+          : new URL(specifier, parentUrl).href
+      const urlWithoutSearch = asUrlWithoutSearch(url)
+      if (inlineRessourceMap.has(urlWithoutSearch)) {
+        return {
+          url,
+        }
+      }
+      return null
     },
 
     load: ({ url }) => {
@@ -88,49 +95,53 @@ export const jsenvPluginHtmlInlineRessources = () => {
       }
     },
 
-    transform: ({ asClientUrl, url, contentType, content }) => {
+    transform: async ({ url, contentType, content }) => {
       if (contentType !== "text/html") {
         return null
       }
       const htmlAst = parseHtmlString(content)
       const inlineRessources = []
-      const scripts = findNodes(content, (node) => node.nodeName === "script")
-      scripts.forEach((script) => {
+      const scripts = findNodes(htmlAst, (node) => node.nodeName === "script")
+      await scripts.reduce(async (previous, script) => {
+        await previous
+        const scriptCategory = parseScriptNode(script)
+        if (scriptCategory === "importmap") {
+          // do not externalize importmap for now
+          return
+        }
         const textNode = getHtmlNodeTextNode(script)
         if (!textNode) {
           return
         }
         const { line, column } = getHtmlNodeLocation(script)
-        const scriptCategory = parseScriptNode(script)
         const inlineScriptId = getIdForInlineHtmlNode(htmlAst, script)
-        const inlineScriptSpecifier = `${urlToFilename(url)}#${inlineScriptId}`
-        // should we do the following?
-        // let inlineScriptUrl = await resolve({
-        //   parentUrl: url,
-        //   specifierType: 'script_text',
-        //   specifier: inlineScriptSpecifier
-        // })
-        let inlineScriptUrl = new URL(inlineScriptSpecifier, url).href
+        let inlineScriptSpecifier = `${urlToFilename(url)}@${inlineScriptId}.js`
         if (scriptCategory === "classic") {
-          inlineScriptUrl = injectQueryParams(inlineScriptUrl, { script: "" })
+          inlineScriptSpecifier = `${inlineScriptSpecifier}?script`
         }
-        const inlineScriptClientUrl = asClientUrl(inlineScriptUrl, url)
+        const inlineScriptUrl = new URL(inlineScriptSpecifier, url).href
         inlineRessources.push({
-          htmlLine: line,
-          htmlColumn: column,
-          url: inlineScriptClientUrl,
-          contentType: "application/javascript",
+          line,
+          column,
+          url: asUrlWithoutSearch(inlineScriptUrl),
+          contentType:
+            scriptCategory === "importmap"
+              ? "application/importmap+json"
+              : "application/javascript",
           content: textNode.value,
         })
-        assignHtmlNodeAttributes(script, { src: inlineScriptClientUrl })
+        assignHtmlNodeAttributes(script, { src: inlineScriptSpecifier })
         removeHtmlNodeText(script)
-      })
-      // TODO: <style> tags
+      }, Promise.resolve())
+      // TODO: <style> tags (that should be turned into <link> tags)
       updateInlineRessources({
-        htmlUrl: url,
-        htmlContent: content,
+        ownerUrl: url,
+        ownerContent: content,
         inlineRessources,
       })
+      if (inlineRessources.length === 0) {
+        return null
+      }
       const htmlModified = stringifyHtmlAst(htmlAst)
       return {
         content: htmlModified,
