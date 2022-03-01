@@ -2,12 +2,9 @@ import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/featu
 import { require } from "@jsenv/core/src/internal/require.js"
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
-import { transformImportMeta } from "../babel/jsenv_babel_plugins/transform_import_meta.js"
-
 export const jsenvPluginSystemJs = () => {
   return {
     name: "jsenv:systemjs",
-
     appliesDuring: {
       dev: true,
       test: true,
@@ -41,15 +38,7 @@ export const jsenvPluginSystemJs = () => {
         }
         const { code, map } = await babelTransform({
           options: {
-            plugins: [
-              [require("@babel/plugin-transform-modules-systemjs")],
-              [
-                transformImportMeta,
-                {
-                  importMetaFormat: "systemjs",
-                },
-              ],
-            ],
+            plugins: [[require("@babel/plugin-transform-modules-systemjs")]],
           },
           url,
           content,

@@ -1,17 +1,16 @@
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
-import { transformReplaceExpressions } from "./jsenv_babel_plugins/transform_replace_expressions.js"
-import { transformImportMeta } from "./jsenv_babel_plugins/transform_import_meta.js"
 import { getBaseBabelPluginStructure } from "./babel_plugin_base.js"
 import { getRuntimeBabelPluginStructure } from "./babel_plugin_runtime.js"
 
 export const jsenvPluginBabel = () => {
-  const baseBabelPluginStructure = getBaseBabelPluginStructure()
+  const babelPluginStructure = {
+    ...getBaseBabelPluginStructure(),
+  }
 
   return {
-    name: "jsenv_babel",
-
+    name: "jsenv:babel",
     appliesDuring: {
       dev: true,
       test: true,
@@ -19,13 +18,7 @@ export const jsenvPluginBabel = () => {
       prod: true,
     },
 
-    transform: async ({
-      scenario,
-      runtimeSupport,
-      url,
-      contentType,
-      content,
-    }) => {
+    transform: async ({ runtimeSupport, url, contentType, content }) => {
       if (contentType !== "application/javascript") {
         return null
       }
@@ -46,40 +39,6 @@ export const jsenvPluginBabel = () => {
             ]),
         // "importmap",
       ]
-
-      const jsenvBabelPluginStructure = {
-        // sometimes code use things specific to Node.js even if it's meant to run
-        // in a browser
-        "transform-replace-expressions": [
-          transformReplaceExpressions,
-          {
-            replaceMap: {
-              "process.env.NODE_ENV": `("${
-                scenario === "dev" || scenario === "test" ? "dev" : "prod"
-              }")`,
-              "global": "globalThis",
-              "__filename": `import.meta.url.slice('file:///'.length)`,
-              "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
-            },
-            allowConflictingReplacements: true,
-          },
-        ],
-        ...(scenario === "dev"
-          ? {
-              "transform-import-meta": [
-                transformImportMeta,
-                {
-                  importMetaFormat: "esmodule",
-                  importMetaHot: true,
-                },
-              ],
-            }
-          : null),
-      }
-      const babelPluginStructure = {
-        ...baseBabelPluginStructure,
-        ...jsenvBabelPluginStructure,
-      }
       const requiredFeatureNames = [
         ...baseFeatureNames,
         ...Object.keys(babelPluginStructure),
