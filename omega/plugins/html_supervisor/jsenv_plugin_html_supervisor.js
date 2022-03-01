@@ -89,7 +89,7 @@ export const jsenvPluginHtmlSupervisor = () => {
         parentUrl: projectDirectoryUrl,
         specifierType: "js_import_export",
         specifier:
-          "@jsenv/core/omega/plugins/html_supervisor/supervisor_client/html_supervisor_setup.js",
+          "@jsenv/core/omega/plugins/html_supervisor/client/html_supervisor_setup.js",
       })
       injectScriptAsEarlyAsPossible(
         htmlAst,
@@ -103,7 +103,7 @@ export const jsenvPluginHtmlSupervisor = () => {
         parentUrl: projectDirectoryUrl,
         specifierType: "js_import_export",
         specifier:
-          "@jsenv/core/omega/plugins/html_supervisor/supervisor_client/module/html_supervisor_module.js",
+          "@jsenv/core/omega/plugins/html_supervisor/client/module/html_supervisor_module.js",
       })
       const htmlSupervisorClientUrl = asClientUrl(htmlSupervisorFileUrl, url)
       injectScriptAsEarlyAsPossible(

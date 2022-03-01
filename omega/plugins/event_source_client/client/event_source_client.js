@@ -1,4 +1,3 @@
-import { inferContextFrom, createUrlContext } from "../url_context.js"
 import { createEventSourceConnection } from "./event_source_connection.js"
 import {
   isAutoreloadEnabled,
@@ -7,16 +6,10 @@ import {
 import { compareTwoUrlPaths } from "./url_helpers.js"
 import {
   reloadHtmlPage,
-  reloadDOMNodesUsingUrls,
+  reloadDOMNodesUsingUrl,
   reloadJsImport,
 } from "./reload.js"
 import { urlHotMetas } from "./import_meta_hot_module.js"
-
-const urlContext = createUrlContext(
-  inferContextFrom({
-    url: window.location,
-  }),
-)
 
 const reloadMessages = []
 const reloadMessagesSignal = { onchange: () => {} }
@@ -69,7 +62,7 @@ const applyHotReload = async ({ hotInstructions }) => {
     async (previous, { type, boundary, acceptedBy }) => {
       await previous
 
-      const urlToFetch = urlContext.asUrlToFetch(boundary)
+      const urlToFetch = new URL(boundary, `${window.location.origin}/`).href
       const urlHotMeta = urlHotMetas[urlToFetch]
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         await urlHotMeta.disposeCallback()
@@ -93,9 +86,9 @@ const applyHotReload = async ({ hotInstructions }) => {
           // we are not in that HTML page
           return null
         }
-        const urlToReload = urlContext.asUrlToFetch(acceptedBy)
-        const sourceUrlToReload = urlContext.asSourceUrl(acceptedBy)
-        reloadDOMNodesUsingUrls([urlToReload, sourceUrlToReload])
+        const urlToReload = new URL(acceptedBy, `${window.location.origin}/`)
+          .href
+        reloadDOMNodesUsingUrl(urlToReload)
         console.log(`[jsenv] hot updated ${acceptedBy} inside ${boundary}`)
         return null
       }

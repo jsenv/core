@@ -1,4 +1,5 @@
-import { htmlAttributeSrcSet } from "../transform_html/html_attribute_src_set.js"
+import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
+
 import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
 
 export const reloadHtmlPage = () => {
@@ -9,12 +10,10 @@ export const reloadHtmlPage = () => {
 // - no need to check [hot-accept]and [hot-decline] attributes for instance
 // This is because if something should full reload, we receive "full_reload"
 // from server and this function is not called
-export const reloadDOMNodesUsingUrls = (urlsToReload) => {
+export const reloadDOMNodesUsingUrl = (urlToReload) => {
   const mutations = []
   const shouldReloadUrl = (urlCandidate) => {
-    return urlsToReload.some((urlToReload) =>
-      compareTwoUrlPaths(urlCandidate, urlToReload),
-    )
+    return compareTwoUrlPaths(urlCandidate, urlToReload)
   }
   const visitNodeAttributeAsUrl = (node, attributeName) => {
     let attribute = node[attributeName]
