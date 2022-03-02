@@ -1,15 +1,18 @@
 import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
 
-import { getBaseBabelPluginStructure } from "./babel_plugin_base.js"
-import { getRuntimeBabelPluginStructure } from "./babel_plugin_runtime.js"
+import {
+  getBaseBabelPluginStructure,
+  getRuntimeBabelPluginStructure,
+} from "./babel_plugin_structure.js"
+import { babelPluginImportAssertions } from "./jsenv_babel_plugins/import_assertions.js"
+import { convertCssTextToJavascriptModule } from "./css_module.js"
+import { convertJsonTextToJavascriptModule } from "./json_module.js"
 
 export const jsenvPluginBabel = () => {
-  const babelPluginStructure = {
-    ...getBaseBabelPluginStructure(),
-  }
+  const babelPluginStructureBase = getBaseBabelPluginStructure()
 
-  return {
+  const babel = {
     name: "jsenv:babel",
     appliesDuring: {
       dev: true,
@@ -39,6 +42,10 @@ export const jsenvPluginBabel = () => {
             ]),
         // "importmap",
       ]
+      const babelPluginStructure = {
+        ...babelPluginStructureBase,
+        "transform-import-assertions": [babelPluginImportAssertions],
+      }
       const requiredFeatureNames = [
         ...baseFeatureNames,
         ...Object.keys(babelPluginStructure),
@@ -85,4 +92,50 @@ export const jsenvPluginBabel = () => {
       }
     },
   }
+
+  const importTypeCss = {
+    name: "jsenv:import_type_css",
+    appliesDuring: {
+      dev: true,
+      test: true,
+      preview: true,
+      prod: true,
+    },
+    transform: ({ url, contentType, content }) => {
+      if (contentType !== "text/css") {
+        return null
+      }
+      if (new URL(url).searchParams.get("import_type") !== "css") {
+        return null
+      }
+      return convertCssTextToJavascriptModule({
+        cssUrl: url,
+        jsUrl: "", // comment savoir cela?
+        content,
+      })
+    },
+  }
+
+  const importTypeJson = {
+    name: "jsenv:import_type_json",
+    appliesDuring: {
+      dev: true,
+      test: true,
+      preview: true,
+      prod: true,
+    },
+    transform: ({ url, contentType, content }) => {
+      if (contentType !== "application/json") {
+        return null
+      }
+      if (new URL(url).searchParams.get("import_type") !== "json") {
+        return null
+      }
+      return convertJsonTextToJavascriptModule({
+        content,
+      })
+    },
+  }
+
+  return [babel, importTypeCss, importTypeJson]
 }

@@ -16,6 +16,21 @@ import { createRequire } from "node:module"
 
 const require = createRequire(import.meta.url)
 
+export const getRuntimeBabelPluginStructure = ({
+  babelPluginStructure,
+  availableFeatureNames,
+}) => {
+  const babelPluginStructureForRuntime = {}
+  Object.keys(babelPluginStructure).forEach((babelPluginName) => {
+    if (availableFeatureNames.includes(babelPluginName)) {
+      return
+    }
+    babelPluginStructureForRuntime[babelPluginName] =
+      babelPluginStructure[babelPluginName]
+  })
+  return babelPluginStructureForRuntime
+}
+
 // The default list of babel plugins MUST be in compatMap
 // https://github.com/jsenv/jsenv-core/blob/master/src/internal/features/babel_plugin_compatibility.js#L11
 // Otherwise it means there is no runtime supporting the babel plugins

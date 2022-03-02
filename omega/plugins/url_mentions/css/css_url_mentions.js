@@ -50,7 +50,9 @@ export const parseCssUrlMentions = async ({
       //   })
       // })
       // return magicSource.toContentAndSourcemap()
-      const { map, content } = await replaceCssUrls({
+      const result = await replaceCssUrls({
+        url,
+        content,
         urlVisitor: ({ url, replace }) => {
           const urlMention = cssUrlMentions.find(
             (urlMention) => urlMention.url === url,
@@ -58,7 +60,10 @@ export const parseCssUrlMentions = async ({
           replace(transformUrlMention(urlMention))
         },
       })
-      return { sourcemap: map, content }
+      return {
+        content: result.content,
+        sourcemap: result.map,
+      }
     },
   }
 }

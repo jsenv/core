@@ -60,6 +60,7 @@ export const createFileService = ({
       [runtimeName]: runtimeVersion,
     }
     const requestContext = {
+      request,
       runtimeName,
       runtimeVersion,
       runtimeSupport,

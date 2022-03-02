@@ -26,6 +26,7 @@ export const babelTransform = async ({
       plugins: [
         // "importMeta",
         // "topLevelAwait",
+        "importAssertions",
         "jsx",
         "classProperties",
         "classPrivateProperties",
