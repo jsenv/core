@@ -30,7 +30,7 @@ export const jsenvPluginPreact = ({
     dev: async ({ url, content }) => {
       url = asUrlWithoutSearch(url)
       const prefreshEnabled = shouldEnablePrefresh(url)
-      const babelReturnValue = await babelTransform({
+      const { code, map } = await babelTransform({
         options: {
           plugins: [
             [
@@ -41,6 +41,7 @@ export const jsenvPluginPreact = ({
               },
             ],
             ["babel-plugin-transform-hook-names"],
+            ...(prefreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
         },
         url,
@@ -48,17 +49,10 @@ export const jsenvPluginPreact = ({
       })
       if (!prefreshEnabled) {
         return {
-          content: babelReturnValue.code,
-          sourcemap: babelReturnValue.map,
+          content: code,
+          sourcemap: map,
         }
       }
-      const { code, map } = await babelTransform({
-        options: {
-          plugins: [["@prefresh/babel-plugin"]],
-        },
-        url,
-        content: babelReturnValue.code,
-      })
       const magicSource = createMagicSource({
         url,
         content: code,
@@ -67,41 +61,17 @@ export const jsenvPluginPreact = ({
       const hasSig = /\$RefreshSig\$\(/.test(code)
       if (!hasSig && !hasReg) {
         return {
-          content: babelReturnValue.code,
-          sourcemap: babelReturnValue.map,
+          content: code,
+          sourcemap: map,
         }
       }
-      magicSource.prepend(`import "@prefresh/core"
-      import { flush } from "@prefresh/utils"
-
-let prevRefreshReg = self.$RefreshReg$ || (() => {})
-let prevRefreshSig = self.$RefreshSig$ || (() => (type) => type)
-self.$RefreshReg$ = (type, id) => {
-  self.__PREFRESH__.register(type, ${JSON.stringify(url)} + " " + id)
-}
-self.$RefreshSig$ = () => {
-  let status = "begin"
-  let savedType
-  return (type, key, forceReset, getCustomHooks) => {
-    if (!savedType) savedType = type
-    status = self.__PREFRESH__.sign(
-      type || savedType,
-      key,
-      forceReset,
-      getCustomHooks,
-      status,
-    )
-    return type
-  }
-}
+      magicSource.prepend(`import { installPrefresh } from "@jsenv/plugin-preact/src/client/prefresh.js"
+const __prefresh__ = installPrefresh(${JSON.stringify(url)})
 `)
       if (hasReg) {
         magicSource.append(`
-self.$RefreshReg$ = prevRefreshReg;
-self.$RefreshSig$ = prevRefreshSig;
-import.meta.hot.accept(() => {
-  flush()
-})`)
+__prefresh__.end()
+import.meta.hot.accept(__prefresh__.acceptCallback)`)
       }
       const result = magicSource.toContentAndSourcemap()
       return {
