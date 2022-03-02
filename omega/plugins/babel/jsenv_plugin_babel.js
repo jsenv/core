@@ -44,7 +44,13 @@ export const jsenvPluginBabel = () => {
       ]
       const babelPluginStructure = {
         ...babelPluginStructureBase,
-        "transform-import-assertions": [babelPluginImportAssertions],
+        "transform-import-assertions": [
+          babelPluginImportAssertions,
+          {
+            transformJson: true, // should depend on support
+            transformCss: true,
+          },
+        ],
       }
       const requiredFeatureNames = [
         ...baseFeatureNames,
@@ -109,8 +115,7 @@ export const jsenvPluginBabel = () => {
         return null
       }
       return convertCssTextToJavascriptModule({
-        cssUrl: url,
-        jsUrl: "", // comment savoir cela?
+        url,
         content,
       })
     },
