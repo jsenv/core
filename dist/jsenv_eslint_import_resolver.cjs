@@ -830,6 +830,9 @@ const applyPackageSelfResolution = ({
   if (!packageJson) {
     return undefined
   }
+  if (packageJson.name !== packageName) {
+    return undefined
+  }
   const { exports } = packageJson;
   if (!exports) {
     const subpathResolution = applyLegacySubpathResolution({
@@ -842,9 +845,6 @@ const applyPackageSelfResolution = ({
     if (subpathResolution && subpathResolution.type !== "subpath") {
       return subpathResolution
     }
-    return undefined
-  }
-  if (packageJson.name !== packageName) {
     return undefined
   }
   return applyPackageExportsResolution({

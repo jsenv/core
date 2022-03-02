@@ -115,6 +115,7 @@ const eslintConfig = composeEslintConfig(
             [require.resolve("./dist/jsenv_eslint_import_resolver.cjs")]: {
               projectDirectoryUrl: __dirname,
               packageConditions: ["browser", "import"],
+              // logLevel: "debug",
             },
           },
         },
