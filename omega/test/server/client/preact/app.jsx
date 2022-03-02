@@ -1,12 +1,11 @@
-import { h } from "preact"
 import { useState } from "preact/hooks"
 
-export let App = () => {
+export const App = () => {
   const [count, countSetter] = useState(0)
+
   return (
     <div>
-      <p>Hello world</p>
-      <span>counter: {count}</span>
+      <span style="color: black">toto: {count}</span>
       <button
         onClick={() => {
           countSetter((prev) => prev + 1)

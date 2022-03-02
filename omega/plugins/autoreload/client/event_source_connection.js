@@ -113,7 +113,9 @@ export const createEventSourceConnection = (
   }
 
   const removePageUnloadListener = listenPageUnload(() => {
-    _disconnect()
+    if (status.value === "connecting" || status.value === "connected") {
+      _disconnect()
+    }
   })
 
   const destroy = () => {

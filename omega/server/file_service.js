@@ -203,11 +203,16 @@ export const createFileService = ({
         if (!transformReturnValue) {
           return
         }
-        context.content = transformReturnValue.content
-        context.sourcemap = composeTwoSourcemaps(
-          context.sourcemap,
-          transformReturnValue.sourcemap,
-        )
+        if (typeof transformReturnValue === "string") {
+          context.content = transformReturnValue
+          // put a warning?
+        } else {
+          context.content = transformReturnValue.content
+          context.sourcemap = composeTwoSourcemaps(
+            context.sourcemap,
+            transformReturnValue.sourcemap,
+          )
+        }
       }
       await plugins.reduce(async (previous, plugin) => {
         await previous
