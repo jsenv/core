@@ -28,14 +28,13 @@ export const jsenvPluginPreact = ({
   }
   const transformScenarios = {
     dev: async ({ url, content }) => {
-      url = asUrlWithoutSearch(url) // for shouldEnablePrefresh
-
+      url = asUrlWithoutSearch(url)
       const prefreshEnabled = shouldEnablePrefresh(url)
       const babelReturnValue = await babelTransform({
         options: {
           plugins: [
             [
-              "@babel/plugin-transform-react-jsx",
+              "@babel/plugin-transform-react-jsx-development",
               {
                 runtime: "automatic",
                 importSource: "preact",

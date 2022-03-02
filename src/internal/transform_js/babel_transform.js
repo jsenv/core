@@ -12,13 +12,17 @@ export const babelTransform = async ({
   content,
 }) => {
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
+  const filepath = urlToFileSystemPath(url)
   options = {
     ast: false,
     sourceMaps: true,
-    sourceFileName: urlToFileSystemPath(url),
+    sourceFileName: filepath,
+    filename: filepath,
     configFile: false,
     babelrc: false,
     parserOpts: {
+      // sourceType: 'module',
+      // allowAwaitOutsideFunction: true,
       plugins: [
         // "importMeta",
         // "topLevelAwait",
