@@ -5,6 +5,7 @@ import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_ment
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
 export const parseJsModuleUrlMentions = async ({
+  url,
   urlFacade,
   contentType,
   content,
@@ -38,7 +39,7 @@ export const parseJsModuleUrlMentions = async ({
       }
     },
     transformUrlMentions: ({ transformUrlMention }) => {
-      const magicSource = createMagicSource({ content })
+      const magicSource = createMagicSource({ url, content })
       urlMentions.forEach((urlMention) => {
         const replacement = JSON.stringify(transformUrlMention(urlMention))
         const { start, end } = urlMention

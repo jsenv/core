@@ -6,14 +6,14 @@ export const applyFileSystemMagicResolution = (
   fileUrl,
   { magicDirectoryIndex, magicExtensions },
 ) => {
-  const filestats = fileStatsOrNull(fileUrl)
-  if (filestats && filestats.isFile()) {
+  const fileStat = fileStatOrNull(fileUrl)
+  if (fileStat && fileStat.isFile()) {
     return {
       found: true,
       url: fileUrl,
     }
   }
-  if (filestats && filestats.isDirectory()) {
+  if (fileStat && fileStat.isDirectory()) {
     if (magicDirectoryIndex) {
       const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index"
       const indexFileUrl = `${fileUrl}${indexFileSuffix}`
@@ -59,13 +59,13 @@ const findExtensionLeadingToFile = (fileUrl, magicExtensions) => {
   const urlFilename = urlToFilename(fileUrl)
   const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
     const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`
-    const stats = fileStatsOrNull(urlCandidate)
-    return stats
+    const stat = fileStatOrNull(urlCandidate)
+    return stat
   })
   return extensionLeadingToFile
 }
 
-const fileStatsOrNull = (url) => {
+const fileStatOrNull = (url) => {
   try {
     return statSync(new URL(url))
   } catch (e) {

@@ -1,6 +1,6 @@
 import MagicString from "magic-string"
 
-export const createMagicSource = ({ content }) => {
+export const createMagicSource = ({ url, content }) => {
   if (content === undefined) {
     throw new Error("content missing")
   }
@@ -28,6 +28,9 @@ export const createMagicSource = ({ content }) => {
       })
       const code = magicString.toString()
       const map = magicString.generateMap({ hires: true })
+      // should we do map.file = urlToFilename(urlFacade) OR map.file = urlToFilename(url)
+      map.sources = [url]
+      map.sourcesContent = [content]
       return {
         content: code,
         sourcemap: map,

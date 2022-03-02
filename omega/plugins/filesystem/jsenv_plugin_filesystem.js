@@ -112,39 +112,40 @@ export const jsenvPluginFileSystem = ({
       if (!url.startsWith("file:")) {
         return null
       }
-      const resolved = applyFileSystemResolution({
-        fileUrl: url,
+      let fileUrl = url
+      fileUrl = applyFileSystemResolution({
+        fileUrl,
         parentUrl,
       })
-      if (!resolved) {
+      if (!fileUrl) {
         return null
       }
-      const packageUrl = lookupPackageScope(resolved)
+      const packageUrl = lookupPackageScope(fileUrl)
       const urlVersion =
         packageUrl && packageUrl !== projectDirectoryUrl
           ? readPackageJson(packageUrl).version
           : undefined
       const urlObject = new URL(url)
       const { search, hash } = urlObject
-      // urlObject.search = ""
-      // urlObject.hash = ""
-      const realPath = realpathSync(urlObject)
-      const realFileUrl = pathToFileURL(realPath)
-      const realUrl = `${realFileUrl}${search}${hash}`
-      if (urlIsInsideOf(realUrl, projectDirectoryUrl)) {
-        return realUrl
+      const realPath = realpathSync(new URL(fileUrl))
+      const realFileUrl = `${pathToFileURL(realPath)}${search}${hash}`
+      if (urlIsInsideOf(realFileUrl, projectDirectoryUrl)) {
+        return realFileUrl
       }
-      if (realUrl !== url && urlIsInsideOf(url, projectDirectoryUrl)) {
+      if (
+        realFileUrl !== fileUrl &&
+        urlIsInsideOf(fileUrl, projectDirectoryUrl)
+      ) {
         // when symlink is inside root directory use it as facadeurl
         return {
-          url: realUrl,
-          urlFacade: url,
+          url: realFileUrl,
+          urlFacade: fileUrl,
           urlVersion,
         }
       }
       return {
-        url: realUrl,
-        urlFacade: `${projectDirectoryUrl}@fs/${realUrl.slice(
+        url: realFileUrl,
+        urlFacade: `${projectDirectoryUrl}@fs/${realFileUrl.slice(
           filesystemRootUrl.length,
         )}`,
         urlVersion,

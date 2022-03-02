@@ -6,7 +6,7 @@ import remapping from "@ampproject/remapping"
 
 export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
   if (!firstSourcemap && !secondSourcemap) {
-    return { ...nullSourceMap }
+    return null
   }
   if (!firstSourcemap) {
     return secondSourcemap
@@ -14,14 +14,36 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
   if (!secondSourcemap) {
     return firstSourcemap
   }
-  const map = remapping([firstSourcemap, secondSourcemap], () => null, true)
-  if (!map.file) {
-    delete map.file
+  const firstHasMultipleSources = firstSourcemap.sources.length > 1
+  const secondHasMultipleSources = secondSourcemap.sources.length > 1
+  // see https://github.com/babel/babel/pull/14246/files
+  // and https://github.com/vitejs/vite/blob/33f96718dc5d827612c300fb6d0258f1c040f5a1/packages/vite/src/node/utils.ts#L548
+  // https://github.com/angular/angular/blob/28393031b10f4dbefab7587c19641e49cb820785/packages/compiler-cli/src/ngtsc/sourcemaps/src/source_file.ts
+  // https://github.com/babel/babel/blob/main/packages/babel-core/src/transformation/file/merge-map.ts
+  if (firstHasMultipleSources && secondHasMultipleSources) {
+    if (firstSourcemap.sources.length > secondSourcemap.sources.length) {
+      return firstSourcemap
+    }
+    return secondSourcemap
   }
+  if (firstHasMultipleSources) {
+    const map = remapping(
+      firstSourcemap,
+      (sourceUrl) => {
+        if (sourceUrl === secondSourcemap.sources[0]) {
+          return secondSourcemap
+        }
+        return { ...nullSourceMap }
+      },
+      true,
+    )
+    return map
+  }
+  const map = remapping([firstSourcemap, secondSourcemap], () => null, true)
   return map
 }
 
-export const nullSourceMap = {
+const nullSourceMap = {
   names: [],
   sources: [],
   mappings: "",

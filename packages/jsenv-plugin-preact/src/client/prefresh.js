@@ -1,7 +1,7 @@
 /* globals self */
 
 import "@prefresh/core"
-import { flush as flushUpdates } from "@prefresh/utils"
+import { flush } from "@prefresh/utils"
 
 export const installPrefresh = (url) => {
   let prevRefreshReg = self.$RefreshReg$ || (() => {})
@@ -30,7 +30,7 @@ export const installPrefresh = (url) => {
       self.$RefreshSig$ = prevRefreshSig
     },
     acceptCallback: () => {
-      flushUpdates()
+      flush()
     },
   }
 }

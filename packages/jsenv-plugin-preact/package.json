@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/plugin-preact",
   "version": "0.0.1",
+  "type": "module",
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
     "@jsenv/core": "../../",

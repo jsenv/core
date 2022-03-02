@@ -70,13 +70,10 @@ export const createFileService = ({
     const responseFromPlugin = await findAsync({
       array: plugins,
       start: (plugin) => {
-        if (plugin.serve) {
-          return plugin.serve({
-            projectDirectoryUrl,
-            request,
-          })
-        }
-        return null
+        return callPluginHook(plugin, "serve", {
+          projectDirectoryUrl,
+          request,
+        })
       },
       predicate: (returnValue) => Boolean(returnValue),
     })
@@ -96,15 +93,12 @@ export const createFileService = ({
         const resolveReturnValue = await findAsync({
           array: plugins,
           start: (plugin) => {
-            if (plugin.resolve) {
-              return plugin.resolve({
-                ...context,
-                parentUrl,
-                specifierType,
-                specifier,
-              })
-            }
-            return null
+            return callPluginHook(plugin, "resolve", {
+              ...context,
+              parentUrl,
+              specifierType,
+              specifier,
+            })
           },
           predicate: (returnValue) => Boolean(returnValue),
         })
@@ -166,10 +160,7 @@ export const createFileService = ({
       const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
-          if (plugin.load) {
-            return plugin.load(context)
-          }
-          return null
+          return callPluginHook(plugin, "load", context)
         },
         predicate: (returnValue) => Boolean(returnValue),
       })
@@ -208,7 +199,6 @@ export const createFileService = ({
         }
       }
 
-      let finalize
       const mutateContentAndSourcemap = (transformReturnValue) => {
         if (!transformReturnValue) {
           return
@@ -218,21 +208,16 @@ export const createFileService = ({
           context.sourcemap,
           transformReturnValue.sourcemap,
         )
-        finalize = transformReturnValue.finalize
       }
       await plugins.reduce(async (previous, plugin) => {
         await previous
-        const { transform } = plugin
-        if (!transform) {
-          return
-        }
-        const transformReturnValue = await transform(context)
+        const transformReturnValue = await callPluginHook(
+          plugin,
+          "transform",
+          context,
+        )
         mutateContentAndSourcemap(transformReturnValue)
       }, Promise.resolve())
-      if (finalize) {
-        const finalizeReturnValue = await finalize(context)
-        mutateContentAndSourcemap(finalizeReturnValue)
-      }
 
       const { sourcemap } = context
       if (sourcemap && sourcemapInjection === "comment") {
@@ -258,7 +243,7 @@ export const createFileService = ({
         specifierType,
         specifier,
       })
-      if (response.status === 404) {
+      if (response && response.status === 404) {
         logger.warn(
           createDetailedMessage(`Error while handling sourcemap`, {
             "error message": response.statusText,
@@ -270,7 +255,11 @@ export const createFileService = ({
       }
       const sourcemapString = content
       try {
-        return JSON.parse(sourcemapString)
+        const sourcemap = JSON.parse(sourcemapString)
+        sourcemap.sources = sourcemap.sources.map((source) => {
+          return new URL(source, url).href
+        })
+        return sourcemap
       } catch (e) {
         if (e.name === "SyntaxError") {
           logger.error(
@@ -326,6 +315,29 @@ export const createFileService = ({
       },
       body: content,
     }
+  }
+}
+
+const callPluginHook = async (plugin, hookName, params) => {
+  const hook = plugin[hookName]
+  if (!hook) {
+    return null
+  }
+  try {
+    return await plugin[hookName](params)
+  } catch (e) {
+    if (e && e.asResponse) {
+      throw e
+    }
+    if (e && e.statusText === "Unexpected directory operation") {
+      e.asResponse = () => {
+        return {
+          status: 403,
+        }
+      }
+      throw e
+    }
+    throw e
   }
 }
 
