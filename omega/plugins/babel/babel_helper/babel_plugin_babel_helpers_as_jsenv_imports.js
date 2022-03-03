@@ -3,9 +3,9 @@ import { pathToFileURL } from "node:url"
 import { injectImport } from "@jsenv/core/omega/internal/js_ast/babel_utils.js"
 
 import {
+  getBabelHelperFileUrl,
   babelHelperNameFromUrl,
-  babelHelperNameToImportSpecifier,
-} from "./babel_helper.js"
+} from "./babel_helper_directory.js"
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
@@ -30,12 +30,11 @@ export const babelPluginBabelHelpersAsJsenvImports = () => {
           return cachedHelpers[name]
         }
         const filePath = file.opts.filename
-        const babelHelperImportSpecifier =
-          babelHelperNameToImportSpecifier(name)
         const fileUrl = pathToFileURL(filePath).href
         if (babelHelperNameFromUrl(fileUrl) === name) {
           return undefined
         }
+        const babelHelperImportSpecifier = getBabelHelperFileUrl(name)
         const helper = injectImport({
           programPath: file.path,
           from: babelHelperImportSpecifier,

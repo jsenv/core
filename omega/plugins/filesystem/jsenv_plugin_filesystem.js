@@ -18,7 +18,7 @@ export const jsenvPluginFileSystem = ({
   magicExtensions = ["inherit"],
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   specifierResolution = "node_esm",
-  packageConditions = ["import", "browser"],
+  packageConditions = ["browser", "import"],
 } = {}) => {
   const applyFileSystemResolution = ({ fileUrl, parentUrl }) => {
     const filesystemResolution = applyFileSystemMagicResolution(fileUrl, {

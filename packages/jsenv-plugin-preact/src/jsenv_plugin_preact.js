@@ -65,8 +65,12 @@ export const jsenvPluginPreact = ({
             "type": "module",
             "textContent":
               scenario === "dev" || scenario === "test"
-                ? `import "preact/debug"`
-                : `import "preact/devtools"`,
+                ? `
+import "preact/debug"
+`
+                : `
+import "preact/devtools"
+`,
             "data-injected": true,
           }),
         )

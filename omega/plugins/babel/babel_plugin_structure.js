@@ -15,7 +15,7 @@
 import { createRequire } from "node:module"
 
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
-import { babelHelperNameFromUrl } from "./babel_helper/babel_helper.js"
+import { babelHelperNameFromUrl } from "./babel_helper/babel_helper_directory.js"
 
 const require = createRequire(import.meta.url)
 
