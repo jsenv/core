@@ -9,6 +9,12 @@ import { applyBabelPlugins } from "@jsenv/core/omega/internal/js_ast/apply_babel
 import { createMagicSource } from "@jsenv/core/omega/internal/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/core/omega/internal/sourcemap/sourcemap_composition.js"
 import { asUrlWithoutSearch } from "@jsenv/core/omega/internal/url_utils.js"
+import {
+  parseHtmlString,
+  stringifyHtmlAst,
+  injectScriptAsEarlyAsPossible,
+  createHtmlNode,
+} from "@jsenv/core/omega/internal/html_ast/html_ast.js"
 
 export const jsenvPluginPreact = ({
   hotRefreshPatterns = {
@@ -16,6 +22,7 @@ export const jsenvPluginPreact = ({
     "./**/*.tsx": true,
     "./**/node_modules/": false,
   },
+  preactDevtoolsDuringBuild = false,
 } = {}) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
@@ -43,9 +50,25 @@ export const jsenvPluginPreact = ({
       },
     },
     transform: {
-      html: () => {
-        // TODO: inject a script type module importing preact/debug or devtools
-        // see https://github.com/preactjs/preset-vite/blob/main/src/index.ts
+      html: ({ scenario, content }) => {
+        if (
+          !preactDevtoolsDuringBuild &&
+          (scenario === "preview" || scenario === "prod")
+        ) {
+          return null
+        }
+        const htmlAst = parseHtmlString(content)
+        injectScriptAsEarlyAsPossible(
+          htmlAst,
+          createHtmlNode({
+            textContent:
+              scenario === "dev" || scenario === "test"
+                ? `import "preact/debug"`
+                : `import "preact/devtools"`,
+          }),
+        )
+        const htmlModified = stringifyHtmlAst(htmlAst)
+        return { content: htmlModified }
       },
       js_module: async ({ scenario, url, content }) => {
         if (scenario === "dev") {
