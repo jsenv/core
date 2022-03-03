@@ -1,5 +1,5 @@
 import { applyBabelPlugins } from "@jsenv/core/omega/internal/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "#omega/internal/sourcemap/magic_source.js"
+import { createMagicSource } from "@jsenv/core/omega/internal/js_ast/magic_source.js"
 
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
