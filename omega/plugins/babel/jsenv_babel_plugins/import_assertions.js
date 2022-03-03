@@ -3,10 +3,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { injectQueryParams } from "@jsenv/core/omega/internal/url_utils.js"
 import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
 
-export const babelPluginImportAssertions = (
-  babel,
-  { transformJson = true, transformCss = true },
-) => {
+export const babelPluginImportAssertions = (babel, { importTypes }) => {
   return {
     name: "transform-import-assertions",
     // During build we throw on import call expression where "specifier" or "type" is dynamic
@@ -53,19 +50,11 @@ export const babelPluginImportAssertions = (
               )
             }
             const { type } = assertionsDescriptor
-            if (type === "json" && transformJson) {
+            if (importTypes.includes(type)) {
               forceImportTypeOnUrlSpecifier({
                 specifierPath,
                 babel,
-                importType: "json",
-              })
-              return
-            }
-            if (type === "css" && transformCss) {
-              forceImportTypeOnUrlSpecifier({
-                specifierPath,
-                babel,
-                importType: "css",
+                importType: type,
               })
               return
             }

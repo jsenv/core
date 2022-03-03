@@ -16,8 +16,8 @@ import {
 } from "#omega/internal/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "#omega/internal/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "#omega/internal/sourcemap/sourcemap_injection.js"
-
-import { parseUserAgentHeader } from "./user_agent.js"
+import { parseUserAgentHeader } from "#omega/internal/runtime_support/user_agent.js"
+import { isFeatureSupportedOnRuntimes } from "#omega/internal/runtime_support/runtime_support.js"
 
 export const createFileService = ({
   signal,
@@ -61,12 +61,16 @@ export const createFileService = ({
     }
     const requestContext = {
       request,
-      runtimeName,
-      runtimeVersion,
+      isSupportedOnRuntime: (featureName) => {
+        return isFeatureSupportedOnRuntimes(runtimeSupport, featureName)
+      },
       runtimeSupport,
     }
     plugins = plugins.filter((plugin) => {
-      return plugin.appliesDuring && plugin.appliesDuring[scenario]
+      return (
+        plugin.appliesDuring &&
+        (plugin.appliesDuring === "*" || plugin.appliesDuring[scenario])
+      )
     })
     const responseFromPlugin = await findAsync({
       array: plugins,
@@ -158,6 +162,7 @@ export const createFileService = ({
       //   }
       // }
       context.contentType = urlToContentType(context.urlFacade)
+      context.type = getRessourceType(context)
       const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
@@ -324,13 +329,32 @@ export const createFileService = ({
   }
 }
 
+const getRessourceType = ({ url, contentType }) => {
+  if (contentType === "text/html") {
+    return "html"
+  }
+  if (contentType === "text/css") {
+    return "css"
+  }
+  if (contentType === "application/javascript") {
+    return new URL(url).searchParams.has("script") ? "js_classic" : "js_module"
+  }
+  if (contentType === "application/json") {
+    return "json"
+  }
+  return "other"
+}
+
 const callPluginHook = async (plugin, hookName, params) => {
-  const hook = plugin[hookName]
+  let hook = plugin[hookName]
   if (!hook) {
     return null
   }
+  if (typeof hook === "object") {
+    hook = hook[params.type]
+  }
   try {
-    return await plugin[hookName](params)
+    return await hook(params)
   } catch (e) {
     if (e && e.asResponse) {
       throw e

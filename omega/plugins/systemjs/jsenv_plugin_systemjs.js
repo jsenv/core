@@ -8,22 +8,29 @@ export const jsenvPluginSystemJs = () => {
     appliesDuring: {
       dev: true,
       test: true,
-      preview: false,
-      prod: false,
     },
-
-    transform: async ({ runtimeSupport, url, contentType, content }) => {
-      const isHtml = contentType === "text/html"
-      if (isHtml) {
+    transform: {
+      html: async () => {
         // TODO
         return null
-      }
-      const isJsModule =
-        contentType === "application/javascript" &&
-        !new URL(url).searchParams.get("script")
-      if (isJsModule) {
+      },
+      js_module: async ({ runtimeSupport, url, content }) => {
+        const shouldBeCompatibleWithNode =
+          Object.keys(runtimeSupport).includes("node")
         const requiredFeatureNames = [
-          // todo
+          "import_dynamic",
+          "top_level_await",
+          "global_this",
+          // when using node we assume the code won't use browser specific feature
+          ...(shouldBeCompatibleWithNode
+            ? []
+            : [
+                "script_type_module",
+                "worker_type_module",
+                "import_type_json",
+                "import_type_css",
+              ]),
+          // "importmap",
         ]
         const needsSystemJs = featuresRelatedToSystemJs.some((featureName) => {
           const isRequired = requiredFeatureNames.includes(featureName)
@@ -47,8 +54,7 @@ export const jsenvPluginSystemJs = () => {
           content: code,
           soourcemap: map,
         }
-      }
-      return null
+      },
     },
   }
 }

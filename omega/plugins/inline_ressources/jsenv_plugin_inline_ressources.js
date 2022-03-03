@@ -65,14 +65,7 @@ export const jsenvPluginInlineRessources = () => {
 
   return {
     name: "jsenv:inline_ressources",
-
-    appliesDuring: {
-      dev: true,
-      test: true,
-      preview: true,
-      prod: true,
-    },
-
+    appliesDuring: "*",
     resolve: ({ projectDirectoryUrl, parentUrl, specifier }) => {
       const url =
         specifier[0] === "/"
@@ -86,7 +79,6 @@ export const jsenvPluginInlineRessources = () => {
       }
       return null
     },
-
     load: ({ url }) => {
       const urlWithoutSearch = asUrlWithoutSearch(url)
       const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
@@ -98,89 +90,89 @@ export const jsenvPluginInlineRessources = () => {
         content: inlineRessource.content,
       }
     },
-
-    transform: async ({ url, contentType, content }) => {
-      if (contentType !== "text/html") {
-        return null
-      }
-      const htmlAst = parseHtmlString(content)
-      const inlineRessources = []
-      const handleInlineStyle = (node) => {
-        if (node.nodeName !== "style") {
-          return
+    transform: {
+      html: async ({ url, content }) => {
+        const htmlAst = parseHtmlString(content)
+        const inlineRessources = []
+        const handleInlineStyle = (node) => {
+          if (node.nodeName !== "style") {
+            return
+          }
+          const textNode = getHtmlNodeTextNode(node)
+          if (!textNode) {
+            return
+          }
+          const { line, column } = getHtmlNodeLocation(node)
+          const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
+          let inlineStyleSpecifier = `${urlToFilename(url)}@${inlineStyleId}.js`
+          const inlineStyleUrl = new URL(inlineStyleSpecifier, url).href
+          inlineRessources.push({
+            line,
+            column,
+            url: asUrlWithoutSearch(inlineStyleUrl),
+            contentType: "text/css",
+            content: textNode.value,
+          })
+          node.nodeName = "link"
+          node.tagName = "link"
+          assignHtmlNodeAttributes(node, {
+            rel: "stylesheet",
+            href: inlineStyleSpecifier,
+          })
+          removeHtmlNodeText(node)
         }
-        const textNode = getHtmlNodeTextNode(node)
-        if (!textNode) {
-          return
+        const handleInlineScript = (node) => {
+          if (node.nodeName !== "script") {
+            return
+          }
+          const scriptCategory = parseScriptNode(node)
+          if (scriptCategory === "importmap") {
+            // do not externalize importmap for now
+            return
+          }
+          const textNode = getHtmlNodeTextNode(node)
+          if (!textNode) {
+            return
+          }
+          const { line, column } = getHtmlNodeLocation(node)
+          const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
+          let inlineScriptSpecifier = `${urlToFilename(
+            url,
+          )}@${inlineScriptId}.js`
+          if (scriptCategory === "classic") {
+            inlineScriptSpecifier = `${inlineScriptSpecifier}?script`
+          }
+          const inlineScriptUrl = new URL(inlineScriptSpecifier, url).href
+          inlineRessources.push({
+            line,
+            column,
+            url: asUrlWithoutSearch(inlineScriptUrl),
+            contentType:
+              scriptCategory === "importmap"
+                ? "application/importmap+json"
+                : "application/javascript",
+            content: textNode.value,
+          })
+          assignHtmlNodeAttributes(node, { src: inlineScriptSpecifier })
+          removeHtmlNodeText(node)
         }
-        const { line, column } = getHtmlNodeLocation(node)
-        const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
-        let inlineStyleSpecifier = `${urlToFilename(url)}@${inlineStyleId}.js`
-        const inlineStyleUrl = new URL(inlineStyleSpecifier, url).href
-        inlineRessources.push({
-          line,
-          column,
-          url: asUrlWithoutSearch(inlineStyleUrl),
-          contentType: "text/css",
-          content: textNode.value,
+        visitHtmlAst(htmlAst, (node) => {
+          handleInlineStyle(node)
+          handleInlineScript(node)
         })
-        node.nodeName = "link"
-        node.tagName = "link"
-        assignHtmlNodeAttributes(node, {
-          rel: "stylesheet",
-          href: inlineStyleSpecifier,
+        updateInlineRessources({
+          ownerUrl: url,
+          ownerContent: content,
+          inlineRessources,
         })
-        removeHtmlNodeText(node)
-      }
-      const handleInlineScript = (node) => {
-        if (node.nodeName !== "script") {
-          return
+        if (inlineRessources.length === 0) {
+          return null
         }
-        const scriptCategory = parseScriptNode(node)
-        if (scriptCategory === "importmap") {
-          // do not externalize importmap for now
-          return
+        const htmlModified = stringifyHtmlAst(htmlAst)
+        return {
+          content: htmlModified,
         }
-        const textNode = getHtmlNodeTextNode(node)
-        if (!textNode) {
-          return
-        }
-        const { line, column } = getHtmlNodeLocation(node)
-        const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
-        let inlineScriptSpecifier = `${urlToFilename(url)}@${inlineScriptId}.js`
-        if (scriptCategory === "classic") {
-          inlineScriptSpecifier = `${inlineScriptSpecifier}?script`
-        }
-        const inlineScriptUrl = new URL(inlineScriptSpecifier, url).href
-        inlineRessources.push({
-          line,
-          column,
-          url: asUrlWithoutSearch(inlineScriptUrl),
-          contentType:
-            scriptCategory === "importmap"
-              ? "application/importmap+json"
-              : "application/javascript",
-          content: textNode.value,
-        })
-        assignHtmlNodeAttributes(node, { src: inlineScriptSpecifier })
-        removeHtmlNodeText(node)
-      }
-      visitHtmlAst(htmlAst, (node) => {
-        handleInlineStyle(node)
-        handleInlineScript(node)
-      })
-      updateInlineRessources({
-        ownerUrl: url,
-        ownerContent: content,
-        inlineRessources,
-      })
-      if (inlineRessources.length === 0) {
-        return null
-      }
-      const htmlModified = stringifyHtmlAst(htmlAst)
-      return {
-        content: htmlModified,
-      }
+      },
     },
   }
 }

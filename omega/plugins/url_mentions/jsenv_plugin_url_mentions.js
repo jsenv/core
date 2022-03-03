@@ -13,14 +13,7 @@ const urlMentionParsers = [
 export const jsenvPluginUrlMentions = () => {
   return {
     name: "jsenv:url_mentions",
-
-    appliesDuring: {
-      dev: true,
-      test: true,
-      preview: true,
-      prod: true,
-    },
-
+    appliesDuring: "*",
     transform: async ({
       ressourceGraph,
       resolve,

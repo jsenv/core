@@ -7,24 +7,18 @@
  * - global
  */
 
-import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
+import { applyBabelPlugins } from "#omega/internal/babel_utils/apply_babel_plugins.js"
 
 import { transformReplaceExpressions } from "./babel_plugin_transform_replace_expressions.js"
 
 export const jsenvPluginCommonJsGlobals = () => {
   return {
     name: "jsenv:commonjs_globals",
-    appliesDuring: {
-      dev: true,
-      test: true,
-      preview: true,
-      prod: true,
-    },
-
-    transform: async ({ scenario, url, content }) => {
-      const { code, map } = await babelTransform({
-        options: {
-          plugins: [
+    appliesDuring: "*",
+    transform: {
+      js_module: async ({ scenario, url, content }) => {
+        const { code, map } = await applyBabelPlugins({
+          babelPlugins: [
             transformReplaceExpressions,
             {
               replaceMap: {
@@ -38,14 +32,14 @@ export const jsenvPluginCommonJsGlobals = () => {
               allowConflictingReplacements: true,
             },
           ],
-        },
-        url,
-        content,
-      })
-      return {
-        content: code,
-        sourcemap: map,
-      }
+          url,
+          content,
+        })
+        return {
+          content: code,
+          sourcemap: map,
+        }
+      },
     },
   }
 }

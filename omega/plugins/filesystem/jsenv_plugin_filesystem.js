@@ -77,14 +77,7 @@ export const jsenvPluginFileSystem = ({
 
   return {
     name: "jsenv:filesystem",
-
-    appliesDuring: {
-      dev: true,
-      test: true,
-      preview: true,
-      prod: true,
-    },
-
+    appliesDuring: "*",
     resolve: async ({
       projectDirectoryUrl,
       parentUrl,
@@ -151,7 +144,6 @@ export const jsenvPluginFileSystem = ({
         urlVersion,
       }
     },
-
     load: async ({ url, contentType }) => {
       if (!url.startsWith("file:")) {
         return null
