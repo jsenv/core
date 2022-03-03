@@ -13,6 +13,9 @@ export const applyBabelPlugins = async ({
   content,
   options,
 }) => {
+  if (babelPlugins.length === 0) {
+    return { code: content }
+  }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
   const filepath = urlToFileSystemPath(url)
   options = {

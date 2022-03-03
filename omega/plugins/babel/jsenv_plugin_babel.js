@@ -1,9 +1,14 @@
+/*
+ * TODO: move this to packages/ this to decrease the "dependencies" in "@jsenv/core"
+ */
+
 import { applyBabelPlugins } from "#omega/internal/babel_utils/apply_babel_plugins.js"
 
 import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js"
-import { babelPluginImportAssertions } from "./jsenv_babel_plugins/import_assertions.js"
-import { convertCssTextToJavascriptModule } from "./css_module.js"
-import { convertJsonTextToJavascriptModule } from "./json_module.js"
+import { babelPluginImportAssertions } from "./import_assertions/import_assertions.js"
+import { convertCssTextToJavascriptModule } from "./import_assertions/css_module.js"
+import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
+import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/new_stylesheet_as_jsenv_import.js"
 
 export const jsenvPluginBabel = () => {
   const babel = {
@@ -36,14 +41,13 @@ export const jsenvPluginBabel = () => {
           babelPluginStructure["regenerator-runtime-as-jsenv-import"] = null // TODO
         }
         if (!isSupportedOnRuntime("new_stylesheet")) {
-          babelPluginStructure["new-stylesheet-as-jsenv-import"] = null // TODO
+          babelPluginStructure["new-stylesheet-as-jsenv-import"] =
+            babelPluginNewStylesheetAsJsenvImport
         }
         const babelPlugins = Object.keys(babelPluginStructure).map(
           (babelPluginName) => babelPluginStructure[babelPluginName],
         )
-        if (babelPlugins.length === 0) {
-          return null
-        }
+        // is there is babel plugins, add babel-helpers-as-jsenv-import
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
           url,
@@ -53,6 +57,11 @@ export const jsenvPluginBabel = () => {
           content: code,
           sourcemap: map,
         }
+      },
+      js_classic: async () => {
+        // TODO (same but some babel plugins configured differently)
+        // and forward that into to applyBabelPlugins
+        return null
       },
     },
   }
@@ -81,6 +90,6 @@ export const jsenvPluginBabel = () => {
       })
     },
   }
-  // maybe add importTypeText
+  // maybe add importTypeText (but this will force )
   return [babel, importTypeJson, importTypeCss]
 }

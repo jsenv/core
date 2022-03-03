@@ -37,13 +37,14 @@ export const injectImport = ({
   name,
   from,
   nameHint,
+  sideEffect,
 }) => {
   const {
     addNamespace,
     addDefault,
     addNamed,
+    addSideEffect,
   } = require("@babel/helper-module-imports")
-
   if (namespace) {
     return addNamespace(programPath, from, {
       nameHint,
@@ -51,6 +52,9 @@ export const injectImport = ({
   }
   if (name) {
     return addNamed(programPath, name, from)
+  }
+  if (sideEffect) {
+    return addSideEffect(programPath, from)
   }
   return addDefault(programPath, from, {
     nameHint,
