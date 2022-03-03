@@ -14,9 +14,7 @@
     "access": "public"
   },
   "type": "module",
-  "imports": {
-    "#omega/*": "./omega/*"
-  },
+  "imports": {},
   "exports": {
     ".": {
       "import": "./main.js"
