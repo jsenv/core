@@ -10,6 +10,7 @@ import {
 export const babelPluginImportMetaHot = (babel) => {
   const importMetaHotClientFileUrl = new URL(
     "./client/import_meta_hot_module.js",
+    import.meta.url,
   ).href
 
   return {
@@ -23,7 +24,7 @@ export const babelPluginImportMetaHot = (babel) => {
           }
           const importMetaHotAst = injectImport({
             programPath,
-            from: importMetaHotClientFileUrl.href,
+            from: importMetaHotClientFileUrl,
             nameHint: `createImportMetaHot`,
             // disable interop, useless as we work only with js modules
             importedType: "es6",

@@ -5,16 +5,16 @@
 
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
-import { applyBabelPlugins } from "@jsenv/core/omega/internal/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/core/omega/internal/js_ast/magic_source.js"
-import { composeTwoSourcemaps } from "@jsenv/core/omega/internal/sourcemap/sourcemap_composition.js"
-import { asUrlWithoutSearch } from "@jsenv/core/omega/internal/url_utils.js"
+import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
+import { createMagicSource } from "@jsenv/core/src/utils/js_ast/magic_source.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
+import { asUrlWithoutSearch } from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/core/omega/internal/html_ast/html_ast.js"
+} from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
 export const jsenvPluginPreact = ({
   hotRefreshPatterns = {

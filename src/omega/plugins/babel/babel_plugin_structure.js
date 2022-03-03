@@ -1,21 +1,7 @@
-/*
- * This file is used to configure a list of babel plugins as documented in
- * https://babeljs.io/docs/en/presets
- *
- * This list of babel plugins is meant to be used in project using jsenv.
- *
- * Jsenv decides to use a subset of babel plugins with the following logic:
- * - During dev babel plugins natively supported by browsers and Node.js are not used.
- * - During build:
- *   - When "runtimeSupport" is configured, babel plugins already supported by these runtime won't be used
- *     See https://github.com/jsenv/jsenv-template-pwa/blob/main/jsenv.config.mjs#L12
- *   - Otherwise all babel plugins are used
- */
-
 import { createRequire } from "node:module"
 
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
-import { babelHelperNameFromUrl } from "./babel_helper/babel_helper_directory.js"
+import { getBabelHelperFileUrl } from "./babel_helper/babel_helper_directory.js"
 
 const require = createRequire(import.meta.url)
 
@@ -166,14 +152,16 @@ export const getBaseBabelPluginStructure = ({ url, isSupportedOnRuntime }) => {
       require("@babel/plugin-transform-template-literals"),
     ]
   }
-  if (isBabelPluginNeeded("transform-typeof-symbol")) {
-    const babelHelperName = babelHelperNameFromUrl(url)
-    // prevent babel to retransform "typeof" itself
-    if (babelHelperName !== "typeof") {
-      babelPluginStructure["transform-typeof-symbol"] = [
-        require("@babel/plugin-transform-typeof-symbol"),
-      ]
-    }
+  if (
+    isBabelPluginNeeded("transform-typeof-symbol") &&
+    // prevent "typeof" to be injected into itself:
+    // - not needed
+    // - would create infinite attempt to transform typeof
+    url !== getBabelHelperFileUrl("typeof")
+  ) {
+    babelPluginStructure["transform-typeof-symbol"] = [
+      require("@babel/plugin-transform-typeof-symbol"),
+    ]
   }
   if (isBabelPluginNeeded("transform-unicode-regex")) {
     babelPluginStructure["transform-unicode-regex"] = [

@@ -19,6 +19,15 @@ import {
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
 export const jsenvPluginHtmlSupervisor = () => {
+  const htmlSupervisorSetupFileUrl = new URL(
+    "./client/html_supervisor_setup.js",
+    import.meta.url,
+  ).href
+  const htmlSupervisorFileUrl = new URL(
+    "./client/html_supervisor.js",
+    import.meta.url,
+  ).href
+
   return {
     name: "jsenv:html_supervisor",
     appliesDuring: {
@@ -81,27 +90,32 @@ export const jsenvPluginHtmlSupervisor = () => {
         if (scriptsToSupervise.length === 0) {
           return null
         }
-        const htmlSupervisorSetupFileUrl = await resolve({
+        let htmlSupervisorSetupResolvedUrl = await resolve({
           parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
-          specifier:
-            "@jsenv/core/omega/plugins/html_supervisor/client/html_supervisor_setup.js",
+          specifier: htmlSupervisorSetupFileUrl,
         })
+        htmlSupervisorSetupResolvedUrl = injectQueryParams(
+          htmlSupervisorSetupResolvedUrl,
+          { script: "" },
+        )
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",
-            "src": asClientUrl(htmlSupervisorSetupFileUrl, url),
+            "src": asClientUrl(htmlSupervisorSetupResolvedUrl, url),
             "data-injected": true,
           }),
         )
-        const htmlSupervisorFileUrl = await resolve({
+        const htmlSupervisorResolvedUrl = await resolve({
           parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
-          specifier:
-            "@jsenv/core/omega/plugins/html_supervisor/client/module/html_supervisor_module.js",
+          specifier: htmlSupervisorFileUrl,
         })
-        const htmlSupervisorClientUrl = asClientUrl(htmlSupervisorFileUrl, url)
+        const htmlSupervisorClientUrl = asClientUrl(
+          htmlSupervisorResolvedUrl,
+          url,
+        )
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({

@@ -9,6 +9,11 @@ import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plug
 import { babelPluginImportMetaHot } from "./babel_plugin_import_meta_hot.js"
 
 export const jsenvPluginAutoreload = () => {
+  const eventSourceFileUrl = new URL(
+    "./client/event_source_client.js",
+    import.meta.url,
+  ).href
+
   return {
     name: "jsenv:autoreload",
     appliesDuring: {
@@ -23,18 +28,17 @@ export const jsenvPluginAutoreload = () => {
         content,
       }) => {
         const htmlAst = parseHtmlString(content)
-        const eventSourceFileUrl = await resolve({
+        const eventSourceResolvedUrl = await resolve({
           parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
-          specifier:
-            "@jsenv/core/omega/plugins/autoreload/client/event_source_client.js",
+          specifier: eventSourceFileUrl,
         })
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",
             "type": "module",
-            "src": asClientUrl(eventSourceFileUrl, url),
+            "src": asClientUrl(eventSourceResolvedUrl, url),
             "data-injected": true,
           }),
         )
