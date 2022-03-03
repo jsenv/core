@@ -4,6 +4,8 @@
 
 const babelHelperClientDirectoryUrl = new URL("./client/", import.meta.url).href
 
+// we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
 export const getBabelHelperFileUrl = (babelHelperName) => {
   const babelHelperFileUrl = new URL(
     `./${babelHelperName}/${babelHelperName}.js`,

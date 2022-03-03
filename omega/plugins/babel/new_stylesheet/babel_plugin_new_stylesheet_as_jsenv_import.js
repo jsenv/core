@@ -9,16 +9,19 @@ import { pathToFileURL } from "node:url"
 import { injectImport } from "#omega/internal/js_ast/babel_utils.js"
 
 export const babelPluginNewStylesheetAsJsenvImport = () => {
+  const newStylesheetClientFileUrl = new URL(
+    "./client/new_stylesheet.js",
+    import.meta.url,
+  ).href
+
   const injectConstructableStylesheetPolyfill = ({ path, filename }) => {
     const fileUrl = pathToFileURL(filename).href
-    if (
-      fileUrl.endsWith("/plugins/babel/new_stylesheet/client/new_stylesheet.js")
-    ) {
+    if (fileUrl === newStylesheetClientFileUrl) {
       return
     }
     injectImport({
       programPath: path.scope.getProgramParent().path,
-      from: "@jsenv/core/omega/plugins/babel/new_stylesheet/client/new_stylesheet.js",
+      from: newStylesheetClientFileUrl,
       sideEffect: true,
     })
   }

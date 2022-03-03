@@ -3,13 +3,18 @@ import { pathToFileURL } from "node:url"
 import { injectImport } from "@jsenv/core/omega/internal/js_ast/babel_utils.js"
 
 export const babelPluginGlobalThisAsJsenvImport = () => {
+  const globalThisClientFileUrl = new URL(
+    "./client/global_this.js",
+    import.meta.url,
+  ).href
+
   return {
     name: "global-this-as-jsenv-import",
     visitor: {
       Identifier(path, opts) {
         const { filename } = opts
         const fileUrl = pathToFileURL(filename).href
-        if (fileUrl.endsWith("/global_this/client/global_this.js")) {
+        if (fileUrl === globalThisClientFileUrl) {
           return
         }
         const { node } = path
@@ -17,7 +22,7 @@ export const babelPluginGlobalThisAsJsenvImport = () => {
         if (node.name === "globalThis") {
           injectImport({
             programPath: path.scope.getProgramParent().path,
-            from: "@jsenv/core/omega/plugins/babel/global_this/client/global_this.js",
+            from: globalThisClientFileUrl,
             sideEffect: true,
           })
         }
