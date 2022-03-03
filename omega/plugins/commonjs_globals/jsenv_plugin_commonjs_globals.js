@@ -19,18 +19,20 @@ export const jsenvPluginCommonJsGlobals = () => {
       js_module: async ({ scenario, url, content }) => {
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
-            transformReplaceExpressions,
-            {
-              replaceMap: {
-                "process.env.NODE_ENV": `("${
-                  scenario === "dev" || scenario === "test" ? "dev" : "prod"
-                }")`,
-                "global": "globalThis",
-                "__filename": `import.meta.url.slice('file:///'.length)`,
-                "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
+            [
+              transformReplaceExpressions,
+              {
+                replaceMap: {
+                  "process.env.NODE_ENV": `("${
+                    scenario === "dev" || scenario === "test" ? "dev" : "prod"
+                  }")`,
+                  "global": "globalThis",
+                  "__filename": `import.meta.url.slice('file:///'.length)`,
+                  "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
+                },
+                allowConflictingReplacements: true,
               },
-              allowConflictingReplacements: true,
-            },
+            ],
           ],
           url,
           content,

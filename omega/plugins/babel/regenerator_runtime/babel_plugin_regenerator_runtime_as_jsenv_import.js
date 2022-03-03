@@ -8,7 +8,7 @@ export const babelPluginRegeneratorRuntimeAsJsenvImport = () => {
     visitor: {
       Identifier(path, opts) {
         const { filename } = opts
-        const fileUrl = pathToFileURL(filename)
+        const fileUrl = pathToFileURL(filename).href
         if (
           fileUrl.endsWith("/regenerator_runtime/client/regenerator_runtime.js")
         ) {

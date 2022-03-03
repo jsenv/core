@@ -15,9 +15,9 @@ import {
 // a named import
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
 
-export const babelPluginBabelHelpersAsJsenvImports = (api) => {
-  api.assertVersion(7)
+export const babelPluginBabelHelpersAsJsenvImports = () => {
   return {
+    name: "babel-helper-as-jsenv-import",
     pre: (file) => {
       const cachedHelpers = {}
       file.set("helperGenerator", (name) => {
@@ -32,7 +32,8 @@ export const babelPluginBabelHelpersAsJsenvImports = (api) => {
         const filePath = file.opts.filename
         const babelHelperImportSpecifier =
           babelHelperNameToImportSpecifier(name)
-        if (babelHelperNameFromUrl(pathToFileURL(filePath)) === name) {
+        const fileUrl = pathToFileURL(filePath).href
+        if (babelHelperNameFromUrl(fileUrl) === name) {
           return undefined
         }
         const helper = injectImport({

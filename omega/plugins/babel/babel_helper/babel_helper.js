@@ -2,11 +2,8 @@
 // the list of possible helpers:
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
 
-const babelHelperDirectory =
-  "@jsenv/core/omega/plugins/babel/babel_helper/client/"
-
 export const babelHelperNameToImportSpecifier = (babelHelperName) => {
-  return `${babelHelperDirectory}${babelHelperName}/${babelHelperName}.js`
+  return `@jsenv/core/omega/plugins/babel/babel_helper/client/${babelHelperName}/${babelHelperName}.js`
 }
 
 export const babelHelperNameFromUrl = (url) => {

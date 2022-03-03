@@ -10,7 +10,7 @@ import { injectImport } from "#omega/internal/js_ast/babel_utils.js"
 
 export const babelPluginNewStylesheetAsJsenvImport = () => {
   const injectConstructableStylesheetPolyfill = ({ path, filename }) => {
-    const fileUrl = pathToFileURL(filename)
+    const fileUrl = pathToFileURL(filename).href
     if (
       fileUrl.endsWith("/plugins/babel/new_stylesheet/client/new_stylesheet.js")
     ) {

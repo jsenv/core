@@ -17,7 +17,7 @@ export const parseJsModuleUrlMentions = async ({
     return null
   }
   const { metadata } = await applyBabelPlugins({
-    plugins: [
+    babelPlugins: [
       [babelPluginMetadataUrlMentions],
       [babelPluginMetadataImportMetaHot],
     ],

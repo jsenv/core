@@ -8,7 +8,7 @@ export const babelPluginGlobalThisAsJsenvImport = () => {
     visitor: {
       Identifier(path, opts) {
         const { filename } = opts
-        const fileUrl = pathToFileURL(filename)
+        const fileUrl = pathToFileURL(filename).href
         if (fileUrl.endsWith("/global_this/client/global_this.js")) {
           return
         }

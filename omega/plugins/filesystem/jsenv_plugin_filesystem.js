@@ -2,6 +2,7 @@
 
 import { realpathSync, statSync, readFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
+import { serveDirectory } from "@jsenv/server"
 import { urlIsInsideOf, urlToExtension } from "@jsenv/filesystem"
 
 import { filesystemRootUrl } from "#omega/internal/url_utils.js"
@@ -144,7 +145,7 @@ export const jsenvPluginFileSystem = ({
         urlVersion,
       }
     },
-    load: async ({ url, contentType }) => {
+    load: async ({ projectDirectoryUrl, url, contentType }) => {
       if (!url.startsWith("file:")) {
         return null
       }
@@ -156,10 +157,13 @@ export const jsenvPluginFileSystem = ({
       const urlObject = new URL(url)
       if (statSync(urlObject).isDirectory()) {
         return {
-          response: {
-            status: 403,
-            statusText: "Not allowed to ready directory",
-          },
+          response: serveDirectory(url, {
+            headers: {
+              accept: "text/html",
+            },
+            canReadDirectory: true,
+            rootDirectoryUrl: projectDirectoryUrl,
+          }),
         }
       }
       const fileBuffer = readFileSync(urlObject)

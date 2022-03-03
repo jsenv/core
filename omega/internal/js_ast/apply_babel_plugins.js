@@ -12,7 +12,7 @@ export const applyBabelPlugins = async ({
   type = "js_module",
   ast,
   content,
-  options,
+  options = {},
 }) => {
   if (babelPlugins.length === 0) {
     return { code: content }
