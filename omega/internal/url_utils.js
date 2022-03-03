@@ -31,5 +31,9 @@ export const injectQueryParams = (url, params) => {
     urlObject.searchParams.set(key, params[key])
   })
   const urlWithParams = urlObject.href
-  return urlWithParams
+  // injectQueryParams('http://example.com/file.js', { hmr: '' })
+  // returns
+  // "http://example.com/file.js?hmr="
+  // It is technically valid but "=" signs hurts readability
+  return urlWithParams.replace(/[=](?=&|$)/g, "")
 }
