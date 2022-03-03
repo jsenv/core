@@ -1,5 +1,3 @@
-import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
-
 export const featuresCompatMap = {
   script_type_module: {
     edge: "16",
@@ -83,5 +81,4 @@ export const featuresCompatMap = {
     samsung: "8",
     electron: "3",
   },
-  ...babelPluginCompatMap,
 }

@@ -1,4 +1,4 @@
-import { fileSystemPathToUrl } from "@jsenv/filesystem"
+import { pathToFileURL } from "node:url"
 
 import { injectImport } from "@jsenv/core/omega/internal/js_ast/babel_utils.js"
 
@@ -32,7 +32,7 @@ export const babelPluginBabelHelpersAsJsenvImports = (api) => {
         const filePath = file.opts.filename
         const babelHelperImportSpecifier =
           babelHelperNameToImportSpecifier(name)
-        if (babelHelperNameFromUrl(fileSystemPathToUrl(filePath)) === name) {
+        if (babelHelperNameFromUrl(pathToFileURL(filePath)) === name) {
           return undefined
         }
         const helper = injectImport({

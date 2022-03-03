@@ -4,26 +4,24 @@
  * - code should also inject helper when code uses "document.adoptedStylesheets"
  */
 
+import { pathToFileURL } from "node:url"
+
 import { injectImport } from "#omega/internal/js_ast/babel_utils.js"
 
-export const babelPluginNewStylesheetAsJsenvImport = (api) => {
-  api.assertVersion(7)
+export const babelPluginNewStylesheetAsJsenvImport = () => {
   const injectConstructableStylesheetPolyfill = ({ path, filename }) => {
-    const filepathname = filename.replace(/\\/g, "/")
+    const fileUrl = pathToFileURL(filename)
     if (
-      filepathname.endsWith(
-        "/plugins/babel/new_stylesheet/client/new_stylesheet.js",
-      )
+      fileUrl.endsWith("/plugins/babel/new_stylesheet/client/new_stylesheet.js")
     ) {
       return
     }
     injectImport({
       programPath: path.scope.getProgramParent().path,
-      from: "@jsenv/core/plugins/babel/new_stylesheet/client/new_stylesheet.js",
+      from: "@jsenv/core/omega/plugins/babel/new_stylesheet/client/new_stylesheet.js",
       sideEffect: true,
     })
   }
-
   return {
     name: "new-stylesheet-as-jsenv-import",
     visitor: {

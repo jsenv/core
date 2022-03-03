@@ -14,36 +14,46 @@
 
 import { createRequire } from "node:module"
 
+import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
+import { babelHelperNameFromUrl } from "./babel_helper/babel_helper.js"
+
 const require = createRequire(import.meta.url)
 
-export const getBaseBabelPluginStructure = ({ isSupportedOnRuntime }) => {
+export const getBaseBabelPluginStructure = ({ url, isSupportedOnRuntime }) => {
+  const isBabelPluginNeeded = (babelPluginName) => {
+    return !isSupportedOnRuntime(
+      babelPluginName,
+      babelPluginCompatMap[babelPluginName],
+    )
+  }
+
   const babelPluginStructure = {}
-  if (!isSupportedOnRuntime("proposal-numeric-separator")) {
+  if (isBabelPluginNeeded("proposal-numeric-separator")) {
     babelPluginStructure[
       "proposal-numeric-separator"
     ] = require("@babel/plugin-proposal-numeric-separator")
   }
-  if (!isSupportedOnRuntime("proposal-json-strings")) {
+  if (isBabelPluginNeeded("proposal-json-strings")) {
     babelPluginStructure[
       "proposal-json-strings"
     ] = require("@babel/plugin-proposal-json-strings")
   }
-  if (!isSupportedOnRuntime("proposal-object-rest-spread")) {
+  if (isBabelPluginNeeded("proposal-object-rest-spread")) {
     babelPluginStructure[
       "proposal-object-rest-spread"
     ] = require("@babel/plugin-proposal-object-rest-spread")
   }
-  if (!isSupportedOnRuntime("proposal-optional-catch-binding")) {
+  if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
     babelPluginStructure[
       "proposal-optional-catch-binding"
     ] = require("@babel/plugin-proposal-optional-catch-binding")
   }
-  if (!isSupportedOnRuntime("proposal-unicode-property-regex")) {
+  if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
     babelPluginStructure[
       "proposal-unicode-property-regex"
     ] = require("@babel/plugin-proposal-unicode-property-regex")
   }
-  if (!isSupportedOnRuntime("transform-async-to-promises")) {
+  if (isBabelPluginNeeded("transform-async-to-promises")) {
     babelPluginStructure["transform-async-to-promises"] = [
       require("babel-plugin-transform-async-to-promises"),
       {
@@ -51,82 +61,82 @@ export const getBaseBabelPluginStructure = ({ isSupportedOnRuntime }) => {
       },
     ]
   }
-  if (!isSupportedOnRuntime("transform-arrow-functions")) {
+  if (isBabelPluginNeeded("transform-arrow-functions")) {
     babelPluginStructure[
       "transform-arrow-functions"
     ] = require("@babel/plugin-transform-arrow-functions")
   }
-  if (!isSupportedOnRuntime("transform-block-scoped-functions")) {
+  if (isBabelPluginNeeded("transform-block-scoped-functions")) {
     babelPluginStructure[
       "transform-block-scoped-functions"
     ] = require("@babel/plugin-transform-block-scoped-functions")
   }
-  if (!isSupportedOnRuntime("transform-block-scoping")) {
+  if (isBabelPluginNeeded("transform-block-scoping")) {
     babelPluginStructure[
       "transform-block-scoping"
     ] = require("@babel/plugin-transform-block-scoping")
   }
-  if (!isSupportedOnRuntime("transform-classes")) {
+  if (isBabelPluginNeeded("transform-classes")) {
     babelPluginStructure[
       "transform-classes"
     ] = require("@babel/plugin-transform-classes")
   }
-  if (!isSupportedOnRuntime("transform-computed-properties")) {
+  if (isBabelPluginNeeded("transform-computed-properties")) {
     babelPluginStructure[
       "transform-computed-properties"
     ] = require("@babel/plugin-transform-computed-properties")
   }
-  if (!isSupportedOnRuntime("transform-destructuring")) {
+  if (isBabelPluginNeeded("transform-destructuring")) {
     babelPluginStructure[
       "transform-destructuring"
     ] = require("@babel/plugin-transform-destructuring")
   }
-  if (!isSupportedOnRuntime("transform-dotall-regex")) {
+  if (isBabelPluginNeeded("transform-dotall-regex")) {
     babelPluginStructure[
       "transform-dotall-regex"
     ] = require("@babel/plugin-transform-dotall-regex")
   }
-  if (!isSupportedOnRuntime("transform-duplicate-keys")) {
+  if (isBabelPluginNeeded("transform-duplicate-keys")) {
     babelPluginStructure[
       "transform-duplicate-keys"
     ] = require("@babel/plugin-transform-duplicate-keys")
   }
-  if (!isSupportedOnRuntime("transform-exponentiation-operator")) {
+  if (isBabelPluginNeeded("transform-exponentiation-operator")) {
     babelPluginStructure[
       "transform-exponentiation-operator"
     ] = require("@babel/plugin-transform-exponentiation-operator")
   }
-  if (!isSupportedOnRuntime("transform-for-of")) {
+  if (isBabelPluginNeeded("transform-for-of")) {
     babelPluginStructure[
       "transform-for-of"
     ] = require("@babel/plugin-transform-for-of")
   }
-  if (!isSupportedOnRuntime("transform-function-name")) {
+  if (isBabelPluginNeeded("transform-function-name")) {
     babelPluginStructure[
       "transform-function-name"
     ] = require("@babel/plugin-transform-function-name")
   }
-  if (!isSupportedOnRuntime("transform-literals")) {
+  if (isBabelPluginNeeded("transform-literals")) {
     babelPluginStructure[
       "transform-literals"
     ] = require("@babel/plugin-transform-literals")
   }
-  if (!isSupportedOnRuntime("transform-new-target")) {
+  if (isBabelPluginNeeded("transform-new-target")) {
     babelPluginStructure[
       "transform-new-target"
     ] = require("@babel/plugin-transform-new-target")
   }
-  if (!isSupportedOnRuntime("transform-object-super")) {
+  if (isBabelPluginNeeded("transform-object-super")) {
     babelPluginStructure[
       "transform-object-super"
     ] = require("@babel/plugin-transform-object-super")
   }
-  if (!isSupportedOnRuntime("transform-parameters")) {
+  if (isBabelPluginNeeded("transform-parameters")) {
     babelPluginStructure[
       "transform-parameters"
     ] = require("@babel/plugin-transform-parameters")
   }
-  if (!isSupportedOnRuntime("transform-regenerator")) {
+  if (isBabelPluginNeeded("transform-regenerator")) {
     babelPluginStructure["transform-regenerator"] = [
       require("@babel/plugin-transform-regenerator"),
       {
@@ -136,32 +146,36 @@ export const getBaseBabelPluginStructure = ({ isSupportedOnRuntime }) => {
       },
     ]
   }
-  if (!isSupportedOnRuntime("transform-shorthand-properties")) {
+  if (isBabelPluginNeeded("transform-shorthand-properties")) {
     babelPluginStructure["transform-shorthand-properties"] = [
       require("@babel/plugin-transform-shorthand-properties"),
     ]
   }
-  if (!isSupportedOnRuntime("transform-spread")) {
+  if (isBabelPluginNeeded("transform-spread")) {
     babelPluginStructure["transform-spread"] = [
       require("@babel/plugin-transform-spread"),
     ]
   }
-  if (!isSupportedOnRuntime("transform-sticky-regex")) {
+  if (isBabelPluginNeeded("transform-sticky-regex")) {
     babelPluginStructure["transform-sticky-regex"] = [
       require("@babel/plugin-transform-sticky-regex"),
     ]
   }
-  if (!isSupportedOnRuntime("transform-template-literals")) {
+  if (isBabelPluginNeeded("transform-template-literals")) {
     babelPluginStructure["transform-template-literals"] = [
       require("@babel/plugin-transform-template-literals"),
     ]
   }
-  if (!isSupportedOnRuntime("transform-typeof-symbol")) {
-    babelPluginStructure["transform-typeof-symbol"] = [
-      require("@babel/plugin-transform-typeof-symbol"),
-    ]
+  if (isBabelPluginNeeded("transform-typeof-symbol")) {
+    const babelHelperName = babelHelperNameFromUrl(url)
+    // prevent babel to retransform "typeof" itself
+    if (babelHelperName !== "typeof") {
+      babelPluginStructure["transform-typeof-symbol"] = [
+        require("@babel/plugin-transform-typeof-symbol"),
+      ]
+    }
   }
-  if (!isSupportedOnRuntime("transform-unicode-regex")) {
+  if (isBabelPluginNeeded("transform-unicode-regex")) {
     babelPluginStructure["transform-unicode-regex"] = [
       require("@babel/plugin-transform-unicode-regex"),
     ]

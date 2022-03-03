@@ -9,6 +9,7 @@ export const applyBabelPlugins = async ({
   sourceFileFetcher,
   babelPlugins,
   url,
+  type = "js_module",
   ast,
   content,
   options,
@@ -26,7 +27,7 @@ export const applyBabelPlugins = async ({
     configFile: false,
     babelrc: false,
     parserOpts: {
-      // sourceType: 'module',
+      sourceType: type === "js_module" ? "module" : "script",
       // allowAwaitOutsideFunction: true,
       plugins: [
         // "importMeta",

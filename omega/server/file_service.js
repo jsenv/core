@@ -17,6 +17,7 @@ import {
 import { composeTwoSourcemaps } from "#omega/internal/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "#omega/internal/sourcemap/sourcemap_injection.js"
 import { parseUserAgentHeader } from "#omega/internal/runtime_support/user_agent.js"
+import { featuresCompatMap } from "#omega/internal/runtime_support/features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "#omega/internal/runtime_support/runtime_support.js"
 
 export const createFileService = ({
@@ -61,8 +62,11 @@ export const createFileService = ({
     }
     const requestContext = {
       request,
-      isSupportedOnRuntime: (featureName) => {
-        return isFeatureSupportedOnRuntimes(runtimeSupport, featureName)
+      isSupportedOnRuntime: (
+        featureName,
+        featureCompat = featuresCompatMap[featureName],
+      ) => {
+        return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
       },
       runtimeSupport,
     }

@@ -1,10 +1,13 @@
 import { applyBabelPlugins } from "#omega/internal/js_ast/apply_babel_plugins.js"
 
 import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js"
-import { babelPluginImportAssertions } from "./import_assertions/import_assertions.js"
+import { babelPluginImportAssertions } from "./import_assertions/babel_plugin_import_assertions.js"
 import { convertCssTextToJavascriptModule } from "./import_assertions/css_module.js"
 import { convertJsonTextToJavascriptModule } from "./import_assertions/json_module.js"
-import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/new_stylesheet_as_jsenv_import.js"
+import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
+import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
+import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
+import { babelPluginBabelHelpersAsJsenvImports } from "./babel_helper/babel_plugin_babel_helpers_as_jsenv_imports.js"
 
 export const jsenvPluginBabel = () => {
   const babel = {
@@ -13,6 +16,7 @@ export const jsenvPluginBabel = () => {
     transform: {
       js_module: async ({ isSupportedOnRuntime, url, content }) => {
         const babelPluginStructure = getBaseBabelPluginStructure({
+          url,
           isSupportedOnRuntime,
         })
         const importTypes = []
@@ -31,10 +35,12 @@ export const jsenvPluginBabel = () => {
           ]
         }
         if (!isSupportedOnRuntime("global_this")) {
-          babelPluginStructure["global-this-as-jsenv-import"] = null // TODO
+          babelPluginStructure["global-this-as-jsenv-import"] =
+            babelPluginGlobalThisAsJsenvImport
         }
         if (!isSupportedOnRuntime("async_generator_function")) {
-          babelPluginStructure["regenerator-runtime-as-jsenv-import"] = null // TODO
+          babelPluginStructure["regenerator-runtime-as-jsenv-import"] =
+            babelPluginRegeneratorRuntimeAsJsenvImport
         }
         if (!isSupportedOnRuntime("new_stylesheet")) {
           babelPluginStructure["new-stylesheet-as-jsenv-import"] =
@@ -43,7 +49,9 @@ export const jsenvPluginBabel = () => {
         const babelPlugins = Object.keys(babelPluginStructure).map(
           (babelPluginName) => babelPluginStructure[babelPluginName],
         )
-        // if there is babel plugins, add babel-helpers-as-jsenv-import
+        if (babelPlugins.length) {
+          babelPlugins.push(babelPluginBabelHelpersAsJsenvImports)
+        }
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
           url,

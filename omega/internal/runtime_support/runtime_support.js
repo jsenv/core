@@ -1,12 +1,12 @@
 import { findHighestVersion } from "@jsenv/core/src/internal/semantic_versioning/highest_version.js"
 
-import { featuresCompatMap } from "./features_compatibility.js"
-
-export const isFeatureSupportedOnRuntimes = (runtimeSupport, featureName) => {
+export const isFeatureSupportedOnRuntimes = (
+  runtimeSupport,
+  featureCompat = {},
+) => {
   const runtimeNames = Object.keys(runtimeSupport)
   return runtimeNames.every((runtimeName) => {
     const runtimeVersion = runtimeSupport[runtimeName]
-    const featureCompat = featuresCompatMap[featureName] || {}
     const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity"
     const highestVersion = findHighestVersion(
       runtimeVersion,
