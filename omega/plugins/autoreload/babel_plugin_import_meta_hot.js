@@ -5,7 +5,7 @@
 import {
   injectImport,
   injectAstAfterImport,
-} from "#omega/internal/babel_utils.js"
+} from "#omega/internal/js_ast/babel_utils.js"
 
 export const babelPluginImportMetaHot = (babel) => {
   return {

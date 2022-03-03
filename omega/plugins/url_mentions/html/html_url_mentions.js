@@ -3,11 +3,11 @@ import {
   parseLinkNode,
   getHtmlNodeAttributeByName,
   stringifyHtmlAst,
-} from "@jsenv/core/src/internal/transform_html/html_ast.js"
-import { htmlAttributeSrcSet } from "@jsenv/core/src/internal/transform_html/html_attribute_src_set.js"
+} from "@jsenv/core/omega/internal/html_ast/html_ast.js"
+import { htmlAttributeSrcSet } from "@jsenv/core/omega/internal/html_ast/html_attribute_src_set.js"
 
-export const parseHtmlUrlMentions = ({ url, contentType, content }) => {
-  if (contentType !== "text/html") {
+export const parseHtmlUrlMentions = ({ url, type, content }) => {
+  if (type !== "html") {
     return null
   }
   const htmlAst = parseHtmlString(content)

@@ -16,7 +16,7 @@ import {
   parseScriptNode,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/core/src/internal/transform_html/html_ast.js"
+} from "@jsenv/core/omega/internal/html_ast/html_ast.js"
 
 export const jsenvPluginHtmlSupervisor = () => {
   return {

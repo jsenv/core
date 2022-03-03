@@ -1,4 +1,4 @@
-import { collectProgramUrlMentions } from "@jsenv/core/src/internal/transform_js/program_url_mentions.js"
+import { collectProgramUrlMentions } from "@jsenv/core/omega/internal/js_ast/program_url_mentions.js"
 
 export const babelPluginMetadataUrlMentions = () => {
   return {

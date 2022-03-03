@@ -4,7 +4,7 @@
  * - code should also inject helper when code uses "document.adoptedStylesheets"
  */
 
-import { injectImport } from "#omega/internal/babel_utils.js"
+import { injectImport } from "#omega/internal/js_ast/babel_utils.js"
 
 export const babelPluginNewStylesheetAsJsenvImport = (api) => {
   api.assertVersion(7)

@@ -1,4 +1,4 @@
-import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
+import { applyBabelPlugins } from "@jsenv/core/omega/internal/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "#omega/internal/sourcemap/magic_source.js"
 
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
@@ -7,26 +7,23 @@ import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import
 export const parseJsModuleUrlMentions = async ({
   url,
   urlFacade,
-  contentType,
+  type,
   content,
 }) => {
-  if (contentType !== "application/javascript") {
+  if (type !== "js_module") {
     return null
   }
   if (new URL(urlFacade).searchParams.has("script")) {
     return null
   }
-  const { metadata } = await babelTransform({
-    options: {
-      plugins: [
-        [babelPluginMetadataUrlMentions],
-        [babelPluginMetadataImportMetaHot],
-      ],
-    },
+  const { metadata } = await applyBabelPlugins({
+    plugins: [
+      [babelPluginMetadataUrlMentions],
+      [babelPluginMetadataImportMetaHot],
+    ],
     url: urlFacade,
     content,
   })
-
   const { urlMentions, hotDecline, hotAcceptSelf, hotAcceptDependencies } =
     metadata
   return {

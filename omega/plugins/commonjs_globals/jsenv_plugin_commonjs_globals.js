@@ -7,7 +7,7 @@
  * - global
  */
 
-import { applyBabelPlugins } from "#omega/internal/babel_utils/apply_babel_plugins.js"
+import { applyBabelPlugins } from "#omega/internal/js_ast/apply_babel_plugins.js"
 
 import { transformReplaceExpressions } from "./babel_plugin_transform_replace_expressions.js"
 

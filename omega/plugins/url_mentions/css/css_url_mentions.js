@@ -4,10 +4,10 @@ import { replaceCssUrls } from "@jsenv/core/src/internal/transform_css/replace_c
 
 export const parseCssUrlMentions = async ({
   url = "file:///file.css",
-  contentType,
+  type,
   content,
 }) => {
-  if (contentType !== "text/css") {
+  if (type !== "css") {
     return null
   }
   const cssUrlMentions = []

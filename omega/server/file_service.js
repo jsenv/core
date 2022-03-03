@@ -351,7 +351,10 @@ const callPluginHook = async (plugin, hookName, params) => {
     return null
   }
   if (typeof hook === "object") {
-    hook = hook[params.type]
+    hook = hook[hookName === "resolve" ? params.specifierType : params.type]
+    if (!hook) {
+      return null
+    }
   }
   try {
     return await hook(params)

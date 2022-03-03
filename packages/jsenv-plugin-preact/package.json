@@ -4,8 +4,8 @@
   "type": "module",
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
-    "@jsenv/core": "../../",
-    "@jsenv/url-meta": "^6.2.0"
+    "@jsenv/core": "26.0.1",
+    "@jsenv/url-meta": "6.2.0"
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx-development": "7.16.7",

@@ -1,6 +1,5 @@
-import { featuresCompatFromRuntimeSupport } from "@jsenv/core/src/internal/features/features_compat_from_runtime_support.js"
 import { require } from "@jsenv/core/src/internal/require.js"
-import { babelTransform } from "@jsenv/core/src/internal/transform_js/babel_transform.js"
+import { applyBabelPlugins } from "@jsenv/core/omega/internal/js_ast/apply_babel_plugins.js"
 
 export const jsenvPluginSystemJs = () => {
   return {
@@ -12,9 +11,16 @@ export const jsenvPluginSystemJs = () => {
     transform: {
       html: async () => {
         // TODO
+        // inject systemjs as early as possible (if needed)
+        // replace type="module" with regular tag using System.import
         return null
       },
-      js_module: async ({ runtimeSupport, url, content }) => {
+      js_module: async ({
+        isSupportedOnRuntime,
+        runtimeSupport,
+        url,
+        content,
+      }) => {
         const shouldBeCompatibleWithNode =
           Object.keys(runtimeSupport).includes("node")
         const requiredFeatureNames = [
@@ -34,19 +40,13 @@ export const jsenvPluginSystemJs = () => {
         ]
         const needsSystemJs = featuresRelatedToSystemJs.some((featureName) => {
           const isRequired = requiredFeatureNames.includes(featureName)
-          const isAvailable = featuresCompatFromRuntimeSupport({
-            featureNames: [featureName],
-            runtimeSupport,
-          }).availableFeatureNames.includes(featureName)
-          return isRequired && !isAvailable
+          return isRequired && !isSupportedOnRuntime(featureName)
         })
         if (!needsSystemJs) {
           return null
         }
-        const { code, map } = await babelTransform({
-          options: {
-            plugins: [[require("@babel/plugin-transform-modules-systemjs")]],
-          },
+        const { code, map } = await applyBabelPlugins({
+          babelPlugins: [require("@babel/plugin-transform-modules-systemjs")],
           url,
           content,
         })

@@ -3,8 +3,8 @@ import {
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/core/src/internal/transform_html/html_ast.js"
-import { applyBabelPlugins } from "#omega/internal/babel_utils/apply_babel_plugins.js"
+} from "@jsenv/core/omega/internal/html_ast/html_ast.js"
+import { applyBabelPlugins } from "#omega/internal/js_ast/apply_babel_plugins.js"
 
 import { babelPluginImportMetaHot } from "./babel_plugin_import_meta_hot.js"
 
@@ -45,7 +45,7 @@ export const jsenvPluginAutoreload = () => {
       },
       js_module: async ({ url, content }) => {
         const { code, map } = await applyBabelPlugins({
-          babelPlugins: [[babelPluginImportMetaHot]],
+          babelPlugins: [babelPluginImportMetaHot],
           url,
           content,
         })

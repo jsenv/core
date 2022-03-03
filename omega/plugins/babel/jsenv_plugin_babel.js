@@ -1,8 +1,4 @@
-/*
- * TODO: move this to packages/ this to decrease the "dependencies" in "@jsenv/core"
- */
-
-import { applyBabelPlugins } from "#omega/internal/babel_utils/apply_babel_plugins.js"
+import { applyBabelPlugins } from "#omega/internal/js_ast/apply_babel_plugins.js"
 
 import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js"
 import { babelPluginImportAssertions } from "./import_assertions/import_assertions.js"

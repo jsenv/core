@@ -20,6 +20,7 @@ export const jsenvPluginUrlMentions = () => {
       asClientUrl,
       url,
       urlFacade,
+      type,
       contentType,
       content,
     }) => {
@@ -29,6 +30,7 @@ export const jsenvPluginUrlMentions = () => {
           return urlMentionParser({
             url,
             urlFacade,
+            type,
             contentType,
             content,
           })
