@@ -31,6 +31,7 @@ export const injectAstAfterImport = (programPath, ast) => {
   }
 }
 
+// https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
 export const injectImport = ({
   programPath,
   namespace,

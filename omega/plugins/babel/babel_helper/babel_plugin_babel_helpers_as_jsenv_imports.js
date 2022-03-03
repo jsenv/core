@@ -1,6 +1,6 @@
 import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
-import { require } from "@jsenv/core/src/internal/require.js"
+import { injectImport } from "@jsenv/core/omega/internal/js_ast/babel_utils.js"
 
 import {
   babelHelperNameFromUrl,
@@ -16,35 +16,28 @@ import {
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
 
 export const babelPluginBabelHelpersAsJsenvImports = (api) => {
-  // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
-  const { addDefault } = require("@babel/helper-module-imports")
-
   api.assertVersion(7)
-
   return {
     pre: (file) => {
       const cachedHelpers = {}
       file.set("helperGenerator", (name) => {
         // the list of possible helpers name
         // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-
         if (!file.availableHelper(name)) {
           return undefined
         }
-
         if (cachedHelpers[name]) {
           return cachedHelpers[name]
         }
-
         const filePath = file.opts.filename
         const babelHelperImportSpecifier =
           babelHelperNameToImportSpecifier(name)
-
         if (babelHelperNameFromUrl(fileSystemPathToUrl(filePath)) === name) {
           return undefined
         }
-
-        const helper = addDefault(file.path, babelHelperImportSpecifier, {
+        const helper = injectImport({
+          programPath: file.path,
+          from: babelHelperImportSpecifier,
           nameHint: `_${name}`,
           // disable interop, useless as we work only with js modules
           importedType: "es6",

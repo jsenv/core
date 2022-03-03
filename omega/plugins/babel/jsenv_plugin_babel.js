@@ -43,7 +43,7 @@ export const jsenvPluginBabel = () => {
         const babelPlugins = Object.keys(babelPluginStructure).map(
           (babelPluginName) => babelPluginStructure[babelPluginName],
         )
-        // is there is babel plugins, add babel-helpers-as-jsenv-import
+        // if there is babel plugins, add babel-helpers-as-jsenv-import
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
           url,

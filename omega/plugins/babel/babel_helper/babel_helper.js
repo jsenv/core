@@ -92,7 +92,8 @@ const babelHelperNameInsideJsenvCoreArray = [
   "writeOnlyError",
 ]
 
-const babelHelperScope = "@jsenv/core/helpers/babel/"
+const babelHelperDirectory =
+  "@jsenv/core/omega/plugins/babel/babel_helper/client/"
 // maybe we can put back / in front of .jsenv here because we will
 // "redirect" or at least transform everything inside .jsenv
 // not only everything inside .dist
@@ -107,7 +108,7 @@ export const listAbstractBabelHelpers = () => {
 
 export const babelHelperNameToImportSpecifier = (babelHelperName) => {
   if (babelHelperNameInsideJsenvCoreArray.includes(babelHelperName)) {
-    return `${babelHelperScope}${babelHelperName}/${babelHelperName}.js`
+    return `${babelHelperDirectory}${babelHelperName}/${babelHelperName}.js`
   }
   return `${babelHelperAbstractScope}${babelHelperName}/${babelHelperName}.js`
 }
