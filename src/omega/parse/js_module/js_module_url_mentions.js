@@ -4,16 +4,8 @@ import { createMagicSource } from "@jsenv/core/src/utils/js_ast/magic_source.js"
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-export const parseJsModuleUrlMentions = async ({
-  url,
-  urlFacade,
-  type,
-  content,
-}) => {
+export const parseJsModuleUrlMentions = async ({ url, type, content }) => {
   if (type !== "js_module") {
-    return null
-  }
-  if (new URL(urlFacade).searchParams.has("script")) {
     return null
   }
   const { metadata } = await applyBabelPlugins({
@@ -21,7 +13,7 @@ export const parseJsModuleUrlMentions = async ({
       [babelPluginMetadataUrlMentions],
       [babelPluginMetadataImportMetaHot],
     ],
-    url: urlFacade,
+    url,
     content,
   })
   const { urlMentions, hotDecline, hotAcceptSelf, hotAcceptDependencies } =

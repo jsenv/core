@@ -72,26 +72,45 @@ export const jsenvPluginBabel = () => {
   const importTypeJson = {
     name: "jsenv:import_type_json",
     appliesDuring: "*",
-    transform: ({ url, content }) => {
-      if (new URL(url).searchParams.get("import_type") !== "json") {
+    deriveMetaFromUrl: {
+      js_import_export: ({ url }) => {
+        if (new URL(url).searchParams.get("import_type") === "json") {
+          return { jsonModule: true }
+        }
         return null
-      }
-      return convertJsonTextToJavascriptModule({
-        content,
-      })
+      },
+    },
+    transform: {
+      js_module: ({ jsonModule, content }) => {
+        if (!jsonModule) {
+          return null
+        }
+        return convertJsonTextToJavascriptModule({
+          content,
+        })
+      },
     },
   }
   const importTypeCss = {
     name: "jsenv:import_type_css",
     appliesDuring: "*",
-    transform: ({ url, content }) => {
-      if (new URL(url).searchParams.get("import_type") !== "css") {
+    deriveMetaFromUrl: {
+      js_import_export: ({ url }) => {
+        if (new URL(url).searchParams.get("import_type") === "css") {
+          return { cssModule: true }
+        }
         return null
-      }
-      return convertCssTextToJavascriptModule({
-        url,
-        content,
-      })
+      },
+    },
+    transform: {
+      js_module: ({ cssModule, content }) => {
+        if (!cssModule) {
+          return null
+        }
+        return convertCssTextToJavascriptModule({
+          content,
+        })
+      },
     },
   }
   // maybe add importTypeText (but this will force )

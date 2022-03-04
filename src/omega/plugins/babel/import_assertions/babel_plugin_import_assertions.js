@@ -16,7 +16,6 @@ export const babelPluginImportAssertions = (babel, { importTypes }) => {
           .filter(({ type }) => type === "js_import_export")
           .forEach(({ specifierPath, path }) => {
             const importNode = path.node
-            let assertionsDescriptor
             if (importNode.type === "CallExpression") {
               const args = importNode.arguments
               const secondArg = args[1]
@@ -41,38 +40,40 @@ export const babelPluginImportAssertions = (babel, { importTypes }) => {
               if (typePropertyValue.type !== "StringLiteral") {
                 return
               }
-              assertionsDescriptor = {
-                type: typePropertyValue.value,
+
+              const type = typePropertyValue.value
+              if (importTypes.includes(type)) {
+                forceImportTypeOnUrlSpecifier({
+                  specifierPath,
+                  babel,
+                  importType: type,
+                })
               }
-            } else {
-              assertionsDescriptor = getImportAssertionsDescriptor(
-                path.node.assertions,
-              )
-            }
-            const { type } = assertionsDescriptor
-            if (importTypes.includes(type)) {
-              forceImportTypeOnUrlSpecifier({
-                specifierPath,
-                babel,
-                importType: type,
-              })
               return
+            }
+            // ImportDeclaration
+            const { assertions } = path.node
+            if (assertions && assertions.length > 0) {
+              const assertionsPath = path.get("assertions")[0]
+              const assertionsDescriptor = {}
+              assertions.forEach((importAssertion) => {
+                assertionsDescriptor[importAssertion.key.name] =
+                  importAssertion.value.value
+              })
+              const { type } = assertionsDescriptor
+              if (importTypes.includes(type)) {
+                forceImportTypeOnUrlSpecifier({
+                  specifierPath,
+                  babel,
+                  importType: type,
+                })
+                assertionsPath.remove()
+              }
             }
           })
       },
     },
   }
-}
-
-const getImportAssertionsDescriptor = (importAssertions) => {
-  const importAssertionsDescriptor = {}
-  if (importAssertions) {
-    importAssertions.forEach((importAssertion) => {
-      importAssertionsDescriptor[importAssertion.key.name] =
-        importAssertion.value.value
-    })
-  }
-  return importAssertionsDescriptor
 }
 
 const forceImportTypeOnUrlSpecifier = ({

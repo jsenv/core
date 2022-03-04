@@ -6,7 +6,11 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
-import { moveUrl, injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
+import {
+  filesystemRootUrl,
+  moveUrl,
+  injectQueryParams,
+} from "@jsenv/core/src/utils/url_utils.js"
 import { findAsync } from "@jsenv/core/src/utils/find_async.js"
 import {
   getCssSourceMappingUrl,
@@ -16,6 +20,7 @@ import {
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 
+import { callPluginHook, callPluginSyncHook } from "./plugin_controller.js"
 import { featuresCompatMap } from "./runtime_support/features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support/runtime_support.js"
 import { parseUserAgentHeader } from "./user_agent.js"
@@ -39,6 +44,8 @@ export const createFileService = ({
   sourcemapInjection,
   ressourceGraph,
 }) => {
+  projectDirectoryUrl = String(projectDirectoryUrl)
+
   const urlInfoMap = new Map()
   const baseContext = {
     signal,
@@ -99,35 +106,56 @@ export const createFileService = ({
       currentContext = context
 
       context.resolve = async ({ parentUrl, specifierType, specifier }) => {
-        const resolveReturnValue = await findAsync({
-          array: plugins,
-          start: (plugin) => {
-            return callPluginHook(plugin, "resolve", {
-              ...context,
-              parentUrl,
-              specifierType,
-              specifier,
-            })
-          },
-          predicate: (returnValue) => Boolean(returnValue),
-        })
-        if (!resolveReturnValue) {
-          return null
-        }
-        if (typeof resolveReturnValue === "object") {
-          const { url, ...urlInfo } = resolveReturnValue
-          urlInfoMap.set(url, urlInfo)
+        if (specifier.startsWith("/@fs/")) {
+          const url = new URL(
+            specifier.slice("/@fs".length),
+            projectDirectoryUrl,
+          ).href
           return url
         }
-        const url = String(resolveReturnValue)
-        urlInfoMap.set(url, {})
-        return url
+        if (specifier[0] === "/") {
+          const url = new URL(specifier.slice(1), projectDirectoryUrl).href
+          return url
+        }
+        const pluginsToIgnore = []
+        let currentPlugin
+        const contextDuringResolve = {
+          ...context,
+          parentUrl,
+          specifierType,
+          specifier,
+          // when "resolve" is called during resolve hook
+          // apply other plugin resolve hooks
+          resolve: () => {
+            pluginsToIgnore.push(currentPlugin)
+            return callResolveHooks(
+              plugins.filter((plugin) => !pluginsToIgnore.includes(plugin)),
+            )
+          },
+        }
+        const callResolveHooks = async (pluginsSubset) => {
+          const resolveReturnValue = await findAsync({
+            array: pluginsSubset,
+            start: (plugin) => {
+              currentPlugin = plugin
+              return callPluginHook(plugin, "resolve", contextDuringResolve)
+            },
+            predicate: (returnValue) => Boolean(returnValue),
+          })
+          if (!resolveReturnValue) {
+            return null
+          }
+          const url = String(resolveReturnValue)
+          return url
+        }
+        return callResolveHooks(plugins)
       }
+
       context.asClientUrl = (url, parentUrl) => {
         const hmr = new URL(parentUrl).searchParams.get("hmr")
         const urlInfo = urlInfoMap.get(url) || {}
-        const { urlFacade, urlVersion } = urlInfo
-        const clientUrlRaw = urlFacade || url
+        const { urlVersion } = urlInfo
+        const clientUrlRaw = url
         const hmrTimestamp = hmr ? ressourceGraph.getHmrTimestamp(url) : null
         const params = {}
         if (hmrTimestamp) {
@@ -140,7 +168,10 @@ export const createFileService = ({
         if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
           return `/${urlToRelativeUrl(clientUrl, projectDirectoryUrl)}`
         }
-        return clientUrl
+        if (clientUrl.startsWith("file:")) {
+          return `/@fs/${clientUrl.slice(filesystemRootUrl.length)}`
+        }
+        return `${clientUrl}`
       }
       context.url = await context.resolve({
         parentUrl,
@@ -155,8 +186,20 @@ export const createFileService = ({
       }
       const urlInfo = urlInfoMap.get(context.url)
       Object.assign(context, urlInfo)
-      context.urlFacade = urlInfo.urlFacade || context.url
-      context.contentType = urlToContentType(context.urlFacade)
+      plugins.forEach((plugin) => {
+        const urlMeta = callPluginSyncHook(plugin, "deriveMetaFromUrl", context)
+        if (urlMeta) {
+          const urlInfo = {
+            ...urlInfoMap.get(context.url),
+            ...urlMeta,
+          }
+          urlInfoMap.set(context.url, urlInfo)
+          Object.assign(context, urlMeta)
+        }
+      })
+      context.contentType =
+        // contentType can be returned by "resolve" hook
+        context.contentType || urlToContentType(context.url)
       context.type = getRessourceType(context)
       const loadReturnValue = await findAsync({
         array: plugins,
@@ -296,7 +339,7 @@ export const createFileService = ({
 
       const { sourcemap } = context
       if (sourcemap && sourcemapInjection === "comment") {
-        const sourcemapUrl = generateSourcemapUrl(context.urlFacade)
+        const sourcemapUrl = generateSourcemapUrl(context.url)
         const sourcemapOutUrl = determineFileUrlForOutDirectory({
           projectDirectoryUrl,
           scenario,
@@ -307,7 +350,7 @@ export const createFileService = ({
         context.sourcemapUrl = sourcemapOutUrl
         context.content = injectSourcemap(context)
       } else if (sourcemap && sourcemapInjection === "inline") {
-        context.sourcemapUrl = generateSourcemapUrl(context.urlFacade)
+        context.sourcemapUrl = generateSourcemapUrl(context.url)
         context.content = injectSourcemap(context)
       }
       return context
@@ -325,18 +368,12 @@ export const createFileService = ({
       return sourcemap
     }
     try {
-      const {
-        response,
-        urlFacade,
-        contentType,
-        content,
-        sourcemapUrl,
-        sourcemap,
-      } = await cookFile({
-        parentUrl: String(projectDirectoryUrl),
-        specifierType: "http_request",
-        specifier: request.ressource,
-      })
+      const { response, url, contentType, content, sourcemapUrl, sourcemap } =
+        await cookFile({
+          parentUrl: projectDirectoryUrl,
+          specifierType: "http_request",
+          specifier: request.ressource,
+        })
       if (response) {
         return response
       }
@@ -355,7 +392,7 @@ export const createFileService = ({
         scenario,
         runtimeName,
         runtimeVersion,
-        url: urlFacade,
+        url,
         content,
       })
       return {
@@ -410,35 +447,6 @@ const getRessourceType = ({ url, contentType }) => {
     return "importmap"
   }
   return "other"
-}
-
-const callPluginHook = async (plugin, hookName, params) => {
-  let hook = plugin[hookName]
-  if (!hook) {
-    return null
-  }
-  if (typeof hook === "object") {
-    hook = hook[hookName === "resolve" ? params.specifierType : params.type]
-    if (!hook) {
-      return null
-    }
-  }
-  try {
-    return await hook(params)
-  } catch (e) {
-    if (e && e.asResponse) {
-      throw e
-    }
-    if (e && e.statusText === "Unexpected directory operation") {
-      e.asResponse = () => {
-        return {
-          status: 403,
-        }
-      }
-      throw e
-    }
-    throw e
-  }
 }
 
 const determineFileUrlForOutDirectory = ({

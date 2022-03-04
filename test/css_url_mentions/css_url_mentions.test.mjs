@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 
-import { parseCssUrlMentions } from "#omega/plugins/url_mentions/css/css_url_mentions.js"
+import { parseCssUrlMentions } from "@jsenv/core/src/omega/parse/css/css_url_mentions.js"
 
 const { urlMentions } = await parseCssUrlMentions({
   url: new URL("./style.css", import.meta.url),

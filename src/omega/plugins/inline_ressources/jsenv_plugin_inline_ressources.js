@@ -73,9 +73,7 @@ export const jsenvPluginInlineRessources = () => {
           : new URL(specifier, parentUrl).href
       const urlWithoutSearch = asUrlWithoutSearch(url)
       if (inlineRessourceMap.has(urlWithoutSearch)) {
-        return {
-          url,
-        }
+        return url
       }
       return null
     },
