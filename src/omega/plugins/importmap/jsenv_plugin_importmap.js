@@ -1,18 +1,20 @@
 /*
- * Importmap resolution is scoped per html file.
- * To implement the above correctly means each file should track the html
- * file importing it.
- * A given js file might be imported by 2 different html files and should use
- * the corresponding importmap
+ * Plugin to read and apply importmap files found in html files.
+ * - feeds importmap files to jsenv plugins
+ * - use importmap to resolve import (when there is one + fallback to other resolution mecanism)
+ * - inline importmap with [src=""]
  *
- * It would be doable by injecting something like ?html_id to each js modules
- * In practice thie would happen if:
+ * A 100% compliant importmap resolution should scope importmap resolution
+ * per html file. It would be doable by adding ?html_id to each js file in order to track
+ * the html file importing it.
+ * Considering it happens only when all the following conditions are met:
  * - 2+ html files are using an importmap
- * - the importmap is not the same
- * - the importmap contains conflicting mappings
- * - This hapens in the same scenario (during dev)
- * As it's unlikely to happen we'll use a lighter strategy which consists info:
- * Merging all importmap found in html files and applying this importmap to everything
+ * - the importmap used is not the same
+ * - the importmap contain conflicting mappings
+ * - these html files are both executed during the same scenario (dev, test, build)
+ * And that it would be ugly to see ?html_id all over the place
+ * -> The importmap resolution implemented here takes a shortcut and does the following:
+ * - All importmap found are merged into a single one that is applied to every import specifiers
  */
 
 import {
