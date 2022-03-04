@@ -85,7 +85,7 @@ const forceImportTypeOnUrlSpecifier = ({
   const fakeOrigin = "http://jsenv.com"
   const url = new URL(specifier, fakeOrigin)
   const urlWithImportType = injectQueryParams(url, {
-    import_type: importType,
+    [`${importType}_module`]: "",
   })
   if (urlWithImportType.startsWith(fakeOrigin)) {
     // specifier was relative

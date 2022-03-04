@@ -74,7 +74,7 @@ export const jsenvPluginBabel = () => {
     appliesDuring: "*",
     deriveMetaFromUrl: {
       js_import_export: ({ url }) => {
-        if (new URL(url).searchParams.get("import_type") === "json") {
+        if (new URL(url).searchParams.has("json_module")) {
           return { jsonModule: true }
         }
         return null
@@ -94,25 +94,30 @@ export const jsenvPluginBabel = () => {
   const importTypeCss = {
     name: "jsenv:import_type_css",
     appliesDuring: "*",
+    // could we skip this and only handle that aspect in "parsed"?
     deriveMetaFromUrl: {
       js_import_export: ({ url }) => {
-        if (new URL(url).searchParams.get("import_type") === "css") {
+        if (new URL(url).searchParams.has("css_module")) {
           return { cssModule: true }
         }
         return null
       },
     },
-    transform: {
+    render: {
       js_module: ({ cssModule, content }) => {
         if (!cssModule) {
           return null
         }
+        // todo return  contentType: "application/javascript" + allow this in file_service.js
         return convertCssTextToJavascriptModule({
           content,
         })
       },
     },
   }
-  // maybe add importTypeText (but this will force )
+  // maybe add importTypeText:
+  // - this would force babel to apply when we could skip it on recent browsers)
+  // - but that's useful
+  // - and I expect it to become available one day
   return [babel, importTypeJson, importTypeCss]
 }

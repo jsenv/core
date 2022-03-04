@@ -1,11 +1,11 @@
 import { statSync, readFileSync } from "node:fs"
-import { serveDirectory } from "@jsenv/server"
+import { serveDirectory, urlToContentType } from "@jsenv/server"
 
 export const jsenvPluginFileUrls = () => {
   return {
     name: "jsenv:file_urls",
     appliesDuring: "*",
-    load: async ({ projectDirectoryUrl, url, contentType }) => {
+    load: async ({ projectDirectoryUrl, url }) => {
       if (!url.startsWith("file:")) {
         return null
       }
@@ -21,13 +21,16 @@ export const jsenvPluginFileUrls = () => {
           }),
         }
       }
+      const contentType = urlToContentType(url)
       const fileBuffer = readFileSync(urlObject)
       if (contentTypeIsTextual(contentType)) {
         return {
+          contentType,
           content: String(fileBuffer),
         }
       }
       return {
+        contentType,
         content: fileBuffer,
       }
     },

@@ -6,13 +6,13 @@ import { urlToExtension } from "@jsenv/filesystem"
 
 import { applyFileSystemMagicResolution } from "@jsenv/core/packages/node-esm-resolution/main.js"
 
-export const jsenvPluginFileSystemMagicResolution = ({
+export const jsenvPluginFileSystemMagic = ({
   magicExtensions = ["inherit"],
   magicDirectoryIndex = true,
   preservesSymlink = true,
 } = {}) => {
   return {
-    name: "jsenv:filesystem_magic_resolution",
+    name: "jsenv:filesystem_magic",
     appliesDuring: "*",
     resolve: async ({ resolve, parentUrl }) => {
       const url = await resolve()

@@ -5,7 +5,7 @@ import { jsenvPluginUrlResolution } from "@jsenv/core/src/omega/plugins/url_reso
 import { jsenvPluginNodeEsmResolution } from "@jsenv/core/src/omega/plugins/node_esm_resolution/jsenv_plugin_node_esm_resolution.js"
 import { jsenvPluginDataUrls } from "@jsenv/core/src/omega/plugins/data_urls/jsenv_plugin_data_urls.js"
 import { jsenvPluginFileUrls } from "@jsenv/core/src/omega/plugins/file_urls/jsenv_plugin_file_urls.js"
-import { jsenvPluginFileSystemMagicResolution } from "@jsenv/core/src/omega/plugins/filesystem_magic_resolution/jsenv_plugin_filesystem_magic_resolution.js"
+import { jsenvPluginFileSystemMagic } from "@jsenv/core/src/omega/plugins/filesystem_magic/jsenv_plugin_filesystem_magic.js"
 import { jsenvPluginInlineRessources } from "@jsenv/core/src/omega/plugins/inline_ressources/jsenv_plugin_inline_ressources.js"
 import { jsenvPluginAutoreload } from "@jsenv/core/src/omega/plugins/autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginHtmlSupervisor } from "@jsenv/core/src/omega/plugins/html_supervisor/jsenv_plugin_html_supervisor.js"
@@ -34,7 +34,7 @@ export const startDevServer = async ({
       // "inline ressources" must come before "filesystem magic resolution"
       // otherwise it will try to read inline files
       jsenvPluginInlineRessources(),
-      jsenvPluginFileSystemMagicResolution(),
+      jsenvPluginFileSystemMagic(),
       jsenvPluginUrlResolution(),
       jsenvPluginImportmap(),
       jsenvPluginNodeEsmResolution(),

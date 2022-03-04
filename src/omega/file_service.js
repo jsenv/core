@@ -1,4 +1,4 @@
-import { fetchFileSystem, urlToContentType } from "@jsenv/server"
+import { fetchFileSystem } from "@jsenv/server"
 import {
   urlIsInsideOf,
   writeFile,
@@ -197,10 +197,7 @@ export const createFileService = ({
           Object.assign(context, urlMeta)
         }
       })
-      context.contentType =
-        // contentType can be returned by "resolve" hook
-        context.contentType || urlToContentType(context.url)
-      context.type = getRessourceType(context)
+
       const loadReturnValue = await findAsync({
         array: plugins,
         start: (plugin) => {
@@ -213,11 +210,17 @@ export const createFileService = ({
           message: `"${context.url}" cannot be loaded`,
         })
       }
-      const { response, content } = loadReturnValue
+      const {
+        response,
+        contentType = "application/octet-stream",
+        content,
+      } = loadReturnValue
       if (response) {
         context.response = response
         return context
       }
+      context.contentType = contentType
+      context.type = getRessourceType(context)
       context.content = content // can be a buffer (used for binary files) or a string
       if (context.contentType === "application/javascript") {
         const sourcemapSpecifier = getJavaScriptSourceMappingUrl(
@@ -409,6 +412,12 @@ export const createFileService = ({
         // - use context.parentUrl to say who imported that file
         // - use context.parentLine, parentColumn to eventually
         //   log where the ressource is referenced
+        return {
+          status: 404,
+          statusText: e.message,
+        }
+      }
+      if (e.code === "ENOENT") {
         return {
           status: 404,
           statusText: e.message,
