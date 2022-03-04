@@ -55,7 +55,6 @@ export const createFileService = ({
     plugins,
     sourcemapInjection,
     ressourceGraph,
-    urlInfoMap,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   return async (request) => {
@@ -184,25 +183,25 @@ export const createFileService = ({
           message: `"${specifier}" specifier found in "${parentUrl}" not resolved`,
         })
       }
-      const urlInfo = urlInfoMap.get(context.url)
-      Object.assign(context, urlInfo)
+      let urlMeta = {}
       plugins.forEach((plugin) => {
-        const urlMeta = callPluginSyncHook(plugin, "deriveMetaFromUrl", context)
-        if (urlMeta) {
-          const urlInfo = {
-            ...urlInfoMap.get(context.url),
+        const urlMetaFromPlugin = callPluginSyncHook(
+          plugin,
+          "deriveMetaFromUrl",
+          context,
+        )
+        if (urlMetaFromPlugin) {
+          urlMeta = {
             ...urlMeta,
+            ...urlMetaFromPlugin,
           }
-          urlInfoMap.set(context.url, urlInfo)
-          Object.assign(context, urlMeta)
         }
       })
+      urlInfoMap.set(context.url, urlMeta)
 
       const loadReturnValue = await findAsync({
         array: plugins,
-        start: (plugin) => {
-          return callPluginHook(plugin, "load", context)
-        },
+        start: (plugin) => callPluginHook(plugin, "load", context),
         predicate: (returnValue) => Boolean(returnValue),
       })
       if (!loadReturnValue) {
@@ -244,20 +243,21 @@ export const createFileService = ({
         }
       }
 
-      const mutateContentAndSourcemap = (transformReturnValue) => {
-        if (!transformReturnValue) {
+      const applyPluginReturnValue = (valueReturnedByAPlugin) => {
+        if (!valueReturnedByAPlugin) {
           return
         }
-        if (typeof transformReturnValue === "string") {
-          context.content = transformReturnValue
+        if (typeof valueReturnedByAPlugin === "string") {
+          context.content = valueReturnedByAPlugin
           // put a warning for css and js because it prevent sourcemap?
-        } else {
-          context.content = transformReturnValue.content
-          context.sourcemap = composeTwoSourcemaps(
-            context.sourcemap,
-            transformReturnValue.sourcemap,
-          )
+          return
         }
+        const { content, sourcemap, contentType } = valueReturnedByAPlugin
+        if (contentType) {
+          context.contentType = contentType
+        }
+        context.content = content
+        context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
       }
       await plugins.reduce(async (previous, plugin) => {
         await previous
@@ -266,7 +266,7 @@ export const createFileService = ({
           "transform",
           context,
         )
-        mutateContentAndSourcemap(transformReturnValue)
+        applyPluginReturnValue(transformReturnValue)
       }, Promise.resolve())
       const onParsed = async ({
         urlMentions = [],
@@ -335,11 +335,10 @@ export const createFileService = ({
             return clientUrl
           },
         })
-        mutateContentAndSourcemap(transformReturnValue)
+        applyPluginReturnValue(transformReturnValue)
       } else {
         await onParsed({})
       }
-
       const { sourcemap } = context
       if (sourcemap && sourcemapInjection === "comment") {
         const sourcemapUrl = generateSourcemapUrl(context.url)
@@ -356,6 +355,12 @@ export const createFileService = ({
         context.sourcemapUrl = generateSourcemapUrl(context.url)
         context.content = injectSourcemap(context)
       }
+      const renderReturnValue = await findAsync({
+        array: plugins,
+        start: (plugin) => callPluginHook(plugin, "render", context),
+        predicate: (returnValue) => Boolean(returnValue),
+      })
+      applyPluginReturnValue(renderReturnValue)
       return context
     }
     const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {

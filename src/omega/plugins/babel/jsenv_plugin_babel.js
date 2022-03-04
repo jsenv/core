@@ -72,47 +72,41 @@ export const jsenvPluginBabel = () => {
   const importTypeJson = {
     name: "jsenv:import_type_json",
     appliesDuring: "*",
-    deriveMetaFromUrl: {
-      js_import_export: ({ url }) => {
-        if (new URL(url).searchParams.has("json_module")) {
-          return { jsonModule: true }
-        }
+    render: ({ url, contentType, content }) => {
+      if (!new URL(url).searchParams.has("json_module")) {
         return null
-      },
-    },
-    transform: {
-      js_module: ({ jsonModule, content }) => {
-        if (!jsonModule) {
-          return null
-        }
-        return convertJsonTextToJavascriptModule({
+      }
+      if (contentType !== "application/json") {
+        throw new Error(
+          `Unexpected content type on ${url}, should be "application/json" but got ${contentType}`,
+        )
+      }
+      return {
+        contentType: "application/javascript",
+        content: convertJsonTextToJavascriptModule({
           content,
-        })
-      },
+        }),
+      }
     },
   }
   const importTypeCss = {
     name: "jsenv:import_type_css",
     appliesDuring: "*",
-    // could we skip this and only handle that aspect in "parsed"?
-    deriveMetaFromUrl: {
-      js_import_export: ({ url }) => {
-        if (new URL(url).searchParams.has("css_module")) {
-          return { cssModule: true }
-        }
+    render: ({ url, contentType, content }) => {
+      if (!new URL(url).searchParams.has("css_module")) {
         return null
-      },
-    },
-    render: {
-      js_module: ({ cssModule, content }) => {
-        if (!cssModule) {
-          return null
-        }
-        // todo return  contentType: "application/javascript" + allow this in file_service.js
-        return convertCssTextToJavascriptModule({
+      }
+      if (contentType !== "text/css") {
+        throw new Error(
+          `Unexpected content type on ${url}, should be "text/css" but got ${contentType}`,
+        )
+      }
+      return {
+        contentType: "application/javascript",
+        content: convertCssTextToJavascriptModule({
           content,
-        })
-      },
+        }),
+      }
     },
   }
   // maybe add importTypeText:
