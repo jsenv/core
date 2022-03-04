@@ -71,25 +71,6 @@ export const createFileService = ({
       },
       runtimeSupport,
     }
-    plugins = plugins.filter((plugin) => {
-      return (
-        plugin.appliesDuring &&
-        (plugin.appliesDuring === "*" || plugin.appliesDuring[scenario])
-      )
-    })
-    const responseFromPlugin = await findAsync({
-      array: plugins,
-      start: (plugin) => {
-        return callPluginHook(plugin, "serve", {
-          projectDirectoryUrl,
-          request,
-        })
-      },
-      predicate: (returnValue) => Boolean(returnValue),
-    })
-    if (responseFromPlugin) {
-      return responseFromPlugin
-    }
 
     const cookFile = async ({ parentUrl, specifierType, specifier }) => {
       const context = {

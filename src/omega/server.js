@@ -52,7 +52,7 @@ export const startOmegaServer = async ({
   },
 }) => {
   const logger = createLogger({ logLevel })
-  plugins = normalizePlugins(plugins)
+  plugins = flattenAndFilterPlugins(plugins, { scenario })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
@@ -158,14 +158,28 @@ export const startOmegaServer = async ({
   }
 }
 
-const normalizePlugins = (plugins) => {
-  const pluginsNormalized = []
-  plugins.forEach((plugin) => {
-    if (Array.isArray(plugin)) {
-      pluginsNormalized.push(...normalizePlugins(plugin))
-    } else {
-      pluginsNormalized.push(plugin)
+const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
+  const plugins = []
+  const visitPluginEntry = (pluginEntry) => {
+    if (Array.isArray(pluginEntry)) {
+      pluginEntry.forEach((value) => visitPluginEntry(value))
+      return
     }
-  })
-  return pluginsNormalized
+    if (typeof pluginEntry === "function") {
+      throw new Error(`plugin must be objects, got a function`)
+    }
+    if (typeof pluginEntry === "object") {
+      const { appliesDuring } = pluginEntry
+      if (appliesDuring === "*") {
+        plugins.push(pluginEntry)
+        return
+      }
+      if (appliesDuring && appliesDuring[scenario]) {
+        plugins.push(pluginEntry)
+        return
+      }
+    }
+  }
+  pluginsRaw.forEach((plugin) => visitPluginEntry(plugin))
+  return plugins
 }
