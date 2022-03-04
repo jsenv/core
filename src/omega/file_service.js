@@ -5,7 +5,6 @@ import {
   resolveUrl,
   urlToRelativeUrl,
 } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
 
 import { moveUrl, injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
 import { findAsync } from "@jsenv/core/src/utils/find_async.js"
@@ -20,6 +19,16 @@ import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injec
 import { featuresCompatMap } from "./runtime_support/features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support/runtime_support.js"
 import { parseUserAgentHeader } from "./user_agent.js"
+import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
+import { parseCssUrlMentions } from "./parse/css/css_url_mentions.js"
+import { parseJsModuleUrlMentions } from "./parse/js_module/js_module_url_mentions.js"
+import { createNotFoundError } from "./errors.js"
+
+const parsers = {
+  html: parseHtmlUrlMentions,
+  css: parseCssUrlMentions,
+  js_module: parseJsModuleUrlMentions,
+}
 
 export const createFileService = ({
   signal,
@@ -31,16 +40,15 @@ export const createFileService = ({
   ressourceGraph,
 }) => {
   const urlInfoMap = new Map()
-  // const urlRedirections = {}
   const baseContext = {
     signal,
     logger,
     projectDirectoryUrl,
     scenario,
+    plugins,
     sourcemapInjection,
     ressourceGraph,
     urlInfoMap,
-    // urlRedirections,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   return async (request) => {
@@ -72,14 +80,24 @@ export const createFileService = ({
       runtimeSupport,
     }
 
+    let currentContext
     const cookFile = async ({ parentUrl, specifierType, specifier }) => {
       const context = {
         ...baseContext,
         ...requestContext,
+        cookFile: async (params) => {
+          const returnValue = await cookFile(params)
+          // we are done with that subfile
+          // restore currentContext to the current file
+          currentContext = context
+          return returnValue
+        },
         parentUrl,
         specifierType,
         specifier,
       }
+      currentContext = context
+
       context.resolve = async ({ parentUrl, specifierType, specifier }) => {
         const resolveReturnValue = await findAsync({
           array: plugins,
@@ -130,23 +148,14 @@ export const createFileService = ({
         specifier,
       })
       if (!context.url) {
-        context.response = {
-          status: 404,
-          statusText: `"${specifier}" specifier found in "${parentUrl}" not resolved`,
-        }
-        return context
+        // TODO: use url trace to improve error message
+        throw createNotFoundError({
+          message: `"${specifier}" specifier found in "${parentUrl}" not resolved`,
+        })
       }
       const urlInfo = urlInfoMap.get(context.url)
       Object.assign(context, urlInfo)
       context.urlFacade = urlInfo.urlFacade || context.url
-      // for (const plugin of plugins) {
-      //   const redirectReturnValue = plugin.redirect(context)
-      //   if (redirectReturnValue) {
-      //     // on aura besoin de gérer ces redirections
-      //     context.urlFacade = redirectReturnValue
-      //     break
-      //   }
-      // }
       context.contentType = urlToContentType(context.urlFacade)
       context.type = getRessourceType(context)
       const loadReturnValue = await findAsync({
@@ -157,11 +166,9 @@ export const createFileService = ({
         predicate: (returnValue) => Boolean(returnValue),
       })
       if (!loadReturnValue) {
-        context.response = {
-          status: 404,
-          statusText: `"${parentUrl}" cannot be loaded`,
-        }
-        return context
+        throw createNotFoundError({
+          message: `"${context.url}" cannot be loaded`,
+        })
       }
       const { response, content } = loadReturnValue
       if (response) {
@@ -197,7 +204,7 @@ export const createFileService = ({
         }
         if (typeof transformReturnValue === "string") {
           context.content = transformReturnValue
-          // put a warning?
+          // put a warning for css and js because it prevent sourcemap?
         } else {
           context.content = transformReturnValue.content
           context.sourcemap = composeTwoSourcemaps(
@@ -215,6 +222,77 @@ export const createFileService = ({
         )
         mutateContentAndSourcemap(transformReturnValue)
       }, Promise.resolve())
+      const onParsed = async ({
+        urlMentions = [],
+        hotDecline = false,
+        hotAcceptSelf = false,
+        hotAcceptDependencies = [],
+      }) => {
+        Object.assign(context, {
+          urlMentions,
+          hotDecline,
+          hotAcceptSelf,
+          hotAcceptDependencies,
+        })
+        ressourceGraph.updateRessourceDependencies({
+          url: context.url,
+          type: context.type,
+          dependencyUrls: urlMentions.map((urlMention) => urlMention.url),
+          hotDecline,
+          hotAcceptSelf,
+          hotAcceptDependencies,
+        })
+        await plugins.reduce(async (previous, plugin) => {
+          await previous
+          const parsedReturnValue = await callPluginHook(
+            plugin,
+            "parsed",
+            context,
+          )
+          if (typeof parsedReturnValue === "function") {
+            const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
+              (prunedRessource) => {
+                if (prunedRessource.url === context.url) {
+                  removePrunedCallback()
+                  parsedReturnValue()
+                }
+              },
+            )
+          }
+        }, Promise.resolve())
+      }
+      const parser = parsers[context.type]
+      if (parser) {
+        const { urlMentions, getHotInfo, transformUrlMentions } = await parser(
+          context,
+        )
+        await urlMentions.reduce(async (previous, urlMention) => {
+          await previous
+          const resolvedUrl = await context.resolve({
+            parentUrl: context.url,
+            specifierType: urlMention.type,
+            specifier: urlMention.specifier,
+          })
+          urlMention.url = resolvedUrl
+        }, Promise.resolve())
+        await onParsed({
+          urlMentions,
+          ...getHotInfo(),
+        })
+        const transformReturnValue = await transformUrlMentions({
+          transformUrlMention: (urlMention) => {
+            if (!urlMention.url) {
+              // will result in 404
+              return urlMention.specifier
+            }
+            const clientUrl = context.asClientUrl(urlMention.url, context.url)
+            return clientUrl
+          },
+        })
+        mutateContentAndSourcemap(transformReturnValue)
+      } else {
+        await onParsed({})
+      }
 
       const { sourcemap } = context
       if (sourcemap && sourcemapInjection === "comment") {
@@ -235,82 +313,82 @@ export const createFileService = ({
       return context
     }
     const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {
-      const { response, url, content } = await cookFile({
+      const sourcemapContext = await cookFile({
         parentUrl,
         specifierType,
         specifier,
       })
-      if (response && response.status === 404) {
-        logger.warn(
-          createDetailedMessage(`Error while handling sourcemap`, {
-            "error message": response.statusText,
-            "sourcemap url": url,
-            "referenced by": parentUrl,
-          }),
-        )
-        return null
+      const sourcemap = JSON.parse(sourcemapContext.content)
+      sourcemap.sources = sourcemap.sources.map((source) => {
+        return new URL(source, sourcemapContext.url).href
+      })
+      return sourcemap
+    }
+    try {
+      const {
+        response,
+        urlFacade,
+        contentType,
+        content,
+        sourcemapUrl,
+        sourcemap,
+      } = await cookFile({
+        parentUrl: String(projectDirectoryUrl),
+        specifierType: "http_request",
+        specifier: request.ressource,
+      })
+      if (response) {
+        return response
       }
-      const sourcemapString = content
-      try {
-        const sourcemap = JSON.parse(sourcemapString)
-        sourcemap.sources = sourcemap.sources.map((source) => {
-          return new URL(source, url).href
+      if (sourcemapUrl) {
+        writeIntoRuntimeDirectory({
+          projectDirectoryUrl,
+          scenario,
+          runtimeName,
+          runtimeVersion,
+          url: sourcemapUrl,
+          content: JSON.stringify(sourcemap, null, "  "),
         })
-        return sourcemap
-      } catch (e) {
-        if (e.name === "SyntaxError") {
-          logger.error(
-            createDetailedMessage(`syntax error while parsing sourcemap`, {
-              "syntax error stack": e.stack,
-              "sourcemap url": url,
-              "referenced by": parentUrl,
-            }),
-          )
-          return null
-        }
-        throw e
       }
-    }
-    const {
-      response,
-      urlFacade,
-      contentType,
-      content,
-      sourcemapUrl,
-      sourcemap,
-    } = await cookFile({
-      parentUrl: projectDirectoryUrl,
-      specifierType: "http_request",
-      specifier: request.ressource,
-    })
-    if (response) {
-      return response
-    }
-    if (sourcemapUrl) {
       writeIntoRuntimeDirectory({
         projectDirectoryUrl,
         scenario,
         runtimeName,
         runtimeVersion,
-        url: sourcemapUrl,
-        content: JSON.stringify(sourcemap, null, "  "),
+        url: urlFacade,
+        content,
       })
-    }
-    writeIntoRuntimeDirectory({
-      projectDirectoryUrl,
-      scenario,
-      runtimeName,
-      runtimeVersion,
-      url: urlFacade,
-      content,
-    })
-    return {
-      status: 200,
-      headers: {
-        "content-type": contentType,
-        "content-length": Buffer.byteLength(content),
-      },
-      body: content,
+      return {
+        status: 200,
+        headers: {
+          "content-type": contentType,
+          "content-length": Buffer.byteLength(content),
+        },
+        body: content,
+      }
+    } catch (e) {
+      if (e.code === "NOT_FOUND") {
+        // TODO: improve error message
+        // - use context.parentUrl to say who imported that file
+        // - use context.parentLine, parentColumn to eventually
+        //   log where the ressource is referenced
+        return {
+          status: 404,
+          statusText: e.message,
+        }
+      }
+      if (e.name === "SyntaxError") {
+        // TODO: improve error message
+        // - prefer a short, local file url if possible
+        // - use context.parentUrl to say who imported that file
+        // - introduce context.parentLine, parentColumn to further improve
+        //   the url trace
+        return {
+          status: 500,
+          statusText: `Syntax error while handling ${currentContext.url}`,
+        }
+      }
+      throw e
     }
   }
 }
@@ -327,6 +405,9 @@ const getRessourceType = ({ url, contentType }) => {
   }
   if (contentType === "application/json") {
     return "json"
+  }
+  if (contentType === "application/importmap+json") {
+    return "importmap"
   }
   return "other"
 }

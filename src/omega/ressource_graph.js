@@ -5,6 +5,7 @@ import { asUrlWithoutSearch } from "@jsenv/core/src/utils/url_utils.js"
 
 export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   const hotUpdateCallbackList = createCallbackList()
+  const prunedCallbackList = createCallbackList()
 
   const ressources = {}
   const getRessourceByUrl = (url) => ressources[url]
@@ -238,6 +239,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     prunedRessources.forEach((prunedRessource) => {
       prunedRessource.hmrTimestamp = Date.now()
       // delete ressources[prunedRessource.url]
+      prunedCallbackList.notify(prunedRessource)
     })
     const mainHotUpdate = propagateUpdate(firstRessource)
     const cause = `following files are no longer referenced: ${prunedRessources.map(
@@ -282,13 +284,35 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     })
   }
 
+  const findDependent = (url, predicate) => {
+    const ressource = getRessourceByUrl(url)
+    if (!ressource) {
+      return null
+    }
+    const visitDependents = (ressource) => {
+      for (const dependentUrl of ressource.dependents) {
+        const dependent = ressources[dependentUrl]
+        if (predicate(dependent)) {
+          return dependent
+        }
+        return visitDependents(dependent)
+      }
+      return null
+    }
+    return visitDependents(ressource)
+  }
+
   return {
     hotUpdateCallbackList,
-    applyUrlResolution,
-    getRessourceByUrl,
+    prunedCallbackList,
+
     updateRessourceDependencies,
     onFileChange,
     getHmrTimestamp,
+
+    getRessourceByUrl,
+    findDependent,
+    applyUrlResolution,
 
     toJSON: () => {
       const data = {}

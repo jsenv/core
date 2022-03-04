@@ -78,7 +78,6 @@ export const jsenvPluginHtmlSupervisor = () => {
           const crossorigin = crossoriginAttribute
             ? crossoriginAttribute.value
             : undefined
-
           scriptsToSupervise.push({
             node,
             type: scriptCategory,
@@ -91,7 +90,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           return null
         }
         let htmlSupervisorSetupResolvedUrl = await resolve({
-          parentUrl: projectDirectoryUrl,
+          parentUrl: String(projectDirectoryUrl),
           specifierType: "js_import_export",
           specifier: htmlSupervisorSetupFileUrl,
         })
@@ -108,7 +107,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           }),
         )
         const htmlSupervisorResolvedUrl = await resolve({
-          parentUrl: projectDirectoryUrl,
+          parentUrl: String(projectDirectoryUrl),
           specifierType: "js_import_export",
           specifier: htmlSupervisorFileUrl,
         })

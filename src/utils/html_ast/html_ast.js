@@ -26,11 +26,7 @@ export const stringifyHtmlAst = (htmlAst) => {
   return htmlString
 }
 
-export const findNode = (htmlStringOrAst, predicate) => {
-  const htmlAst =
-    typeof htmlStringOrAst === "string"
-      ? parseHtmlString(htmlStringOrAst)
-      : htmlStringOrAst
+export const findNode = (htmlAst, predicate) => {
   let nodeMatching = null
   visitHtmlAst(htmlAst, (node) => {
     if (predicate(node)) {
