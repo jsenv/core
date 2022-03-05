@@ -151,7 +151,7 @@ export const createFileService = ({
       }
 
       context.asClientUrl = (url, parentUrl) => {
-        const hmr = new URL(parentUrl).searchParams.get("hmr")
+        const hmr = new URL(parentUrl).searchParams.has("hmr")
         const urlInfo = urlInfoMap.get(url) || {}
         const { urlVersion } = urlInfo
         const clientUrlRaw = url

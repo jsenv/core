@@ -103,7 +103,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     }
   }
 
-  const updateHmrTimestamp = (ressource, hmr) => {
+  const updateHmrTimestamp = (ressource, hmrTimestamp) => {
     const seen = []
     const iterate = (url) => {
       if (seen.includes(url)) {
@@ -111,11 +111,11 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       }
       seen.push(url)
       const ressource = ressources[url]
-      ressource.hmrTimestamp = hmr
+      ressource.hmrTimestamp = hmrTimestamp
       ressource.dependents.forEach((dependentUrl) => {
         const dependent = ressources[dependentUrl]
         if (!dependent.hotAcceptDependencies.includes(url)) {
-          iterate(dependentUrl, hmr)
+          iterate(dependentUrl, hmrTimestamp)
         }
       })
     }
