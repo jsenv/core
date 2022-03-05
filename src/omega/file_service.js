@@ -41,10 +41,12 @@ export const createFileService = ({
   projectDirectoryUrl,
   scenario,
   plugins,
+  runtimeSupport,
   sourcemapInjection,
   ressourceGraph,
 }) => {
   projectDirectoryUrl = String(projectDirectoryUrl)
+  const runtimeSupportFromParams = runtimeSupport
 
   const urlInfoMap = new Map()
   const baseContext = {
@@ -72,7 +74,7 @@ export const createFileService = ({
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
     )
-    const runtimeSupport = {
+    runtimeSupport = runtimeSupportFromParams || {
       [runtimeName]: runtimeVersion,
     }
     const requestContext = {

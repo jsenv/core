@@ -10,6 +10,7 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
+import { getJsenvPlugins } from "./jsenv_plugins.js"
 import { createRessourceGraph } from "./ressource_graph.js"
 import { createFileService } from "./file_service.js"
 import { createSSEService } from "./sse_service.js"
@@ -32,6 +33,7 @@ export const startOmegaServer = async ({
   projectDirectoryUrl,
   scenario,
   plugins,
+  runtimeSupport,
   sourcemapInjection = {
     dev: "inline",
     test: "inline",
@@ -52,7 +54,10 @@ export const startOmegaServer = async ({
   },
 }) => {
   const logger = createLogger({ logLevel })
-  plugins = flattenAndFilterPlugins(plugins, { scenario })
+  plugins = [...plugins, ...getJsenvPlugins()]
+  plugins = flattenAndFilterPlugins(plugins, {
+    scenario,
+  })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
@@ -70,6 +75,7 @@ export const startOmegaServer = async ({
       projectDirectoryUrl,
       scenario,
       plugins,
+      runtimeSupport,
       sourcemapInjection,
       ressourceGraph,
     }),
