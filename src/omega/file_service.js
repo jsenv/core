@@ -243,21 +243,52 @@ export const createFileService = ({
         }
       }
 
-      const applyPluginReturnValue = (valueReturnedByAPlugin) => {
-        if (!valueReturnedByAPlugin) {
-          return
-        }
-        if (typeof valueReturnedByAPlugin === "string") {
-          context.content = valueReturnedByAPlugin
-          // put a warning for css and js because it prevent sourcemap?
-          return
-        }
-        const { content, sourcemap, contentType } = valueReturnedByAPlugin
-        if (contentType) {
-          context.contentType = contentType
-        }
+      const updateContentAndSourcemap = ({ content, sourcemap }) => {
         context.content = content
         context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
+      }
+
+      const applyPluginReturnValue = (valueReturned, { hookName, plugin }) => {
+        if (!valueReturned) {
+          return
+        }
+        if (
+          typeof valueReturned === "string" ||
+          Buffer.isBuffer(valueReturned)
+        ) {
+          updateContentAndSourcemap({
+            content: valueReturned,
+          })
+          return
+        }
+        if (typeof valueReturned === "object") {
+          const { contentType, content, sourcemap } = valueReturned
+          if (typeof content !== "string" && !Buffer.isBuffer(content)) {
+            throw new Error(
+              `Unexpected "content" found in plugin return value: it must be a string or a buffer
+--- plugin name --- 
+${plugin.name}
+--- plugin hook ---
+${hookName}
+--- content ---
+${content}`,
+            )
+          }
+          if (contentType) {
+            context.contentType = contentType
+          }
+          updateContentAndSourcemap({ content, sourcemap })
+          return
+        }
+        throw new Error(
+          `Unexpected value returned by plugin: it must be a string, a buffer or an object
+--- plugin name --- 
+${plugin.name}
+--- plugin hook ---
+${hookName}
+--- value returned ---
+${valueReturned}`,
+        )
       }
       await plugins.reduce(async (previous, plugin) => {
         await previous
@@ -266,7 +297,10 @@ export const createFileService = ({
           "transform",
           context,
         )
-        applyPluginReturnValue(transformReturnValue)
+        applyPluginReturnValue(transformReturnValue, {
+          plugin,
+          hookName: "transform",
+        })
       }, Promise.resolve())
       const onParsed = async ({
         urlMentions = [],
@@ -335,7 +369,7 @@ export const createFileService = ({
             return clientUrl
           },
         })
-        applyPluginReturnValue(transformReturnValue)
+        updateContentAndSourcemap(transformReturnValue)
       } else {
         await onParsed({})
       }
@@ -355,12 +389,25 @@ export const createFileService = ({
         context.sourcemapUrl = generateSourcemapUrl(context.url)
         context.content = injectSourcemap(context)
       }
-      const renderReturnValue = await findAsync({
+      await findAsync({
         array: plugins,
-        start: (plugin) => callPluginHook(plugin, "render", context),
+        start: async (plugin) => {
+          const renderReturnValue = await callPluginHook(
+            plugin,
+            "render",
+            context,
+          )
+          if (!renderReturnValue) {
+            return false
+          }
+          applyPluginReturnValue(renderReturnValue, {
+            plugin,
+            hookName: "render",
+          })
+          return true
+        },
         predicate: (returnValue) => Boolean(returnValue),
       })
-      applyPluginReturnValue(renderReturnValue)
       return context
     }
     const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {
