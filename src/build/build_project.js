@@ -8,8 +8,6 @@
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
-import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
-
 import { rollupPluginJsenv } from "./rollup_plugin_jsenv.js"
 import { applyRollupPlugins } from "./apply_rollup_plugins.js"
 
@@ -36,28 +34,23 @@ export const buildProject = async ({
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
-  const server = await startOmegaServer({
-    keepProcessAlive: false,
 
-    projectDirectoryUrl,
-    plugins,
-    runtimeSupport,
-    scenario: preview ? "preview" : "prod",
-  })
+  const scenario = preview ? "preview" : "prod"
   await applyRollupPlugins({
     rollupPlugins: [
-      rollupPluginJsenv({
+      await rollupPluginJsenv({
         logger,
         projectDirectoryUrl,
         buildDirectoryUrl,
-        server,
+        plugins,
+        runtimeSupport,
+        scenario,
       }),
     ],
     inputOptions: {
       input: [],
     },
   })
-  server.stop()
   return null
 }
 
