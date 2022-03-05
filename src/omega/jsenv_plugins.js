@@ -13,7 +13,7 @@ import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plug
 export const getJsenvPlugins = () => {
   const asFewAsPossible = true // useful during dev
   return [
-    // "inline ressources" must come before "filesystem magic resolution"
+    // "inline ressources" must come before "filesystem magic"
     // otherwise it will try to read inline files
     ...(asFewAsPossible ? [] : jsenvPluginInlineRessources()),
     ...(asFewAsPossible ? [] : jsenvPluginFileSystemMagic()),

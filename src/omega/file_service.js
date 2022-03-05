@@ -44,6 +44,7 @@ export const createFileService = ({
   runtimeSupport,
   sourcemapInjection,
   ressourceGraph,
+  longTermCache = false, // will become true once things get more stable
 }) => {
   projectDirectoryUrl = String(projectDirectoryUrl)
   const runtimeSupportFromParams = runtimeSupport
@@ -457,6 +458,10 @@ ${valueReturned}`,
         headers: {
           "content-type": contentType,
           "content-length": Buffer.byteLength(content),
+          "cache-control": determineCacheControlResponseHeader({
+            url,
+            longTermCache,
+          }),
         },
         body: content,
       }
@@ -492,6 +497,16 @@ ${valueReturned}`,
     }
   }
 }
+
+const determineCacheControlResponseHeader = ({ url, longTermCache }) => {
+  const { searchParams } = new URL(url)
+  // When url is versioned and no hmr on it, put it in browser cache for 30 days
+  if (longTermCache && searchParams.has("v") && !searchParams.has("hmr")) {
+    return `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+  }
+  return `private,max-age=0,must-revalidate`
+}
+const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30
 
 const getRessourceType = ({ url, contentType }) => {
   if (contentType === "text/html") {

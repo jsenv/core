@@ -66,11 +66,8 @@ export const jsenvPluginInlineRessources = () => {
   return {
     name: "jsenv:inline_ressources",
     appliesDuring: "*",
-    resolve: ({ projectDirectoryUrl, parentUrl, specifier }) => {
-      const url =
-        specifier[0] === "/"
-          ? new URL(specifier.slice(1), projectDirectoryUrl).href
-          : new URL(specifier, parentUrl).href
+    resolve: ({ parentUrl, specifier }) => {
+      const url = new URL(specifier, parentUrl).href
       const urlWithoutSearch = asUrlWithoutSearch(url)
       if (inlineRessourceMap.has(urlWithoutSearch)) {
         return url

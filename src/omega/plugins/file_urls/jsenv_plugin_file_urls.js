@@ -5,7 +5,7 @@ export const jsenvPluginFileUrls = () => {
   return {
     name: "jsenv:file_urls",
     appliesDuring: "*",
-    load: async ({ projectDirectoryUrl, url }) => {
+    load: ({ projectDirectoryUrl, url }) => {
       if (!url.startsWith("file:")) {
         return null
       }
