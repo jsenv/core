@@ -21,6 +21,25 @@ export const startDevServer = async ({
   projectDirectoryUrl,
   plugins = [],
 }) => {
+  const asFewAsPossible = true // useful during dev
+
+  let jsenvPlugins = [
+    // "inline ressources" must come before "filesystem magic resolution"
+    // otherwise it will try to read inline files
+    ...(asFewAsPossible ? [] : jsenvPluginInlineRessources()),
+    ...(asFewAsPossible ? [] : jsenvPluginFileSystemMagic()),
+    jsenvPluginImportmap(), // must come before node esm to catch "js_import_export"
+    jsenvPluginNodeEsmResolution(), // must come before url resolution to catch "js_import_export"
+    jsenvPluginUrlResolution(),
+    // load
+    jsenvPluginDataUrls(),
+    jsenvPluginFileUrls(),
+    // transform
+    jsenvPluginAutoreload(),
+    ...(asFewAsPossible ? [] : jsenvPluginHtmlSupervisor()),
+    ...(asFewAsPossible ? [] : jsenvPluginCommonJsGlobals()),
+    jsenvPluginBabel(),
+  ]
   const server = await startOmegaServer({
     keepProcessAlive: true,
     port,
@@ -28,25 +47,7 @@ export const startDevServer = async ({
     certificate,
     privateKey,
     projectDirectoryUrl,
-    plugins: [
-      ...plugins,
-      // resolve
-      // "inline ressources" must come before "filesystem magic resolution"
-      // otherwise it will try to read inline files
-      jsenvPluginInlineRessources(),
-      jsenvPluginFileSystemMagic(),
-      jsenvPluginUrlResolution(),
-      jsenvPluginImportmap(),
-      jsenvPluginNodeEsmResolution(),
-      // load
-      jsenvPluginDataUrls(),
-      jsenvPluginFileUrls(),
-      // transform
-      jsenvPluginAutoreload(),
-      jsenvPluginHtmlSupervisor(),
-      jsenvPluginCommonJsGlobals(),
-      jsenvPluginBabel(),
-    ],
+    plugins: [...plugins, ...jsenvPlugins],
     scenario: "dev",
   })
   return server

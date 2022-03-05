@@ -29,7 +29,7 @@ export const jsenvPluginAutoreload = () => {
       }) => {
         const htmlAst = parseHtmlString(content)
         const eventSourceResolvedUrl = await resolve({
-          parentUrl: String(projectDirectoryUrl),
+          parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
           specifier: eventSourceFileUrl,
         })

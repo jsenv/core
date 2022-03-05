@@ -50,11 +50,8 @@ const jsenvPluginImportmapSupervisor = () => {
   return {
     name: "jsenv:importmap_supervisor",
     appliesDuring: "*",
-    resolve: ({ projectDirectoryUrl, parentUrl, specifier }) => {
-      const url =
-        specifier[0] === "/"
-          ? new URL(specifier.slice(1), projectDirectoryUrl).href
-          : new URL(specifier, parentUrl).href
+    resolve: ({ parentUrl, specifier }) => {
+      const url = new URL(specifier, parentUrl).href
       const urlWithoutSearch = asUrlWithoutSearch(url)
       const importmapContent = importmapContents[urlWithoutSearch]
       if (importmapContent) {
@@ -180,6 +177,11 @@ const jsenvPluginImportmapResolution = () => {
           return null
         } catch (e) {
           if (e.message.includes("bare specifier")) {
+            // in theory we should throw to be compliant with web behaviour
+            // but for now it's simpler to return null
+            // and let a chance to other plugins to handle the bare specifier
+            // (node esm resolution)
+            // and we want importmap to be prio over node esm so we cannot put this plugin after
             return null
           }
           throw e

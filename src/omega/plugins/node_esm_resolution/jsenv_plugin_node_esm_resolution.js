@@ -1,3 +1,12 @@
+/*
+ * - should I restore eventual search params lost during node esm resolution
+ * - what about symlinks?
+ *   It feels like I should apply symlink (when we don't want to preserve them)
+ *   once a file:/// url is found, regardless
+ *   if that comes from node resolution or anything else (not even magic resolution)
+ *   it should likely be an other plugin happening after the others
+ */
+
 import {
   applyNodeEsmResolution,
   lookupPackageScope,
@@ -18,7 +27,6 @@ export const jsenvPluginNodeEsmResolution = ({
           parentUrl,
           specifier,
         })
-        // should I restore eventual search params that would be lost during node esm resolution?
         return url
       },
     },

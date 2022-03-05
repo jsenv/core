@@ -6,6 +6,7 @@ export const jsenvPluginUrlResolution = () => {
     name: "jsenv:url_resolution",
     appliesDuring: "*",
     resolve: {
+      "js_import_export": urlResolver,
       "http_request": urlResolver,
       "link_href": urlResolver,
       "script_src": urlResolver,
