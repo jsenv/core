@@ -10,9 +10,13 @@ import { createLogger } from "@jsenv/logger"
 
 import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
 
+import { rollupPluginJsenv } from "./rollup_plugin_jsenv.js"
+import { applyRollupPlugins } from "./apply_rollup_plugins.js"
+
 export const buildProject = async ({
   logLevel = "info",
   projectDirectoryUrl,
+  buildDirectoryRelativeUrl,
   entryPoints = {},
   preview = false,
   plugins = [],
@@ -31,7 +35,11 @@ export const buildProject = async ({
   const logger = createLogger({ logLevel })
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
-
+  if (typeof buildDirectoryRelativeUrl !== "string") {
+    throw new TypeError(
+      `buildDirectoryRelativeUrl must be a string, received ${buildDirectoryRelativeUrl}`,
+    )
+  }
   const server = await startOmegaServer({
     keepProcessAlive: false,
 
@@ -40,12 +48,27 @@ export const buildProject = async ({
     runtimeSupport,
     scenario: preview ? "preview" : "prod",
   })
-  // TODO: use rollup and stuff, perform http request to retrieve files,
-  return server
+  await applyRollupPlugins({
+    rollupPlugins: [
+      rollupPluginJsenv({
+        logger,
+        projectDirectoryUrl,
+        buildDirectoryRelativeUrl,
+        server,
+      }),
+    ],
+    inputOptions: {
+      input: [],
+    },
+  })
+
+  server.stop()
+
+  return null
 }
 
 const assertEntryPoints = ({ entryPoints }) => {
-  if (typeof entryPoints !== "object") {
+  if (typeof entryPoints !== "object" || entryPoints === null) {
     throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
   }
   const keys = Object.keys(entryPoints)
@@ -55,7 +78,6 @@ const assertEntryPoints = ({ entryPoints }) => {
         `unexpected key in entryPoints, all keys must start with ./ but found ${key}`,
       )
     }
-
     const value = entryPoints[key]
     if (typeof value !== "string") {
       throw new TypeError(

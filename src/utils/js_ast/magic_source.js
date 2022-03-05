@@ -21,6 +21,11 @@ export const createMagicSource = ({ url, content }) => {
         magicString.overwrite(start, end, replacement)
       })
     },
+    remove: ({ start, end }) => {
+      mutations.push((magicString) => {
+        magicString.remove(start, end)
+      })
+    },
     toContentAndSourcemap: () => {
       const magicString = new MagicString(content)
       mutations.forEach((mutation) => {
