@@ -16,7 +16,7 @@ import { applyRollupPlugins } from "./apply_rollup_plugins.js"
 export const buildProject = async ({
   logLevel = "info",
   projectDirectoryUrl,
-  buildDirectoryRelativeUrl,
+  buildDirectoryUrl,
   entryPoints = {},
   preview = false,
   plugins = [],
@@ -35,11 +35,7 @@ export const buildProject = async ({
   const logger = createLogger({ logLevel })
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
-  if (typeof buildDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `buildDirectoryRelativeUrl must be a string, received ${buildDirectoryRelativeUrl}`,
-    )
-  }
+  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
   const server = await startOmegaServer({
     keepProcessAlive: false,
 
@@ -53,7 +49,7 @@ export const buildProject = async ({
       rollupPluginJsenv({
         logger,
         projectDirectoryUrl,
-        buildDirectoryRelativeUrl,
+        buildDirectoryUrl,
         server,
       }),
     ],
@@ -61,9 +57,7 @@ export const buildProject = async ({
       input: [],
     },
   })
-
   server.stop()
-
   return null
 }
 
