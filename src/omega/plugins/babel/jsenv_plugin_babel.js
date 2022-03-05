@@ -81,12 +81,9 @@ export const jsenvPluginBabel = () => {
           `Unexpected content type on ${url}, should be "application/json" but got ${contentType}`,
         )
       }
-      return {
-        contentType: "application/javascript",
-        content: convertJsonTextToJavascriptModule({
-          content,
-        }),
-      }
+      return convertJsonTextToJavascriptModule({
+        content,
+      })
     },
   }
   const importTypeCss = {
@@ -101,12 +98,9 @@ export const jsenvPluginBabel = () => {
           `Unexpected content type on ${url}, should be "text/css" but got ${contentType}`,
         )
       }
-      return {
-        contentType: "application/javascript",
-        content: convertCssTextToJavascriptModule({
-          content,
-        }),
-      }
+      return convertCssTextToJavascriptModule({
+        content,
+      })
     },
   }
   // maybe add importTypeText:

@@ -14,79 +14,85 @@ export const babelPluginNewStylesheetAsJsenvImport = () => {
     import.meta.url,
   ).href
 
-  const injectConstructableStylesheetPolyfill = ({ path, filename }) => {
-    const fileUrl = pathToFileURL(filename).href
-    if (fileUrl === newStylesheetClientFileUrl) {
-      return
-    }
-    injectImport({
-      programPath: path.scope.getProgramParent().path,
-      from: newStylesheetClientFileUrl,
-      sideEffect: true,
-    })
-  }
   return {
     name: "new-stylesheet-as-jsenv-import",
     visitor: {
-      CallExpression: (path, { filename }) => {
-        if (path.node.callee.type !== "Import") {
-          // Some other function call, not import();
+      Program: (programPath, { filename }) => {
+        const fileUrl = pathToFileURL(filename).href
+        if (fileUrl === newStylesheetClientFileUrl) {
           return
         }
-        if (path.node.arguments[0].type !== "StringLiteral") {
-          // Non-string argument, probably a variable or expression, e.g.
-          // import(moduleId)
-          // import('./' + moduleName)
-          return
-        }
-        if (!hasImportTypeCssAssertion(path)) {
-          return
-        }
-        injectConstructableStylesheetPolyfill({
-          path,
-          filename,
+        let needsNewStylesheetPolyfill = false
+        programPath.traverse({
+          CallExpression: (path) => {
+            if (needsNewStylesheetPolyfill) {
+              return
+            }
+            if (path.node.callee.type !== "Import") {
+              // Some other function call, not import();
+              return
+            }
+            if (path.node.arguments[0].type !== "StringLiteral") {
+              // Non-string argument, probably a variable or expression, e.g.
+              // import(moduleId)
+              // import('./' + moduleName)
+              return
+            }
+            const sourcePath = path.get("arguments")[0]
+            needsNewStylesheetPolyfill =
+              hasCssModuleQueryParam(sourcePath) ||
+              hasImportTypeCssAssertion(path)
+          },
+          ImportDeclaration: (path) => {
+            if (needsNewStylesheetPolyfill) {
+              return
+            }
+            const sourcePath = path.get("source")
+            needsNewStylesheetPolyfill =
+              hasCssModuleQueryParam(sourcePath) ||
+              hasImportTypeCssAssertion(path)
+          },
+          ExportAllDeclaration: (path) => {
+            if (needsNewStylesheetPolyfill) {
+              return
+            }
+            const sourcePath = path.get("source")
+            needsNewStylesheetPolyfill = hasCssModuleQueryParam(sourcePath)
+          },
+          ExportNamedDeclaration: (path) => {
+            if (needsNewStylesheetPolyfill) {
+              return
+            }
+            if (!path.node.source) {
+              // This export has no "source", so it's probably
+              // a local variable or function, e.g.
+              // export { varName }
+              // export const constName = ...
+              // export function funcName() {}
+              return
+            }
+            const sourcePath = path.get("source")
+            needsNewStylesheetPolyfill = hasCssModuleQueryParam(sourcePath)
+          },
         })
-      },
-
-      ExportAllDeclaration: (path, { filename }) => {
-        if (!hasImportTypeCssAssertion(path)) {
-          return
+        if (needsNewStylesheetPolyfill) {
+          injectImport({
+            programPath,
+            from: newStylesheetClientFileUrl,
+            sideEffect: true,
+          })
         }
-        injectConstructableStylesheetPolyfill({
-          path,
-          filename,
-        })
-      },
-
-      ExportNamedDeclaration: (path, { filename }) => {
-        if (!path.node.source) {
-          // This export has no "source", so it's probably
-          // a local variable or function, e.g.
-          // export { varName }
-          // export const constName = ...
-          // export function funcName() {}
-          return
-        }
-        if (!hasImportTypeCssAssertion(path)) {
-          return
-        }
-        injectConstructableStylesheetPolyfill({
-          path,
-          filename,
-        })
-      },
-
-      ImportDeclaration: (path, { filename }) => {
-        if (!hasImportTypeCssAssertion(path)) {
-          return
-        }
-        injectConstructableStylesheetPolyfill({
-          path,
-          filename,
-        })
       },
     },
   }
+}
+
+const hasCssModuleQueryParam = (path) => {
+  const { node } = path
+  return (
+    node.type === "StringLiteral" &&
+    new URL(node.value, "https://jsenv.dev").searchParams.has(`css_module`)
+  )
 }
 
 const hasImportTypeCssAssertion = (path) => {
