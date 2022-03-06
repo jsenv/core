@@ -1,3 +1,5 @@
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
+
 import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
 
 export const startDevServer = async ({
@@ -9,6 +11,7 @@ export const startDevServer = async ({
   projectDirectoryUrl,
   plugins = [],
 }) => {
+  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   const server = await startOmegaServer({
     keepProcessAlive: true,
     port,

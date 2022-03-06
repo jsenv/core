@@ -8,7 +8,7 @@ export const generateSourcemapUrl = (url) => {
   return sourcemapUrl
 }
 
-export const getJavaScriptSourceMappingUrl = (javaScriptSource) => {
+export const parseJavaScriptSourcemapComment = (javaScriptSource) => {
   let sourceMappingUrl
   replaceSourceMappingUrl(
     javaScriptSource,
@@ -17,7 +17,16 @@ export const getJavaScriptSourceMappingUrl = (javaScriptSource) => {
       sourceMappingUrl = value
     },
   )
-  return sourceMappingUrl
+  if (!sourceMappingUrl) {
+    return null
+  }
+  return {
+    specifier: sourceMappingUrl,
+    // we assume it's on last line
+    line: javaScriptSource.split(/\r?\n/).length,
+    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//#"} sourceMappingURL=`.length + 1,
+  }
 }
 
 export const setJavaScriptSourceMappingUrl = (
@@ -45,7 +54,7 @@ ${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}`
     : javaScriptSource
 }
 
-export const getCssSourceMappingUrl = (cssSource) => {
+export const parseCssSourcemapComment = (cssSource) => {
   let sourceMappingUrl
   replaceSourceMappingUrl(
     cssSource,
@@ -54,7 +63,16 @@ export const getCssSourceMappingUrl = (cssSource) => {
       sourceMappingUrl = value
     },
   )
-  return sourceMappingUrl
+  if (!sourceMappingUrl) {
+    return null
+  }
+  return {
+    specifier: sourceMappingUrl,
+    // we assume it's on last line
+    line: cssSource.split(/\r?\n/).length - 1,
+    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//*#"} sourceMappingURL=`.length + 1,
+  }
 }
 
 export const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {

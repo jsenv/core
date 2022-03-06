@@ -1,6 +1,8 @@
 import { fetchFileSystem } from "@jsenv/server"
 import { urlIsInsideOf } from "@jsenv/filesystem"
 
+import { moveUrl } from "@jsenv/core/src/utils/url_utils.js"
+
 import { createKitchen } from "./kitchen/kitchen.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -40,17 +42,25 @@ export const createFileService = ({
     const runtimeSupport = {
       [runtimeName]: runtimeVersion,
     }
-    const { error, response, url, contentType, content } =
-      await kitchen.cookFile({
-        outDirectoryName: `${runtimeName}@${runtimeVersion}`,
-        runtimeSupport,
-        parentUrl: projectDirectoryUrl,
-        specifierType: "http_request",
-        specifier: request.ressource,
-      })
+    const parentUrl = inferParentFromRequest(request, projectDirectoryUrl)
+    const url = await kitchen.resolveSpecifier({
+      parentUrl,
+      specifierType: "http_request",
+      specifier: request.ressource,
+    })
+    // TODO: use ressourcegraph to get an url site for this parentUrl + url
+    // and pass it to cookUrl, and inside cookUrl use it when there is an error
+    // to give context
+    const { error, response, contentType, content } = await kitchen.cookUrl({
+      outDirectoryName: `${runtimeName}@${runtimeVersion}`,
+      runtimeSupport,
+      parentUrl,
+      url,
+    })
     if (error) {
       if (error.code === "PARSE_ERROR") {
         // let the browser re-throw the syntax error
+        logger.error(error.message)
         return {
           status: 200,
           headers: {
@@ -94,6 +104,14 @@ export const createFileService = ({
       body: content,
     }
   }
+}
+
+const inferParentFromRequest = (request, projectDirectoryUrl) => {
+  const { referer } = request.headers
+  if (!referer) {
+    return projectDirectoryUrl
+  }
+  return moveUrl(referer, request.origin, projectDirectoryUrl)
 }
 
 const determineCacheControlResponseHeader = ({ url, longTermCache }) => {

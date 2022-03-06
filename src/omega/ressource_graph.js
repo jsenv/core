@@ -41,6 +41,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     url,
     type,
     dependencyUrls,
+    dependencyUrlSites,
     hotDecline,
     hotAcceptSelf,
     hotAcceptDependencies,
@@ -54,6 +55,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       ressource.type = type
     }
     if (dependencyUrls !== undefined) {
+      ressource.dependencyUrlSites = dependencyUrlSites
       dependencyUrls.forEach((dependencyUrl) => {
         const dependency = reuseOrCreateRessource(dependencyUrl)
         ressource.dependencies.add(dependencyUrl)
@@ -336,6 +338,7 @@ const createRessource = (url) => {
     type: "",
     hmrTimestamp: 0,
     dependencies: new Set(),
+    dependencyUrlSites: {},
     dependents: new Set(),
     hotAcceptSelf: false,
     hotAcceptDependencies: [],

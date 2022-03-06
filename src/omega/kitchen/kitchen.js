@@ -1,9 +1,4 @@
-import {
-  urlIsInsideOf,
-  writeFile,
-  resolveUrl,
-  urlToRelativeUrl,
-} from "@jsenv/filesystem"
+import { urlIsInsideOf, writeFile, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
   filesystemRootUrl,
@@ -11,8 +6,8 @@ import {
   injectQueryParams,
 } from "@jsenv/core/src/utils/url_utils.js"
 import {
-  getCssSourceMappingUrl,
-  getJavaScriptSourceMappingUrl,
+  parseJavaScriptSourcemapComment,
+  parseCssSourcemapComment,
   generateSourcemapUrl,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
@@ -24,6 +19,7 @@ import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
 import { parseCssUrlMentions } from "./parse/css/css_url_mentions.js"
 import { parseJsModuleUrlMentions } from "./parse/js_module/js_module_url_mentions.js"
+import { stringifyUrlSite } from "@jsenv/core/old_src/internal/building/url_trace.js"
 
 const parsers = {
   html: parseHtmlUrlMentions,
@@ -53,73 +49,74 @@ export const createKitchen = ({
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
 
+  const resolveSpecifier = async ({ parentUrl, specifierType, specifier }) => {
+    if (specifier.startsWith("/@fs/")) {
+      const url = new URL(specifier.slice("/@fs".length), projectDirectoryUrl)
+        .href
+      return url
+    }
+    if (specifier[0] === "/") {
+      const url = new URL(specifier.slice(1), projectDirectoryUrl).href
+      return url
+    }
+    const pluginsToIgnore = []
+    const contextDuringResolve = {
+      ...baseContext,
+      parentUrl,
+      specifierType,
+      specifier,
+      // when "resolve" is called during resolve hook
+      // apply other plugin resolve hooks
+      resolve: () => {
+        pluginsToIgnore.push(pluginController.getCurrentPlugin())
+        return callResolveHooks(
+          plugins.filter((plugin) => !pluginsToIgnore.includes(plugin)),
+        )
+      },
+    }
+    const callResolveHooks = async (pluginsSubset) => {
+      const resolveReturnValue = await pluginController.callPluginHooksUntil(
+        pluginsSubset,
+        "resolve",
+        contextDuringResolve,
+      )
+      if (!resolveReturnValue) {
+        return null
+      }
+      const url = String(resolveReturnValue)
+      return url
+    }
+    const url = await callResolveHooks(plugins)
+    return url
+  }
+
   let currentContext
-  const _cookFile = async ({
+  const _cookUrl = async ({
     outDirectoryName,
     runtimeSupport,
     parentUrl,
-    specifierType,
-    specifier,
+    url,
   }) => {
     const context = {
       ...baseContext,
+      resolve: resolveSpecifier,
+      cookUrl: async (params) => {
+        const returnValue = await cookUrl(params)
+        // we are done with that subfile
+        // restore currentContext to the current file
+        currentContext = context
+        return returnValue
+      },
       isSupportedOnRuntime: (
         featureName,
         featureCompat = featuresCompatMap[featureName],
       ) => {
         return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
       },
-      cookFile: async (params) => {
-        const returnValue = await cookFile(params)
-        // we are done with that subfile
-        // restore currentContext to the current file
-        currentContext = context
-        return returnValue
-      },
       parentUrl,
-      specifierType,
-      specifier,
+      url,
     }
     currentContext = context
-    context.resolve = async ({ parentUrl, specifierType, specifier }) => {
-      if (specifier.startsWith("/@fs/")) {
-        const url = new URL(specifier.slice("/@fs".length), projectDirectoryUrl)
-          .href
-        return url
-      }
-      if (specifier[0] === "/") {
-        const url = new URL(specifier.slice(1), projectDirectoryUrl).href
-        return url
-      }
-      const pluginsToIgnore = []
-      const contextDuringResolve = {
-        ...context,
-        parentUrl,
-        specifierType,
-        specifier,
-        // when "resolve" is called during resolve hook
-        // apply other plugin resolve hooks
-        resolve: () => {
-          pluginsToIgnore.push(pluginController.getCurrentPlugin())
-          return callResolveHooks(
-            plugins.filter((plugin) => !pluginsToIgnore.includes(plugin)),
-          )
-        },
-      }
-      const callResolveHooks = async (pluginsSubset) => {
-        const resolveReturnValue = await pluginController.callPluginHooksUntil(
-          pluginsSubset,
-          "resolve",
-          contextDuringResolve,
-        )
-        if (!resolveReturnValue) {
-          return null
-        }
-        const url = String(resolveReturnValue)
-        return url
-      }
-      return callResolveHooks(plugins)
-    }
     context.asClientUrl = (url, parentUrl) => {
       const hmr = new URL(parentUrl).searchParams.has("hmr")
       const urlInfo = urlInfoMap.get(url) || {}
@@ -141,38 +138,6 @@ export const createKitchen = ({
         return `/@fs/${clientUrl.slice(filesystemRootUrl.length)}`
       }
       return `${clientUrl}`
-    }
-
-    // "resolve" hook
-    try {
-      context.url = await context.resolve({
-        parentUrl,
-        specifierType,
-        specifier,
-      })
-      if (!context.url) {
-        throw new Error("NO_RESOLVE")
-      }
-    } catch (e) {
-      let error
-      if (e.message === "NO_RESOLVE") {
-        error = new Error(`Failed to resolve ${currentContext.specifierType}
---- reason ---
-all "resolve" hooks returned null`)
-        error.code = "NOT_FOUND"
-      } else {
-        error = new Error(
-          `Failed to resolve ${currentContext.specifierType}
---- reason ---
-error thrown during "resolve" by "${pluginController.getCurrentPlugin()}" plugin`,
-          {
-            cause: e,
-          },
-        )
-        error.code = "PLUGIN_ERROR"
-      }
-      context.error = error
-      return context
     }
 
     // "deriveMetaFromUrl" hook
@@ -217,19 +182,19 @@ error thrown during "resolve" by "${pluginController.getCurrentPlugin()}" plugin
     } catch (e) {
       let error
       if (e.message === "NO_LOAD") {
-        error = new Error(`Failed to load ${currentContext.specifierType}
+        error = new Error(`Failed to load ${currentContext.url}
 --- reason ---
 all "load" hooks returned null`)
         error.code = "NOT_FOUND"
       } else if (e && e.code === "EPERM") {
         error = new Error(
-          `Failed to load ${currentContext.specifierType}
+          `Failed to load ${currentContext.url}
 --- reason ---
 not allowed to read entry on filesystem at ${e.path}`,
         )
         error.code = "NOT_ALLOWED"
       } else if (e && e.code === "EISDIR") {
-        error = new Error(`Failed to load ${currentContext.specifierType}    
+        error = new Error(`Failed to load ${currentContext.url}    
 --- reason ---
 found a directory at ${e.path}`)
         error.code = "NOT_ALLOWED"
@@ -240,7 +205,7 @@ no entry on filesystem at ${e.path}`)
         error.code = "NOT_FOUND"
       } else if (e) {
         error = new Error(
-          `Failed to load ${currentContext.specifierType}
+          `Failed to load ${currentContext.url}
 --- reason ---
 error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
           {
@@ -255,21 +220,25 @@ error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
 
     // sourcemap loading
     if (context.contentType === "application/javascript") {
-      const sourcemapSpecifier = getJavaScriptSourceMappingUrl(context.content)
-      if (sourcemapSpecifier) {
+      const sourcemapInfo = parseJavaScriptSourcemapComment(context.content)
+      if (sourcemapInfo) {
         context.sourcemap = await loadSourcemap({
           parentUrl: context.url,
+          parentLine: sourcemapInfo.line,
+          parentColumn: sourcemapInfo.column,
           specifierType: "js_sourcemap_comment",
-          specifier: sourcemapSpecifier,
+          specifier: sourcemapInfo.specifier,
         })
       }
     } else if (context.contentType === "text/css") {
-      const sourcemapSpecifier = getCssSourceMappingUrl(context.content)
-      if (sourcemapSpecifier) {
+      const sourcemapInfo = parseCssSourcemapComment(context.content)
+      if (sourcemapInfo) {
         context.sourcemap = await loadSourcemap({
           parentUrl: context.url,
+          parentLine: sourcemapInfo.line,
+          parentColumn: sourcemapInfo.column,
           specifierType: "css_sourcemap_comment",
-          specifier: sourcemapSpecifier,
+          specifier: sourcemapInfo.specifier,
         })
       }
     }
@@ -319,10 +288,24 @@ error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plug
         hotAcceptSelf,
         hotAcceptDependencies,
       })
+      const dependencyUrls = []
+      const dependencyUrlSites = {}
+      urlMentions.forEach((urlMention) => {
+        const resolvedUrl =
+          urlMention.url || new URL(urlMention.specifier, context.url).href
+        dependencyUrls.push(resolvedUrl)
+        dependencyUrlSites[resolvedUrl] = stringifyUrlSite({
+          url: context.url,
+          line: urlMention.line,
+          column: urlMention.column,
+          content: context.content,
+        })
+      })
       ressourceGraph.updateRessourceDependencies({
         url: context.url,
         type: context.type,
-        dependencyUrls: urlMentions.map((urlMention) => urlMention.url),
+        dependencyUrls,
+        dependencyUrlSites,
         hotDecline,
         hotAcceptSelf,
         hotAcceptDependencies,
@@ -352,9 +335,7 @@ error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plug
         context,
       )
       for (const urlMention of urlMentions) {
-        const resolvedUrl = await context.resolve({
-          parentLine: urlMention.line,
-          parentColumn: urlMention.column,
+        const resolvedUrl = await resolveSpecifier({
           parentUrl: context.url,
           specifierType: urlMention.type,
           specifier: urlMention.specifier,
@@ -428,18 +409,22 @@ error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plug
 
     return context
   }
-  const cookFile = async (params) => {
+  const cookUrl = async (params) => {
     try {
-      return await _cookFile(params)
+      return await _cookUrl(params)
     } catch (e) {
       throw e
     }
   }
   const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {
-    const sourcemapContext = await cookFile({
+    const sourcemapUrl = await resolveSpecifier({
       parentUrl,
       specifierType,
       specifier,
+    })
+    const sourcemapContext = await cookUrl({
+      parentUrl,
+      url: sourcemapUrl,
     })
     if (sourcemapContext.error) {
       logger.error(
@@ -456,7 +441,8 @@ error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plug
 
   return {
     jsenvDirectoryUrl,
-    cookFile,
+    resolveSpecifier,
+    cookUrl,
   }
 }
 
@@ -485,10 +471,10 @@ const determineFileUrlForOutDirectory = ({
   scenario,
   url,
 }) => {
-  const outDirectoryUrl = resolveUrl(
+  const outDirectoryUrl = new URL(
     `.jsenv/${scenario}/${outDirectoryName}/`,
     projectDirectoryUrl,
-  )
+  ).href
   return moveUrl(url, projectDirectoryUrl, outDirectoryUrl)
 }
 
