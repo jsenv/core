@@ -6,6 +6,19 @@ export const applyFileSystemMagicResolution = (
   fileUrl,
   { magicDirectoryIndex, magicExtensions },
 ) => {
+  let lastENOENTError = null
+  const fileStatOrNull = (url) => {
+    try {
+      return statSync(new URL(url))
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        lastENOENTError = e
+        return null
+      }
+      throw e
+    }
+  }
+
   const fileStat = fileStatOrNull(fileUrl)
   if (fileStat && fileStat.isFile()) {
     return {
@@ -32,46 +45,27 @@ export const applyFileSystemMagicResolution = (
       url: fileUrl,
     }
   }
-  const extensionLeadingToAFile = findExtensionLeadingToFile(
-    fileUrl,
-    magicExtensions,
-  )
-  // magic extension not found
-  if (extensionLeadingToAFile) {
-    // magic extension worked
-    return {
-      magicExtension: extensionLeadingToAFile,
-      found: true,
-      url: `${fileUrl}${extensionLeadingToAFile}`,
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href
+    const urlFilename = urlToFilename(fileUrl)
+    const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`
+      const stat = fileStatOrNull(urlCandidate)
+      return stat
+    })
+    if (extensionLeadingToFile) {
+      // magic extension worked
+      return {
+        magicExtension: extensionLeadingToFile,
+        found: true,
+        url: `${fileUrl}${extensionLeadingToFile}`,
+      }
     }
   }
+  // magic extension not found
   return {
     found: false,
     url: fileUrl,
-  }
-}
-
-const findExtensionLeadingToFile = (fileUrl, magicExtensions) => {
-  if (!magicExtensions) {
-    return null
-  }
-  const parentUrl = new URL("./", fileUrl).href
-  const urlFilename = urlToFilename(fileUrl)
-  const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
-    const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`
-    const stat = fileStatOrNull(urlCandidate)
-    return stat
-  })
-  return extensionLeadingToFile
-}
-
-const fileStatOrNull = (url) => {
-  try {
-    return statSync(new URL(url))
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      return null
-    }
-    throw e
+    lastENOENTError,
   }
 }

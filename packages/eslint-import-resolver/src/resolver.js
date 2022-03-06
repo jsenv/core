@@ -33,6 +33,8 @@ export const resolve = (
     packageConditions = ["browser", "import"],
     importmapFileRelativeUrl,
     caseSensitive = true,
+    // NICE TO HAVE: allow more control on when magic resolution applies:
+    // one might want to enable this for node_modules but not for project files
     magicDirectoryIndex = false,
     magicExtensions = false,
   },
