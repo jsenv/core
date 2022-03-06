@@ -40,13 +40,40 @@ export const createFileService = ({
     const runtimeSupport = {
       [runtimeName]: runtimeVersion,
     }
-    const { response, url, contentType, content } = await kitchen.cookFile({
-      outDirectoryName: `${runtimeName}@${runtimeVersion}`,
-      runtimeSupport,
-      parentUrl: projectDirectoryUrl,
-      specifierType: "http_request",
-      specifier: request.ressource,
-    })
+    const { error, response, url, contentType, content } =
+      await kitchen.cookFile({
+        outDirectoryName: `${runtimeName}@${runtimeVersion}`,
+        runtimeSupport,
+        parentUrl: projectDirectoryUrl,
+        specifierType: "http_request",
+        specifier: request.ressource,
+      })
+    if (error) {
+      // SAUF QUE: si on allait retourner du js, alors retourne
+      // du JS valide qui fait ça:
+      // const error = new Error()
+      // error.__jsenv__ = true
+      // Object.assign(error, JSON.stringify({}))
+      // throw error
+      // pour l'instant on va faire comme si le build existe pas
+      // et gérer ça ailleurs
+      if (error.code === "NOT_ALLOWED") {
+        return {
+          status: 403,
+          statusText: error.message,
+        }
+      }
+      if (error.code === "NOT_FOUND") {
+        return {
+          status: 404,
+          statusText: error.message,
+        }
+      }
+      return {
+        status: 500,
+        statusText: error.message,
+      }
+    }
     if (response) {
       return response
     }

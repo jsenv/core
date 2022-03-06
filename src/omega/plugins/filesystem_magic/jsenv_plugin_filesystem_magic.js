@@ -32,9 +32,10 @@ export const jsenvPluginFileSystemMagic = ({
         },
       )
       if (!filesystemResolution.found) {
-        // we throw early the ENOENT so that we know in advance this file won't be found
-        // it generate better error because we can display
-        // more context when trying to resolve the specifier found in a file
+        // we throw the ENOENT that will be catched
+        // in order to produce an error message saying
+        // "ENOENT" instead of "cannot resolve"
+        // to give more information
         throw filesystemResolution.lastENOENTError
       }
       const fileUrlRaw = filesystemResolution.url

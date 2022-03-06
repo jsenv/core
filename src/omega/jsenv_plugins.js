@@ -11,12 +11,12 @@ import { jsenvPluginCommonJsGlobals } from "@jsenv/core/src/omega/plugins/common
 import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plugin_babel.js"
 
 export const getJsenvPlugins = () => {
-  const asFewAsPossible = true // useful during dev
+  const asFewAsPossible = false // useful during dev
   return [
     // "inline ressources" must come before "filesystem magic"
     // otherwise it will try to read inline files
-    ...(asFewAsPossible ? [] : jsenvPluginInlineRessources()),
-    ...(asFewAsPossible ? [] : jsenvPluginFileSystemMagic()),
+    ...(asFewAsPossible ? [] : [jsenvPluginInlineRessources()]),
+    ...(asFewAsPossible ? [] : [jsenvPluginFileSystemMagic()]),
     jsenvPluginImportmap(), // must come before node esm to catch "js_import_export"
     jsenvPluginNodeEsmResolution(), // must come before url resolution to catch "js_import_export"
     jsenvPluginUrlResolution(),
@@ -25,8 +25,8 @@ export const getJsenvPlugins = () => {
     jsenvPluginFileUrls(),
     // transform
     jsenvPluginAutoreload(),
-    ...(asFewAsPossible ? [] : jsenvPluginHtmlSupervisor()),
-    ...(asFewAsPossible ? [] : jsenvPluginCommonJsGlobals()),
+    ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
+    ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     jsenvPluginBabel(),
   ]
 }

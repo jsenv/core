@@ -19,7 +19,6 @@ import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 
 import { createPluginController } from "./plugin_controller.js"
-import { createNotFoundError, createPluginHookError } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
@@ -82,7 +81,6 @@ export const createKitchen = ({
       specifier,
     }
     currentContext = context
-
     context.resolve = async ({ parentUrl, specifierType, specifier }) => {
       if (specifier.startsWith("/@fs/")) {
         const url = new URL(specifier.slice("/@fs".length), projectDirectoryUrl)
@@ -94,7 +92,6 @@ export const createKitchen = ({
         return url
       }
       const pluginsToIgnore = []
-      let currentPlugin
       const contextDuringResolve = {
         ...context,
         parentUrl,
@@ -103,7 +100,7 @@ export const createKitchen = ({
         // when "resolve" is called during resolve hook
         // apply other plugin resolve hooks
         resolve: () => {
-          pluginsToIgnore.push(currentPlugin)
+          pluginsToIgnore.push(pluginController.getCurrentPlugin())
           return callResolveHooks(
             plugins.filter((plugin) => !pluginsToIgnore.includes(plugin)),
           )
@@ -123,7 +120,6 @@ export const createKitchen = ({
       }
       return callResolveHooks(plugins)
     }
-
     context.asClientUrl = (url, parentUrl) => {
       const hmr = new URL(parentUrl).searchParams.has("hmr")
       const urlInfo = urlInfoMap.get(url) || {}
@@ -146,16 +142,59 @@ export const createKitchen = ({
       }
       return `${clientUrl}`
     }
-    context.url = await context.resolve({
-      parentUrl,
-      specifierType,
-      specifier,
-    })
-    if (!context.url) {
-      throw createNotFoundError({
-        message: `all "resolve" hooks returned null`,
+
+    // "resolve" hook
+    try {
+      context.url = await context.resolve({
+        parentUrl,
+        specifierType,
+        specifier,
       })
+      if (!context.url) {
+        throw new Error("NO_RESOLVE")
+      }
+    } catch (e) {
+      // TODO: add more context to the error when possible
+      // (importer + source frame)
+      let error
+      if (e.message === "NO_RESOLVE") {
+        error = new Error(`Failed to resolve ${currentContext.specifierType}
+--- reason ---
+all "resolve" hooks returned null`)
+        error.code = "NOT_FOUND"
+      } else if (e && e.code === "EPERM") {
+        error = new Error(
+          `Failed to resolve ${currentContext.specifierType}
+--- reason ---
+not allowed to read entry on filesystem at ${e.path}`,
+        )
+        error.code = "NOT_ALLOWED"
+      } else if (e && e.code === "EISDIR") {
+        error = new Error(`Failed to resolve ${currentContext.specifierType}    
+--- reason ---
+found a directory at ${e.path}`)
+        error.code = "NOT_ALLOWED"
+      } else if (e && e.code === "ENOENT") {
+        error = new Error(`Failed to resolve ${currentContext.specifierType} 
+--- reason ---
+no entry on filesystem at ${e.path}`)
+        error.code = "NOT_FOUND"
+      } else if (e) {
+        error = new Error(
+          `Failed to resolve ${currentContext.specifierType}
+--- reason ---
+error thrown during "resolve" by "${pluginController.getCurrentPlugin()}" plugin`,
+          {
+            cause: e,
+          },
+        )
+        error.code = "PLUGIN_ERROR"
+      }
+      context.error = error
+      return context
     }
+
+    // "deriveMetaFromUrl" hook
     let urlMeta = {}
     plugins.forEach((plugin) => {
       const urlMetaFromPlugin = pluginController.callPluginSyncHook(
@@ -172,28 +211,68 @@ export const createKitchen = ({
     })
     urlInfoMap.set(context.url, urlMeta)
 
-    const loadReturnValue = await pluginController.callPluginHooksUntil(
-      plugins,
-      "load",
-      context,
-    )
-    if (!loadReturnValue) {
-      throw createNotFoundError({
-        message: `all "load" hooks returned null`,
-      })
-    }
-    const {
-      response,
-      contentType = "application/octet-stream",
-      content,
-    } = loadReturnValue
-    if (response) {
-      context.response = response
+    // "load" hook
+    try {
+      const loadReturnValue = await pluginController.callPluginHooksUntil(
+        plugins,
+        "load",
+        context,
+      )
+      if (!loadReturnValue) {
+        throw new Error("NO_LOAD")
+      }
+      const {
+        response,
+        contentType = "application/octet-stream",
+        content,
+      } = loadReturnValue
+      if (response) {
+        context.response = response
+        return context
+      }
+      context.contentType = contentType
+      context.type = getRessourceType(context)
+      context.content = content // can be a buffer (used for binary files) or a string
+    } catch (e) {
+      let error
+      if (e.message === "NO_LOAD") {
+        error = new Error(`Failed to load ${currentContext.specifierType}
+--- reason ---
+all "load" hooks returned null`)
+        error.code = "NOT_FOUND"
+      } else if (e && e.code === "EPERM") {
+        error = new Error(
+          `Failed to load ${currentContext.specifierType}
+--- reason ---
+not allowed to read entry on filesystem at ${e.path}`,
+        )
+        error.code = "NOT_ALLOWED"
+      } else if (e && e.code === "EISDIR") {
+        error = new Error(`Failed to load ${currentContext.specifierType}    
+--- reason ---
+found a directory at ${e.path}`)
+        error.code = "NOT_ALLOWED"
+      } else if (e && e.code === "ENOENT") {
+        error = new Error(`Failed to load ${currentContext.specifierType} 
+--- reason ---
+no entry on filesystem at ${e.path}`)
+        error.code = "NOT_FOUND"
+      } else if (e) {
+        error = new Error(
+          `Failed to load ${currentContext.specifierType}
+--- reason ---
+error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
+          {
+            cause: e,
+          },
+        )
+        error.code = "PLUGIN_ERROR"
+      }
+      context.error = error
       return context
     }
-    context.contentType = contentType
-    context.type = getRessourceType(context)
-    context.content = content // can be a buffer (used for binary files) or a string
+
+    // sourcemap loading
     if (context.contentType === "application/javascript") {
       const sourcemapSpecifier = getJavaScriptSourceMappingUrl(context.content)
       if (sourcemapSpecifier) {
@@ -214,6 +293,7 @@ export const createKitchen = ({
       }
     }
 
+    // "transform" hook
     const updateContents = (data) => {
       if (data) {
         const { contentType, content, sourcemap } = data
@@ -224,15 +304,32 @@ export const createKitchen = ({
         context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
       }
     }
-    await plugins.reduce(async (previous, plugin) => {
-      await previous
-      const transformReturnValue = await pluginController.callPluginHook(
-        plugin,
-        "transform",
-        context,
-      )
-      updateContents(transformReturnValue)
-    }, Promise.resolve())
+    try {
+      await plugins.reduce(async (previous, plugin) => {
+        await previous
+        const transformReturnValue = await pluginController.callPluginHook(
+          plugin,
+          "transform",
+          context,
+        )
+        updateContents(transformReturnValue)
+      }, Promise.resolve())
+    } catch (e) {
+      if (e.code === "PARSE_ERROR") {
+        context.response = {
+          status: 200,
+          headers: {
+            "content-type": context.contentType,
+            "content-length": Buffer.byteLength(context.content),
+          },
+          body: context.content,
+        }
+        return context
+      }
+      throw e
+    }
+
+    // parsing + "parsed" hook
     const onParsed = async ({
       urlMentions = [],
       hotDecline = false,
@@ -277,15 +374,21 @@ export const createKitchen = ({
       const { urlMentions, getHotInfo, transformUrlMentions } = await parser(
         context,
       )
-      await urlMentions.reduce(async (previous, urlMention) => {
-        await previous
-        const resolvedUrl = await context.resolve({
-          parentUrl: context.url,
-          specifierType: urlMention.type,
-          specifier: urlMention.specifier,
-        })
-        urlMention.url = resolvedUrl
-      }, Promise.resolve())
+      for (const urlMention of urlMentions) {
+        try {
+          const resolvedUrl = await context.resolve({
+            parentLine: urlMention.line,
+            parentColumn: urlMention.column,
+            parentUrl: context.url,
+            specifierType: urlMention.type,
+            specifier: urlMention.specifier,
+          })
+          urlMention.url = resolvedUrl
+        } catch (e) {
+          // let the error occur later, when browser requests that file
+          urlMention.url = null
+        }
+      }
       await onParsed({
         urlMentions,
         ...getHotInfo(),
@@ -304,6 +407,8 @@ export const createKitchen = ({
     } else {
       await onParsed({})
     }
+
+    // sourcemap injection
     const { sourcemap } = context
     if (sourcemap && sourcemapInjection === "comment") {
       const sourcemapUrl = generateSourcemapUrl(context.url)
@@ -319,12 +424,16 @@ export const createKitchen = ({
       context.sourcemapUrl = generateSourcemapUrl(context.url)
       context.content = injectSourcemap(context)
     }
+
+    // "render" hook
     const renderReturnValue = await pluginController.callPluginHooksUntil(
       plugins,
       "render",
       context,
     )
     updateContents(renderReturnValue)
+
+    // writing result inside ".jsenv" directory (debug purposes)
     if (context.sourcemapUrl) {
       writeIntoRuntimeDirectory({
         projectDirectoryUrl,
@@ -339,25 +448,35 @@ export const createKitchen = ({
       outDirectoryName,
       scenario,
       url: context.url,
-      content,
+      content: context.content,
     })
+
     return context
   }
   const cookFile = async (params) => {
     try {
       return await _cookFile(params)
     } catch (e) {
+      // - resolve peut throw sur la ressource principale
+      //   mais peut aussi throw durant parse
+      //   et pour le JS on veut alors retourner 200 + un js custom
+      //   pour le HTML 200, on laissera l'erreur se produire lorsque le browser load la ressource
+      // - si on throw durant autre chose on peut aussi utiliser
+      //   ressource graph pour trouver la premiere ressource qui importe celle-ci
+      //   et donner du contexte (attention cela ne garantie pas que ce soit
+      //   a ce moment la que le souci se produit, ce serais plutot la derniere ref dailleurs)
+      //   on pourrait juste dire
+      // --- last referenced by ---
+      // ./main.html:10:2 + source frame
+      // --- last imported by ---
+      // ./main.js:10:2 + source frame
       const currentHookName = pluginController.getCurrentHookName()
       if (currentHookName) {
-        const currentPlugin = pluginController.getCurrentPlugin()
-        const error = createPluginHookError({
-          plugin: currentPlugin,
-          message:
-            currentHookName === "resolve"
-              ? `Failed to resolve ${currentContext.specifierType}`
-              : `Error during "${currentHookName}" of ${currentContext.type}`,
-          cause: e,
-        })
+        // const currentPlugin = pluginController.getCurrentPlugin()
+        const error = new Error(
+          `Error during "${currentHookName}" of ${currentContext.type}`,
+          { cause: e },
+        )
         currentContext.error = error
         return currentContext
       }
@@ -370,6 +489,12 @@ export const createKitchen = ({
       specifierType,
       specifier,
     })
+    if (sourcemapContext.error) {
+      logger.error(
+        `Error while handling sourcemap: ${sourcemapContext.error.message}`,
+      )
+      return null
+    }
     const sourcemap = JSON.parse(sourcemapContext.content)
     sourcemap.sources = sourcemap.sources.map((source) => {
       return new URL(source, sourcemapContext.url).href
@@ -382,6 +507,56 @@ export const createKitchen = ({
     cookFile,
   }
 }
+
+// if (scenario !== "dev" && scenario !== "test") {
+//   throw e
+// }
+// if (context.type !== "js_module") {
+//   throw e
+// }
+// // we could have a plugin hook like
+// // appliesDuring: {dev: true, test: true},
+// // parseError: { js_module }
+// const js = generateCodeToThrowImportExportNotFound({
+//   importerUrl: context.url,
+//   importerContent: context.content,
+//   importerLine: urlMention.line,
+//   importerColumn: urlMention.column,
+//   specifier: urlMention.specifier,
+// })
+// context.response = {
+//   status: 200,
+//   headers: {
+//     "content-type": "application/javascript",
+//     "content-length": Buffer.byteLength(js),
+//     "cache-control": "no-store",
+//   },
+//   body: js,
+// }
+
+// const generateCodeToThrowImportExportNotFound = ({
+//   importerUrl,
+//   importerContent,
+//   importerLine,
+//   importerColumn,
+//   specifier,
+// }) => {
+//   const urlSiteString = stringifyUrlSite({
+//     url: importerUrl,
+//     content: importerContent,
+//     line: importerLine,
+//     column: importerColumn,
+//   })
+
+//   const errorProperties = {
+//     specifier,
+//     message: urlSiteString,
+//   }
+//   return `
+// const error = new Error()
+// Object.assign(error, ${JSON.stringify(errorProperties)})
+// throw error`
+// }
 
 const getRessourceType = ({ url, contentType }) => {
   if (contentType === "text/html") {

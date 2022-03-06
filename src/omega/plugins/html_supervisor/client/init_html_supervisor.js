@@ -43,7 +43,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         }
         let errorExposureInConsole = true
         if (e.name === "SyntaxError") {
-          errorExposureInConsole = false
+          // errorExposureInConsole = false
         }
         if (errorTransformer) {
           try {
