@@ -154,32 +154,13 @@ export const createKitchen = ({
         throw new Error("NO_RESOLVE")
       }
     } catch (e) {
-      // TODO: add more context to the error when possible
-      // (importer + source frame)
       let error
       if (e.message === "NO_RESOLVE") {
         error = new Error(`Failed to resolve ${currentContext.specifierType}
 --- reason ---
 all "resolve" hooks returned null`)
         error.code = "NOT_FOUND"
-      } else if (e && e.code === "EPERM") {
-        error = new Error(
-          `Failed to resolve ${currentContext.specifierType}
---- reason ---
-not allowed to read entry on filesystem at ${e.path}`,
-        )
-        error.code = "NOT_ALLOWED"
-      } else if (e && e.code === "EISDIR") {
-        error = new Error(`Failed to resolve ${currentContext.specifierType}    
---- reason ---
-found a directory at ${e.path}`)
-        error.code = "NOT_ALLOWED"
-      } else if (e && e.code === "ENOENT") {
-        error = new Error(`Failed to resolve ${currentContext.specifierType} 
---- reason ---
-no entry on filesystem at ${e.path}`)
-        error.code = "NOT_FOUND"
-      } else if (e) {
+      } else {
         error = new Error(
           `Failed to resolve ${currentContext.specifierType}
 --- reason ---
@@ -316,17 +297,13 @@ error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
       }, Promise.resolve())
     } catch (e) {
       if (e.code === "PARSE_ERROR") {
-        context.response = {
-          status: 200,
-          headers: {
-            "content-type": context.contentType,
-            "content-length": Buffer.byteLength(context.content),
-          },
-          body: context.content,
-        }
-        return context
+        context.error = e
+      } else {
+        context.error = new Error(`Failed to transform ${context.specifierType}
+--- reason ---
+error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plugin`)
       }
-      throw e
+      return context
     }
 
     // parsing + "parsed" hook
@@ -375,19 +352,17 @@ error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
         context,
       )
       for (const urlMention of urlMentions) {
-        try {
-          const resolvedUrl = await context.resolve({
-            parentLine: urlMention.line,
-            parentColumn: urlMention.column,
-            parentUrl: context.url,
-            specifierType: urlMention.type,
-            specifier: urlMention.specifier,
-          })
-          urlMention.url = resolvedUrl
-        } catch (e) {
-          // let the error occur later, when browser requests that file
-          urlMention.url = null
-        }
+        const resolvedUrl = await context.resolve({
+          parentLine: urlMention.line,
+          parentColumn: urlMention.column,
+          parentUrl: context.url,
+          specifierType: urlMention.type,
+          specifier: urlMention.specifier,
+        })
+        // resolvedUrl can be null:
+        // in that case we won't touch the specifier
+        // and let the browser request the file which will result in 404
+        urlMention.url = resolvedUrl
       }
       await onParsed({
         urlMentions,
@@ -457,29 +432,6 @@ error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
     try {
       return await _cookFile(params)
     } catch (e) {
-      // - resolve peut throw sur la ressource principale
-      //   mais peut aussi throw durant parse
-      //   et pour le JS on veut alors retourner 200 + un js custom
-      //   pour le HTML 200, on laissera l'erreur se produire lorsque le browser load la ressource
-      // - si on throw durant autre chose on peut aussi utiliser
-      //   ressource graph pour trouver la premiere ressource qui importe celle-ci
-      //   et donner du contexte (attention cela ne garantie pas que ce soit
-      //   a ce moment la que le souci se produit, ce serais plutot la derniere ref dailleurs)
-      //   on pourrait juste dire
-      // --- last referenced by ---
-      // ./main.html:10:2 + source frame
-      // --- last imported by ---
-      // ./main.js:10:2 + source frame
-      const currentHookName = pluginController.getCurrentHookName()
-      if (currentHookName) {
-        // const currentPlugin = pluginController.getCurrentPlugin()
-        const error = new Error(
-          `Error during "${currentHookName}" of ${currentContext.type}`,
-          { cause: e },
-        )
-        currentContext.error = error
-        return currentContext
-      }
       throw e
     }
   }
@@ -507,56 +459,6 @@ error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
     cookFile,
   }
 }
-
-// if (scenario !== "dev" && scenario !== "test") {
-//   throw e
-// }
-// if (context.type !== "js_module") {
-//   throw e
-// }
-// // we could have a plugin hook like
-// // appliesDuring: {dev: true, test: true},
-// // parseError: { js_module }
-// const js = generateCodeToThrowImportExportNotFound({
-//   importerUrl: context.url,
-//   importerContent: context.content,
-//   importerLine: urlMention.line,
-//   importerColumn: urlMention.column,
-//   specifier: urlMention.specifier,
-// })
-// context.response = {
-//   status: 200,
-//   headers: {
-//     "content-type": "application/javascript",
-//     "content-length": Buffer.byteLength(js),
-//     "cache-control": "no-store",
-//   },
-//   body: js,
-// }
-
-// const generateCodeToThrowImportExportNotFound = ({
-//   importerUrl,
-//   importerContent,
-//   importerLine,
-//   importerColumn,
-//   specifier,
-// }) => {
-//   const urlSiteString = stringifyUrlSite({
-//     url: importerUrl,
-//     content: importerContent,
-//     line: importerLine,
-//     column: importerColumn,
-//   })
-
-//   const errorProperties = {
-//     specifier,
-//     message: urlSiteString,
-//   }
-//   return `
-// const error = new Error()
-// Object.assign(error, ${JSON.stringify(errorProperties)})
-// throw error`
-// }
 
 const getRessourceType = ({ url, contentType }) => {
   if (contentType === "text/html") {
