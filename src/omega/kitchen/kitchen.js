@@ -10,7 +10,6 @@ import {
   moveUrl,
   injectQueryParams,
 } from "@jsenv/core/src/utils/url_utils.js"
-import { findAsync } from "@jsenv/core/src/utils/find_async.js"
 import {
   getCssSourceMappingUrl,
   getJavaScriptSourceMappingUrl,
@@ -19,8 +18,8 @@ import {
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 
-import { callPluginHook, callPluginSyncHook } from "./plugin_controller.js"
-import { createNotFoundError } from "./errors.js"
+import { createPluginController } from "./plugin_controller.js"
+import { createNotFoundError, createPluginHookError } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
@@ -53,6 +52,7 @@ export const createKitchen = ({
     ressourceGraph,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
+  const pluginController = createPluginController()
 
   let currentContext
   const _cookFile = async ({
@@ -110,14 +110,11 @@ export const createKitchen = ({
         },
       }
       const callResolveHooks = async (pluginsSubset) => {
-        const resolveReturnValue = await findAsync({
-          array: pluginsSubset,
-          start: (plugin) => {
-            currentPlugin = plugin
-            return callPluginHook(plugin, "resolve", contextDuringResolve)
-          },
-          predicate: (returnValue) => Boolean(returnValue),
-        })
+        const resolveReturnValue = await pluginController.callPluginHooksUntil(
+          pluginsSubset,
+          "resolve",
+          contextDuringResolve,
+        )
         if (!resolveReturnValue) {
           return null
         }
@@ -155,14 +152,13 @@ export const createKitchen = ({
       specifier,
     })
     if (!context.url) {
-      // TODO: use url trace to improve error message
       throw createNotFoundError({
-        message: `"${specifier}" specifier found in "${parentUrl}" not resolved`,
+        message: `all "resolve" hooks returned null`,
       })
     }
     let urlMeta = {}
     plugins.forEach((plugin) => {
-      const urlMetaFromPlugin = callPluginSyncHook(
+      const urlMetaFromPlugin = pluginController.callPluginSyncHook(
         plugin,
         "deriveMetaFromUrl",
         context,
@@ -176,14 +172,14 @@ export const createKitchen = ({
     })
     urlInfoMap.set(context.url, urlMeta)
 
-    const loadReturnValue = await findAsync({
-      array: plugins,
-      start: (plugin) => callPluginHook(plugin, "load", context),
-      predicate: (returnValue) => Boolean(returnValue),
-    })
+    const loadReturnValue = await pluginController.callPluginHooksUntil(
+      plugins,
+      "load",
+      context,
+    )
     if (!loadReturnValue) {
       throw createNotFoundError({
-        message: `"${context.url}" cannot be loaded`,
+        message: `all "load" hooks returned null`,
       })
     }
     const {
@@ -218,61 +214,24 @@ export const createKitchen = ({
       }
     }
 
-    const updateContentAndSourcemap = ({ content, sourcemap }) => {
-      context.content = content
-      context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
-    }
-
-    const applyPluginReturnValue = (valueReturned, { hookName, plugin }) => {
-      if (!valueReturned) {
-        return
-      }
-      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
-        updateContentAndSourcemap({
-          content: valueReturned,
-        })
-        return
-      }
-      if (typeof valueReturned === "object") {
-        const { contentType, content, sourcemap } = valueReturned
-        if (typeof content !== "string" && !Buffer.isBuffer(content)) {
-          throw new Error(
-            `Unexpected "content" found in plugin return value: it must be a string or a buffer
---- plugin name --- 
-${plugin.name}
---- plugin hook ---
-${hookName}
---- content ---
-${content}`,
-          )
-        }
+    const updateContents = (data) => {
+      if (data) {
+        const { contentType, content, sourcemap } = data
         if (contentType) {
           context.contentType = contentType
         }
-        updateContentAndSourcemap({ content, sourcemap })
-        return
+        context.content = content
+        context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
       }
-      throw new Error(
-        `Unexpected value returned by plugin: it must be a string, a buffer or an object
---- plugin name --- 
-${plugin.name}
---- plugin hook ---
-${hookName}
---- value returned ---
-${valueReturned}`,
-      )
     }
     await plugins.reduce(async (previous, plugin) => {
       await previous
-      const transformReturnValue = await callPluginHook(
+      const transformReturnValue = await pluginController.callPluginHook(
         plugin,
         "transform",
         context,
       )
-      applyPluginReturnValue(transformReturnValue, {
-        plugin,
-        hookName: "transform",
-      })
+      updateContents(transformReturnValue)
     }, Promise.resolve())
     const onParsed = async ({
       urlMentions = [],
@@ -296,7 +255,7 @@ ${valueReturned}`,
       })
       await plugins.reduce(async (previous, plugin) => {
         await previous
-        const parsedReturnValue = await callPluginHook(
+        const parsedReturnValue = await pluginController.callPluginHook(
           plugin,
           "parsed",
           context,
@@ -341,7 +300,7 @@ ${valueReturned}`,
           return clientUrl
         },
       })
-      updateContentAndSourcemap(transformReturnValue)
+      updateContents(transformReturnValue)
     } else {
       await onParsed({})
     }
@@ -360,25 +319,12 @@ ${valueReturned}`,
       context.sourcemapUrl = generateSourcemapUrl(context.url)
       context.content = injectSourcemap(context)
     }
-    await findAsync({
-      array: plugins,
-      start: async (plugin) => {
-        const renderReturnValue = await callPluginHook(
-          plugin,
-          "render",
-          context,
-        )
-        if (!renderReturnValue) {
-          return false
-        }
-        applyPluginReturnValue(renderReturnValue, {
-          plugin,
-          hookName: "render",
-        })
-        return true
-      },
-      predicate: (returnValue) => Boolean(returnValue),
-    })
+    const renderReturnValue = await pluginController.callPluginHooksUntil(
+      plugins,
+      "render",
+      context,
+    )
+    updateContents(renderReturnValue)
     if (context.sourcemapUrl) {
       writeIntoRuntimeDirectory({
         projectDirectoryUrl,
@@ -401,32 +347,19 @@ ${valueReturned}`,
     try {
       return await _cookFile(params)
     } catch (e) {
-      if (e.code === "NOT_FOUND") {
-        // TODO: improve error message
-        // - use context.parentUrl to say who imported that file
-        // - use context.parentLine, parentColumn to eventually
-        //   log where the ressource is referenced
-        return {
-          status: 404,
-          statusText: e.message,
-        }
-      }
-      if (e.code === "ENOENT") {
-        return {
-          status: 404,
-          statusText: e.message,
-        }
-      }
-      if (e.name === "SyntaxError") {
-        // TODO: improve error message
-        // - prefer a short, local file url if possible
-        // - use context.parentUrl to say who imported that file
-        // - introduce context.parentLine, parentColumn to further improve
-        //   the url trace
-        return {
-          status: 500,
-          statusText: `Syntax error while handling ${currentContext.url}`,
-        }
+      const currentHookName = pluginController.getCurrentHookName()
+      if (currentHookName) {
+        const currentPlugin = pluginController.getCurrentPlugin()
+        const error = createPluginHookError({
+          plugin: currentPlugin,
+          message:
+            currentHookName === "resolve"
+              ? `Failed to resolve ${currentContext.specifierType}`
+              : `Error during "${currentHookName}" of ${currentContext.type}`,
+          cause: e,
+        })
+        currentContext.error = error
+        return currentContext
       }
       throw e
     }

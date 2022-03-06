@@ -1,28 +1,33 @@
-import { statSync, readFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { serveDirectory, urlToContentType } from "@jsenv/server"
 
 export const jsenvPluginFileUrls = () => {
   return {
     name: "jsenv:file_urls",
     appliesDuring: "*",
-    load: ({ projectDirectoryUrl, url }) => {
+    load: ({ projectDirectoryUrl, specifierType, url }) => {
       if (!url.startsWith("file:")) {
         return null
       }
       const urlObject = new URL(url)
-      if (statSync(urlObject).isDirectory()) {
-        return {
-          response: serveDirectory(url, {
-            headers: {
-              accept: "text/html",
-            },
-            canReadDirectory: true,
-            rootDirectoryUrl: projectDirectoryUrl,
-          }),
+      let fileBuffer
+      try {
+        fileBuffer = readFileSync(urlObject)
+      } catch (e) {
+        if (e.code === "EISDIR" && specifierType === "http_request") {
+          return {
+            response: serveDirectory(url, {
+              headers: {
+                accept: "text/html",
+              },
+              canReadDirectory: true,
+              rootDirectoryUrl: projectDirectoryUrl,
+            }),
+          }
         }
+        throw e
       }
       const contentType = urlToContentType(url)
-      const fileBuffer = readFileSync(urlObject)
       if (contentTypeIsTextual(contentType)) {
         return {
           contentType,

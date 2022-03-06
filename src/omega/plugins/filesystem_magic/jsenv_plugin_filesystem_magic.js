@@ -4,6 +4,7 @@ import { realpathSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { urlToExtension } from "@jsenv/filesystem"
 
+// TODO move "applyFileSystemMagicResolution" back here
 import { applyFileSystemMagicResolution } from "@jsenv/core/packages/node-esm-resolution/main.js"
 
 export const jsenvPluginFileSystemMagic = ({
@@ -32,6 +33,7 @@ export const jsenvPluginFileSystemMagic = ({
         },
       )
       if (!filesystemResolution.found) {
+        // TODO: rethrow ENOENT, EISDIR
         return null
       }
       const fileUrlRaw = filesystemResolution.url
