@@ -9,7 +9,7 @@
  *   maintain symlink as facade url when it's outside project directory
  *   or use the real path when inside
  */
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 
 import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js"
 import { lookupPackageScope } from "./lookup_package_scope.js"
@@ -670,7 +670,7 @@ const applyLegacySubpathResolution = ({
 
 const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
   for (const condition of conditions) {
-    const resolved = mainLegacyResolvers[condition](packageJson)
+    const resolved = mainLegacyResolvers[condition](packageJson, packageUrl)
     if (resolved) {
       return {
         type: resolved.type,
@@ -697,20 +697,38 @@ const mainLegacyResolvers = {
     }
     return null
   },
-  browser: ({ browser }) => {
-    if (typeof browser === "string") {
+  browser: ({ browser, module }, packageUrl) => {
+    const browserMain =
+      typeof browser === "string"
+        ? browser
+        : typeof browser === "object" && browser !== null
+        ? browser["."]
+        : ""
+    if (!browserMain) {
+      return null
+    }
+    if (typeof module !== "string" || module === browserMain) {
       return {
         type: "browser",
-        path: browser,
+        path: browserMain,
       }
     }
-    if (typeof browser === "object" && browser !== null) {
+    const browserMainUrlObject = new URL(browserMain, packageUrl)
+    const content = readFileSync(browserMainUrlObject, "utf-8")
+    if (
+      (/typeof exports\s*==/.test(content) &&
+        /typeof module\s*==/.test(content)) ||
+      /module\.exports\s*=/.test(content)
+    ) {
       return {
-        type: "browser",
-        path: browser["."],
+        type: "module",
+        path: module,
       }
     }
-    return null
+    return {
+      type: "browser",
+      path: browserMain,
+    }
   },
   node: ({ main }) => {
     if (typeof main === "string") {
