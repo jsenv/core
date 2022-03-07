@@ -95,6 +95,7 @@ export const createFileService = ({
       return {
         status: 500,
         statusText: error.reason,
+        statusMessage: error.message,
       }
     }
     if (response) {

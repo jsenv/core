@@ -184,11 +184,12 @@ export const createKitchen = ({
       context.content = content
     } catch (e) {
       let error
-      const createFailedToLoadError = ({ code, reason, cause }) => {
+      const createFailedToLoadError = ({ code, reason, cause, ...rest }) => {
         const error = new Error(
           createDetailedMessage(`Failed to load url`, {
             url: currentContext.url,
             reason,
+            ...rest,
             ...(urlSite ? { "referenced at": urlSite } : null),
           }),
         )
@@ -200,7 +201,7 @@ export const createKitchen = ({
       if (e.message === "NO_LOAD") {
         error = createFailedToLoadError({
           code: "NOT_FOUND",
-          reason: `all "load" hooks returned null`,
+          reason: `no plugin has handled the url during "load" hook`,
           cause: e,
         })
       } else if (e && e.code === "EPERM") {
@@ -221,11 +222,14 @@ export const createKitchen = ({
           reason: "no entry on filesystem",
           cause: e,
         })
-      } else if (e) {
+      } else {
         error = createFailedToLoadError({
-          code: "PLUGIN_ERROR",
-          reason: `error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
+          code: "PLUGIN_THROW",
+          reason: `throw during "load" hook by plugin named "${
+            pluginController.getCurrentPlugin().name
+          }"`,
           cause: e,
+          ...detailsFromValueThrown(e),
         })
       }
       context.error = error
@@ -516,4 +520,20 @@ const writeIntoRuntimeDirectory = async ({
     }),
     content,
   )
+}
+
+const detailsFromValueThrown = (valueThrownByPlugin) => {
+  if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    return {
+      "error stack": valueThrownByPlugin.stack,
+    }
+  }
+  if (valueThrownByPlugin === undefined) {
+    return {
+      "value thrown": "undefined",
+    }
+  }
+  return {
+    "value thrown": JSON.stringify(valueThrownByPlugin),
+  }
 }

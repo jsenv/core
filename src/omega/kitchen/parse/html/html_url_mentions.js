@@ -57,7 +57,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     if (specifier[0] === "#") {
       return
     }
-    const { line, column } = getHtmlNodeLocation(node) || {}
+    const { line, column } = getHtmlNodeLocation(node, attribute.name) || {}
     htmlUrlMentions.push({
       type,
       htmlNode: node,

@@ -13,6 +13,17 @@ await startDevServer({
   privateKey: serverCertificatePrivateKey,
   projectDirectoryUrl: new URL("./client/", import.meta.url),
   // plugins: [jsenvPluginPreact()],
+  plugins: [
+    {
+      name: "plugin_throw_during_load",
+      appliesDuring: "*",
+      load: ({ url }) => {
+        if (url.includes("plugin_error_load/main.js")) {
+          throw new Error("here")
+        }
+      },
+    },
+  ],
 })
 
 // const { fetchUrl } = await import("@jsenv/core/src/internal/fetching.js")
