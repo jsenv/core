@@ -170,7 +170,7 @@ export const createKitchen = ({
       const {
         response,
         contentType = "application/octet-stream",
-        content,
+        content, // can be a buffer (used for binary files) or a string
       } = loadReturnValue
       if (response) {
         context.response = response
@@ -178,7 +178,8 @@ export const createKitchen = ({
       }
       context.contentType = contentType
       context.type = getRessourceType(context)
-      context.content = content // can be a buffer (used for binary files) or a string
+      context.originalContent = content
+      context.content = content
     } catch (e) {
       let error
       if (e.message === "NO_LOAD") {
