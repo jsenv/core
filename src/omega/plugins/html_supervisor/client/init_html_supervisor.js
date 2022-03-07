@@ -24,7 +24,8 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       resolveScriptExecutionsPromise()
     }
   }
-  const addExecution = async ({ src, currentScript, promise }) => {
+  const addExecution = async ({ type, src, currentScript, promise }) => {
+    console.group(`[jsenv] loading ${type} ${src}`)
     onExecutionStart(src)
     promise.then(
       (namespace) => {
@@ -34,11 +35,13 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
           coverage: window.__coverage__,
         }
         onExecutionSettled(src, executionResult)
+        console.log(`${type} load ended`)
+        console.groupEnd()
       },
       async (e) => {
+        let error = e
         const executionResult = {
           status: "errored",
-          error: e,
           coverage: window.__coverage__,
         }
         let errorExposureInConsole = true
@@ -47,15 +50,22 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
         }
         if (errorTransformer) {
           try {
-            executionResult.error = await errorTransformer(e)
+            error = await errorTransformer(e)
           } catch (e) {}
         }
-
+        executionResult.error = error
         onExecutionSettled(src, executionResult)
         onExecutionError(executionResult, {
           currentScript,
-          errorExposureInConsole,
         })
+        if (errorExposureInConsole) {
+          if (typeof window.reportError === "function") {
+            window.reportError(error)
+          } else {
+            console.error(error)
+          }
+        }
+        console.groupEnd()
       },
     )
   }
@@ -96,7 +106,6 @@ const onExecutionError = (
   executionResult,
   {
     currentScript,
-    errorExposureInConsole = true,
     errorExposureInNotification = false,
     errorExposureInDocument = true,
   },
@@ -114,13 +123,6 @@ const onExecutionError = (
     globalErrorEvent.colno = error.column || error.columnno
     globalErrorEvent.message = error.message
     window.dispatchEvent(globalErrorEvent)
-  }
-  if (errorExposureInConsole) {
-    if (typeof window.reportError === "function") {
-      window.reportError(error)
-    } else {
-      console.error(error)
-    }
   }
   if (errorExposureInNotification) {
     displayErrorNotification(error)

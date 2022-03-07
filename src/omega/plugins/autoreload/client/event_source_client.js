@@ -104,12 +104,12 @@ const applyHotReload = async ({ hotInstructions }) => {
         return null
       }
       if (type === "js_module") {
-        console.log(`re-import js module`)
+        console.log(`importing js module`)
         const namespace = await reloadJsImport(urlToFetch)
         if (urlHotMeta && urlHotMeta.acceptCallback) {
           await urlHotMeta.acceptCallback(namespace)
         }
-        console.log(`js module re-import done`)
+        console.log(`js module import done`)
         console.groupEnd()
         return namespace
       }

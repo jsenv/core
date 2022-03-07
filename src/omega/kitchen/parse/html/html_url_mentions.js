@@ -1,8 +1,9 @@
 import {
   parseHtmlString,
+  stringifyHtmlAst,
   parseLinkNode,
   getHtmlNodeAttributeByName,
-  stringifyHtmlAst,
+  getHtmlNodeLocation,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
@@ -56,12 +57,15 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     if (specifier[0] === "#") {
       return
     }
+    const { line, column } = getHtmlNodeLocation(node) || {}
     htmlUrlMentions.push({
       type,
       htmlNode: node,
       attribute,
       specifier,
       hotAccepted,
+      line,
+      column,
     })
   }
   const onNode = (node, { hotAccepted }) => {

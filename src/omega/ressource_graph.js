@@ -17,6 +17,19 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return ressource
   }
 
+  const getUrlSite = (url, dependencyUrl) => {
+    const ressource = getRessourceByUrl(url)
+    if (!ressource) {
+      return null
+    }
+    const dependencyUrlSite =
+      ressource.dependencyUrlSites[asUrlWithoutSearch(dependencyUrl)]
+    if (!dependencyUrlSite) {
+      return null
+    }
+    return dependencyUrlSite
+  }
+
   const applyUrlResolution = (specifier, baseUrl) => {
     const url = new URL(specifier, baseUrl).href
     return asUrlWithoutSearch(url)
@@ -313,6 +326,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     getHmrTimestamp,
 
     getRessourceByUrl,
+    getUrlSite,
     findDependent,
     applyUrlResolution,
 

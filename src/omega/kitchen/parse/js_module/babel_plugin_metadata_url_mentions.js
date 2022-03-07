@@ -14,6 +14,8 @@ export const babelPluginMetadataUrlMentions = () => {
               specifier: specifierNode.value,
               start: specifierNode.start,
               end: specifierNode.end,
+              line: specifierNode.loc.start.line,
+              column: specifierNode.loc.start.column,
             })
           }
         })

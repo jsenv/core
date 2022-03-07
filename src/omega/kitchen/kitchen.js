@@ -1,4 +1,5 @@
 import { urlIsInsideOf, writeFile, urlToRelativeUrl } from "@jsenv/filesystem"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import {
   filesystemRootUrl,
@@ -95,6 +96,7 @@ export const createKitchen = ({
     outDirectoryName,
     runtimeSupport,
     parentUrl,
+    urlSite,
     url,
   }) => {
     const context = {
@@ -182,38 +184,49 @@ export const createKitchen = ({
       context.content = content
     } catch (e) {
       let error
+      const createFailedToLoadError = ({ code, reason, cause }) => {
+        const error = new Error(
+          createDetailedMessage(`Failed to load url`, {
+            url: currentContext.url,
+            reason,
+            ...(urlSite ? { "referenced at": urlSite } : null),
+          }),
+        )
+        error.code = code
+        error.reason = reason
+        error.cause = cause
+        return error
+      }
       if (e.message === "NO_LOAD") {
-        error = new Error(`Failed to load ${currentContext.url}
---- reason ---
-all "load" hooks returned null`)
-        error.code = "NOT_FOUND"
+        error = createFailedToLoadError({
+          code: "NOT_FOUND",
+          reason: `all "load" hooks returned null`,
+          cause: e,
+        })
       } else if (e && e.code === "EPERM") {
-        error = new Error(
-          `Failed to load ${currentContext.url}
---- reason ---
-not allowed to read entry on filesystem at ${e.path}`,
-        )
-        error.code = "NOT_ALLOWED"
+        error = createFailedToLoadError({
+          code: "NOT_ALLOWED",
+          reason: `not allowed to read entry on filesystem`,
+          cause: e,
+        })
       } else if (e && e.code === "EISDIR") {
-        error = new Error(`Failed to load ${currentContext.url}    
---- reason ---
-found a directory at ${e.path}`)
-        error.code = "NOT_ALLOWED"
+        error = createFailedToLoadError({
+          code: "NOT_ALLOWED",
+          reason: `found a directory on filesystem`,
+          cause: e,
+        })
       } else if (e && e.code === "ENOENT") {
-        error = new Error(`Failed to load ${currentContext.specifierType} 
---- reason ---
-no entry on filesystem at ${e.path}`)
-        error.code = "NOT_FOUND"
+        error = createFailedToLoadError({
+          code: "NOT_FOUND",
+          reason: "no entry on filesystem",
+          cause: e,
+        })
       } else if (e) {
-        error = new Error(
-          `Failed to load ${currentContext.url}
---- reason ---
-error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
-          {
-            cause: e,
-          },
-        )
-        error.code = "PLUGIN_ERROR"
+        error = createFailedToLoadError({
+          code: "PLUGIN_ERROR",
+          reason: `error thrown during "load" by "${pluginController.getCurrentPlugin()}" plugin`,
+          cause: e,
+        })
       }
       context.error = error
       return context
@@ -295,6 +308,9 @@ error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plug
         const resolvedUrl =
           urlMention.url || new URL(urlMention.specifier, context.url).href
         dependencyUrls.push(resolvedUrl)
+        // TODO: when file is transformed the context.content is not the original
+        // one, in that case use eventual sourcemap to get original line and column
+        // fallbacking to the transformed line and column when there is no sourcemap
         dependencyUrlSites[resolvedUrl] = stringifyUrlSite({
           url: context.url,
           line: urlMention.line,

@@ -97,6 +97,8 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               specifier,
               url,
               declarationNode: atImportNode,
+              line: atImportNode.source.start.line,
+              column: atImportNode.source.start.column,
               urlNode,
               replace: (newUrlSpecifier) => {
                 if (newUrlSpecifier === urlNode.value) {
@@ -115,6 +117,8 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
           },
         },
         Declaration: (declarationNode) => {
+          const line = declarationNode.source.start.line
+          const column = declarationNode.source.start.column
           const parsed = parseCssValue(declarationNode.value)
           const urlMutations = []
           walkUrls(parsed, {
@@ -128,12 +132,10 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 )
                 return
               }
-
               // Skip Data URI
               if (isDataUrl(url)) {
                 return
               }
-
               const specifier = url
               url = resolveUrl(specifier, fileSystemPathToUrl(from))
               urlVisitor({
@@ -142,6 +144,8 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 url,
                 declarationNode,
                 urlNode,
+                line,
+                column,
                 replace: (newUrlSpecifier) => {
                   urlMutations.push(() => {
                     urlNode.value = newUrlSpecifier
@@ -150,7 +154,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               })
             },
           })
-
           if (urlMutations.length) {
             mutations.push(() => {
               urlMutations.forEach((urlMutation) => {

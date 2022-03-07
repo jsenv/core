@@ -12,7 +12,7 @@ window.__html_supervisor__ = {
 
   superviseScript: ({ src, crossorigin, integrity }) => {
     window.__html_supervisor__.htmlSupervisor.addExecution({
-      type: "js_script",
+      type: "js_classic",
       improveErrorWithFetch: true,
       currentScript: document.currentScript,
       src,

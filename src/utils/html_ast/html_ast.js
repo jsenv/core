@@ -144,7 +144,6 @@ export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
   if (!sourceCodeLocation) {
     return null
   }
-
   if (!htmlAttributeName) {
     const { startLine, endLine, startCol, endCol } = sourceCodeLocation
     return {
@@ -154,7 +153,6 @@ export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
       columnEnd: endCol,
     }
   }
-
   const attributeSourceCodeLocation =
     sourceCodeLocation.attrs[htmlAttributeName]
   if (!attributeSourceCodeLocation) {

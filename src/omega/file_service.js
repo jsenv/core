@@ -1,4 +1,4 @@
-import { fetchFileSystem } from "@jsenv/server"
+import { fetchFileSystem, serveDirectory } from "@jsenv/server"
 import { urlIsInsideOf } from "@jsenv/filesystem"
 
 import { moveUrl } from "@jsenv/core/src/utils/url_utils.js"
@@ -48,13 +48,12 @@ export const createFileService = ({
       specifierType: "http_request",
       specifier: request.ressource,
     })
-    // TODO: use ressourcegraph to get an url site for this parentUrl + url
-    // and pass it to cookUrl, and inside cookUrl use it when there is an error
-    // to give context
+    const urlSite = ressourceGraph.getUrlSite(parentUrl, url)
     const { error, response, contentType, content } = await kitchen.cookUrl({
       outDirectoryName: `${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
       parentUrl,
+      urlSite,
       url,
     })
     if (error) {
@@ -72,20 +71,30 @@ export const createFileService = ({
         }
       }
       if (error.code === "NOT_ALLOWED") {
+        if (error.cause && error.cause.code === "EISDIR") {
+          return serveDirectory(url, {
+            headers: {
+              accept: "text/html",
+            },
+            canReadDirectory: true,
+            rootDirectoryUrl: projectDirectoryUrl,
+          })
+        }
         return {
           status: 403,
-          statusText: error.message,
+          statusText: error.reason,
         }
       }
       if (error.code === "NOT_FOUND") {
         return {
           status: 404,
-          statusText: error.message,
+          statusText: error.reason,
+          statusMessage: error.message,
         }
       }
       return {
         status: 500,
-        statusText: error.message,
+        statusText: error.reason,
       }
     }
     if (response) {
