@@ -15,36 +15,24 @@ export const createPluginController = () => {
     }
     currentPlugin = plugin
     currentHookName = hookName
-    const returnValue = await hook(params)
-    if (hookName === "transform" || hookName === "render") {
-      if (!returnValue) {
-        currentPlugin = null
-        currentHookName = null
-        return null
-      }
-      if (typeof returnValue === "string" || Buffer.isBuffer(returnValue)) {
-        currentPlugin = null
-        currentHookName = null
-        return { content: returnValue }
-      }
-      if (typeof returnValue === "object") {
-        const { content } = returnValue
-        if (typeof content !== "string" && !Buffer.isBuffer(content)) {
-          throw new Error(
-            `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
-          )
+    let valueReturned = await hook(params)
+    // all hooks are allowed to return null/undefined
+    if (valueReturned !== null && valueReturned !== undefined) {
+      for (const returnValueAssertion of returnValueAssertions) {
+        if (!returnValueAssertions.appliesTo.includes(hookName)) {
+          continue
         }
-        currentPlugin = null
-        currentHookName = null
-        return returnValue
+        const assertionResult = returnValueAssertion.assertion(valueReturned)
+        if (assertionResult !== undefined) {
+          // normalization
+          valueReturned = assertionResult
+          break
+        }
       }
-      throw new Error(
-        `Unexpected value returned by plugin: it must be a string, a buffer or an object; got ${returnValue}`,
-      )
     }
     currentPlugin = null
     currentHookName = null
-    return returnValue
+    return valueReturned
   }
 
   const callPluginSyncHook = (plugin, hookName, params) => {
@@ -94,3 +82,42 @@ export const createPluginController = () => {
     getCurrentHookName: () => currentHookName,
   }
 }
+
+const returnValueAssertions = [
+  {
+    name: "url_assertion",
+    appliesTo: ["resolve"],
+    assertion: (valueReturned) => {
+      if (valueReturned instanceof URL) {
+        return valueReturned.href
+      }
+      if (typeof valueReturned === "string") {
+        return undefined
+      }
+      throw new Error(
+        `Unexpected value returned by plugin: it must be a string; got ${valueReturned}`,
+      )
+    },
+  },
+  {
+    name: "content_assertion",
+    appliesTo: ["load", "transform", "render"],
+    assertion: (valueReturned) => {
+      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
+        return { content: valueReturned }
+      }
+      if (typeof valueReturned === "object") {
+        const { content } = valueReturned
+        if (typeof content !== "string" && !Buffer.isBuffer(content)) {
+          throw new Error(
+            `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
+          )
+        }
+        return undefined
+      }
+      throw new Error(
+        `Unexpected value returned by plugin: it must be a string, a buffer or an object; got ${valueReturned}`,
+      )
+    },
+  },
+]

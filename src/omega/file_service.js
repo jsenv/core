@@ -49,15 +49,21 @@ export const createFileService = ({
       specifier: request.ressource,
     })
     const urlSite = ressourceGraph.getUrlSite(parentUrl, url)
-    const { error, response, contentType, content } = await kitchen.cookUrl({
+    const { response, error, contentType, content } = await kitchen.cookUrl({
       outDirectoryName: `${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
       parentUrl,
       urlSite,
       url,
     })
+    if (response) {
+      return response
+    }
     if (error) {
-      if (error.code === "PARSE_ERROR") {
+      if (
+        error.name === "TRANSFORM_ERROR" &&
+        error.cause.code === "PARSE_ERROR"
+      ) {
         // let the browser re-throw the syntax error
         logger.error(error.message)
         return {
@@ -97,9 +103,6 @@ export const createFileService = ({
         statusText: error.reason,
         statusMessage: error.message,
       }
-    }
-    if (response) {
-      return response
     }
     return {
       status: 200,

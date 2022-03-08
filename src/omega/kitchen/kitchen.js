@@ -1,5 +1,4 @@
 import { urlIsInsideOf, writeFile, urlToRelativeUrl } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
 
 import {
   filesystemRootUrl,
@@ -15,6 +14,7 @@ import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 
 import { createPluginController } from "./plugin_controller.js"
+import { createLoadError, createTransformError } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
@@ -116,6 +116,7 @@ export const createKitchen = ({
         return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
       },
       parentUrl,
+      urlSite,
       url,
     }
     currentContext = context
@@ -182,57 +183,12 @@ export const createKitchen = ({
       context.type = getRessourceType(context)
       context.originalContent = content
       context.content = content
-    } catch (e) {
-      let error
-      const createFailedToLoadError = ({ code, reason, cause, ...rest }) => {
-        const error = new Error(
-          createDetailedMessage(`Failed to load url`, {
-            url: currentContext.url,
-            reason,
-            ...rest,
-            ...(urlSite ? { "referenced at": urlSite } : null),
-          }),
-        )
-        error.code = code
-        error.reason = reason
-        error.cause = cause
-        return error
-      }
-      if (e.message === "NO_LOAD") {
-        error = createFailedToLoadError({
-          code: "NOT_FOUND",
-          reason: `no plugin has handled the url during "load" hook`,
-          cause: e,
-        })
-      } else if (e && e.code === "EPERM") {
-        error = createFailedToLoadError({
-          code: "NOT_ALLOWED",
-          reason: `not allowed to read entry on filesystem`,
-          cause: e,
-        })
-      } else if (e && e.code === "EISDIR") {
-        error = createFailedToLoadError({
-          code: "NOT_ALLOWED",
-          reason: `found a directory on filesystem`,
-          cause: e,
-        })
-      } else if (e && e.code === "ENOENT") {
-        error = createFailedToLoadError({
-          code: "NOT_FOUND",
-          reason: "no entry on filesystem",
-          cause: e,
-        })
-      } else {
-        error = createFailedToLoadError({
-          code: "PLUGIN_THROW",
-          reason: `throw during "load" hook by plugin named "${
-            pluginController.getCurrentPlugin().name
-          }"`,
-          cause: e,
-          ...detailsFromValueThrown(e),
-        })
-      }
-      context.error = error
+    } catch (error) {
+      context.error = createLoadError({
+        error,
+        context: currentContext,
+        pluginController,
+      })
       return context
     }
 
@@ -282,14 +238,12 @@ export const createKitchen = ({
         )
         updateContents(transformReturnValue)
       }, Promise.resolve())
-    } catch (e) {
-      if (e.code === "PARSE_ERROR") {
-        context.error = e
-      } else {
-        context.error = new Error(`Failed to transform ${context.specifierType}
---- reason ---
-error thrown during "transform" by "${pluginController.getCurrentPlugin()}" plugin`)
-      }
+    } catch (error) {
+      context.error = createTransformError({
+        error,
+        context: currentContext,
+        pluginController,
+      })
       return context
     }
 
@@ -520,20 +474,4 @@ const writeIntoRuntimeDirectory = async ({
     }),
     content,
   )
-}
-
-const detailsFromValueThrown = (valueThrownByPlugin) => {
-  if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
-    return {
-      "error stack": valueThrownByPlugin.stack,
-    }
-  }
-  if (valueThrownByPlugin === undefined) {
-    return {
-      "value thrown": "undefined",
-    }
-  }
-  return {
-    "value thrown": JSON.stringify(valueThrownByPlugin),
-  }
 }
