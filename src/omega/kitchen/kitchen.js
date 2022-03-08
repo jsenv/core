@@ -12,8 +12,9 @@ import {
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
-import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
+import { stringifyUrlSite } from "@jsenv/core/old_src/internal/building/url_trace.js"
 
+import { getOriginalUrlSite } from "./original_url_site.js"
 import { createPluginController } from "./plugin_controller.js"
 import {
   createResolveError,
@@ -25,7 +26,6 @@ import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
 import { parseCssUrlMentions } from "./parse/css/css_url_mentions.js"
 import { parseJsModuleUrlMentions } from "./parse/js_module/js_module_url_mentions.js"
-import { stringifyUrlSite } from "@jsenv/core/old_src/internal/building/url_trace.js"
 
 const parsers = {
   html: parseHtmlUrlMentions,
@@ -264,6 +264,12 @@ export const createKitchen = ({
     }
 
     // parsing + "parsed" hook
+    const fileOutUrl = determineFileUrlForOutDirectory({
+      projectDirectoryUrl,
+      outDirectoryName,
+      scenario,
+      url: context.url,
+    })
     const parser = parsers[context.type]
     const {
       urlMentions = [],
@@ -273,13 +279,25 @@ export const createKitchen = ({
     const dependencyUrls = []
     const dependencyUrlSites = {}
     for (const urlMention of urlMentions) {
-      const specifierUrlSite = await getUrlSite({
-        url: context.url,
-        originalContent: context.originalContent,
-        content: context.content,
-        urlMention,
-        urlInfo: urlInfoMap.get(url) || {},
-      })
+      const urlInfo = urlInfoMap.get(url) || {}
+      const specifierUrlSite = await stringifyUrlSite(
+        getOriginalUrlSite({
+          originalUrl: context.url,
+          originalContent: context.originalContent,
+          originalLine: urlMention.originalLine,
+          originalColumn: urlMention.originalColumn,
+          ownerUrl: urlInfo.ownerUrl,
+          ownerLine: urlInfo.ownerLine,
+          ownerColumn: urlInfo.ownerColumn,
+          ownerContent: urlInfo.ownerContent,
+          url: fileOutUrl,
+          content: context.content,
+          line: urlMention.line,
+          column: urlMention.column,
+          sourcemap: context.sourcemap,
+        }),
+      )
+
       try {
         const resolvedUrl = await resolveSpecifier({
           parentUrl: context.url,
@@ -362,6 +380,7 @@ export const createKitchen = ({
       })
       context.sourcemapUrl = sourcemapOutUrl
       context.content = injectSourcemap(context)
+      await writeFile(sourcemapOutUrl, JSON.stringify(sourcemap, null, "  "))
     } else if (sourcemap && sourcemapInjection === "inline") {
       context.sourcemapUrl = generateSourcemapUrl(context.url)
       context.content = injectSourcemap(context)
@@ -376,22 +395,7 @@ export const createKitchen = ({
     updateContents(renderReturnValue)
 
     // writing result inside ".jsenv" directory (debug purposes)
-    if (context.sourcemapUrl) {
-      writeIntoRuntimeDirectory({
-        projectDirectoryUrl,
-        outDirectoryName,
-        scenario,
-        url: context.sourcemapUrl,
-        content: JSON.stringify(sourcemap, null, "  "),
-      })
-    }
-    writeIntoRuntimeDirectory({
-      projectDirectoryUrl,
-      outDirectoryName,
-      scenario,
-      url: context.url,
-      content: context.content,
-    })
+    writeFile(fileOutUrl, context.content)
 
     return context
   }
@@ -451,97 +455,19 @@ const getRessourceType = ({ url, contentType }) => {
   return "other"
 }
 
-const getUrlSite = async ({
-  url,
-  originalContent,
-  content,
-  sourcemap,
-  urlMention,
-  urlInfo,
-}) => {
-  if (urlMention.injected) {
-    return `ressource injected in ${urlMention.url}`
-  }
-  let line = urlMention.line
-  let column = urlMention.column
-  if (sourcemap) {
-    const originalPosition = await getOriginalPosition({
-      sourcemap,
-      line,
-      column,
-    })
-    if (!originalPosition || originalPosition.line === null) {
-      // we'll only put the link to the file where the import was found
-      // without the line/column and code frame
-      line = null
-      column = null
-    } else {
-      content = originalContent
-      line = originalPosition.line
-      column = originalPosition.column
-    }
-  }
-  if (typeof urlMention.originalLine === "number") {
-    content = originalContent
-    line = urlMention.originalLine
-    column = urlMention.originalColumn
-  }
-  if (urlInfo.ownerUrl) {
-    // inline ressources
-    url = urlInfo.ownerUrl
-    line = urlInfo.ownerLine + line
-    column = urlInfo.ownerLine + column
-    content = urlInfo.ownerContent
-  }
-  // without sourcemap if the file is modified we will point to the source file
-  // but the code frame won't be visible in the original file
-  // for now that's fine
-  // To get this properly fixed we should use the following approach
-  // 1. turn string into ast
-  // 2. use magic source for js, css and html to get valid sourcemap
-  //    and be able to track what is injected
-  // 3. use sourcemap and the injection tracking to map back to original source
-  //    or be able to tell the ressource was injected
-  return stringifyUrlSite({
-    url,
-    line,
-    column,
-    content,
-  })
-}
-
+// this is just for debug (ability to see what is generated)
 const determineFileUrlForOutDirectory = ({
   projectDirectoryUrl,
   outDirectoryName,
   scenario,
   url,
 }) => {
+  if (!urlIsInsideOf(url, projectDirectoryUrl)) {
+    url = `${projectDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
+  }
   const outDirectoryUrl = new URL(
     `.jsenv/${scenario}/${outDirectoryName}/`,
     projectDirectoryUrl,
   ).href
   return moveUrl(url, projectDirectoryUrl, outDirectoryUrl)
-}
-
-// this is just for debug (ability to see what is generated)
-const writeIntoRuntimeDirectory = async ({
-  projectDirectoryUrl,
-  outDirectoryName,
-  scenario,
-
-  url,
-  content,
-}) => {
-  if (!urlIsInsideOf(url, projectDirectoryUrl)) {
-    return
-  }
-  await writeFile(
-    determineFileUrlForOutDirectory({
-      projectDirectoryUrl,
-      outDirectoryName,
-      scenario,
-      url,
-    }),
-    content,
-  )
 }

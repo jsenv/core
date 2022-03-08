@@ -4,6 +4,8 @@ import { urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
 export const filesystemRootUrl =
   process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///"
 
+// I would expect moveUrl to move url trying to keep it relative to the destination
+// TODO: rename this function moveAbsoluteUrl and write a moveUrl which tries to keep url relative
 export const moveUrl = (url, from, to) => {
   const relativeUrl = urlToRelativeUrl(url, from)
   return resolveUrl(relativeUrl, to)
