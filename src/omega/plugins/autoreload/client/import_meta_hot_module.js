@@ -5,7 +5,7 @@
 
 export const urlHotMetas = {}
 
-export default (url) => {
+export const createImportMetaHot = (url) => {
   const data = {}
 
   return {

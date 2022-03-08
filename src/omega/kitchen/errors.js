@@ -1,14 +1,47 @@
 import { fileURLToPath } from "node:url"
 import { createDetailedMessage } from "@jsenv/logger"
 
-export const createLoadError = ({ error, context, pluginController }) => {
+export const createResolveError = ({
+  pluginController,
+  specifierUrlSite,
+  specifier,
+  error,
+}) => {
+  const createFailedToResolveError = ({ code, reason, ...details }) => {
+    const loadError = new Error(
+      createDetailedMessage(`Failed to resolve specifier`, {
+        reason,
+        specifier: `"${specifier}"`,
+        ...details,
+        ...detailsFromUrlSite(specifierUrlSite),
+        ...detailsFromPluginController(pluginController),
+      }),
+    )
+    loadError.name = "RESOLVE_ERROR"
+    loadError.code = code
+    loadError.reason = reason
+    loadError.cause = error
+    return loadError
+  }
+  if (error.message === "NO_RESOLVE") {
+    return createFailedToResolveError({
+      reason: `no plugin has handled the specifier during "resolve" hook`,
+    })
+  }
+  return createFailedToResolveError({
+    reason: `An error occured during "resolve"`,
+    ...detailsFromValueThrown(error),
+  })
+}
+
+export const createLoadError = ({ pluginController, urlSite, url, error }) => {
   const createFailedToLoadError = ({ code, reason, ...details }) => {
     const loadError = new Error(
       createDetailedMessage(`Failed to load url`, {
         reason,
         ...details,
-        url: context.url,
-        ...detailsFromUrlSite(context.urlSite),
+        url,
+        ...detailsFromUrlSite(urlSite),
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -25,7 +58,7 @@ export const createLoadError = ({ error, context, pluginController }) => {
       reason: `no plugin has handled the url during "load" hook`,
     })
   }
-  if (error.path === fileURLToPath(context.url)) {
+  if (error.path === fileURLToPath(url)) {
     if (error.code === "EPERM") {
       return createFailedToLoadError({
         code: "NOT_ALLOWED",
@@ -51,14 +84,20 @@ export const createLoadError = ({ error, context, pluginController }) => {
   })
 }
 
-export const createTransformError = ({ error, context, pluginController }) => {
+export const createTransformError = ({
+  pluginController,
+  urlSite,
+  url,
+  type,
+  error,
+}) => {
   const createFailedToTransformError = ({ code, reason, ...details }) => {
     const loadError = new Error(
-      createDetailedMessage(`Failed to transform ${context.type}`, {
+      createDetailedMessage(`Failed to transform ${type}`, {
         reason,
         ...details,
-        url: context.url,
-        ...detailsFromUrlSite(context.urlSite),
+        url,
+        ...detailsFromUrlSite(urlSite),
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -78,7 +117,7 @@ const detailsFromUrlSite = (urlSite) => {
   if (!urlSite) {
     return null
   }
-  if (urlSite.include(">")) {
+  if (urlSite.includes(">")) {
     return { "referenced at": urlSite }
   }
   return { "referenced in": urlSite }

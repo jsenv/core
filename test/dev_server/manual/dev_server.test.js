@@ -15,8 +15,16 @@ await startDevServer({
   // plugins: [jsenvPluginPreact()],
   plugins: [
     {
-      name: "plugin_throw_during_load",
+      name: "plugin_throwing",
       appliesDuring: "*",
+      resolve: ({ parentUrl, specifier }) => {
+        if (
+          parentUrl.includes("plugin_error_resolve/main.js") &&
+          specifier === "./file.js"
+        ) {
+          throw new Error("here")
+        }
+      },
       load: ({ url }) => {
         if (url.includes("plugin_error_load/main.js")) {
           throw new Error("here")

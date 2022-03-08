@@ -15,7 +15,11 @@ import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injec
 import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
 import { createPluginController } from "./plugin_controller.js"
-import { createLoadError, createTransformError } from "./errors.js"
+import {
+  createResolveError,
+  createLoadError,
+  createTransformError,
+} from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
@@ -192,9 +196,10 @@ export const createKitchen = ({
       context.content = content
     } catch (error) {
       context.error = createLoadError({
-        error,
-        context: currentContext,
         pluginController,
+        urlSite: currentContext.urlSite,
+        url: currentContext.url,
+        error,
       })
       return context
     }
@@ -249,100 +254,99 @@ export const createKitchen = ({
       }, Promise.resolve())
     } catch (error) {
       context.error = createTransformError({
-        error,
-        context: currentContext,
         pluginController,
+        urlSite: currentContext.urlSite,
+        url: currentContext.url,
+        type: currentContext.type,
+        error,
       })
       return context
     }
 
     // parsing + "parsed" hook
-    const onParsed = async ({
-      urlMentions = [],
-      hotDecline = false,
-      hotAcceptSelf = false,
-      hotAcceptDependencies = [],
-    }) => {
-      Object.assign(context, {
-        urlMentions,
-        hotDecline,
-        hotAcceptSelf,
-        hotAcceptDependencies,
-      })
-      const dependencyUrls = []
-      const dependencyUrlSites = {}
-      await Promise.all(
-        urlMentions.map(async (urlMention) => {
-          const resolvedUrl =
-            urlMention.url || new URL(urlMention.specifier, context.url).href
-          dependencyUrls.push(resolvedUrl)
-          dependencyUrlSites[resolvedUrl] = await getUrlSite({
-            urlMention,
-            context,
-          })
-        }),
-      )
-      ressourceGraph.updateRessourceDependencies({
-        url: context.url,
-        type: context.type,
-        dependencyUrls,
-        dependencyUrlSites,
-        hotDecline,
-        hotAcceptSelf,
-        hotAcceptDependencies,
-      })
-      await plugins.reduce(async (previous, plugin) => {
-        await previous
-        const parsedReturnValue = await pluginController.callPluginHook(
-          plugin,
-          "parsed",
-          context,
-        )
-        if (typeof parsedReturnValue === "function") {
-          const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
-            (prunedRessource) => {
-              if (prunedRessource.url === context.url) {
-                removePrunedCallback()
-                parsedReturnValue()
-              }
-            },
-          )
-        }
-      }, Promise.resolve())
-    }
     const parser = parsers[context.type]
-    if (parser) {
-      const { urlMentions, getHotInfo, transformUrlMentions } = await parser(
-        context,
-      )
-      for (const urlMention of urlMentions) {
+    const {
+      urlMentions = [],
+      getHotInfo = () => ({}),
+      transformUrlMentions,
+    } = parser ? await parser(context) : {}
+    const dependencyUrls = []
+    const dependencyUrlSites = {}
+    for (const urlMention of urlMentions) {
+      const specifierUrlSite = await getUrlSite({
+        url: context.url,
+        originalContent: context.originalContent,
+        content: context.content,
+        urlMention,
+      })
+      try {
         const resolvedUrl = await resolveSpecifier({
           parentUrl: context.url,
           specifierType: urlMention.type,
           specifier: urlMention.specifier,
         })
-        // resolvedUrl can be null:
-        // in that case we won't touch the specifier
-        // and let the browser request the file which will result in 404
+        if (resolvedUrl === null) {
+          throw new Error(`NO_RESOLVE`)
+        }
         urlMention.url = resolvedUrl
+        dependencyUrlSites[resolvedUrl] = specifierUrlSite
+        dependencyUrls.push(resolvedUrl)
+      } catch (error) {
+        context.error = createResolveError({
+          pluginController,
+          specifierUrlSite,
+          specifier: urlMention.specifier,
+          error,
+        })
+        return context
       }
-      await onParsed({
-        urlMentions,
-        ...getHotInfo(),
-      })
+    }
+    const {
+      hotDecline = false,
+      hotAcceptSelf = false,
+      hotAcceptDependencies = [],
+    } = getHotInfo()
+    Object.assign(context, {
+      urlMentions,
+      hotDecline,
+      hotAcceptSelf,
+      hotAcceptDependencies,
+    })
+    ressourceGraph.updateRessourceDependencies({
+      url: context.url,
+      type: context.type,
+      dependencyUrls,
+      dependencyUrlSites,
+      hotDecline,
+      hotAcceptSelf,
+      hotAcceptDependencies,
+    })
+    await plugins.reduce(async (previous, plugin) => {
+      await previous
+      const parsedReturnValue = await pluginController.callPluginHook(
+        plugin,
+        "parsed",
+        context,
+      )
+      if (typeof parsedReturnValue === "function") {
+        const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
+          (prunedRessource) => {
+            if (prunedRessource.url === context.url) {
+              removePrunedCallback()
+              parsedReturnValue()
+            }
+          },
+        )
+      }
+    }, Promise.resolve())
+    if (transformUrlMentions) {
       const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
-          if (!urlMention.url) {
-            // will result in 404
-            return urlMention.specifier
-          }
           const clientUrl = context.asClientUrl(urlMention.url, context.url)
           return clientUrl
         },
       })
       updateContents(transformReturnValue)
-    } else {
-      await onParsed({})
     }
 
     // sourcemap injection
@@ -446,17 +450,21 @@ const getRessourceType = ({ url, contentType }) => {
   return "other"
 }
 
-const getUrlSite = async ({ urlMention, context }) => {
+const getUrlSite = async ({
+  url,
+  originalContent,
+  content,
+  sourcemap,
+  urlMention,
+}) => {
   if (urlMention.injected) {
     return `ressource injected in ${urlMention.url}`
   }
-  let url = context.url
-  let content = context.content
   let line = urlMention.line
   let column = urlMention.column
-  if (context.sourcemap) {
+  if (sourcemap) {
     const originalPosition = await getOriginalPosition({
-      sourcemap: context.sourcemap,
+      sourcemap,
       line,
       column,
     })
@@ -466,7 +474,7 @@ const getUrlSite = async ({ urlMention, context }) => {
       line = null
       column = null
     } else {
-      content = context.originalContent
+      content = originalContent
       line = originalPosition.line
       column = originalPosition.column
     }

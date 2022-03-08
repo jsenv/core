@@ -90,7 +90,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           return null
         }
         let htmlSupervisorSetupResolvedUrl = await resolve({
-          parentUrl: String(projectDirectoryUrl),
+          parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
           specifier: htmlSupervisorSetupFileUrl,
         })
