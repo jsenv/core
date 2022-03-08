@@ -11,8 +11,8 @@ export const createResolveError = ({
     const loadError = new Error(
       createDetailedMessage(`Failed to resolve specifier`, {
         reason,
-        specifier: `"${specifier}"`,
         ...details,
+        specifier: `"${specifier}"`,
         ...detailsFromUrlSite(specifierUrlSite),
         ...detailsFromPluginController(pluginController),
       }),
