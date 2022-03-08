@@ -65,9 +65,10 @@ export const createFileService = ({
         error.cause.code === "PARSE_ERROR"
       ) {
         // let the browser re-throw the syntax error
-        logger.error(error.message)
         return {
           status: 200,
+          statusText: error.reason,
+          statusMessage: error.message,
           headers: {
             "content-type": contentType,
             "content-length": Buffer.byteLength(content),

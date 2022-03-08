@@ -10,7 +10,6 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
-import { getJsenvPlugins } from "./jsenv_plugins.js"
 import { createRessourceGraph } from "./ressource_graph.js"
 import { createFileService } from "./file_service.js"
 import { createSSEService } from "./sse_service.js"
@@ -54,10 +53,6 @@ export const startOmegaServer = async ({
   },
 }) => {
   const logger = createLogger({ logLevel })
-  plugins = [...plugins, ...getJsenvPlugins()]
-  plugins = flattenAndFilterPlugins(plugins, {
-    scenario,
-  })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
@@ -162,33 +157,4 @@ export const startOmegaServer = async ({
   return {
     ...server,
   }
-}
-
-const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
-  const plugins = []
-  const visitPluginEntry = (pluginEntry) => {
-    if (Array.isArray(pluginEntry)) {
-      pluginEntry.forEach((value) => visitPluginEntry(value))
-      return
-    }
-    if (typeof pluginEntry === "function") {
-      throw new Error(`plugin must be objects, got a function`)
-    }
-    if (typeof pluginEntry === "object") {
-      const { appliesDuring } = pluginEntry
-      if (appliesDuring === undefined) {
-        console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
-      }
-      if (appliesDuring === "*") {
-        plugins.push(pluginEntry)
-        return
-      }
-      if (appliesDuring && appliesDuring[scenario]) {
-        plugins.push(pluginEntry)
-        return
-      }
-    }
-  }
-  pluginsRaw.forEach((plugin) => visitPluginEntry(plugin))
-  return plugins
 }

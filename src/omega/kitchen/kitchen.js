@@ -15,7 +15,11 @@ import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injec
 import { stringifyUrlSite } from "@jsenv/core/old_src/internal/building/url_trace.js"
 
 import { getOriginalUrlSite } from "./original_url_site.js"
-import { createPluginController } from "./plugin_controller.js"
+import { getJsenvPlugins } from "../jsenv_plugins.js"
+import {
+  flattenAndFilterPlugins,
+  createPluginController,
+} from "./plugin_controller.js"
 import {
   createResolveError,
   createLoadError,
@@ -42,6 +46,11 @@ export const createKitchen = ({
   sourcemapInjection,
   ressourceGraph,
 }) => {
+  plugins = [...plugins, ...getJsenvPlugins()]
+  plugins = flattenAndFilterPlugins(plugins, {
+    scenario,
+  })
+
   const urlInfoMap = new Map()
   const baseContext = {
     signal,
@@ -342,17 +351,17 @@ export const createKitchen = ({
     })
     await plugins.reduce(async (previous, plugin) => {
       await previous
-      const parsedReturnValue = await pluginController.callPluginHook(
+      const cookedReturnValue = await pluginController.callPluginHook(
         plugin,
-        "parsed",
+        "cooked",
         context,
       )
-      if (typeof parsedReturnValue === "function") {
+      if (typeof cookedReturnValue === "function") {
         const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
           (prunedRessource) => {
             if (prunedRessource.url === context.url) {
               removePrunedCallback()
-              parsedReturnValue()
+              cookedReturnValue()
             }
           },
         )

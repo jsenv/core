@@ -139,7 +139,7 @@ const jsenvPluginImportmapResolution = () => {
   return {
     name: "jsenv:importmap_resolution",
     appliesDuring: "*",
-    parsed: {
+    cooked: {
       importmap: ({ url, content }) => {
         const importmapRaw = JSON.parse(content)
         const importmap = normalizeImportMap(importmapRaw, url)

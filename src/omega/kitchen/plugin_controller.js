@@ -1,3 +1,32 @@
+export const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
+  const plugins = []
+  const visitPluginEntry = (pluginEntry) => {
+    if (Array.isArray(pluginEntry)) {
+      pluginEntry.forEach((value) => visitPluginEntry(value))
+      return
+    }
+    if (typeof pluginEntry === "function") {
+      throw new Error(`plugin must be objects, got a function`)
+    }
+    if (typeof pluginEntry === "object") {
+      const { appliesDuring } = pluginEntry
+      if (appliesDuring === undefined) {
+        console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+      }
+      if (appliesDuring === "*") {
+        plugins.push(pluginEntry)
+        return
+      }
+      if (appliesDuring && appliesDuring[scenario]) {
+        plugins.push(pluginEntry)
+        return
+      }
+    }
+  }
+  pluginsRaw.forEach((plugin) => visitPluginEntry(plugin))
+  return plugins
+}
+
 export const createPluginController = () => {
   let currentPlugin = null
   let currentHookName = null
