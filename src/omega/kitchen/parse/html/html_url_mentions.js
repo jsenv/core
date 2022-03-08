@@ -62,6 +62,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       type,
       htmlNode: node,
       attribute,
+      injected: Boolean(getHtmlNodeAttributeByName(node, "data-injected")),
       specifier,
       hotAccepted,
       line,

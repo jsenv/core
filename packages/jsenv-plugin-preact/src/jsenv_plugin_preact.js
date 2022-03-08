@@ -61,9 +61,9 @@ export const jsenvPluginPreact = ({
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "tagName": "script",
-            "type": "module",
-            "textContent":
+            tagName: "script",
+            type: "module",
+            textContent:
               scenario === "dev" || scenario === "test"
                 ? `
 import "preact/debug"
@@ -71,7 +71,6 @@ import "preact/debug"
                 : `
 import "preact/devtools"
 `,
-            "data-injected": true,
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

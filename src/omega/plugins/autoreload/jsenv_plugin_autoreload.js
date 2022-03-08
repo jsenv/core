@@ -38,10 +38,9 @@ export const jsenvPluginAutoreload = () => {
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "tagName": "script",
-            "type": "module",
-            "src": asClientUrl(eventSourceResolvedUrl, url),
-            "data-injected": true,
+            tagName: "script",
+            type: "module",
+            src: asClientUrl(eventSourceResolvedUrl, url),
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

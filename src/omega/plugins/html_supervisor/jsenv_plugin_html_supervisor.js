@@ -101,9 +101,8 @@ export const jsenvPluginHtmlSupervisor = () => {
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "tagName": "script",
-            "src": asClientUrl(htmlSupervisorSetupResolvedUrl, url),
-            "data-injected": true,
+            tagName: "script",
+            src: asClientUrl(htmlSupervisorSetupResolvedUrl, url),
           }),
         )
         const htmlSupervisorResolvedUrl = await resolve({
@@ -118,10 +117,9 @@ export const jsenvPluginHtmlSupervisor = () => {
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "tagName": "script",
-            "type": "module",
-            "src": htmlSupervisorClientUrl,
-            "data-injected": true,
+            tagName: "script",
+            type: "module",
+            src: htmlSupervisorClientUrl,
           }),
         )
         await scriptsToSupervise.reduce(

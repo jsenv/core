@@ -276,26 +276,9 @@ export const createKitchen = ({
           const resolvedUrl =
             urlMention.url || new URL(urlMention.specifier, context.url).href
           dependencyUrls.push(resolvedUrl)
-          let content = context.content
-          let line = urlMention.line
-          let column = urlMention.column
-          if (context.sourcemap) {
-            const originalPosition = await getOriginalPosition({
-              sourcemap: context.sourcemap,
-              line,
-              column,
-            })
-            if (originalPosition && originalPosition.line !== null) {
-              content = context.originalContent
-              line = originalPosition.line
-              column = originalPosition.column
-            }
-          }
-          dependencyUrlSites[resolvedUrl] = stringifyUrlSite({
-            url: context.url,
-            line,
-            column,
-            content,
+          dependencyUrlSites[resolvedUrl] = await getUrlSite({
+            urlMention,
+            context,
           })
         }),
       )
@@ -461,6 +444,48 @@ const getRessourceType = ({ url, contentType }) => {
     return "importmap"
   }
   return "other"
+}
+
+const getUrlSite = async ({ urlMention, context }) => {
+  if (urlMention.injected) {
+    return `ressource injected in ${urlMention.url}`
+  }
+  let url = context.url
+  let content = context.content
+  let line = urlMention.line
+  let column = urlMention.column
+  if (context.sourcemap) {
+    const originalPosition = await getOriginalPosition({
+      sourcemap: context.sourcemap,
+      line,
+      column,
+    })
+    if (!originalPosition || originalPosition.line === null) {
+      // we'll only put the link to the file where the import was found
+      // without the line/column and code frame
+      line = null
+      column = null
+    } else {
+      content = context.originalContent
+      line = originalPosition.line
+      column = originalPosition.column
+    }
+  }
+  // without sourcemap if the file is modified we will point to the source file
+  // but the code frame won't be visible in the original file
+  // for now that's fine
+  // To get this properly fixed we should use the following approach
+  // 1. turn string into ast
+  // 2. use magic source for js, css and html to get valid sourcemap
+  //    and be able to track what is injected
+  // 3. use sourcemap and the injection tracking to map back to original source
+  //    or be able to tell the ressource was injected
+  return stringifyUrlSite({
+    url,
+    line,
+    column,
+    content,
+  })
 }
 
 const determineFileUrlForOutDirectory = ({

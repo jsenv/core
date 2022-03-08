@@ -3,16 +3,13 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 export const createLoadError = ({ error, context, pluginController }) => {
   const createFailedToLoadError = ({ code, reason, ...details }) => {
-    const currentPlugin = pluginController.getCurrentPlugin()
     const loadError = new Error(
       createDetailedMessage(`Failed to load url`, {
         reason,
         ...details,
         url: context.url,
-        ...(context.urlSite ? { "referenced at": context.urlSite } : null),
-        ...(currentPlugin
-          ? { "plugin name": `"${currentPlugin.name}"` }
-          : null),
+        ...detailsFromUrlSite(context.urlSite),
+        ...detailsFromPluginController(pluginController),
       }),
     )
     loadError.name = "LOAD_ERROR"
@@ -56,16 +53,13 @@ export const createLoadError = ({ error, context, pluginController }) => {
 
 export const createTransformError = ({ error, context, pluginController }) => {
   const createFailedToTransformError = ({ code, reason, ...details }) => {
-    const currentPlugin = pluginController.getCurrentPlugin()
     const loadError = new Error(
       createDetailedMessage(`Failed to transform ${context.type}`, {
         reason,
         ...details,
         url: context.url,
-        ...(context.urlSite ? { "referenced at": context.urlSite } : null),
-        ...(currentPlugin
-          ? { "plugin name": `"${currentPlugin.name}"` }
-          : null),
+        ...detailsFromUrlSite(context.urlSite),
+        ...detailsFromPluginController(pluginController),
       }),
     )
     loadError.name = "TRANSFORM_ERROR"
@@ -78,6 +72,24 @@ export const createTransformError = ({ error, context, pluginController }) => {
     reason: `An error occured during "transform"`,
     ...detailsFromValueThrown(error),
   })
+}
+
+const detailsFromUrlSite = (urlSite) => {
+  if (!urlSite) {
+    return null
+  }
+  if (urlSite.include(">")) {
+    return { "referenced at": urlSite }
+  }
+  return { "referenced in": urlSite }
+}
+
+const detailsFromPluginController = (pluginController) => {
+  const currentPlugin = pluginController.getCurrentPlugin()
+  if (!currentPlugin) {
+    return null
+  }
+  return { "plugin name": `"${currentPlugin.name}"` }
 }
 
 const detailsFromValueThrown = (valueThrownByPlugin) => {
