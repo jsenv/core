@@ -13,7 +13,7 @@ import {
   getIdForInlineHtmlNode,
   removeHtmlNodeText,
   assignHtmlNodeAttributes,
-  getHtmlNodeLocation,
+  htmlNodePosition,
   parseScriptNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
@@ -97,7 +97,7 @@ export const jsenvPluginInlineRessources = () => {
           if (!textNode) {
             return
           }
-          const { line, column } = getHtmlNodeLocation(node)
+          const { line, column } = htmlNodePosition.readNodePosition(node)
           const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
           let inlineStyleSpecifier = `${urlToFilename(url)}@${inlineStyleId}.js`
           const inlineStyleUrl = new URL(inlineStyleSpecifier, url).href
@@ -129,7 +129,7 @@ export const jsenvPluginInlineRessources = () => {
           if (!textNode) {
             return
           }
-          const { line, column } = getHtmlNodeLocation(node)
+          const { line, column } = htmlNodePosition.readNodePosition(node)
           const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
           let inlineScriptSpecifier = `${urlToFilename(
             url,

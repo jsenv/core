@@ -3,7 +3,7 @@ import {
   stringifyHtmlAst,
   parseLinkNode,
   getHtmlNodeAttributeByName,
-  getHtmlNodeLocation,
+  htmlNodePosition,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
@@ -60,7 +60,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       return
     }
     const { line, column, originalLine, originalColumn } =
-      getHtmlNodeLocation(node, attribute.name) || {}
+      htmlNodePosition.readAttributePosition(node, attribute.name)
     htmlUrlMentions.push({
       type,
       htmlNode: node,
