@@ -279,25 +279,16 @@ export const createKitchen = ({
           let content = context.content
           let line = urlMention.line
           let column = urlMention.column
-          // if (urlMention.specifier.includes("not_found.js")) {
-          //   debugger
-          // }
           if (context.sourcemap) {
-            const { sources, sourcesContent } = context.sourcemap
-            if (sourcesContent) {
-              const originalPosition = await getOriginalPosition({
-                sourcemap: context.sourcemap,
-                line,
-                column,
-              })
-              if (originalPosition) {
-                const sourceIndex = sources.indexOf(originalPosition.source)
-                if (sourceIndex > -1) {
-                  content = sourcesContent[sourceIndex]
-                  line = originalPosition.line
-                  column = originalPosition.column
-                }
-              }
+            const originalPosition = await getOriginalPosition({
+              sourcemap: context.sourcemap,
+              line,
+              column,
+            })
+            if (originalPosition && originalPosition.line !== null) {
+              content = context.originalContent
+              line = originalPosition.line
+              column = originalPosition.column
             }
           }
           dependencyUrlSites[resolvedUrl] = stringifyUrlSite({
