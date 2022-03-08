@@ -153,16 +153,27 @@ export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
       columnEnd: endCol,
     }
   }
-  const attributeSourceCodeLocation =
-    sourceCodeLocation.attrs[htmlAttributeName]
-  if (!attributeSourceCodeLocation) {
-    return null
+  const positionData = {}
+  const attributeLocation = sourceCodeLocation.attrs[htmlAttributeName]
+  if (attributeLocation) {
+    Object.assign(positionData, {
+      line: attributeLocation.startLine,
+      column: attributeLocation.startCol,
+    })
   }
-  const { startLine, startCol } = attributeSourceCodeLocation
-  return {
-    line: startLine,
-    column: startCol,
+  const attributeOriginalLocation = getHtmlNodeAttributeByName(
+    htmlNode,
+    `original-${htmlAttributeName}-location`,
+  )
+  if (attributeOriginalLocation) {
+    const [originalLine, originalColumn] =
+      attributeOriginalLocation.value.split(":")
+    Object.assign(positionData, {
+      originalLine,
+      originalColumn,
+    })
   }
+  return positionData
 }
 
 export const findHtmlNode = (htmlAst, predicate) => {

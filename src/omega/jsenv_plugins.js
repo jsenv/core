@@ -24,7 +24,7 @@ export const getJsenvPlugins = () => {
     jsenvPluginDataUrls(),
     jsenvPluginFileUrls(),
     // transform
-    jsenvPluginAutoreload(),
+    ...(asFewAsPossible ? [] : [jsenvPluginAutoreload()]),
     ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     jsenvPluginBabel(),

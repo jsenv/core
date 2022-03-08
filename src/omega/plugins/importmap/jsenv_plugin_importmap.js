@@ -71,7 +71,7 @@ const jsenvPluginImportmapSupervisor = () => {
       }
     },
     transform: {
-      html: async ({ cookFile, url, content }) => {
+      html: async ({ cookUrl, url, content }) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
@@ -94,10 +94,9 @@ const jsenvPluginImportmapSupervisor = () => {
           )}@${inlineImportmapId}.importmap`
           const importmapUrl = new URL(inlineImportmapSpecifier, url).href
           importmapContents[importmapUrl] = textNode.value
-          const importmapContext = await cookFile({
+          const importmapContext = await cookUrl({
             parentUrl: url,
-            specifierType: "script_src",
-            specifier: inlineImportmapSpecifier,
+            url: importmapUrl,
           })
           setHtmlNodeText(importmap, importmapContext.content)
           assignHtmlNodeAttributes(importmap, {
@@ -110,10 +109,9 @@ const jsenvPluginImportmapSupervisor = () => {
         const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")
         const src = srcAttribute ? srcAttribute.value : undefined
         if (src) {
-          const importmapRessource = await cookFile({
+          const importmapRessource = await cookUrl({
             parentUrl: url,
-            specifierType: "script_src",
-            specifier: src,
+            url: new URL(src, url).href,
           })
           removeHtmlNodeAttributeByName(importmap, "src")
           assignHtmlNodeAttributes(importmap, {

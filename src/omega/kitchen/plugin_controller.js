@@ -19,7 +19,7 @@ export const createPluginController = () => {
     // all hooks are allowed to return null/undefined
     if (valueReturned !== null && valueReturned !== undefined) {
       for (const returnValueAssertion of returnValueAssertions) {
-        if (!returnValueAssertions.appliesTo.includes(hookName)) {
+        if (!returnValueAssertion.appliesTo.includes(hookName)) {
           continue
         }
         const assertionResult = returnValueAssertion.assertion(valueReturned)

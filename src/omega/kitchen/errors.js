@@ -6,11 +6,13 @@ export const createLoadError = ({ error, context, pluginController }) => {
     const currentPlugin = pluginController.getCurrentPlugin()
     const loadError = new Error(
       createDetailedMessage(`Failed to load url`, {
-        url: context.url,
         reason,
         ...details,
+        url: context.url,
         ...(context.urlSite ? { "referenced at": context.urlSite } : null),
-        ...(currentPlugin ? { "plugin name": currentPlugin.name } : null),
+        ...(currentPlugin
+          ? { "plugin name": `"${currentPlugin.name}"` }
+          : null),
       }),
     )
     loadError.name = "LOAD_ERROR"
@@ -57,11 +59,13 @@ export const createTransformError = ({ error, context, pluginController }) => {
     const currentPlugin = pluginController.getCurrentPlugin()
     const loadError = new Error(
       createDetailedMessage(`Failed to transform ${context.type}`, {
-        url: context.url,
         reason,
         ...details,
+        url: context.url,
         ...(context.urlSite ? { "referenced at": context.urlSite } : null),
-        ...(currentPlugin ? { "plugin name": currentPlugin.name } : null),
+        ...(currentPlugin
+          ? { "plugin name": `"${currentPlugin.name}"` }
+          : null),
       }),
     )
     loadError.name = "TRANSFORM_ERROR"

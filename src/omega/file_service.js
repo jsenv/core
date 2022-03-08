@@ -76,16 +76,16 @@ export const createFileService = ({
           body: content,
         }
       }
+      if (error.cause && error.cause.code === "EISDIR") {
+        return serveDirectory(url, {
+          headers: {
+            accept: "text/html",
+          },
+          canReadDirectory: true,
+          rootDirectoryUrl: projectDirectoryUrl,
+        })
+      }
       if (error.code === "NOT_ALLOWED") {
-        if (error.cause && error.cause.code === "EISDIR") {
-          return serveDirectory(url, {
-            headers: {
-              accept: "text/html",
-            },
-            canReadDirectory: true,
-            rootDirectoryUrl: projectDirectoryUrl,
-          })
-        }
         return {
           status: 403,
           statusText: error.reason,

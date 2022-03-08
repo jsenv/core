@@ -12,6 +12,7 @@ import {
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
+import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
 import { createPluginController } from "./plugin_controller.js"
 import { createLoadError, createTransformError } from "./errors.js"
@@ -102,8 +103,14 @@ export const createKitchen = ({
     const context = {
       ...baseContext,
       resolve: resolveSpecifier,
-      cookUrl: async (params) => {
-        const returnValue = await cookUrl(params)
+      cookUrl: async ({ parentUrl, urlSite, url }) => {
+        const returnValue = await cookUrl({
+          outDirectoryName,
+          runtimeSupport,
+          parentUrl,
+          urlSite,
+          url,
+        })
         // we are done with that subfile
         // restore currentContext to the current file
         currentContext = context
@@ -225,7 +232,9 @@ export const createKitchen = ({
           context.contentType = contentType
         }
         context.content = content
-        context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
+        if (sourcemap) {
+          context.sourcemap = composeTwoSourcemaps(context.sourcemap, sourcemap)
+        }
       }
     }
     try {
@@ -262,20 +271,43 @@ export const createKitchen = ({
       })
       const dependencyUrls = []
       const dependencyUrlSites = {}
-      urlMentions.forEach((urlMention) => {
-        const resolvedUrl =
-          urlMention.url || new URL(urlMention.specifier, context.url).href
-        dependencyUrls.push(resolvedUrl)
-        // TODO: when file is transformed the context.content is not the original
-        // one, in that case use eventual sourcemap to get original line and column
-        // fallbacking to the transformed line and column when there is no sourcemap
-        dependencyUrlSites[resolvedUrl] = stringifyUrlSite({
-          url: context.url,
-          line: urlMention.line,
-          column: urlMention.column,
-          content: context.content,
-        })
-      })
+      await Promise.all(
+        urlMentions.map(async (urlMention) => {
+          const resolvedUrl =
+            urlMention.url || new URL(urlMention.specifier, context.url).href
+          dependencyUrls.push(resolvedUrl)
+          let content = context.content
+          let line = urlMention.line
+          let column = urlMention.column
+          // if (urlMention.specifier.includes("not_found.js")) {
+          //   debugger
+          // }
+          if (context.sourcemap) {
+            const { sources, sourcesContent } = context.sourcemap
+            if (sourcesContent) {
+              const originalPosition = await getOriginalPosition({
+                sourcemap: context.sourcemap,
+                line,
+                column,
+              })
+              if (originalPosition) {
+                const sourceIndex = sources.indexOf(originalPosition.source)
+                if (sourceIndex > -1) {
+                  content = sourcesContent[sourceIndex]
+                  line = originalPosition.line
+                  column = originalPosition.column
+                }
+              }
+            }
+          }
+          dependencyUrlSites[resolvedUrl] = stringifyUrlSite({
+            url: context.url,
+            line,
+            column,
+            content,
+          })
+        }),
+      )
       ressourceGraph.updateRessourceDependencies({
         url: context.url,
         type: context.type,

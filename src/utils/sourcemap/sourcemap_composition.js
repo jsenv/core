@@ -32,7 +32,9 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
     firstSourcemap.sources.length === 1 &&
     secondSourcemap.sources.length === 1
   ) {
-    const map = remapping([firstSourcemap, secondSourcemap], () => null, true)
+    const map = remapping([firstSourcemap, secondSourcemap], () => null, {
+      excludeContent: false,
+    })
     return map
   }
   // first is composed by many sources and some source correspond to the second sourcemap source
@@ -51,7 +53,9 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
         }
         return { ...nullSourceMap }
       },
-      true,
+      {
+        excludeContent: false,
+      },
     )
     return map
   }
