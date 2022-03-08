@@ -22,7 +22,7 @@ export const jsenvPluginInlineRessources = () => {
    * can be represented as below
    * "file:///project_directory/index.html.L10-L12.js": {
    *   "ownerUrl": "file:///project_directory/index.html",
-   *   "ownerContent": "console.log(`Hello world`)",
+   *   "ownerContent": "<html><script>console.log(`Hello world`)</script></html>",
    *   "line": 10,
    *   "column": 5,
    *   "contentType": "application/javascript",
@@ -62,17 +62,21 @@ export const jsenvPluginInlineRessources = () => {
   //       }
   //     : null
   // }
+  const tryResolveInline = ({ parentUrl, specifier }) => {
+    const url = new URL(specifier, parentUrl).href
+    const urlWithoutSearch = asUrlWithoutSearch(url)
+    if (inlineRessourceMap.has(urlWithoutSearch)) {
+      return url
+    }
+    return null
+  }
 
   return {
     name: "jsenv:inline_ressources",
     appliesDuring: "*",
-    resolve: ({ parentUrl, specifier }) => {
-      const url = new URL(specifier, parentUrl).href
-      const urlWithoutSearch = asUrlWithoutSearch(url)
-      if (inlineRessourceMap.has(urlWithoutSearch)) {
-        return url
-      }
-      return null
+    resolve: {
+      script_src: tryResolveInline,
+      link_href: tryResolveInline,
     },
     load: ({ url }) => {
       const urlWithoutSearch = asUrlWithoutSearch(url)
@@ -85,8 +89,21 @@ export const jsenvPluginInlineRessources = () => {
         content: inlineRessource.content,
       }
     },
+    deriveMetaFromUrl: ({ url }) => {
+      const urlWithoutSearch = asUrlWithoutSearch(url)
+      const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
+      if (!inlineRessource) {
+        return null
+      }
+      return {
+        ownerUrl: inlineRessource.ownerUrl,
+        ownerLine: inlineRessource.line,
+        ownerColumn: inlineRessource.column,
+        ownerContent: inlineRessource.ownerContent,
+      }
+    },
     transform: {
-      html: async ({ url, content }) => {
+      html: async ({ url, originalContent, content }) => {
         const htmlAst = parseHtmlString(content)
         const inlineRessources = []
         const handleInlineStyle = (node) => {
@@ -129,7 +146,9 @@ export const jsenvPluginInlineRessources = () => {
           if (!textNode) {
             return
           }
-          const { line, column } = htmlNodePosition.readNodePosition(node)
+          const { line, column } = htmlNodePosition.readNodePosition(node, {
+            preferOriginal: true,
+          })
           const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
           let inlineScriptSpecifier = `${urlToFilename(
             url,
@@ -148,7 +167,10 @@ export const jsenvPluginInlineRessources = () => {
                 : "application/javascript",
             content: textNode.value,
           })
-          assignHtmlNodeAttributes(node, { src: inlineScriptSpecifier })
+          assignHtmlNodeAttributes(node, {
+            "src": inlineScriptSpecifier,
+            "data-externalized": "",
+          })
           removeHtmlNodeText(node)
         }
         visitHtmlAst(htmlAst, (node) => {
@@ -157,7 +179,7 @@ export const jsenvPluginInlineRessources = () => {
         })
         updateInlineRessources({
           ownerUrl: url,
-          ownerContent: content,
+          ownerContent: originalContent,
           inlineRessources,
         })
         if (inlineRessources.length === 0) {

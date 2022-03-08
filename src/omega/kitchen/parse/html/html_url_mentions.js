@@ -59,13 +59,26 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     if (specifier[0] === "#") {
       return
     }
-    const { line, column, originalLine, originalColumn } =
-      htmlNodePosition.readAttributePosition(node, attribute.name)
+    const injected = Boolean(getHtmlNodeAttributeByName(node, "data-injected"))
+    const externalized = Boolean(
+      getHtmlNodeAttributeByName(node, "data-externalized"),
+    )
+
+    let position
+    if (externalized) {
+      // when externalized, the real line, column is not the content-src but the original-position
+      position = htmlNodePosition.readNodePosition(node)
+    } else {
+      position = htmlNodePosition.readAttributePosition(node, attribute.name)
+    }
+    const { line, column, originalLine, originalColumn } = position
+
     htmlUrlMentions.push({
       type,
       htmlNode: node,
       attribute,
-      injected: Boolean(getHtmlNodeAttributeByName(node, "data-injected")),
+      injected,
+      externalized,
       specifier,
       hotAccepted,
       line,

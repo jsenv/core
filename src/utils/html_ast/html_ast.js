@@ -59,7 +59,7 @@ export const htmlNodePosition = {
     return true
   },
 
-  readNodePosition: (node) => {
+  readNodePosition: (node, { preferOriginal = false } = {}) => {
     const position = {}
     const { sourceCodeLocation } = node
     if (sourceCodeLocation) {
@@ -82,7 +82,12 @@ export const htmlNodePosition = {
         originalLine: parseInt(originalLine),
         originalColumn: parseInt(originalColumn),
       })
+      if (preferOriginal) {
+        position.line = position.originalLine
+        position.column = position.originalColumn
+      }
     }
+
     return position
   },
 

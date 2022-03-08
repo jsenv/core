@@ -278,6 +278,7 @@ export const createKitchen = ({
         originalContent: context.originalContent,
         content: context.content,
         urlMention,
+        urlInfo: urlInfoMap.get(url) || {},
       })
       try {
         const resolvedUrl = await resolveSpecifier({
@@ -456,6 +457,7 @@ const getUrlSite = async ({
   content,
   sourcemap,
   urlMention,
+  urlInfo,
 }) => {
   if (urlMention.injected) {
     return `ressource injected in ${urlMention.url}`
@@ -483,6 +485,13 @@ const getUrlSite = async ({
     content = originalContent
     line = urlMention.originalLine
     column = urlMention.originalColumn
+  }
+  if (urlInfo.ownerUrl) {
+    // inline ressources
+    url = urlInfo.ownerUrl
+    line = urlInfo.ownerLine + line
+    column = urlInfo.ownerLine + column
+    content = urlInfo.ownerContent
   }
   // without sourcemap if the file is modified we will point to the source file
   // but the code frame won't be visible in the original file
