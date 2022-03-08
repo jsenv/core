@@ -479,6 +479,11 @@ const getUrlSite = async ({
       column = originalPosition.column
     }
   }
+  if (typeof urlMention.originalLine === "number") {
+    content = originalContent
+    line = urlMention.originalLine
+    column = urlMention.originalColumn
+  }
   // without sourcemap if the file is modified we will point to the source file
   // but the code frame won't be visible in the original file
   // for now that's fine

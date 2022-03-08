@@ -44,7 +44,9 @@ export const parseHtmlUrlMentions = ({ url, type, content }) => {
         htmlUrlMention.attribute.value = transformUrlMention(htmlUrlMention)
       })
       return {
-        content: stringifyHtmlAst(htmlAst),
+        content: stringifyHtmlAst(htmlAst, {
+          removeOriginalPositionAttributes: true,
+        }),
       }
     },
   }
@@ -57,7 +59,8 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     if (specifier[0] === "#") {
       return
     }
-    const { line, column } = getHtmlNodeLocation(node, attribute.name) || {}
+    const { line, column, originalLine, originalColumn } =
+      getHtmlNodeLocation(node, attribute.name) || {}
     htmlUrlMentions.push({
       type,
       htmlNode: node,
@@ -67,6 +70,8 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       hotAccepted,
       line,
       column,
+      originalLine,
+      originalColumn,
     })
   }
   const onNode = (node, { hotAccepted }) => {

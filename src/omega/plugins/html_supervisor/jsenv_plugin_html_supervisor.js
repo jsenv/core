@@ -106,7 +106,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           }),
         )
         const htmlSupervisorResolvedUrl = await resolve({
-          parentUrl: String(projectDirectoryUrl),
+          parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
           specifier: htmlSupervisorFileUrl,
         })
@@ -134,7 +134,9 @@ export const jsenvPluginHtmlSupervisor = () => {
               scriptUrl = injectQueryParams(scriptUrl, { script: "" })
             }
             removeHtmlNodeAttributeByName(node, "src")
-            assignHtmlNodeAttributes(node, { "content-src": scriptUrl })
+            assignHtmlNodeAttributes(node, {
+              "content-src": scriptUrl,
+            })
             setHtmlNodeText(
               node,
               generateCodeToSuperviseScript({

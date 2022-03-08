@@ -6,10 +6,78 @@ import { require } from "@jsenv/core/src/utils/require.js"
 // eslint-disable-next-line import/no-unresolved
 // const treeAdapter = require("parse5/lib/tree-adapters/default.js")
 
-export const parseHtmlString = (htmlString) => {
+export const parseHtmlString = (
+  htmlString,
+  { storeOriginalPositions = true } = {},
+) => {
   const parse5 = require("parse5")
   const htmlAst = parse5.parse(htmlString, { sourceCodeLocationInfo: true })
+  if (storeOriginalPositions) {
+    const htmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
+    const storedAttribute = getHtmlNodeAttributeByName(
+      htmlNode,
+      "original-position-stored",
+    )
+    if (!storedAttribute) {
+      visitHtmlAst(htmlAst, (node) => {
+        storeAttributeOriginalPosition(node, "src")
+        storeAttributeOriginalPosition(node, "href")
+      })
+      assignHtmlNodeAttributes(htmlNode, {
+        "original-position-stored": "",
+      })
+    }
+  }
   return htmlAst
+}
+
+export const stringifyHtmlAst = (
+  htmlAst,
+  { removeOriginalPositionAttributes = false } = {},
+) => {
+  const parse5 = require("parse5")
+  if (removeOriginalPositionAttributes) {
+    const htmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
+    const storedAttribute = getHtmlNodeAttributeByName(
+      htmlNode,
+      "original-position-stored",
+    )
+    if (storedAttribute) {
+      removeHtmlNodeAttributeByName(htmlNode, "original-position-stored")
+      visitHtmlAst(htmlAst, (node) => {
+        removeHtmlNodeAttributeByName(node, "original-src-position")
+        removeHtmlNodeAttributeByName(node, "original-href-position")
+      })
+    }
+  }
+  const htmlString = parse5.serialize(htmlAst)
+
+  return htmlString
+}
+
+const storeAttributeOriginalPosition = (node, attributeName) => {
+  const attribute = getHtmlNodeAttributeByName(node, attributeName)
+  if (!attribute) {
+    return false
+  }
+  const originalPositionAttributeName = `original-${attributeName}-position`
+  const originalPositionAttribute = getHtmlNodeAttributeByName(
+    node,
+    originalPositionAttributeName,
+  )
+  if (originalPositionAttribute) {
+    return true
+  }
+  const attributeLocation = node.sourceCodeLocation.attrs[attributeName]
+  if (!attributeLocation) {
+    return false
+  }
+  const line = attributeLocation.startLine
+  const column = attributeLocation.startCol
+  assignHtmlNodeAttributes(node, {
+    [originalPositionAttributeName]: `${line}:${column}`,
+  })
+  return true
 }
 
 export const parseSvgString = (svgString) => {
@@ -18,12 +86,6 @@ export const parseSvgString = (svgString) => {
     sourceCodeLocationInfo: true,
   })
   return svgAst
-}
-
-export const stringifyHtmlAst = (htmlAst) => {
-  const parse5 = require("parse5")
-  const htmlString = parse5.serialize(htmlAst)
-  return htmlString
 }
 
 export const findNode = (htmlAst, predicate) => {
@@ -163,14 +225,16 @@ export const getHtmlNodeLocation = (htmlNode, htmlAttributeName) => {
   }
   const attributeOriginalLocation = getHtmlNodeAttributeByName(
     htmlNode,
-    `original-${htmlAttributeName}-location`,
+    htmlAttributeName === "content-src"
+      ? `original-src-position`
+      : `original-${htmlAttributeName}-position`,
   )
   if (attributeOriginalLocation) {
     const [originalLine, originalColumn] =
       attributeOriginalLocation.value.split(":")
     Object.assign(positionData, {
-      originalLine,
-      originalColumn,
+      originalLine: parseInt(originalLine),
+      originalColumn: parseInt(originalColumn),
     })
   }
   return positionData

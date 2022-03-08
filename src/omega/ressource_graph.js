@@ -1,8 +1,6 @@
 import { createCallbackList } from "@jsenv/abort"
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
-import { asUrlWithoutSearch } from "@jsenv/core/src/utils/url_utils.js"
-
 export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   const hotUpdateCallbackList = createCallbackList()
   const prunedCallbackList = createCallbackList()
@@ -23,7 +21,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       return null
     }
     const dependencyUrlSite =
-      ressource.dependencyUrlSites[asUrlWithoutSearch(dependencyUrl)]
+      ressource.dependencyUrlSites[asUrlWithoutHmrSearchParams(dependencyUrl)]
     if (!dependencyUrlSite) {
       return null
     }
@@ -32,7 +30,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
 
   const applyUrlResolution = (specifier, baseUrl) => {
     const url = new URL(specifier, baseUrl).href
-    return asUrlWithoutSearch(url)
+    return asUrlWithoutHmrSearchParams(url)
   }
 
   const getHmrTimestamp = (url) => {
@@ -59,7 +57,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     hotAcceptSelf,
     hotAcceptDependencies,
   }) => {
-    url = asUrlWithoutSearch(url)
+    url = asUrlWithoutHmrSearchParams(url)
     const existingRessource = getRessourceByUrl(url)
     const ressource =
       existingRessource || (ressources[url] = createRessource(url))
@@ -344,6 +342,16 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       return data
     },
   }
+}
+
+const asUrlWithoutHmrSearchParams = (url) => {
+  const urlObject = new URL(url)
+  if (urlObject.searchParams.has("hmr")) {
+    urlObject.searchParams.delete("hmr")
+    urlObject.searchParams.delete("v")
+    return urlObject.href
+  }
+  return url
 }
 
 const createRessource = (url) => {
