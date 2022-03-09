@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 import { urlIsInsideOf, writeFile, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import {
@@ -457,7 +458,7 @@ export const createKitchen = ({
     }
     const sourcemap = JSON.parse(sourcemapContext.content)
     sourcemap.sources = sourcemap.sources.map((source) => {
-      return new URL(source, sourcemapContext.url).href
+      return fileURLToPath(new URL(source, sourcemapContext.url).href)
     })
     return sourcemap
   }

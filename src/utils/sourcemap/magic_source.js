@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 import MagicString from "magic-string"
 
 export const createMagicSource = ({ url, content }) => {
@@ -34,7 +35,7 @@ export const createMagicSource = ({ url, content }) => {
       const code = magicString.toString()
       const map = magicString.generateMap({ hires: true })
       // should we do map.file = urlToFilename(urlFacade) OR map.file = urlToFilename(url)
-      map.sources = [url]
+      map.sources = [fileURLToPath(url)]
       map.sourcesContent = [content]
       return {
         content: code,
