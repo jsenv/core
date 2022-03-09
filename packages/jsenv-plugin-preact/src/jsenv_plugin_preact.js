@@ -127,10 +127,6 @@ import "preact/devtools"
 }
 
 const applyHotRefreshInstrumentation = ({ url, content, sourcemap }) => {
-  const magicSource = createMagicSource({
-    url,
-    content,
-  })
   const hasReg = /\$RefreshReg\$\(/.test(content)
   const hasSig = /\$RefreshSig\$\(/.test(content)
   if (!hasSig && !hasReg) {
@@ -139,6 +135,10 @@ const applyHotRefreshInstrumentation = ({ url, content, sourcemap }) => {
       sourcemap,
     }
   }
+  const magicSource = createMagicSource({
+    url,
+    content,
+  })
   magicSource.prepend(`import { installPrefresh } from "@jsenv/plugin-preact/src/client/prefresh.js"
 const __prefresh__ = installPrefresh(${JSON.stringify(url)})
 `)

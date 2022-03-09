@@ -53,12 +53,12 @@ export const featuresCompatMap = {
     edge: "93",
   },
   // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
-  new_stylesheet: {
-    chrome: "73",
-    edge: "79",
-    opera: "53",
-    android: "73",
-  },
+  // new_stylesheet: {
+  //   chrome: "73",
+  //   edge: "79",
+  //   opera: "53",
+  //   android: "73",
+  // },
   worker_type_module: {
     chrome: "80",
     edge: "80",

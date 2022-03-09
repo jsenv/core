@@ -33,7 +33,9 @@ export const createMagicSource = ({ url, content }) => {
         mutation(magicString)
       })
       const code = magicString.toString()
-      const map = magicString.generateMap({ hires: true })
+      const map = magicString.generateMap({
+        hires: true,
+      })
       // should we do map.file = urlToFilename(urlFacade) OR map.file = urlToFilename(url)
       map.sources = [fileURLToPath(url)]
       map.sourcesContent = [content]

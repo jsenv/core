@@ -303,23 +303,22 @@ export const createKitchen = ({
     const dependencyUrlSites = {}
     for (const urlMention of urlMentions) {
       const urlInfo = urlInfoMap.get(url) || {}
-      const specifierUrlSite = stringifyUrlSite(
-        await getOriginalUrlSite({
-          originalUrl: context.url,
-          originalContent: context.originalContent,
-          originalLine: urlMention.originalLine,
-          originalColumn: urlMention.originalColumn,
-          ownerUrl: urlInfo.ownerUrl,
-          ownerLine: urlInfo.ownerLine,
-          ownerColumn: urlInfo.ownerColumn,
-          ownerContent: urlInfo.ownerContent,
-          url: context.outUrl,
-          content: context.content,
-          line: urlMention.line,
-          column: urlMention.column,
-          sourcemap: context.sourcemap,
-        }),
-      )
+      const specifierUrlSiteRaw = await getOriginalUrlSite({
+        originalUrl: context.url,
+        originalContent: context.originalContent,
+        originalLine: urlMention.originalLine,
+        originalColumn: urlMention.originalColumn,
+        ownerUrl: urlInfo.ownerUrl,
+        ownerLine: urlInfo.ownerLine,
+        ownerColumn: urlInfo.ownerColumn,
+        ownerContent: urlInfo.ownerContent,
+        url: context.outUrl,
+        content: context.content,
+        line: urlMention.line,
+        column: urlMention.column,
+        sourcemap: context.sourcemap,
+      })
+      const specifierUrlSite = stringifyUrlSite(specifierUrlSiteRaw)
 
       try {
         const resolvedUrl = await resolveSpecifier({
