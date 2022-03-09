@@ -55,6 +55,7 @@ export const getOriginalUrlSite = async ({
   if (!sourcemap) {
     return {
       url,
+      content,
       line,
       column,
     }
@@ -68,6 +69,7 @@ export const getOriginalUrlSite = async ({
   if (!originalPosition || originalPosition.line === null) {
     return {
       url,
+      content,
       line,
       column,
     }

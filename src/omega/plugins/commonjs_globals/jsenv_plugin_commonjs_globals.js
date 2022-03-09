@@ -8,6 +8,7 @@
  */
 
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
+import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 
 import { transformReplaceExpressions } from "./babel_plugin_transform_replace_expressions.js"
 
@@ -17,19 +18,20 @@ export const jsenvPluginCommonJsGlobals = () => {
     appliesDuring: "*",
     transform: {
       js_module: async ({ scenario, url, content }) => {
-        const { code, map } = await applyBabelPlugins({
+        const replaceMap = {
+          "process.env.NODE_ENV": `("${
+            scenario === "dev" || scenario === "test" ? "dev" : "prod"
+          }")`,
+          "global": "globalThis",
+          "__filename": `import.meta.url.slice('file:///'.length)`,
+          "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
+        }
+        const { metadata } = await applyBabelPlugins({
           babelPlugins: [
             [
               transformReplaceExpressions,
               {
-                replaceMap: {
-                  "process.env.NODE_ENV": `("${
-                    scenario === "dev" || scenario === "test" ? "dev" : "prod"
-                  }")`,
-                  "global": "globalThis",
-                  "__filename": `import.meta.url.slice('file:///'.length)`,
-                  "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
-                },
+                replaceMap,
                 allowConflictingReplacements: true,
               },
             ],
@@ -37,10 +39,25 @@ export const jsenvPluginCommonJsGlobals = () => {
           url,
           content,
         })
-        return {
-          content: code,
-          sourcemap: map,
+        const { expressionPaths } = metadata
+        const keys = Object.keys(expressionPaths)
+        if (keys.length === 0) {
+          return null
         }
+        const magicSource = createMagicSource({
+          url,
+          content,
+        })
+        keys.forEach((key) => {
+          expressionPaths[key].forEach((path) => {
+            magicSource.replace({
+              start: path.node.start,
+              end: path.node.end,
+              replacement: replaceMap[key],
+            })
+          })
+        })
+        return magicSource.toContentAndSourcemap()
       },
     },
   }
