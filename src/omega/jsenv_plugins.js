@@ -8,6 +8,7 @@ import { jsenvPluginInlineRessources } from "@jsenv/core/src/omega/plugins/inlin
 import { jsenvPluginAutoreload } from "@jsenv/core/src/omega/plugins/autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginHtmlSupervisor } from "@jsenv/core/src/omega/plugins/html_supervisor/jsenv_plugin_html_supervisor.js"
 import { jsenvPluginCommonJsGlobals } from "@jsenv/core/src/omega/plugins/commonjs_globals/jsenv_plugin_commonjs_globals.js"
+import { jsenvPluginImportAssertions } from "@jsenv/core/src/omega/plugins/import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plugin_babel.js"
 
 export const getJsenvPlugins = () => {
@@ -27,6 +28,7 @@ export const getJsenvPlugins = () => {
     // ...(asFewAsPossible ? [] : [jsenvPluginAutoreload()]),
     // ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
+    ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
     jsenvPluginBabel(),
   ]
 }

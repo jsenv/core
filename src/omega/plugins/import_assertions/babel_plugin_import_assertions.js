@@ -1,38 +1,18 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
-
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
-
 export const babelPluginImportAssertions = (babel, { importTypes }) => {
   return {
-    name: "transform-import-assertions",
+    name: "import-assertions",
     visitor: {
-      Program: (path) => {
-        const importAssertions = collectProgramImportAssertions(path)
-        importAssertions.forEach((importAssertion) => {
-          const assertType = importAssertion.assert.type
-          if (!importTypes.includes(assertType)) {
-            return
-          }
-          const { path } = importAssertion
-          const { node } = path
-          if (node.type === "CallExpression") {
-            forceImportTypeOnUrlSpecifier({
-              babel,
-              importSpecifierPath: path.get("arguments")[0],
-              assertType,
-            })
-            const secondArgPath = path.get("arguments")[1]
-            secondArgPath.remove()
-            return
-          }
-          forceImportTypeOnUrlSpecifier({
-            babel,
-            importSpecifierPath: path.get("source"),
-            assertType,
-          })
-          const assertionsPath = path.get("assertions")[0]
-          assertionsPath.remove()
-        })
+      Program: (programPath, state) => {
+        const importAssertions = collectProgramImportAssertions(programPath)
+        state.file.metadata.importAssertions = importAssertions.filter(
+          (importAssertion) => {
+            const assertType = importAssertion.assert.type
+            if (!importTypes.includes(assertType)) {
+              return false
+            }
+            return true
+          },
+        )
       },
     },
   }
@@ -123,40 +103,4 @@ const collectProgramImportAssertions = (programPath) => {
     },
   })
   return importAssertions
-}
-
-const forceImportTypeOnUrlSpecifier = ({
-  babel,
-  importSpecifierPath,
-  assertType,
-}) => {
-  const specifier = importSpecifierPath.node.value
-  const fakeOrigin = "http://jsenv.com"
-  const url = new URL(specifier, fakeOrigin)
-  const urlWithImportType = injectQueryParams(url, {
-    [`${assertType}_module`]: "",
-  })
-  if (urlWithImportType.startsWith(fakeOrigin)) {
-    // specifier was relative
-    const specifierWithImportType = urlToRelativeUrl(
-      urlWithImportType,
-      fakeOrigin,
-    )
-    replaceUrlSpecifierUsingBabel(`./${specifierWithImportType}`, {
-      babel,
-      importSpecifierPath,
-    })
-    return
-  }
-  replaceUrlSpecifierUsingBabel(urlWithImportType, {
-    babel,
-    importSpecifierPath,
-  })
-}
-
-const replaceUrlSpecifierUsingBabel = (
-  value,
-  { babel, importSpecifierPath },
-) => {
-  importSpecifierPath.replaceWith(babel.types.stringLiteral(value))
 }
