@@ -302,8 +302,8 @@ export const createKitchen = ({
     const dependencyUrlSites = {}
     for (const urlMention of urlMentions) {
       const urlInfo = urlInfoMap.get(url) || {}
-      const specifierUrlSite = await stringifyUrlSite(
-        getOriginalUrlSite({
+      const specifierUrlSite = stringifyUrlSite(
+        await getOriginalUrlSite({
           originalUrl: context.url,
           originalContent: context.originalContent,
           originalLine: urlMention.originalLine,
@@ -421,12 +421,12 @@ export const createKitchen = ({
       if (context.sourcemap) {
         if (sourcemapInjection === "comment") {
           await writeFile(
-            context.sourcemapOutUrl,
+            context.sourcemapUrl,
             JSON.stringify(context.sourcemap, null, "  "),
           )
         } else if (sourcemapInjection === "inline") {
           writeFile(
-            context.sourcemapOutUrl,
+            context.sourcemapUrl,
             JSON.stringify(context.sourcemap, null, "  "),
           )
         }

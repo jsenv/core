@@ -13,7 +13,7 @@ await startDevServer({
   privateKey: serverCertificatePrivateKey,
   projectDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [
-    jsenvPluginPreact(),
+    // jsenvPluginPreact(),
     {
       name: "plugin_throwing",
       appliesDuring: "*",

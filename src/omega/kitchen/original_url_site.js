@@ -21,7 +21,8 @@ export const getOriginalUrlSite = async ({
     if (ownerUrl) {
       return {
         url: ownerUrl,
-        line: ownerLine + line,
+        // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
+        line: ownerLine + line - 1,
         column: ownerColumn + column,
         content: ownerContent,
       }
