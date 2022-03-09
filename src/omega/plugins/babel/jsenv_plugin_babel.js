@@ -72,7 +72,7 @@ export const jsenvPluginBabel = () => {
   const importTypeJson = {
     name: "jsenv:import_type_json",
     appliesDuring: "*",
-    render: ({ url, contentType, content }) => {
+    finalize: ({ url, contentType, content }) => {
       if (!new URL(url).searchParams.has("json_module")) {
         return null
       }
@@ -89,7 +89,7 @@ export const jsenvPluginBabel = () => {
   const importTypeCss = {
     name: "jsenv:import_type_css",
     appliesDuring: "*",
-    render: ({ url, contentType, content }) => {
+    finalize: ({ url, contentType, content }) => {
       if (!new URL(url).searchParams.has("css_module")) {
         return null
       }

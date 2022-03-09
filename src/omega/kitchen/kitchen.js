@@ -404,13 +404,13 @@ export const createKitchen = ({
       context.content = injectSourcemap(context)
     }
 
-    // "render" hook
-    const renderReturnValue = await pluginController.callPluginHooksUntil(
+    // "finalize" hook
+    const finalizeReturnValue = await pluginController.callPluginHooksUntil(
       plugins,
-      "render",
+      "finalize",
       context,
     )
-    updateContents(renderReturnValue)
+    updateContents(finalizeReturnValue)
 
     return context
   }
