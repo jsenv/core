@@ -139,13 +139,26 @@ export const createKitchen = ({
       urlSite,
       url,
     }
+    const urlObject = new URL(url)
+    context.hmr = urlObject.searchParams.has("hmr")
+    // - "hmr" search param goal is to tell hmr is enabled for that url
+    //   this goal is achieved when we reach this part of the code
+    // - "v" search param goal is put url in browser cache or bypass it for hmr
+    //   this goal is achieved when we reach this part of the code
+    // We get rid of both params so that url is consistent and code such as
+    // ressource graph see the same url
+    urlObject.searchParams.delete("v")
+    urlObject.searchParams.delete("hmr")
+    context.url = urlObject.href
+
     currentContext = context
-    context.asClientUrl = (url, parentUrl) => {
-      const hmr = new URL(parentUrl).searchParams.has("hmr")
+    context.asClientUrl = (url) => {
       const urlInfo = urlInfoMap.get(url) || {}
       const { urlVersion } = urlInfo
       const clientUrlRaw = url
-      const hmrTimestamp = hmr ? ressourceGraph.getHmrTimestamp(url) : null
+      const hmrTimestamp = context.hmr
+        ? ressourceGraph.getHmrTimestamp(url)
+        : null
       const params = {}
       if (hmrTimestamp) {
         params.hmr = ""
@@ -178,7 +191,7 @@ export const createKitchen = ({
         }
       }
     })
-    urlInfoMap.set(context.url, urlMeta)
+    urlInfoMap.set(context.url, urlMeta) // ideally we should delete when url is pruned
 
     // "load" hook
     try {
@@ -370,7 +383,7 @@ export const createKitchen = ({
     if (transformUrlMentions) {
       const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
-          const clientUrl = context.asClientUrl(urlMention.url, context.url)
+          const clientUrl = context.asClientUrl(urlMention.url)
           return clientUrl
         },
       })

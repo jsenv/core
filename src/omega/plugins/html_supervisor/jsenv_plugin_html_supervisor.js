@@ -102,7 +102,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           htmlAst,
           createHtmlNode({
             tagName: "script",
-            src: asClientUrl(htmlSupervisorSetupResolvedUrl, url),
+            src: asClientUrl(htmlSupervisorSetupResolvedUrl),
           }),
         )
         const htmlSupervisorResolvedUrl = await resolve({
@@ -110,10 +110,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           specifierType: "js_import_export",
           specifier: htmlSupervisorFileUrl,
         })
-        const htmlSupervisorClientUrl = asClientUrl(
-          htmlSupervisorResolvedUrl,
-          url,
-        )
+        const htmlSupervisorClientUrl = asClientUrl(htmlSupervisorResolvedUrl)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
@@ -141,7 +138,7 @@ export const jsenvPluginHtmlSupervisor = () => {
               node,
               generateCodeToSuperviseScript({
                 type,
-                src: asClientUrl(scriptUrl, url),
+                src: asClientUrl(scriptUrl),
                 integrity,
                 crossorigin,
                 htmlSupervisorClientUrl,

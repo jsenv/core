@@ -22,13 +22,7 @@ export const jsenvPluginAutoreload = () => {
       dev: true,
     },
     transform: {
-      html: async ({
-        projectDirectoryUrl,
-        resolve,
-        asClientUrl,
-        url,
-        content,
-      }) => {
+      html: async ({ projectDirectoryUrl, resolve, asClientUrl, content }) => {
         const htmlAst = parseHtmlString(content)
         const eventSourceResolvedUrl = await resolve({
           parentUrl: projectDirectoryUrl,
@@ -40,7 +34,7 @@ export const jsenvPluginAutoreload = () => {
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: asClientUrl(eventSourceResolvedUrl, url),
+            src: asClientUrl(eventSourceResolvedUrl),
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

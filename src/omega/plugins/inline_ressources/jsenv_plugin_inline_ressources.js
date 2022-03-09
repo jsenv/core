@@ -4,7 +4,6 @@
 
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { asUrlWithoutSearch } from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -50,22 +49,9 @@ export const jsenvPluginInlineRessources = () => {
       })
     })
   }
-  // const getInlineUrlSite = (url) => {
-  //   const urlWithoutSearch = asUrlWithoutSearch(url)
-  //   const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
-  //   return inlineRessource
-  //     ? {
-  //         url: inlineRessource.ownerUrl,
-  //         line: inlineRessource.line,
-  //         column: inlineRessource.column,
-  //         source: inlineRessource.ownerContent,
-  //       }
-  //     : null
-  // }
   const tryResolveInline = ({ parentUrl, specifier }) => {
     const url = new URL(specifier, parentUrl).href
-    const urlWithoutSearch = asUrlWithoutSearch(url)
-    if (inlineRessourceMap.has(urlWithoutSearch)) {
+    if (inlineRessourceMap.has(url)) {
       return url
     }
     return null
@@ -79,8 +65,7 @@ export const jsenvPluginInlineRessources = () => {
       link_href: tryResolveInline,
     },
     load: ({ url }) => {
-      const urlWithoutSearch = asUrlWithoutSearch(url)
-      const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
+      const inlineRessource = inlineRessourceMap.get(url)
       if (!inlineRessource) {
         return null
       }
@@ -90,8 +75,7 @@ export const jsenvPluginInlineRessources = () => {
       }
     },
     deriveMetaFromUrl: ({ url }) => {
-      const urlWithoutSearch = asUrlWithoutSearch(url)
-      const inlineRessource = inlineRessourceMap.get(urlWithoutSearch)
+      const inlineRessource = inlineRessourceMap.get(url)
       if (!inlineRessource) {
         return null
       }
@@ -121,7 +105,7 @@ export const jsenvPluginInlineRessources = () => {
           inlineRessources.push({
             line,
             column,
-            url: asUrlWithoutSearch(inlineStyleUrl),
+            url: inlineStyleUrl,
             contentType: "text/css",
             content: textNode.value,
           })
@@ -160,7 +144,7 @@ export const jsenvPluginInlineRessources = () => {
           inlineRessources.push({
             line,
             column,
-            url: asUrlWithoutSearch(inlineScriptUrl),
+            url: inlineScriptUrl,
             contentType:
               scriptCategory === "importmap"
                 ? "application/importmap+json"

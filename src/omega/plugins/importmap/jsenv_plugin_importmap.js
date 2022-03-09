@@ -24,7 +24,6 @@ import {
 } from "@jsenv/importmap"
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { asUrlWithoutSearch } from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -52,16 +51,14 @@ const jsenvPluginImportmapSupervisor = () => {
     appliesDuring: "*",
     resolve: ({ parentUrl, specifier }) => {
       const url = new URL(specifier, parentUrl).href
-      const urlWithoutSearch = asUrlWithoutSearch(url)
-      const importmapContent = importmapContents[urlWithoutSearch]
+      const importmapContent = importmapContents[url]
       if (importmapContent) {
         return url
       }
       return null
     },
     load: ({ url }) => {
-      const urlWithoutSearch = asUrlWithoutSearch(url)
-      const importmapContent = importmapContents[urlWithoutSearch]
+      const importmapContent = importmapContents[url]
       if (!importmapContent) {
         return null
       }

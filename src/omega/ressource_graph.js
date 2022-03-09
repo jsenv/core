@@ -20,17 +20,11 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!ressource) {
       return null
     }
-    const dependencyUrlSite =
-      ressource.dependencyUrlSites[asUrlWithoutHmrSearchParams(dependencyUrl)]
+    const dependencyUrlSite = ressource.dependencyUrlSites[dependencyUrl]
     if (!dependencyUrlSite) {
       return null
     }
     return dependencyUrlSite
-  }
-
-  const applyUrlResolution = (specifier, baseUrl) => {
-    const url = new URL(specifier, baseUrl).href
-    return asUrlWithoutHmrSearchParams(url)
   }
 
   const getHmrTimestamp = (url) => {
@@ -57,7 +51,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     hotAcceptSelf,
     hotAcceptDependencies,
   }) => {
-    url = asUrlWithoutHmrSearchParams(url)
     const existingRessource = getRessourceByUrl(url)
     const ressource =
       existingRessource || (ressources[url] = createRessource(url))
@@ -326,7 +319,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     getRessourceByUrl,
     getUrlSite,
     findDependent,
-    applyUrlResolution,
 
     toJSON: () => {
       const data = {}
@@ -342,16 +334,6 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       return data
     },
   }
-}
-
-const asUrlWithoutHmrSearchParams = (url) => {
-  const urlObject = new URL(url)
-  if (urlObject.searchParams.has("hmr")) {
-    urlObject.searchParams.delete("hmr")
-    urlObject.searchParams.delete("v")
-    return urlObject.href
-  }
-  return url
 }
 
 const createRessource = (url) => {
