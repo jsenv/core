@@ -93,6 +93,9 @@ const applyHotReload = async ({ hotInstructions }) => {
       }
       const urlToFetch = new URL(boundary, `${window.location.origin}/`).href
       const urlHotMeta = urlHotMetas[urlToFetch]
+      // TODO: we should return when there is no url hot meta because
+      // it means code was not executed (code splitting with dynamic import)
+      // if (!urlHotMeta) {return }
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         console.log(`call dispose callback`)
         await urlHotMeta.disposeCallback()
