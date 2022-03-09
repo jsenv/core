@@ -96,7 +96,7 @@ export const jsenvPluginHtmlSupervisor = () => {
         })
         htmlSupervisorSetupResolvedUrl = injectQueryParams(
           htmlSupervisorSetupResolvedUrl,
-          { script: "" },
+          { js_classic: "" },
         )
         injectScriptAsEarlyAsPossible(
           htmlAst,
@@ -128,7 +128,7 @@ export const jsenvPluginHtmlSupervisor = () => {
               specifier: src,
             })
             if (type === "classic") {
-              scriptUrl = injectQueryParams(scriptUrl, { script: "" })
+              scriptUrl = injectQueryParams(scriptUrl, { js_classic: "" })
             }
             removeHtmlNodeAttributeByName(node, "src")
             assignHtmlNodeAttributes(node, {

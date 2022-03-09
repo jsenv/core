@@ -1,3 +1,11 @@
+/*
+ * TOFIX: for some reason
+ * the url of
+ * import { installPrefresh } from "url"
+ * is not versioned when page load for the first time
+ * then becomes versioned on hmr breaking the hmr
+ */
+
 import { fileURLToPath } from "node:url"
 import { urlIsInsideOf, writeFile, urlToRelativeUrl } from "@jsenv/filesystem"
 
@@ -477,7 +485,23 @@ const getRessourceType = ({ url, contentType }) => {
     return "css"
   }
   if (contentType === "application/javascript") {
-    return new URL(url).searchParams.has("script") ? "js_classic" : "js_module"
+    const urlObject = new URL(url)
+    if (urlObject.searchParams.has("js_classic")) {
+      return "js_classic"
+    }
+    if (urlObject.searchParams.has("worker_classic")) {
+      return "worker_classic"
+    }
+    if (urlObject.searchParams.has("worker_module")) {
+      return "worker_module"
+    }
+    if (urlObject.searchParams.has("service_worker_classic")) {
+      return "service_worker_classic"
+    }
+    if (urlObject.searchParams.has("service_worker_module")) {
+      return "service_worker_module"
+    }
+    return "js_module"
   }
   if (contentType === "application/json") {
     return "json"
