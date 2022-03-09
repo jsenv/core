@@ -35,7 +35,14 @@ export const jsenvPluginImportAssertions = () => {
             url,
             content,
           })
-          const { importAssertions } = metadata
+          let { importAssertions } = metadata
+          importAssertions = importAssertions.filter((importAssertion) => {
+            const assertType = importAssertion.assert.type
+            if (!importTypes.includes(assertType)) {
+              return false
+            }
+            return true
+          })
           if (importAssertions.length === 0) {
             return null
           }

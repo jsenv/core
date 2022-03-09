@@ -1,18 +1,10 @@
-export const babelPluginImportAssertions = (babel, { importTypes }) => {
+export const babelPluginImportAssertions = () => {
   return {
     name: "import-assertions",
     visitor: {
       Program: (programPath, state) => {
         const importAssertions = collectProgramImportAssertions(programPath)
-        state.file.metadata.importAssertions = importAssertions.filter(
-          (importAssertion) => {
-            const assertType = importAssertion.assert.type
-            if (!importTypes.includes(assertType)) {
-              return false
-            }
-            return true
-          },
-        )
+        state.file.metadata.importAssertions = importAssertions
       },
     },
   }
