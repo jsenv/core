@@ -225,6 +225,12 @@ export const createKitchen = ({
       })
       return context
     }
+    context.outUrl = determineFileUrlForOutDirectory({
+      projectDirectoryUrl,
+      outDirectoryName,
+      scenario,
+      url: context.url,
+    })
 
     // sourcemap loading
     if (context.contentType === "application/javascript") {
@@ -286,12 +292,6 @@ export const createKitchen = ({
     }
 
     // parsing + "parsed" hook
-    const fileOutUrl = determineFileUrlForOutDirectory({
-      projectDirectoryUrl,
-      outDirectoryName,
-      scenario,
-      url: context.url,
-    })
     const parser = parsers[context.type]
     const {
       urlMentions = [],
@@ -312,7 +312,7 @@ export const createKitchen = ({
           ownerLine: urlInfo.ownerLine,
           ownerColumn: urlInfo.ownerColumn,
           ownerContent: urlInfo.ownerContent,
-          url: fileOutUrl,
+          url: context.outUrl,
           content: context.content,
           line: urlMention.line,
           column: urlMention.column,
@@ -392,7 +392,7 @@ export const createKitchen = ({
 
     // sourcemap injection
     const { sourcemap } = context
-    if (sourcemap && sourcemapInjection === "comment") {
+    if (sourcemap) {
       const sourcemapUrl = generateSourcemapUrl(context.url)
       const sourcemapOutUrl = determineFileUrlForOutDirectory({
         projectDirectoryUrl,
@@ -401,10 +401,6 @@ export const createKitchen = ({
         url: sourcemapUrl,
       })
       context.sourcemapUrl = sourcemapOutUrl
-      context.content = injectSourcemap(context)
-      await writeFile(sourcemapOutUrl, JSON.stringify(sourcemap, null, "  "))
-    } else if (sourcemap && sourcemapInjection === "inline") {
-      context.sourcemapUrl = generateSourcemapUrl(context.url)
       context.content = injectSourcemap(context)
     }
 
@@ -416,14 +412,29 @@ export const createKitchen = ({
     )
     updateContents(renderReturnValue)
 
-    // writing result inside ".jsenv" directory (debug purposes)
-    writeFile(fileOutUrl, context.content)
-
     return context
   }
   const cookUrl = async (params) => {
     try {
-      return await _cookUrl(params)
+      const context = await _cookUrl(params)
+      // writing result inside ".jsenv" directory (debug purposes)
+      if (context.sourcemap) {
+        if (sourcemapInjection === "comment") {
+          await writeFile(
+            context.sourcemapOutUrl,
+            JSON.stringify(context.sourcemap, null, "  "),
+          )
+        } else if (sourcemapInjection === "inline") {
+          writeFile(
+            context.sourcemapOutUrl,
+            JSON.stringify(context.sourcemap, null, "  "),
+          )
+        }
+      }
+      if (context.outUrl) {
+        writeFile(context.outUrl, context.content)
+      }
+      return context
     } catch (e) {
       throw e
     }
