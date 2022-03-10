@@ -29,7 +29,7 @@ export const createResolveError = ({
     })
   }
   return createFailedToResolveError({
-    reason: `An error occured during "resolve"`,
+    reason: `An error occured during specifier resolution`,
     ...detailsFromValueThrown(error),
   })
 }

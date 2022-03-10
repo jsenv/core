@@ -11,20 +11,21 @@ import { jsenvPluginCommonJsGlobals } from "@jsenv/core/src/omega/plugins/common
 import { jsenvPluginImportAssertions } from "@jsenv/core/src/omega/plugins/import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plugin_babel.js"
 
-export const getJsenvPlugins = () => {
+export const getJsenvPlugins = ({ projectDirectoryUrl }) => {
   const asFewAsPossible = false // useful during dev
   return [
-    // "inline ressources" must come before "filesystem magic"
-    // otherwise it will try to read inline files
-    ...(asFewAsPossible ? [] : [jsenvPluginInlineRessources()]),
-    ...(asFewAsPossible ? [] : [jsenvPluginFileSystemMagic()]),
-    jsenvPluginImportmap(), // must come before node esm to catch "js_import_export"
-    jsenvPluginNodeEsmResolution(), // must come before url resolution to catch "js_import_export"
+    // url resolution
+    ...(asFewAsPossible ? [] : [jsenvPluginInlineRessources()]), // must come first to resolve inline urls
+    jsenvPluginImportmap(), // must come before node esm to handle bare specifiers before node esm
+    jsenvPluginNodeEsmResolution({
+      projectDirectoryUrl,
+    }), // must come before url resolution to handle "js_import_export" resolution
     jsenvPluginUrlResolution(),
-    // load
+    ...(asFewAsPossible ? [] : [jsenvPluginFileSystemMagic()]),
+    // url loading
     jsenvPluginDataUrls(),
     jsenvPluginFileUrls(),
-    // transform
+    // content transformation
     ...(asFewAsPossible ? [] : [jsenvPluginAutoreload()]),
     ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),

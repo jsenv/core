@@ -72,22 +72,16 @@ export const jsenvPluginInlineRessources = () => {
       return {
         contentType: inlineRessource.contentType,
         content: inlineRessource.content,
-      }
-    },
-    deriveMetaFromUrl: ({ url }) => {
-      const inlineRessource = inlineRessourceMap.get(url)
-      if (!inlineRessource) {
-        return null
-      }
-      return {
-        ownerUrl: inlineRessource.ownerUrl,
-        ownerLine: inlineRessource.line,
-        ownerColumn: inlineRessource.column,
-        ownerContent: inlineRessource.ownerContent,
+        parentUrlSite: {
+          url: inlineRessource.ownerUrl,
+          line: inlineRessource.line,
+          column: inlineRessource.column,
+          content: inlineRessource.ownerContent,
+        },
       }
     },
     transform: {
-      html: async ({ url, originalContent, content }) => {
+      html: ({ resolveSpecifier, url, originalContent, content }) => {
         const htmlAst = parseHtmlString(content)
         const inlineRessources = []
         const handleInlineStyle = (node) => {
@@ -101,7 +95,11 @@ export const jsenvPluginInlineRessources = () => {
           const { line, column } = htmlNodePosition.readNodePosition(node)
           const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
           let inlineStyleSpecifier = `${urlToFilename(url)}@${inlineStyleId}.js`
-          const inlineStyleUrl = new URL(inlineStyleSpecifier, url).href
+          const inlineStyleUrl = resolveSpecifier({
+            parentUrl: url,
+            specifierType: "link_href",
+            specifier: inlineStyleSpecifier,
+          })
           inlineRessources.push({
             line,
             column,
@@ -137,10 +135,14 @@ export const jsenvPluginInlineRessources = () => {
           let inlineScriptSpecifier = `${urlToFilename(
             url,
           )}@${inlineScriptId}.js`
-          if (scriptCategory === "classic") {
-            inlineScriptSpecifier = `${inlineScriptSpecifier}?script`
-          }
-          const inlineScriptUrl = new URL(inlineScriptSpecifier, url).href
+          const inlineScriptUrl = resolveSpecifier({
+            parentUrl: url,
+            specifierType: "script_src",
+            specifier:
+              scriptCategory === "classic"
+                ? `${inlineScriptSpecifier}?js_classic`
+                : inlineScriptSpecifier,
+          })
           inlineRessources.push({
             line,
             column,

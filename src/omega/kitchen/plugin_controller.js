@@ -115,7 +115,7 @@ export const createPluginController = () => {
 const returnValueAssertions = [
   {
     name: "url_assertion",
-    appliesTo: ["resolve"],
+    appliesTo: ["resolve", "redirect"],
     assertion: (valueReturned) => {
       if (valueReturned instanceof URL) {
         return valueReturned.href

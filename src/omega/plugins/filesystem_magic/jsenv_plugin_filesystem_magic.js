@@ -14,11 +14,10 @@ export const jsenvPluginFileSystemMagic = ({
   return {
     name: "jsenv:filesystem_magic",
     appliesDuring: "*",
-    resolve: async ({ resolve, parentUrl }) => {
-      const url = await resolve()
+    redirect: ({ url, parentUrl }) => {
       // http, https, data, about, etc
       if (!url.startsWith("file:")) {
-        return url
+        return null
       }
       const urlObject = new URL(url)
       const { search, hash } = urlObject

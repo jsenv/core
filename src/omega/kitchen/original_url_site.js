@@ -7,10 +7,7 @@ export const getOriginalUrlSite = async ({
   originalContent,
   originalLine,
   originalColumn,
-  ownerUrl,
-  ownerLine,
-  ownerColumn,
-  ownerContent,
+  parentUrlSite,
   url,
   content,
   line,
@@ -18,13 +15,13 @@ export const getOriginalUrlSite = async ({
   sourcemap,
 }) => {
   const adjustIfInline = ({ url, content, line, column }) => {
-    if (ownerUrl) {
+    if (parentUrlSite) {
       return {
-        url: ownerUrl,
+        url: parentUrlSite.url,
         // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
-        line: ownerLine + line - 1,
-        column: ownerColumn + column,
-        content: ownerContent,
+        line: parentUrlSite.line + line - 1,
+        column: parentUrlSite.column + column,
+        content: parentUrlSite.content,
       }
     }
     return {

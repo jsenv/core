@@ -22,9 +22,14 @@ export const jsenvPluginAutoreload = () => {
       dev: true,
     },
     transform: {
-      html: async ({ projectDirectoryUrl, resolve, asClientUrl, content }) => {
+      html: async ({
+        projectDirectoryUrl,
+        resolveSpecifier,
+        asClientUrl,
+        content,
+      }) => {
         const htmlAst = parseHtmlString(content)
-        const eventSourceResolvedUrl = await resolve({
+        const eventSourceResolvedUrl = resolveSpecifier({
           parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
           specifier: eventSourceFileUrl,

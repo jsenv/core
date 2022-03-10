@@ -14,9 +14,10 @@ import {
 } from "@jsenv/core/packages/node-esm-resolution/main.js"
 
 export const jsenvPluginNodeEsmResolution = ({
+  projectDirectoryUrl,
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = ["browser", "import"],
-} = {}) => {
+}) => {
   const nodeEsmResolution = {
     name: "jsenv:node_esm_resolve",
     appliesDuring: "*",
@@ -46,7 +47,7 @@ export const jsenvPluginNodeEsmResolution = ({
       dev: true,
       test: true,
     },
-    deriveMetaFromUrl: ({ projectDirectoryUrl, url }) => {
+    redirect: (url) => {
       if (!url.startsWith("file:")) {
         return null
       }
@@ -54,6 +55,10 @@ export const jsenvPluginNodeEsmResolution = ({
       // could be considered as a node module if there is a ancestor package.json
       // but we want to version only node modules
       if (!url.includes("/node_modules/")) {
+        return null
+      }
+      const urlObject = new URL(url)
+      if (urlObject.searchParams.has("v")) {
         return null
       }
       const packageUrl = lookupPackageScope(url)
@@ -64,7 +69,8 @@ export const jsenvPluginNodeEsmResolution = ({
         return null
       }
       const packageVersion = readPackageJson(packageUrl).version
-      return { urlVersion: packageVersion }
+      urlObject.searchParams.set("v", packageVersion)
+      return urlObject.href
     },
   }
 

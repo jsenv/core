@@ -55,12 +55,16 @@ export const createKitchen = ({
   sourcemapInjection,
   ressourceGraph,
 }) => {
-  plugins = [...plugins, ...getJsenvPlugins()]
+  plugins = [
+    ...plugins,
+    ...getJsenvPlugins({
+      projectDirectoryUrl,
+    }),
+  ]
   plugins = flattenAndFilterPlugins(plugins, {
     scenario,
   })
 
-  const urlInfoMap = new Map()
   const baseContext = {
     signal,
     logger,
@@ -73,7 +77,7 @@ export const createKitchen = ({
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
 
-  const resolveSpecifier = async ({ parentUrl, specifierType, specifier }) => {
+  const resolveSpecifier = ({ parentUrl, specifierType, specifier }) => {
     if (specifier.startsWith("/@fs/")) {
       const url = new URL(specifier.slice("/@fs".length), projectDirectoryUrl)
         .href
@@ -89,28 +93,41 @@ export const createKitchen = ({
       parentUrl,
       specifierType,
       specifier,
-      // when "resolve" is called during resolve hook
+      // when "resolveSpecifier" is called during resolve hook
       // apply other plugin resolve hooks
-      resolve: () => {
+      resolveSpecifier: () => {
         pluginsToIgnore.push(pluginController.getCurrentPlugin())
         return callResolveHooks(
           plugins.filter((plugin) => !pluginsToIgnore.includes(plugin)),
         )
       },
     }
-    const callResolveHooks = async (pluginsSubset) => {
-      const resolveReturnValue = await pluginController.callPluginHooksUntil(
-        pluginsSubset,
-        "resolve",
-        contextDuringResolve,
-      )
-      if (!resolveReturnValue) {
-        return null
+    const callResolveHooks = (pluginsSubset) => {
+      for (const plugin of pluginsSubset) {
+        const resolveReturnValue = pluginController.callPluginSyncHook(
+          plugin,
+          "resolve",
+          contextDuringResolve,
+        )
+        if (resolveReturnValue) {
+          return resolveReturnValue
+        }
       }
-      const url = String(resolveReturnValue)
-      return url
+      return null
     }
-    const url = await callResolveHooks(plugins)
+    let url = callResolveHooks(plugins)
+    if (url) {
+      plugins.forEach((plugin) => {
+        const redirectReturnValue = pluginController.callPluginSyncHook(
+          plugin,
+          "redirect",
+          url,
+        )
+        if (redirectReturnValue) {
+          url = redirectReturnValue
+        }
+      })
+    }
     return url
   }
 
@@ -124,7 +141,7 @@ export const createKitchen = ({
   }) => {
     const context = {
       ...baseContext,
-      resolve: resolveSpecifier,
+      resolveSpecifier,
       cookUrl: async ({ parentUrl, urlSite, url }) => {
         const returnValue = await cookUrl({
           outDirectoryName,
@@ -162,8 +179,6 @@ export const createKitchen = ({
 
     currentContext = context
     context.asClientUrl = (url) => {
-      const urlInfo = urlInfoMap.get(url) || {}
-      const { urlVersion } = urlInfo
       const clientUrlRaw = url
       const hmrTimestamp = context.hmr
         ? ressourceGraph.getHmrTimestamp(url)
@@ -172,8 +187,6 @@ export const createKitchen = ({
       if (hmrTimestamp) {
         params.hmr = ""
         params.v = hmrTimestamp
-      } else if (urlVersion) {
-        params.v = urlVersion
       }
       const clientUrl = injectQueryParams(clientUrlRaw, params)
       if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
@@ -184,23 +197,6 @@ export const createKitchen = ({
       }
       return `${clientUrl}`
     }
-
-    // "deriveMetaFromUrl" hook
-    let urlMeta = {}
-    plugins.forEach((plugin) => {
-      const urlMetaFromPlugin = pluginController.callPluginSyncHook(
-        plugin,
-        "deriveMetaFromUrl",
-        context,
-      )
-      if (urlMetaFromPlugin) {
-        urlMeta = {
-          ...urlMeta,
-          ...urlMetaFromPlugin,
-        }
-      }
-    })
-    urlInfoMap.set(context.url, urlMeta) // ideally we should delete when url is pruned
 
     // "load" hook
     try {
@@ -216,6 +212,7 @@ export const createKitchen = ({
         response,
         contentType = "application/octet-stream",
         content, // can be a buffer (used for binary files) or a string
+        parentUrlSite,
       } = loadReturnValue
       if (response) {
         context.response = response
@@ -225,6 +222,7 @@ export const createKitchen = ({
       context.type = getRessourceType(context)
       context.originalContent = content
       context.content = content
+      context.parentUrlSite = parentUrlSite
     } catch (error) {
       context.error = createLoadError({
         pluginController,
@@ -300,7 +298,7 @@ export const createKitchen = ({
       return context
     }
 
-    // parsing + "parsed" hook
+    // parsing
     const parser = parsers[context.type]
     const {
       urlMentions = [],
@@ -310,16 +308,12 @@ export const createKitchen = ({
     const dependencyUrls = []
     const dependencyUrlSites = {}
     for (const urlMention of urlMentions) {
-      const urlInfo = urlInfoMap.get(url) || {}
       const specifierUrlSiteRaw = await getOriginalUrlSite({
         originalUrl: context.url,
         originalContent: context.originalContent,
         originalLine: urlMention.originalLine,
         originalColumn: urlMention.originalColumn,
-        ownerUrl: urlInfo.ownerUrl,
-        ownerLine: urlInfo.ownerLine,
-        ownerColumn: urlInfo.ownerColumn,
-        ownerContent: urlInfo.ownerContent,
+        parentUrlSite: context.parentUrlSite,
         url: context.outUrl,
         content: context.content,
         line: urlMention.line,
@@ -329,7 +323,7 @@ export const createKitchen = ({
       const specifierUrlSite = stringifyUrlSite(specifierUrlSiteRaw)
 
       try {
-        const resolvedUrl = await resolveSpecifier({
+        const resolvedUrl = resolveSpecifier({
           parentUrl: context.url,
           specifierType: urlMention.type,
           specifier: urlMention.specifier,
@@ -370,24 +364,6 @@ export const createKitchen = ({
       hotAcceptSelf,
       hotAcceptDependencies,
     })
-    await plugins.reduce(async (previous, plugin) => {
-      await previous
-      const cookedReturnValue = await pluginController.callPluginHook(
-        plugin,
-        "cooked",
-        context,
-      )
-      if (typeof cookedReturnValue === "function") {
-        const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
-          (prunedRessource) => {
-            if (prunedRessource.url === context.url) {
-              removePrunedCallback()
-              cookedReturnValue()
-            }
-          },
-        )
-      }
-    }, Promise.resolve())
     if (transformUrlMentions) {
       const transformReturnValue = await transformUrlMentions({
         transformUrlMention: (urlMention) => {
@@ -420,6 +396,25 @@ export const createKitchen = ({
     )
     updateContents(finalizeReturnValue)
 
+    // "cooked" hook
+    plugins.forEach((plugin) => {
+      const cookedReturnValue = pluginController.callPluginSyncHook(
+        plugin,
+        "cooked",
+        context,
+      )
+      if (typeof cookedReturnValue === "function") {
+        const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
+          (prunedRessource) => {
+            if (prunedRessource.url === context.url) {
+              removePrunedCallback()
+              cookedReturnValue()
+            }
+          },
+        )
+      }
+    })
+
     return context
   }
   const cookUrl = async (params) => {
@@ -448,7 +443,7 @@ export const createKitchen = ({
     }
   }
   const loadSourcemap = async ({ parentUrl, specifierType, specifier }) => {
-    const sourcemapUrl = await resolveSpecifier({
+    const sourcemapUrl = resolveSpecifier({
       parentUrl,
       specifierType,
       specifier,

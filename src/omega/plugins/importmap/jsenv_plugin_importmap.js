@@ -68,7 +68,7 @@ const jsenvPluginImportmapSupervisor = () => {
       }
     },
     transform: {
-      html: async ({ cookUrl, url, content }) => {
+      html: async ({ resolveSpecifier, cookUrl, url, content }) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
@@ -89,7 +89,11 @@ const jsenvPluginImportmapSupervisor = () => {
           let inlineImportmapSpecifier = `${urlToFilename(
             url,
           )}@${inlineImportmapId}.importmap`
-          const importmapUrl = new URL(inlineImportmapSpecifier, url).href
+          const importmapUrl = resolveSpecifier({
+            parentUrl: url,
+            specifierType: "script_src",
+            specifier: inlineImportmapSpecifier,
+          })
           importmapContents[importmapUrl] = textNode.value
           const importmapContext = await cookUrl({
             parentUrl: url,
@@ -106,9 +110,14 @@ const jsenvPluginImportmapSupervisor = () => {
         const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")
         const src = srcAttribute ? srcAttribute.value : undefined
         if (src) {
+          const importmapUrl = resolveSpecifier({
+            parentUrl: url,
+            specifierType: "script_src",
+            specifier: src,
+          })
           const importmapRessource = await cookUrl({
             parentUrl: url,
-            url: new URL(src, url).href,
+            url: importmapUrl,
           })
           removeHtmlNodeAttributeByName(importmap, "src")
           assignHtmlNodeAttributes(importmap, {
@@ -160,7 +169,7 @@ const jsenvPluginImportmapResolution = () => {
           let fromMapping = false
           const result = resolveImport({
             specifier,
-            importer: String(parentUrl),
+            importer: parentUrl,
             importMap: importmap,
             onImportMapping: () => {
               fromMapping = true

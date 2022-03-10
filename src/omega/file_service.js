@@ -43,7 +43,7 @@ export const createFileService = ({
       [runtimeName]: runtimeVersion,
     }
     const parentUrl = inferParentFromRequest(request, projectDirectoryUrl)
-    const url = await kitchen.resolveSpecifier({
+    const url = kitchen.resolveSpecifier({
       parentUrl,
       specifierType: "http_request",
       specifier: request.ressource,

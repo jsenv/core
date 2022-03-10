@@ -35,9 +35,9 @@ export const jsenvPluginHtmlSupervisor = () => {
       test: true,
     },
     transform: {
-      html: async ({
+      html: ({
         projectDirectoryUrl,
-        resolve,
+        resolveSpecifier,
         asClientUrl,
         url,
         content,
@@ -89,7 +89,7 @@ export const jsenvPluginHtmlSupervisor = () => {
         if (scriptsToSupervise.length === 0) {
           return null
         }
-        let htmlSupervisorSetupResolvedUrl = await resolve({
+        let htmlSupervisorSetupResolvedUrl = resolveSpecifier({
           parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
           specifier: htmlSupervisorSetupFileUrl,
@@ -105,7 +105,7 @@ export const jsenvPluginHtmlSupervisor = () => {
             src: asClientUrl(htmlSupervisorSetupResolvedUrl),
           }),
         )
-        const htmlSupervisorResolvedUrl = await resolve({
+        const htmlSupervisorResolvedUrl = resolveSpecifier({
           parentUrl: projectDirectoryUrl,
           specifierType: "js_import_export",
           specifier: htmlSupervisorFileUrl,
@@ -119,10 +119,9 @@ export const jsenvPluginHtmlSupervisor = () => {
             src: htmlSupervisorClientUrl,
           }),
         )
-        await scriptsToSupervise.reduce(
-          async (previous, { node, type, src, integrity, crossorigin }) => {
-            await previous
-            let scriptUrl = await resolve({
+        scriptsToSupervise.forEach(
+          ({ node, type, src, integrity, crossorigin }) => {
+            let scriptUrl = resolveSpecifier({
               parentUrl: url,
               specifierType: "script_src",
               specifier: src,
@@ -145,7 +144,6 @@ export const jsenvPluginHtmlSupervisor = () => {
               }),
             )
           },
-          Promise.resolve(),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)
         return {
