@@ -47,7 +47,7 @@ export const jsenvPluginNodeEsmResolution = ({
       dev: true,
       test: true,
     },
-    redirect: (url) => {
+    redirect: ({ url }) => {
       if (!url.startsWith("file:")) {
         return null
       }

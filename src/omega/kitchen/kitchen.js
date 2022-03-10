@@ -115,20 +115,20 @@ export const createKitchen = ({
       }
       return null
     }
-    let url = callResolveHooks(plugins)
-    if (url) {
+    contextDuringResolve.url = callResolveHooks(plugins)
+    if (contextDuringResolve.url) {
       plugins.forEach((plugin) => {
         const redirectReturnValue = pluginController.callPluginSyncHook(
           plugin,
           "redirect",
-          url,
+          contextDuringResolve,
         )
         if (redirectReturnValue) {
-          url = redirectReturnValue
+          contextDuringResolve.url = redirectReturnValue
         }
       })
     }
-    return url
+    return contextDuringResolve.url
   }
 
   let currentContext

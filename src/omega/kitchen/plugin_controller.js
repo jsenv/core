@@ -31,56 +31,32 @@ export const createPluginController = () => {
   let currentPlugin = null
   let currentHookName = null
 
-  const callPluginHook = async (plugin, hookName, params) => {
-    let hook = plugin[hookName]
+  const callPluginHook = async (plugin, hookName, context) => {
+    const hook = getPluginHook(plugin, hookName, context)
     if (!hook) {
       return null
     }
-    if (typeof hook === "object") {
-      hook = hook[hookName === "resolve" ? params.specifierType : params.type]
-      if (!hook) {
-        return null
-      }
-    }
     currentPlugin = plugin
     currentHookName = hookName
-    let valueReturned = await hook(params)
-    // all hooks are allowed to return null/undefined
-    if (valueReturned !== null && valueReturned !== undefined) {
-      for (const returnValueAssertion of returnValueAssertions) {
-        if (!returnValueAssertion.appliesTo.includes(hookName)) {
-          continue
-        }
-        const assertionResult = returnValueAssertion.assertion(valueReturned)
-        if (assertionResult !== undefined) {
-          // normalization
-          valueReturned = assertionResult
-          break
-        }
-      }
-    }
+    let valueReturned = await hook(context)
+    valueReturned = assertAndNormalizeReturnValue(hookName, valueReturned)
     currentPlugin = null
     currentHookName = null
     return valueReturned
   }
 
-  const callPluginSyncHook = (plugin, hookName, params) => {
-    let hook = plugin[hookName]
+  const callPluginSyncHook = (plugin, hookName, context) => {
+    const hook = getPluginHook(plugin, hookName, context)
     if (!hook) {
       return null
     }
-    if (typeof hook === "object") {
-      hook = hook[params.type]
-      if (!hook) {
-        return null
-      }
-    }
     currentPlugin = plugin
     currentHookName = hookName
-    const returnValue = hook(params)
+    let valueReturned = hook(context)
+    valueReturned = assertAndNormalizeReturnValue(hookName, valueReturned)
     currentPlugin = null
     currentHookName = null
-    return returnValue
+    return valueReturned
   }
 
   const callPluginHooksUntil = (plugins, hookName, params) => {
@@ -110,6 +86,50 @@ export const createPluginController = () => {
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName,
   }
+}
+
+const getPluginHook = (plugin, hookName, context) => {
+  const hook = plugin[hookName]
+  if (!hook) {
+    return null
+  }
+  if (typeof hook === "function") {
+    return hook
+  }
+  if (typeof hook === "object") {
+    if (hookName === "resolve" || hookName === "redirect") {
+      const hookForSpecifier = hook[context.specifierType]
+      if (!hookForSpecifier) {
+        return null
+      }
+      return hookForSpecifier
+    }
+    const hookForType = hook[context.type]
+    if (!hookForType) {
+      return null
+    }
+    return hookForType
+  }
+  return null
+}
+
+const assertAndNormalizeReturnValue = (hookName, returnValue) => {
+  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
+  if (returnValue === null || returnValue === undefined) {
+    return returnValue
+  }
+  for (const returnValueAssertion of returnValueAssertions) {
+    if (!returnValueAssertion.appliesTo.includes(hookName)) {
+      continue
+    }
+    const assertionResult = returnValueAssertion.assertion(returnValue)
+    if (assertionResult !== undefined) {
+      // normalization
+      returnValue = assertionResult
+      break
+    }
+  }
+  return returnValue
 }
 
 const returnValueAssertions = [
