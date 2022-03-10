@@ -28,6 +28,12 @@ export const createMagicSource = ({ url, content }) => {
       })
     },
     toContentAndSourcemap: () => {
+      if (mutations.length === 0) {
+        return {
+          content,
+          sourcemap: null,
+        }
+      }
       const magicString = new MagicString(content)
       mutations.forEach((mutation) => {
         mutation(magicString)

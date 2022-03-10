@@ -1,6 +1,6 @@
-export const babelPluginImportAssertions = () => {
+export const babelPluginMetadataImportAssertions = () => {
   return {
-    name: "import-assertions",
+    name: "metadata-import-assertions",
     visitor: {
       Program: (programPath, state) => {
         const importAssertions = collectProgramImportAssertions(programPath)

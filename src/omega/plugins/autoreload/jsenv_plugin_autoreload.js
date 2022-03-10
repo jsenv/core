@@ -5,6 +5,9 @@ import {
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
+import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
+
+import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
 export const jsenvPluginAutoreload = () => {
   const eventSourceFileUrl = new URL(
@@ -47,12 +50,15 @@ export const jsenvPluginAutoreload = () => {
           content: htmlModified,
         }
       },
-      js_module: async ({ url, content }) => {
-        // The simplicity content.includes() is seducing
-        // (The counter part would be to parse js ast and search nodes for import.meta.hot)
-        // Yes it means if code contains import.meta.hot in a comment, it will be instrumented
-        // but this is unlikely to happen and would not have special consequences
-        if (!content.includes("import.meta.hot")) {
+      js_module: async ({ parentUrlSite, url, content }) => {
+        const { metadata } = await applyBabelPlugins({
+          babelPlugins: [babelPluginMetadataImportMetaHot],
+          parentUrlSite,
+          url,
+          content,
+        })
+        const { importMetaHotDetected } = metadata
+        if (!importMetaHotDetected) {
           return null
         }
         // For some reason using magic source here produce

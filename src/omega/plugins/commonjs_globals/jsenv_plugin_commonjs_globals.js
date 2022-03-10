@@ -10,7 +10,7 @@
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 
-import { transformReplaceExpressions } from "./babel_plugin_transform_replace_expressions.js"
+import { babelPluginMetadataExpressionPaths } from "./babel_plugin_metadata_expression_paths.js"
 
 export const jsenvPluginCommonJsGlobals = () => {
   return {
@@ -29,7 +29,7 @@ export const jsenvPluginCommonJsGlobals = () => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [
             [
-              transformReplaceExpressions,
+              babelPluginMetadataExpressionPaths,
               {
                 replaceMap,
                 allowConflictingReplacements: true,

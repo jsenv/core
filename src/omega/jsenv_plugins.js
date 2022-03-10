@@ -9,6 +9,7 @@ import { jsenvPluginAutoreload } from "@jsenv/core/src/omega/plugins/autoreload/
 import { jsenvPluginHtmlSupervisor } from "@jsenv/core/src/omega/plugins/html_supervisor/jsenv_plugin_html_supervisor.js"
 import { jsenvPluginCommonJsGlobals } from "@jsenv/core/src/omega/plugins/commonjs_globals/jsenv_plugin_commonjs_globals.js"
 import { jsenvPluginImportAssertions } from "@jsenv/core/src/omega/plugins/import_assertions/jsenv_plugin_import_assertions.js"
+import { jsenvPluginImportMetaScenarios } from "@jsenv/core/src/omega/plugins/import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plugin_babel.js"
 
 export const getJsenvPlugins = ({ projectDirectoryUrl }) => {
@@ -30,6 +31,7 @@ export const getJsenvPlugins = ({ projectDirectoryUrl }) => {
     ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
+    ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
     jsenvPluginBabel(),
   ]
 }

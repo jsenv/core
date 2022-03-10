@@ -5,7 +5,7 @@ import { contentTypeIsTextual } from "@jsenv/core/src/utils/content_type.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
 
-import { babelPluginImportAssertions } from "./babel_plugin_import_assertions.js"
+import { babelPluginMetadataImportAssertions } from "./babel_plugin_metadata_import_assertions.js"
 import { convertJsonTextToJavascriptModule } from "./json_module.js"
 import { convertCssTextToJavascriptModule } from "./css_module.js"
 import { convertTextToJavascriptModule } from "./text_module.js"
@@ -36,27 +36,21 @@ export const jsenvPluginImportAssertions = () => {
             return null
           }
           const { metadata } = await applyBabelPlugins({
-            babelPlugins: [babelPluginImportAssertions],
+            babelPlugins: [babelPluginMetadataImportAssertions],
             parentUrlSite,
             url,
             content,
           })
-          let { importAssertions } = metadata
-          importAssertions = importAssertions.filter((importAssertion) => {
-            const assertType = importAssertion.assert.type
-            if (!importTypes.includes(assertType)) {
-              return false
-            }
-            return true
-          })
-          if (importAssertions.length === 0) {
-            return null
-          }
+          const { importAssertions } = metadata
           const magicSource = createMagicSource({ url, content })
           importAssertions.forEach((importAssertion) => {
+            const assertType = importAssertion.assert.type
+            if (!importTypes.includes(assertType)) {
+              return
+            }
             const { path } = importAssertion
             const { node } = path
-            const importType = `${importAssertion.assert.type}_module`
+            const importType = `${assertType}_module`
             if (node.type === "CallExpression") {
               const importSpecifierPath = path.get("arguments")[0]
               magicSource.replace({

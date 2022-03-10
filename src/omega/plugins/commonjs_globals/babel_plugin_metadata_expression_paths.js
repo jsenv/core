@@ -1,7 +1,7 @@
 // heavily inspired from https://github.com/jviide/babel-plugin-transform-replace-expressions
 // last known commit: 57b608e0eeb8807db53d1c68292621dfafb5599c
 
-export const transformReplaceExpressions = (
+export const babelPluginMetadataExpressionPaths = (
   babel,
   { replaceMap = {}, allowConflictingReplacements = false },
 ) => {
@@ -10,7 +10,7 @@ export const transformReplaceExpressions = (
   const valueExpressionSet = new Set()
 
   return {
-    name: "transform-replace-expressions",
+    name: "metadata-replace",
 
     pre: (state) => {
       // https://github.com/babel/babel/blob/d50e78d45b608f6e0f6cc33aeb22f5db5027b153/packages/babel-traverse/src/path/replacement.js#L93
