@@ -34,7 +34,7 @@ export const stringifyUrlTrace = (trace) => {
 }
 
 export const stringifyUrlSite = (
-  { url, line, column, source },
+  { url, line, column, content },
   {
     showCodeFrame = true,
     numberOfSurroundingLinesToShow,
@@ -51,12 +51,12 @@ export const stringifyUrlSite = (
     }
   }
 
-  if (!showCodeFrame || typeof line !== "number" || !source) {
+  if (!showCodeFrame || typeof line !== "number" || !content) {
     return string
   }
 
   const sourceLoc = showSourceLocation({
-    source,
+    content,
     line,
     column,
     numberOfSurroundingLinesToShow,
@@ -78,7 +78,7 @@ export const humanizeUrl = (url) => {
 }
 
 export const showSourceLocation = ({
-  source,
+  content,
   line,
   column,
   numberOfSurroundingLinesToShow = 1,
@@ -92,7 +92,7 @@ export const showSourceLocation = ({
     aside = (string) => ANSI.color(string, ANSI.GREY)
   }
 
-  const lines = source.split(/\r?\n/)
+  const lines = content.split(/\r?\n/)
   if (line === 0) line = 1
   let lineRange = {
     start: line - 1,

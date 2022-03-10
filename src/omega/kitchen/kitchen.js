@@ -19,11 +19,11 @@ import {
   parseCssSourcemapComment,
   generateSourcemapUrl,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
+import { getOriginalUrlSite } from "@jsenv/core/src/utils/sourcemap/original_url_site.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
-import { stringifyUrlSite } from "@jsenv/core/old_src/internal/building/url_trace.js"
+import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 
-import { getOriginalUrlSite } from "./original_url_site.js"
 import { getJsenvPlugins } from "../jsenv_plugins.js"
 import {
   flattenAndFilterPlugins,

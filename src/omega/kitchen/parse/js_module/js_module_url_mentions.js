@@ -4,7 +4,12 @@ import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-export const parseJsModuleUrlMentions = async ({ url, type, content }) => {
+export const parseJsModuleUrlMentions = async ({
+  parentUrlSite,
+  url,
+  type,
+  content,
+}) => {
   if (type !== "js_module") {
     return null
   }
@@ -13,6 +18,7 @@ export const parseJsModuleUrlMentions = async ({ url, type, content }) => {
       [babelPluginMetadataUrlMentions],
       [babelPluginMetadataImportMetaHot],
     ],
+    parentUrlSite,
     url,
     content,
   })

@@ -16,7 +16,12 @@ export const jsenvPluginImportAssertions = () => {
       name: "jsenv:import_assertions",
       appliesDuring: "*",
       transform: {
-        js_module: async ({ isSupportedOnRuntime, url, content }) => {
+        js_module: async ({
+          isSupportedOnRuntime,
+          parentUrlSite,
+          url,
+          content,
+        }) => {
           const importTypes = []
           if (!isSupportedOnRuntime("import_type_json")) {
             importTypes.push("json")
@@ -32,6 +37,7 @@ export const jsenvPluginImportAssertions = () => {
           }
           const { metadata } = await applyBabelPlugins({
             babelPlugins: [babelPluginImportAssertions],
+            parentUrlSite,
             url,
             content,
           })

@@ -1,4 +1,4 @@
-import { applyBabelPlugins } from "./apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 
 export const parseJsString = async ({ url, content }) => {
   const { ast } = await applyBabelPlugins({

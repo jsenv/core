@@ -1,6 +1,4 @@
-// maybe move this to sourcemap utils
-
-import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
+import { getOriginalPosition } from "./original_position.js"
 
 export const getOriginalUrlSite = async ({
   originalUrl,
