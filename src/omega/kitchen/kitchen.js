@@ -1,11 +1,3 @@
-/*
- * TOFIX: for some reason
- * the url of
- * import { installPrefresh } from "url"
- * is not versioned when page load for the first time
- * then becomes versioned on hmr breaking the hmr
- */
-
 import { fileURLToPath } from "node:url"
 import { urlIsInsideOf, writeFile, urlToRelativeUrl } from "@jsenv/filesystem"
 
@@ -76,6 +68,14 @@ export const createKitchen = ({
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
+
+  const isSupported = ({
+    runtimeSupport,
+    featureName,
+    featureCompat = featuresCompatMap[featureName],
+  }) => {
+    return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
+  }
 
   const resolveSpecifier = ({ parentUrl, specifierType, specifier }) => {
     if (specifier.startsWith("/@fs/")) {
@@ -155,11 +155,8 @@ export const createKitchen = ({
         currentContext = context
         return returnValue
       },
-      isSupportedOnRuntime: (
-        featureName,
-        featureCompat = featuresCompatMap[featureName],
-      ) => {
-        return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
+      isSupportedOnRuntime: (featureName, featureCompat) => {
+        return isSupported({ runtimeSupport, featureName, featureCompat })
       },
       parentUrl,
       urlSite,
@@ -235,7 +232,6 @@ export const createKitchen = ({
     context.outUrl = determineFileUrlForOutDirectory({
       projectDirectoryUrl,
       outDirectoryName,
-      scenario,
       url: context.url,
     })
 
@@ -381,7 +377,6 @@ export const createKitchen = ({
       const sourcemapOutUrl = determineFileUrlForOutDirectory({
         projectDirectoryUrl,
         outDirectoryName,
-        scenario,
         url: sourcemapUrl,
       })
       context.sourcemapUrl = sourcemapOutUrl
@@ -420,22 +415,18 @@ export const createKitchen = ({
   const cookUrl = async (params) => {
     try {
       const context = await _cookUrl(params)
+      const { outUrl } = context
       // writing result inside ".jsenv" directory (debug purposes)
-      if (context.sourcemap) {
-        if (sourcemapInjection === "comment") {
-          await writeFile(
-            context.sourcemapUrl,
-            JSON.stringify(context.sourcemap, null, "  "),
-          )
-        } else if (sourcemapInjection === "inline") {
-          writeFile(
-            context.sourcemapUrl,
-            JSON.stringify(context.sourcemap, null, "  "),
-          )
+      if (outUrl && outUrl.startsWith("file:")) {
+        writeFile(outUrl, context.content)
+        const { sourcemapUrl, sourcemap } = context
+        if (sourcemapUrl && sourcemap) {
+          if (sourcemapInjection === "comment") {
+            await writeFile(sourcemapUrl, JSON.stringify(sourcemap, null, "  "))
+          } else if (sourcemapInjection === "inline") {
+            writeFile(sourcemapUrl, JSON.stringify(sourcemap, null, "  "))
+          }
         }
-      }
-      if (context.outUrl) {
-        writeFile(context.outUrl, context.content)
       }
       return context
     } catch (e) {
@@ -467,6 +458,7 @@ export const createKitchen = ({
 
   return {
     jsenvDirectoryUrl,
+    isSupported,
     resolveSpecifier,
     cookUrl,
   }
@@ -511,14 +503,16 @@ const getRessourceType = ({ url, contentType }) => {
 const determineFileUrlForOutDirectory = ({
   projectDirectoryUrl,
   outDirectoryName,
-  scenario,
   url,
 }) => {
+  if (!url.startsWith("file:")) {
+    return url
+  }
   if (!urlIsInsideOf(url, projectDirectoryUrl)) {
     url = `${projectDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
   }
   const outDirectoryUrl = new URL(
-    `.jsenv/${scenario}/${outDirectoryName}/`,
+    `.jsenv/${outDirectoryName}/`,
     projectDirectoryUrl,
   ).href
   return moveUrl(url, projectDirectoryUrl, outDirectoryUrl)

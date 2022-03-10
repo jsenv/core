@@ -50,7 +50,7 @@ export const createFileService = ({
     })
     const urlSite = ressourceGraph.getUrlSite(parentUrl, url)
     const { response, error, contentType, content } = await kitchen.cookUrl({
-      outDirectoryName: `${runtimeName}@${runtimeVersion}`,
+      outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
       parentUrl,
       urlSite,

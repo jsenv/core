@@ -33,17 +33,10 @@ export const startOmegaServer = async ({
   scenario,
   plugins,
   runtimeSupport,
-  sourcemapInjection = {
-    dev: "inline",
-    test: "inline",
-    preview: "comment",
-    prod: false,
-  }[scenario],
+  sourcemapInjection = "inline",
   autoreload = {
     dev: true,
     test: false,
-    preview: false,
-    prod: false,
   }[scenario],
   autoreloadPatterns = {
     "./**": true,

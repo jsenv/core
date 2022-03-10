@@ -12,6 +12,7 @@ import { rollupPluginJsenv } from "./rollup_plugin_jsenv.js"
 import { applyRollupPlugins } from "./apply_rollup_plugins.js"
 
 export const buildProject = async ({
+  signal = new AbortController().signal,
   logLevel = "info",
   projectDirectoryUrl,
   buildDirectoryUrl,
@@ -29,6 +30,7 @@ export const buildProject = async ({
     rhino: "0.0.0",
     safari: "0.0.0",
   },
+  sourcemapInjection = preview ? "comment" : false,
 }) => {
   const logger = createLogger({ logLevel })
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
@@ -39,11 +41,13 @@ export const buildProject = async ({
   await applyRollupPlugins({
     rollupPlugins: [
       await rollupPluginJsenv({
+        signal,
         logger,
         projectDirectoryUrl,
         buildDirectoryUrl,
         plugins,
         runtimeSupport,
+        sourcemapInjection,
         scenario,
       }),
     ],

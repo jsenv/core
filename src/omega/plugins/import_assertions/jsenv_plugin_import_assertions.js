@@ -17,22 +17,17 @@ export const jsenvPluginImportAssertions = () => {
       appliesDuring: "*",
       transform: {
         js_module: async ({
+          scenario,
           isSupportedOnRuntime,
           parentUrlSite,
           url,
           content,
         }) => {
-          const importTypes = []
-          if (!isSupportedOnRuntime("import_type_json")) {
-            importTypes.push("json")
-          }
-          if (!isSupportedOnRuntime("import_type_css")) {
-            importTypes.push("css")
-          }
-          if (!isSupportedOnRuntime("import_type_text")) {
-            importTypes.push("text")
-          }
-          if (importTypes.length === 0) {
+          const importTypesToHandle = getImportTypesToHandle({
+            scenario,
+            isSupportedOnRuntime,
+          })
+          if (importTypesToHandle.length === 0) {
             return null
           }
           const { metadata } = await applyBabelPlugins({
@@ -45,7 +40,7 @@ export const jsenvPluginImportAssertions = () => {
           const magicSource = createMagicSource({ url, content })
           importAssertions.forEach((importAssertion) => {
             const assertType = importAssertion.assert.type
-            if (!importTypes.includes(assertType)) {
+            if (!importTypesToHandle.includes(assertType)) {
               return
             }
             const { path } = importAssertion
@@ -142,6 +137,25 @@ export const jsenvPluginImportAssertions = () => {
     },
   }
   return [importAssertions, importTypeJson, importTypeCss, importTypeText]
+}
+
+const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
+  // during build always replace import assertions with the js to feed
+  // solely js to rollup
+  if (scenario === "preview" || scenario === "prod") {
+    return ["json", "css", "text"]
+  }
+  const importTypes = []
+  if (!isSupportedOnRuntime("import_type_json")) {
+    importTypes.push("json")
+  }
+  if (!isSupportedOnRuntime("import_type_css")) {
+    importTypes.push("css")
+  }
+  if (!isSupportedOnRuntime("import_type_text")) {
+    importTypes.push("text")
+  }
+  return importTypes
 }
 
 const injectImportTypeInSpecifier = (specifier, importType) => {
