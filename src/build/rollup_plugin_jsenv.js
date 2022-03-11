@@ -1,10 +1,10 @@
 import { pathToFileUrl, fileURLToPath } from "node:url"
-import { isFileSystemPath } from "@jsenv/filesystem"
+import { isFileSystemPath, urlToFilename } from "@jsenv/filesystem"
 
 import { createRessourceGraph } from "@jsenv/core/src/omega/ressource_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 
-import { createFileBuilder } from "./file_builder.js"
+import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
 
 export const rollupPluginJsenv = ({
   signal,
@@ -55,13 +55,12 @@ export const rollupPluginJsenv = ({
     logger,
     projectDirectoryUrl,
     scenario,
-    plugins,
+    plugins: [jsenvPluginAvoidVersioningCascade(), ...plugins],
     runtimeSupport,
     sourcemapInjection,
     ressourceGraph,
   })
 
-  const fileBuilder = createFileBuilder()
   const urlsReferencedByJs = []
   const urlImporters = {}
   const assetCookedPromises = []
@@ -106,52 +105,49 @@ export const rollupPluginJsenv = ({
       if (error) {
         throw error
       }
-      urlMentions.map(async (urlMention) => {
-        if (urlMention.type === "js_import_meta_url_pattern") {
-          const urlSite = {
-            url: fileUrl,
-            line: urlMention.line,
-            column: urlMention.column,
+      await Promise.all(
+        urlMentions.map(async (urlMention) => {
+          if (urlMention.type === "js_import_meta_url_pattern") {
+            const urlSite = {
+              url: fileUrl,
+              line: urlMention.line,
+              column: urlMention.column,
+            }
+            const referenceUrl = urlMention.url
+            // TODO: cook + emit asset once per url
+            const assetContext = await kitchen.cookUrl({
+              outDirectoryName: `${scenario}`,
+              runtimeSupport,
+              parentUrl: fileUrl,
+              urlSite,
+              url: referenceUrl,
+            })
+            if (assetContext.error) {
+              throw assetContext.error
+            }
+            const rollupReferenceId = emitAsset({
+              fileName: urlToFilename(referenceUrl),
+              source: assetContext.content,
+            })
+            return `import.meta.ROLLUP_FILE_URL_${rollupReferenceId}`
           }
-          const referenceUrl = urlMention.url
-          // const reference = fileBuilder.createReferenceFoundInJsModule({
-          //   label: "URL + import.meta.url",
-          //   urlSite,
-          //   url: referenceUrl,
-          // })
-          // TODO: cook + emit asset once per url
-          const assetContext = await kitchen.cookUrl({
-            outDirectoryName: `${scenario}`,
-            runtimeSupport,
-            parentUrl: fileUrl,
-            urlSite,
-            url: referenceUrl,
-          })
-          if (assetContext.error) {
-            throw assetContext.error
-          }
-          const rollupReferenceId = emitAsset({
-            fileName: "", // quel sera le fileName?
-            source: assetContext.content,
-          })
-          return `import.meta.ROLLUP_FILE_URL_${rollupReferenceId}`
-        }
-      })
+        }),
+      )
       return {
         code: content,
         map: sourcemap,
       }
     },
-    resolveFileUrl: ({
-      // referenceId,
-      fileName,
-    }) => {
-      urlsReferencedByJs.push(fileName)
-      // TODO: inject window.__resolveFileUrl__ into every html page
-      // (likely a plugin to pass to kitchen)
-      // and use it for import.meta.url pattern and dynamic import.
-      // for static import not possible we'll have to use the versioned url
-      return `window.__resolveRessourceUrl__("./${fileName}", import.meta.url)`
+    resolveFileUrl: ({ moduleId, fileName }) => {
+      urlsReferencedByJs.push(pathToFileUrl(moduleId).href)
+      return `window.__resolveUrl__("./${fileName}", import.meta.url)`
+    },
+    renderDynamicImport: ({ moduleId }) => {
+      urlsReferencedByJs.push(pathToFileUrl(moduleId).href)
+      return {
+        left: "window.__resolveUrl__(",
+        right: ", import.meta.url)",
+      }
     },
   }
 }

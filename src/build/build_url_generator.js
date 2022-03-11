@@ -1,10 +1,9 @@
 import { urlToBasename, urlToExtension, urlToFilename } from "@jsenv/filesystem"
 
-import { generateContentHash } from "./url_versioning.js"
+import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
 
 export const createBuildUrlGenerator = ({
   entryPointUrls,
-  asOriginalUrl,
   lineBreakNormalization,
 }) => {
   const availableNameGenerator = createAvailableNameGenerator()
@@ -12,12 +11,11 @@ export const createBuildUrlGenerator = ({
   const prepareBuildUrlForFile = (file) => {
     const buildRelativeUrlPattern = getBuildRelativeUrlPattern({
       entryPointUrls,
-      asOriginalUrl,
       availableNameGenerator,
       file,
     })
     const buildRelativeUrlWithoutHash = buildRelativeUrlPattern.replace(
-      "_[hash]",
+      "?v=[hash]",
       "",
     )
     return {
@@ -45,14 +43,12 @@ export const createBuildUrlGenerator = ({
 
 const getBuildRelativeUrlPattern = ({
   entryPointUrls,
-  asOriginalUrl,
   availableNameGenerator,
   file,
 }) => {
   if (file.isEntryPoint) {
-    const originalUrl = asOriginalUrl(file.url)
-    const entryPointBuildRelativeUrlPattern = entryPointUrls[originalUrl]
-    return entryPointBuildRelativeUrlPattern || urlToFilename(originalUrl)
+    const entryPointBuildRelativeUrlPattern = entryPointUrls[file.url]
+    return entryPointBuildRelativeUrlPattern || urlToFilename(file.url)
   }
 
   // inline ressource
@@ -63,7 +59,7 @@ const getBuildRelativeUrlPattern = ({
     const name = urlToBasename(file.url)
     const extension = urlToExtension(file.url)
     // no need to ensure name is unique because it's already done
-    return `${name}_[hash]${extension}`
+    return `${name}${extension}?v=[hash]`
   }
 
   // importmap.
@@ -75,7 +71,7 @@ const getBuildRelativeUrlPattern = ({
       "/",
     )
     const extension = urlToExtension(file.url)
-    return `${name}_[hash]${extension}`
+    return `${name}${extension}?v=[hash]`
   }
 
   // service worker:
@@ -100,7 +96,7 @@ const getBuildRelativeUrlPattern = ({
       "/",
     )
     const extension = urlToExtension(file.url)
-    return `${name}_[hash]${extension}`
+    return `${name}${extension}?v=[hash]`
   }
 
   if (file.type === "js_module") {
@@ -108,7 +104,7 @@ const getBuildRelativeUrlPattern = ({
       urlToBasename(file.url),
       "/",
     )
-    return `${name}_[hash].js`
+    return `${name}.js?v=[hash]`
   }
 
   const name = availableNameGenerator.getAvailableNameInDirectory(
@@ -118,7 +114,7 @@ const getBuildRelativeUrlPattern = ({
   const extension = urlToExtension(file.url)
   return file.urlVersioningDisabled
     ? `assets/${name}${extension}`
-    : `assets/${name}_[hash]${extension}`
+    : `assets/${name}${extension}?v=[hash]`
 }
 
 const createAvailableNameGenerator = () => {
