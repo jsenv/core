@@ -7,7 +7,7 @@ import {
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
-export const parseHtmlUrlMentions = ({ url, type, content }) => {
+export const parseHtmlUrlMentions = ({ asClientUrl, url, type, content }) => {
   if (type !== "html") {
     return null
   }
@@ -39,9 +39,9 @@ export const parseHtmlUrlMentions = ({ url, type, content }) => {
         hotAcceptDependencies,
       }
     },
-    transformUrlMentions: ({ transformUrlMention }) => {
+    transformUrlMentions: () => {
       htmlUrlMentions.forEach((htmlUrlMention) => {
-        htmlUrlMention.attribute.value = transformUrlMention(htmlUrlMention)
+        htmlUrlMention.attribute.value = asClientUrl(htmlUrlMention.url)
       })
       return {
         content: stringifyHtmlAst(htmlAst, {

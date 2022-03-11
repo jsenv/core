@@ -8,7 +8,7 @@ import {
 } from "@jsenv/core/old_src/internal/transform_html/html_ast.js"
 
 export const jsenvPluginAvoidVersioningCascade = () => {
-  const clientFileUrl = new URL("./client/versioned_url_resolver.js").href
+  const clientFileUrl = new URL("./client/versioned_resolver.js").href
 
   return {
     name: "jsenv:avoid_versioning_cascade",

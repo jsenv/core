@@ -138,6 +138,7 @@ export const createKitchen = ({
     parentUrl,
     urlSite,
     url,
+    urlMentionHandlers,
   }) => {
     const context = {
       ...baseContext,
@@ -161,6 +162,7 @@ export const createKitchen = ({
       parentUrl,
       urlSite,
       url,
+      urlMentionHandlers,
     }
     const urlObject = new URL(url)
     context.hmr = urlObject.searchParams.has("hmr")
@@ -361,12 +363,7 @@ export const createKitchen = ({
       hotAcceptDependencies,
     })
     if (transformUrlMentions) {
-      const transformReturnValue = await transformUrlMentions({
-        transformUrlMention: (urlMention) => {
-          const clientUrl = context.asClientUrl(urlMention.url)
-          return clientUrl
-        },
-      })
+      const transformReturnValue = await transformUrlMentions()
       updateContents(transformReturnValue)
     }
 

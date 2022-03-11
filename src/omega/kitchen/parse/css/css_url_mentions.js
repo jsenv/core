@@ -3,8 +3,9 @@ import { postCssPluginUrlVisitor } from "@jsenv/core/src/utils/css_ast/postcss_p
 import { replaceCssUrls } from "@jsenv/core/src/utils/css_ast/replace_css_urls.js"
 
 export const parseCssUrlMentions = async ({
-  url = "file:///file.css",
+  asClientUrl,
   type,
+  url,
   content,
 }) => {
   if (type !== "css") {
@@ -39,7 +40,7 @@ export const parseCssUrlMentions = async ({
         hotAcceptDependencies: [],
       }
     },
-    transformUrlMentions: async ({ transformUrlMention }) => {
+    transformUrlMentions: async () => {
       // we can't use magic source because urlMention.start/end do not match the url specifier
       // const magicSource = createMagicSource({ url, content })
       // cssUrlMentions.forEach((urlMention) => {
@@ -57,7 +58,7 @@ export const parseCssUrlMentions = async ({
           const urlMention = cssUrlMentions.find(
             (urlMention) => urlMention.url === url,
           )
-          replace(transformUrlMention(urlMention))
+          replace(asClientUrl(urlMention.url))
         },
       })
       return {

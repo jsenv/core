@@ -45,6 +45,7 @@ export const buildProject = async ({
         logger,
         projectDirectoryUrl,
         buildDirectoryUrl,
+        entryPoints,
         plugins,
         runtimeSupport,
         sourcemapInjection,

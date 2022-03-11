@@ -4,21 +4,24 @@ export const babelPluginMetadataUrlMentions = () => {
   return {
     name: "metadata-url-mentions",
     visitor: {
-      Program(path, state) {
+      Program(programPath, state) {
         const urlMentions = []
-        collectProgramUrlMentions(path).forEach(({ type, specifierPath }) => {
-          const specifierNode = specifierPath.node
-          if (specifierNode.type === "StringLiteral") {
-            urlMentions.push({
-              type,
-              specifier: specifierNode.value,
-              start: specifierNode.start,
-              end: specifierNode.end,
-              line: specifierNode.loc.start.line,
-              column: specifierNode.loc.start.column,
-            })
-          }
-        })
+        collectProgramUrlMentions(programPath).forEach(
+          ({ type, path, specifierPath }) => {
+            const specifierNode = specifierPath.node
+            if (specifierNode.type === "StringLiteral") {
+              urlMentions.push({
+                type,
+                path,
+                specifier: specifierNode.value,
+                start: specifierNode.start,
+                end: specifierNode.end,
+                line: specifierNode.loc.start.line,
+                column: specifierNode.loc.start.column,
+              })
+            }
+          },
+        )
         state.file.metadata.urlMentions = urlMentions
       },
     },

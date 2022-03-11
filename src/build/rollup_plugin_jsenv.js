@@ -1,8 +1,9 @@
 import { pathToFileUrl, fileURLToPath } from "node:url"
-import { isFileSystemPath, urlToFilename } from "@jsenv/filesystem"
+import { isFileSystemPath } from "@jsenv/filesystem"
 
 import { createRessourceGraph } from "@jsenv/core/src/omega/ressource_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
+import { parseScriptNode } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
 import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
 
@@ -10,6 +11,8 @@ export const rollupPluginJsenv = ({
   signal,
   logger,
   projectDirectoryUrl,
+  buildDirectoryUrl,
+  entryPoints,
   plugins,
   runtimeSupport,
   sourcemapInjection,
@@ -18,18 +21,8 @@ export const rollupPluginJsenv = ({
   let _rollupEmitFile = () => {
     throw new Error("not implemented")
   }
-  let _rollupSetAssetSource = () => {
-    throw new Error("not implemented")
-  }
   let _rollupGetModuleInfo = () => {
     throw new Error("not implemented")
-  }
-  const emitAsset = ({ fileName, source }) => {
-    return _rollupEmitFile({
-      type: "asset",
-      source,
-      fileName,
-    })
   }
   // rollup expects an input option, if we provide only an html file
   // without any script type module in it, we won't emit "chunk" and rollup will throw.
@@ -43,9 +36,6 @@ export const rollupPluginJsenv = ({
       type: "chunk",
       ...chunk,
     })
-  }
-  const setAssetSource = (rollupReferenceId, assetSource) => {
-    return _rollupSetAssetSource(rollupReferenceId, assetSource)
   }
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
@@ -63,19 +53,125 @@ export const rollupPluginJsenv = ({
 
   const urlsReferencedByJs = []
   const urlImporters = {}
-  const assetCookedPromises = []
+  const cookedUrls = {}
+  const assetUrls = []
+
+  const cookUrl = ({ url, ...rest }) => {
+    const cookedUrl = cookedUrls[url]
+    if (cookedUrl) return cookedUrl
+    const promise = kitchen.cookUrl({
+      outDirectoryName: `${scenario}`,
+      runtimeSupport,
+      url,
+      ...rest,
+    })
+    cookedUrls[url] = promise
+    return promise
+  }
+
+  const cookEntryPoint = async (entryPointUrl) => {
+    const entryPointContext = await cookUrl({
+      outDirectoryName: `${scenario}`,
+      runtimeSupport,
+      parentUrl: projectDirectoryUrl,
+      urlSite: null, // we could trace function calls
+      url: entryPointUrl,
+    })
+    if (entryPointContext.error) {
+      throw entryPointContext.error
+    }
+    return entryPointContext
+  }
+
+  const startCookingAsset = async ({ parentUrl, url, ...rest }) => {
+    assetUrls.push(url)
+    const urlSite = ressourceGraph.getUrlSite(parentUrl, url)
+    const assetContext = await cookUrl({ parentUrl, urlSite, url, ...rest })
+    if (assetContext.error) {
+      throw assetContext.error
+    }
+    return assetContext
+  }
+
+  const cookJsModule = async (params) => {
+    const jsModuleContext = await cookUrl(params)
+    if (jsModuleContext.error) {
+      throw jsModuleContext.error
+    }
+    return jsModuleContext
+  }
+
   return {
     name: "jsenv",
     async buildStart() {
       _rollupEmitFile = (...args) => this.emitFile(...args)
-      _rollupSetAssetSource = (...args) => this.setAssetSource(...args)
       _rollupGetModuleInfo = (id) => this.getModuleInfo(id)
+
+      await Object.keys(entryPoints).reduce(async (previous, key) => {
+        await previous
+        const entryPointRelativeUrl = key
+        const entryPointUrl = kitchen.resolveSpecifier({
+          parentUrl: projectDirectoryUrl,
+          specifierType: "http_request", // not really but kinda
+          specifier: entryPointRelativeUrl,
+        })
+        const entryPointContext = await cookEntryPoint(entryPointUrl)
+        if (entryPointContext.type === "html") {
+          let previousJsModuleId
+          entryPointContext.urlMentions.forEach((urlMention) => {
+            if (
+              urlMention.type === "script_src" &&
+              parseScriptNode(urlMention.node) === "module"
+            ) {
+              emitChunk({
+                id: urlMention.url,
+                implicitlyLoadedAfterOneOf: previousJsModuleId
+                  ? [previousJsModuleId]
+                  : [],
+              })
+              previousJsModuleId = urlMention.url
+              return
+            }
+            startCookingAsset({
+              parentUrl: entryPointContext.url,
+              url: urlMention.url,
+            })
+          })
+          return
+        }
+        if (entryPointContext.type === "js_module") {
+          emitChunk({
+            id: entryPointContext.url,
+          })
+          return
+        }
+        assetUrls.push(entryPointContext.url)
+        entryPointContext.urlMentions.forEach((urlMention) => {
+          startCookingAsset({
+            parentUrl: entryPointContext.url,
+            url: urlMention.url,
+          })
+        })
+      }, Promise.resolve())
     },
     async generateBundle() {
-      // late asset emission
       _rollupEmitFile = (...args) => this.emitFile(...args)
-      _rollupSetAssetSource = (...args) => this.setAssetSource(...args)
-      await Promise.all(assetCookedPromises)
+      await Promise.all(assetUrls.map((url) => cookedUrls[url]))
+    },
+    outputOptions: (outputOptions) => {
+      Object.assign(outputOptions, {
+        format: "esm",
+        dir: fileURLToPath(buildDirectoryUrl),
+        entryFileNames: () => {
+          return `[name].js`
+        },
+        // assetFileNames: () => {
+        //   return `assets/[name][extname]`
+        // },
+        chunkFileNames: () => {
+          return `[name].js`
+        },
+      })
     },
     resolveId: (specifier, importer = projectDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
@@ -92,61 +188,51 @@ export const rollupPluginJsenv = ({
       return fileURLToPath(url)
     },
     async load(rollupId) {
+      // here we know we are loading only js, assets are handled elsewhere right?
       const fileUrl = pathToFileUrl(rollupId).href
       const parentUrl = urlImporters[fileUrl] || projectDirectoryUrl
       const urlSite = ressourceGraph.getUrlSite(parentUrl, fileUrl)
-      const { error, content, sourcemap, urlMentions } = await kitchen.cookUrl({
-        outDirectoryName: `${scenario}`,
-        runtimeSupport,
+      const { content, sourcemap } = await cookJsModule({
         parentUrl,
         urlSite,
         url: fileUrl,
-      })
-      if (error) {
-        throw error
-      }
-      await Promise.all(
-        urlMentions.map(async (urlMention) => {
-          if (urlMention.type === "js_import_meta_url_pattern") {
+        urlMentionHandlers: {
+          js_import_meta_url_pattern: ({ urlMention, magicSource }) => {
             const urlSite = {
               url: fileUrl,
               line: urlMention.line,
               column: urlMention.column,
             }
-            const referenceUrl = urlMention.url
-            // TODO: cook + emit asset once per url
-            const assetContext = await kitchen.cookUrl({
-              outDirectoryName: `${scenario}`,
-              runtimeSupport,
+            startCookingAsset({
               parentUrl: fileUrl,
               urlSite,
-              url: referenceUrl,
+              url: urlMention.url,
             })
-            if (assetContext.error) {
-              throw assetContext.error
-            }
-            const rollupReferenceId = emitAsset({
-              fileName: urlToFilename(referenceUrl),
-              source: assetContext.content,
+            urlsReferencedByJs.push(urlMention.url)
+            // TODO: decide filename
+            const { start, end } = urlMention.path.node
+            magicSource.replace({
+              start,
+              end,
+              replacement: `window.__asVersionedSpecifier__("./${fileName}")`,
             })
-            return `import.meta.ROLLUP_FILE_URL_${rollupReferenceId}`
-          }
-        }),
-      )
+          },
+        },
+      })
       return {
         code: content,
         map: sourcemap,
       }
     },
-    resolveFileUrl: ({ moduleId, fileName }) => {
-      urlsReferencedByJs.push(pathToFileUrl(moduleId).href)
-      return `window.__resolveUrl__("./${fileName}", import.meta.url)`
-    },
+    // resolveFileUrl: ({ moduleId, fileName }) => {
+    //   urlsReferencedByJs.push(pathToFileUrl(moduleId).href)
+    //   return `window.__resolveUrl__("./${fileName}", import.meta.url)`
+    // },
     renderDynamicImport: ({ moduleId }) => {
       urlsReferencedByJs.push(pathToFileUrl(moduleId).href)
       return {
-        left: "window.__resolveUrl__(",
-        right: ", import.meta.url)",
+        left: "import(window.__asVersionedSpecifier__(",
+        right: "), import.meta.url)",
       }
     },
   }
