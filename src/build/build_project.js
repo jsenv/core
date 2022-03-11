@@ -5,7 +5,11 @@
  * The other formats we'll see afterwards
  */
 
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
+import { writeFileSync } from "node:fs"
+import {
+  assertAndNormalizeDirectoryUrl,
+  ensureEmptyDirectory,
+} from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
 import { rollupPluginJsenv } from "./rollup_plugin_jsenv.js"
@@ -31,16 +35,19 @@ export const buildProject = async ({
     safari: "0.0.0",
   },
   sourcemapInjection = preview ? "comment" : false,
+
+  writeOnFileSystem = true,
+  buildDirectoryClean,
 }) => {
   const logger = createLogger({ logLevel })
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
-
   const scenario = preview ? "preview" : "prod"
+  const resultRef = { current: null }
   await applyRollupPlugins({
     rollupPlugins: [
-      await rollupPluginJsenv({
+      rollupPluginJsenv({
         signal,
         logger,
         projectDirectoryUrl,
@@ -50,6 +57,7 @@ export const buildProject = async ({
         runtimeSupport,
         sourcemapInjection,
         scenario,
+        resultRef,
       }),
     ],
     inputOptions: {
@@ -65,7 +73,22 @@ export const buildProject = async ({
       },
     },
   })
-  return null
+  const { buildFileContents } = resultRef
+  if (writeOnFileSystem) {
+    if (buildDirectoryClean) {
+      await ensureEmptyDirectory(buildDirectoryUrl)
+    }
+    const buildRelativeUrls = Object.keys(buildFileContents)
+    buildRelativeUrls.forEach((buildRelativeUrl) => {
+      writeFileSync(
+        new URL(buildRelativeUrl, buildDirectoryUrl),
+        buildFileContents[buildRelativeUrl],
+      )
+    })
+  }
+  return {
+    buildFileContents,
+  }
 }
 
 const assertEntryPoints = ({ entryPoints }) => {

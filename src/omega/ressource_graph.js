@@ -15,16 +15,16 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return ressource
   }
 
-  const getUrlSite = (url, dependencyUrl) => {
+  const getUrlTrace = (dependencyUrl, url) => {
     const ressource = getRessourceByUrl(url)
     if (!ressource) {
       return null
     }
-    const dependencyUrlSite = ressource.dependencyUrlSites[dependencyUrl]
-    if (!dependencyUrlSite) {
+    const dependencyUrlTrace = ressource.dependencyUrlTraces[dependencyUrl]
+    if (!dependencyUrlTrace) {
       return null
     }
-    return dependencyUrlSite
+    return dependencyUrlTrace
   }
 
   const getHmrTimestamp = (url) => {
@@ -42,11 +42,11 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     return hmrTimestamp
   }
 
-  const updateRessourceDependencies = ({
+  const updateDependencies = ({
     url,
     type,
     dependencyUrls,
-    dependencyUrlSites,
+    dependencyUrlTraces,
     hotDecline,
     hotAcceptSelf,
     hotAcceptDependencies,
@@ -59,7 +59,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       ressource.type = type
     }
     if (dependencyUrls !== undefined) {
-      ressource.dependencyUrlSites = dependencyUrlSites
+      ressource.dependencyUrlTraces = dependencyUrlTraces
       dependencyUrls.forEach((dependencyUrl) => {
         const dependency = reuseOrCreateRessource(dependencyUrl)
         ressource.dependencies.add(dependencyUrl)
@@ -312,12 +312,12 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     hotUpdateCallbackList,
     prunedCallbackList,
 
-    updateRessourceDependencies,
+    updateDependencies,
     onFileChange,
     getHmrTimestamp,
 
     getRessourceByUrl,
-    getUrlSite,
+    getUrlTrace,
     findDependent,
 
     toJSON: () => {
@@ -342,7 +342,7 @@ const createRessource = (url) => {
     type: "",
     hmrTimestamp: 0,
     dependencies: new Set(),
-    dependencyUrlSites: {},
+    dependencyUrlTraces: {},
     dependents: new Set(),
     hotAcceptSelf: false,
     hotAcceptDependencies: [],

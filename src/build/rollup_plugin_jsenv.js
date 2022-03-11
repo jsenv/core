@@ -1,4 +1,4 @@
-import { pathToFileUrl, fileURLToPath } from "node:url"
+import { pathToFileUrl, fileURLToPath, pathToFileURL } from "node:url"
 import { isFileSystemPath, urlToFilename } from "@jsenv/filesystem"
 
 import { createRessourceGraph } from "@jsenv/core/src/omega/ressource_graph.js"
@@ -20,6 +20,7 @@ export const rollupPluginJsenv = ({
   runtimeSupport,
   sourcemapInjection,
   scenario,
+  resultRef,
 }) => {
   let _rollupEmitFile = () => {
     throw new Error("not implemented")
@@ -104,8 +105,8 @@ export const rollupPluginJsenv = ({
 
   const startCookingAsset = async ({ parentUrl, url, ...rest }) => {
     assetUrls.push(url)
-    const urlSite = ressourceGraph.getUrlSite(parentUrl, url)
-    const assetContext = await cookUrl({ parentUrl, urlSite, url, ...rest })
+    const urlTrace = ressourceGraph.getUrlTrace(url, parentUrl)
+    const assetContext = await cookUrl({ parentUrl, urlTrace, url, ...rest })
     if (assetContext.error) {
       throw assetContext.error
     }
@@ -180,6 +181,11 @@ export const rollupPluginJsenv = ({
             previousJsModuleId = urlMention.url
             return
           }
+          // imaginons un link re="preload", on peut pas juste emit
+          // l'asset sans prendre en compte ce qu'il référence
+          // parce que si c'est du js de type module
+          // (chose qu'on découvre ensuite an voyant un script type module par ex)
+          // alors on a pas la bonne approche
           startCookingAsset({
             parentUrl: htmlEntryPointCooked.url,
             url: urlMention.url,
@@ -212,6 +218,26 @@ export const rollupPluginJsenv = ({
       _rollupEmitFile = (...args) => this.emitFile(...args)
       delete rollupResult["__empty__"]
       await Promise.all(assetUrls.map((url) => cookedUrls[url]))
+
+      const buildFileContents = {}
+      Object.keys(rollupResult).forEach((fileName) => {
+        const rollupFileInfo = rollupResult[fileName]
+        // there is 3 types of file: "placeholder", "asset", "chunk"
+        if (rollupFileInfo.type === "chunk") {
+          const { facadeModuleId } = rollupFileInfo
+          if (facadeModuleId) {
+            rollupFileInfo.url = pathToFileURL(facadeModuleId).href
+          } else {
+            const { sources } = rollupFileInfo.map
+            const sourcePath = sources[sources.length - 1]
+            rollupFileInfo.url = pathToFileURL(sourcePath).href
+          }
+        }
+      })
+      // on veut aussi itérer sur tous les assets pour les mettre dans "buildFileContents"
+      resultRef.current = {
+        buildFileContents,
+      }
     },
     outputOptions: (outputOptions) => {
       Object.assign(outputOptions, {
@@ -252,10 +278,10 @@ export const rollupPluginJsenv = ({
       // here we know we are loading only js, assets are handled elsewhere right?
       const fileUrl = pathToFileUrl(rollupId).href
       const parentUrl = urlImporters[fileUrl] || projectDirectoryUrl
-      const urlSite = ressourceGraph.getUrlSite(parentUrl, fileUrl)
+      const urlTrace = ressourceGraph.getUrlTrace(parentUrl, fileUrl)
       const { content, sourcemap } = await cookJsModule({
         parentUrl,
-        urlSite,
+        urlTrace,
         url: fileUrl,
       })
       return {

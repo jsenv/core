@@ -1,3 +1,8 @@
+/*
+ * maybe we should use "generated" to differentiate from "original"? as in
+ * https://nodejs.org/dist/latest-v17.x/docs/api/module.html#sourcemapfindentrylinenumber-columnnumber
+ */
+
 import { getOriginalPosition } from "./original_position.js"
 
 export const getOriginalUrlSite = async ({

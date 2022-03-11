@@ -136,19 +136,19 @@ export const createKitchen = ({
     outDirectoryName,
     runtimeSupport,
     parentUrl,
-    urlSite,
+    urlTrace,
     url,
     urlMentionHandlers,
   }) => {
     const context = {
       ...baseContext,
       resolveSpecifier,
-      cookUrl: async ({ parentUrl, urlSite, url }) => {
+      cookUrl: async ({ parentUrl, urlTrace, url }) => {
         const returnValue = await cookUrl({
           outDirectoryName,
           runtimeSupport,
           parentUrl,
-          urlSite,
+          urlTrace,
           url,
         })
         // we are done with that subfile
@@ -160,7 +160,7 @@ export const createKitchen = ({
         return isSupported({ runtimeSupport, featureName, featureCompat })
       },
       parentUrl,
-      urlSite,
+      urlTrace,
       url,
       urlMentionHandlers,
     }
@@ -225,7 +225,7 @@ export const createKitchen = ({
     } catch (error) {
       context.error = createLoadError({
         pluginController,
-        urlSite: currentContext.urlSite,
+        urlTrace: currentContext.urlTrace,
         url: currentContext.url,
         error,
       })
@@ -288,7 +288,7 @@ export const createKitchen = ({
     } catch (error) {
       context.error = createTransformError({
         pluginController,
-        urlSite: currentContext.urlSite,
+        urlTrace: currentContext.urlTrace,
         url: currentContext.url,
         type: currentContext.type,
         error,
@@ -304,7 +304,7 @@ export const createKitchen = ({
       transformUrlMentions,
     } = parser ? await parser(context) : {}
     const dependencyUrls = []
-    const dependencyUrlSites = {}
+    const dependencyTraces = {}
     for (const urlMention of urlMentions) {
       const specifierUrlSiteRaw = await getOriginalUrlSite({
         originalUrl: context.url,
@@ -318,7 +318,10 @@ export const createKitchen = ({
         column: urlMention.column,
         sourcemap: context.sourcemap,
       })
-      const specifierUrlSite = stringifyUrlSite(specifierUrlSiteRaw)
+      const specifierTrace = {
+        type: "url_site_string",
+        trace: stringifyUrlSite(specifierUrlSiteRaw),
+      }
 
       try {
         const resolvedUrl = resolveSpecifier({
@@ -330,12 +333,12 @@ export const createKitchen = ({
           throw new Error(`NO_RESOLVE`)
         }
         urlMention.url = resolvedUrl
-        dependencyUrlSites[resolvedUrl] = specifierUrlSite
+        dependencyTraces[resolvedUrl] = specifierTrace
         dependencyUrls.push(resolvedUrl)
       } catch (error) {
         context.error = createResolveError({
           pluginController,
-          specifierUrlSite,
+          specifierTrace,
           specifier: urlMention.specifier,
           error,
         })
@@ -353,11 +356,11 @@ export const createKitchen = ({
       hotAcceptSelf,
       hotAcceptDependencies,
     })
-    ressourceGraph.updateRessourceDependencies({
+    ressourceGraph.updateDependencies({
       url: context.url,
       type: context.type,
       dependencyUrls,
-      dependencyUrlSites,
+      dependencyTraces,
       hotDecline,
       hotAcceptSelf,
       hotAcceptDependencies,

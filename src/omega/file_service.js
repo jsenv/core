@@ -48,12 +48,12 @@ export const createFileService = ({
       specifierType: "http_request",
       specifier: request.ressource,
     })
-    const urlSite = ressourceGraph.getUrlSite(parentUrl, url)
+    const urlTrace = ressourceGraph.getUrlTrace(url, parentUrl)
     const { response, error, contentType, content } = await kitchen.cookUrl({
       outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
       parentUrl,
-      urlSite,
+      urlTrace,
       url,
     })
     if (response) {

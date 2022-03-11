@@ -1,9 +1,11 @@
 import { fileURLToPath } from "node:url"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
+
 export const createResolveError = ({
   pluginController,
-  specifierUrlSite,
+  specifierTrace,
   specifier,
   error,
 }) => {
@@ -13,7 +15,7 @@ export const createResolveError = ({
         reason,
         ...details,
         specifier: `"${specifier}"`,
-        ...detailsFromUrlSite(specifierUrlSite),
+        ...detailsFromUrlTrace(specifierTrace),
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -34,14 +36,14 @@ export const createResolveError = ({
   })
 }
 
-export const createLoadError = ({ pluginController, urlSite, url, error }) => {
+export const createLoadError = ({ pluginController, urlTrace, url, error }) => {
   const createFailedToLoadError = ({ code, reason, ...details }) => {
     const loadError = new Error(
       createDetailedMessage(`Failed to load url`, {
         reason,
         ...details,
         url,
-        ...detailsFromUrlSite(urlSite),
+        ...detailsFromUrlTrace(urlTrace),
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -86,7 +88,7 @@ export const createLoadError = ({ pluginController, urlSite, url, error }) => {
 
 export const createTransformError = ({
   pluginController,
-  urlSite,
+  urlTrace,
   url,
   type,
   error,
@@ -97,7 +99,7 @@ export const createTransformError = ({
         reason,
         ...details,
         url,
-        ...detailsFromUrlSite(urlSite),
+        ...detailsFromUrlTrace(urlTrace),
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -113,14 +115,23 @@ export const createTransformError = ({
   })
 }
 
-const detailsFromUrlSite = (urlSite) => {
-  if (!urlSite) {
+const detailsFromUrlTrace = (urlTrace) => {
+  if (!urlTrace) {
     return null
   }
-  if (urlSite.includes(">")) {
-    return { "referenced at": urlSite }
+  if (urlTrace.type === "url_site") {
+    urlTrace = {
+      type: "url_site_string",
+      value: stringifyUrlSite(urlTrace.value),
+    }
   }
-  return { "referenced in": urlSite }
+  if (urlTrace.type === "url_site_string") {
+    if (urlTrace.value.includes(">")) {
+      return { "referenced at": urlTrace.value }
+    }
+    return { "referenced in": urlTrace.value }
+  }
+  return { "referenced by": urlTrace.value }
 }
 
 const detailsFromPluginController = (pluginController) => {
