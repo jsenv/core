@@ -117,7 +117,7 @@ const getBuildRelativeUrlPattern = ({
     : `assets/${name}${extension}?v=[hash]`
 }
 
-const createAvailableNameGenerator = () => {
+export const createAvailableNameGenerator = () => {
   const cache = {}
   const getAvailableNameInDirectory = (name, directory) => {
     let names = cache[directory]

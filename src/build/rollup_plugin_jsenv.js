@@ -1,11 +1,14 @@
 import { pathToFileUrl, fileURLToPath } from "node:url"
-import { isFileSystemPath } from "@jsenv/filesystem"
+import { isFileSystemPath, urlToFilename } from "@jsenv/filesystem"
 
 import { createRessourceGraph } from "@jsenv/core/src/omega/ressource_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 import { parseScriptNode } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
+import { createAvailableNameGenerator } from "./build_url_generator.js"
 import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
+
+const EMPTY_CHUNK_URL = "virtual:__empty__"
 
 export const rollupPluginJsenv = ({
   signal,
@@ -24,14 +27,7 @@ export const rollupPluginJsenv = ({
   let _rollupGetModuleInfo = () => {
     throw new Error("not implemented")
   }
-  // rollup expects an input option, if we provide only an html file
-  // without any script type module in it, we won't emit "chunk" and rollup will throw.
-  // It is valid to build an html not referencing any js (rare but valid)
-  // In that case jsenv emits an empty chunk and discards rollup warning about it
-  // This chunk is later ignored in "generateBundle" hook
-  let atleastOneChunkEmitted = false
   const emitChunk = (chunk) => {
-    atleastOneChunkEmitted = true
     return _rollupEmitFile({
       type: "chunk",
       ...chunk,
@@ -39,22 +35,58 @@ export const rollupPluginJsenv = ({
   }
   const rollupGetModuleInfo = (id) => _rollupGetModuleInfo(id)
 
+  const assetDirectoryUrl = new URL("./assets/", buildDirectoryUrl).href
+  const availableNameGenerator = createAvailableNameGenerator()
+  const urlsReferencedByJs = []
+  const urlImporters = {}
+  const cookedUrls = {}
+  const assetUrls = []
+
+  const urlMentionHandlers = {
+    js_import_meta_url_pattern: ({ url, urlMention, magicSource }) => {
+      const urlSite = {
+        url,
+        line: urlMention.line,
+        column: urlMention.column,
+      }
+      startCookingAsset({
+        parentUrl: url,
+        urlSite,
+        url: urlMention.url,
+      })
+      urlsReferencedByJs.push(urlMention.url)
+      const assetName = availableNameGenerator.getAvailableNameInDirectory(
+        urlToFilename(urlMention.url),
+        assetDirectoryUrl,
+      )
+      const { start, end } = urlMention.path.node
+      magicSource.replace({
+        start,
+        end,
+        replacement: `window.__asVersionedSpecifier__("./${assetName}")`,
+      })
+    },
+  }
+
   const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
   const kitchen = createKitchen({
     signal,
     logger,
     projectDirectoryUrl,
     scenario,
-    plugins: [jsenvPluginAvoidVersioningCascade(), ...plugins],
+    plugins: [
+      // {
+      //   name: "jsenv:rollup",
+      //   appliesDuring: "*",
+      //   cooked: onCooked,
+      // },
+      jsenvPluginAvoidVersioningCascade(),
+      ...plugins,
+    ],
     runtimeSupport,
     sourcemapInjection,
     ressourceGraph,
   })
-
-  const urlsReferencedByJs = []
-  const urlImporters = {}
-  const cookedUrls = {}
-  const assetUrls = []
 
   const cookUrl = ({ url, ...rest }) => {
     const cookedUrl = cookedUrls[url]
@@ -63,24 +95,11 @@ export const rollupPluginJsenv = ({
       outDirectoryName: `${scenario}`,
       runtimeSupport,
       url,
+      urlMentionHandlers,
       ...rest,
     })
     cookedUrls[url] = promise
     return promise
-  }
-
-  const cookEntryPoint = async (entryPointUrl) => {
-    const entryPointContext = await cookUrl({
-      outDirectoryName: `${scenario}`,
-      runtimeSupport,
-      parentUrl: projectDirectoryUrl,
-      urlSite: null, // we could trace function calls
-      url: entryPointUrl,
-    })
-    if (entryPointContext.error) {
-      throw entryPointContext.error
-    }
-    return entryPointContext
   }
 
   const startCookingAsset = async ({ parentUrl, url, ...rest }) => {
@@ -107,6 +126,9 @@ export const rollupPluginJsenv = ({
       _rollupEmitFile = (...args) => this.emitFile(...args)
       _rollupGetModuleInfo = (id) => this.getModuleInfo(id)
 
+      const htmlEntryPointsCooked = []
+      const jsModuleEntryPointsCooked = []
+      const assetEntryPointsCooked = []
       await Object.keys(entryPoints).reduce(async (previous, key) => {
         await previous
         const entryPointRelativeUrl = key
@@ -115,47 +137,80 @@ export const rollupPluginJsenv = ({
           specifierType: "http_request", // not really but kinda
           specifier: entryPointRelativeUrl,
         })
-        const entryPointContext = await cookEntryPoint(entryPointUrl)
-        if (entryPointContext.type === "html") {
-          let previousJsModuleId
-          entryPointContext.urlMentions.forEach((urlMention) => {
-            if (
-              urlMention.type === "script_src" &&
-              parseScriptNode(urlMention.node) === "module"
-            ) {
-              emitChunk({
-                id: urlMention.url,
-                implicitlyLoadedAfterOneOf: previousJsModuleId
-                  ? [previousJsModuleId]
-                  : [],
-              })
-              previousJsModuleId = urlMention.url
-              return
-            }
-            startCookingAsset({
-              parentUrl: entryPointContext.url,
-              url: urlMention.url,
+        const entryPointCooked = await cookUrl({
+          outDirectoryName: `${scenario}`,
+          runtimeSupport,
+          parentUrl: projectDirectoryUrl,
+          urlSite: null, // we could trace function calls
+          url: entryPointUrl,
+        })
+        if (entryPointCooked.error) {
+          throw entryPointCooked.error
+        }
+        if (entryPointCooked.type === "html") {
+          htmlEntryPointsCooked.push(entryPointCooked)
+          return
+        }
+        if (entryPointCooked.type === "js_module") {
+          jsModuleEntryPointsCooked.push(entryPointCooked)
+          return
+        }
+        assetEntryPointsCooked.push(entryPointCooked)
+      }, Promise.resolve())
+      // rollup expects an input option, if we provide only an html file
+      // without any script type module in it, we won't emit "chunk" and rollup will throw.
+      // It is valid to build an html not referencing any js (rare but valid)
+      // In that case jsenv emits an empty chunk and discards rollup warning about it
+      // This chunk is later ignored in "generateBundle" hook
+      let atLeastOneChunkEmitted = false
+      htmlEntryPointsCooked.forEach((htmlEntryPointCooked) => {
+        let previousJsModuleId
+        htmlEntryPointCooked.urlMentions.forEach((urlMention) => {
+          if (
+            urlMention.type === "script_src" &&
+            parseScriptNode(urlMention.node) === "module"
+          ) {
+            atLeastOneChunkEmitted = true
+            emitChunk({
+              id: urlMention.url,
+              implicitlyLoadedAfterOneOf: previousJsModuleId
+                ? [previousJsModuleId]
+                : [],
             })
-          })
-          return
-        }
-        if (entryPointContext.type === "js_module") {
-          emitChunk({
-            id: entryPointContext.url,
-          })
-          return
-        }
-        assetUrls.push(entryPointContext.url)
-        entryPointContext.urlMentions.forEach((urlMention) => {
+            previousJsModuleId = urlMention.url
+            return
+          }
           startCookingAsset({
-            parentUrl: entryPointContext.url,
+            parentUrl: htmlEntryPointCooked.url,
             url: urlMention.url,
           })
         })
-      }, Promise.resolve())
+      })
+      jsModuleEntryPointsCooked.forEach((jsModuleEntryPointCooked) => {
+        emitChunk({
+          id: jsModuleEntryPointCooked.url,
+        })
+        atLeastOneChunkEmitted = true
+      })
+      assetEntryPointsCooked.forEach((assetEntryPointCooked) => {
+        assetUrls.push(assetEntryPointCooked.url)
+        assetEntryPointCooked.urlMentions.forEach((urlMention) => {
+          startCookingAsset({
+            parentUrl: assetEntryPointCooked.url,
+            url: urlMention.url,
+          })
+        })
+      })
+      if (!atLeastOneChunkEmitted) {
+        emitChunk({
+          id: EMPTY_CHUNK_URL,
+          fileName: "__empty__",
+        })
+      }
     },
-    async generateBundle() {
+    async generateBundle(outputOptions, rollupResult) {
       _rollupEmitFile = (...args) => this.emitFile(...args)
+      delete rollupResult["__empty__"]
       await Promise.all(assetUrls.map((url) => cookedUrls[url]))
     },
     outputOptions: (outputOptions) => {
@@ -174,6 +229,9 @@ export const rollupPluginJsenv = ({
       })
     },
     resolveId: (specifier, importer = projectDirectoryUrl) => {
+      if (specifier === EMPTY_CHUNK_URL) {
+        return specifier
+      }
       if (isFileSystemPath(importer)) {
         importer = pathToFileUrl(importer).href
       }
@@ -188,6 +246,9 @@ export const rollupPluginJsenv = ({
       return fileURLToPath(url)
     },
     async load(rollupId) {
+      if (rollupId === EMPTY_CHUNK_URL) {
+        return ""
+      }
       // here we know we are loading only js, assets are handled elsewhere right?
       const fileUrl = pathToFileUrl(rollupId).href
       const parentUrl = urlImporters[fileUrl] || projectDirectoryUrl
@@ -196,28 +257,6 @@ export const rollupPluginJsenv = ({
         parentUrl,
         urlSite,
         url: fileUrl,
-        urlMentionHandlers: {
-          js_import_meta_url_pattern: ({ urlMention, magicSource }) => {
-            const urlSite = {
-              url: fileUrl,
-              line: urlMention.line,
-              column: urlMention.column,
-            }
-            startCookingAsset({
-              parentUrl: fileUrl,
-              urlSite,
-              url: urlMention.url,
-            })
-            urlsReferencedByJs.push(urlMention.url)
-            // TODO: decide filename
-            const { start, end } = urlMention.path.node
-            magicSource.replace({
-              start,
-              end,
-              replacement: `window.__asVersionedSpecifier__("./${fileName}")`,
-            })
-          },
-        },
       })
       return {
         code: content,
@@ -234,6 +273,17 @@ export const rollupPluginJsenv = ({
         left: "import(window.__asVersionedSpecifier__(",
         right: "), import.meta.url)",
       }
+    },
+    renderChunk: (code, chunkInfo) => {
+      const { facadeModuleId } = chunkInfo
+      if (!facadeModuleId) {
+        // happens for inline module scripts for instance
+        return null
+      }
+      if (facadeModuleId === EMPTY_CHUNK_URL) {
+        return null
+      }
+      return null
     },
   }
 }

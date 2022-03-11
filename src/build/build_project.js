@@ -54,6 +54,15 @@ export const buildProject = async ({
     ],
     inputOptions: {
       input: [],
+      onwarn: (warning) => {
+        if (
+          warning.code === "EMPTY_BUNDLE" &&
+          warning.chunkName === "__empty__"
+        ) {
+          return
+        }
+        logger.warn(String(warning))
+      },
     },
   })
   return null

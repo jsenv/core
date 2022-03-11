@@ -40,7 +40,7 @@ export const parseJsModuleUrlMentions = async ({
       urlMentions.forEach((urlMention) => {
         const handler = urlMentionHandlers[urlMention.type]
         if (handler) {
-          handler({ urlMention, magicSource })
+          handler({ url, urlMention, magicSource })
         } else {
           const clientUrl = asClientUrl(urlMention.url)
           const replacement = JSON.stringify(clientUrl)
