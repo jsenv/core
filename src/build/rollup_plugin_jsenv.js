@@ -1,12 +1,9 @@
-import { pathToFileUrl, fileURLToPath, pathToFileURL } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { isFileSystemPath, urlToFilename } from "@jsenv/filesystem"
 
-import { createRessourceGraph } from "@jsenv/core/src/omega/ressource_graph.js"
-import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 import { parseScriptNode } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
 import { createAvailableNameGenerator } from "./build_url_generator.js"
-import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
 
 const EMPTY_CHUNK_URL = "virtual:__empty__"
 
@@ -15,8 +12,7 @@ export const rollupPluginJsenv = ({
   logger,
   projectDirectoryUrl,
   buildDirectoryUrl,
-  entryPoints,
-  plugins,
+  projectGraph,
   runtimeSupport,
   sourcemapInjection,
   scenario,
@@ -68,26 +64,6 @@ export const rollupPluginJsenv = ({
       })
     },
   }
-
-  const ressourceGraph = createRessourceGraph({ projectDirectoryUrl })
-  const kitchen = createKitchen({
-    signal,
-    logger,
-    projectDirectoryUrl,
-    scenario,
-    plugins: [
-      // {
-      //   name: "jsenv:rollup",
-      //   appliesDuring: "*",
-      //   cooked: onCooked,
-      // },
-      jsenvPluginAvoidVersioningCascade(),
-      ...plugins,
-    ],
-    runtimeSupport,
-    sourcemapInjection,
-    ressourceGraph,
-  })
 
   const cookUrl = ({ url, ...rest }) => {
     const cookedUrl = cookedUrls[url]
@@ -259,7 +235,7 @@ export const rollupPluginJsenv = ({
         return specifier
       }
       if (isFileSystemPath(importer)) {
-        importer = pathToFileUrl(importer).href
+        importer = pathToFileURL(importer).href
       }
       const url = new URL(specifier, importer).href
       const existingImporter = urlImporters[url]
@@ -276,7 +252,7 @@ export const rollupPluginJsenv = ({
         return ""
       }
       // here we know we are loading only js, assets are handled elsewhere right?
-      const fileUrl = pathToFileUrl(rollupId).href
+      const fileUrl = pathToFileURL(rollupId).href
       const parentUrl = urlImporters[fileUrl] || projectDirectoryUrl
       const urlTrace = ressourceGraph.getUrlTrace(parentUrl, fileUrl)
       const { content, sourcemap } = await cookJsModule({
@@ -294,7 +270,7 @@ export const rollupPluginJsenv = ({
     //   return `window.__resolveUrl__("./${fileName}", import.meta.url)`
     // },
     renderDynamicImport: ({ moduleId }) => {
-      urlsReferencedByJs.push(pathToFileUrl(moduleId).href)
+      urlsReferencedByJs.push(pathToFileURL(moduleId).href)
       return {
         left: "import(window.__asVersionedSpecifier__(",
         right: "), import.meta.url)",

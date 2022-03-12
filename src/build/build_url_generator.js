@@ -119,11 +119,11 @@ const getBuildRelativeUrlPattern = ({
 
 export const createAvailableNameGenerator = () => {
   const cache = {}
-  const getAvailableNameInDirectory = (name, directory) => {
-    let names = cache[directory]
+  const getAvailableNameInNamespace = (name, namespace) => {
+    let names = cache[namespace]
     if (!names) {
       names = []
-      cache[directory] = names
+      cache[namespace] = names
     }
 
     let nameCandidate = name
@@ -139,8 +139,17 @@ export const createAvailableNameGenerator = () => {
     }
   }
 
+  const generateFileName = (name) => {
+    return getAvailableNameInNamespace(name, "dist")
+  }
+
+  const generateAssetName = (name) => {
+    return getAvailableNameInNamespace(name, "asset")
+  }
+
   return {
-    getAvailableNameInDirectory,
+    generateFileName,
+    generateAssetName,
   }
 }
 

@@ -64,7 +64,7 @@
     "@jsenv/filesystem": "2.7.1",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",
-    "@jsenv/log": "1.5.0",
+    "@jsenv/log": "1.5.1",
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.5.6",
     "@jsenv/uneval": "1.6.0",

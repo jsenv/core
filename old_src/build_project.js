@@ -292,7 +292,7 @@ const assertEntryPoints = ({ entryPoints }) => {
   keys.forEach((key) => {
     if (!key.startsWith("./")) {
       throw new TypeError(
-        `unexpected key in entryPoints, all keys must start with ./ but found ${key}`,
+        `unexpected key in entryPoints, all keys must start with "./" but found ${key}`,
       )
     }
 
@@ -304,7 +304,7 @@ const assertEntryPoints = ({ entryPoints }) => {
     }
     if (value.includes("/")) {
       throw new TypeError(
-        `unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`,
+        `unexpected value in entryPoints, all values must be plain strings (no "/") but found "${value}" for key "${key}"`,
       )
     }
   })

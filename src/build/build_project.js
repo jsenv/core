@@ -12,8 +12,8 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
-import { rollupPluginJsenv } from "./rollup_plugin_jsenv.js"
-import { applyRollupPlugins } from "./apply_rollup_plugins.js"
+import { buildGraph } from "./build_graph.js"
+import { buildWithRollup } from "./build_with_rollup.js"
 
 export const buildProject = async ({
   signal = new AbortController().signal,
@@ -39,58 +39,46 @@ export const buildProject = async ({
   },
   sourcemapInjection = isPreview ? "comment" : false,
 
-  writeOnFileSystem = true,
-  buildDirectoryClean,
+  writeOnFileSystem = false,
+  buildDirectoryClean = true,
 }) => {
   const logger = createLogger({ logLevel })
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
-  const resultRef = { current: null }
-  await applyRollupPlugins({
-    rollupPlugins: [
-      rollupPluginJsenv({
-        signal,
-        logger,
-        projectDirectoryUrl,
-        buildDirectoryUrl,
-        entryPoints,
-        plugins,
-        runtimeSupport,
-        sourcemapInjection,
-        isPreview,
-        resultRef,
-      }),
-    ],
-    inputOptions: {
-      input: [],
-      onwarn: (warning) => {
-        if (
-          warning.code === "EMPTY_BUNDLE" &&
-          warning.chunkName === "__empty__"
-        ) {
-          return
-        }
-        logger.warn(String(warning))
-      },
-    },
+
+  const projectGraph = await buildGraph({
+    signal,
+    logger,
+    projectDirectoryUrl,
+    entryPoints,
+    plugins,
+    runtimeSupport,
+    sourcemapInjection,
   })
-  const { buildFileContents } = resultRef
-  if (writeOnFileSystem) {
-    if (buildDirectoryClean) {
-      await ensureEmptyDirectory(buildDirectoryUrl)
-    }
-    const buildRelativeUrls = Object.keys(buildFileContents)
-    buildRelativeUrls.forEach((buildRelativeUrl) => {
-      writeFileSync(
-        new URL(buildRelativeUrl, buildDirectoryUrl),
-        buildFileContents[buildRelativeUrl],
-      )
-    })
-  }
-  return {
-    buildFileContents,
-  }
+  // const buildStats = await buildWithRollup({
+  //   signal,
+  //   logger,
+  //   projectDirectoryUrl,
+  //   buildDirectoryUrl,
+  //   projectGraph,
+  //   runtimeSupport,
+  //   sourcemapInjection,
+  // })
+  // if (writeOnFileSystem) {
+  //   if (buildDirectoryClean) {
+  //     await ensureEmptyDirectory(buildDirectoryUrl)
+  //   }
+  //   const { buildFileContents } = buildStats
+  //   const buildRelativeUrls = Object.keys(buildFileContents)
+  //   buildRelativeUrls.forEach((buildRelativeUrl) => {
+  //     writeFileSync(
+  //       new URL(buildRelativeUrl, buildDirectoryUrl),
+  //       buildFileContents[buildRelativeUrl],
+  //     )
+  //   })
+  // }
+  // return buildStats
 }
 
 const assertEntryPoints = ({ entryPoints }) => {

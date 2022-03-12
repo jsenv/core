@@ -26,7 +26,7 @@ export const jsenvPluginImportMetaScenarios = () => {
           url,
           content,
         })
-        const { dev, test, build } = metadata.importMetaScenarios
+        const { dev = [], test = [], build = [] } = metadata.importMetaScenarios
         const replacements = []
         const replace = (path, value) => {
           replacements.push({ path, value })

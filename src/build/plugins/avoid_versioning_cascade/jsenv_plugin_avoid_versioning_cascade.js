@@ -5,10 +5,13 @@ import {
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
-} from "@jsenv/core/old_src/internal/transform_html/html_ast.js"
+} from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
 export const jsenvPluginAvoidVersioningCascade = () => {
-  const clientFileUrl = new URL("./client/versioned_resolver.js").href
+  const clientFileUrl = new URL(
+    "./client/versioned_resolver.js",
+    import.meta.url,
+  ).href
 
   return {
     name: "jsenv:avoid_versioning_cascade",
