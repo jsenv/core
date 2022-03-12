@@ -418,15 +418,14 @@ export const createKitchen = ({
     await onDependencyResolved(context)
 
     const resolveUrlMention = async (urlMention) => {
-      const contextDuringResolveUrlMention = {
+      const contextDuringResolveAsClientUrl = {
         ...context,
         urlMention,
-        asClientUrl,
       }
       const pluginResult = await pluginController.callPluginHooksUntil(
         plugins,
-        "resolveUrlMention",
-        contextDuringResolveUrlMention,
+        "resolveAsClientUrl",
+        contextDuringResolveAsClientUrl,
       )
       if (pluginResult) {
         return pluginResult

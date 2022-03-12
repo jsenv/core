@@ -1,6 +1,7 @@
 import { createLog, startSpinner, UNICODE, ANSI } from "@jsenv/log"
 import { urlToFilename } from "@jsenv/filesystem"
 
+import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
 import { createProjectGraph } from "@jsenv/core/src/omega/project_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 
@@ -8,19 +9,23 @@ import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
-import { createAvailableNameGenerator } from "./build_url_generator.js"
+import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
 
 export const buildGraph = async ({
   signal,
   logger,
   projectDirectoryUrl,
+  baseUrl = "/",
   entryPoints,
   plugins,
   runtimeSupport,
   sourcemapInjection,
   lineBreakNormalization = process.platform === "win32",
 }) => {
+  const buildUrlsGenerator = createBuilUrlsGenerator({
+    baseUrl,
+  })
   const buildingLog = createLog()
   const spinner = startSpinner({
     log: buildingLog,
@@ -29,7 +34,6 @@ export const buildGraph = async ({
   let kitchen
   const urlPromiseCache = {}
   let urlCount = 0
-  const availableNameGenerator = createAvailableNameGenerator()
   const urlsReferencedByJs = []
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
@@ -67,7 +71,7 @@ export const buildGraph = async ({
       {
         name: "jsenv:build",
         appliesDuring: { build: true },
-        resolveUrlMention: async ({ url, urlMention, asClientUrl }) => {
+        resolveAsClientUrl: async ({ url, urlMention }) => {
           const urlMentionCooked = await cookUrl({
             parentUrl: url,
             urlTrace: {
@@ -80,24 +84,31 @@ export const buildGraph = async ({
             },
             url: urlMention.url,
           })
-
+          const asClientUrl = (clientUrlRaw, { version }) => {
+            const params = {}
+            if (version) {
+              params.v = version
+            }
+            const clientUrl = injectQueryParams(clientUrlRaw, params)
+            return clientUrl
+          }
           const urlMentionInfo = projectGraph.urlInfos[urlMentionCooked.url]
           if (urlMention.type === "js_import_meta_url_pattern") {
             urlsReferencedByJs.push(urlMention.url)
             return `window.__asVersionedSpecifier__("${asClientUrl(
-              urlMentionInfo.uniqueName,
+              urlMentionInfo.buildUrl,
             )}")`
           }
           if (urlMention.type === "js_import_export") {
-            return JSON.stringify(asClientUrl(urlMention.url))
+            return JSON.stringify(
+              asClientUrl(urlMention.buildUrl, {
+                version: urlMentionInfo.version,
+              }),
+            )
           }
-          // il faudrait utiliser urlMentionInfo.uniqueName
-          // mais un truc absolu et qui sait déja ou l'asset sera mis
-          // sinon l'url d'une image dans du css ne sera pas bonne
-          // il faudrait ajouter a cette url la version
-          // il faudrait aussi la rendre relative a celui qui importe?
-          // ou alors absolue
-          return asClientUrl(urlMentionInfo.uniqueName)
+          return asClientUrl(urlMentionInfo.buildUrl, {
+            version: urlMentionInfo.version,
+          })
         },
         cooked: ({ projectGraph, url, type, contentType, content }) => {
           // at this stage all deps are known and url mentions are replaced
@@ -110,17 +121,11 @@ export const buildGraph = async ({
               lineBreakNormalization,
             })
           }
-          if (type === "js_module") {
-            const jsModuleName = availableNameGenerator.generateFileName(
-              urlToFilename(url),
-            )
-            urlInfo.uniqueName = jsModuleName
-          } else {
-            const assetName = availableNameGenerator.generateAssetName(
-              urlToFilename(url),
-            )
-            urlInfo.uniqueName = assetName
-          }
+          const buildUrl = buildUrlsGenerator.generate(
+            urlToFilename(url),
+            type === "js_module" ? "/" : "assets/",
+          )
+          urlInfo.buildUrl = buildUrl
         },
       },
       jsenvPluginAvoidVersioningCascade(),
