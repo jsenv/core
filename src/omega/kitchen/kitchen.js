@@ -42,10 +42,10 @@ export const createKitchen = ({
   signal,
   logger,
   projectDirectoryUrl,
-  scenario,
   plugins,
   sourcemapInjection,
-  ressourceGraph,
+  projectGraph,
+  scenario,
 }) => {
   plugins = [
     ...plugins,
@@ -61,10 +61,10 @@ export const createKitchen = ({
     signal,
     logger,
     projectDirectoryUrl,
-    scenario,
     plugins,
     sourcemapInjection,
-    ressourceGraph,
+    projectGraph,
+    scenario,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
@@ -180,7 +180,7 @@ export const createKitchen = ({
     context.asClientUrl = (url) => {
       const clientUrlRaw = url
       const hmrTimestamp = context.hmr
-        ? ressourceGraph.getHmrTimestamp(url)
+        ? projectGraph.getHmrTimestamp(url)
         : null
       const params = {}
       if (hmrTimestamp) {
@@ -356,9 +356,18 @@ export const createKitchen = ({
       hotAcceptSelf,
       hotAcceptDependencies,
     })
-    ressourceGraph.updateDependencies({
+    projectGraph.updateUrlInfo({
       url: context.url,
       type: context.type,
+      // during dev/test we don't keep everything in memory to reduce memory consumption
+      // during build we keep more in memory to be able to build the whole project
+      ...(scenario === "build"
+        ? {
+            contentType: context.contentType,
+            content: context.content,
+            sourcemap: context.sourcemap,
+          }
+        : null),
       dependencyUrls,
       dependencyTraces,
       hotDecline,
@@ -399,9 +408,9 @@ export const createKitchen = ({
         context,
       )
       if (typeof cookedReturnValue === "function") {
-        const removePrunedCallback = ressourceGraph.prunedCallbackList.add(
-          (prunedRessource) => {
-            if (prunedRessource.url === context.url) {
+        const removePrunedCallback = projectGraph.prunedCallbackList.add(
+          (prunedUrlInfo) => {
+            if (prunedUrlInfo.url === context.url) {
               removePrunedCallback()
               cookedReturnValue()
             }

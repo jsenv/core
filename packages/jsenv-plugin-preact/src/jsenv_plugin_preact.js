@@ -50,10 +50,7 @@ export const jsenvPluginPreact = ({
     },
     transform: {
       html: ({ scenario, content }) => {
-        if (
-          !preactDevtoolsDuringBuild &&
-          (scenario === "preview" || scenario === "prod")
-        ) {
+        if (!preactDevtoolsDuringBuild && scenario === "build") {
           return null
         }
         const htmlAst = parseHtmlString(content)

@@ -1,26 +1,26 @@
 import { createCallbackList } from "@jsenv/abort"
 import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
 
-export const createRessourceGraph = ({ projectDirectoryUrl }) => {
+export const createProjectGraph = ({ projectDirectoryUrl }) => {
   const hotUpdateCallbackList = createCallbackList()
   const prunedCallbackList = createCallbackList()
 
-  const ressources = {}
-  const getRessourceByUrl = (url) => ressources[url]
-  const reuseOrCreateRessource = (url) => {
-    const existingRessource = getRessourceByUrl(url)
-    if (existingRessource) return existingRessource
-    const ressource = createRessource(url)
-    ressources[url] = ressource
-    return ressource
+  const urlInfos = {}
+  const getUrlInfo = (url) => urlInfos[url]
+  const reuseOrCreateUrlInfo = (url) => {
+    const existingUrlInfo = urlInfos[url]
+    if (existingUrlInfo) return existingUrlInfo
+    const urlInfo = createUrlInfo(url)
+    urlInfos[url] = urlInfo
+    return urlInfo
   }
 
   const getUrlTrace = (dependencyUrl, url) => {
-    const ressource = getRessourceByUrl(url)
-    if (!ressource) {
+    const urlInfo = urlInfos[url]
+    if (!urlInfo) {
       return null
     }
-    const dependencyUrlTrace = ressource.dependencyUrlTraces[dependencyUrl]
+    const dependencyUrlTrace = urlInfo.dependencyUrlTraces[dependencyUrl]
     if (!dependencyUrlTrace) {
       return null
     }
@@ -31,69 +31,80 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     if (!urlIsInsideOf(url, projectDirectoryUrl)) {
       return null
     }
-    const ressource = ressources[url]
-    if (!ressource) {
+    const urlInfo = urlInfos[url]
+    if (!urlInfo) {
       return null
     }
-    const { hmrTimestamp } = ressource
+    const { hmrTimestamp } = urlInfo
     if (!hmrTimestamp) {
       return null
     }
     return hmrTimestamp
   }
 
-  const updateDependencies = ({
+  const updateUrlInfo = ({
     url,
     type,
+    contentType,
+    content,
+    sourcemap,
     dependencyUrls,
     dependencyUrlTraces,
     hotDecline,
     hotAcceptSelf,
     hotAcceptDependencies,
   }) => {
-    const existingRessource = getRessourceByUrl(url)
-    const ressource =
-      existingRessource || (ressources[url] = createRessource(url))
+    const existingUrlInfo = urlInfos[url]
+    const urlInfo = existingUrlInfo || (urlInfos[url] = createUrlInfo(url))
 
     if (type !== undefined) {
-      ressource.type = type
+      urlInfo.type = type
+    }
+    if (contentType !== undefined) {
+      urlInfo.contentType = contentType
+    }
+    if (content !== undefined) {
+      urlInfo.content = content
+    }
+    if (sourcemap !== undefined) {
+      urlInfo.sourcemap = sourcemap
     }
     if (dependencyUrls !== undefined) {
-      ressource.dependencyUrlTraces = dependencyUrlTraces
+      urlInfo.dependencyUrlTraces = dependencyUrlTraces
       dependencyUrls.forEach((dependencyUrl) => {
-        const dependency = reuseOrCreateRessource(dependencyUrl)
-        ressource.dependencies.add(dependencyUrl)
-        dependency.dependents.add(url)
+        const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
+        urlInfo.dependencies.add(dependencyUrl)
+        dependencyUrlInfo.dependents.add(url)
       })
-      if (existingRessource) {
+      if (existingUrlInfo) {
         pruneDependencies(
-          existingRessource,
-          Array.from(existingRessource.dependencies).filter(
+          existingUrlInfo,
+          Array.from(existingUrlInfo.dependencies).filter(
             (dep) => !dependencyUrls.includes(dep),
           ),
         )
       }
     }
     if (hotDecline !== undefined) {
-      ressource.hotDecline = hotDecline
+      urlInfo.hotDecline = hotDecline
     }
     if (hotAcceptSelf !== undefined) {
-      ressource.hotAcceptSelf = hotAcceptSelf
+      urlInfo.hotAcceptSelf = hotAcceptSelf
     }
     if (hotAcceptDependencies !== undefined) {
-      ressource.hotAcceptDependencies = hotAcceptDependencies
+      urlInfo.hotAcceptDependencies = hotAcceptDependencies
     }
   }
 
   const onFileChange = ({ relativeUrl, event }) => {
     const url = resolveUrl(relativeUrl, projectDirectoryUrl)
-    const ressource = getRessourceByUrl(url)
+    const urlInfo = urlInfos[url]
     // file not part of dependency graph
-    if (!ressource) {
+    if (!urlInfo) {
       return
     }
-    updateHmrTimestamp(ressource, Date.now())
-    const hotUpdate = propagateUpdate(ressource)
+    updateHmrTimestamp(urlInfo, Date.now())
+    const hotUpdate = propagateUpdate(urlInfo)
     if (hotUpdate.declined) {
       notifyDeclined({
         cause: `${relativeUrl} ${event}`,
@@ -109,23 +120,23 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     }
   }
 
-  const updateHmrTimestamp = (ressource, hmrTimestamp) => {
+  const updateHmrTimestamp = (urlInfo, hmrTimestamp) => {
     const seen = []
     const iterate = (url) => {
       if (seen.includes(url)) {
         return
       }
       seen.push(url)
-      const ressource = ressources[url]
-      ressource.hmrTimestamp = hmrTimestamp
-      ressource.dependents.forEach((dependentUrl) => {
-        const dependent = ressources[dependentUrl]
+      const urlInfo = urlInfo[url]
+      urlInfo.hmrTimestamp = hmrTimestamp
+      urlInfo.dependents.forEach((dependentUrl) => {
+        const dependent = urlInfo[dependentUrl]
         if (!dependent.hotAcceptDependencies.includes(url)) {
           iterate(dependentUrl, hmrTimestamp)
         }
       })
     }
-    iterate(ressource.url)
+    iterate(urlInfo.url)
   }
 
   const notifyDeclined = ({ cause, reason, declinedBy }) => {
@@ -145,40 +156,40 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     })
   }
 
-  const propagateUpdate = (firstRessource) => {
-    const iterate = (ressource, trace) => {
-      if (ressource.hotAcceptSelf) {
+  const propagateUpdate = (firstUrlInfo) => {
+    const iterate = (urlInfo, trace) => {
+      if (urlInfo.hotAcceptSelf) {
         return {
           accepted: true,
           reason:
-            ressource === firstRessource
-              ? `ressource accepts hot reload`
-              : `a dependent ressource accepts hot reload`,
+            urlInfo === firstUrlInfo
+              ? `file accepts hot reload`
+              : `a dependent file accepts hot reload`,
           instructions: [
             {
-              type: ressource.type,
-              boundary: urlToRelativeUrl(ressource.url, projectDirectoryUrl),
-              acceptedBy: urlToRelativeUrl(ressource.url, projectDirectoryUrl),
+              type: urlInfo.type,
+              boundary: urlToRelativeUrl(urlInfo.url, projectDirectoryUrl),
+              acceptedBy: urlToRelativeUrl(urlInfo.url, projectDirectoryUrl),
             },
           ],
         }
       }
-      const { dependents } = ressource
+      const { dependents } = urlInfo
       const instructions = []
       for (const dependentUrl of dependents) {
-        const dependent = ressources[dependentUrl]
+        const dependent = urlInfos[dependentUrl]
         if (dependent.hotDecline) {
           return {
             declined: true,
-            reason: `a dependent ressource declines hot reload`,
+            reason: `a dependent file declines hot reload`,
             declinedBy: dependentUrl,
           }
         }
-        if (dependent.hotAcceptDependencies.includes(ressource.url)) {
+        if (dependent.hotAcceptDependencies.includes(urlInfo.url)) {
           instructions.push({
             type: dependent.type,
             boundary: urlToRelativeUrl(dependentUrl, projectDirectoryUrl),
-            acceptedBy: urlToRelativeUrl(ressource.url, projectDirectoryUrl),
+            acceptedBy: urlToRelativeUrl(urlInfo.url, projectDirectoryUrl),
           })
           continue
         }
@@ -198,7 +209,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
           continue
         }
         if (
-          // declined explicitely by an other ressource, it must decline the whole update
+          // declined explicitely by an other file, it must decline the whole update
           dependentPropagationResult.declinedBy
         ) {
           return dependentPropagationResult
@@ -209,47 +220,48 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       if (instructions.length === 0) {
         return {
           declined: true,
-          reason: `there is no ressource accepting hot reload while propagating update`,
+          reason: `there is no file accepting hot reload while propagating update`,
         }
       }
       return {
         accepted: true,
-        reason: `${instructions.length} dependent ressource(s) accepts hot reload`,
+        reason: `${instructions.length} dependent file(s) accepts hot reload`,
         instructions,
       }
     }
     const trace = []
-    return iterate(firstRessource, trace)
+    return iterate(firstUrlInfo, trace)
   }
 
-  const pruneDependencies = (firstRessource, urlsToRemove) => {
-    const prunedRessources = []
-    const removeDependencies = (ressource, urlsToPrune) => {
+  const pruneDependencies = (firstUrlInfo, urlsToRemove) => {
+    const prunedUrlInfos = []
+    const removeDependencies = (urlInfo, urlsToPrune) => {
       urlsToPrune.forEach((urlToPrune) => {
-        ressource.dependencies.delete(urlToPrune)
-        const dependency = ressources[urlToPrune]
+        urlInfo.dependencies.delete(urlToPrune)
+        const dependency = urlInfos[urlToPrune]
         if (!dependency) {
           return
         }
-        dependency.dependents.delete(ressource.url)
+        dependency.dependents.delete(urlInfo.url)
         if (dependency.dependents.size === 0) {
           removeDependencies(dependency, Array.from(dependency.dependencies))
-          prunedRessources.push(dependency)
+          prunedUrlInfos.push(dependency)
         }
       })
     }
-    removeDependencies(firstRessource, urlsToRemove)
-    if (prunedRessources.length === 0) {
+    removeDependencies(firstUrlInfo, urlsToRemove)
+    if (prunedUrlInfos.length === 0) {
       return
     }
-    prunedRessources.forEach((prunedRessource) => {
-      prunedRessource.hmrTimestamp = Date.now()
-      // delete ressources[prunedRessource.url]
-      prunedCallbackList.notify(prunedRessource)
+    prunedUrlInfos.forEach((prunedUrlInfo) => {
+      prunedUrlInfo.hmrTimestamp = Date.now()
+      // delete urlInfos[prunedRessource.url]
+      prunedCallbackList.notify(prunedUrlInfo)
     })
-    const mainHotUpdate = propagateUpdate(firstRessource)
-    const cause = `following files are no longer referenced: ${prunedRessources.map(
-      (ressource) => urlToRelativeUrl(ressource.url, projectDirectoryUrl),
+    const mainHotUpdate = propagateUpdate(firstUrlInfo)
+    const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
+      (prunedUrlInfo) =>
+        urlToRelativeUrl(prunedUrlInfo.url, projectDirectoryUrl),
     )}`
     // now check if we can hot update the main ressource
     // then if we can hot update all dependencies
@@ -264,23 +276,20 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
     // main can hot update
     let i = 0
     const instructions = []
-    while (i < prunedRessources.length) {
-      const prunedRessource = prunedRessources[i++]
-      if (prunedRessource.hotDecline) {
+    while (i < prunedUrlInfos.length) {
+      const prunedUrlInfo = prunedUrlInfos[i++]
+      if (prunedUrlInfo.hotDecline) {
         notifyDeclined({
           cause,
-          reason: `a pruned ressource declines hot reload`,
-          declinedBy: urlToRelativeUrl(
-            prunedRessource.url,
-            projectDirectoryUrl,
-          ),
+          reason: `a pruned file declines hot reload`,
+          declinedBy: urlToRelativeUrl(prunedUrlInfo.url, projectDirectoryUrl),
         })
         return
       }
       instructions.push({
         type: "prune",
-        boundary: urlToRelativeUrl(prunedRessource.url, projectDirectoryUrl),
-        acceptedBy: urlToRelativeUrl(firstRessource.url, projectDirectoryUrl),
+        boundary: urlToRelativeUrl(prunedUrlInfo.url, projectDirectoryUrl),
+        acceptedBy: urlToRelativeUrl(firstUrlInfo.url, projectDirectoryUrl),
       })
     }
     notifyAccepted({
@@ -291,13 +300,13 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   }
 
   const findDependent = (url, predicate) => {
-    const ressource = getRessourceByUrl(url)
-    if (!ressource) {
+    const urlInfo = urlInfos[url]
+    if (!urlInfo) {
       return null
     }
-    const visitDependents = (ressource) => {
-      for (const dependentUrl of ressource.dependents) {
-        const dependent = ressources[dependentUrl]
+    const visitDependents = (urlInfo) => {
+      for (const dependentUrl of urlInfo.dependents) {
+        const dependent = urlInfos[dependentUrl]
         if (predicate(dependent)) {
           return dependent
         }
@@ -305,25 +314,26 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
       }
       return null
     }
-    return visitDependents(ressource)
+    return visitDependents(urlInfo)
   }
 
   return {
     hotUpdateCallbackList,
     prunedCallbackList,
 
-    updateDependencies,
+    urlInfos,
+    getUrlInfo,
+    updateUrlInfo,
     onFileChange,
     getHmrTimestamp,
 
-    getRessourceByUrl,
     getUrlTrace,
     findDependent,
 
     toJSON: () => {
       const data = {}
-      Object.keys(ressources).forEach((url) => {
-        const dependencyUrls = Array.from(ressources[url].dependencies)
+      Object.keys(urlInfos).forEach((url) => {
+        const dependencyUrls = Array.from(urlInfos[url].dependencies)
         if (dependencyUrls.length) {
           const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
           data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
@@ -336,7 +346,7 @@ export const createRessourceGraph = ({ projectDirectoryUrl }) => {
   }
 }
 
-const createRessource = (url) => {
+const createUrlInfo = (url) => {
   return {
     url,
     type: "",

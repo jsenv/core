@@ -9,8 +9,7 @@ export const babelPluginMetadataImportMetaScenarios = () => {
         state.file.metadata.importMetaScenarios = {
           dev: importMetas.dev,
           test: importMetas.test,
-          preview: importMetas.preview,
-          prod: importMetas.prod,
+          build: importMetas.build,
         }
       },
     },

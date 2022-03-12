@@ -12,7 +12,7 @@ export const jsenvPluginAvoidVersioningCascade = () => {
 
   return {
     name: "jsenv:avoid_versioning_cascade",
-    appliesDuring: { preview: true, prod: true },
+    appliesDuring: { build: true },
     transform: {
       html: ({ resolveSpecifier, asClientUrl, url, content }) => {
         const htmlAst = parseHtmlString(content)

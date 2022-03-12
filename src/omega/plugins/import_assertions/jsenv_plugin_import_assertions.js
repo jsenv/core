@@ -142,7 +142,7 @@ export const jsenvPluginImportAssertions = () => {
 const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
   // during build always replace import assertions with the js to feed
   // solely js to rollup
-  if (scenario === "preview" || scenario === "prod") {
+  if (scenario === "build") {
     return ["json", "css", "text"]
   }
   const importTypes = []

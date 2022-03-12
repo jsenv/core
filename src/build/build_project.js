@@ -21,7 +21,10 @@ export const buildProject = async ({
   projectDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
-  preview = false,
+  // for now it's here but I think preview will become an other script
+  // that will just pass different options to build project
+  // and this function will be agnostic about "preview" concept
+  isPreview = false,
   plugins = [],
   runtimeSupport = {
     android: "0.0.0",
@@ -34,7 +37,7 @@ export const buildProject = async ({
     rhino: "0.0.0",
     safari: "0.0.0",
   },
-  sourcemapInjection = preview ? "comment" : false,
+  sourcemapInjection = isPreview ? "comment" : false,
 
   writeOnFileSystem = true,
   buildDirectoryClean,
@@ -43,7 +46,6 @@ export const buildProject = async ({
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
-  const scenario = preview ? "preview" : "prod"
   const resultRef = { current: null }
   await applyRollupPlugins({
     rollupPlugins: [
@@ -56,7 +58,7 @@ export const buildProject = async ({
         plugins,
         runtimeSupport,
         sourcemapInjection,
-        scenario,
+        isPreview,
         resultRef,
       }),
     ],
