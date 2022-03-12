@@ -5,8 +5,7 @@ import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_ment
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
 export const parseJsModuleUrlMentions = async ({
-  urlMentionHandlers,
-  asClientUrl,
+  resolveUrlMention,
   parentUrlSite,
   url,
   type,
@@ -38,19 +37,12 @@ export const parseJsModuleUrlMentions = async ({
     transformUrlMentions: () => {
       const magicSource = createMagicSource({ url, content })
       urlMentions.forEach((urlMention) => {
-        const handler = urlMentionHandlers[urlMention.type]
-        if (handler) {
-          handler({ url, urlMention, magicSource })
-        } else {
-          const clientUrl = asClientUrl(urlMention.url)
-          const replacement = JSON.stringify(clientUrl)
-          const { start, end } = urlMention
-          magicSource.replace({
-            start,
-            end,
-            replacement,
-          })
-        }
+        const { start, end } = urlMention
+        magicSource.replace({
+          start,
+          end,
+          replacement: resolveUrlMention(urlMention),
+        })
       })
       return magicSource.toContentAndSourcemap()
     },

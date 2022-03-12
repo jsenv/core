@@ -98,13 +98,13 @@ const getPluginHook = (plugin, hookName, context) => {
   }
   if (typeof hook === "object") {
     if (hookName === "resolve" || hookName === "redirect") {
-      const hookForSpecifier = hook[context.specifierType]
+      const hookForSpecifier = hook[context.specifierType] || hook["*"]
       if (!hookForSpecifier) {
         return null
       }
       return hookForSpecifier
     }
-    const hookForType = hook[context.type]
+    const hookForType = hook[context.type] || hook["*"]
     if (!hookForType) {
       return null
     }

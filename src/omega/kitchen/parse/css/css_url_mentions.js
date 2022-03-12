@@ -3,7 +3,7 @@ import { postCssPluginUrlVisitor } from "@jsenv/core/src/utils/css_ast/postcss_p
 import { replaceCssUrls } from "@jsenv/core/src/utils/css_ast/replace_css_urls.js"
 
 export const parseCssUrlMentions = async ({
-  asClientUrl,
+  resolveUrlMention,
   type,
   url,
   content,
@@ -58,7 +58,7 @@ export const parseCssUrlMentions = async ({
           const urlMention = cssUrlMentions.find(
             (urlMention) => urlMention.url === url,
           )
-          replace(asClientUrl(urlMention.url))
+          replace(resolveUrlMention(urlMention))
         },
       })
       return {

@@ -46,7 +46,17 @@ export const createKitchen = ({
   sourcemapInjection,
   projectGraph,
   scenario,
+  urlMentionHandlers = {},
 }) => {
+  urlMentionHandlers = {
+    ...urlMentionHandlers,
+    js_import_meta_url_pattern: (urlMention, { asClientUrl }) => {
+      return JSON.stringify(asClientUrl(urlMention.url))
+    },
+    js_import_export: (urlMention, { asClientUrl }) => {
+      return JSON.stringify(asClientUrl(urlMention.url))
+    },
+  }
   plugins = [
     ...plugins,
     ...getJsenvPlugins({
@@ -65,6 +75,7 @@ export const createKitchen = ({
     sourcemapInjection,
     projectGraph,
     scenario,
+    urlMentionHandlers,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
@@ -138,7 +149,6 @@ export const createKitchen = ({
     parentUrl,
     urlTrace,
     url,
-    urlMentionHandlers,
   }) => {
     const context = {
       ...baseContext,
@@ -162,7 +172,6 @@ export const createKitchen = ({
       parentUrl,
       urlTrace,
       url,
-      urlMentionHandlers,
     }
     const urlObject = new URL(url)
     context.hmr = urlObject.searchParams.has("hmr")
@@ -177,6 +186,14 @@ export const createKitchen = ({
     context.url = urlObject.href
 
     currentContext = context
+    context.resolveUrlMention = (urlMention) => {
+      const handler =
+        urlMentionHandlers[urlMention.type] || urlMentionHandlers["*"]
+      return (
+        handler(urlMention, currentContext) ||
+        context.asClientUrl(urlMention.url)
+      )
+    }
     context.asClientUrl = (url) => {
       const clientUrlRaw = url
       const hmrTimestamp = context.hmr
@@ -296,7 +313,7 @@ export const createKitchen = ({
       return context
     }
 
-    // parsing
+    // parsing, introduce "dependencyResolved" hook?
     const parser = parsers[context.type]
     const {
       urlMentions = [],

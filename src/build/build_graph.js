@@ -26,11 +26,47 @@ export const buildGraph = async ({
     signal,
     logger,
     projectDirectoryUrl,
-    plugins: [jsenvPluginAvoidVersioningCascade(), ...plugins],
+    plugins: [
+      // le souci c'est que redirect se produit avant "load"
+      // donc ça marche pas vraiment
+      // mais j'aime l'idée
+      // on pourrait ajouter un concept de postredirect mais pour l'instant non
+      //   {
+      //     name: "jsenv:build_url_versioning",
+      //     appliesDuring: { build: true },
+      //     redirect: ({ url }) => {},
+      //   },
+      jsenvPluginAvoidVersioningCascade(),
+      ...plugins,
+    ],
     runtimeSupport,
     sourcemapInjection,
     projectGraph,
     scenario: "build",
+    urlMentionHandlers: {
+      "js_import_meta_url_pattern": (urlMention) => {
+        const assetName = availableNameGenerator.generateAssetName(
+          urlToFilename(urlMention.url),
+        )
+        urlsReferencedByJs.push(urlMention.url)
+        return `window.__asVersionedSpecifier__("./${assetName}")`
+      },
+      // pour import statique on pourrait esperer que importmap fonctionne
+      // mais le support est insuffisant donc on va garder l'import sans la version
+      // pareil pour les imports dynamique, c'est rollup qui se chargera de ça
+      "js_import_export": (urlMention, { asClientUrl }) => {
+        return JSON.stringify(asClientUrl(urlMention.url))
+      },
+      "*": (urlMention) => {
+        const clientUrl = asClientUrl(urlMention.url)
+        // we must version url
+        // mais pour pouvoir calculer le hash il faut que les deps soit cooked
+        // hors pour le moment on les cooked apres
+        // + se prémunir des deps circulaires
+        // on ferait cela dans un "dependencyResolved" hook
+        // pour les deps circulaire on verra
+      },
+    },
   })
   const buildingLog = createLog()
   const spinner = startSpinner({
@@ -40,21 +76,7 @@ export const buildGraph = async ({
   const urlPromiseCache = {}
   const urlsReferencedByJs = []
   let urlCount = 0
-  const urlMentionHandlers = {
-    js_import_meta_url_pattern: ({ urlMention, magicSource }) => {
-      // TODO: no need to replace the whole expression, only the specifier is enough
-      const assetName = availableNameGenerator.generateAssetName(
-        urlToFilename(urlMention.url),
-      )
-      urlsReferencedByJs.push(urlMention.url)
-      const { start, end } = urlMention.path.node
-      magicSource.replace({
-        start,
-        end,
-        replacement: `window.__asVersionedSpecifier__("./${assetName}")`,
-      })
-    },
-  }
+
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
     if (promiseFromCache) return promiseFromCache
@@ -62,20 +84,20 @@ export const buildGraph = async ({
       outDirectoryName: `build`,
       runtimeSupport,
       url,
-      urlMentionHandlers,
       ...rest,
     })
     urlPromiseCache[url] = promise
     return promise
   }
   const _cookUrl = async (params) => {
+    urlCount++
+    spinner.text = `Loading project graph ${urlCount}`
+
     const cookedUrl = await kitchen.cookUrl(params)
     if (cookedUrl.error) {
       spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
       throw cookedUrl.error
     }
-    urlCount++
-    spinner.text = `Loading project graph ${urlCount}`
     // cook dependencies
     await Promise.all(
       cookedUrl.urlMentions.map(async (urlMention) => {
@@ -95,7 +117,6 @@ export const buildGraph = async ({
     )
     return cookedUrl
   }
-
   await Object.keys(entryPoints).reduce(
     async (previous, entryPointRelativeUrl) => {
       await previous
@@ -128,6 +149,11 @@ ${ANSI.color(`Total:`, ANSI.GREY)} ${graphStats.total.count} (${byteAsFileSize(
 }
 
 // TODO: exlude inline files
+// more groups:
+// - js_classic
+// - graphics: jpg, png, fonts, svgs
+// - audio: mp3, ogg, midi
+// - video: mp4
 const createProjectGraphStats = (projectGraph) => {
   const { urlInfos } = projectGraph
   const countGroups = {
@@ -203,7 +229,7 @@ const determineCategory = (urlInfo) => {
   return urlInfo.type
 }
 
-const createRepartitionMessage = ({ html, css, js_module, other, total }) => {
+const createRepartitionMessage = ({ html, css, js_module, other }) => {
   const parts = []
   if (html.count) {
     parts.push(
