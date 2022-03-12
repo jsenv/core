@@ -50,10 +50,10 @@ export const jsenvPluginAutoreload = () => {
           content: htmlModified,
         }
       },
-      js_module: async ({ parentUrlSite, url, content }) => {
+      js_module: async ({ getOriginalUrlSite, url, content }) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
-          parentUrlSite,
+          getOriginalUrlSite,
           url,
           content,
         })

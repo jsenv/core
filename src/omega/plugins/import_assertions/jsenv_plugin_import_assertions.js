@@ -19,7 +19,7 @@ export const jsenvPluginImportAssertions = () => {
         js_module: async ({
           scenario,
           isSupportedOnRuntime,
-          parentUrlSite,
+          getOriginalUrlSite,
           url,
           content,
         }) => {
@@ -32,7 +32,7 @@ export const jsenvPluginImportAssertions = () => {
           }
           const { metadata } = await applyBabelPlugins({
             babelPlugins: [babelPluginMetadataImportAssertions],
-            parentUrlSite,
+            getOriginalUrlSite,
             url,
             content,
           })

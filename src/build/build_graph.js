@@ -3,6 +3,8 @@ import { urlToFilename } from "@jsenv/filesystem"
 
 import { createProjectGraph } from "@jsenv/core/src/omega/project_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
+import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
+
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
@@ -18,24 +20,76 @@ export const buildGraph = async ({
   runtimeSupport,
   sourcemapInjection,
 }) => {
+  const buildingLog = createLog()
+  const spinner = startSpinner({
+    log: buildingLog,
+    text: `Loading project graph`,
+  })
+  let kitchen
+  const urlPromiseCache = {}
+  let urlCount = 0
+  const cookUrl = ({ url, ...rest }) => {
+    const promiseFromCache = urlPromiseCache[url]
+    if (promiseFromCache) return promiseFromCache
+    const promise = _cookUrl({
+      outDirectoryName: `build`,
+      runtimeSupport,
+      url,
+      ...rest,
+    })
+    urlPromiseCache[url] = promise
+    return promise
+  }
+
+  const _cookUrl = async (params) => {
+    urlCount++
+    spinner.text = `Loading project graph ${urlCount}`
+    const cookedUrl = await kitchen.cookUrl(params)
+    if (cookedUrl.error) {
+      spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
+      throw cookedUrl.error
+    }
+    return cookedUrl
+  }
+
   const projectGraph = createProjectGraph({
     projectDirectoryUrl,
+    scenario: "build",
   })
   const availableNameGenerator = createAvailableNameGenerator()
-  const kitchen = createKitchen({
+  kitchen = createKitchen({
     signal,
     logger,
     projectDirectoryUrl,
     plugins: [
-      // le souci c'est que redirect se produit avant "load"
-      // donc ça marche pas vraiment
-      // mais j'aime l'idée
-      // on pourrait ajouter un concept de postredirect mais pour l'instant non
-      //   {
-      //     name: "jsenv:build_url_versioning",
-      //     appliesDuring: { build: true },
-      //     redirect: ({ url }) => {},
-      //   },
+      {
+        name: "jsenv:build_dependencies",
+        appliesDuring: { build: true },
+        dependencyResolved: async ({ url, urlMentions }) => {
+          await Promise.all(
+            urlMentions.map(async (urlMention) => {
+              await cookUrl({
+                parentUrl: url,
+                urlTrace: {
+                  type: "url_site",
+                  value: {
+                    url,
+                    line: urlMention.line,
+                    column: urlMention.column,
+                  },
+                },
+                url: urlMention.url,
+              })
+            }),
+          )
+          // at this stage we can compute url version
+          // but why do we need to cook dependency for that?
+          // oh yes because dependency will influence the url mention in that file
+          // so dependency version must be computed first
+          // and to compute version we need first to wait for url mention to be replaced
+          // in a file (so waiting for cooked is good)
+        },
+      },
       jsenvPluginAvoidVersioningCascade(),
       ...plugins,
     ],
@@ -57,66 +111,18 @@ export const buildGraph = async ({
       "js_import_export": (urlMention, { asClientUrl }) => {
         return JSON.stringify(asClientUrl(urlMention.url))
       },
-      "*": (urlMention) => {
+      "*": (urlMention, { asClientUrl }) => {
         const clientUrl = asClientUrl(urlMention.url)
-        // we must version url
-        // mais pour pouvoir calculer le hash il faut que les deps soit cooked
-        // hors pour le moment on les cooked apres
-        // + se prémunir des deps circulaires
-        // on ferait cela dans un "dependencyResolved" hook
-        // pour les deps circulaire on verra
+        const clientUrlVersioned = injectQueryParams(clientUrl, {
+          v: projectGraph.urlInfos[urlMention.url].version,
+        })
+        return clientUrlVersioned
       },
     },
   })
-  const buildingLog = createLog()
-  const spinner = startSpinner({
-    log: buildingLog,
-    text: `Loading project graph`,
-  })
-  const urlPromiseCache = {}
+
   const urlsReferencedByJs = []
-  let urlCount = 0
 
-  const cookUrl = ({ url, ...rest }) => {
-    const promiseFromCache = urlPromiseCache[url]
-    if (promiseFromCache) return promiseFromCache
-    const promise = _cookUrl({
-      outDirectoryName: `build`,
-      runtimeSupport,
-      url,
-      ...rest,
-    })
-    urlPromiseCache[url] = promise
-    return promise
-  }
-  const _cookUrl = async (params) => {
-    urlCount++
-    spinner.text = `Loading project graph ${urlCount}`
-
-    const cookedUrl = await kitchen.cookUrl(params)
-    if (cookedUrl.error) {
-      spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
-      throw cookedUrl.error
-    }
-    // cook dependencies
-    await Promise.all(
-      cookedUrl.urlMentions.map(async (urlMention) => {
-        await cookUrl({
-          parentUrl: cookedUrl.url,
-          urlTrace: {
-            type: "url_site",
-            value: {
-              url: cookedUrl.url,
-              line: urlMention.line,
-              column: urlMention.column,
-            },
-          },
-          url: urlMention.url,
-        })
-      }),
-    )
-    return cookedUrl
-  }
   await Object.keys(entryPoints).reduce(
     async (previous, entryPointRelativeUrl) => {
       await previous

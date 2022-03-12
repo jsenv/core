@@ -6,7 +6,7 @@ import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import
 
 export const parseJsModuleUrlMentions = async ({
   resolveUrlMention,
-  parentUrlSite,
+  getOriginalUrlSite,
   url,
   type,
   content,
@@ -19,7 +19,7 @@ export const parseJsModuleUrlMentions = async ({
       [babelPluginMetadataUrlMentions],
       [babelPluginMetadataImportMetaHot],
     ],
-    parentUrlSite,
+    getOriginalUrlSite,
     url,
     content,
   })

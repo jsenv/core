@@ -1,7 +1,14 @@
 import { createCallbackList } from "@jsenv/abort"
-import { resolveUrl, urlToRelativeUrl, urlIsInsideOf } from "@jsenv/filesystem"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-export const createProjectGraph = ({ projectDirectoryUrl }) => {
+import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
+
+export const createProjectGraph = ({
+  projectDirectoryUrl,
+  scenario,
+  contentVersioning = { dev: false, test: false, build: true }[scenario],
+  lineBreakNormalization = process.platform === "win32",
+}) => {
   const hotUpdateCallbackList = createCallbackList()
   const prunedCallbackList = createCallbackList()
 
@@ -15,85 +22,75 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
     return urlInfo
   }
 
-  const getUrlTrace = (dependencyUrl, url) => {
-    const urlInfo = urlInfos[url]
-    if (!urlInfo) {
+  const inferUrlSite = async (url, parentUrl) => {
+    const parentUrlInfo = urlInfos[parentUrl]
+    if (!parentUrlInfo) {
       return null
     }
-    const dependencyUrlTrace = urlInfo.dependencyUrlTraces[dependencyUrl]
-    if (!dependencyUrlTrace) {
+    const dependencyUrlSite = parentUrlInfo.dependencyUrlSites[url]
+    if (!dependencyUrlSite) {
       return null
     }
-    return dependencyUrlTrace
-  }
-
-  const getHmrTimestamp = (url) => {
-    if (!urlIsInsideOf(url, projectDirectoryUrl)) {
-      return null
+    return {
+      url: dependencyUrlSite.url,
+      content:
+        dependencyUrlSite.url === parentUrlInfo.url
+          ? parentUrlInfo.originalContent
+          : parentUrlInfo.content,
+      line: dependencyUrlSite.line,
+      column: dependencyUrlSite.column,
     }
-    const urlInfo = urlInfos[url]
-    if (!urlInfo) {
-      return null
-    }
-    const { hmrTimestamp } = urlInfo
-    if (!hmrTimestamp) {
-      return null
-    }
-    return hmrTimestamp
   }
 
   const updateUrlInfo = ({
     url,
+    generatedUrl,
     type,
     contentType,
+    originalContent,
     content,
     sourcemap,
+    version,
+    parentUrlSite,
+    dependencyUrlSites,
     dependencyUrls,
-    dependencyUrlTraces,
     hotDecline,
     hotAcceptSelf,
     hotAcceptDependencies,
   }) => {
     const existingUrlInfo = urlInfos[url]
     const urlInfo = existingUrlInfo || (urlInfos[url] = createUrlInfo(url))
-
-    if (type !== undefined) {
-      urlInfo.type = type
-    }
-    if (contentType !== undefined) {
-      urlInfo.contentType = contentType
-    }
-    if (content !== undefined) {
-      urlInfo.content = content
-    }
-    if (sourcemap !== undefined) {
-      urlInfo.sourcemap = sourcemap
-    }
-    if (dependencyUrls !== undefined) {
-      urlInfo.dependencyUrlTraces = dependencyUrlTraces
-      dependencyUrls.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
-        urlInfo.dependencies.add(dependencyUrl)
-        dependencyUrlInfo.dependents.add(url)
+    if (version === undefined && contentVersioning) {
+      urlInfo.version = generateContentHash(content, {
+        contentType,
+        lineBreakNormalization,
       })
-      if (existingUrlInfo) {
-        pruneDependencies(
-          existingUrlInfo,
-          Array.from(existingUrlInfo.dependencies).filter(
-            (dep) => !dependencyUrls.includes(dep),
-          ),
-        )
-      }
     }
-    if (hotDecline !== undefined) {
-      urlInfo.hotDecline = hotDecline
+    urlInfo.generatedUrl = generatedUrl
+    urlInfo.parentUrlSite = parentUrlSite
+    urlInfo.type = type
+    urlInfo.contentType = contentType
+    urlInfo.originalContent = originalContent
+    urlInfo.content = content
+    urlInfo.version = version
+    urlInfo.sourcemap = sourcemap
+    urlInfo.dependencyUrlSites = dependencyUrlSites
+    dependencyUrls.forEach((dependencyUrl) => {
+      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
+      urlInfo.dependencies.add(dependencyUrl)
+      dependencyUrlInfo.dependents.add(url)
+    })
+    if (existingUrlInfo) {
+      pruneDependencies(
+        existingUrlInfo,
+        Array.from(existingUrlInfo.dependencies).filter(
+          (dep) => !dependencyUrls.includes(dep),
+        ),
+      )
     }
-    if (hotAcceptSelf !== undefined) {
-      urlInfo.hotAcceptSelf = hotAcceptSelf
-    }
-    if (hotAcceptDependencies !== undefined) {
-      urlInfo.hotAcceptDependencies = hotAcceptDependencies
-    }
+    urlInfo.hotDecline = hotDecline
+    urlInfo.hotAcceptSelf = hotAcceptSelf
+    urlInfo.hotAcceptDependencies = hotAcceptDependencies
   }
 
   const onFileChange = ({ relativeUrl, event }) => {
@@ -325,9 +322,8 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
     getUrlInfo,
     updateUrlInfo,
     onFileChange,
-    getHmrTimestamp,
 
-    getUrlTrace,
+    inferUrlSite,
     findDependent,
 
     toJSON: () => {
@@ -349,13 +345,20 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
 const createUrlInfo = (url) => {
   return {
     url,
+    generatedUrl: null,
     type: "",
+    contentType: "",
+    originalContent: "",
+    content: "",
+    sourcemap: null,
+    version: null,
     hmrTimestamp: 0,
+    parentUrlSite: null,
+    dependencyUrlSites: {},
     dependencies: new Set(),
-    dependencyUrlTraces: {},
     dependents: new Set(),
+    hotDecline: false,
     hotAcceptSelf: false,
     hotAcceptDependencies: [],
-    hotDecline: false,
   }
 }

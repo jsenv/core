@@ -11,10 +11,9 @@ import {
   parseCssSourcemapComment,
   generateSourcemapUrl,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { getOriginalUrlSite } from "@jsenv/core/src/utils/sourcemap/original_url_site.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
-import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
+import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
 import { getJsenvPlugins } from "../jsenv_plugins.js"
 import {
@@ -79,6 +78,7 @@ export const createKitchen = ({
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
+  let currentContext
 
   const isSupported = ({
     runtimeSupport,
@@ -142,7 +142,75 @@ export const createKitchen = ({
     return contextDuringResolve.url
   }
 
-  let currentContext
+  const getOriginalUrlSite = async ({ url, line, column }) => {
+    const { parentUrlSite, originalContent, content, sourcemap, generatedUrl } =
+      currentContext
+    const adjustIfInline = ({ url, line, column, content }) => {
+      if (parentUrlSite) {
+        return {
+          url: parentUrlSite.url,
+          // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
+          line: parentUrlSite.line + line - 1,
+          column: parentUrlSite.column + column,
+          content: parentUrlSite.content,
+        }
+      }
+      return {
+        url,
+        line,
+        column,
+        content,
+      }
+    }
+    if (content === originalContent) {
+      return adjustIfInline({
+        url,
+        line,
+        column,
+        content: originalContent,
+      })
+    }
+    if (!sourcemap) {
+      return {
+        url: generatedUrl,
+        line,
+        column,
+        content,
+      }
+    }
+    const originalPosition = await getOriginalPosition({
+      sourcemap,
+      line,
+      column,
+    })
+    // cannot map back to original file
+    if (!originalPosition || originalPosition.line === null) {
+      return {
+        url: generatedUrl,
+        line,
+        column,
+        content,
+      }
+    }
+    return adjustIfInline({
+      url,
+      line: originalPosition.line,
+      column: originalPosition.column,
+      content: originalContent,
+    })
+  }
+
+  const getParamsForUrlTracing = async () => {
+    const { url, urlTrace } = currentContext
+    if (urlTrace.type === "url_string") {
+      urlTrace.value = await getOriginalPosition(urlTrace.value)
+    }
+    return {
+      urlTrace,
+      url,
+    }
+  }
+
   const _cookUrl = async ({
     outDirectoryName,
     runtimeSupport,
@@ -194,15 +262,19 @@ export const createKitchen = ({
         context.asClientUrl(urlMention.url)
       )
     }
+    // TODO: make it a hook in itself like "resolveClientUrl" handled by plugin
+    // the autoreload plugin will handle the hmr part
+    // the url versioning the v in url part
+    // the filesystem the /@fs/ ?
     context.asClientUrl = (url) => {
       const clientUrlRaw = url
-      const hmrTimestamp = context.hmr
-        ? projectGraph.getHmrTimestamp(url)
-        : null
+      const urlInfo = projectGraph.getUrlInfo(url) || {}
       const params = {}
-      if (hmrTimestamp) {
+      if (context.hmr && urlInfo.hmrTimestamp) {
         params.hmr = ""
-        params.v = hmrTimestamp
+        params.v = urlInfo.hmrTimestamp
+      } else if (urlInfo.version) {
+        params.v = urlInfo.version
       }
       const clientUrl = injectQueryParams(clientUrlRaw, params)
       if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
@@ -242,13 +314,12 @@ export const createKitchen = ({
     } catch (error) {
       context.error = createLoadError({
         pluginController,
-        urlTrace: currentContext.urlTrace,
-        url: currentContext.url,
+        ...(await getParamsForUrlTracing()),
         error,
       })
       return context
     }
-    context.outUrl = determineFileUrlForOutDirectory({
+    context.generatedUrl = determineFileUrlForOutDirectory({
       projectDirectoryUrl,
       outDirectoryName,
       url: context.url,
@@ -305,15 +376,14 @@ export const createKitchen = ({
     } catch (error) {
       context.error = createTransformError({
         pluginController,
-        urlTrace: currentContext.urlTrace,
-        url: currentContext.url,
+        ...(await getParamsForUrlTracing()),
         type: currentContext.type,
         error,
       })
       return context
     }
 
-    // parsing, introduce "dependencyResolved" hook?
+    // parsing
     const parser = parsers[context.type]
     const {
       urlMentions = [],
@@ -321,25 +391,21 @@ export const createKitchen = ({
       transformUrlMentions,
     } = parser ? await parser(context) : {}
     const dependencyUrls = []
-    const dependencyTraces = {}
+    const dependencyUrlSites = {}
     for (const urlMention of urlMentions) {
-      const specifierUrlSiteRaw = await getOriginalUrlSite({
-        originalUrl: context.url,
-        originalContent: context.originalContent,
-        originalLine: urlMention.originalLine,
-        originalColumn: urlMention.originalColumn,
-        parentUrlSite: context.parentUrlSite,
-        url: context.outUrl,
-        content: context.content,
-        line: urlMention.line,
-        column: urlMention.column,
-        sourcemap: context.sourcemap,
-      })
-      const specifierTrace = {
-        type: "url_site_string",
-        trace: stringifyUrlSite(specifierUrlSiteRaw),
-      }
-
+      const specifierUrlSite =
+        context.content === context.originalContent ||
+        typeof urlMention.originalLine === "number"
+          ? {
+              url,
+              line: urlMention.originalLine,
+              column: urlMention.originalColumn,
+            }
+          : {
+              url: context.generatedUrl,
+              line: urlMention.line,
+              column: urlMention.column,
+            }
       try {
         const resolvedUrl = resolveSpecifier({
           parentUrl: context.url,
@@ -350,12 +416,15 @@ export const createKitchen = ({
           throw new Error(`NO_RESOLVE`)
         }
         urlMention.url = resolvedUrl
-        dependencyTraces[resolvedUrl] = specifierTrace
         dependencyUrls.push(resolvedUrl)
+        dependencyUrlSites[resolvedUrl] = specifierUrlSite
       } catch (error) {
         context.error = createResolveError({
           pluginController,
-          specifierTrace,
+          specifierTrace: {
+            type: "url_site",
+            value: await getOriginalUrlSite(specifierUrlSite),
+          },
           specifier: urlMention.specifier,
           error,
         })
@@ -375,22 +444,24 @@ export const createKitchen = ({
     })
     projectGraph.updateUrlInfo({
       url: context.url,
+      generatedUrl: context.generatedUrl,
       type: context.type,
-      // during dev/test we don't keep everything in memory to reduce memory consumption
-      // during build we keep more in memory to be able to build the whole project
-      ...(scenario === "build"
-        ? {
-            contentType: context.contentType,
-            content: context.content,
-            sourcemap: context.sourcemap,
-          }
-        : null),
+      contentType: context.contentType,
+      originalContent: context.originalContent,
+      content: context.content,
+      sourcemap: context.sourcemap,
+      parentUrlSite: context.parentUrlSite,
       dependencyUrls,
-      dependencyTraces,
       hotDecline,
       hotAcceptSelf,
       hotAcceptDependencies,
     })
+    // "dependencyResolved" hook
+    await pluginController.callPluginHooksUntil(
+      plugins,
+      "dependencyResolved",
+      context,
+    )
     if (transformUrlMentions) {
       const transformReturnValue = await transformUrlMentions()
       updateContents(transformReturnValue)
@@ -400,12 +471,12 @@ export const createKitchen = ({
     const { sourcemap } = context
     if (sourcemap) {
       const sourcemapUrl = generateSourcemapUrl(context.url)
-      const sourcemapOutUrl = determineFileUrlForOutDirectory({
+      const sourcemapGeneratedUrl = determineFileUrlForOutDirectory({
         projectDirectoryUrl,
         outDirectoryName,
         url: sourcemapUrl,
       })
-      context.sourcemapUrl = sourcemapOutUrl
+      context.sourcemapGeneratedUrl = sourcemapGeneratedUrl
       context.content = injectSourcemap(context)
     }
 
@@ -441,16 +512,22 @@ export const createKitchen = ({
   const cookUrl = async (params) => {
     try {
       const context = await _cookUrl(params)
-      const { outUrl } = context
+      const { generatedUrl } = context
       // writing result inside ".jsenv" directory (debug purposes)
-      if (outUrl && outUrl.startsWith("file:")) {
-        writeFile(outUrl, context.content)
-        const { sourcemapUrl, sourcemap } = context
-        if (sourcemapUrl && sourcemap) {
+      if (generatedUrl && generatedUrl.startsWith("file:")) {
+        writeFile(generatedUrl, context.content)
+        const { sourcemapGeneratedUrl, sourcemap } = context
+        if (sourcemapGeneratedUrl && sourcemap) {
           if (sourcemapInjection === "comment") {
-            await writeFile(sourcemapUrl, JSON.stringify(sourcemap, null, "  "))
+            await writeFile(
+              sourcemapGeneratedUrl,
+              JSON.stringify(sourcemap, null, "  "),
+            )
           } else if (sourcemapInjection === "inline") {
-            writeFile(sourcemapUrl, JSON.stringify(sourcemap, null, "  "))
+            writeFile(
+              sourcemapGeneratedUrl,
+              JSON.stringify(sourcemap, null, "  "),
+            )
           }
         }
       }

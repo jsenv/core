@@ -13,7 +13,7 @@ export const jsenvPluginBabel = () => {
     transform: {
       js_module: async ({
         isSupportedOnRuntime,
-        parentUrlSite,
+        getOriginalUrlSite,
         url,
         content,
       }) => {
@@ -41,7 +41,7 @@ export const jsenvPluginBabel = () => {
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
-          parentUrlSite,
+          getOriginalUrlSite,
           url,
           content,
         })

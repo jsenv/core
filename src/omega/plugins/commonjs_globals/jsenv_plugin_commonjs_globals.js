@@ -17,7 +17,7 @@ export const jsenvPluginCommonJsGlobals = () => {
     name: "jsenv:commonjs_globals",
     appliesDuring: "*",
     transform: {
-      js_module: async ({ scenario, parentUrlSite, url, content }) => {
+      js_module: async ({ scenario, getOriginalUrlSite, url, content }) => {
         const replaceMap = {
           "process.env.NODE_ENV": `("${
             scenario === "dev" || scenario === "test" ? "dev" : "prod"
@@ -36,7 +36,7 @@ export const jsenvPluginCommonJsGlobals = () => {
               },
             ],
           ],
-          parentUrlSite,
+          getOriginalUrlSite,
           url,
           content,
         })

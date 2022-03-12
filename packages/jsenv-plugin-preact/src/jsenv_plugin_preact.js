@@ -72,7 +72,7 @@ import "preact/devtools"
         const htmlModified = stringifyHtmlAst(htmlAst)
         return { content: htmlModified }
       },
-      js_module: async ({ scenario, parentUrlSite, url, content }) => {
+      js_module: async ({ scenario, getOriginalUrlSite, url, content }) => {
         if (scenario === "dev") {
           const prefreshEnabled = shouldEnablePrefresh(url)
           const { code, map } = await applyBabelPlugins({
@@ -87,7 +87,7 @@ import "preact/devtools"
               ["babel-plugin-transform-hook-names"],
               ...(prefreshEnabled ? ["@prefresh/babel-plugin"] : []),
             ],
-            parentUrlSite,
+            getOriginalUrlSite,
             url,
             content,
           })
@@ -112,7 +112,7 @@ import "preact/devtools"
               },
             ],
           ],
-          parentUrlSite,
+          getOriginalUrlSite,
           url,
           content,
         })

@@ -1,11 +1,10 @@
 import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
-import { getOriginalUrlSite } from "@jsenv/core/src/utils/sourcemap/original_url_site.js"
 
 export const applyBabelPlugins = async ({
   babelPlugins,
-  parentUrlSite,
+  getOriginalUrlSite,
   url,
   type = "js_module",
   ast,
@@ -58,9 +57,7 @@ export const applyBabelPlugins = async ({
       let line = error.loc.line
       let column = error.loc.column
       const originalUrlSite = await getOriginalUrlSite({
-        parentUrlSite,
         url,
-        content,
         line,
         column,
       })
