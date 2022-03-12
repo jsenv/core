@@ -26,9 +26,15 @@ export const createBuilUrlsGenerator = ({ baseUrl }) => {
       nameCandidate = `${name}${integer}`
     }
     if (directoryRelativeUrl === "/") {
-      return `${baseUrl}${nameCandidate}`
+      return {
+        buildRelativeUrl: nameCandidate,
+        buildUrl: `${baseUrl}${nameCandidate}`,
+      }
     }
-    return `${baseUrl}${directoryRelativeUrl}${nameCandidate}`
+    return {
+      buildRelativeUrl: `${directoryRelativeUrl}${nameCandidate}`,
+      buildUrl: `${baseUrl}${directoryRelativeUrl}${nameCandidate}`,
+    }
   }
 
   return {

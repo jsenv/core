@@ -2,10 +2,7 @@ import { applyPostCss } from "@jsenv/core/src/utils/css_ast/apply_post_css.js"
 import { postCssPluginUrlVisitor } from "@jsenv/core/src/utils/css_ast/postcss_plugin_url_visitor.js"
 import { replaceCssUrls } from "@jsenv/core/src/utils/css_ast/replace_css_urls.js"
 
-export const parseCssUrlMentions = async ({ type, url, content }) => {
-  if (type !== "css") {
-    return null
-  }
+export const parseCssUrlMentions = async ({ url, content }) => {
   const cssUrlMentions = []
   await applyPostCss({
     sourcemapMethod: false,
@@ -26,16 +23,12 @@ export const parseCssUrlMentions = async ({ type, url, content }) => {
   })
   return {
     urlMentions: cssUrlMentions,
-    getHotInfo: () => {
-      return {
-        hotAcceptSelf: false,
-        // we don't know how to reload css, it can be anywhere
-        // in order to reload it, an importer should self accept hot reloading
-        // or if we talk about html, be in hotAcceptDependencies of html
-        hotAcceptDependencies: [],
-      }
-    },
-    transformUrlMentions: async (replacements) => {
+    hotAcceptSelf: false,
+    // we don't know how to reload css, it can be anywhere
+    // in order to reload it, an importer should self accept hot reloading
+    // or if we talk about html, be in hotAcceptDependencies of html
+    hotAcceptDependencies: [],
+    replaceUrls: async (replacements) => {
       // we can't use magic source because urlMention.start/end do not match the url specifier
       // const magicSource = createMagicSource({ url, content })
       // cssUrlMentions.forEach((urlMention) => {
@@ -50,7 +43,10 @@ export const parseCssUrlMentions = async ({ type, url, content }) => {
         url,
         content,
         urlVisitor: ({ url, replace }) => {
-          replace(replacements[url])
+          const replacement = replacements[url]
+          if (replacement) {
+            replace(replacement)
+          }
         },
       })
       return {

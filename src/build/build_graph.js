@@ -1,31 +1,30 @@
 import { createLog, startSpinner, UNICODE, ANSI } from "@jsenv/log"
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
 import { createProjectGraph } from "@jsenv/core/src/omega/project_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
-
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
-import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
+import { parseUrls } from "../omega/kitchen/parse_urls.js"
+import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 
 export const buildGraph = async ({
   signal,
   logger,
   projectDirectoryUrl,
-  baseUrl = "/",
+  buildUrlsGenerator,
+
   entryPoints,
   plugins,
   runtimeSupport,
   sourcemapInjection,
   lineBreakNormalization = process.platform === "win32",
 }) => {
-  const buildUrlsGenerator = createBuilUrlsGenerator({
-    baseUrl,
-  })
+  const startMs = Date.now()
   const buildingLog = createLog()
   const spinner = startSpinner({
     log: buildingLog,
@@ -34,7 +33,6 @@ export const buildGraph = async ({
   let kitchen
   const urlPromiseCache = {}
   let urlCount = 0
-  const urlsReferencedByJs = []
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
     if (promiseFromCache) return promiseFromCache
@@ -56,6 +54,22 @@ export const buildGraph = async ({
       spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
       throw cookedUrl.error
     }
+    await Promise.all(
+      cookedUrl.urlMentions.map(async (urlMention) => {
+        await cookUrl({
+          parentUrl: cookedUrl.url,
+          urlTrace: {
+            type: "url_site",
+            value: {
+              url: cookedUrl.url,
+              line: urlMention.line,
+              column: urlMention.column,
+            },
+          },
+          url: urlMention.url,
+        })
+      }),
+    )
     return cookedUrl
   }
 
@@ -71,60 +85,16 @@ export const buildGraph = async ({
       {
         name: "jsenv:build",
         appliesDuring: { build: true },
-        resolveAsClientUrl: async ({ url, urlMention }) => {
-          const urlMentionCooked = await cookUrl({
-            parentUrl: url,
-            urlTrace: {
-              type: "url_site",
-              value: {
-                url,
-                line: urlMention.line,
-                column: urlMention.column,
-              },
-            },
-            url: urlMention.url,
-          })
-          const asClientUrl = (clientUrlRaw, { version }) => {
-            const params = {}
-            if (version) {
-              params.v = version
-            }
-            const clientUrl = injectQueryParams(clientUrlRaw, params)
-            return clientUrl
-          }
-          const urlMentionInfo = projectGraph.urlInfos[urlMentionCooked.url]
-          if (urlMention.type === "js_import_meta_url_pattern") {
-            urlsReferencedByJs.push(urlMention.url)
-            return `window.__asVersionedSpecifier__("${asClientUrl(
-              urlMentionInfo.buildUrl,
-            )}")`
-          }
-          if (urlMention.type === "js_import_export") {
-            return JSON.stringify(
-              asClientUrl(urlMention.buildUrl, {
-                version: urlMentionInfo.version,
-              }),
-            )
-          }
-          return asClientUrl(urlMentionInfo.buildUrl, {
-            version: urlMentionInfo.version,
-          })
-        },
-        cooked: ({ projectGraph, url, type, contentType, content }) => {
+        cooked: ({ projectGraph, url, type }) => {
           // at this stage all deps are known and url mentions are replaced
           // "content" accurately represent the file content
           // and can be used to version the url
           const urlInfo = projectGraph.urlInfos[url]
-          if (urlInfo.version === undefined) {
-            urlInfo.version = generateContentHash(content, {
-              contentType,
-              lineBreakNormalization,
-            })
-          }
-          const buildUrl = buildUrlsGenerator.generate(
+          const { buildRelativeUrl, buildUrl } = buildUrlsGenerator.generate(
             urlToFilename(url),
             type === "js_module" ? "/" : "assets/",
           )
+          urlInfo.buildRelativeUrl = buildRelativeUrl
           urlInfo.buildUrl = buildUrl
         },
       },
@@ -157,8 +127,79 @@ export const buildGraph = async ({
     Promise.resolve(),
   )
 
+  // here we can perform many checks such as ensuring ressource hints are used
+  // circular deps, etc
+  // we could also compute all assets version and urls starting with least dependent one
+  // but maybe we'll keep that for later?
+  // now we are done here we want
+  // to build js modules entry points using rollup
+  // the other js modules will be discovered as rollup loads js
+
+  const visited = []
+  const sorted = []
+  const visit = (url, importerUrl) => {
+    const isSorted = sorted.includes(url)
+    if (isSorted) return
+    const isVisited = visited.includes(url)
+    if (isVisited) {
+      throw new Error(`Circular dependency between ${url} and ${importerUrl}`)
+    }
+    visited.push(url)
+    projectGraph.urlInfos[url].dependencies.forEach((dependencyUrl) => {
+      visit(dependencyUrl, url)
+    })
+    sorted.push(url)
+  }
+  Object.keys(projectGraph.urlInfos).forEach((url) => {
+    visit(url)
+  })
+  await sorted.reduce(async (previous, url) => {
+    await previous
+    const urlInfo = projectGraph.urlInfos[url]
+    if (urlInfo.version === undefined) {
+      urlInfo.version = generateContentHash(urlInfo.content, {
+        contentType: urlInfo.contentType,
+        lineBreakNormalization,
+      })
+    }
+    // file using this file must update their reference
+    const { urlMentions, replaceUrls } = await parseUrls({
+      type: urlInfo.type,
+      url: urlInfo.url,
+      content: urlInfo.content,
+    })
+    if (urlMentions.length) {
+      const replacements = {}
+      for (const urlMention of urlMentions) {
+        const urlMentionUrl =
+          applyLeadingSlashUrlResolution(
+            urlMention.specifier,
+            projectDirectoryUrl,
+          ) || new URL(urlMention.specifier, urlInfo.url).href
+        urlMention.url = urlMentionUrl
+        const urlMentionInfo = projectGraph.urlInfos[urlMentionUrl]
+        if (urlMentionInfo.version) {
+          const urlObject = new URL(urlMentionUrl)
+          urlObject.searchParams.set("v", urlMentionInfo.version)
+          // TODO: stringify only when inside js
+          replacements[urlMentionUrl] = JSON.stringify(urlObject.href)
+        }
+      }
+      if (Object.keys(replacements).length) {
+        const { content, sourcemap } = await replaceUrls(replacements)
+        urlInfo.content = content
+        if (sourcemap) {
+          urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
+        }
+      }
+    }
+  }, Promise.resolve())
+
   const graphStats = createProjectGraphStats(projectGraph)
-  spinner.stop(`${UNICODE.OK} project graph loaded in ${msAsDuration()}`)
+  const msEllapsed = Date.now() - startMs
+  spinner.stop(
+    `${UNICODE.OK} project graph loaded in ${msAsDuration(msEllapsed)}`,
+  )
   logger.info(`--- graph summary ---  
 ${createRepartitionMessage(graphStats)}
 ${ANSI.color(`Total:`, ANSI.GREY)} ${graphStats.total.count} (${byteAsFileSize(

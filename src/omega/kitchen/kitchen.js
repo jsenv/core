@@ -15,6 +15,7 @@ import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
+import { applyLeadingSlashUrlResolution } from "./leading_slash_url_resolution.js"
 import { getJsenvPlugins } from "../jsenv_plugins.js"
 import {
   flattenAndFilterPlugins,
@@ -27,15 +28,7 @@ import {
 } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
-import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
-import { parseCssUrlMentions } from "./parse/css/css_url_mentions.js"
-import { parseJsModuleUrlMentions } from "./parse/js_module/js_module_url_mentions.js"
-
-const parsers = {
-  html: parseHtmlUrlMentions,
-  css: parseCssUrlMentions,
-  js_module: parseJsModuleUrlMentions,
-}
+import { parseUrls } from "./parse_urls.js"
 
 export const createKitchen = ({
   signal,
@@ -78,14 +71,12 @@ export const createKitchen = ({
   }
 
   const resolveSpecifier = ({ parentUrl, specifierType, specifier }) => {
-    if (specifier.startsWith("/@fs/")) {
-      const url = new URL(specifier.slice("/@fs".length), projectDirectoryUrl)
-        .href
-      return url
-    }
-    if (specifier[0] === "/") {
-      const url = new URL(specifier.slice(1), projectDirectoryUrl).href
-      return url
+    const resolved = applyLeadingSlashUrlResolution(
+      specifier,
+      projectDirectoryUrl,
+    )
+    if (resolved) {
+      return resolved
     }
     const pluginsToIgnore = []
     const contextDuringResolve = {
@@ -343,14 +334,20 @@ export const createKitchen = ({
     }
 
     // parsing
-    const parser = parsers[context.type]
     const {
-      urlMentions = [],
-      getHotInfo = () => ({}),
-      transformUrlMentions,
-    } = parser ? await parser(context) : {}
+      urlMentions,
+      hotDecline,
+      hotAcceptSelf,
+      hotAcceptDependencies,
+      replaceUrls,
+    } = await parseUrls({
+      type: context.type,
+      url: context.url,
+      content: context.content,
+    })
     const dependencyUrls = []
     const dependencyUrlSites = {}
+    const replacements = {}
     for (const urlMention of urlMentions) {
       const specifierUrlSite =
         context.content === context.originalContent ||
@@ -377,6 +374,13 @@ export const createKitchen = ({
         urlMention.url = resolvedUrl
         dependencyUrls.push(resolvedUrl)
         dependencyUrlSites[resolvedUrl] = specifierUrlSite
+        const clientUrl = asClientUrl(urlMention.url, context)
+        const clientUrFormatted =
+          urlMention.type === "js_import_meta_url_pattern" ||
+          urlMention.type === "js_import_export"
+            ? JSON.stringify(clientUrl)
+            : clientUrl
+        replacements[urlMention.url] = clientUrFormatted
       } catch (error) {
         context.error = createResolveError({
           pluginController,
@@ -390,17 +394,23 @@ export const createKitchen = ({
         return context
       }
     }
-    const {
-      hotDecline = false,
-      hotAcceptSelf = false,
-      hotAcceptDependencies = [],
-    } = getHotInfo()
     Object.assign(context, {
       urlMentions,
       hotDecline,
       hotAcceptSelf,
-      hotAcceptDependencies,
+      hotAcceptDependencies: hotAcceptDependencies.map(
+        (hotAcceptDependency) => {
+          return resolveSpecifier({
+            parentUrl: context.url,
+            specifierType: hotAcceptDependency.type,
+            specifier: hotAcceptDependency.specifier,
+          })
+        },
+      ),
     })
+
+    const transformReturnValue = await replaceUrls(replacements)
+    updateContents(transformReturnValue)
     projectGraph.updateUrlInfo({
       url: context.url,
       generatedUrl: context.generatedUrl,
@@ -411,48 +421,11 @@ export const createKitchen = ({
       sourcemap: context.sourcemap,
       parentUrlSite: context.parentUrlSite,
       dependencyUrls,
-      hotDecline,
-      hotAcceptSelf,
-      hotAcceptDependencies,
+      hotDecline: context.hotDecline,
+      hotAcceptSelf: context.hotAcceptSelf,
+      hotAcceptDependencies: context.hotAcceptDependencies,
     })
     await onDependencyResolved(context)
-
-    const resolveUrlMention = async (urlMention) => {
-      const contextDuringResolveAsClientUrl = {
-        ...context,
-        urlMention,
-      }
-      const pluginResult = await pluginController.callPluginHooksUntil(
-        plugins,
-        "resolveAsClientUrl",
-        contextDuringResolveAsClientUrl,
-      )
-      if (pluginResult) {
-        return pluginResult
-      }
-      const clientUrl = asClientUrl(urlMention.url, context)
-      if (
-        urlMention.type === "js_import_meta_url_pattern" ||
-        urlMention.type === "js_import_export"
-      ) {
-        return JSON.stringify(clientUrl)
-      }
-      return clientUrl
-    }
-
-    if (transformUrlMentions) {
-      const replacements = {}
-      await Promise.all(
-        urlMentions.map(async (urlMention) => {
-          replacements[urlMention.url] = await resolveUrlMention(
-            urlMention,
-            currentContext,
-          )
-        }),
-      )
-      const transformReturnValue = await transformUrlMentions(replacements)
-      updateContents(transformReturnValue)
-    }
 
     // sourcemap injection
     const { sourcemap } = context

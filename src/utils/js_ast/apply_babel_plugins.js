@@ -56,19 +56,26 @@ export const applyBabelPlugins = async ({
     if (error && error.code === "BABEL_PARSE_ERROR") {
       let line = error.loc.line
       let column = error.loc.column
-      const originalUrlSite = await getOriginalUrlSite({
-        url,
-        line,
-        column,
-      })
+      const urlSite = getOriginalUrlSite
+        ? await getOriginalUrlSite({
+            url,
+            line,
+            column,
+          })
+        : {
+            url,
+            line,
+            column,
+            content,
+          }
       const message = `${error.reasonCode}
-${stringifyUrlSite(originalUrlSite)}`
+${stringifyUrlSite(urlSite)}`
       throw createParseError({
         message,
         cause: error,
-        url: originalUrlSite.url,
-        line: originalUrlSite.line,
-        column: originalUrlSite.column,
+        url: urlSite.url,
+        line: urlSite.line,
+        column: urlSite.column,
       })
     }
     throw error

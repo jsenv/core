@@ -4,21 +4,12 @@ import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.
 import { babelPluginMetadataUrlMentions } from "./babel_plugin_metadata_url_mentions.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-export const parseJsModuleUrlMentions = async ({
-  getOriginalUrlSite,
-  url,
-  type,
-  content,
-}) => {
-  if (type !== "js_module") {
-    return null
-  }
+export const parseJsModuleUrlMentions = async ({ url, content }) => {
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [
       [babelPluginMetadataUrlMentions],
       [babelPluginMetadataImportMetaHot],
     ],
-    getOriginalUrlSite,
     url,
     content,
   })
@@ -26,21 +17,25 @@ export const parseJsModuleUrlMentions = async ({
     metadata
   return {
     urlMentions,
-    getHotInfo: () => {
+    hotDecline,
+    hotAcceptSelf,
+    hotAcceptDependencies: hotAcceptDependencies.map((hotAcceptDependency) => {
       return {
-        hotDecline,
-        hotAcceptSelf,
-        hotAcceptDependencies,
+        type: "js_import_export",
+        specifier: hotAcceptDependency,
       }
-    },
-    transformUrlMentions: async (replacements) => {
+    }),
+    replaceUrls: async (replacements) => {
       const magicSource = createMagicSource({ url, content })
-      urlMentions.forEach((urlMention) => {
+      Object.keys(replacements).forEach((url) => {
+        const urlMention = urlMentions.find(
+          (urlMention) => urlMention.url === url,
+        )
         const { start, end } = urlMention
         magicSource.replace({
           start,
           end,
-          replacement: replacements[urlMention.url],
+          replacement: replacements[url],
         })
       })
       return magicSource.toContentAndSourcemap()

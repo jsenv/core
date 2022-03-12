@@ -7,8 +7,11 @@ export const babelPluginMetadataImportMetaHot = () => {
     name: "metadata-import-meta-hot",
     visitor: {
       Program(programPath) {
-        const { hotDecline, hotAcceptSelf, hotAcceptDependencies } =
-          collectImportMetaProperties(programPath)
+        const {
+          hotDecline,
+          hotAcceptSelf,
+          hotAcceptDependencies = [],
+        } = collectImportMetaProperties(programPath)
         Object.assign(this.file.metadata, {
           hotDecline,
           hotAcceptSelf,

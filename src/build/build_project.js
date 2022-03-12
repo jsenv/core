@@ -12,6 +12,7 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildGraph } from "./build_graph.js"
 import { buildWithRollup } from "./build_with_rollup.js"
 
@@ -41,44 +42,103 @@ export const buildProject = async ({
 
   writeOnFileSystem = false,
   buildDirectoryClean = true,
+  baseUrl = "/",
 }) => {
   const logger = createLogger({ logLevel })
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
+  const buildUrlsGenerator = createBuilUrlsGenerator({
+    baseUrl,
+  })
   const projectGraph = await buildGraph({
     signal,
     logger,
     projectDirectoryUrl,
+    buildUrlsGenerator,
     entryPoints,
+
     plugins,
     runtimeSupport,
     sourcemapInjection,
   })
-  // const buildStats = await buildWithRollup({
-  //   signal,
-  //   logger,
-  //   projectDirectoryUrl,
-  //   buildDirectoryUrl,
-  //   projectGraph,
-  //   runtimeSupport,
-  //   sourcemapInjection,
-  // })
-  // if (writeOnFileSystem) {
-  //   if (buildDirectoryClean) {
-  //     await ensureEmptyDirectory(buildDirectoryUrl)
-  //   }
-  //   const { buildFileContents } = buildStats
-  //   const buildRelativeUrls = Object.keys(buildFileContents)
-  //   buildRelativeUrls.forEach((buildRelativeUrl) => {
-  //     writeFileSync(
-  //       new URL(buildRelativeUrl, buildDirectoryUrl),
-  //       buildFileContents[buildRelativeUrl],
-  //     )
-  //   })
-  // }
-  // return buildStats
+  const jsModulesToBuild = []
+  Object.keys(entryPoints).forEach((entyrPointRelativeUrl) => {
+    const entryPointUrl = new URL(entyrPointRelativeUrl, projectDirectoryUrl)
+      .href
+    const entryPointUrlInfo = projectGraph.getUrlInfo(entryPointUrl)
+    if (entryPointUrlInfo.type === "html") {
+      entryPointUrlInfo.dependencies.forEach((dependencyUrl) => {
+        const dependencyUrlInfo = projectGraph.getUrlInfo(dependencyUrl)
+        if (dependencyUrlInfo.type === "js_module") {
+          const urlInfo = projectGraph.getUrlInfo(dependencyUrl)
+          jsModulesToBuild.push({
+            id: dependencyUrl,
+            fileName: urlInfo.buildRelativeUrl,
+            // add implicity loaded after one of
+          })
+        }
+      })
+      return
+    }
+    if (entryPointUrlInfo.type === "js_module") {
+      jsModulesToBuild.push({
+        id: entryPointUrlInfo.url,
+        fileName: entryPointUrlInfo.buildRelativeUrl,
+      })
+      return
+    }
+  })
+  const buildFileContents = {}
+  Object.keys(projectGraph.urlInfos).forEach((url) => {
+    const urlInfo = projectGraph.urlInfos[url]
+    if (urlInfo.type !== "js_module") {
+      buildFileContents[urlInfo.buildRelativeUrl] = urlInfo.content
+    }
+  })
+  if (jsModulesToBuild.length) {
+    const { jsModuleInfos } = await buildWithRollup({
+      signal,
+      logger,
+      projectDirectoryUrl,
+      buildDirectoryUrl,
+      buildUrlsGenerator,
+      projectGraph,
+      jsModulesToBuild,
+
+      runtimeSupport,
+      sourcemapInjection,
+    })
+    Object.keys(jsModuleInfos).forEach((url) => {
+      const jsModuleInfo = jsModuleInfos[url]
+      buildFileContents[jsModuleInfo.buildRelativeUrl] = jsModuleInfo.content
+    })
+  }
+
+  if (writeOnFileSystem) {
+    if (buildDirectoryClean) {
+      await ensureEmptyDirectory(buildDirectoryUrl)
+    }
+    const buildRelativeUrls = Object.keys(buildFileContents)
+    buildRelativeUrls.forEach((buildRelativeUrl) => {
+      writeFileSync(
+        new URL(buildRelativeUrl, buildDirectoryUrl),
+        buildFileContents[buildRelativeUrl],
+      )
+    })
+  }
+
+  /* :check: build done in 1s
+   * --- 1 build file ----
+   * dist/file.js (10ko)
+   * --- build summary ---
+   * - build files: 1 (10 ko)
+   * - build sourcemap files: none
+   * ----------------------
+   */
+
+  return null
 }
 
 const assertEntryPoints = ({ entryPoints }) => {

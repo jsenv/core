@@ -21,6 +21,7 @@ export const jsenvPluginBabel = () => {
           url,
           isSupportedOnRuntime,
         })
+        // TODO: when content is inline the code needs to be injected, not the import
         if (!isSupportedOnRuntime("global_this")) {
           babelPluginStructure["global-this-as-jsenv-import"] =
             babelPluginGlobalThisAsJsenvImport
@@ -37,6 +38,7 @@ export const jsenvPluginBabel = () => {
           (babelPluginName) => babelPluginStructure[babelPluginName],
         )
         if (babelPlugins.length) {
+          // TODO: not if content is inlined
           babelPlugins.push(babelPluginBabelHelpersAsJsenvImports)
         }
         const { code, map } = await applyBabelPlugins({

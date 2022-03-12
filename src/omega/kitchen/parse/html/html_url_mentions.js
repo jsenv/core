@@ -7,41 +7,33 @@ import {
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
-export const parseHtmlUrlMentions = ({ url, type, content }) => {
-  if (type !== "html") {
-    return null
-  }
+export const parseHtmlUrlMentions = ({ url, content }) => {
   const htmlAst = parseHtmlString(content)
   const htmlUrlMentions = collectHtmlUrlMentions({ url, htmlAst })
   return {
     urlMentions: htmlUrlMentions,
-    getHotInfo: () => {
-      const hotAcceptDependencies = []
-      htmlUrlMentions.forEach(({ url, hotAccepted }) => {
-        // Adding url to "hotAcceptDependencies" means html hot_reload these ressources:
-        // something like this: link.href = `${link.href}?hmr=${Date.now()}`)
-        // If some url must trigger a full reload of the html page it should be excluded from
-        // "hotAcceptDependencies".
-        // There is some "smart" default applied in "collectHtmlDependenciesFromAst"
-        // to decide what should hot reload / fullreload:
-        // By default:
-        //   - hot reload on <img src="./image.png" />
-        //   - fullreload on <script src="./file.js" />
-        // Can be controlled by [hot-decline] and [hot-accept]:
-        //   - fullreload on <img src="./image.png" hot-decline />
-        //   - hot reload on <script src="./file.js" hot-accept />
-        if (hotAccepted) {
-          hotAcceptDependencies.push(url)
-        }
-      })
-      return {
-        hotAcceptSelf: false,
-        hotAcceptDependencies,
-      }
-    },
-    transformUrlMentions: async (replacements) => {
-      htmlUrlMentions.forEach((htmlUrlMention) => {
-        htmlUrlMention.attribute.value = replacements[htmlUrlMention.url]
+    hotAcceptSelf: false,
+    // Adding url to "hotAcceptDependencies" means html hot_reload these ressources:
+    // something like this: link.href = `${link.href}?hmr=${Date.now()}`)
+    // If some url must trigger a full reload of the html page it should be excluded from
+    // "hotAcceptDependencies".
+    // There is some "smart" default applied in "collectHtmlDependenciesFromAst"
+    // to decide what should hot reload / fullreload:
+    // By default:
+    //   - hot reload on <img src="./image.png" />
+    //   - fullreload on <script src="./file.js" />
+    // Can be controlled by [hot-decline] and [hot-accept]:
+    //   - fullreload on <img src="./image.png" hot-decline />
+    //   - hot reload on <script src="./file.js" hot-accept />
+    hotAcceptDependencies: htmlUrlMentions.filter(
+      (htmlUrlMention) => htmlUrlMention.hotAccepted,
+    ),
+    replaceUrls: async (replacements) => {
+      Object.keys(replacements).forEach((url) => {
+        const urlMention = htmlUrlMentions.find(
+          (urlMention) => urlMention.url === url,
+        )
+        urlMention.attribute.value = replacements[url]
       })
       return {
         content: stringifyHtmlAst(htmlAst, {

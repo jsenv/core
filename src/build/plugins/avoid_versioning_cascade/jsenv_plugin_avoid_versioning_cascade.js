@@ -27,7 +27,7 @@ export const jsenvPluginAvoidVersioningCascade = () => {
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            type: "script",
+            tagName: "script",
             src: clientFileUrlResolved,
           }),
         )

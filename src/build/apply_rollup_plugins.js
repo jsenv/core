@@ -1,7 +1,7 @@
 export const applyRollupPlugins = async ({
   rollupPlugins,
   inputOptions = {},
-  outputOptions,
+  outputOptions = {},
 }) => {
   const { rollup } = await import("rollup")
   const { importAssertions } = await import("acorn-import-assertions")
