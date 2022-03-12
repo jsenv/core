@@ -2,12 +2,7 @@ import { applyPostCss } from "@jsenv/core/src/utils/css_ast/apply_post_css.js"
 import { postCssPluginUrlVisitor } from "@jsenv/core/src/utils/css_ast/postcss_plugin_url_visitor.js"
 import { replaceCssUrls } from "@jsenv/core/src/utils/css_ast/replace_css_urls.js"
 
-export const parseCssUrlMentions = async ({
-  resolveUrlMention,
-  type,
-  url,
-  content,
-}) => {
+export const parseCssUrlMentions = async ({ type, url, content }) => {
   if (type !== "css") {
     return null
   }
@@ -40,7 +35,7 @@ export const parseCssUrlMentions = async ({
         hotAcceptDependencies: [],
       }
     },
-    transformUrlMentions: async () => {
+    transformUrlMentions: async (replacements) => {
       // we can't use magic source because urlMention.start/end do not match the url specifier
       // const magicSource = createMagicSource({ url, content })
       // cssUrlMentions.forEach((urlMention) => {
@@ -55,10 +50,7 @@ export const parseCssUrlMentions = async ({
         url,
         content,
         urlVisitor: ({ url, replace }) => {
-          const urlMention = cssUrlMentions.find(
-            (urlMention) => urlMention.url === url,
-          )
-          replace(resolveUrlMention(urlMention))
+          replace(replacements[url])
         },
       })
       return {

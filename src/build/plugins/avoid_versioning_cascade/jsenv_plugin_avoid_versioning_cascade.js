@@ -17,7 +17,7 @@ export const jsenvPluginAvoidVersioningCascade = () => {
     name: "jsenv:avoid_versioning_cascade",
     appliesDuring: { build: true },
     transform: {
-      html: ({ resolveSpecifier, asClientUrl, url, content }) => {
+      html: ({ resolveSpecifier, url, content }) => {
         const htmlAst = parseHtmlString(content)
         const clientFileUrlResolved = resolveSpecifier({
           parentUrl: url,
@@ -28,7 +28,7 @@ export const jsenvPluginAvoidVersioningCascade = () => {
           htmlAst,
           createHtmlNode({
             type: "script",
-            src: asClientUrl(clientFileUrlResolved),
+            src: clientFileUrlResolved,
           }),
         )
         return stringifyHtmlAst(htmlAst)

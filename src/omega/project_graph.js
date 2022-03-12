@@ -1,14 +1,7 @@
 import { createCallbackList } from "@jsenv/abort"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
-
-export const createProjectGraph = ({
-  projectDirectoryUrl,
-  scenario,
-  contentVersioning = { dev: false, test: false, build: true }[scenario],
-  lineBreakNormalization = process.platform === "win32",
-}) => {
+export const createProjectGraph = ({ projectDirectoryUrl }) => {
   const hotUpdateCallbackList = createCallbackList()
   const prunedCallbackList = createCallbackList()
 
@@ -60,12 +53,6 @@ export const createProjectGraph = ({
   }) => {
     const existingUrlInfo = urlInfos[url]
     const urlInfo = existingUrlInfo || (urlInfos[url] = createUrlInfo(url))
-    if (version === undefined && contentVersioning) {
-      urlInfo.version = generateContentHash(content, {
-        contentType,
-        lineBreakNormalization,
-      })
-    }
     urlInfo.generatedUrl = generatedUrl
     urlInfo.parentUrlSite = parentUrlSite
     urlInfo.type = type
@@ -91,6 +78,7 @@ export const createProjectGraph = ({
     urlInfo.hotDecline = hotDecline
     urlInfo.hotAcceptSelf = hotAcceptSelf
     urlInfo.hotAcceptDependencies = hotAcceptDependencies
+    return urlInfo
   }
 
   const onFileChange = ({ relativeUrl, event }) => {

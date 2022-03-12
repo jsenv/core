@@ -3,8 +3,8 @@ import { urlToFilename } from "@jsenv/filesystem"
 
 import { createProjectGraph } from "@jsenv/core/src/omega/project_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
 
+import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
@@ -19,6 +19,7 @@ export const buildGraph = async ({
   plugins,
   runtimeSupport,
   sourcemapInjection,
+  lineBreakNormalization = process.platform === "win32",
 }) => {
   const buildingLog = createLog()
   const spinner = startSpinner({
@@ -28,6 +29,8 @@ export const buildGraph = async ({
   let kitchen
   const urlPromiseCache = {}
   let urlCount = 0
+  const availableNameGenerator = createAvailableNameGenerator()
+  const urlsReferencedByJs = []
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
     if (promiseFromCache) return promiseFromCache
@@ -56,38 +59,68 @@ export const buildGraph = async ({
     projectDirectoryUrl,
     scenario: "build",
   })
-  const availableNameGenerator = createAvailableNameGenerator()
   kitchen = createKitchen({
     signal,
     logger,
     projectDirectoryUrl,
     plugins: [
       {
-        name: "jsenv:build_dependencies",
+        name: "jsenv:build",
         appliesDuring: { build: true },
-        dependencyResolved: async ({ url, urlMentions }) => {
-          await Promise.all(
-            urlMentions.map(async (urlMention) => {
-              await cookUrl({
-                parentUrl: url,
-                urlTrace: {
-                  type: "url_site",
-                  value: {
-                    url,
-                    line: urlMention.line,
-                    column: urlMention.column,
-                  },
-                },
-                url: urlMention.url,
-              })
-            }),
-          )
-          // at this stage we can compute url version
-          // but why do we need to cook dependency for that?
-          // oh yes because dependency will influence the url mention in that file
-          // so dependency version must be computed first
-          // and to compute version we need first to wait for url mention to be replaced
-          // in a file (so waiting for cooked is good)
+        resolveUrlMention: async ({ url, urlMention, asClientUrl }) => {
+          const urlMentionCooked = await cookUrl({
+            parentUrl: url,
+            urlTrace: {
+              type: "url_site",
+              value: {
+                url,
+                line: urlMention.line,
+                column: urlMention.column,
+              },
+            },
+            url: urlMention.url,
+          })
+
+          const urlMentionInfo = projectGraph.urlInfos[urlMentionCooked.url]
+          if (urlMention.type === "js_import_meta_url_pattern") {
+            urlsReferencedByJs.push(urlMention.url)
+            return `window.__asVersionedSpecifier__("${asClientUrl(
+              urlMentionInfo.uniqueName,
+            )}")`
+          }
+          if (urlMention.type === "js_import_export") {
+            return JSON.stringify(asClientUrl(urlMention.url))
+          }
+          // il faudrait utiliser urlMentionInfo.uniqueName
+          // mais un truc absolu et qui sait déja ou l'asset sera mis
+          // sinon l'url d'une image dans du css ne sera pas bonne
+          // il faudrait ajouter a cette url la version
+          // il faudrait aussi la rendre relative a celui qui importe?
+          // ou alors absolue
+          return asClientUrl(urlMentionInfo.uniqueName)
+        },
+        cooked: ({ projectGraph, url, type, contentType, content }) => {
+          // at this stage all deps are known and url mentions are replaced
+          // "content" accurately represent the file content
+          // and can be used to version the url
+          const urlInfo = projectGraph.urlInfos[url]
+          if (urlInfo.version === undefined) {
+            urlInfo.version = generateContentHash(content, {
+              contentType,
+              lineBreakNormalization,
+            })
+          }
+          if (type === "js_module") {
+            const jsModuleName = availableNameGenerator.generateFileName(
+              urlToFilename(url),
+            )
+            urlInfo.uniqueName = jsModuleName
+          } else {
+            const assetName = availableNameGenerator.generateAssetName(
+              urlToFilename(url),
+            )
+            urlInfo.uniqueName = assetName
+          }
         },
       },
       jsenvPluginAvoidVersioningCascade(),
@@ -97,31 +130,7 @@ export const buildGraph = async ({
     sourcemapInjection,
     projectGraph,
     scenario: "build",
-    urlMentionHandlers: {
-      "js_import_meta_url_pattern": (urlMention) => {
-        const assetName = availableNameGenerator.generateAssetName(
-          urlToFilename(urlMention.url),
-        )
-        urlsReferencedByJs.push(urlMention.url)
-        return `window.__asVersionedSpecifier__("./${assetName}")`
-      },
-      // pour import statique on pourrait esperer que importmap fonctionne
-      // mais le support est insuffisant donc on va garder l'import sans la version
-      // pareil pour les imports dynamique, c'est rollup qui se chargera de ça
-      "js_import_export": (urlMention, { asClientUrl }) => {
-        return JSON.stringify(asClientUrl(urlMention.url))
-      },
-      "*": (urlMention, { asClientUrl }) => {
-        const clientUrl = asClientUrl(urlMention.url)
-        const clientUrlVersioned = injectQueryParams(clientUrl, {
-          v: projectGraph.urlInfos[urlMention.url].version,
-        })
-        return clientUrlVersioned
-      },
-    },
   })
-
-  const urlsReferencedByJs = []
 
   await Object.keys(entryPoints).reduce(
     async (previous, entryPointRelativeUrl) => {

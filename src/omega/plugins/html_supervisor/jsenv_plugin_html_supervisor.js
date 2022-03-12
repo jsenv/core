@@ -35,13 +35,7 @@ export const jsenvPluginHtmlSupervisor = () => {
       test: true,
     },
     transform: {
-      html: ({
-        projectDirectoryUrl,
-        resolveSpecifier,
-        asClientUrl,
-        url,
-        content,
-      }) => {
+      html: ({ projectDirectoryUrl, resolveSpecifier, url, content }) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
         visitHtmlAst(htmlAst, (node) => {
@@ -102,7 +96,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           htmlAst,
           createHtmlNode({
             tagName: "script",
-            src: asClientUrl(htmlSupervisorSetupResolvedUrl),
+            src: htmlSupervisorSetupResolvedUrl,
           }),
         )
         const htmlSupervisorResolvedUrl = resolveSpecifier({
@@ -110,13 +104,12 @@ export const jsenvPluginHtmlSupervisor = () => {
           specifierType: "js_import_export",
           specifier: htmlSupervisorFileUrl,
         })
-        const htmlSupervisorClientUrl = asClientUrl(htmlSupervisorResolvedUrl)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: htmlSupervisorClientUrl,
+            src: htmlSupervisorResolvedUrl,
           }),
         )
         scriptsToSupervise.forEach(
@@ -137,10 +130,10 @@ export const jsenvPluginHtmlSupervisor = () => {
               node,
               generateCodeToSuperviseScript({
                 type,
-                src: asClientUrl(scriptUrl),
+                src: scriptUrl,
                 integrity,
                 crossorigin,
-                htmlSupervisorClientUrl,
+                htmlSupervisorResolvedUrl,
               }),
             )
           },
@@ -161,11 +154,11 @@ const generateCodeToSuperviseScript = ({
   src,
   integrity,
   crossorigin,
-  htmlSupervisorClientUrl,
+  htmlSupervisorResolvedUrl,
 }) => {
   const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
   if (type === "module") {
-    return `import { superviseScriptTypeModule } from "${htmlSupervisorClientUrl}"
+    return `import { superviseScriptTypeModule } from "${htmlSupervisorResolvedUrl}"
 superviseScriptTypeModule(${paramsAsJson})`
   }
   return `window.__html_supervisor__.superviseScript(${paramsAsJson})`

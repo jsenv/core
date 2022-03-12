@@ -45,17 +45,7 @@ export const createKitchen = ({
   sourcemapInjection,
   projectGraph,
   scenario,
-  urlMentionHandlers = {},
 }) => {
-  urlMentionHandlers = {
-    ...urlMentionHandlers,
-    js_import_meta_url_pattern: (urlMention, { asClientUrl }) => {
-      return JSON.stringify(asClientUrl(urlMention.url))
-    },
-    js_import_export: (urlMention, { asClientUrl }) => {
-      return JSON.stringify(asClientUrl(urlMention.url))
-    },
-  }
   plugins = [
     ...plugins,
     ...getJsenvPlugins({
@@ -74,7 +64,6 @@ export const createKitchen = ({
     sourcemapInjection,
     projectGraph,
     scenario,
-    urlMentionHandlers,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
   const pluginController = createPluginController()
@@ -217,6 +206,7 @@ export const createKitchen = ({
     parentUrl,
     urlTrace,
     url,
+    onDependencyResolved = () => {},
   }) => {
     const context = {
       ...baseContext,
@@ -254,37 +244,6 @@ export const createKitchen = ({
     context.url = urlObject.href
 
     currentContext = context
-    context.resolveUrlMention = (urlMention) => {
-      const handler =
-        urlMentionHandlers[urlMention.type] || urlMentionHandlers["*"]
-      return (
-        handler(urlMention, currentContext) ||
-        context.asClientUrl(urlMention.url)
-      )
-    }
-    // TODO: make it a hook in itself like "resolveClientUrl" handled by plugin
-    // the autoreload plugin will handle the hmr part
-    // the url versioning the v in url part
-    // the filesystem the /@fs/ ?
-    context.asClientUrl = (url) => {
-      const clientUrlRaw = url
-      const urlInfo = projectGraph.getUrlInfo(url) || {}
-      const params = {}
-      if (context.hmr && urlInfo.hmrTimestamp) {
-        params.hmr = ""
-        params.v = urlInfo.hmrTimestamp
-      } else if (urlInfo.version) {
-        params.v = urlInfo.version
-      }
-      const clientUrl = injectQueryParams(clientUrlRaw, params)
-      if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
-        return `/${urlToRelativeUrl(clientUrl, projectDirectoryUrl)}`
-      }
-      if (clientUrl.startsWith("file:")) {
-        return `/@fs/${clientUrl.slice(filesystemRootUrl.length)}`
-      }
-      return `${clientUrl}`
-    }
 
     // "load" hook
     try {
@@ -456,14 +415,43 @@ export const createKitchen = ({
       hotAcceptSelf,
       hotAcceptDependencies,
     })
-    // "dependencyResolved" hook
-    await pluginController.callPluginHooksUntil(
-      plugins,
-      "dependencyResolved",
-      context,
-    )
+    await onDependencyResolved(context)
+
+    const resolveUrlMention = async (urlMention) => {
+      const contextDuringResolveUrlMention = {
+        ...context,
+        urlMention,
+        asClientUrl,
+      }
+      const pluginResult = await pluginController.callPluginHooksUntil(
+        plugins,
+        "resolveUrlMention",
+        contextDuringResolveUrlMention,
+      )
+      if (pluginResult) {
+        return pluginResult
+      }
+      const clientUrl = asClientUrl(urlMention.url, context)
+      if (
+        urlMention.type === "js_import_meta_url_pattern" ||
+        urlMention.type === "js_import_export"
+      ) {
+        return JSON.stringify(clientUrl)
+      }
+      return clientUrl
+    }
+
     if (transformUrlMentions) {
-      const transformReturnValue = await transformUrlMentions()
+      const replacements = {}
+      await Promise.all(
+        urlMentions.map(async (urlMention) => {
+          replacements[urlMention.url] = await resolveUrlMention(
+            urlMention,
+            currentContext,
+          )
+        }),
+      )
+      const transformReturnValue = await transformUrlMentions(replacements)
       updateContents(transformReturnValue)
     }
 
@@ -565,6 +553,29 @@ export const createKitchen = ({
     resolveSpecifier,
     cookUrl,
   }
+}
+
+const asClientUrl = (
+  url,
+  { baseUrl = "/", projectDirectoryUrl, projectGraph, hmr },
+) => {
+  const clientUrlRaw = url
+  const urlInfo = projectGraph.getUrlInfo(url) || {}
+  const params = {}
+  if (hmr && urlInfo.hmrTimestamp) {
+    params.hmr = ""
+    params.v = urlInfo.hmrTimestamp
+  } else if (urlInfo.version) {
+    params.v = urlInfo.version
+  }
+  const clientUrl = injectQueryParams(clientUrlRaw, params)
+  if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
+    return `${baseUrl}${urlToRelativeUrl(clientUrl, projectDirectoryUrl)}`
+  }
+  if (clientUrl.startsWith("file:")) {
+    return `${baseUrl}@fs/${clientUrl.slice(filesystemRootUrl.length)}`
+  }
+  return `${clientUrl}`
 }
 
 const getRessourceType = ({ url, contentType }) => {

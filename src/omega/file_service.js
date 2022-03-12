@@ -53,7 +53,12 @@ export const createFileService = ({
       outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
       parentUrl,
-      urlSite,
+      urlTrace: urlSite
+        ? {
+            type: "url_site",
+            value: urlSite,
+          }
+        : null,
       url,
     })
     if (response) {
