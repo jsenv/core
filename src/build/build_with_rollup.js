@@ -1,15 +1,10 @@
-/*
- * we will log something like
- *
- */
-
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { isFileSystemPath } from "@jsenv/filesystem"
 import { createLog, startSpinner, UNICODE } from "@jsenv/log"
 
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
+import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
 
-import { applyRollupPlugins } from "./apply_rollup_plugins.js"
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 
 export const buildWithRollup = async ({
@@ -17,9 +12,8 @@ export const buildWithRollup = async ({
   logger,
   projectDirectoryUrl,
   buildDirectoryUrl,
-  buildUrlsGenerator,
   projectGraph,
-  jsModulesToBuild,
+  jsModulesUrlsToBuild,
 
   runtimeSupport,
   sourcemapInjection,
@@ -28,7 +22,7 @@ export const buildWithRollup = async ({
   const startMs = Date.now()
   const spinner = startSpinner({
     log: buildingLog,
-    text: `Building js moduels with rollup`,
+    text: `Building js modules with rollup`,
   })
   const resultRef = { current: null }
   await applyRollupPlugins({
@@ -38,9 +32,8 @@ export const buildWithRollup = async ({
         logger,
         projectDirectoryUrl,
         buildDirectoryUrl,
-        buildUrlsGenerator,
         projectGraph,
-        jsModulesToBuild,
+        jsModulesUrlsToBuild,
 
         runtimeSupport,
         sourcemapInjection,
@@ -63,9 +56,8 @@ const rollupPluginJsenv = ({
   // logger,
   projectDirectoryUrl,
   buildDirectoryUrl,
-  // buildUrlsGenerator,
   projectGraph,
-  jsModulesToBuild,
+  jsModulesUrlsToBuild,
 
   resultRef,
 }) => {
@@ -78,17 +70,17 @@ const rollupPluginJsenv = ({
       ...chunk,
     })
   }
-
-  const urlsReferencedByJs = []
   const urlImporters = {}
 
   return {
     name: "jsenv",
     async buildStart() {
       _rollupEmitFile = (...args) => this.emitFile(...args)
-
-      jsModulesToBuild.forEach((jsModuleInfo) => {
-        emitChunk(jsModuleInfo)
+      jsModulesUrlsToBuild.forEach((jsModuleUrl) => {
+        // const jsModuleUrlInfo = projectGraph.getUrlInfo(jsModuleUrl)
+        emitChunk({
+          id: jsModuleUrl,
+        })
       })
     },
     async generateBundle(outputOptions, rollupResult) {
@@ -109,7 +101,7 @@ const rollupPluginJsenv = ({
             url = pathToFileURL(sourcePath).href
           }
           jsModuleInfos[url] = {
-            buildRelativeUrl: rollupFileInfo.fileName,
+            // buildRelativeUrl: rollupFileInfo.fileName,
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
           }
@@ -126,8 +118,8 @@ const rollupPluginJsenv = ({
         entryFileNames: () => {
           return `[name].js`
         },
-        chunkFileNames: (chunkInfo) => {
-          return `[name].js?v=[hash]`
+        chunkFileNames: () => {
+          return `[name].js`
         },
       })
     },
@@ -155,21 +147,22 @@ const rollupPluginJsenv = ({
         map: urlInfo.sourcemap,
       }
     },
-    resolveFileUrl: ({ moduleId, referenceId }) => {
-      const url = pathToFileURL(moduleId).href
-      urlsReferencedByJs.push(url)
-      console.log("resolve file url for", url, "referenced by", referenceId)
-      return `window.__asVersionedSpecifier__("${true}")`
-    },
-    renderDynamicImport: ({ facadeModuleId }) => {
-      const url = pathToFileURL(facadeModuleId).href
-      urlsReferencedByJs.push(url)
-      console.log("render dynamic import", url)
-      return {
-        left: "import(window.__asVersionedSpecifier__(",
-        right: "), import.meta.url)",
-      }
-    },
+    // nope: will be done by url versioning
+    // resolveFileUrl: ({ moduleId, referenceId }) => {
+    //   const url = pathToFileURL(moduleId).href
+    //   urlsReferencedByJs.push(url)
+    //   console.log("resolve file url for", url, "referenced by", referenceId)
+    //   return `window.__asVersionedSpecifier__("${true}")`
+    // },
+    // renderDynamicImport: ({ facadeModuleId }) => {
+    //   const url = pathToFileURL(facadeModuleId).href
+    //   urlsReferencedByJs.push(url)
+    //   console.log("render dynamic import", url)
+    //   return {
+    //     left: "import(window.__asVersionedSpecifier__(",
+    //     right: "), import.meta.url)",
+    //   }
+    // },
     renderChunk: (code, chunkInfo) => {
       const { facadeModuleId } = chunkInfo
       if (!facadeModuleId) {

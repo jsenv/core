@@ -1,11 +1,11 @@
 import { createLog, startSpinner, UNICODE, ANSI } from "@jsenv/log"
 
-import { createProjectGraph } from "@jsenv/core/src/omega/project_graph.js"
+import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
-export const loadGraph = async ({
+export const loadProjectGraph = async ({
   signal,
   logger,
   projectDirectoryUrl,
@@ -46,7 +46,7 @@ export const loadGraph = async ({
       spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
       throw cookedUrl.error
     }
-    const urlInfo = projectGraph.getUrlInfo(cookedUrl.url)
+    const urlInfo = urlGraph.getUrlInfo(cookedUrl.url)
     const { url, dependencies, dependencyUrlSites } = urlInfo
     const dependencyUrls = Array.from(dependencies.values())
     await Promise.all(
@@ -64,7 +64,7 @@ export const loadGraph = async ({
     return cookedUrl
   }
 
-  const projectGraph = createProjectGraph({
+  const urlGraph = createUrlGraph({
     projectDirectoryUrl,
     scenario: "build",
   })
@@ -75,7 +75,7 @@ export const loadGraph = async ({
     plugins,
     runtimeSupport,
     sourcemapInjection,
-    projectGraph,
+    urlGraph,
     scenario: "build",
   })
 
@@ -105,7 +105,7 @@ export const loadGraph = async ({
 
   // here we can perform many checks such as ensuring ressource hints are used
 
-  const graphStats = createProjectGraphStats(projectGraph)
+  const graphStats = createProjectGraphStats(urlGraph)
   const msEllapsed = Date.now() - startMs
   spinner.stop(
     `${UNICODE.OK} project graph loaded in ${msAsDuration(msEllapsed)}`,
@@ -116,7 +116,7 @@ ${ANSI.color(`Total:`, ANSI.GREY)} ${graphStats.total.count} (${byteAsFileSize(
     graphStats.total.size,
   )})
 ---------------------`)
-  return projectGraph
+  return urlGraph
 }
 
 // TODO: exlude inline files

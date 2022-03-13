@@ -1,7 +1,7 @@
 import { createCallbackList } from "@jsenv/abort"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 
-export const createProjectGraph = ({ projectDirectoryUrl }) => {
+export const createUrlGraph = ({ rootDirectoryUrl }) => {
   const hotUpdateCallbackList = createCallbackList()
   const prunedCallbackList = createCallbackList()
 
@@ -82,7 +82,7 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
   }
 
   const onFileChange = ({ relativeUrl, event }) => {
-    const url = resolveUrl(relativeUrl, projectDirectoryUrl)
+    const url = resolveUrl(relativeUrl, rootDirectoryUrl)
     const urlInfo = urlInfos[url]
     // file not part of dependency graph
     if (!urlInfo) {
@@ -153,8 +153,8 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
           instructions: [
             {
               type: urlInfo.type,
-              boundary: urlToRelativeUrl(urlInfo.url, projectDirectoryUrl),
-              acceptedBy: urlToRelativeUrl(urlInfo.url, projectDirectoryUrl),
+              boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
+              acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
             },
           ],
         }
@@ -173,8 +173,8 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
         if (dependent.hotAcceptDependencies.includes(urlInfo.url)) {
           instructions.push({
             type: dependent.type,
-            boundary: urlToRelativeUrl(dependentUrl, projectDirectoryUrl),
-            acceptedBy: urlToRelativeUrl(urlInfo.url, projectDirectoryUrl),
+            boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
+            acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
           })
           continue
         }
@@ -182,7 +182,7 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
           return {
             declined: true,
             reason: "circular dependency",
-            declinedBy: urlToRelativeUrl(dependentUrl, projectDirectoryUrl),
+            declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
           }
         }
         const dependentPropagationResult = iterate(dependent, [
@@ -245,8 +245,7 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
     })
     const mainHotUpdate = propagateUpdate(firstUrlInfo)
     const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
-      (prunedUrlInfo) =>
-        urlToRelativeUrl(prunedUrlInfo.url, projectDirectoryUrl),
+      (prunedUrlInfo) => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
     )}`
     // now check if we can hot update the main ressource
     // then if we can hot update all dependencies
@@ -267,14 +266,14 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
         notifyDeclined({
           cause,
           reason: `a pruned file declines hot reload`,
-          declinedBy: urlToRelativeUrl(prunedUrlInfo.url, projectDirectoryUrl),
+          declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
         })
         return
       }
       instructions.push({
         type: "prune",
-        boundary: urlToRelativeUrl(prunedUrlInfo.url, projectDirectoryUrl),
-        acceptedBy: urlToRelativeUrl(firstUrlInfo.url, projectDirectoryUrl),
+        boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
+        acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl),
       })
     }
     notifyAccepted({
@@ -319,9 +318,9 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
       Object.keys(urlInfos).forEach((url) => {
         const dependencyUrls = Array.from(urlInfos[url].dependencies)
         if (dependencyUrls.length) {
-          const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
+          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
           data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
-            urlToRelativeUrl(dependencyUrl, projectDirectoryUrl),
+            urlToRelativeUrl(dependencyUrl, rootDirectoryUrl),
           )
         }
       })

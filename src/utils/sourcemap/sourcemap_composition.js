@@ -1,6 +1,8 @@
 /*
  * Keep in mind: "no sourcemap is better than wrong sourcemap"
  *
+ * What about https://github.com/parcel-bundler/source-map ?
+ *
  * "@ampproject/remapping"
  *   - can compose/merge sourcemap composed of a single source
  *   - cannot compose/merge sourcemap composed of multiple sources (concatenation)
