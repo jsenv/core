@@ -1,3 +1,7 @@
+import { urlToFilename } from "@jsenv/filesystem"
+
+import { memoizeByUrl } from "@jsenv/core/src/utils/memoize/memoize_by_url.js"
+
 export const createBuilUrlsGenerator = ({ baseUrl }) => {
   // TODO: normalize baseUrl
   // if a valid url:
@@ -7,7 +11,8 @@ export const createBuilUrlsGenerator = ({ baseUrl }) => {
   //   - ensure trailing slash
 
   const cache = {}
-  const generate = (name, directoryRelativeUrl) => {
+  const generate = memoizeByUrl((url, directoryRelativeUrl) => {
+    const name = urlToFilename(url)
     let names = cache[directoryRelativeUrl]
     if (!names) {
       names = []
@@ -35,7 +40,7 @@ export const createBuilUrlsGenerator = ({ baseUrl }) => {
       buildRelativeUrl: `${directoryRelativeUrl}${nameCandidate}`,
       buildUrl: `${baseUrl}${directoryRelativeUrl}${nameCandidate}`,
     }
-  }
+  })
 
   return {
     generate,
