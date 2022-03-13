@@ -15,7 +15,7 @@ export const createProjectGraph = ({ projectDirectoryUrl }) => {
     return urlInfo
   }
 
-  const inferUrlSite = async (url, parentUrl) => {
+  const inferUrlSite = (url, parentUrl) => {
     const parentUrlInfo = urlInfos[parentUrl]
     if (!parentUrlInfo) {
       return null

@@ -182,7 +182,7 @@ export const createKitchen = ({
 
   const getParamsForUrlTracing = async () => {
     const { url, urlTrace } = currentContext
-    if (urlTrace.type === "url_string") {
+    if (urlTrace && urlTrace.type === "url_string") {
       urlTrace.value = await getOriginalPosition(urlTrace.value)
     }
     return {
@@ -197,7 +197,7 @@ export const createKitchen = ({
     parentUrl,
     urlTrace,
     url,
-    onDependencyResolved = () => {},
+    onDependencies = () => {},
   }) => {
     const context = {
       ...baseContext,
@@ -353,7 +353,7 @@ export const createKitchen = ({
     const hotAcceptDependencies = []
     const dependencyUrls = []
     const dependencyUrlSites = {}
-    const replacements = {}
+
     for (const urlMention of urlMentions) {
       const specifierUrlSite =
         context.content === context.originalContent ||
@@ -368,8 +368,9 @@ export const createKitchen = ({
               line: urlMention.line,
               column: urlMention.column,
             }
+      let resolvedUrl
       try {
-        const resolvedUrl = resolveSpecifier({
+        resolvedUrl = resolveSpecifier({
           parentUrl: context.url,
           specifierType: urlMention.type,
           specifier: urlMention.specifier,
@@ -377,19 +378,6 @@ export const createKitchen = ({
         if (resolvedUrl === null) {
           throw new Error(`NO_RESOLVE`)
         }
-        if (urlMention.hotAccepted) {
-          hotAcceptDependencies.push(urlMention.url)
-        }
-        urlMention.url = resolvedUrl
-        dependencyUrls.push(resolvedUrl)
-        dependencyUrlSites[resolvedUrl] = specifierUrlSite
-        const clientUrl = asClientUrl(urlMention.url, context)
-        const clientUrFormatted =
-          urlMention.type === "js_import_meta_url_pattern" ||
-          urlMention.type === "js_import_export"
-            ? JSON.stringify(clientUrl)
-            : clientUrl
-        replacements[urlMention.url] = clientUrFormatted
       } catch (error) {
         context.error = createResolveError({
           pluginController,
@@ -402,15 +390,19 @@ export const createKitchen = ({
         })
         return context
       }
+
+      urlMention.url = resolvedUrl
+      if (urlMention.hotAccepted) {
+        hotAcceptDependencies.push(resolvedUrl)
+      }
+      dependencyUrls.push(resolvedUrl)
+      dependencyUrlSites[resolvedUrl] = specifierUrlSite
     }
     Object.assign(context, {
       urlMentions,
       hotDecline,
       hotAcceptSelf,
     })
-
-    const transformReturnValue = await replaceUrls(replacements)
-    updateContents(transformReturnValue)
     projectGraph.updateUrlInfo({
       url: context.url,
       generatedUrl: context.generatedUrl,
@@ -420,12 +412,25 @@ export const createKitchen = ({
       content: context.content,
       sourcemap: context.sourcemap,
       parentUrlSite: context.parentUrlSite,
+      dependencyUrlSites,
       dependencyUrls,
       hotDecline: context.hotDecline,
       hotAcceptSelf: context.hotAcceptSelf,
       hotAcceptDependencies: context.hotAcceptDependencies,
     })
-    await onDependencyResolved(context)
+    await onDependencies(context)
+    const replacements = {}
+    for (const urlMention of urlMentions) {
+      const clientUrl = asClientUrl(urlMention.url, context)
+      const clientUrFormatted =
+        urlMention.type === "js_import_meta_url_pattern" ||
+        urlMention.type === "js_import_export"
+          ? JSON.stringify(clientUrl)
+          : clientUrl
+      replacements[urlMention.url] = clientUrFormatted
+    }
+    const transformReturnValue = await replaceUrls(replacements)
+    updateContents(transformReturnValue)
 
     // sourcemap injection
     const { sourcemap } = context

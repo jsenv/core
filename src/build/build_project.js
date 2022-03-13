@@ -13,7 +13,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
-import { buildGraph } from "./build_graph.js"
+import { loadGraph } from "./load_graph.js"
 import { buildWithRollup } from "./build_with_rollup.js"
 
 export const buildProject = async ({
@@ -52,7 +52,7 @@ export const buildProject = async ({
   const buildUrlsGenerator = createBuilUrlsGenerator({
     baseUrl,
   })
-  const projectGraph = await buildGraph({
+  const projectGraph = await loadGraph({
     signal,
     logger,
     projectDirectoryUrl,

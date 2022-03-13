@@ -2,6 +2,9 @@
  * Things happening here
  * - html supervisor module injection
  * - scripts are wrapped to be supervised
+ *
+ * TODO: if ressource is referenced by ressource hint we should do sthing?
+ * I think so when we inject ?js_classic
  */
 
 import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"

@@ -1,20 +1,33 @@
 import { createHash } from "node:crypto"
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
-export const generateContentHash = (
-  stringOrBuffer,
-  {
+// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
+export const createUrlVersionGenerator = () => {
+  const hash = createHash("sha256")
+
+  const augmentWithContent = ({
+    content,
     contentType = "application/octet-stream",
     lineBreakNormalization = false,
-  } = {},
-) => {
-  const hash = createHash("sha256")
-  hash.update(
-    lineBreakNormalization && contentTypeIsTextual(contentType)
-      ? normalizeLineBreaks(stringOrBuffer)
-      : stringOrBuffer,
-  )
-  return hash.digest("hex").slice(0, 8)
+  }) => {
+    hash.update(
+      lineBreakNormalization && contentTypeIsTextual(contentType)
+        ? normalizeLineBreaks(content)
+        : content,
+    )
+  }
+
+  const augmentWithDependencyVersion = (version) => {
+    hash.update(version)
+  }
+
+  return {
+    augmentWithContent,
+    augmentWithDependencyVersion,
+    generate: () => {
+      return hash.digest("hex").slice(0, 8)
+    },
+  }
 }
 
 const contentTypeIsTextual = (contentType) => {

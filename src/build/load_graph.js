@@ -1,22 +1,18 @@
 import { createLog, startSpinner, UNICODE, ANSI } from "@jsenv/log"
-import { urlToFilename } from "@jsenv/filesystem"
 
 import { createProjectGraph } from "@jsenv/core/src/omega/project_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
-import { generateContentHash } from "@jsenv/core/src/utils/url_versioning.js"
+import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_versioning.js"
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
 import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
-import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
-import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 
-export const buildGraph = async ({
+export const loadGraph = async ({
   signal,
   logger,
   projectDirectoryUrl,
-  buildUrlsGenerator,
+  // buildUrlsGenerator,
 
   entryPoints,
   plugins,
@@ -33,13 +29,73 @@ export const buildGraph = async ({
   let kitchen
   const urlPromiseCache = {}
   let urlCount = 0
+
+  const dependenciesPromiseCache = {}
+  const preparePromiseForDependenciesResolved = (url) => {
+    let resolveDependenciesPromise
+    const dependenciesPromise = new Promise((resolve) => {
+      resolveDependenciesPromise = resolve
+    })
+    dependenciesPromiseCache[url] = dependenciesPromise
+    return resolveDependenciesPromise
+  }
+  const getPromiseForDependenciesResolved = (url) => {
+    return dependenciesPromiseCache[url]
+  }
+
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
     if (promiseFromCache) return promiseFromCache
+
+    const markDependenciesAsResolved =
+      preparePromiseForDependenciesResolved(url)
     const promise = _cookUrl({
       outDirectoryName: `build`,
       runtimeSupport,
       url,
+      onDependencies: async ({ url }) => {
+        markDependenciesAsResolved()
+        const urlInfo = projectGraph.getUrlInfo(url)
+        const { dependencies, dependencyUrlSites } = urlInfo
+        const promises = []
+        dependencies.forEach((dependencyUrl) => {
+          promises.push(getPromiseForDependenciesResolved(dependencyUrl))
+          cookUrl({
+            parentUrl: url,
+            urlTrace: {
+              type: "url_site",
+              value: dependencyUrlSites[dependencyUrl],
+            },
+            url: dependencyUrl,
+          })
+        })
+        await Promise.all(promises)
+        const urlVersionGenerator = createUrlVersionGenerator()
+        urlVersionGenerator.augmentWithContent({
+          content: urlInfo.content,
+          contentType: urlInfo.contentType,
+          lineBreakNormalization,
+        })
+        dependencies.forEach((dependencyUrl) => {
+          const dependencyUrlInfo = projectGraph.getUrlInfo(dependencyUrl)
+          if (dependencyUrlInfo.version) {
+            urlVersionGenerator.augmentWithDependencyVersion(
+              dependencyUrlInfo.version,
+            )
+          } else {
+            // because all dependencies are know, if the dependency has no version
+            // it means there is a circular dependency between this file
+            // and it's dependency
+            // in that case we'll use the dependency content
+            urlVersionGenerator.augmentWithContent({
+              content: dependencyUrlInfo.content,
+              contentType: dependencyUrlInfo.contentType,
+              lineBreakNormalization,
+            })
+          }
+        })
+        urlInfo.version = urlVersionGenerator.generate()
+      },
       ...rest,
     })
     urlPromiseCache[url] = promise
@@ -54,22 +110,6 @@ export const buildGraph = async ({
       spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
       throw cookedUrl.error
     }
-    await Promise.all(
-      cookedUrl.urlMentions.map(async (urlMention) => {
-        await cookUrl({
-          parentUrl: cookedUrl.url,
-          urlTrace: {
-            type: "url_site",
-            value: {
-              url: cookedUrl.url,
-              line: urlMention.line,
-              column: urlMention.column,
-            },
-          },
-          url: urlMention.url,
-        })
-      }),
-    )
     return cookedUrl
   }
 
@@ -82,22 +122,7 @@ export const buildGraph = async ({
     logger,
     projectDirectoryUrl,
     plugins: [
-      {
-        name: "jsenv:build",
-        appliesDuring: { build: true },
-        cooked: ({ projectGraph, url, type }) => {
-          // at this stage all deps are known and url mentions are replaced
-          // "content" accurately represent the file content
-          // and can be used to version the url
-          const urlInfo = projectGraph.urlInfos[url]
-          const { buildRelativeUrl, buildUrl } = buildUrlsGenerator.generate(
-            urlToFilename(url),
-            type === "js_module" ? "/" : "assets/",
-          )
-          urlInfo.buildRelativeUrl = buildRelativeUrl
-          urlInfo.buildUrl = buildUrl
-        },
-      },
+      jsenvPluginUrlVersioning(),
       jsenvPluginAvoidVersioningCascade(),
       ...plugins,
     ],
@@ -129,71 +154,66 @@ export const buildGraph = async ({
 
   // here we can perform many checks such as ensuring ressource hints are used
   // circular deps, etc
-  // we could also compute all assets version and urls starting with least dependent one
-  // but maybe we'll keep that for later?
-  // now we are done here we want
-  // to build js modules entry points using rollup
-  // the other js modules will be discovered as rollup loads js
 
-  const visited = []
-  const sorted = []
-  const visit = (url, importerUrl) => {
-    const isSorted = sorted.includes(url)
-    if (isSorted) return
-    const isVisited = visited.includes(url)
-    if (isVisited) {
-      throw new Error(`Circular dependency between ${url} and ${importerUrl}`)
-    }
-    visited.push(url)
-    projectGraph.urlInfos[url].dependencies.forEach((dependencyUrl) => {
-      visit(dependencyUrl, url)
-    })
-    sorted.push(url)
-  }
-  Object.keys(projectGraph.urlInfos).forEach((url) => {
-    visit(url)
-  })
-  await sorted.reduce(async (previous, url) => {
-    await previous
-    const urlInfo = projectGraph.urlInfos[url]
-    if (urlInfo.version === undefined) {
-      urlInfo.version = generateContentHash(urlInfo.content, {
-        contentType: urlInfo.contentType,
-        lineBreakNormalization,
-      })
-    }
-    // file using this file must update their reference
-    const { urlMentions, replaceUrls } = await parseUrlMentions({
-      type: urlInfo.type,
-      url: urlInfo.url,
-      content: urlInfo.content,
-    })
-    if (urlMentions.length) {
-      const replacements = {}
-      for (const urlMention of urlMentions) {
-        const urlMentionUrl =
-          applyLeadingSlashUrlResolution(
-            urlMention.specifier,
-            projectDirectoryUrl,
-          ) || new URL(urlMention.specifier, urlInfo.url).href
-        urlMention.url = urlMentionUrl
-        const urlMentionInfo = projectGraph.urlInfos[urlMentionUrl]
-        if (urlMentionInfo.version) {
-          const urlObject = new URL(urlMentionUrl)
-          urlObject.searchParams.set("v", urlMentionInfo.version)
-          // TODO: stringify only when inside js
-          replacements[urlMentionUrl] = JSON.stringify(urlObject.href)
-        }
-      }
-      if (Object.keys(replacements).length) {
-        const { content, sourcemap } = await replaceUrls(replacements)
-        urlInfo.content = content
-        if (sourcemap) {
-          urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
-        }
-      }
-    }
-  }, Promise.resolve())
+  // const visited = []
+  // const sorted = []
+  // const visit = (url, importerUrl) => {
+  //   const isSorted = sorted.includes(url)
+  //   if (isSorted) return
+  //   const isVisited = visited.includes(url)
+  //   if (isVisited) {
+  //     throw new Error(`Circular dependency between ${url} and ${importerUrl}`)
+  //   }
+  //   visited.push(url)
+  //   projectGraph.urlInfos[url].dependencies.forEach((dependencyUrl) => {
+  //     visit(dependencyUrl, url)
+  //   })
+  //   sorted.push(url)
+  // }
+  // Object.keys(projectGraph.urlInfos).forEach((url) => {
+  //   visit(url)
+  // })
+  // await sorted.reduce(async (previous, url) => {
+  //   await previous
+  //   const urlInfo = projectGraph.urlInfos[url]
+  //   if (urlInfo.version === undefined) {
+  //     urlInfo.version = generateContentHash(urlInfo.content, {
+  //       contentType: urlInfo.contentType,
+  //       lineBreakNormalization,
+  //     })
+  //   }
+  //   // file using this file must update their reference
+  //   const { urlMentions, replaceUrls } = await parseUrlMentions({
+  //     type: urlInfo.type,
+  //     url: urlInfo.url,
+  //     content: urlInfo.content,
+  //   })
+  //   if (urlMentions.length) {
+  //     const replacements = {}
+  //     for (const urlMention of urlMentions) {
+  //       const urlMentionUrl =
+  //         applyLeadingSlashUrlResolution(
+  //           urlMention.specifier,
+  //           projectDirectoryUrl,
+  //         ) || new URL(urlMention.specifier, urlInfo.url).href
+  //       urlMention.url = urlMentionUrl
+  //       const urlMentionInfo = projectGraph.urlInfos[urlMentionUrl]
+  //       if (urlMentionInfo.version) {
+  //         const urlObject = new URL(urlMentionUrl)
+  //         urlObject.searchParams.set("v", urlMentionInfo.version)
+  //         // TODO: stringify only when inside js
+  //         replacements[urlMentionUrl] = JSON.stringify(urlObject.href)
+  //       }
+  //     }
+  //     if (Object.keys(replacements).length) {
+  //       const { content, sourcemap } = await replaceUrls(replacements)
+  //       urlInfo.content = content
+  //       if (sourcemap) {
+  //         urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
+  //       }
+  //     }
+  //   }
+  // }, Promise.resolve())
 
   const graphStats = createProjectGraphStats(projectGraph)
   const msEllapsed = Date.now() - startMs
@@ -207,6 +227,26 @@ ${ANSI.color(`Total:`, ANSI.GREY)} ${graphStats.total.count} (${byteAsFileSize(
   )})
 ---------------------`)
   return projectGraph
+}
+
+const jsenvPluginUrlVersioning = () => {
+  return {
+    name: "jsenv:url_versioning",
+    appliesDuring: { build: true },
+  }
+
+  // cooked: ({ projectGraph, url, type }) => {
+  //   // at this stage all deps are known and url mentions are replaced
+  //   // "content" accurately represent the file content
+  //   // and can be used to version the url
+  //   const urlInfo = projectGraph.urlInfos[url]
+  //   const { buildRelativeUrl, buildUrl } = buildUrlsGenerator.generate(
+  //     urlToFilename(url),
+  //     type === "js_module" ? "/" : "assets/",
+  //   )
+  //   urlInfo.buildRelativeUrl = buildRelativeUrl
+  //   urlInfo.buildUrl = buildUrl
+  // },
 }
 
 // TODO: exlude inline files
