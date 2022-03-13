@@ -30,36 +30,25 @@ export const loadGraph = async ({
   const urlPromiseCache = {}
   let urlCount = 0
 
-  const dependenciesPromiseCache = {}
-  const preparePromiseForDependenciesResolved = (url) => {
-    let resolveDependenciesPromise
-    const dependenciesPromise = new Promise((resolve) => {
-      resolveDependenciesPromise = resolve
-    })
-    dependenciesPromiseCache[url] = dependenciesPromise
-    return resolveDependenciesPromise
-  }
-  const getPromiseForDependenciesResolved = (url) => {
-    return dependenciesPromiseCache[url]
-  }
+  const dependencyGraph = createDependencyGraph()
 
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
     if (promiseFromCache) return promiseFromCache
 
-    const markDependenciesAsResolved =
-      preparePromiseForDependenciesResolved(url)
     const promise = _cookUrl({
       outDirectoryName: `build`,
       runtimeSupport,
       url,
       onDependencies: async ({ url }) => {
-        markDependenciesAsResolved()
         const urlInfo = projectGraph.getUrlInfo(url)
         const { dependencies, dependencyUrlSites } = urlInfo
-        const promises = []
+        const dependencyUrls = Array.from(dependencies.values())
+        const readyPromise = dependencyGraph.setDependencyUrls(
+          url,
+          dependencyUrls,
+        )
         dependencies.forEach((dependencyUrl) => {
-          promises.push(getPromiseForDependenciesResolved(dependencyUrl))
           cookUrl({
             parentUrl: url,
             urlTrace: {
@@ -69,7 +58,7 @@ export const loadGraph = async ({
             url: dependencyUrl,
           })
         })
-        await Promise.all(promises)
+        await readyPromise
         const urlVersionGenerator = createUrlVersionGenerator()
         urlVersionGenerator.augmentWithContent({
           content: urlInfo.content,
@@ -152,68 +141,11 @@ export const loadGraph = async ({
     Promise.resolve(),
   )
 
-  // here we can perform many checks such as ensuring ressource hints are used
-  // circular deps, etc
+  await Promise.all(
+    Object.keys(urlPromiseCache).map((key) => urlPromiseCache[key]),
+  )
 
-  // const visited = []
-  // const sorted = []
-  // const visit = (url, importerUrl) => {
-  //   const isSorted = sorted.includes(url)
-  //   if (isSorted) return
-  //   const isVisited = visited.includes(url)
-  //   if (isVisited) {
-  //     throw new Error(`Circular dependency between ${url} and ${importerUrl}`)
-  //   }
-  //   visited.push(url)
-  //   projectGraph.urlInfos[url].dependencies.forEach((dependencyUrl) => {
-  //     visit(dependencyUrl, url)
-  //   })
-  //   sorted.push(url)
-  // }
-  // Object.keys(projectGraph.urlInfos).forEach((url) => {
-  //   visit(url)
-  // })
-  // await sorted.reduce(async (previous, url) => {
-  //   await previous
-  //   const urlInfo = projectGraph.urlInfos[url]
-  //   if (urlInfo.version === undefined) {
-  //     urlInfo.version = generateContentHash(urlInfo.content, {
-  //       contentType: urlInfo.contentType,
-  //       lineBreakNormalization,
-  //     })
-  //   }
-  //   // file using this file must update their reference
-  //   const { urlMentions, replaceUrls } = await parseUrlMentions({
-  //     type: urlInfo.type,
-  //     url: urlInfo.url,
-  //     content: urlInfo.content,
-  //   })
-  //   if (urlMentions.length) {
-  //     const replacements = {}
-  //     for (const urlMention of urlMentions) {
-  //       const urlMentionUrl =
-  //         applyLeadingSlashUrlResolution(
-  //           urlMention.specifier,
-  //           projectDirectoryUrl,
-  //         ) || new URL(urlMention.specifier, urlInfo.url).href
-  //       urlMention.url = urlMentionUrl
-  //       const urlMentionInfo = projectGraph.urlInfos[urlMentionUrl]
-  //       if (urlMentionInfo.version) {
-  //         const urlObject = new URL(urlMentionUrl)
-  //         urlObject.searchParams.set("v", urlMentionInfo.version)
-  //         // TODO: stringify only when inside js
-  //         replacements[urlMentionUrl] = JSON.stringify(urlObject.href)
-  //       }
-  //     }
-  //     if (Object.keys(replacements).length) {
-  //       const { content, sourcemap } = await replaceUrls(replacements)
-  //       urlInfo.content = content
-  //       if (sourcemap) {
-  //         urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
-  //       }
-  //     }
-  //   }
-  // }, Promise.resolve())
+  // here we can perform many checks such as ensuring ressource hints are used
 
   const graphStats = createProjectGraphStats(projectGraph)
   const msEllapsed = Date.now() - startMs
@@ -227,6 +159,84 @@ ${ANSI.color(`Total:`, ANSI.GREY)} ${graphStats.total.count} (${byteAsFileSize(
   )})
 ---------------------`)
   return projectGraph
+}
+
+const createDependencyGraph = () => {
+  const nodes = {}
+  const getOrCreateNode = (url) => {
+    const existing = nodes[url]
+    if (existing) {
+      return existing
+    }
+    const node = createNode(url)
+    nodes[url] = node
+    return node
+  }
+  const createNode = (url) => {
+    const node = {}
+    const promiseWithResolve = (newStatus) => {
+      let resolved = false
+      let resolve
+      const promise = new Promise((r) => {
+        resolve = r
+      }).then(() => {
+        node.status = newStatus
+      })
+      promise.resolve = (value) => {
+        if (resolved) return
+        resolve(value)
+      }
+      return promise
+    }
+    const knownPromise = promiseWithResolve(
+      "waiting_for_dependencies_to_be_ready",
+    )
+    const readyPromise = promiseWithResolve("ready")
+    const setDependencies = async (dependencies) => {
+      node.dependencies = dependencies
+      knownPromise.resolve()
+      const promises = dependencies.map((dependencyNode) => {
+        // for circular dependency we wait for knownPromise
+        if (hasDependencyOn(dependencyNode, node)) {
+          return dependencyNode.knownPromise
+        }
+        return dependencyNode.readyPromise
+      })
+      readyPromise.resolve(Promise.all(promises))
+    }
+    Object.assign(node, {
+      url,
+      status: "waiting_to_know_dependencies",
+      dependencies: [],
+      setDependencies,
+      knownPromise,
+      readyPromise,
+    })
+    return node
+  }
+  const setDependencyUrls = async (url, dependencyUrls) => {
+    console.log("url dependencies are known for:", url)
+    const node = getOrCreateNode(url)
+    const dependencies = dependencyUrls.map((dependencyUrl) =>
+      getOrCreateNode(dependencyUrl),
+    )
+    node.setDependencies(dependencies)
+    await node.readyPromise
+    console.log("url is ready:", url)
+  }
+  return { setDependencyUrls }
+}
+
+const hasDependencyOn = (node, otherNode) => {
+  for (const dependencyNode of node.dependencies) {
+    if (dependencyNode.url === otherNode.url) {
+      return true
+    }
+    if (hasDependencyOn(dependencyNode, otherNode)) {
+      return true
+    }
+  }
+  return false
 }
 
 const jsenvPluginUrlVersioning = () => {

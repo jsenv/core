@@ -126,7 +126,7 @@ const rollupPluginJsenv = ({
         entryFileNames: () => {
           return `[name].js`
         },
-        chunkFileNames: () => {
+        chunkFileNames: (chunkInfo) => {
           return `[name].js?v=[hash]`
         },
       })
