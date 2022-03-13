@@ -14,7 +14,7 @@ import {
 } from "@jsenv/core/packages/node-esm-resolution/main.js"
 
 export const jsenvPluginNodeEsmResolution = ({
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = ["browser", "import"],
 }) => {
@@ -65,7 +65,7 @@ export const jsenvPluginNodeEsmResolution = ({
       if (!packageUrl) {
         return null
       }
-      if (packageUrl === projectDirectoryUrl) {
+      if (packageUrl === rootDirectoryUrl) {
         return null
       }
       const packageVersion = readPackageJson(packageUrl).version

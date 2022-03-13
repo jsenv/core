@@ -3,8 +3,10 @@
  * - html supervisor module injection
  * - scripts are wrapped to be supervised
  *
- * TODO: if ressource is referenced by ressource hint we should do sthing?
- * I think so when we inject ?js_classic
+ * TODO:
+ *  - fix url using asClientUrl
+ *  - if ressource is referenced by ressource hint we should do sthing?
+ *   I think so when we inject ?js_classic
  */
 
 import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
@@ -38,7 +40,7 @@ export const jsenvPluginHtmlSupervisor = () => {
       test: true,
     },
     transform: {
-      html: ({ projectDirectoryUrl, resolveSpecifier, url, content }) => {
+      html: ({ rootDirectoryUrl, resolveSpecifier, url, content }) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
         visitHtmlAst(htmlAst, (node) => {
@@ -87,7 +89,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           return null
         }
         let htmlSupervisorSetupResolvedUrl = resolveSpecifier({
-          parentUrl: projectDirectoryUrl,
+          parentUrl: rootDirectoryUrl,
           specifierType: "js_import_export",
           specifier: htmlSupervisorSetupFileUrl,
         })
@@ -103,7 +105,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           }),
         )
         const htmlSupervisorResolvedUrl = resolveSpecifier({
-          parentUrl: projectDirectoryUrl,
+          parentUrl: rootDirectoryUrl,
           specifierType: "js_import_export",
           specifier: htmlSupervisorFileUrl,
         })

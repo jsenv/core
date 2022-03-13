@@ -7,7 +7,7 @@ export const createSSEService = ({
   serverStopCallbackList,
   autoreload,
   autoreloadPatterns,
-  projectGraph,
+  urlGraph,
 }) => {
   let handleSSEClientRequest
   if (autoreload) {
@@ -15,7 +15,7 @@ export const createSSEService = ({
       projectDirectoryUrl,
       serverStopCallbackList,
       autoreloadPatterns,
-      projectGraph,
+      urlGraph,
     })
   } else {
     const roomWhenAutoreloadIsDisabled = createSSERoom()
@@ -26,7 +26,7 @@ export const createSSEService = ({
   }
   return (request) => {
     if (request.ressource === "/__graph__") {
-      const graphJson = JSON.stringify(projectGraph)
+      const graphJson = JSON.stringify(urlGraph)
       return {
         status: 200,
         headers: {
@@ -48,7 +48,7 @@ const createSSEServiceWithAutoreload = ({
   projectDirectoryUrl,
   serverStopCallbackList,
   autoreloadPatterns,
-  projectGraph,
+  urlGraph,
 }) => {
   const projectFileModified = createCallbackList()
   const projectFileRemoved = createCallbackList()
@@ -124,7 +124,7 @@ const createSSEServiceWithAutoreload = ({
       historyLength: 100,
       welcomeEventEnabled: true,
       effect: () => {
-        const removeHotUpdateCallback = projectGraph.hotUpdateCallbackList.add(
+        const removeHotUpdateCallback = urlGraph.hotUpdateCallbackList.add(
           (hotUpdate) => {
             if (hotUpdate.declined) {
               sseRoom.sendEvent({
@@ -150,7 +150,7 @@ const createSSEServiceWithAutoreload = ({
           },
         )
         const stopWatching = watchProjectFiles(({ relativeUrl, event }) => {
-          projectGraph.onFileChange({ relativeUrl, event })
+          urlGraph.onFileChange({ relativeUrl, event })
         })
         return () => {
           removeHotUpdateCallback()

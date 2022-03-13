@@ -12,14 +12,14 @@ import { jsenvPluginImportAssertions } from "@jsenv/core/src/omega/plugins/impor
 import { jsenvPluginImportMetaScenarios } from "@jsenv/core/src/omega/plugins/import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plugin_babel.js"
 
-export const getJsenvPlugins = ({ projectDirectoryUrl }) => {
+export const getJsenvPlugins = ({ rootDirectoryUrl }) => {
   const asFewAsPossible = false // useful during dev
   return [
     // url resolution
     ...(asFewAsPossible ? [] : [jsenvPluginInlineRessources()]), // must come first to resolve inline urls
     jsenvPluginImportmap(), // must come before node esm to handle bare specifiers before node esm
     jsenvPluginNodeEsmResolution({
-      projectDirectoryUrl,
+      rootDirectoryUrl,
     }), // must come before url resolution to handle "js_import_export" resolution
     jsenvPluginUrlResolution(),
     ...(asFewAsPossible ? [] : [jsenvPluginFileSystemMagic()]),

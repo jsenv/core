@@ -11,16 +11,19 @@ import {
   ensureEmptyDirectory,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
+import { createLog, startSpinner, UNICODE } from "@jsenv/log"
 
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
 import { loadUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph_load.js"
+import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
+import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
+import { applyLeadingSlashUrlResolution } from "@jsenv/core/src/omega/kitchen/leading_slash_url_resolution.js"
 
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
-import { loadProjectGraph } from "./load_project_graph.js"
 import { buildWithRollup } from "./build_with_rollup.js"
 
 export const buildProject = async ({
@@ -59,24 +62,56 @@ export const buildProject = async ({
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
-  const buildUrlsGenerator = createBuilUrlsGenerator({
-    baseUrl,
-  })
   const entryUrls = Object.keys(entryPoints).map(
     (key) => new URL(key, projectDirectoryUrl).href,
   )
-
-  const projectGraph = await loadProjectGraph({
+  const projectGraph = createUrlGraph({
+    rootDirectoryUrl: projectDirectoryUrl,
+  })
+  const startMs = Date.now()
+  const buildingLog = createLog()
+  const spinner = startSpinner({
+    log: buildingLog,
+    text: `Loading project graph`,
+  })
+  let urlCount = 0
+  const projectKitchen = createKitchen({
     signal,
     logger,
-    projectDirectoryUrl,
-    buildUrlsGenerator,
-    entryPoints,
-
-    plugins,
+    rootDirectoryUrl: projectDirectoryUrl,
+    urlGraph: projectGraph,
+    plugins: [
+      ...plugins,
+      {
+        name: "jsenv:build_log",
+        appliesDuring: { build: true },
+        cooked: () => {
+          urlCount++
+          spinner.text = `Loading project graph ${urlCount}`
+        },
+      },
+    ],
+    scenario: "build",
     runtimeSupport,
     sourcemapInjection,
   })
+  try {
+    await loadUrlGraph({
+      urlGraph: projectGraph,
+      kitchen: projectKitchen,
+      entryUrls,
+    })
+  } catch (e) {
+    spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
+    throw e
+  }
+  // here we can perform many checks such as ensuring ressource hints are used
+  const msEllapsed = Date.now() - startMs
+  spinner.stop(
+    `${UNICODE.OK} project graph loaded in ${msAsDuration(msEllapsed)}`,
+  )
+  logger.info(createUrlGraphSummary(projectGraph))
+
   const jsModulesUrlsToBuild = []
   const cssUrlsToBuild = []
   entryUrls.forEach((entryPointUrl) => {
@@ -133,23 +168,29 @@ export const buildProject = async ({
   }
   // TODO: minify html, svg, json
 
-  const buildGraph = createUrlGraph({ rootDirectoryUrl: buildDirectoryUrl })
-  // TODO:
-  // - disable jsenv plugins
-  // - inside "resolve" first apply browser like url resolution (leading slash stuff)
-  //   then check if the file was replaced by rollup and prefer rollup one when it exists
-  // - use again asClientUrl in html supervisor
+  const buildUrlsGenerator = createBuilUrlsGenerator({
+    baseUrl,
+  })
+  const buildGraph = createUrlGraph({
+    rootDirectoryUrl: buildDirectoryUrl,
+  })
   const buildKitchen = createKitchen({
-    projectDirectoryUrl: buildDirectoryUrl,
+    rootDirectoryUrl: buildDirectoryUrl,
+    injectJsenvPlugins: false,
     plugins: [
       {
         name: "jsenv:postbuild",
         appliesDuring: { postbuild: true },
         resolve: ({ parentUrl, specifier }) => {
-          // apply
-          return new URL(specifier, parentUrl).href
+          const url =
+            applyLeadingSlashUrlResolution(specifier, projectDirectoryUrl) ||
+            new URL(specifier, parentUrl).href
+          const buildFileInfo = buildFiles[url]
+          debugger
         },
-        load: () => {
+        // load either from project graph or rollup
+        load: ({ url }) => {
+          const projectUrlInfo = projectGraph.getUrlInfo(url)
           // load from project graph
         },
       },
@@ -158,10 +199,8 @@ export const buildProject = async ({
   })
   await loadUrlGraph({
     urlGraph: buildGraph,
-    entryUrls,
-    rootDirectoryUrl: buildDirectoryUrl,
     kitchen: buildKitchen,
-    onCooked: () => {},
+    entryUrls,
   })
 
   if (urlVersioning) {
@@ -210,7 +249,8 @@ export const buildProject = async ({
           // static import we have no choice until importmap is supported
           // the rest must use versioned url
         })
-        await replaceUrls(replacements)
+        const { content } = await replaceUrls(replacements)
+        urlInfo.content = content
       }),
     )
   }

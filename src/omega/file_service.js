@@ -12,18 +12,18 @@ export const createFileService = ({
   projectDirectoryUrl,
   plugins,
   sourcemapInjection,
-  projectGraph,
+  urlGraph,
   scenario,
   longTermCache = false, // will become true once things get more stable
 }) => {
   const kitchen = createKitchen({
     signal,
     logger,
-    projectDirectoryUrl,
+    rootDirectoryUrl: projectDirectoryUrl,
+    urlGraph,
     scenario,
     plugins,
     sourcemapInjection,
-    projectGraph,
   })
   return async (request) => {
     // serve file inside ".jsenv" directory
@@ -48,7 +48,7 @@ export const createFileService = ({
       specifierType: "http_request",
       specifier: request.ressource,
     })
-    const urlSite = projectGraph.inferUrlSite(url, parentUrl)
+    const urlSite = urlGraph.inferUrlSite(url, parentUrl)
     const { response, error, contentType, content } = await kitchen.cookUrl({
       outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
       runtimeSupport,

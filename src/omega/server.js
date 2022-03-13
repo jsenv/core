@@ -10,7 +10,8 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
-import { createUrlGraph } from "./url_graph.js"
+import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
+
 import { createFileService } from "./file_service.js"
 import { createSSEService } from "./sse_service.js"
 
@@ -48,7 +49,7 @@ export const startOmegaServer = async ({
   const logger = createLogger({ logLevel })
 
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-  const projectGraph = createUrlGraph({
+  const urlGraph = createUrlGraph({
     rootDirectoryUrl: projectDirectoryUrl,
   })
   const coreServices = {
@@ -57,16 +58,16 @@ export const startOmegaServer = async ({
       serverStopCallbackList,
       autoreload,
       autoreloadPatterns,
-      projectGraph,
+      urlGraph,
     }),
     "service:file": createFileService({
       signal,
       logger,
       projectDirectoryUrl,
+      urlGraph,
       plugins,
       runtimeSupport,
       sourcemapInjection,
-      projectGraph,
       scenario,
     }),
   }

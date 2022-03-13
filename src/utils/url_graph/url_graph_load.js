@@ -1,10 +1,4 @@
-export const loadUrlGraph = async ({
-  urlGraph,
-  entryUrls,
-  rootDirectoryUrl,
-  kitchen,
-  onCooked,
-}) => {
+export const loadUrlGraph = async ({ urlGraph, kitchen, entryUrls }) => {
   const urlPromiseCache = {}
 
   const cookUrl = ({ url, ...rest }) => {
@@ -21,7 +15,6 @@ export const loadUrlGraph = async ({
 
   const _cookUrl = async (params) => {
     const cookedUrl = await kitchen.cookUrl(params)
-    onCooked(cookedUrl)
     if (cookedUrl.error) {
       throw cookedUrl.error
     }
@@ -46,7 +39,6 @@ export const loadUrlGraph = async ({
   await entryUrls.reduce(async (previous, entryUrl) => {
     await previous
     await cookUrl({
-      parentUrl: rootDirectoryUrl,
       urlTrace: {
         type: "parameter",
         value: `"entryPoints" parameter to buildProject`,

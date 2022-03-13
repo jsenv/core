@@ -33,18 +33,22 @@ import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 export const createKitchen = ({
   signal,
   logger,
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   plugins,
   sourcemapInjection,
-  projectGraph,
+  urlGraph,
   scenario,
+
+  injectJsenvPlugins = true,
 }) => {
-  plugins = [
-    ...plugins,
-    ...getJsenvPlugins({
-      projectDirectoryUrl,
-    }),
-  ]
+  if (injectJsenvPlugins) {
+    plugins = [
+      ...plugins,
+      ...getJsenvPlugins({
+        rootDirectoryUrl,
+      }),
+    ]
+  }
   plugins = flattenAndFilterPlugins(plugins, {
     scenario,
   })
@@ -52,13 +56,13 @@ export const createKitchen = ({
   const baseContext = {
     signal,
     logger,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     plugins,
     sourcemapInjection,
-    projectGraph,
+    urlGraph,
     scenario,
   }
-  const jsenvDirectoryUrl = new URL(".jsenv/", projectDirectoryUrl).href
+  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
   const pluginController = createPluginController()
   let currentContext
 
@@ -71,10 +75,7 @@ export const createKitchen = ({
   }
 
   const resolveSpecifier = ({ parentUrl, specifierType, specifier }) => {
-    const resolved = applyLeadingSlashUrlResolution(
-      specifier,
-      projectDirectoryUrl,
-    )
+    const resolved = applyLeadingSlashUrlResolution(specifier, rootDirectoryUrl)
     if (resolved) {
       return resolved
     }
@@ -194,7 +195,7 @@ export const createKitchen = ({
   const _cookUrl = async ({
     outDirectoryName,
     runtimeSupport,
-    parentUrl,
+    parentUrl = rootDirectoryUrl,
     urlTrace,
     url,
     onDependencies = () => {},
@@ -270,7 +271,7 @@ export const createKitchen = ({
       return context
     }
     context.generatedUrl = determineFileUrlForOutDirectory({
-      projectDirectoryUrl,
+      rootDirectoryUrl,
       outDirectoryName,
       url: context.url,
     })
@@ -403,7 +404,7 @@ export const createKitchen = ({
       hotDecline,
       hotAcceptSelf,
     })
-    projectGraph.updateUrlInfo({
+    urlGraph.updateUrlInfo({
       url: context.url,
       generatedUrl: context.generatedUrl,
       type: context.type,
@@ -437,7 +438,7 @@ export const createKitchen = ({
     if (sourcemap) {
       const sourcemapUrl = generateSourcemapUrl(context.url)
       const sourcemapGeneratedUrl = determineFileUrlForOutDirectory({
-        projectDirectoryUrl,
+        rootDirectoryUrl,
         outDirectoryName,
         url: sourcemapUrl,
       })
@@ -461,7 +462,7 @@ export const createKitchen = ({
         context,
       )
       if (typeof cookedReturnValue === "function") {
-        const removePrunedCallback = projectGraph.prunedCallbackList.add(
+        const removePrunedCallback = urlGraph.prunedCallbackList.add(
           (prunedUrlInfo) => {
             if (prunedUrlInfo.url === context.url) {
               removePrunedCallback()
@@ -534,10 +535,10 @@ export const createKitchen = ({
 
 const asClientUrl = (
   url,
-  { baseUrl = "/", projectDirectoryUrl, projectGraph, hmr },
+  { baseUrl = "/", rootDirectoryUrl, urlGraph, hmr },
 ) => {
   const clientUrlRaw = url
-  const urlInfo = projectGraph.getUrlInfo(url) || {}
+  const urlInfo = urlGraph.getUrlInfo(url) || {}
   const params = {}
   if (hmr && urlInfo.hmrTimestamp) {
     params.hmr = ""
@@ -546,8 +547,8 @@ const asClientUrl = (
     params.v = urlInfo.version
   }
   const clientUrl = injectQueryParams(clientUrlRaw, params)
-  if (urlIsInsideOf(clientUrl, projectDirectoryUrl)) {
-    return `${baseUrl}${urlToRelativeUrl(clientUrl, projectDirectoryUrl)}`
+  if (urlIsInsideOf(clientUrl, rootDirectoryUrl)) {
+    return `${baseUrl}${urlToRelativeUrl(clientUrl, rootDirectoryUrl)}`
   }
   if (clientUrl.startsWith("file:")) {
     return `${baseUrl}@fs/${clientUrl.slice(filesystemRootUrl.length)}`
@@ -592,19 +593,19 @@ const getRessourceType = ({ url, contentType }) => {
 
 // this is just for debug (ability to see what is generated)
 const determineFileUrlForOutDirectory = ({
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   outDirectoryName,
   url,
 }) => {
   if (!url.startsWith("file:")) {
     return url
   }
-  if (!urlIsInsideOf(url, projectDirectoryUrl)) {
-    url = `${projectDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
+  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
+    url = `${rootDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
   }
   const outDirectoryUrl = new URL(
     `.jsenv/${outDirectoryName}/`,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
   ).href
-  return moveUrl(url, projectDirectoryUrl, outDirectoryUrl)
+  return moveUrl(url, rootDirectoryUrl, outDirectoryUrl)
 }
