@@ -12,6 +12,12 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
+import { loadUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph_load.js"
+import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
+import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
+
+import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { loadProjectGraph } from "./load_project_graph.js"
@@ -41,6 +47,9 @@ export const buildProject = async ({
   },
   sourcemapInjection = isPreview ? "comment" : false,
 
+  urlVersioning = true,
+  lineBreakNormalization = process.platform === "win32",
+
   writeOnFileSystem = false,
   buildDirectoryClean = true,
   baseUrl = "/",
@@ -53,6 +62,10 @@ export const buildProject = async ({
   const buildUrlsGenerator = createBuilUrlsGenerator({
     baseUrl,
   })
+  const entryUrls = Object.keys(entryPoints).map(
+    (key) => new URL(key, projectDirectoryUrl).href,
+  )
+
   const projectGraph = await loadProjectGraph({
     signal,
     logger,
@@ -66,9 +79,7 @@ export const buildProject = async ({
   })
   const jsModulesUrlsToBuild = []
   const cssUrlsToBuild = []
-  Object.keys(entryPoints).forEach((entyrPointRelativeUrl) => {
-    const entryPointUrl = new URL(entyrPointRelativeUrl, projectDirectoryUrl)
-      .href
+  entryUrls.forEach((entryPointUrl) => {
     const entryPointUrlInfo = projectGraph.getUrlInfo(entryPointUrl)
     if (entryPointUrlInfo.type === "html") {
       entryPointUrlInfo.dependencies.forEach((dependencyUrl) => {
@@ -122,45 +133,87 @@ export const buildProject = async ({
   }
   // TODO: minify html, svg, json
 
-  const buildGraph = {}
-  await Object.keys(entryPoints).reduce(
-    async (previous, entyrPointRelativeUrl) => {
-      await previous
-      const entryPointUrl = new URL(entyrPointRelativeUrl, projectDirectoryUrl)
-        .href
-      const entryPointUrlInfo = projectGraph.getUrlInfo(entryPointUrl)
-      // le'ts say html was minified so we need to re-parse it
-      if (entryPointUrlInfo.type === "html") {
+  const buildGraph = createUrlGraph({ rootDirectoryUrl: buildDirectoryUrl })
+  // TODO:
+  // - disable jsenv plugins
+  // - inside "resolve" first apply browser like url resolution (leading slash stuff)
+  //   then check if the file was replaced by rollup and prefer rollup one when it exists
+  // - use again asClientUrl in html supervisor
+  const buildKitchen = createKitchen({
+    projectDirectoryUrl: buildDirectoryUrl,
+    plugins: [
+      {
+        name: "jsenv:postbuild",
+        appliesDuring: { postbuild: true },
+        resolve: ({ parentUrl, specifier }) => {
+          // apply
+          return new URL(specifier, parentUrl).href
+        },
+        load: () => {
+          // load from project graph
+        },
+      },
+    ],
+    scenario: "postbuild",
+  })
+  await loadUrlGraph({
+    urlGraph: buildGraph,
+    entryUrls,
+    rootDirectoryUrl: buildDirectoryUrl,
+    kitchen: buildKitchen,
+    onCooked: () => {},
+  })
+
+  if (urlVersioning) {
+    const urlsSorted = sortUrlGraphByDependencies(buildGraph)
+    urlsSorted.forEach((url) => {
+      const urlInfo = buildGraph.getUrlInfo(url)
+      const urlVersionGenerator = createUrlVersionGenerator()
+      urlVersionGenerator.augmentWithContent({
+        content: urlInfo.content,
+        contentType: urlInfo.contentType,
+        lineBreakNormalization,
+      })
+      urlInfo.dependencies.forEach((dependencyUrl) => {
+        const dependencyUrlInfo = buildGraph.getUrlInfo(dependencyUrl)
+        if (dependencyUrlInfo.version) {
+          urlVersionGenerator.augmentWithDependencyVersion(
+            dependencyUrlInfo.version,
+          )
+        } else {
+          // because all dependencies are know, if the dependency has no version
+          // it means there is a circular dependency between this file
+          // and it's dependency
+          // in that case we'll use the dependency content
+          urlVersionGenerator.augmentWithContent({
+            content: dependencyUrlInfo.content,
+            contentType: dependencyUrlInfo.contentType,
+            lineBreakNormalization,
+          })
+        }
+      })
+      urlInfo.version = urlVersionGenerator.generate()
+    })
+    // replace all urls to inject versions
+    await Promise.all(
+      urlsSorted.map(async (url) => {
+        const urlInfo = buildGraph.getUrlInfo(url)
         const { urlMentions, replaceUrls } = await parseUrlMentions({
-          type: entryPointUrlInfo.type,
-          url: entryPointUrlInfo.url,
-          content: entryPointUrlInfo.content,
+          url: urlInfo.url,
+          type: urlInfo.type,
+          content: urlInfo.content,
         })
-        // replace all files that where built by rollup
         const replacements = {}
         urlMentions.forEach((urlMention) => {
-          replacements[urlMention.url] = buildUrlsGenerator.generate(
-            urlMention.url,
-          )
+          // TODO: if url mention is versioned
+          // (all urls are, oh yeah but no, not import meta url, not dynamic imports)
+          // static import we have no choice until importmap is supported
+          // the rest must use versioned url
         })
-        const { content } = await replaceUrls(replacements)
-        entryPointUrlInfo.content = content
-      }
-
-      // replace urls in html when they are different
-    },
-    Promise.resolve(),
-  )
-
-  // ok ici on se retrouve dans le cas ou le html fait référence aux vieux fichiers
-  // js, on voudrait qu'il pointent vers les fichiers concat
-  // il nous faut donc un mapping
-  // et on veut faire ça pour toutes les urls
-  // des fichiers source qu'on veut en fait redirect sur les fichier de build
-  // pour que ça marche on part des points d'entrée et on suit ce qu'on trouve
-  // si c'est un fichier buildé on suit le fichier buildé,
-  // sinon on suit le fichier source mais on remplacera son url par une url de build
-  // quand on a fini tout ça on applique le versioning
+        await replaceUrls(replacements)
+      }),
+    )
+  }
 
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {
