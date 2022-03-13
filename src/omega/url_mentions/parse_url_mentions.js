@@ -1,6 +1,6 @@
-import { parseHtmlUrlMentions } from "./parse/html/html_url_mentions.js"
-import { parseCssUrlMentions } from "./parse/css/css_url_mentions.js"
-import { parseJsModuleUrlMentions } from "./parse/js_module/js_module_url_mentions.js"
+import { parseHtmlUrlMentions } from "./html_url_mentions.js"
+import { parseCssUrlMentions } from "./css_url_mentions.js"
+import { parseJsModuleUrlMentions } from "./js_module_url_mentions.js"
 
 const parsers = {
   html: parseHtmlUrlMentions,
@@ -8,14 +8,13 @@ const parsers = {
   js_module: parseJsModuleUrlMentions,
 }
 
-export const parseUrls = async ({ type, url, content }) => {
+export const parseUrlMentions = async ({ type, url, content }) => {
   const parser = parsers[type]
   if (!parser) {
     return {
       urlMentions: [],
       hotDecline: false,
       hotAcceptSelf: false,
-      hotAcceptDependencies: [],
       replaceUrls: () => null,
     }
   }
@@ -23,14 +22,12 @@ export const parseUrls = async ({ type, url, content }) => {
     urlMentions = [],
     hotDecline = false,
     hotAcceptSelf = false,
-    hotAcceptDependencies = [],
     replaceUrls,
   } = await parser({ url, content })
   return {
     urlMentions,
     hotDecline,
     hotAcceptSelf,
-    hotAcceptDependencies,
     replaceUrls,
   }
 }

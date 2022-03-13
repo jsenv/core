@@ -24,10 +24,6 @@ export const parseCssUrlMentions = async ({ url, content }) => {
   return {
     urlMentions: cssUrlMentions,
     hotAcceptSelf: false,
-    // we don't know how to reload css, it can be anywhere
-    // in order to reload it, an importer should self accept hot reloading
-    // or if we talk about html, be in hotAcceptDependencies of html
-    hotAcceptDependencies: [],
     replaceUrls: async (replacements) => {
       // we can't use magic source because urlMention.start/end do not match the url specifier
       // const magicSource = createMagicSource({ url, content })

@@ -9,7 +9,7 @@ import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 
 import { jsenvPluginAvoidVersioningCascade } from "./plugins/avoid_versioning_cascade/jsenv_plugin_avoid_versioning_cascade.js"
-import { parseUrls } from "../omega/kitchen/parse_urls.js"
+import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 
 export const buildGraph = async ({
@@ -163,7 +163,7 @@ export const buildGraph = async ({
       })
     }
     // file using this file must update their reference
-    const { urlMentions, replaceUrls } = await parseUrls({
+    const { urlMentions, replaceUrls } = await parseUrlMentions({
       type: urlInfo.type,
       url: urlInfo.url,
       content: urlInfo.content,

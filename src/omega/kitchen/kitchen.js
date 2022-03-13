@@ -15,8 +15,9 @@ import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
-import { applyLeadingSlashUrlResolution } from "./leading_slash_url_resolution.js"
+import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import { getJsenvPlugins } from "../jsenv_plugins.js"
+import { applyLeadingSlashUrlResolution } from "./leading_slash_url_resolution.js"
 import {
   flattenAndFilterPlugins,
   createPluginController,
@@ -28,7 +29,6 @@ import {
 } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
-import { parseUrls } from "./parse_urls.js"
 
 export const createKitchen = ({
   signal,
@@ -334,17 +334,23 @@ export const createKitchen = ({
     }
 
     // parsing
-    const {
-      urlMentions,
-      hotDecline,
-      hotAcceptSelf,
-      hotAcceptDependencies,
-      replaceUrls,
-    } = await parseUrls({
-      type: context.type,
-      url: context.url,
-      content: context.content,
-    })
+    const { urlMentions, hotDecline, hotAcceptSelf, replaceUrls } =
+      await parseUrlMentions({
+        type: context.type,
+        url: context.url,
+        content: context.content,
+      })
+    // All url mention objects having "hotAccepted" property will be added
+    // to "hotAcceptDependencies"
+    // For html there is some "smart" default applied in "collectHtmlDependenciesFromAst"
+    // to decide what should hot reload / fullreload:
+    // By default:
+    //   - hot reload on <img src="./image.png" />
+    //   - fullreload on <script src="./file.js" />
+    // Can be controlled by [hot-decline] and [hot-accept]:
+    //   - fullreload on <img src="./image.png" hot-decline />
+    //   - hot reload on <script src="./file.js" hot-accept />
+    const hotAcceptDependencies = []
     const dependencyUrls = []
     const dependencyUrlSites = {}
     const replacements = {}
@@ -370,6 +376,9 @@ export const createKitchen = ({
         })
         if (resolvedUrl === null) {
           throw new Error(`NO_RESOLVE`)
+        }
+        if (urlMention.hotAccepted) {
+          hotAcceptDependencies.push(urlMention.url)
         }
         urlMention.url = resolvedUrl
         dependencyUrls.push(resolvedUrl)
@@ -398,15 +407,6 @@ export const createKitchen = ({
       urlMentions,
       hotDecline,
       hotAcceptSelf,
-      hotAcceptDependencies: hotAcceptDependencies.map(
-        (hotAcceptDependency) => {
-          return resolveSpecifier({
-            parentUrl: context.url,
-            specifierType: hotAcceptDependency.type,
-            specifier: hotAcceptDependency.specifier,
-          })
-        },
-      ),
     })
 
     const transformReturnValue = await replaceUrls(replacements)
