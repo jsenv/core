@@ -67,7 +67,7 @@ export const createFileService = ({
     if (error) {
       if (
         error.name === "TRANSFORM_ERROR" &&
-        error.cause.code === "PARSE_ERROR"
+        error.originalError.code === "PARSE_ERROR"
       ) {
         // let the browser re-throw the syntax error
         return {
@@ -82,7 +82,7 @@ export const createFileService = ({
           body: content,
         }
       }
-      if (error.cause && error.cause.code === "EISDIR") {
+      if (error.originalError && error.originalError.code === "EISDIR") {
         return serveDirectory(url, {
           headers: {
             accept: "text/html",

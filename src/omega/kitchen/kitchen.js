@@ -15,9 +15,9 @@ import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
+import { applyLeadingSlashUrlResolution } from "./leading_slash_url_resolution.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import { getJsenvPlugins } from "../jsenv_plugins.js"
-import { applyLeadingSlashUrlResolution } from "./leading_slash_url_resolution.js"
 import {
   flattenAndFilterPlugins,
   createPluginController,

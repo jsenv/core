@@ -1,11 +1,18 @@
-export const loadUrlGraph = async ({ urlGraph, kitchen, entryUrls }) => {
+export const loadUrlGraph = async ({
+  urlGraph,
+  kitchen,
+  entryUrls,
+  outDirectoryName,
+  runtimeSupport,
+}) => {
   const urlPromiseCache = {}
 
   const cookUrl = ({ url, ...rest }) => {
     const promiseFromCache = urlPromiseCache[url]
     if (promiseFromCache) return promiseFromCache
     const promise = _cookUrl({
-      outDirectoryName: `build`,
+      outDirectoryName,
+      runtimeSupport,
       url,
       ...rest,
     })

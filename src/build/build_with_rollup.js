@@ -1,8 +1,6 @@
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { isFileSystemPath } from "@jsenv/filesystem"
-import { createLog, startSpinner, UNICODE } from "@jsenv/log"
 
-import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
 import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
@@ -18,12 +16,6 @@ export const buildWithRollup = async ({
   runtimeSupport,
   sourcemapInjection,
 }) => {
-  const buildingLog = createLog()
-  const startMs = Date.now()
-  const spinner = startSpinner({
-    log: buildingLog,
-    text: `Building js modules with rollup`,
-  })
   const resultRef = { current: null }
   await applyRollupPlugins({
     rollupPlugins: [
@@ -47,8 +39,6 @@ export const buildWithRollup = async ({
       },
     },
   })
-  const msEllapsed = Date.now() - startMs
-  spinner.stop(`${UNICODE.OK} rollup build done in ${msAsDuration(msEllapsed)}`)
   return resultRef.current
 }
 

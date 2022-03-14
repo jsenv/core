@@ -124,5 +124,5 @@ const createRepartitionMessage = ({ html, css, js_module, other }) => {
     )
   }
   return `- ${parts.join(`
-    - `)}`
+- `)}`
 }

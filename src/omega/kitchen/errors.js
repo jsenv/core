@@ -22,7 +22,7 @@ export const createResolveError = ({
     loadError.name = "RESOLVE_ERROR"
     loadError.code = code
     loadError.reason = reason
-    loadError.cause = error
+    loadError.originalError = error
     return loadError
   }
   if (error.message === "NO_RESOLVE") {

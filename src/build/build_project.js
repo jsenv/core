@@ -11,15 +11,13 @@ import {
   ensureEmptyDirectory,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
-import { createLog, startSpinner, UNICODE } from "@jsenv/log"
 
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
 import { loadUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph_load.js"
-import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
+import { createTaskLog } from "@jsenv/core/src/utils/logs/task_log.js"
 import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
-import { applyLeadingSlashUrlResolution } from "@jsenv/core/src/omega/kitchen/leading_slash_url_resolution.js"
 
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
@@ -68,12 +66,7 @@ export const buildProject = async ({
   const projectGraph = createUrlGraph({
     rootDirectoryUrl: projectDirectoryUrl,
   })
-  const startMs = Date.now()
-  const buildingLog = createLog()
-  const spinner = startSpinner({
-    log: buildingLog,
-    text: `Loading project graph`,
-  })
+  const loadProjectGraphLog = createTaskLog("load project graph")
   let urlCount = 0
   const projectKitchen = createKitchen({
     signal,
@@ -87,12 +80,11 @@ export const buildProject = async ({
         appliesDuring: { build: true },
         cooked: () => {
           urlCount++
-          spinner.text = `Loading project graph ${urlCount}`
+          loadProjectGraphLog.setRightText(urlCount)
         },
       },
     ],
     scenario: "build",
-    runtimeSupport,
     sourcemapInjection,
   })
   try {
@@ -100,16 +92,15 @@ export const buildProject = async ({
       urlGraph: projectGraph,
       kitchen: projectKitchen,
       entryUrls,
+      outDirectoryName: "build",
+      runtimeSupport,
     })
   } catch (e) {
-    spinner.stop(`${UNICODE.FAILURE} Failed to load project graph`)
+    loadProjectGraphLog.fail()
     throw e
   }
   // here we can perform many checks such as ensuring ressource hints are used
-  const msEllapsed = Date.now() - startMs
-  spinner.stop(
-    `${UNICODE.OK} project graph loaded in ${msAsDuration(msEllapsed)}`,
-  )
+  loadProjectGraphLog.done()
   logger.info(createUrlGraphSummary(projectGraph))
 
   const jsModulesUrlsToBuild = []
@@ -139,34 +130,42 @@ export const buildProject = async ({
       return
     }
   })
-  const buildFiles = []
+  const buildUrlInfos = {}
+  // in the future this should be done in a "bundle" hook
   if (jsModulesUrlsToBuild.length) {
-    const { jsModuleInfos } = await buildWithRollup({
-      signal,
-      logger,
-      projectDirectoryUrl,
-      buildDirectoryUrl,
-      buildUrlsGenerator,
-      projectGraph,
-      jsModulesUrlsToBuild,
+    const rollupBuildLog = createTaskLog(`building js modules with rollup`)
+    try {
+      const rollupBuild = await buildWithRollup({
+        signal,
+        logger,
+        projectDirectoryUrl,
+        buildDirectoryUrl,
+        projectGraph,
+        jsModulesUrlsToBuild,
 
-      runtimeSupport,
-      sourcemapInjection,
-    })
-    Object.keys(jsModuleInfos).forEach((url) => {
-      const jsModuleInfo = jsModuleInfos[url]
-      buildFiles.push({
-        url,
-        type: "js_module",
-        content: jsModuleInfo.content,
-        sourcemap: jsModuleInfo.sourcemap,
+        runtimeSupport,
+        sourcemapInjection,
       })
-    })
+      const { jsModuleInfos } = rollupBuild
+      Object.keys(jsModuleInfos).forEach((url) => {
+        const jsModuleInfo = jsModuleInfos[url]
+        buildUrlInfos[url] = {
+          type: "js_module",
+          content: jsModuleInfo.content,
+          sourcemap: jsModuleInfo.sourcemap,
+        }
+      })
+    } catch (e) {
+      rollupBuildLog.fail()
+      throw e
+    }
+    rollupBuildLog.done()
   }
   if (cssUrlsToBuild.length) {
     // on pourrait concat + minify en utilisant post css
   }
   // TODO: minify html, svg, json
+  // in the future this should be done in a "optimize" hook
 
   const buildUrlsGenerator = createBuilUrlsGenerator({
     baseUrl,
@@ -182,77 +181,109 @@ export const buildProject = async ({
         name: "jsenv:postbuild",
         appliesDuring: { postbuild: true },
         resolve: ({ parentUrl, specifier }) => {
-          const url =
-            applyLeadingSlashUrlResolution(specifier, projectDirectoryUrl) ||
-            new URL(specifier, parentUrl).href
-          const buildFileInfo = buildFiles[url]
-          debugger
+          const url = new URL(specifier, parentUrl).href
+          return url
         },
-        // load either from project graph or rollup
+        redirect: ({ url }) => {
+          const urlInfo = buildUrlInfos[url] || projectGraph.getUrlInfo(url)
+          const { buildUrl } = buildUrlsGenerator.generate(
+            url,
+            urlInfo.type === "js_module" ? "/" : "assets/",
+          )
+          return buildUrl
+        },
         load: ({ url }) => {
+          // the url is the build url
+          // we must map it back to the "original url"
+          // then decide
+          // TODO:
+          // load from rollup if exists, otherwise from project graph
+
           const projectUrlInfo = projectGraph.getUrlInfo(url)
-          // load from project graph
+          if (projectUrlInfo) {
+            return {
+              contentType: projectUrlInfo.contentType,
+              content: projectUrlInfo.content,
+              sourcemap: projectUrlInfo.sourcemap,
+            }
+          }
+          // what??
         },
       },
     ],
     scenario: "postbuild",
   })
-  await loadUrlGraph({
-    urlGraph: buildGraph,
-    kitchen: buildKitchen,
-    entryUrls,
-  })
+  const loadBuilGraphLog = createTaskLog("load build graph")
+  try {
+    await loadUrlGraph({
+      urlGraph: buildGraph,
+      kitchen: buildKitchen,
+      entryUrls,
+      outDirectoryName: "postbuild",
+    })
+  } catch (e) {
+    loadBuilGraphLog.fail()
+    throw e
+  }
+  loadBuilGraphLog.done()
 
   if (urlVersioning) {
-    const urlsSorted = sortUrlGraphByDependencies(buildGraph)
-    urlsSorted.forEach((url) => {
-      const urlInfo = buildGraph.getUrlInfo(url)
-      const urlVersionGenerator = createUrlVersionGenerator()
-      urlVersionGenerator.augmentWithContent({
-        content: urlInfo.content,
-        contentType: urlInfo.contentType,
-        lineBreakNormalization,
-      })
-      urlInfo.dependencies.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = buildGraph.getUrlInfo(dependencyUrl)
-        if (dependencyUrlInfo.version) {
-          urlVersionGenerator.augmentWithDependencyVersion(
-            dependencyUrlInfo.version,
-          )
-        } else {
-          // because all dependencies are know, if the dependency has no version
-          // it means there is a circular dependency between this file
-          // and it's dependency
-          // in that case we'll use the dependency content
-          urlVersionGenerator.augmentWithContent({
-            content: dependencyUrlInfo.content,
-            contentType: dependencyUrlInfo.contentType,
-            lineBreakNormalization,
-          })
-        }
-      })
-      urlInfo.version = urlVersionGenerator.generate()
-    })
-    // replace all urls to inject versions
-    await Promise.all(
-      urlsSorted.map(async (url) => {
+    const urlVersioningLog = createTaskLog("inject version in urls")
+    try {
+      const urlsSorted = sortUrlGraphByDependencies(buildGraph)
+      urlsSorted.forEach((url) => {
         const urlInfo = buildGraph.getUrlInfo(url)
-        const { urlMentions, replaceUrls } = await parseUrlMentions({
-          url: urlInfo.url,
-          type: urlInfo.type,
+        const urlVersionGenerator = createUrlVersionGenerator()
+        urlVersionGenerator.augmentWithContent({
           content: urlInfo.content,
+          contentType: urlInfo.contentType,
+          lineBreakNormalization,
         })
-        const replacements = {}
-        urlMentions.forEach((urlMention) => {
-          // TODO: if url mention is versioned
-          // (all urls are, oh yeah but no, not import meta url, not dynamic imports)
-          // static import we have no choice until importmap is supported
-          // the rest must use versioned url
+        urlInfo.dependencies.forEach((dependencyUrl) => {
+          const dependencyUrlInfo = buildGraph.getUrlInfo(dependencyUrl)
+          if (dependencyUrlInfo.version) {
+            urlVersionGenerator.augmentWithDependencyVersion(
+              dependencyUrlInfo.version,
+            )
+          } else {
+            // because all dependencies are know, if the dependency has no version
+            // it means there is a circular dependency between this file
+            // and it's dependency
+            // in that case we'll use the dependency content
+            urlVersionGenerator.augmentWithContent({
+              content: dependencyUrlInfo.content,
+              contentType: dependencyUrlInfo.contentType,
+              lineBreakNormalization,
+            })
+          }
         })
-        const { content } = await replaceUrls(replacements)
-        urlInfo.content = content
-      }),
-    )
+        urlInfo.version = urlVersionGenerator.generate()
+      })
+      // replace all urls to inject versions
+      await Promise.all(
+        urlsSorted.map(async (url) => {
+          const urlInfo = buildGraph.getUrlInfo(url)
+          const { urlMentions, replaceUrls } = await parseUrlMentions({
+            url: urlInfo.url,
+            type: urlInfo.type,
+            content: urlInfo.content,
+          })
+          const replacements = {}
+          urlMentions.forEach((urlMention) => {
+            // TODO: if url mention is versioned
+            // (all urls are, oh yeah but no, not import meta url, not dynamic imports)
+            // static import we have no choice until importmap is supported
+            // the rest must use versioned url
+          })
+          const { content } = await replaceUrls(replacements)
+          urlInfo.content = content
+        }),
+      )
+    } catch (e) {
+      urlVersioningLog.fail()
+      throw e
+    }
+    urlVersioningLog.done()
   }
 
   if (writeOnFileSystem) {
