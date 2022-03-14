@@ -16,6 +16,7 @@ import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
 
+import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
@@ -200,8 +201,10 @@ export const build = async ({
         name: "jsenv:postbuild",
         appliesDuring: { postbuild: true },
         resolve: ({ parentUrl, specifier }) => {
-          const url = new URL(specifier, parentUrl).href
-          return url
+          return (
+            applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
+            new URL(specifier, parentUrl).href
+          )
         },
         redirect: ({ specifierType, url }) => {
           const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
@@ -295,20 +298,23 @@ export const build = async ({
       await Promise.all(
         urlsSorted.map(async (url) => {
           const urlInfo = buildGraph.getUrlInfo(url)
-          const { urlMentions, replaceUrls } = await parseUrlMentions({
+          const parseResult = await parseUrlMentions({
             url: urlInfo.url,
             type: urlInfo.type,
             content: urlInfo.content,
           })
-          const replacements = {}
-          urlMentions.forEach((urlMention) => {
-            // TODO: if url mention is versioned
-            // (all urls are, oh yeah but no, not import meta url, not dynamic imports)
-            // static import we have no choice until importmap is supported
-            // the rest must use versioned url
-          })
-          const { content } = await replaceUrls(replacements)
-          urlInfo.content = content
+          if (parseResult) {
+            const { urlMentions, replaceUrls } = parseResult
+            const replacements = {}
+            urlMentions.forEach((urlMention) => {
+              // TODO: if url mention is versioned
+              // (all urls are, oh yeah but no, not import meta url, not dynamic imports)
+              // static import we have no choice until importmap is supported
+              // the rest must use versioned url
+            })
+            const { content } = await replaceUrls(replacements)
+            urlInfo.content = content
+          }
         }),
       )
     } catch (e) {

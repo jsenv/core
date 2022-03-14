@@ -11,12 +11,7 @@ const parsers = {
 export const parseUrlMentions = async ({ type, url, content }) => {
   const parser = parsers[type]
   if (!parser) {
-    return {
-      urlMentions: [],
-      hotDecline: false,
-      hotAcceptSelf: false,
-      replaceUrls: () => null,
-    }
+    return null
   }
   const {
     urlMentions = [],

@@ -1,3 +1,4 @@
+import { jsenvPluginLeadingSlash } from "@jsenv/core/src/omega/plugins/leading_slash/jsenv_plugin_leading_slash.js"
 import { jsenvPluginImportmap } from "@jsenv/core/src/omega/plugins/importmap/jsenv_plugin_importmap.js"
 import { jsenvPluginUrlResolution } from "@jsenv/core/src/omega/plugins/url_resolution/jsenv_plugin_url_resolution.js"
 import { jsenvPluginNodeEsmResolution } from "@jsenv/core/src/omega/plugins/node_esm_resolution/jsenv_plugin_node_esm_resolution.js"
@@ -16,6 +17,7 @@ export const getJsenvPlugins = ({ rootDirectoryUrl }) => {
   const asFewAsPossible = false // useful during dev
   return [
     // url resolution
+    jsenvPluginLeadingSlash(),
     ...(asFewAsPossible ? [] : [jsenvPluginInlineRessources()]), // must come first to resolve inline urls
     jsenvPluginImportmap(), // must come before node esm to handle bare specifiers before node esm
     jsenvPluginNodeEsmResolution({

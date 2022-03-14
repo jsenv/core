@@ -15,7 +15,6 @@ import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
-import { applyLeadingSlashUrlResolution } from "./leading_slash_url_resolution.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import { getJsenvPlugins } from "../jsenv_plugins.js"
 import {
@@ -77,10 +76,6 @@ export const createKitchen = ({
   }
 
   const resolveSpecifier = ({ parentUrl, specifierType, specifier }) => {
-    const resolved = applyLeadingSlashUrlResolution(specifier, rootDirectoryUrl)
-    if (resolved) {
-      return resolved
-    }
     const pluginsToIgnore = []
     const contextDuringResolve = {
       ...baseContext,
@@ -336,87 +331,97 @@ export const createKitchen = ({
     }
 
     // parsing
-    const { urlMentions, hotDecline, hotAcceptSelf, replaceUrls } =
-      await parseUrlMentions({
-        type: context.type,
-        url: context.url,
-        content: context.content,
-      })
-    // All url mention objects having "hotAccepted" property will be added
-    // to "hotAcceptDependencies"
-    // For html there is some "smart" default applied in "collectHtmlDependenciesFromAst"
-    // to decide what should hot reload / fullreload:
-    // By default:
-    //   - hot reload on <img src="./image.png" />
-    //   - fullreload on <script src="./file.js" />
-    // Can be controlled by [hot-decline] and [hot-accept]:
-    //   - fullreload on <img src="./image.png" hot-decline />
-    //   - hot reload on <script src="./file.js" hot-accept />
-    const hotAcceptDependencies = []
-    const dependencyUrls = []
-    const dependencyUrlSites = {}
-
-    for (const urlMention of urlMentions) {
-      const specifierUrlSite =
-        context.content === context.originalContent ||
-        typeof urlMention.originalLine === "number"
-          ? {
-              url,
-              line: urlMention.originalLine,
-              column: urlMention.originalColumn,
-            }
-          : {
-              url: context.generatedUrl,
-              line: urlMention.line,
-              column: urlMention.column,
-            }
-      let resolvedUrl
-      try {
-        resolvedUrl = resolveSpecifier({
-          parentUrl: context.url,
-          specifierType: urlMention.type,
-          specifier: urlMention.specifier,
-        })
-        if (resolvedUrl === null) {
-          throw new Error(`NO_RESOLVE`)
-        }
-      } catch (error) {
-        context.error = createResolveError({
-          pluginController,
-          specifierTrace: {
-            type: "url_site",
-            value: await getOriginalUrlSite(specifierUrlSite),
-          },
-          specifier: urlMention.specifier,
-          error,
-        })
-        return context
-      }
-
-      urlMention.url = resolvedUrl
-      if (urlMention.hotAccepted) {
-        hotAcceptDependencies.push(resolvedUrl)
-      }
-      dependencyUrls.push(resolvedUrl)
-      dependencyUrlSites[resolvedUrl] = specifierUrlSite
-    }
-    Object.assign(context, {
-      urlMentions,
-      hotDecline,
-      hotAcceptSelf,
+    const parseResult = await parseUrlMentions({
+      type: context.type,
+      url: context.url,
+      content: context.content,
     })
-    const replacements = {}
-    for (const urlMention of urlMentions) {
-      const clientUrl = asClientUrl(urlMention.url, context)
-      const clientUrFormatted =
-        urlMention.type === "js_import_meta_url_pattern" ||
-        urlMention.type === "js_import_export"
-          ? JSON.stringify(clientUrl)
-          : clientUrl
-      replacements[urlMention.url] = clientUrFormatted
+    if (parseResult) {
+      const { urlMentions, hotDecline, hotAcceptSelf, replaceUrls } =
+        parseResult
+      // All url mention objects having "hotAccepted" property will be added
+      // to "hotAcceptDependencies"
+      // For html there is some "smart" default applied in "collectHtmlDependenciesFromAst"
+      // to decide what should hot reload / fullreload:
+      // By default:
+      //   - hot reload on <img src="./image.png" />
+      //   - fullreload on <script src="./file.js" />
+      // Can be controlled by [hot-decline] and [hot-accept]:
+      //   - fullreload on <img src="./image.png" hot-decline />
+      //   - hot reload on <script src="./file.js" hot-accept />
+      const hotAcceptDependencies = []
+      const dependencyUrls = []
+      const dependencyUrlSites = {}
+      for (const urlMention of urlMentions) {
+        const specifierUrlSite =
+          context.content === context.originalContent ||
+          typeof urlMention.originalLine === "number"
+            ? {
+                url,
+                line: urlMention.originalLine,
+                column: urlMention.originalColumn,
+              }
+            : {
+                url: context.generatedUrl,
+                line: urlMention.line,
+                column: urlMention.column,
+              }
+        let resolvedUrl
+        try {
+          resolvedUrl = resolveSpecifier({
+            parentUrl: context.url,
+            specifierType: urlMention.type,
+            specifier: urlMention.specifier,
+          })
+          if (resolvedUrl === null) {
+            throw new Error(`NO_RESOLVE`)
+          }
+        } catch (error) {
+          context.error = createResolveError({
+            pluginController,
+            specifierTrace: {
+              type: "url_site",
+              value: await getOriginalUrlSite(specifierUrlSite),
+            },
+            specifier: urlMention.specifier,
+            error,
+          })
+          return context
+        }
+
+        urlMention.url = resolvedUrl
+        if (urlMention.hotAccepted) {
+          hotAcceptDependencies.push(resolvedUrl)
+        }
+        dependencyUrls.push(resolvedUrl)
+        dependencyUrlSites[resolvedUrl] = specifierUrlSite
+      }
+      Object.assign(context, {
+        urlMentions,
+        dependencyUrls,
+        dependencyUrlSites,
+        hotDecline,
+        hotAcceptSelf,
+      })
+      const replacements = {}
+      for (const urlMention of urlMentions) {
+        const clientUrl = asClientUrl(urlMention.url, context)
+        const clientUrFormatted =
+          urlMention.type === "js_import_meta_url_pattern" ||
+          urlMention.type === "js_import_export"
+            ? JSON.stringify(clientUrl)
+            : clientUrl
+        replacements[urlMention.url] = clientUrFormatted
+      }
+      const transformReturnValue = await replaceUrls(replacements)
+      updateContents(transformReturnValue)
+    } else {
+      Object.assign(context, {
+        urlMentions: [],
+        dependencyUrls: [],
+        dependencyUrlSites: {},
+      })
     }
-    const transformReturnValue = await replaceUrls(replacements)
-    updateContents(transformReturnValue)
 
     // sourcemap injection
     const { sourcemap } = context
@@ -440,8 +445,8 @@ export const createKitchen = ({
       content: context.content,
       sourcemap: context.sourcemap,
       parentUrlSite: context.parentUrlSite,
-      dependencyUrlSites,
-      dependencyUrls,
+      dependencyUrlSites: context.dependencyUrlSites,
+      dependencyUrls: context.dependencyUrls,
       hotDecline: context.hotDecline,
       hotAcceptSelf: context.hotAcceptSelf,
       hotAcceptDependencies: context.hotAcceptDependencies,
