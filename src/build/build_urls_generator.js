@@ -2,7 +2,7 @@ import { urlToFilename } from "@jsenv/filesystem"
 
 import { memoizeByUrl } from "@jsenv/core/src/utils/memoize/memoize_by_url.js"
 
-export const createBuilUrlsGenerator = ({ baseUrl }) => {
+export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   // TODO: normalize baseUrl
   // if a valid url:
   //   - ensure trailing slash
@@ -31,15 +31,9 @@ export const createBuilUrlsGenerator = ({ baseUrl }) => {
       nameCandidate = `${name}${integer}`
     }
     if (directoryRelativeUrl === "/") {
-      return {
-        buildRelativeUrl: nameCandidate,
-        buildUrl: `${baseUrl}${nameCandidate}`,
-      }
+      return `${buildDirectoryUrl}${nameCandidate}`
     }
-    return {
-      buildRelativeUrl: `${directoryRelativeUrl}${nameCandidate}`,
-      buildUrl: `${baseUrl}${directoryRelativeUrl}${nameCandidate}`,
-    }
+    return `${buildDirectoryUrl}${directoryRelativeUrl}${nameCandidate}`
   })
 
   return {

@@ -45,7 +45,7 @@ export const createFileService = ({
     const parentUrl = inferParentFromRequest(request, projectDirectoryUrl)
     const url = kitchen.resolveSpecifier({
       parentUrl,
-      specifierType: "http_request",
+      specifierType: "entry_point",
       specifier: request.ressource,
     })
     const urlSite = urlGraph.inferUrlSite(url, parentUrl)

@@ -1,8 +1,5 @@
 /*
- * As a first step, and maybe forever we will try to
- * output esmodule and fallback to systemjs
- * The fallback to systemjs will be done later
- * The other formats we'll see afterwards
+ *
  */
 
 import { writeFileSync } from "node:fs"
@@ -89,7 +86,7 @@ export const build = async ({
     sourceEntryUrls = Object.keys(entryPoints).map((key) =>
       sourceKitchen.resolveSpecifier({
         parentUrl: sourceDirectoryUrl,
-        specifierType: "http_request", // not really but kinda
+        specifierType: "entry_point",
         specifier: key,
       }),
     )
@@ -184,16 +181,21 @@ export const build = async ({
   // in the future this should be done in a "optimize" hook
 
   const buildUrlsGenerator = createBuilUrlsGenerator({
-    baseUrl,
+    buildDirectoryUrl,
   })
   const buildGraph = createUrlGraph({
     rootDirectoryUrl: buildDirectoryUrl,
   })
   const buildUrlMappings = {}
   const buildKitchen = createKitchen({
-    rootDirectoryUrl: buildDirectoryUrl,
+    rootDirectoryUrl: sourceDirectoryUrl,
+    urlGraph: buildGraph,
+    baseUrl,
     injectJsenvPlugins: false,
     plugins: [
+      // truc a fix: lorsque l'url démarre par "/" resolve + redirect n'est pas appelé
+      // c'est pas bon
+      // en tous cas pour le build on veut vraiment voir passer toutes les urls
       {
         name: "jsenv:postbuild",
         appliesDuring: { postbuild: true },
@@ -201,11 +203,13 @@ export const build = async ({
           const url = new URL(specifier, parentUrl).href
           return url
         },
-        redirect: ({ url }) => {
+        redirect: ({ specifierType, url }) => {
           const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
-          const { buildUrl } = buildUrlsGenerator.generate(
+          const buildUrl = buildUrlsGenerator.generate(
             url,
-            urlInfo.type === "js_module" ? "/" : "assets/",
+            specifierType === "entry_point" || urlInfo.type === "js_module"
+              ? "/"
+              : "assets/",
           )
           buildUrlMappings[buildUrl] = url
           return buildUrl
@@ -227,9 +231,9 @@ export const build = async ({
   const loadBuilGraphLog = createTaskLog("load build graph")
   try {
     const buildEntryUrls = Object.keys(entryPoints).map((key) =>
-      sourceKitchen.resolveSpecifier({
-        parentUrl: buildDirectoryUrl,
-        specifierType: "http_request", // not really but kinda
+      buildKitchen.resolveSpecifier({
+        parentUrl: sourceDirectoryUrl,
+        specifierType: "entry_point",
         specifier: key,
       }),
     )

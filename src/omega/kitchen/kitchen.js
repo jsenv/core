@@ -39,6 +39,7 @@ export const createKitchen = ({
   urlGraph,
   scenario,
 
+  baseUrl = "/",
   injectJsenvPlugins = true,
 }) => {
   if (injectJsenvPlugins) {
@@ -61,6 +62,7 @@ export const createKitchen = ({
     sourcemapInjection,
     urlGraph,
     scenario,
+    baseUrl,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
   const pluginController = createPluginController()
@@ -198,7 +200,6 @@ export const createKitchen = ({
     parentUrl = rootDirectoryUrl,
     urlTrace,
     url,
-    onDependencies = () => {},
   }) => {
     const context = {
       ...baseContext,
@@ -404,22 +405,6 @@ export const createKitchen = ({
       hotDecline,
       hotAcceptSelf,
     })
-    urlGraph.updateUrlInfo({
-      url: context.url,
-      generatedUrl: context.generatedUrl,
-      type: context.type,
-      contentType: context.contentType,
-      originalContent: context.originalContent,
-      content: context.content,
-      sourcemap: context.sourcemap,
-      parentUrlSite: context.parentUrlSite,
-      dependencyUrlSites,
-      dependencyUrls,
-      hotDecline: context.hotDecline,
-      hotAcceptSelf: context.hotAcceptSelf,
-      hotAcceptDependencies: context.hotAcceptDependencies,
-    })
-    await onDependencies(context)
     const replacements = {}
     for (const urlMention of urlMentions) {
       const clientUrl = asClientUrl(urlMention.url, context)
@@ -445,6 +430,22 @@ export const createKitchen = ({
       context.sourcemapGeneratedUrl = sourcemapGeneratedUrl
       context.content = injectSourcemap(context)
     }
+
+    urlGraph.updateUrlInfo({
+      url: context.url,
+      generatedUrl: context.generatedUrl,
+      type: context.type,
+      contentType: context.contentType,
+      originalContent: context.originalContent,
+      content: context.content,
+      sourcemap: context.sourcemap,
+      parentUrlSite: context.parentUrlSite,
+      dependencyUrlSites,
+      dependencyUrls,
+      hotDecline: context.hotDecline,
+      hotAcceptSelf: context.hotAcceptSelf,
+      hotAcceptDependencies: context.hotAcceptDependencies,
+    })
 
     // "finalize" hook
     const finalizeReturnValue = await pluginController.callPluginHooksUntil(
@@ -533,10 +534,7 @@ export const createKitchen = ({
   }
 }
 
-const asClientUrl = (
-  url,
-  { baseUrl = "/", rootDirectoryUrl, urlGraph, hmr },
-) => {
+const asClientUrl = (url, { baseUrl, rootDirectoryUrl, urlGraph, hmr }) => {
   const clientUrlRaw = url
   const urlInfo = urlGraph.getUrlInfo(url) || {}
   const params = {}
