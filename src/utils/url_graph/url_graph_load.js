@@ -1,9 +1,9 @@
 export const loadUrlGraph = async ({
   urlGraph,
   kitchen,
-  entryUrls,
   outDirectoryName,
   runtimeSupport,
+  startLoading,
 }) => {
   const urlPromiseCache = {}
 
@@ -43,14 +43,9 @@ export const loadUrlGraph = async ({
     return cookedUrl
   }
 
-  await entryUrls.reduce(async (previous, entryUrl) => {
-    await previous
-    await cookUrl({
-      urlTrace: {
-        type: "parameter",
-        value: `"entryPoints" parameter to buildProject`,
-      },
-      url: entryUrl,
-    })
-  }, Promise.resolve())
+  const promises = []
+  startLoading((params) => {
+    promises.push(cookUrl(params))
+  })
+  await Promise.all(promises)
 }

@@ -2,14 +2,17 @@ import { ANSI } from "@jsenv/log"
 
 import { byteAsFileSize } from "@jsenv/core/src/utils/logs/size_log.js"
 
-export const createUrlGraphSummary = (urlGraph) => {
+export const createUrlGraphSummary = (
+  urlGraph,
+  { title = "graph summary" } = {},
+) => {
   const graphReport = createUrlGraphReport(urlGraph)
-  return `--- graph summary ---  
+  return `--- ${title} ---  
 ${createRepartitionMessage(graphReport)}
 ${ANSI.color(`Total:`, ANSI.GREY)} ${graphReport.total.count} (${byteAsFileSize(
     graphReport.total.size,
   )})
----------------------`
+--------------------`
 }
 
 // TODO: exlude inline files

@@ -8,9 +8,9 @@ import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_u
 export const buildWithRollup = async ({
   signal,
   logger,
-  projectDirectoryUrl,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
-  projectGraph,
+  sourceGraph,
   jsModulesUrlsToBuild,
 
   runtimeSupport,
@@ -22,9 +22,9 @@ export const buildWithRollup = async ({
       rollupPluginJsenv({
         signal,
         logger,
-        projectDirectoryUrl,
+        sourceDirectoryUrl,
         buildDirectoryUrl,
-        projectGraph,
+        sourceGraph,
         jsModulesUrlsToBuild,
 
         runtimeSupport,
@@ -44,9 +44,9 @@ export const buildWithRollup = async ({
 
 const rollupPluginJsenv = ({
   // logger,
-  projectDirectoryUrl,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
-  projectGraph,
+  sourceGraph,
   jsModulesUrlsToBuild,
 
   resultRef,
@@ -113,12 +113,12 @@ const rollupPluginJsenv = ({
         },
       })
     },
-    resolveId: (specifier, importer = projectDirectoryUrl) => {
+    resolveId: (specifier, importer = sourceDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
         importer = pathToFileURL(importer).href
       }
       const url =
-        applyLeadingSlashUrlResolution(specifier, projectDirectoryUrl) ||
+        applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
         new URL(specifier, importer).href
       const existingImporter = urlImporters[url]
       if (!existingImporter) {
@@ -131,7 +131,7 @@ const rollupPluginJsenv = ({
     },
     async load(rollupId) {
       const fileUrl = pathToFileURL(rollupId).href
-      const urlInfo = projectGraph.getUrlInfo(fileUrl)
+      const urlInfo = sourceGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,
         map: urlInfo.sourcemap,

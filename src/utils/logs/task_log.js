@@ -16,7 +16,7 @@ export const createTaskLog = (label) => {
     done: () => {
       const msEllapsed = Date.now() - startMs
       taskSpinner.stop(
-        `${UNICODE.OK} ${label} done in ${msAsDuration(msEllapsed)}`,
+        `${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`,
       )
     },
     fail: () => {

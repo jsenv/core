@@ -24,10 +24,10 @@ import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildWithRollup } from "./build_with_rollup.js"
 
-export const buildProject = async ({
+export const build = async ({
   signal = new AbortController().signal,
   logLevel = "info",
-  projectDirectoryUrl,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
   // for now it's here but I think preview will become an other script
@@ -56,23 +56,20 @@ export const buildProject = async ({
   baseUrl = "/",
 }) => {
   const logger = createLogger({ logLevel })
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
+  sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
-  const entryUrls = Object.keys(entryPoints).map(
-    (key) => new URL(key, projectDirectoryUrl).href,
-  )
-  const projectGraph = createUrlGraph({
-    rootDirectoryUrl: projectDirectoryUrl,
+  const sourceGraph = createUrlGraph({
+    rootDirectoryUrl: sourceDirectoryUrl,
   })
-  const loadProjectGraphLog = createTaskLog("load project graph")
+  const loadSourceGraphLog = createTaskLog("load source graph")
   let urlCount = 0
-  const projectKitchen = createKitchen({
+  const sourceKitchen = createKitchen({
     signal,
     logger,
-    rootDirectoryUrl: projectDirectoryUrl,
-    urlGraph: projectGraph,
+    rootDirectoryUrl: sourceDirectoryUrl,
+    urlGraph: sourceGraph,
     plugins: [
       ...plugins,
       {
@@ -80,36 +77,54 @@ export const buildProject = async ({
         appliesDuring: { build: true },
         cooked: () => {
           urlCount++
-          loadProjectGraphLog.setRightText(urlCount)
+          loadSourceGraphLog.setRightText(urlCount)
         },
       },
     ],
     scenario: "build",
     sourcemapInjection,
   })
+  let sourceEntryUrls
   try {
+    sourceEntryUrls = Object.keys(entryPoints).map((key) =>
+      sourceKitchen.resolveSpecifier({
+        parentUrl: sourceDirectoryUrl,
+        specifierType: "http_request", // not really but kinda
+        specifier: key,
+      }),
+    )
     await loadUrlGraph({
-      urlGraph: projectGraph,
-      kitchen: projectKitchen,
-      entryUrls,
+      urlGraph: sourceGraph,
+      kitchen: sourceKitchen,
       outDirectoryName: "build",
       runtimeSupport,
+      startLoading: (cook) => {
+        sourceEntryUrls.forEach((entryUrl) => {
+          return cook({
+            urlTrace: {
+              type: "parameter",
+              value: `"entryPoints" parameter to build`,
+            },
+            url: entryUrl,
+          })
+        })
+      },
     })
   } catch (e) {
-    loadProjectGraphLog.fail()
+    loadSourceGraphLog.fail()
     throw e
   }
   // here we can perform many checks such as ensuring ressource hints are used
-  loadProjectGraphLog.done()
-  logger.info(createUrlGraphSummary(projectGraph))
+  loadSourceGraphLog.done()
+  logger.info(createUrlGraphSummary(sourceGraph, { title: "source files" }))
 
   const jsModulesUrlsToBuild = []
   const cssUrlsToBuild = []
-  entryUrls.forEach((entryPointUrl) => {
-    const entryPointUrlInfo = projectGraph.getUrlInfo(entryPointUrl)
+  sourceEntryUrls.forEach((entryPointUrl) => {
+    const entryPointUrlInfo = sourceGraph.getUrlInfo(entryPointUrl)
     if (entryPointUrlInfo.type === "html") {
       entryPointUrlInfo.dependencies.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = projectGraph.getUrlInfo(dependencyUrl)
+        const dependencyUrlInfo = sourceGraph.getUrlInfo(dependencyUrl)
         if (dependencyUrlInfo.type === "js_module") {
           jsModulesUrlsToBuild.push(dependencyUrl)
           return
@@ -138,9 +153,9 @@ export const buildProject = async ({
       const rollupBuild = await buildWithRollup({
         signal,
         logger,
-        projectDirectoryUrl,
+        sourceDirectoryUrl,
         buildDirectoryUrl,
-        projectGraph,
+        sourceGraph,
         jsModulesUrlsToBuild,
 
         runtimeSupport,
@@ -151,6 +166,7 @@ export const buildProject = async ({
         const jsModuleInfo = jsModuleInfos[url]
         buildUrlInfos[url] = {
           type: "js_module",
+          contentType: "application/javascript",
           content: jsModuleInfo.content,
           sourcemap: jsModuleInfo.sourcemap,
         }
@@ -173,6 +189,7 @@ export const buildProject = async ({
   const buildGraph = createUrlGraph({
     rootDirectoryUrl: buildDirectoryUrl,
   })
+  const buildUrlMappings = {}
   const buildKitchen = createKitchen({
     rootDirectoryUrl: buildDirectoryUrl,
     injectJsenvPlugins: false,
@@ -185,29 +202,23 @@ export const buildProject = async ({
           return url
         },
         redirect: ({ url }) => {
-          const urlInfo = buildUrlInfos[url] || projectGraph.getUrlInfo(url)
+          const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
           const { buildUrl } = buildUrlsGenerator.generate(
             url,
             urlInfo.type === "js_module" ? "/" : "assets/",
           )
+          buildUrlMappings[buildUrl] = url
           return buildUrl
         },
         load: ({ url }) => {
-          // the url is the build url
-          // we must map it back to the "original url"
-          // then decide
-          // TODO:
-          // load from rollup if exists, otherwise from project graph
-
-          const projectUrlInfo = projectGraph.getUrlInfo(url)
-          if (projectUrlInfo) {
-            return {
-              contentType: projectUrlInfo.contentType,
-              content: projectUrlInfo.content,
-              sourcemap: projectUrlInfo.sourcemap,
-            }
+          const sourceUrl = buildUrlMappings[url]
+          const urlInfo =
+            buildUrlInfos[sourceUrl] || sourceGraph.getUrlInfo(sourceUrl)
+          return {
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            sourcemap: urlInfo.sourcemap,
           }
-          // what??
         },
       },
     ],
@@ -215,11 +226,28 @@ export const buildProject = async ({
   })
   const loadBuilGraphLog = createTaskLog("load build graph")
   try {
+    const buildEntryUrls = Object.keys(entryPoints).map((key) =>
+      sourceKitchen.resolveSpecifier({
+        parentUrl: buildDirectoryUrl,
+        specifierType: "http_request", // not really but kinda
+        specifier: key,
+      }),
+    )
     await loadUrlGraph({
       urlGraph: buildGraph,
       kitchen: buildKitchen,
-      entryUrls,
       outDirectoryName: "postbuild",
+      startLoading: (cook) => {
+        buildEntryUrls.forEach((entryUrl) => {
+          cook({
+            urlTrace: {
+              type: "parameter",
+              value: `"entryPoints" parameter to build`,
+            },
+            url: entryUrl,
+          })
+        })
+      },
     })
   } catch (e) {
     loadBuilGraphLog.fail()
