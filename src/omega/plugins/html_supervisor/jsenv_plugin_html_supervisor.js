@@ -40,7 +40,10 @@ export const jsenvPluginHtmlSupervisor = () => {
       test: true,
     },
     transform: {
-      html: ({ rootDirectoryUrl, resolveSpecifier, url, content }) => {
+      html: (
+        { url, content },
+        { rootDirectoryUrl, createReference, resolveReference },
+      ) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
         visitHtmlAst(htmlAst, (node) => {
@@ -88,54 +91,52 @@ export const jsenvPluginHtmlSupervisor = () => {
         if (scriptsToSupervise.length === 0) {
           return null
         }
-        let htmlSupervisorSetupResolvedUrl = resolveSpecifier({
+        const htmlSupervisorSetupReference = createReference({
           parentUrl: rootDirectoryUrl,
-          specifierType: "js_import_export",
-          specifier: htmlSupervisorSetupFileUrl,
+          type: "js_import_export",
+          specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
+            js_classic: "",
+          }),
         })
-        htmlSupervisorSetupResolvedUrl = injectQueryParams(
-          htmlSupervisorSetupResolvedUrl,
-          { js_classic: "" },
-        )
+        resolveReference(htmlSupervisorSetupReference)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
-            src: htmlSupervisorSetupResolvedUrl,
+            src: htmlSupervisorSetupReference.url,
           }),
         )
-        const htmlSupervisorResolvedUrl = resolveSpecifier({
+        const htmlSupervisorReference = createReference({
           parentUrl: rootDirectoryUrl,
-          specifierType: "js_import_export",
+          type: "js_import_export",
           specifier: htmlSupervisorFileUrl,
         })
+        resolveReference(htmlSupervisorReference)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: htmlSupervisorResolvedUrl,
+            src: htmlSupervisorReference.url,
           }),
         )
         scriptsToSupervise.forEach(
           ({ node, type, src, integrity, crossorigin }) => {
-            let scriptUrl = resolveSpecifier({
+            const scriptReference = createReference({
               parentUrl: url,
-              specifierType: "script_src",
-              specifier: src,
+              type: "script_src",
+              specifier: type === "classic" ? `${src}?js_classic` : src,
             })
-            if (type === "classic") {
-              scriptUrl = injectQueryParams(scriptUrl, { js_classic: "" })
-            }
+            resolveReference(scriptReference)
             removeHtmlNodeAttributeByName(node, "src")
             assignHtmlNodeAttributes(node, {
-              "content-src": scriptUrl,
+              "content-src": scriptReference.url,
             })
             setHtmlNodeText(
               node,
               generateCodeToSuperviseScript({
                 type,
-                src: scriptUrl,
+                src: scriptReference.url,
                 integrity,
                 crossorigin,
                 htmlSupervisorResolvedUrl,

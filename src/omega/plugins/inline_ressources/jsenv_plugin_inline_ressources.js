@@ -21,9 +21,7 @@ export const jsenvPluginInlineRessources = () => {
    * can be represented as below
    * "file:///project_directory/index.html.L10-L12.js": {
    *   "ownerUrl": "file:///project_directory/index.html",
-   *   "ownerContent": "<html><script>console.log(`Hello world`)</script></html>",
-   *   "line": 10,
-   *   "column": 5,
+   *   "content": "console.log(42)",
    *   "contentType": "application/javascript",
    * }
    * It is used to serve inline ressources as if they where inside a file
@@ -31,11 +29,7 @@ export const jsenvPluginInlineRessources = () => {
    * are deleted so that when html file and page is reloaded, the inline ressources are updated
    */
   const inlineRessourceMap = new Map()
-  const updateInlineRessources = ({
-    ownerUrl,
-    ownerContent,
-    inlineRessources,
-  }) => {
+  const updateInlineRessources = ({ ownerUrl, inlineRessources }) => {
     inlineRessourceMap.forEach((inlineRessource, inlineRessourceUrl) => {
       if (inlineRessource.ownerUrl === ownerUrl) {
         inlineRessourceMap.delete(inlineRessourceUrl)
@@ -45,7 +39,6 @@ export const jsenvPluginInlineRessources = () => {
       inlineRessourceMap.set(inlineRessource.url, {
         ...inlineRessource,
         ownerUrl,
-        ownerContent,
       })
     })
   }
@@ -72,18 +65,37 @@ export const jsenvPluginInlineRessources = () => {
       return {
         contentType: inlineRessource.contentType,
         content: inlineRessource.content,
-        parentUrlSite: {
-          url: inlineRessource.ownerUrl,
-          line: inlineRessource.line,
-          column: inlineRessource.column,
-          content: inlineRessource.ownerContent,
-        },
       }
     },
     transform: {
-      html: ({ resolveSpecifier, url, originalContent, content }) => {
+      html: (
+        { url, originalContent, content },
+        { createReference, resolveReference },
+      ) => {
         const htmlAst = parseHtmlString(content)
         const inlineRessources = []
+        const createAndResolveInlineReference = ({ node, type, specifier }) => {
+          const { line, column } = htmlNodePosition.readNodePosition(node, {
+            preferOriginal: true,
+          })
+          const inlineReference = createReference({
+            parentUrl: url,
+            line,
+            column,
+            type,
+            specifier,
+          })
+          const inlineUrlInfo = resolveReference(inlineReference)
+          inlineUrlInfo.data.isInline = true
+          inlineUrlInfo.data.parentReference = {
+            parentUrl: url,
+            parentContent: originalContent, // original because it's the origin line and column
+            line,
+            column,
+          }
+          return inlineReference
+        }
+
         const handleInlineStyle = (node) => {
           if (node.nodeName !== "style") {
             return
@@ -92,18 +104,14 @@ export const jsenvPluginInlineRessources = () => {
           if (!textNode) {
             return
           }
-          const { line, column } = htmlNodePosition.readNodePosition(node)
           const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
-          let inlineStyleSpecifier = `${urlToFilename(url)}@${inlineStyleId}.js`
-          const inlineStyleUrl = resolveSpecifier({
-            parentUrl: url,
-            specifierType: "link_href",
-            specifier: inlineStyleSpecifier,
+          const inlineStyleReference = createAndResolveInlineReference({
+            node,
+            type: "link_href",
+            specifier: `${urlToFilename(url)}@${inlineStyleId}.js`,
           })
           inlineRessources.push({
-            line,
-            column,
-            url: inlineStyleUrl,
+            url: inlineStyleReference.url,
             contentType: "text/css",
             content: textNode.value,
           })
@@ -111,7 +119,7 @@ export const jsenvPluginInlineRessources = () => {
           node.tagName = "link"
           assignHtmlNodeAttributes(node, {
             rel: "stylesheet",
-            href: inlineStyleSpecifier,
+            href: inlineStyleReference.specifier,
           })
           removeHtmlNodeText(node)
         }
@@ -128,25 +136,19 @@ export const jsenvPluginInlineRessources = () => {
           if (!textNode) {
             return
           }
-          const { line, column } = htmlNodePosition.readNodePosition(node, {
-            preferOriginal: true,
-          })
           const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
-          let inlineScriptSpecifier = `${urlToFilename(
+          const inlineScriptSpecifier = `${urlToFilename(
             url,
           )}@${inlineScriptId}.js`
-          const inlineScriptUrl = resolveSpecifier({
-            parentUrl: url,
-            specifierType: "script_src",
+          const inlineScriptReference = createAndResolveInlineReference({
+            type: "script_src",
             specifier:
               scriptCategory === "classic"
                 ? `${inlineScriptSpecifier}?js_classic`
                 : inlineScriptSpecifier,
           })
           inlineRessources.push({
-            line,
-            column,
-            url: inlineScriptUrl,
+            url: inlineScriptReference.url,
             contentType:
               scriptCategory === "importmap"
                 ? "application/importmap+json"
@@ -154,7 +156,7 @@ export const jsenvPluginInlineRessources = () => {
             content: textNode.value,
           })
           assignHtmlNodeAttributes(node, {
-            "src": inlineScriptSpecifier,
+            "src": inlineScriptReference.specifier,
             "data-externalized": "",
           })
           removeHtmlNodeText(node)
@@ -165,7 +167,6 @@ export const jsenvPluginInlineRessources = () => {
         })
         updateInlineRessources({
           ownerUrl: url,
-          ownerContent: originalContent,
           inlineRessources,
         })
         if (inlineRessources.length === 0) {

@@ -11,12 +11,7 @@ export const jsenvPluginBabel = () => {
     name: "jsenv:babel",
     appliesDuring: "*",
     transform: {
-      js_module: async ({
-        isSupportedOnRuntime,
-        getOriginalUrlSite,
-        url,
-        content,
-      }) => {
+      js_module: async ({ url, content }, { isSupportedOnRuntime }) => {
         const babelPluginStructure = getBaseBabelPluginStructure({
           url,
           isSupportedOnRuntime,
@@ -43,7 +38,6 @@ export const jsenvPluginBabel = () => {
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
-          getOriginalUrlSite,
           url,
           content,
         })

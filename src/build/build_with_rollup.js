@@ -3,8 +3,6 @@ import { isFileSystemPath } from "@jsenv/filesystem"
 
 import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
 
-import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
-
 export const buildWithRollup = async ({
   signal,
   logger,
@@ -117,9 +115,7 @@ const rollupPluginJsenv = ({
       if (isFileSystemPath(importer)) {
         importer = pathToFileURL(importer).href
       }
-      const url =
-        applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
-        new URL(specifier, importer).href
+      const url = new URL(specifier, importer).href
       const existingImporter = urlImporters[url]
       if (!existingImporter) {
         urlImporters[url] = importer

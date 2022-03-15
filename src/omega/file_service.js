@@ -1,8 +1,13 @@
-import { fetchFileSystem, serveDirectory } from "@jsenv/server"
+import {
+  fetchFileSystem,
+  serveDirectory,
+  composeTwoResponses,
+} from "@jsenv/server"
 import { urlIsInsideOf } from "@jsenv/filesystem"
 
 import { moveUrl } from "@jsenv/core/src/utils/url_utils.js"
 
+import { createPluginController } from "./kitchen/plugin_controller.js"
 import { createKitchen } from "./kitchen/kitchen.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -14,18 +19,21 @@ export const createFileService = ({
   sourcemapInjection,
   urlGraph,
   scenario,
-  longTermCache = false, // will become true once things get more stable
 }) => {
+  const pluginController = createPluginController({
+    plugins,
+    scenario,
+  })
   const kitchen = createKitchen({
     signal,
     logger,
     rootDirectoryUrl: projectDirectoryUrl,
     urlGraph,
     scenario,
-    plugins,
+    pluginController,
     sourcemapInjection,
   })
-  return async (request) => {
+  const getResponse = async (request) => {
     // serve file inside ".jsenv" directory
     const requestFileUrl = new URL(
       request.ressource.slice(1),
@@ -36,30 +44,32 @@ export const createFileService = ({
         headers: request.headers,
       })
     }
+    const responseFromPlugin = pluginController.callHooksUntil("serve", request)
+    if (responseFromPlugin) {
+      return responseFromPlugin
+    }
+
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
     )
     const runtimeSupport = {
       [runtimeName]: runtimeVersion,
     }
-    const parentUrl = inferParentFromRequest(request, projectDirectoryUrl)
-    const url = kitchen.resolveSpecifier({
-      parentUrl,
-      specifierType: "entry_point",
+    const reference = kitchen.createReference({
+      parentUrl: inferParentFromRequest(request, projectDirectoryUrl),
+      type: "entry_point",
       specifier: request.ressource,
     })
-    const urlSite = urlGraph.inferUrlSite(url, parentUrl)
-    const { response, error, contentType, content } = await kitchen.cookUrl({
+    const requestedUrlInfo = kitchen.resolveReference(reference)
+    const referenceFromGraph = urlGraph.inferReference(
+      reference.url,
+      reference.parentUrl,
+    )
+    const { response, error, contentType, content } = await kitchen.cook({
+      reference: referenceFromGraph || reference,
+      urlInfo: requestedUrlInfo,
       outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
-      parentUrl,
-      urlTrace: urlSite
-        ? {
-            type: "url_site",
-            value: urlSite,
-          }
-        : null,
-      url,
     })
     if (response) {
       return response
@@ -71,6 +81,7 @@ export const createFileService = ({
       ) {
         // let the browser re-throw the syntax error
         return {
+          url: reference.url,
           status: 200,
           statusText: error.reason,
           statusMessage: error.message,
@@ -83,7 +94,7 @@ export const createFileService = ({
         }
       }
       if (error.originalError && error.originalError.code === "EISDIR") {
-        return serveDirectory(url, {
+        return serveDirectory(reference.url, {
           headers: {
             accept: "text/html",
           },
@@ -93,35 +104,45 @@ export const createFileService = ({
       }
       if (error.code === "NOT_ALLOWED") {
         return {
+          url: reference.url,
           status: 403,
           statusText: error.reason,
         }
       }
       if (error.code === "NOT_FOUND") {
         return {
+          url: reference.url,
           status: 404,
           statusText: error.reason,
           statusMessage: error.message,
         }
       }
       return {
+        url: reference.url,
         status: 500,
         statusText: error.reason,
         statusMessage: error.message,
       }
     }
     return {
+      url: reference.url,
       status: 200,
       headers: {
         "content-type": contentType,
         "content-length": Buffer.byteLength(content),
-        "cache-control": determineCacheControlResponseHeader({
-          url,
-          longTermCache,
-        }),
+        "cache-control": `private,max-age=0,must-revalidate`,
       },
       body: content,
     }
+  }
+  return async (request) => {
+    let response = await getResponse(request)
+    if (response.url) {
+      pluginController.callPluginHook("augmentResponse", (returnValue) => {
+        response = composeTwoResponses(response, returnValue)
+      })
+    }
+    return response
   }
 }
 
@@ -132,13 +153,3 @@ const inferParentFromRequest = (request, projectDirectoryUrl) => {
   }
   return moveUrl(referer, request.origin, projectDirectoryUrl)
 }
-
-const determineCacheControlResponseHeader = ({ url, longTermCache }) => {
-  const { searchParams } = new URL(url)
-  // When url is versioned and no hmr on it, put it in browser cache for 30 days
-  if (longTermCache && searchParams.has("v") && !searchParams.has("hmr")) {
-    return `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-  }
-  return `private,max-age=0,must-revalidate`
-}
-const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30

@@ -31,6 +31,7 @@ import {
   findNode,
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
+  htmlNodePosition,
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
   assignHtmlNodeAttributes,
@@ -68,7 +69,10 @@ const jsenvPluginImportmapSupervisor = () => {
       }
     },
     transform: {
-      html: async ({ resolveSpecifier, cookUrl, url, content }) => {
+      html: async (
+        { url, originalContent, content },
+        { createReference, resolveReference, cookUrl },
+      ) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
@@ -85,23 +89,36 @@ const jsenvPluginImportmapSupervisor = () => {
         }
         const textNode = getHtmlNodeTextNode(importmap)
         if (textNode) {
+          const { line, column } = htmlNodePosition.readNodePosition(
+            importmap,
+            {
+              preferOriginal: true,
+            },
+          )
           const inlineImportmapId = getIdForInlineHtmlNode(htmlAst, importmap)
-          let inlineImportmapSpecifier = `${urlToFilename(
-            url,
-          )}@${inlineImportmapId}.importmap`
-          const importmapUrl = resolveSpecifier({
+          const importmapReference = createReference({
             parentUrl: url,
-            specifierType: "script_src",
-            specifier: inlineImportmapSpecifier,
+            line,
+            column,
+            type: "script_src",
+            specifier: `${urlToFilename(url)}@${inlineImportmapId}.importmap`,
           })
-          importmapContents[importmapUrl] = textNode.value
-          const importmapContext = await cookUrl({
+          const importmapUrlInfo = resolveReference(importmapReference)
+          importmapUrlInfo.data.isInline = true
+          importmapUrlInfo.data.parentReference = {
             parentUrl: url,
-            url: importmapUrl,
+            parentContent: originalContent, // original because it's the origin line and column
+            line,
+            column,
+          }
+          importmapContents[importmapReference.url] = textNode.value
+          const importmapContext = await cookUrl({
+            reference: importmapReference,
+            urlInfo: importmapUrlInfo,
           })
           setHtmlNodeText(importmap, importmapContext.content)
           assignHtmlNodeAttributes(importmap, {
-            "content-src": inlineImportmapSpecifier,
+            "content-src": importmapReference.specifier,
           })
           return {
             content: stringifyHtmlAst(htmlAst),
@@ -110,14 +127,24 @@ const jsenvPluginImportmapSupervisor = () => {
         const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")
         const src = srcAttribute ? srcAttribute.value : undefined
         if (src) {
-          const importmapUrl = resolveSpecifier({
+          const { line, column } = htmlNodePosition.readNodePosition(
+            importmap,
+            {
+              preferOriginal: true,
+            },
+          )
+          const importmapReference = createReference({
             parentUrl: url,
-            specifierType: "script_src",
+            parentContent: originalContent,
+            line,
+            column,
+            type: "script_src",
             specifier: src,
           })
+          const importmapUrlInfo = resolveReference(importmapReference)
           const importmapRessource = await cookUrl({
-            parentUrl: url,
-            url: importmapUrl,
+            reference: importmapReference,
+            urlInfo: importmapUrlInfo,
           })
           removeHtmlNodeAttributeByName(importmap, "src")
           assignHtmlNodeAttributes(importmap, {

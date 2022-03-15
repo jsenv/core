@@ -14,10 +14,9 @@ import {
 } from "@jsenv/core/packages/node-esm-resolution/main.js"
 
 export const jsenvPluginNodeEsmResolution = ({
-  rootDirectoryUrl,
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = ["browser", "import"],
-}) => {
+} = {}) => {
   const nodeEsmResolution = {
     name: "jsenv:node_esm_resolve",
     appliesDuring: "*",
@@ -47,7 +46,7 @@ export const jsenvPluginNodeEsmResolution = ({
       dev: true,
       test: true,
     },
-    redirect: ({ url }) => {
+    transformReferencedUrl: ({ url }, { rootDirectoryUrl }) => {
       if (!url.startsWith("file:")) {
         return null
       }

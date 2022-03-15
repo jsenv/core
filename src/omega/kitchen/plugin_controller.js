@@ -1,4 +1,111 @@
-export const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
+import { getJsenvPlugins } from "../jsenv_plugins.js"
+
+export const createPluginController = ({
+  plugins,
+  scenario,
+  injectJsenvPlugins,
+}) => {
+  if (injectJsenvPlugins) {
+    plugins = [...plugins, ...getJsenvPlugins()]
+  }
+  plugins = flattenAndFilterPlugins(plugins, { scenario })
+
+  let currentPlugin = null
+  let currentHookName = null
+  const callPluginHook = (plugin, hookName, info, context) => {
+    const hook = getPluginHook(plugin, hookName, info)
+    if (!hook) {
+      return null
+    }
+    currentPlugin = plugin
+    currentHookName = hookName
+    let valueReturned = hook(info, context)
+    valueReturned = assertAndNormalizeReturnValue(hookName, valueReturned)
+    currentPlugin = null
+    currentHookName = null
+    return valueReturned
+  }
+  const callPluginAsyncHook = async (plugin, hookName, info, context) => {
+    const hook = getPluginHook(plugin, hookName, info)
+    if (!hook) {
+      return null
+    }
+    currentPlugin = plugin
+    currentHookName = hookName
+    let valueReturned = await hook(info, context)
+    valueReturned = assertAndNormalizeReturnValue(hookName, valueReturned)
+    currentPlugin = null
+    currentHookName = null
+    return valueReturned
+  }
+
+  const callHooks = (hookName, info, context, callback) => {
+    for (const plugin of plugins) {
+      const returnValue = callPluginHook(plugin, hookName, info, context)
+      if (returnValue) {
+        callback(returnValue)
+      }
+    }
+  }
+  const callAsyncHooks = async (hookName, info, context, callback) => {
+    await plugins.reduce(async (previous, plugin) => {
+      await previous
+      const returnValue = await callPluginAsyncHook(
+        plugin,
+        hookName,
+        info,
+        context,
+      )
+      if (returnValue && callback) {
+        callback(returnValue)
+      }
+    }, Promise.resolve())
+  }
+
+  const callHooksUntil = (hookName, info, context) => {
+    for (const plugin of plugins) {
+      const returnValue = callPluginHook(plugin, hookName, info, context)
+      if (returnValue) {
+        return returnValue
+      }
+    }
+    return null
+  }
+  const callAsyncHooksUntil = (hookName, info, context) => {
+    return new Promise((resolve, reject) => {
+      const visit = (index) => {
+        if (index >= plugins.length) {
+          return resolve()
+        }
+        const plugin = plugins[index]
+        const returnValue = callPluginAsyncHook(plugin, hookName, info, context)
+        return Promise.resolve(returnValue).then((output) => {
+          if (output) {
+            return resolve(output)
+          }
+          return visit(index + 1)
+        }, reject)
+      }
+      visit(0)
+    })
+  }
+
+  callHooks("init", {
+    // which params?
+  })
+
+  return {
+    callHooks,
+    callHooksUntil,
+    callAsyncHooks,
+    callAsyncHooksUntil,
+
+    getCurrentPlugin: () => currentPlugin,
+    getCurrentHookName: () => currentHookName,
+  }
+}
+
+const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
   const plugins = []
   const visitPluginEntry = (pluginEntry) => {
     if (Array.isArray(pluginEntry)) {
@@ -27,68 +134,12 @@ export const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
   return plugins
 }
 
-export const createPluginController = () => {
-  let currentPlugin = null
-  let currentHookName = null
-
-  const callPluginHook = async (plugin, hookName, context) => {
-    const hook = getPluginHook(plugin, hookName, context)
-    if (!hook) {
-      return null
-    }
-    currentPlugin = plugin
-    currentHookName = hookName
-    let valueReturned = await hook(context)
-    valueReturned = assertAndNormalizeReturnValue(hookName, valueReturned)
-    currentPlugin = null
-    currentHookName = null
-    return valueReturned
-  }
-
-  const callPluginSyncHook = (plugin, hookName, context) => {
-    const hook = getPluginHook(plugin, hookName, context)
-    if (!hook) {
-      return null
-    }
-    currentPlugin = plugin
-    currentHookName = hookName
-    let valueReturned = hook(context)
-    valueReturned = assertAndNormalizeReturnValue(hookName, valueReturned)
-    currentPlugin = null
-    currentHookName = null
-    return valueReturned
-  }
-
-  const callPluginHooksUntil = (plugins, hookName, params) => {
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= plugins.length) {
-          return resolve()
-        }
-        const plugin = plugins[index]
-        const returnValue = callPluginHook(plugin, hookName, params)
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output)
-          }
-          return visit(index + 1)
-        }, reject)
-      }
-      visit(0)
-    })
-  }
-
-  return {
-    callPluginHook,
-    callPluginSyncHook,
-    callPluginHooksUntil,
-
-    getCurrentPlugin: () => currentPlugin,
-    getCurrentHookName: () => currentHookName,
-  }
-}
-
-const getPluginHook = (plugin, hookName, context) => {
+const getPluginHook = (
+  plugin,
+  hookName,
+  // can be specifierInfo or urlInfo
+  info,
+) => {
   const hook = plugin[hookName]
   if (!hook) {
     return null
@@ -97,14 +148,7 @@ const getPluginHook = (plugin, hookName, context) => {
     return hook
   }
   if (typeof hook === "object") {
-    if (hookName === "resolve" || hookName === "redirect") {
-      const hookForSpecifier = hook[context.specifierType] || hook["*"]
-      if (!hookForSpecifier) {
-        return null
-      }
-      return hookForSpecifier
-    }
-    const hookForType = hook[context.type] || hook["*"]
+    const hookForType = hook[info.type] || hook["*"]
     if (!hookForType) {
       return null
     }

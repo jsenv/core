@@ -1,10 +1,7 @@
 import { createCallbackList } from "@jsenv/abort"
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 export const createUrlGraph = ({ rootDirectoryUrl }) => {
-  const hotUpdateCallbackList = createCallbackList()
-  const prunedCallbackList = createCallbackList()
-
   const urlInfos = {}
   const getUrlInfo = (url) => urlInfos[url]
   const reuseOrCreateUrlInfo = (url) => {
@@ -14,210 +11,60 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     urlInfos[url] = urlInfo
     return urlInfo
   }
-
-  const inferUrlSite = (url, parentUrl) => {
+  const inferReference = (url, parentUrl) => {
     const parentUrlInfo = urlInfos[parentUrl]
     if (!parentUrlInfo) {
       return null
     }
-    const dependencyUrlSite = parentUrlInfo.dependencyUrlSites[url]
-    if (!dependencyUrlSite) {
+    const reference = parentUrlInfo.references[url]
+    if (!reference) {
       return null
     }
     return {
-      url: dependencyUrlSite.url,
+      url: reference.url,
+      type: reference.type,
       content:
-        dependencyUrlSite.url === parentUrlInfo.url
+        reference.url === parentUrlInfo.url
           ? parentUrlInfo.originalContent
           : parentUrlInfo.content,
-      line: dependencyUrlSite.line,
-      column: dependencyUrlSite.column,
+      line: reference.line,
+      column: reference.column,
     }
   }
+  const findDependent = (url, predicate) => {
+    const urlInfo = urlInfos[url]
+    if (!urlInfo) {
+      return null
+    }
+    const visitDependents = (urlInfo) => {
+      for (const dependentUrl of urlInfo.dependents) {
+        const dependent = urlInfos[dependentUrl]
+        if (predicate(dependent)) {
+          return dependent
+        }
+        return visitDependents(dependent)
+      }
+      return null
+    }
+    return visitDependents(urlInfo)
+  }
 
-  const updateUrlInfo = ({
-    url,
-    generatedUrl,
-    type,
-    contentType,
-    originalContent,
-    content,
-    sourcemap,
-    version,
-    parentUrlSite,
-    dependencyUrlSites,
-    dependencyUrls,
-    hotDecline,
-    hotAcceptSelf,
-    hotAcceptDependencies,
-  }) => {
-    const existingUrlInfo = urlInfos[url]
-    const urlInfo = existingUrlInfo || (urlInfos[url] = createUrlInfo(url))
-    urlInfo.generatedUrl = generatedUrl
-    urlInfo.parentUrlSite = parentUrlSite
-    urlInfo.type = type
-    urlInfo.contentType = contentType
-    urlInfo.originalContent = originalContent
-    urlInfo.content = content
-    urlInfo.version = version
-    urlInfo.sourcemap = sourcemap
-    urlInfo.dependencyUrlSites = dependencyUrlSites
+  const prunedCallbackList = createCallbackList()
+  const updateDependencies = (urlInfo, { dependencyUrls, references }) => {
+    pruneDependencies(
+      urlInfo,
+      Array.from(urlInfo.dependencies).filter(
+        (dep) => !dependencyUrls.includes(dep),
+      ),
+    )
+    urlInfo.references = references
     dependencyUrls.forEach((dependencyUrl) => {
       const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
       urlInfo.dependencies.add(dependencyUrl)
-      dependencyUrlInfo.dependents.add(url)
+      dependencyUrlInfo.dependents.add(urlInfo.url)
     })
-    if (existingUrlInfo) {
-      pruneDependencies(
-        existingUrlInfo,
-        Array.from(existingUrlInfo.dependencies).filter(
-          (dep) => !dependencyUrls.includes(dep),
-        ),
-      )
-    }
-    urlInfo.hotDecline = hotDecline
-    urlInfo.hotAcceptSelf = hotAcceptSelf
-    urlInfo.hotAcceptDependencies = hotAcceptDependencies
     return urlInfo
   }
-
-  const onFileChange = ({ relativeUrl, event }) => {
-    const url = resolveUrl(relativeUrl, rootDirectoryUrl)
-    const urlInfo = urlInfos[url]
-    // file not part of dependency graph
-    if (!urlInfo) {
-      return
-    }
-    updateHmrTimestamp(urlInfo, Date.now())
-    const hotUpdate = propagateUpdate(urlInfo)
-    if (hotUpdate.declined) {
-      notifyDeclined({
-        cause: `${relativeUrl} ${event}`,
-        reason: hotUpdate.reason,
-        declinedBy: hotUpdate.declinedBy,
-      })
-    } else {
-      notifyAccepted({
-        cause: `${relativeUrl} ${event}`,
-        reason: hotUpdate.reason,
-        instructions: hotUpdate.instructions,
-      })
-    }
-  }
-
-  const updateHmrTimestamp = (urlInfo, hmrTimestamp) => {
-    const seen = []
-    const iterate = (url) => {
-      if (seen.includes(url)) {
-        return
-      }
-      seen.push(url)
-      const urlInfo = urlInfo[url]
-      urlInfo.hmrTimestamp = hmrTimestamp
-      urlInfo.dependents.forEach((dependentUrl) => {
-        const dependent = urlInfo[dependentUrl]
-        if (!dependent.hotAcceptDependencies.includes(url)) {
-          iterate(dependentUrl, hmrTimestamp)
-        }
-      })
-    }
-    iterate(urlInfo.url)
-  }
-
-  const notifyDeclined = ({ cause, reason, declinedBy }) => {
-    hotUpdateCallbackList.notify({
-      declined: true,
-      cause,
-      reason,
-      declinedBy,
-    })
-  }
-  const notifyAccepted = ({ cause, reason, instructions }) => {
-    hotUpdateCallbackList.notify({
-      accepted: true,
-      cause,
-      reason,
-      instructions,
-    })
-  }
-
-  const propagateUpdate = (firstUrlInfo) => {
-    const iterate = (urlInfo, trace) => {
-      if (urlInfo.hotAcceptSelf) {
-        return {
-          accepted: true,
-          reason:
-            urlInfo === firstUrlInfo
-              ? `file accepts hot reload`
-              : `a dependent file accepts hot reload`,
-          instructions: [
-            {
-              type: urlInfo.type,
-              boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-              acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-            },
-          ],
-        }
-      }
-      const { dependents } = urlInfo
-      const instructions = []
-      for (const dependentUrl of dependents) {
-        const dependent = urlInfos[dependentUrl]
-        if (dependent.hotDecline) {
-          return {
-            declined: true,
-            reason: `a dependent file declines hot reload`,
-            declinedBy: dependentUrl,
-          }
-        }
-        if (dependent.hotAcceptDependencies.includes(urlInfo.url)) {
-          instructions.push({
-            type: dependent.type,
-            boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-            acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-          })
-          continue
-        }
-        if (trace.includes(dependentUrl)) {
-          return {
-            declined: true,
-            reason: "circular dependency",
-            declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-          }
-        }
-        const dependentPropagationResult = iterate(dependent, [
-          ...trace,
-          dependentUrl,
-        ])
-        if (dependentPropagationResult.accepted) {
-          instructions.push(...dependentPropagationResult.instructions)
-          continue
-        }
-        if (
-          // declined explicitely by an other file, it must decline the whole update
-          dependentPropagationResult.declinedBy
-        ) {
-          return dependentPropagationResult
-        }
-        // declined by absence of boundary, we can keep searching
-        continue
-      }
-      if (instructions.length === 0) {
-        return {
-          declined: true,
-          reason: `there is no file accepting hot reload while propagating update`,
-        }
-      }
-      return {
-        accepted: true,
-        reason: `${instructions.length} dependent file(s) accepts hot reload`,
-        instructions,
-      }
-    }
-    const trace = []
-    return iterate(firstUrlInfo, trace)
-  }
-
   const pruneDependencies = (firstUrlInfo, urlsToRemove) => {
     const prunedUrlInfos = []
     const removeDependencies = (urlInfo, urlsToPrune) => {
@@ -238,80 +85,18 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     if (prunedUrlInfos.length === 0) {
       return
     }
-    prunedUrlInfos.forEach((prunedUrlInfo) => {
-      prunedUrlInfo.hmrTimestamp = Date.now()
-      // delete urlInfos[prunedRessource.url]
-      prunedCallbackList.notify(prunedUrlInfo)
-    })
-    const mainHotUpdate = propagateUpdate(firstUrlInfo)
-    const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
-      (prunedUrlInfo) => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-    )}`
-    // now check if we can hot update the main ressource
-    // then if we can hot update all dependencies
-    if (mainHotUpdate.declined) {
-      notifyDeclined({
-        cause,
-        reason: mainHotUpdate.reason,
-        declinedBy: mainHotUpdate.declinedBy,
-      })
-      return
-    }
-    // main can hot update
-    let i = 0
-    const instructions = []
-    while (i < prunedUrlInfos.length) {
-      const prunedUrlInfo = prunedUrlInfos[i++]
-      if (prunedUrlInfo.hotDecline) {
-        notifyDeclined({
-          cause,
-          reason: `a pruned file declines hot reload`,
-          declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-        })
-        return
-      }
-      instructions.push({
-        type: "prune",
-        boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-        acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl),
-      })
-    }
-    notifyAccepted({
-      cause,
-      reason: mainHotUpdate.reason,
-      instructions,
-    })
-  }
-
-  const findDependent = (url, predicate) => {
-    const urlInfo = urlInfos[url]
-    if (!urlInfo) {
-      return null
-    }
-    const visitDependents = (urlInfo) => {
-      for (const dependentUrl of urlInfo.dependents) {
-        const dependent = urlInfos[dependentUrl]
-        if (predicate(dependent)) {
-          return dependent
-        }
-        return visitDependents(dependent)
-      }
-      return null
-    }
-    return visitDependents(urlInfo)
+    prunedCallbackList.notify(prunedUrlInfos, firstUrlInfo)
   }
 
   return {
-    hotUpdateCallbackList,
-    prunedCallbackList,
-
     urlInfos,
+    reuseOrCreateUrlInfo,
     getUrlInfo,
-    updateUrlInfo,
-    onFileChange,
-
-    inferUrlSite,
+    inferReference,
     findDependent,
+
+    prunedCallbackList,
+    updateDependencies,
 
     toJSON: () => {
       const data = {}
@@ -331,21 +116,17 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
 
 const createUrlInfo = (url) => {
   return {
+    error: null,
+    data: {}, // plugins can put whatever they want here
     url,
     generatedUrl: null,
-    type: "",
     contentType: "",
     originalContent: "",
     content: "",
     sourcemap: null,
-    version: null,
-    hmrTimestamp: 0,
-    parentUrlSite: null,
-    dependencyUrlSites: {},
+    type: "",
+    references: {},
     dependencies: new Set(),
     dependents: new Set(),
-    hotDecline: false,
-    hotAcceptSelf: false,
-    hotAcceptDependencies: [],
   }
 }

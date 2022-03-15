@@ -120,16 +120,11 @@ const detailsFromUrlTrace = (urlTrace) => {
     return null
   }
   if (urlTrace.type === "url_site") {
-    urlTrace = {
-      type: "url_site_string",
-      value: stringifyUrlSite(urlTrace.value),
+    const urlSite = urlTrace.value
+    if (urlSite.line && urlSite.content) {
+      return { "referenced at": stringifyUrlSite(urlSite) }
     }
-  }
-  if (urlTrace.type === "url_site_string") {
-    if (urlTrace.value.includes(">")) {
-      return { "referenced at": urlTrace.value }
-    }
-    return { "referenced in": urlTrace.value }
+    return { "referenced in": stringifyUrlSite(urlSite) }
   }
   return { "referenced by": urlTrace.value }
 }

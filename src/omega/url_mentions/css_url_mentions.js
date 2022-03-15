@@ -27,7 +27,6 @@ export const parseCssUrlMentions = async ({ url, content }) => {
   })
   return {
     urlMentions: cssUrlMentions,
-    hotAcceptSelf: false,
     replaceUrls: async (replacements) => {
       // we can't use magic source because urlMention.start/end do not match the url specifier
       // const magicSource = createMagicSource({ url, content })

@@ -1,10 +1,7 @@
 import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 
-import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
-
 export const applyBabelPlugins = async ({
   babelPlugins,
-  getOriginalUrlSite,
   url,
   type = "js_module",
   ast,
@@ -54,38 +51,22 @@ export const applyBabelPlugins = async ({
     return await transformAsync(content, options)
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      let line = error.loc.line
-      let column = error.loc.column
-      const urlSite = getOriginalUrlSite
-        ? await getOriginalUrlSite({
-            url,
-            line,
-            column,
-          })
-        : {
-            url,
-            line,
-            column,
-            content,
-          }
-      const message = `${error.reasonCode}
-${stringifyUrlSite(urlSite)}`
       throw createParseError({
-        message,
-        cause: error,
-        url: urlSite.url,
-        line: urlSite.line,
-        column: urlSite.column,
+        message: error.message,
+        reasonCode: error.reasonCode,
+        content,
+        url,
+        line: error.loc.line,
+        column: error.loc.column,
       })
     }
     throw error
   }
 }
 
-const createParseError = ({ message, cause, url, line, column }) => {
-  const parseError = new Error(message, { cause })
-  const code = "PARSE_ERROR"
-  parseError.code = code
+const createParseError = ({ message, url, line, column }) => {
+  const parseError = new Error(message)
+  parseError.code = "PARSE_ERROR"
   parseError.url = url
   parseError.line = line
   parseError.column = column

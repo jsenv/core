@@ -37,19 +37,19 @@ export const jsenvPluginPreact = ({
     name: "jsenv:preact",
     appliesDuring: "*",
     resolve: {
-      js_import_export: ({ resolve, parentUrl, specifierType, specifier }) => {
-        if (specifier === "react" || specifier === "react-dom") {
-          return resolve({
-            parentUrl,
-            specifierType,
-            specifier: "preact/compat",
-          })
+      js_import_export: (reference, { resolveReference }) => {
+        if (
+          reference.specifier === "react" ||
+          reference.specifier === "react-dom"
+        ) {
+          reference.specifier = "preact/compat"
+          return resolveReference(reference).url
         }
         return null
       },
     },
     transform: {
-      html: ({ scenario, content }) => {
+      html: ({ content }, { scenario }) => {
         if (!preactDevtoolsDuringBuild && scenario === "build") {
           return null
         }
@@ -72,7 +72,7 @@ import "preact/devtools"
         const htmlModified = stringifyHtmlAst(htmlAst)
         return { content: htmlModified }
       },
-      js_module: async ({ scenario, getOriginalUrlSite, url, content }) => {
+      js_module: async ({ url, content }, { scenario }) => {
         if (scenario === "dev") {
           const prefreshEnabled = shouldEnablePrefresh(url)
           const { code, map } = await applyBabelPlugins({
@@ -87,7 +87,6 @@ import "preact/devtools"
               ["babel-plugin-transform-hook-names"],
               ...(prefreshEnabled ? ["@prefresh/babel-plugin"] : []),
             ],
-            getOriginalUrlSite,
             url,
             content,
           })
@@ -112,7 +111,6 @@ import "preact/devtools"
               },
             ],
           ],
-          getOriginalUrlSite,
           url,
           content,
         })

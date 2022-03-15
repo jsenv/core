@@ -17,18 +17,19 @@ export const jsenvPluginAvoidVersioningCascade = () => {
     name: "jsenv:avoid_versioning_cascade",
     appliesDuring: { build: true },
     transform: {
-      html: ({ resolveSpecifier, url, content }) => {
+      html: ({ url, content }, { createReference, resolveReference }) => {
         const htmlAst = parseHtmlString(content)
-        const clientFileUrlResolved = resolveSpecifier({
+        const reference = createReference({
           parentUrl: url,
-          specifierType: "js_import_export",
+          type: "js_import_export",
           specifier: clientFileUrl,
         })
+        resolveReference(reference)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
-            src: clientFileUrlResolved,
+            src: reference.url,
           }),
         )
         return stringifyHtmlAst(htmlAst)
