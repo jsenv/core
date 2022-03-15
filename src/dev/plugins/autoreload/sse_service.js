@@ -3,52 +3,11 @@ import { registerDirectoryLifecycle } from "@jsenv/filesystem"
 import { createCallbackList } from "@jsenv/abort"
 
 export const createSSEService = ({
-  projectDirectoryUrl,
-  serverStopCallbackList,
-  autoreload,
+  stopCallbackList,
+  rootDirectoryUrl,
   autoreloadPatterns,
-  urlGraph,
-}) => {
-  let handleSSEClientRequest
-  if (autoreload) {
-    handleSSEClientRequest = createSSEServiceWithAutoreload({
-      projectDirectoryUrl,
-      serverStopCallbackList,
-      autoreloadPatterns,
-      urlGraph,
-    })
-  } else {
-    const roomWhenAutoreloadIsDisabled = createSSERoom()
-    roomWhenAutoreloadIsDisabled.open()
-    handleSSEClientRequest = (request) => {
-      return roomWhenAutoreloadIsDisabled.join(request)
-    }
-  }
-  return (request) => {
-    if (request.ressource === "/__graph__") {
-      const graphJson = JSON.stringify(urlGraph)
-      return {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(graphJson),
-        },
-        body: graphJson,
-      }
-    }
-    const { accept } = request.headers
-    if (!accept || !accept.includes("text/event-stream")) {
-      return null
-    }
-    return handleSSEClientRequest(request)
-  }
-}
-
-const createSSEServiceWithAutoreload = ({
-  projectDirectoryUrl,
-  serverStopCallbackList,
-  autoreloadPatterns,
-  urlGraph,
+  onFileChange,
+  hotUpdateCallbackList,
 }) => {
   const projectFileModified = createCallbackList()
   const projectFileRemoved = createCallbackList()
@@ -83,7 +42,7 @@ const createSSEServiceWithAutoreload = ({
   // registerDirectoryLifecycle
   const timeout = setTimeout(() => {
     const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-      projectDirectoryUrl,
+      rootDirectoryUrl,
       {
         watchDescription: {
           ...autoreloadPatterns,
@@ -102,9 +61,10 @@ const createSSEServiceWithAutoreload = ({
         recursive: true,
       },
     )
-    serverStopCallbackList.add(unregisterDirectoryLifecyle)
+
+    stopCallbackList.add(unregisterDirectoryLifecyle)
   }, 100)
-  serverStopCallbackList.add(() => {
+  stopCallbackList.add(() => {
     clearTimeout(timeout)
   })
 
@@ -124,7 +84,7 @@ const createSSEServiceWithAutoreload = ({
       historyLength: 100,
       welcomeEventEnabled: true,
       effect: () => {
-        const removeHotUpdateCallback = urlGraph.hotUpdateCallbackList.add(
+        const removeHotUpdateCallback = hotUpdateCallbackList.add(
           (hotUpdate) => {
             if (hotUpdate.declined) {
               sseRoom.sendEvent({
@@ -150,7 +110,7 @@ const createSSEServiceWithAutoreload = ({
           },
         )
         const stopWatching = watchProjectFiles(({ relativeUrl, event }) => {
-          urlGraph.onFileChange({ relativeUrl, event })
+          onFileChange({ relativeUrl, event })
         })
         return () => {
           removeHotUpdateCallback()
@@ -159,7 +119,7 @@ const createSSEServiceWithAutoreload = ({
       },
     })
 
-    const removeSSECleanupCallback = serverStopCallbackList.add(() => {
+    const removeSSECleanupCallback = stopCallbackList.add(() => {
       removeSSECleanupCallback()
       sseRoom.close()
     })
@@ -178,8 +138,5 @@ const createSSEServiceWithAutoreload = ({
     return sseRoom
   }
 
-  return (request) => {
-    const room = getOrCreateSSERoom(request)
-    return room.join(request)
-  }
+  return getOrCreateSSERoom
 }

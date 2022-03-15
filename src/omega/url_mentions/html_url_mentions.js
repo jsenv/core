@@ -1,7 +1,6 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  parseLinkNode,
   getHtmlNodeAttributeByName,
   htmlNodePosition,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
@@ -12,7 +11,6 @@ export const parseHtmlUrlMentions = ({ url, content }) => {
   const htmlUrlMentions = collectHtmlUrlMentions({ url, htmlAst })
   return {
     urlMentions: htmlUrlMentions,
-    hotAcceptSelf: false,
     replaceUrls: async (replacements) => {
       Object.keys(replacements).forEach((url) => {
         const urlMention = htmlUrlMentions.find(
@@ -66,17 +64,6 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
   }
   const onNode = (node, { hotAccepted }) => {
     if (node.nodeName === "link") {
-      if (hotAccepted === undefined) {
-        const { isStylesheet, isRessourceHint } = parseLinkNode(node)
-        if (isStylesheet) {
-          // stylesheets can be hot replaced by default
-          hotAccepted = true
-        } else if (isRessourceHint) {
-          // for ressource hints html will be notified the underlying ressource has changed
-          // but we won't do anything (if the ressource is deleted we should?)
-          hotAccepted = true
-        }
-      }
       visitAttributeAsUrlSpecifier({
         type: "link_href",
         node,
@@ -94,11 +81,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         type: "script_src",
         node,
         attributeName: "src",
-        hotAccepted:
-          hotAccepted === undefined
-            ? // script cannot hotreload by default
-              false
-            : hotAccepted,
+        hotAccepted,
       })
       return
     }
@@ -107,22 +90,15 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         type: "a_href",
         node,
         attributeName: "href",
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
     }
     if (node.nodeName === "iframe") {
-      // Iframe will have their own event source client
-      // and can hot reload independently
-      // But if the iframe communicates with the parent iframe
-      // then we canot know for sure if the communication is broken
-      // ideally, if the iframe full-reload the page must full-reload too
-      // if the iframe hot-reload we don't know but we could assume there is nothing to do
-      // if there is [hot-accept] on the iframe
       visitAttributeAsUrlSpecifier({
         type: "iframe_src",
         node,
         attributeName: "src",
-        hotAccepted: hotAccepted === undefined ? false : hotAccepted,
+        hotAccepted,
       })
     }
     if (node.nodeName === "img") {
@@ -130,12 +106,12 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         type: "img_src",
         node,
         attributeName: "src",
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
       visitSrcset({
         type: "img_srcset",
         node,
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
       return
     }
@@ -144,12 +120,12 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         type: "source_src",
         node,
         attributeName: "src",
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
       visitSrcset({
         type: "source_srcset",
         node,
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
       return
     }
@@ -159,7 +135,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         type: "image_href",
         node,
         attributeName: "href",
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
       return
     }
@@ -168,7 +144,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
         type: "use_href",
         node,
         attributeName: "href",
-        hotAccepted: hotAccepted === undefined ? true : hotAccepted,
+        hotAccepted,
       })
       return
     }

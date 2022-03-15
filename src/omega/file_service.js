@@ -7,32 +7,15 @@ import { urlIsInsideOf } from "@jsenv/filesystem"
 
 import { moveUrl } from "@jsenv/core/src/utils/url_utils.js"
 
-import { createPluginController } from "./kitchen/plugin_controller.js"
-import { createKitchen } from "./kitchen/kitchen.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
 export const createFileService = ({
-  signal,
-  logger,
   projectDirectoryUrl,
-  plugins,
-  sourcemapInjection,
   urlGraph,
+  pluginController,
+  kitchen,
   scenario,
 }) => {
-  const pluginController = createPluginController({
-    plugins,
-    scenario,
-  })
-  const kitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl: projectDirectoryUrl,
-    urlGraph,
-    scenario,
-    pluginController,
-    sourcemapInjection,
-  })
   const getResponse = async (request) => {
     // serve file inside ".jsenv" directory
     const requestFileUrl = new URL(
@@ -65,12 +48,13 @@ export const createFileService = ({
       reference.url,
       reference.parentUrl,
     )
-    const { response, error, contentType, content } = await kitchen.cook({
+    await kitchen.cook({
       reference: referenceFromGraph || reference,
       urlInfo: requestedUrlInfo,
       outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
       runtimeSupport,
     })
+    const { response, error, contentType, content } = requestedUrlInfo
     if (response) {
       return response
     }

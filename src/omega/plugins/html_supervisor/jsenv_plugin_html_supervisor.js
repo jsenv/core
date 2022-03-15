@@ -42,7 +42,12 @@ export const jsenvPluginHtmlSupervisor = () => {
     transform: {
       html: (
         { url, content },
-        { rootDirectoryUrl, createReference, resolveReference },
+        {
+          rootDirectoryUrl,
+          createReference,
+          resolveReference,
+          specifierFromReference,
+        },
       ) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
@@ -136,10 +141,10 @@ export const jsenvPluginHtmlSupervisor = () => {
               node,
               generateCodeToSuperviseScript({
                 type,
-                src: scriptReference.url,
+                src: specifierFromReference(scriptReference),
                 integrity,
                 crossorigin,
-                htmlSupervisorResolvedUrl,
+                htmlSupervisorUrl: htmlSupervisorReference.url,
               }),
             )
           },
@@ -160,11 +165,11 @@ const generateCodeToSuperviseScript = ({
   src,
   integrity,
   crossorigin,
-  htmlSupervisorResolvedUrl,
+  htmlSupervisorUrl,
 }) => {
   const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
   if (type === "module") {
-    return `import { superviseScriptTypeModule } from "${htmlSupervisorResolvedUrl}"
+    return `import { superviseScriptTypeModule } from "${htmlSupervisorUrl}"
 superviseScriptTypeModule(${paramsAsJson})`
   }
   return `window.__html_supervisor__.superviseScript(${paramsAsJson})`

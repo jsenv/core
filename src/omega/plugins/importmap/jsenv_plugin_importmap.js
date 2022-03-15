@@ -71,7 +71,7 @@ const jsenvPluginImportmapSupervisor = () => {
     transform: {
       html: async (
         { url, originalContent, content },
-        { createReference, resolveReference, cookUrl },
+        { createReference, resolveReference, cook },
       ) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
@@ -112,11 +112,11 @@ const jsenvPluginImportmapSupervisor = () => {
             column,
           }
           importmapContents[importmapReference.url] = textNode.value
-          const importmapContext = await cookUrl({
+          await cook({
             reference: importmapReference,
             urlInfo: importmapUrlInfo,
           })
-          setHtmlNodeText(importmap, importmapContext.content)
+          setHtmlNodeText(importmap, importmapUrlInfo.content)
           assignHtmlNodeAttributes(importmap, {
             "content-src": importmapReference.specifier,
           })
@@ -142,7 +142,7 @@ const jsenvPluginImportmapSupervisor = () => {
             specifier: src,
           })
           const importmapUrlInfo = resolveReference(importmapReference)
-          const importmapRessource = await cookUrl({
+          await cook({
             reference: importmapReference,
             urlInfo: importmapUrlInfo,
           })
@@ -150,7 +150,7 @@ const jsenvPluginImportmapSupervisor = () => {
           assignHtmlNodeAttributes(importmap, {
             "content-src": src,
           })
-          setHtmlNodeText(importmap, importmapRessource.content)
+          setHtmlNodeText(importmap, importmapUrlInfo.content)
           return {
             content: stringifyHtmlAst(htmlAst),
           }

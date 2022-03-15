@@ -8,17 +8,14 @@ import {
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
-import { createLogger } from "@jsenv/logger"
-
-import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
+import { loggerToLogLevel } from "@jsenv/logger"
 
 import { createFileService } from "./file_service.js"
-import { createSSEService } from "./sse_service.js"
 
 export const startOmegaServer = async ({
-  signal = new AbortController().signal,
+  signal,
   handleSIGINT,
-  logLevel,
+  logger,
   protocol = "http",
   http2 = protocol === "https",
   privateKey,
@@ -32,42 +29,17 @@ export const startOmegaServer = async ({
 
   projectDirectoryUrl,
   scenario,
-  plugins,
-  runtimeSupport,
-  sourcemapInjection = "inline",
-  autoreload = {
-    dev: true,
-    test: false,
-  }[scenario],
-  autoreloadPatterns = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
-    "./dist/": false,
-    "./**/node_modules/": false,
-  },
+  urlGraph,
+  pluginController,
+  kitchen,
 }) => {
-  const logger = createLogger({ logLevel })
-
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-  const urlGraph = createUrlGraph({
-    rootDirectoryUrl: projectDirectoryUrl,
-  })
   const coreServices = {
-    "jsenv:sse": createSSEService({
-      projectDirectoryUrl,
-      serverStopCallbackList,
-      autoreload,
-      autoreloadPatterns,
-      urlGraph,
-    }),
     "service:file": createFileService({
-      signal,
-      logger,
       projectDirectoryUrl,
       urlGraph,
-      plugins,
-      runtimeSupport,
-      sourcemapInjection,
+      pluginController,
+      kitchen,
       scenario,
     }),
   }
@@ -77,7 +49,7 @@ export const startOmegaServer = async ({
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
     keepProcessAlive,
-    logLevel,
+    logLevel: loggerToLogLevel(logger),
 
     protocol,
     http2,

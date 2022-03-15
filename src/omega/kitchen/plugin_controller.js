@@ -1,13 +1,4 @@
-import { getJsenvPlugins } from "../jsenv_plugins.js"
-
-export const createPluginController = ({
-  plugins,
-  scenario,
-  injectJsenvPlugins,
-}) => {
-  if (injectJsenvPlugins) {
-    plugins = [...plugins, ...getJsenvPlugins()]
-  }
+export const createPluginController = ({ plugins, scenario }) => {
   plugins = flattenAndFilterPlugins(plugins, { scenario })
 
   let currentPlugin = null

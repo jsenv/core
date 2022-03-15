@@ -17,12 +17,15 @@ import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
+import { createPluginController } from "../omega/kitchen/plugin_controller.js"
+import { getJsenvPlugins } from "../omega/jsenv_plugins.js"
+
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildWithRollup } from "./build_with_rollup.js"
 
-export const build = async ({
+export const generateBuild = async ({
   signal = new AbortController().signal,
   logLevel = "info",
   sourceDirectoryUrl,
@@ -63,11 +66,7 @@ export const build = async ({
   })
   const loadSourceGraphLog = createTaskLog("load source graph")
   let urlCount = 0
-  const sourceKitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl: sourceDirectoryUrl,
-    urlGraph: sourceGraph,
+  const sourcePluginController = createPluginController({
     plugins: [
       ...plugins,
       {
@@ -78,32 +77,42 @@ export const build = async ({
           loadSourceGraphLog.setRightText(urlCount)
         },
       },
+      ...getJsenvPlugins(),
     ],
     scenario: "build",
-    sourcemapInjection,
   })
-  let sourceEntryUrls
+  const sourceKitchen = createKitchen({
+    signal,
+    logger,
+    rootDirectoryUrl: sourceDirectoryUrl,
+    pluginController: sourcePluginController,
+    urlGraph: sourceGraph,
+    sourcemapInjection,
+    scenario: "build",
+    baseUrl,
+  })
+  let sourceEntryReferences
   try {
-    sourceEntryUrls = Object.keys(entryPoints).map((key) =>
-      sourceKitchen.resolveSpecifier({
+    sourceEntryReferences = Object.keys(entryPoints).map((key) => {
+      const sourceEntryReference = sourceKitchen.createReference({
         parentUrl: sourceDirectoryUrl,
-        specifierType: "entry_point",
+        type: "entry_point",
         specifier: key,
-      }),
-    )
+      })
+      return sourceEntryReference
+    })
     await loadUrlGraph({
       urlGraph: sourceGraph,
       kitchen: sourceKitchen,
       outDirectoryName: "build",
       runtimeSupport,
       startLoading: (cook) => {
-        sourceEntryUrls.forEach((entryUrl) => {
-          return cook({
-            urlTrace: {
-              type: "parameter",
-              value: `"entryPoints" parameter to build`,
-            },
-            url: entryUrl,
+        sourceEntryReferences.forEach((sourceEntryReference) => {
+          const sourcEntryUrlInfo =
+            sourceKitchen.resolveReference(sourceEntryReference)
+          cook({
+            reference: sourceEntryReference,
+            urlInfo: sourcEntryUrlInfo,
           })
         })
       },
@@ -118,10 +127,10 @@ export const build = async ({
 
   const jsModulesUrlsToBuild = []
   const cssUrlsToBuild = []
-  sourceEntryUrls.forEach((entryPointUrl) => {
-    const entryPointUrlInfo = sourceGraph.getUrlInfo(entryPointUrl)
-    if (entryPointUrlInfo.type === "html") {
-      entryPointUrlInfo.dependencies.forEach((dependencyUrl) => {
+  sourceEntryReferences.forEach((sourceEntryReference) => {
+    const sourceEntryUrlInfo = sourceGraph.getUrlInfo(sourceEntryReference.url)
+    if (sourceEntryUrlInfo.type === "html") {
+      sourceEntryUrlInfo.dependencies.forEach((dependencyUrl) => {
         const dependencyUrlInfo = sourceGraph.getUrlInfo(dependencyUrl)
         if (dependencyUrlInfo.type === "js_module") {
           jsModulesUrlsToBuild.push(dependencyUrl)
@@ -134,12 +143,12 @@ export const build = async ({
       })
       return
     }
-    if (entryPointUrlInfo.type === "js_module") {
-      jsModulesUrlsToBuild.push(entryPointUrlInfo.url)
+    if (sourceEntryUrlInfo.type === "js_module") {
+      jsModulesUrlsToBuild.push(sourceEntryUrlInfo.url)
       return
     }
-    if (entryPointUrlInfo.type === "css") {
-      cssUrlsToBuild.push(entryPointUrlInfo.url)
+    if (sourceEntryUrlInfo.type === "css") {
+      cssUrlsToBuild.push(sourceEntryUrlInfo.url)
       return
     }
   })
@@ -184,19 +193,9 @@ export const build = async ({
   const buildUrlsGenerator = createBuilUrlsGenerator({
     buildDirectoryUrl,
   })
-  const buildGraph = createUrlGraph({
-    rootDirectoryUrl: buildDirectoryUrl,
-  })
-  const buildUrlMappings = {}
-  const buildKitchen = createKitchen({
-    rootDirectoryUrl: sourceDirectoryUrl,
-    urlGraph: buildGraph,
-    baseUrl,
+  const buildPluginController = createPluginController({
     injectJsenvPlugins: false,
     plugins: [
-      // truc a fix: lorsque l'url démarre par "/" resolve + redirect n'est pas appelé
-      // c'est pas bon
-      // en tous cas pour le build on veut vraiment voir passer toutes les urls
       {
         name: "jsenv:postbuild",
         appliesDuring: { postbuild: true },
@@ -206,11 +205,11 @@ export const build = async ({
             new URL(specifier, parentUrl).href
           )
         },
-        redirect: ({ specifierType, url }) => {
+        redirect: ({ type, url }) => {
           const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(
             url,
-            specifierType === "entry_point" || urlInfo.type === "js_module"
+            type === "entry_point" || urlInfo.type === "js_module"
               ? "/"
               : "assets/",
           )
@@ -231,27 +230,36 @@ export const build = async ({
     ],
     scenario: "postbuild",
   })
+  const buildGraph = createUrlGraph({
+    rootDirectoryUrl: buildDirectoryUrl,
+  })
+  const buildUrlMappings = {}
+  const buildKitchen = createKitchen({
+    rootDirectoryUrl: sourceDirectoryUrl,
+    urlGraph: buildGraph,
+    pluginController: buildPluginController,
+    scenario: "postbuild",
+
+    baseUrl,
+  })
   const loadBuilGraphLog = createTaskLog("load build graph")
   try {
-    const buildEntryUrls = Object.keys(entryPoints).map((key) =>
-      buildKitchen.resolveSpecifier({
-        parentUrl: sourceDirectoryUrl,
-        specifierType: "entry_point",
-        specifier: key,
-      }),
-    )
     await loadUrlGraph({
       urlGraph: buildGraph,
       kitchen: buildKitchen,
       outDirectoryName: "postbuild",
       startLoading: (cook) => {
-        buildEntryUrls.forEach((entryUrl) => {
+        Object.keys(entryPoints).forEach((key) => {
+          const buildEntryReference = buildKitchen.createReference({
+            parentUrl: sourceDirectoryUrl,
+            type: "entry_point",
+            specifier: key,
+          })
+          const buildEntryUrlInfo =
+            buildKitchen.resolveReference(buildEntryReference)
           cook({
-            urlTrace: {
-              type: "parameter",
-              value: `"entryPoints" parameter to build`,
-            },
-            url: entryUrl,
+            reference: buildEntryReference,
+            urlInfo: buildEntryUrlInfo,
           })
         })
       },
