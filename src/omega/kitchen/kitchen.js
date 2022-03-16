@@ -97,7 +97,7 @@ export const createKitchen = ({
   }
   const specifierFromReference = (reference) => {
     // create a copy because .url will be mutated
-    const referencedUrlInfo = {
+    const referencedCopy = {
       ...reference,
     }
     pluginController.callHooks(
@@ -105,14 +105,15 @@ export const createKitchen = ({
       reference,
       baseContext,
       (returnValue) => {
-        referencedUrlInfo.url = returnValue
+        referencedCopy.url = returnValue
       },
     )
     const returnValue = pluginController.callHooksUntil(
       "formatReferencedUrl",
-      referencedUrlInfo,
+      referencedCopy,
+      baseContext,
     )
-    return returnValue || referencedUrlInfo.url
+    return returnValue || referencedCopy.url
   }
 
   const _cook = async ({
@@ -134,7 +135,7 @@ export const createKitchen = ({
       if (reference) {
         return {
           urlTrace: {
-            type: "url_string",
+            type: "url_site",
             value: {
               url: reference.parentUrl,
               content: reference.parentContent,
@@ -316,15 +317,19 @@ ${stringifyUrlSite({
         dependencyUrls,
         references,
       })
-      const replacements = {}
-      references.forEach((reference) => {
+      const replacements = []
+      references.forEach((reference, index) => {
         const specifier = specifierFromReference(reference)
         const specifierFormatted =
           reference.type === "js_import_meta_url_pattern" ||
           reference.type === "js_import_export"
             ? JSON.stringify(specifier)
             : specifier
-        replacements[reference.url] = specifierFormatted
+        replacements.push({
+          url: reference.url,
+          urlMentionIndex: index,
+          value: specifierFormatted,
+        })
       })
       const transformReturnValue = await replaceUrls(replacements)
       updateContents(transformReturnValue)

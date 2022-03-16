@@ -12,12 +12,10 @@ export const parseHtmlUrlMentions = ({ url, content }) => {
   const htmlUrlMentions = collectHtmlUrlMentions({ url, htmlAst })
   return {
     urlMentions: htmlUrlMentions,
-    replaceUrls: async (replacements) => {
-      Object.keys(replacements).forEach((url) => {
-        const urlMention = htmlUrlMentions.find(
-          (urlMention) => urlMention.url === url,
-        )
-        urlMention.attribute.value = replacements[url]
+    replaceUrls: (replacements) => {
+      replacements.forEach(({ urlMentionIndex, value }) => {
+        const urlMention = htmlUrlMentions[urlMentionIndex]
+        urlMention.attribute.value = value
       })
       return {
         content: stringifyHtmlAst(htmlAst, {

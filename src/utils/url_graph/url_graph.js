@@ -23,12 +23,12 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
       return null
     }
     return {
-      url: firstReferenceOnThatUrl.url,
-      type: firstReferenceOnThatUrl.type,
-      content:
+      parentUrl: firstReferenceOnThatUrl.parentUrl,
+      parentContent:
         firstReferenceOnThatUrl.url === parentUrlInfo.url
           ? parentUrlInfo.originalContent
           : parentUrlInfo.content,
+      type: firstReferenceOnThatUrl.type,
       line: firstReferenceOnThatUrl.line,
       column: firstReferenceOnThatUrl.column,
     }

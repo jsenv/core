@@ -14,15 +14,13 @@ export const parseJsModuleUrlMentions = async ({ url, content }) => {
     urlMentions,
     replaceUrls: async (replacements) => {
       const magicSource = createMagicSource({ url, content })
-      Object.keys(replacements).forEach((url) => {
-        const urlMention = urlMentions.find(
-          (urlMention) => urlMention.url === url,
-        )
+      replacements.forEach(({ urlMentionIndex, value }) => {
+        const urlMention = urlMentions[urlMentionIndex]
         const { start, end } = urlMention
         magicSource.replace({
           start,
           end,
-          replacement: replacements[url],
+          replacement: value,
         })
       })
       return magicSource.toContentAndSourcemap()

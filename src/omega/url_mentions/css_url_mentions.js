@@ -42,9 +42,11 @@ export const parseCssUrlMentions = async ({ url, content }) => {
         url,
         content,
         urlVisitor: ({ url, replace }) => {
-          const replacement = replacements[url]
+          const replacement = replacements.find(
+            (replacement) => replacement.url === url,
+          )
           if (replacement) {
-            replace(replacement)
+            replace(replacement.value)
           }
         },
       })

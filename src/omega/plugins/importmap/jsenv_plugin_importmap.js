@@ -98,6 +98,7 @@ const jsenvPluginImportmapSupervisor = () => {
           const inlineImportmapId = getIdForInlineHtmlNode(htmlAst, importmap)
           const importmapReference = createReference({
             parentUrl: url,
+            parentContent: originalContent,
             line,
             column,
             type: "script_src",

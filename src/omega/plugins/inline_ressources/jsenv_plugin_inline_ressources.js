@@ -80,6 +80,7 @@ export const jsenvPluginInlineRessources = () => {
           })
           const inlineReference = createReference({
             parentUrl: url,
+            parentContent: originalContent,
             line,
             column,
             type,
@@ -141,6 +142,7 @@ export const jsenvPluginInlineRessources = () => {
             url,
           )}@${inlineScriptId}.js`
           const inlineScriptReference = createAndResolveInlineReference({
+            node,
             type: "script_src",
             specifier:
               scriptCategory === "classic"
