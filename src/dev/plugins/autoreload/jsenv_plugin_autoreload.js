@@ -147,7 +147,7 @@ const jsenvPluginHot = () => {
         const importMetaHotClientFileReference = createReference({
           parentUrl: url,
           type: "js_import_export",
-          value: importMetaHotClientFileUrl,
+          specifier: importMetaHotClientFileUrl,
         })
         resolveReference(importMetaHotClientFileReference)
         const magicSource = createMagicSource({
@@ -230,17 +230,17 @@ const jsenvPluginHotSSE = ({
       const { dependents } = urlInfo
       const instructions = []
       for (const dependentUrl of dependents) {
-        const dependent = urlInfos[dependentUrl]
-        if (dependent.data.hotDecline) {
+        const dependentUrlInfo = urlInfos[dependentUrl]
+        if (dependentUrlInfo.data.hotDecline) {
           return {
             declined: true,
             reason: `a dependent file declines hot reload`,
             declinedBy: dependentUrl,
           }
         }
-        if (dependent.data.hotAcceptDependencies.includes(urlInfo.url)) {
+        if (dependentUrlInfo.data.hotAcceptDependencies.includes(urlInfo.url)) {
           instructions.push({
-            type: dependent.type,
+            type: dependentUrlInfo.type,
             boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
             acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
           })
@@ -253,7 +253,7 @@ const jsenvPluginHotSSE = ({
             declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
           }
         }
-        const dependentPropagationResult = iterate(dependent, [
+        const dependentPropagationResult = iterate(dependentUrlInfo, [
           ...trace,
           dependentUrl,
         ])
@@ -313,13 +313,13 @@ const jsenvPluginHotSSE = ({
     },
     hotUpdateCallbackList,
   })
-  urlGraph.prunedCallbackList.add((prunedUrlInfos, ancestorUrlInfo) => {
+  urlGraph.prunedCallbackList.add(({ prunedUrlInfos, firstUrlInfo }) => {
     prunedUrlInfos.forEach((prunedUrlInfo) => {
       prunedUrlInfo.data.hmrTimestamp = Date.now()
       // should we delete instead?
       // delete urlGraph.urlInfos[prunedUrlInfo.url]
     })
-    const mainHotUpdate = propagateUpdate(ancestorUrlInfo)
+    const mainHotUpdate = propagateUpdate(firstUrlInfo)
     const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
       (prunedUrlInfo) => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
     )}`
@@ -349,7 +349,7 @@ const jsenvPluginHotSSE = ({
       instructions.push({
         type: "prune",
         boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-        acceptedBy: urlToRelativeUrl(ancestorUrlInfo.url, rootDirectoryUrl),
+        acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl),
       })
     }
     notifyAccepted({

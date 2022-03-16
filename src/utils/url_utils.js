@@ -27,6 +27,22 @@ export const isValidUrl = (url) => {
   }
 }
 
+export const injectQueryParamsIntoSpecifier = (specifier, params) => {
+  if (isValidUrl(specifier)) {
+    return injectQueryParams(specifier, params)
+  }
+  const [beforeQuestion, afterQuestion = ""] = specifier.split("?")
+  const searchParams = new URLSearchParams(afterQuestion)
+  Object.keys(params).forEach((key) => {
+    searchParams.set(key, params[key])
+  })
+  const paramsString = searchParams.toString().replace(/[=](?=&|$)/g, "")
+  if (paramsString) {
+    return `${beforeQuestion}?${paramsString}`
+  }
+  return specifier
+}
+
 export const injectQueryParams = (url, params) => {
   const urlObject = new URL(url)
   Object.keys(params).forEach((key) => {

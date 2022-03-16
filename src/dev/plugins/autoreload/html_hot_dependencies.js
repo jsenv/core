@@ -123,7 +123,7 @@ const getNodeContext = (node) => {
   return context
 }
 
-const htmlNodeCanHotReload = ({ node }) => {
+const htmlNodeCanHotReload = (node) => {
   if (node.nodeName === "link") {
     const { isStylesheet, isRessourceHint } = parseLinkNode(node)
     if (isStylesheet) {

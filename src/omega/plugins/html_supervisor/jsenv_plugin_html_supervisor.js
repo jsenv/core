@@ -4,12 +4,14 @@
  * - scripts are wrapped to be supervised
  *
  * TODO:
- *  - fix url using asClientUrl
  *  - if ressource is referenced by ressource hint we should do sthing?
  *   I think so when we inject ?js_classic
  */
 
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
+import {
+  injectQueryParams,
+  injectQueryParamsIntoSpecifier,
+} from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -117,26 +119,32 @@ export const jsenvPluginHtmlSupervisor = () => {
           specifier: htmlSupervisorFileUrl,
         })
         resolveReference(htmlSupervisorReference)
+        const htmlSupervisorSpecifier = specifierFromReference(
+          htmlSupervisorReference,
+        )
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: htmlSupervisorReference.url,
+            src: htmlSupervisorSpecifier,
           }),
         )
         scriptsToSupervise.forEach(
           ({ node, type, src, integrity, crossorigin }) => {
+            removeHtmlNodeAttributeByName(node, "src")
+            assignHtmlNodeAttributes(node, {
+              "content-src": src,
+            })
             const scriptReference = createReference({
               parentUrl: url,
               type: "script_src",
-              specifier: type === "classic" ? `${src}?js_classic` : src,
+              specifier:
+                type === "classic"
+                  ? injectQueryParamsIntoSpecifier(src, { js_classic: "" })
+                  : src,
             })
             resolveReference(scriptReference)
-            removeHtmlNodeAttributeByName(node, "src")
-            assignHtmlNodeAttributes(node, {
-              "content-src": scriptReference.url,
-            })
             setHtmlNodeText(
               node,
               generateCodeToSuperviseScript({
@@ -144,7 +152,7 @@ export const jsenvPluginHtmlSupervisor = () => {
                 src: specifierFromReference(scriptReference),
                 integrity,
                 crossorigin,
-                htmlSupervisorUrl: htmlSupervisorReference.url,
+                htmlSupervisorSpecifier,
               }),
             )
           },
@@ -165,11 +173,11 @@ const generateCodeToSuperviseScript = ({
   src,
   integrity,
   crossorigin,
-  htmlSupervisorUrl,
+  htmlSupervisorSpecifier,
 }) => {
   const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
   if (type === "module") {
-    return `import { superviseScriptTypeModule } from "${htmlSupervisorUrl}"
+    return `import { superviseScriptTypeModule } from "${htmlSupervisorSpecifier}"
 superviseScriptTypeModule(${paramsAsJson})`
   }
   return `window.__html_supervisor__.superviseScript(${paramsAsJson})`

@@ -87,7 +87,7 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     if (prunedUrlInfos.length === 0) {
       return
     }
-    prunedCallbackList.notify(prunedUrlInfos, firstUrlInfo)
+    prunedCallbackList.notify({ prunedUrlInfos, firstUrlInfo })
   }
 
   return {

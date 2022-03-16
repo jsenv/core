@@ -128,8 +128,14 @@ export const createKitchen = ({
       isSupportedOnRuntime: (featureName, featureCompat) => {
         return isSupported({ runtimeSupport, featureName, featureCompat })
       },
+      cook: (params) => {
+        return cook({
+          outDirectoryName,
+          runtimeSupport,
+          ...params,
+        })
+      },
     }
-
     const getParamsForUrlTracing = () => {
       const { url } = urlInfo
       if (reference) {
@@ -279,8 +285,13 @@ ${stringifyUrlSite({
           line: urlMention.line,
           column: urlMention.column,
         })
+        // if (urlMention.specifier.includes("not_found.js")) {
+        //   debugger
+        // }
         const dependencyReference = createReference({
-          parentUrl: urlMentionPosition.url,
+          parentUrl: urlMentionPosition.isOriginal
+            ? urlMentionPosition.url
+            : urlInfo.url,
           parentContent: urlMentionPosition.content,
           line: urlMentionPosition.line,
           column: urlMentionPosition.column,
@@ -373,10 +384,13 @@ ${stringifyUrlSite({
       (cookedReturnValue) => {
         if (typeof cookedReturnValue === "function") {
           const removePrunedCallback = urlGraph.prunedCallbackList.add(
-            (prunedUrlInfo, ancestorUrlInfo) => {
-              if (prunedUrlInfo.url === urlInfo.url) {
+            ({ prunedUrlInfos, firstUrlInfo }) => {
+              const pruned = prunedUrlInfos.find(
+                (prunedUrlInfo) => prunedUrlInfo.url === urlInfo.url,
+              )
+              if (pruned) {
                 removePrunedCallback()
-                cookedReturnValue(ancestorUrlInfo)
+                cookedReturnValue(firstUrlInfo)
               }
             },
           )
@@ -522,6 +536,7 @@ const getPosition = async ({
   }
   if (typeof originalLine === "number") {
     return adjustIfInline({
+      isOriginal: true,
       url: urlInfo.url,
       content: urlInfo.originalContent,
       line: originalLine,
@@ -530,6 +545,7 @@ const getPosition = async ({
   }
   if (urlInfo.content === urlInfo.originalContent) {
     return adjustIfInline({
+      isOriginal: true,
       url: urlInfo.url,
       content: urlInfo.originalContent,
       line,
@@ -541,6 +557,7 @@ const getPosition = async ({
   const { sourcemap } = urlInfo
   if (!sourcemap) {
     return {
+      isOriginal: false,
       url: urlInfo.generatedUrl,
       content: urlInfo.content,
       line,
@@ -555,6 +572,7 @@ const getPosition = async ({
   // cannot map back to original file
   if (!originalPosition || originalPosition.line === null) {
     return {
+      isOriginal: false,
       url: urlInfo.generatedUrl,
       content: urlInfo.content,
       line,
@@ -562,6 +580,7 @@ const getPosition = async ({
     }
   }
   return adjustIfInline({
+    isOriginal: true,
     url: urlInfo.url,
     content: urlInfo.originalContent,
     line: originalPosition.line,
