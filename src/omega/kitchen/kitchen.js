@@ -286,7 +286,6 @@ ${stringifyUrlSite({
           column: urlMentionPosition.column,
           type: urlMention.type,
           specifier: urlMention.specifier,
-          hotAccepted: urlMention.hotAccepted,
         })
         try {
           resolveReference(dependencyReference)

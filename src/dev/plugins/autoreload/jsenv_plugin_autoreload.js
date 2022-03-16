@@ -12,6 +12,7 @@ import {
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 
 import { createSSEService } from "./sse_service.js"
+import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
 export const jsenvPluginAutoreload = ({
@@ -19,6 +20,17 @@ export const jsenvPluginAutoreload = ({
   urlGraph,
   autoreloadPatterns,
 }) => {
+  return [
+    jsenvPluginHot(),
+    jsenvPluginHotSSE({
+      rootDirectoryUrl,
+      urlGraph,
+      autoreloadPatterns,
+    }),
+  ]
+}
+
+const jsenvPluginHot = () => {
   const eventSourceClientFileUrl = new URL(
     "./client/event_source_client.js",
     import.meta.url,
@@ -28,6 +40,138 @@ export const jsenvPluginAutoreload = ({
     import.meta.url,
   ).href
 
+  return {
+    name: "jsenv:hot",
+    appliesDuring: { dev: true },
+    normalize: ({ url, data }) => {
+      const urlObject = new URL(url)
+      if (!urlObject.searchParams.has("hmr")) {
+        data.hmr = false
+        return null
+      }
+      data.hmr = true
+      // "hmr" search param goal is to mark url as enabling hmr:
+      // this goal is achieved when we reach this part of the code
+      // We get rid of this params so that urlGraph and other parts of the code
+      // recognize the url (it is not considered as a different url)
+      urlObject.searchParams.delete("hmr")
+      urlObject.searchParams.delete("v")
+      return urlObject.href
+    },
+    transformReferencedUrl: ({ url, data }) => {
+      if (!data.hmr) {
+        return null
+      }
+      if (!data.hmrTimestamp) {
+        return null
+      }
+      return injectQueryParams(url, {
+        hmr: "",
+        v: data.hmrTimestamp,
+      })
+    },
+    transform: {
+      html: (
+        { url, data, content },
+        {
+          rootDirectoryUrl,
+          createReference,
+          resolveReference,
+          specifierFromReference,
+        },
+      ) => {
+        const htmlAst = parseHtmlString(content)
+        const { hotReferences } = collectHotDataFromHtmlAst(htmlAst)
+        data.hotDecline = false
+        data.hotAcceptSelf = false
+        data.hotAcceptDependencies = hotReferences.map(
+          ({ type, specifier }) => {
+            const reference = createReference({
+              parentUrl: url,
+              type,
+              specifier,
+            })
+            resolveReference(reference)
+            return reference.url
+          },
+        )
+        const eventSourceClientReference = createReference({
+          parentUrl: rootDirectoryUrl,
+          type: "js_import_export",
+          specifier: eventSourceClientFileUrl,
+        })
+        resolveReference(eventSourceClientReference)
+        injectScriptAsEarlyAsPossible(
+          htmlAst,
+          createHtmlNode({
+            tagName: "script",
+            type: "module",
+            src: specifierFromReference(eventSourceClientReference),
+          }),
+        )
+        const htmlModified = stringifyHtmlAst(htmlAst)
+        return {
+          content: htmlModified,
+        }
+      },
+      css: ({ data }) => {
+        data.hotDecline = false
+        data.hotAcceptSelf = false
+        data.hotAcceptDependencies = []
+      },
+      js_module: async (
+        { url, data, content },
+        { createReference, resolveReference, specifierFromReference },
+      ) => {
+        const { metadata } = await applyBabelPlugins({
+          babelPlugins: [babelPluginMetadataImportMetaHot],
+          url,
+          content,
+        })
+        const {
+          importMetaHotDetected,
+          hotDecline,
+          hotAcceptSelf,
+          hotAcceptDependencies,
+        } = metadata
+        data.hotDecline = hotDecline
+        data.hotAcceptSelf = hotAcceptSelf
+        data.hotAcceptDependencies = hotAcceptDependencies
+        if (!importMetaHotDetected) {
+          return null
+        }
+        // For some reason using magic source here produce
+        // better sourcemap than doing the equivalent with babel
+        // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
+        // which is likely not well supported by babel
+        const importMetaHotClientFileReference = createReference({
+          parentUrl: url,
+          type: "js_import_export",
+          value: importMetaHotClientFileUrl,
+        })
+        resolveReference(importMetaHotClientFileReference)
+        const magicSource = createMagicSource({
+          url,
+          content,
+        })
+        magicSource.prepend(
+          `import { createImportMetaHot } from "${specifierFromReference(
+            importMetaHotClientFileReference,
+          )}"
+import.meta.hot = createImportMetaHot(import.meta.url)
+`,
+        )
+        return magicSource.toContentAndSourcemap()
+      },
+    },
+  }
+}
+
+const jsenvPluginHotSSE = ({
+  rootDirectoryUrl,
+  urlGraph,
+  autoreloadPatterns,
+}) => {
   const hotUpdateCallbackList = createCallbackList()
   const notifyDeclined = ({ cause, reason, declinedBy }) => {
     hotUpdateCallbackList.notify({
@@ -215,11 +359,9 @@ export const jsenvPluginAutoreload = ({
     })
   })
 
-  const autoreloadPlugin = {
-    name: "jsenv:autoreload",
-    appliesDuring: {
-      dev: true,
-    },
+  return {
+    name: "jsenv:hot_sse",
+    appliesDuring: { dev: true },
     serve: (request, { urlGraph }) => {
       if (request.ressource === "/__graph__") {
         const graphJson = JSON.stringify(urlGraph)
@@ -239,124 +381,8 @@ export const jsenvPluginAutoreload = ({
       }
       return null
     },
-    normalize: ({ url, data }) => {
-      const urlObject = new URL(url)
-      if (!urlObject.searchParams.has("hmr")) {
-        data.hmr = false
-        return null
-      }
-      data.hmr = true
-      // "hmr" search param goal is to mark url as enabling hmr:
-      // this goal is achieved when we reach this part of the code
-      // We get rid of this params so that urlGraph and other parts of the code
-      // recognize the url (it is not considered as a different url)
-      urlObject.searchParams.delete("hmr")
-      urlObject.searchParams.delete("v")
-      return urlObject.href
-    },
-    transform: {
-      html: async (
-        { content },
-        { rootDirectoryUrl, createReference, resolveReference },
-      ) => {
-        const htmlAst = parseHtmlString(content)
-        const eventSourceClientReference = createReference({
-          parentUrl: rootDirectoryUrl,
-          type: "js_import_export",
-          specifier: eventSourceClientFileUrl,
-        })
-        resolveReference(eventSourceClientReference)
-        injectScriptAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            src: eventSourceClientReference.url,
-          }),
-        )
-        const htmlModified = stringifyHtmlAst(htmlAst)
-        return {
-          content: htmlModified,
-        }
-      },
-      js_module: async ({ url, data, content }) => {
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaHot],
-          url,
-          content,
-        })
-        const {
-          importMetaHotDetected,
-          hotDecline,
-          hotAcceptSelf,
-          hotAcceptDependencies,
-        } = metadata
-        data.hotDecline = hotDecline
-        data.hotAcceptSelf = hotAcceptSelf
-        data.hotAcceptDependencies = hotAcceptDependencies
-        if (!importMetaHotDetected) {
-          return null
-        }
-        // For some reason using magic source here produce
-        // better sourcemap than doing the equivalent with babel
-        // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
-        // which is likely not well supported by babel
-        const magicSource = createMagicSource({
-          url,
-          content,
-        })
-        magicSource.prepend(
-          `import { createImportMetaHot } from "${importMetaHotClientFileUrl}"
-import.meta.hot = createImportMetaHot(import.meta.url)
-`,
-        )
-        return magicSource.toContentAndSourcemap()
-      },
-    },
-    referencesResolved: {
-      html: ({ data, references }) => {
-        data.hotDecline = false
-        data.hotAcceptSelf = false
-        // All url mention objects having "hotAccepted" property will be added
-        // to "hotAcceptDependencies"
-        // For html there is some "smart" default applied in "collectHtmlDependenciesFromAst"
-        // to decide what should hot reload / fullreload:
-        // By default:
-        //   - hot reload on <img src="./image.png" />
-        //   - fullreload on <script src="./file.js" />
-        // Can be controlled by [hot-decline] and [hot-accept]:
-        //   - fullreload on <img src="./image.png" hot-decline />
-        //   - hot reload on <script src="./file.js" hot-accept />
-        const hotAcceptDependencies = []
-        references.forEach((reference) => {
-          if (reference.hotAccepted === true) {
-            hotAcceptDependencies.push(reference.url)
-            return
-          }
-        })
-        data.hotAcceptDependencies = hotAcceptDependencies
-      },
-      css: ({ data }) => {
-        data.hotDecline = false
-        data.hotAcceptSelf = false
-        data.hotAcceptDependencies = []
-      },
-    },
-    transformReferencedUrl: ({ url, data }) => {
-      if (!data.hmr) {
-        return null
-      }
-      if (!data.hmrTimestamp) {
-        return null
-      }
-      return injectQueryParams(url, {
-        hmr: "",
-        v: data.hmrTimestamp,
-      })
-    },
     destroy: () => {
       sseService.destroy()
     },
   }
-  return autoreloadPlugin
 }
