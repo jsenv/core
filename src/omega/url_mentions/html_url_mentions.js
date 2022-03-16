@@ -3,6 +3,7 @@ import {
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   htmlNodePosition,
+  parseLinkNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
@@ -55,7 +56,10 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       injected,
       externalized,
       specifier,
-      hotAccepted,
+      hotAccepted:
+        hotAccepted === undefined
+          ? htmlReferenceAcceptsHotByDefault({ node })
+          : hotAccepted,
       line,
       column,
       originalLine,
@@ -227,4 +231,38 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
   }
   iterate(htmlAst, {})
   return htmlUrlMentions
+}
+
+const htmlReferenceAcceptsHotByDefault = ({ type, node }) => {
+  if (type === "link_href") {
+    const { isStylesheet, isRessourceHint } = parseLinkNode(node)
+    if (isStylesheet) {
+      // stylesheets can be hot replaced by default
+      return true
+    }
+    if (isRessourceHint) {
+      // for ressource hints html will be notified the underlying ressource has changed
+      // but we won't do anything (if the ressource is deleted we should?)
+      return true
+    }
+    return false
+  }
+  return [
+    // "script_src", // script src cannot hot reload
+    "a_href",
+    // Iframe will have their own event source client
+    // and can hot reload independently
+    // But if the iframe communicates with the parent iframe
+    // then we canot know for sure if the communication is broken
+    // ideally, if the iframe full-reload the page must full-reload too
+    // if the iframe hot-reload we don't know but we could assume there is nothing to do
+    // if there is [hot-accept] on the iframe
+    "iframe_src",
+    "img_src",
+    "img_srcset",
+    "source_src",
+    "source_srcset",
+    "image_href",
+    "use_href",
+  ].includes(type)
 }

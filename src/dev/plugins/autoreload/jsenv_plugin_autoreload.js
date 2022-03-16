@@ -8,13 +8,11 @@ import {
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-  parseLinkNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 
 import { createSSEService } from "./sse_service.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
-import { data } from "@jsenv/core/old_test/assets/json/importing_json/json_with_dynamic_import_assertion/main.js"
 
 export const jsenvPluginAutoreload = ({
   rootDirectoryUrl,
@@ -281,13 +279,21 @@ export const jsenvPluginAutoreload = ({
           content: htmlModified,
         }
       },
-      js_module: async ({ url, content }) => {
+      js_module: async ({ url, data, content }) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
           url,
           content,
         })
-        const { importMetaHotDetected } = metadata
+        const {
+          importMetaHotDetected,
+          hotDecline,
+          hotAcceptSelf,
+          hotAcceptDependencies,
+        } = metadata
+        data.hotDecline = hotDecline
+        data.hotAcceptSelf = hotAcceptSelf
+        data.hotAcceptDependencies = hotAcceptDependencies
         if (!importMetaHotDetected) {
           return null
         }
@@ -301,14 +307,16 @@ export const jsenvPluginAutoreload = ({
         })
         magicSource.prepend(
           `import { createImportMetaHot } from "${importMetaHotClientFileUrl}"
-    import.meta.hot = createImportMetaHot(import.meta.url)
-    `,
+import.meta.hot = createImportMetaHot(import.meta.url)
+`,
         )
         return magicSource.toContentAndSourcemap()
       },
     },
     referencesResolved: {
-      html: ({ references }) => {
+      html: ({ data, references }) => {
+        data.hotDecline = false
+        data.hotAcceptSelf = false
         // All url mention objects having "hotAccepted" property will be added
         // to "hotAcceptDependencies"
         // For html there is some "smart" default applied in "collectHtmlDependenciesFromAst"
@@ -321,28 +329,14 @@ export const jsenvPluginAutoreload = ({
         //   - hot reload on <script src="./file.js" hot-accept />
         const hotAcceptDependencies = []
         references.forEach((reference) => {
-          if (reference.hotAccepted === false) {
-            return
-          }
           if (reference.hotAccepted === true) {
             hotAcceptDependencies.push(reference.url)
             return
           }
-          if (htmlReferenceAcceptsHotByDefault(reference)) {
-            hotAcceptDependencies.push(reference.url)
-            return
-          }
         })
-        data.hotDecline = false
-        data.hotAcceptSelf = false
         data.hotAcceptDependencies = hotAcceptDependencies
       },
       css: ({ data }) => {
-        data.hotDecline = false
-        data.hotAcceptSelf = false
-        data.hotAcceptDependencies = []
-      },
-      js_module: ({ data }) => {
         data.hotDecline = false
         data.hotAcceptSelf = false
         data.hotAcceptDependencies = []
@@ -365,38 +359,4 @@ export const jsenvPluginAutoreload = ({
     },
   }
   return autoreloadPlugin
-}
-
-const htmlReferenceAcceptsHotByDefault = (reference) => {
-  if (reference.type === "link_href") {
-    const { isStylesheet, isRessourceHint } = parseLinkNode(node)
-    if (isStylesheet) {
-      // stylesheets can be hot replaced by default
-      return true
-    }
-    if (isRessourceHint) {
-      // for ressource hints html will be notified the underlying ressource has changed
-      // but we won't do anything (if the ressource is deleted we should?)
-      return true
-    }
-    return false
-  }
-  return [
-    // "script_src", // script src cannot hot reload
-    "a_href",
-    // Iframe will have their own event source client
-    // and can hot reload independently
-    // But if the iframe communicates with the parent iframe
-    // then we canot know for sure if the communication is broken
-    // ideally, if the iframe full-reload the page must full-reload too
-    // if the iframe hot-reload we don't know but we could assume there is nothing to do
-    // if there is [hot-accept] on the iframe
-    "iframe_src",
-    "img_src",
-    "img_srcset",
-    "source_src",
-    "source_srcset",
-    "image_href",
-    "use_href",
-  ].includes(reference.type)
 }
