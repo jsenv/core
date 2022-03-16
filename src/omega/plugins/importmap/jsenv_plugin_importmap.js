@@ -98,11 +98,12 @@ const jsenvPluginImportmapSupervisor = () => {
           const inlineImportmapId = getIdForInlineHtmlNode(htmlAst, importmap)
           const importmapReference = createReference({
             parentUrl: url,
-            parentContent: originalContent,
-            line,
-            column,
             type: "script_src",
             specifier: `${urlToFilename(url)}@${inlineImportmapId}.importmap`,
+            specifierTrace: {
+              type: "url_site",
+              value: { url, content: originalContent, line, column },
+            },
           })
           const importmapUrlInfo = resolveReference(importmapReference)
           importmapUrlInfo.data.isInline = true
@@ -136,11 +137,12 @@ const jsenvPluginImportmapSupervisor = () => {
           )
           const importmapReference = createReference({
             parentUrl: url,
-            parentContent: originalContent,
-            line,
-            column,
             type: "script_src",
             specifier: src,
+            specifierTrace: {
+              type: "url_site",
+              value: { url, content: originalContent, line, column },
+            },
           })
           const importmapUrlInfo = resolveReference(importmapReference)
           await cook({

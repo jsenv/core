@@ -55,21 +55,12 @@ export const createKitchen = ({
     return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
   }
 
-  const createReference = ({
-    parentUrl,
-    parentContent,
-    line,
-    column,
-    type,
-    specifier,
-  }) => {
+  const createReference = ({ parentUrl, type, specifier, specifierTrace }) => {
     return {
       parentUrl,
-      parentContent,
-      line,
-      column,
       type,
       specifier,
+      specifierTrace,
       data: {},
     }
   }
@@ -138,17 +129,9 @@ export const createKitchen = ({
     }
     const getParamsForUrlTracing = () => {
       const { url } = urlInfo
-      if (reference) {
+      if (reference && reference.specifierTrace) {
         return {
-          urlTrace: {
-            type: "url_site",
-            value: {
-              url: reference.parentUrl,
-              content: reference.parentContent,
-              line: reference.line,
-              column: reference.column,
-            },
-          },
+          urlTrace: reference.specifierTrace,
           url,
         }
       }
@@ -199,24 +182,18 @@ export const createKitchen = ({
       const sourcemapInfo = parseJavaScriptSourcemapComment(urlInfo.content)
       if (sourcemapInfo) {
         urlInfo.sourcemap = await loadSourcemap({
-          parentUrl: urlInfo.url,
-          parentContent: urlInfo.content,
-          line: sourcemapInfo.line,
-          column: sourcemapInfo.column,
           type: "js_sourcemap_comment",
-          specifier: sourcemapInfo.specifier,
+          urlInfo,
+          sourcemapInfo,
         })
       }
     } else if (urlInfo.contentType === "text/css") {
       const sourcemapInfo = parseCssSourcemapComment(urlInfo.content)
       if (sourcemapInfo) {
         urlInfo.sourcemap = await loadSourcemap({
-          parentUrl: urlInfo.url,
-          parentContent: urlInfo.content,
-          line: sourcemapInfo.line,
-          column: sourcemapInfo.column,
           type: "css_sourcemap_comment",
-          specifier: sourcemapInfo.specifier,
+          urlInfo,
+          sourcemapInfo,
         })
       }
     }
@@ -245,18 +222,16 @@ export const createKitchen = ({
       )
     } catch (error) {
       if (error.code === "PARSE_ERROR") {
-        const { url, content, line, column } = await getPosition({
+        const urlSite = await getUrlSite(
+          {
+            line: error.line,
+            column: error.column,
+          },
           urlInfo,
-          line: error.line,
-          column: error.column,
-        })
+        )
+
         error.message = `${error.reasonCode}
-${stringifyUrlSite({
-  url,
-  content,
-  line,
-  column,
-})}`
+${stringifyUrlSite(urlSite)}`
       }
       urlInfo.error = createTransformError({
         pluginController,
@@ -278,25 +253,27 @@ ${stringifyUrlSite({
       const dependencyUrls = []
       const references = []
       for (const urlMention of urlMentions) {
-        const urlMentionPosition = await getPosition({
+        if (urlMention.specifier.includes("not_found.js")) {
+          debugger
+        }
+        const referenceUrlSite = await getUrlSite(
+          {
+            line: urlMention.line,
+            column: urlMention.column,
+            originalLine: urlMention.originalLine,
+            originalColumn: urlMention.originalColumn,
+          },
           urlInfo,
-          originalLine: urlMention.originalLine,
-          originalColumn: urlMention.originalColumn,
-          line: urlMention.line,
-          column: urlMention.column,
-        })
-        // if (urlMention.specifier.includes("not_found.js")) {
-        //   debugger
-        // }
+        )
+        const specifierTrace = {
+          type: "url_site",
+          value: referenceUrlSite,
+        }
         const dependencyReference = createReference({
-          parentUrl: urlMentionPosition.isOriginal
-            ? urlMentionPosition.url
-            : urlInfo.url,
-          parentContent: urlMentionPosition.content,
-          line: urlMentionPosition.line,
-          column: urlMentionPosition.column,
+          parentUrl: urlInfo.url,
           type: urlMention.type,
           specifier: urlMention.specifier,
+          specifierTrace,
         })
         try {
           resolveReference(dependencyReference)
@@ -306,15 +283,7 @@ ${stringifyUrlSite({
         } catch (error) {
           urlInfo.error = createResolveError({
             pluginController,
-            specifierTrace: {
-              type: "url_site",
-              value: {
-                url: urlMentionPosition.url,
-                content: urlMentionPosition.content,
-                line: urlMentionPosition.line,
-                column: urlMentionPosition.column,
-              },
-            },
+            specifierTrace,
             specifier: urlMention.specifier,
             error,
           })
@@ -426,21 +395,20 @@ ${stringifyUrlSite({
     }
   }
 
-  const loadSourcemap = async ({
-    parentUrl,
-    parentContent,
-    line,
-    column,
-    type,
-    specifier,
-  }) => {
+  const loadSourcemap = async ({ type, urlInfo, sourcemapInfo }) => {
     const sourcemapReference = createReference({
-      parentUrl,
-      parentContent,
-      line,
-      column,
+      parentUrl: urlInfo.url,
       type,
-      specifier,
+      specifier: sourcemapInfo.specifier,
+      specifierTrace: {
+        type: "url_site",
+        value: {
+          url: urlInfo.url,
+          content: urlInfo.content,
+          line: sourcemapInfo.line,
+          column: sourcemapInfo.column,
+        },
+      },
     })
     const sourcemapUrlInfo = resolveReference(sourcemapReference)
     await cook({
@@ -509,60 +477,43 @@ const getRessourceType = ({ url, contentType }) => {
   return "other"
 }
 
-const getPosition = async ({
+const getUrlSite = async (
+  { line, column, originalLine, originalColumn },
   urlInfo,
-  originalLine,
-  originalColumn,
-  line,
-  column,
-}) => {
-  const adjustIfInline = ({ url, content, line, column }) => {
-    const parentReference = urlInfo.data.parentReference
-    if (parentReference) {
-      return {
-        url: parentReference.url,
-        content: parentReference.content,
-        // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
-        line: parentReference.line + line - 1,
-        column: parentReference.column + column,
-      }
-    }
-    return {
-      url,
-      content,
-      line,
-      column,
-    }
-  }
+) => {
   if (typeof originalLine === "number") {
-    return adjustIfInline({
-      isOriginal: true,
-      url: urlInfo.url,
-      content: urlInfo.originalContent,
-      line: originalLine,
-      column: originalColumn,
-    })
+    return adjustUrlSite(
+      {
+        url: urlInfo.url,
+        line: originalLine,
+        column: originalColumn,
+      },
+      urlInfo,
+    )
   }
   if (urlInfo.content === urlInfo.originalContent) {
-    return adjustIfInline({
-      isOriginal: true,
-      url: urlInfo.url,
-      content: urlInfo.originalContent,
-      line,
-      column,
-    })
+    return adjustUrlSite(
+      {
+        url: urlInfo.url,
+        line,
+        column,
+      },
+      urlInfo,
+    )
   }
   // at this point things were transformed: line and column are generated
   // no sourcemap -> cannot map back to original file
   const { sourcemap } = urlInfo
   if (!sourcemap) {
-    return {
-      isOriginal: false,
-      url: urlInfo.generatedUrl,
-      content: urlInfo.content,
-      line,
-      column,
-    }
+    return adjustUrlSite(
+      {
+        url: urlInfo.generatedUrl,
+        content: urlInfo.content,
+        line,
+        column,
+      },
+      urlInfo,
+    )
   }
   const originalPosition = await getOriginalPosition({
     sourcemap,
@@ -571,21 +522,49 @@ const getPosition = async ({
   })
   // cannot map back to original file
   if (!originalPosition || originalPosition.line === null) {
-    return {
-      isOriginal: false,
-      url: urlInfo.generatedUrl,
-      content: urlInfo.content,
-      line,
-      column,
-    }
+    return adjustUrlSite(
+      {
+        url: urlInfo.generatedUrl,
+        line,
+        column,
+      },
+      urlInfo,
+    )
   }
-  return adjustIfInline({
+  return adjustUrlSite(
+    {
+      url: urlInfo.url,
+      line: originalPosition.line,
+      column: originalPosition.column,
+    },
+    urlInfo,
+  )
+}
+
+const adjustUrlSite = ({ url, line, column }, urlInfo) => {
+  const isOriginal = url === urlInfo.url
+  const urlSite = {
+    isOriginal,
+    url,
+    content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+    line,
+    column,
+  }
+  if (!isOriginal) {
+    return urlSite
+  }
+  const parentReference = urlInfo.data.parentReference
+  if (!parentReference) {
+    return urlSite
+  }
+  return {
     isOriginal: true,
-    url: urlInfo.url,
-    content: urlInfo.originalContent,
-    line: originalPosition.line,
-    column: originalPosition.column,
-  })
+    url: parentReference.url,
+    content: parentReference.content,
+    // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
+    line: parentReference.line + line - 1,
+    column: parentReference.column + column,
+  }
 }
 
 // this is just for debug (ability to see what is generated)

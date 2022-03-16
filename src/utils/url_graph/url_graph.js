@@ -19,19 +19,7 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     const firstReferenceOnThatUrl = parentUrlInfo.references.find(
       (reference) => reference.url === url,
     )
-    if (!firstReferenceOnThatUrl) {
-      return null
-    }
-    return {
-      parentUrl: firstReferenceOnThatUrl.parentUrl,
-      parentContent:
-        firstReferenceOnThatUrl.url === parentUrlInfo.url
-          ? parentUrlInfo.originalContent
-          : parentUrlInfo.content,
-      type: firstReferenceOnThatUrl.type,
-      line: firstReferenceOnThatUrl.line,
-      column: firstReferenceOnThatUrl.column,
-    }
+    return firstReferenceOnThatUrl
   }
   const findDependent = (url, predicate) => {
     const urlInfo = urlInfos[url]

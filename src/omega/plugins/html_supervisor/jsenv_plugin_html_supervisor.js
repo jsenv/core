@@ -104,6 +104,10 @@ export const jsenvPluginHtmlSupervisor = () => {
           specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
             js_classic: "",
           }),
+          specifierTrace: {
+            type: "plugin_injection",
+            value: "injected by jsenv:html_supervisor",
+          },
         })
         resolveReference(htmlSupervisorSetupReference)
         injectScriptAsEarlyAsPossible(
@@ -117,6 +121,10 @@ export const jsenvPluginHtmlSupervisor = () => {
           parentUrl: rootDirectoryUrl,
           type: "js_import_export",
           specifier: htmlSupervisorFileUrl,
+          specifierTrace: {
+            type: "plugin_injection",
+            value: "injected by jsenv:html_supervisor",
+          },
         })
         resolveReference(htmlSupervisorReference)
         const htmlSupervisorSpecifier = specifierFromReference(

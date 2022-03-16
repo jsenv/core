@@ -80,17 +80,18 @@ export const jsenvPluginInlineRessources = () => {
           })
           const inlineReference = createReference({
             parentUrl: url,
-            parentContent: originalContent,
-            line,
-            column,
             type,
             specifier,
+            specifierTrace: {
+              type: "url_site",
+              value: { url, content: originalContent, line, column },
+            },
           })
           const inlineUrlInfo = resolveReference(inlineReference)
           inlineUrlInfo.data.isInline = true
-          inlineUrlInfo.data.parentReference = {
-            parentUrl: url,
-            parentContent: originalContent, // original because it's the origin line and column
+          inlineUrlInfo.data.htmlUrlSite = {
+            url,
+            content: originalContent, // original because it's the origin line and column
             line,
             column,
           }
