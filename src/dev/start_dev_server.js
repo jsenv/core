@@ -58,6 +58,7 @@ export const startDevServer = async ({
     sourcemapInjection,
   })
   const server = await startOmegaServer({
+    logger,
     keepProcessAlive: true,
     port,
     protocol,
@@ -66,6 +67,7 @@ export const startDevServer = async ({
     privateKey,
     projectDirectoryUrl,
     pluginController,
+    urlGraph,
     kitchen,
     scenario: "dev",
   })

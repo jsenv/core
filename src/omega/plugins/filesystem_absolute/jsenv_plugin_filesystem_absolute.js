@@ -5,7 +5,7 @@ import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
 export const jsenvPluginFileSystemAbsolute = () => {
   return {
     name: "jsenv:filesystem_absolute",
-    appiesDuring: {
+    appliesDuring: {
       // during dev and test it's a browser running the code
       // so absolute file urls needs to be relativized
       dev: true,

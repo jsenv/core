@@ -240,6 +240,7 @@ export const jsenvPluginAutoreload = ({
       return null
     },
     normalize: ({ url, data }) => {
+      const urlObject = new URL(url)
       if (!urlObject.searchParams.has("hmr")) {
         data.hmr = false
         return null
@@ -249,7 +250,6 @@ export const jsenvPluginAutoreload = ({
       // this goal is achieved when we reach this part of the code
       // We get rid of this params so that urlGraph and other parts of the code
       // recognize the url (it is not considered as a different url)
-      const urlObject = new URL(url)
       urlObject.searchParams.delete("hmr")
       urlObject.searchParams.delete("v")
       return urlObject.href

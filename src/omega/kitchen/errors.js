@@ -60,7 +60,7 @@ export const createLoadError = ({ pluginController, urlTrace, url, error }) => {
       reason: `no plugin has handled the url during "load" hook`,
     })
   }
-  if (error.path === fileURLToPath(url)) {
+  if (url && error.path === fileURLToPath(url)) {
     if (error.code === "EPERM") {
       return createFailedToLoadError({
         code: "NOT_ALLOWED",

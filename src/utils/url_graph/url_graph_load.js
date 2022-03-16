@@ -5,47 +5,41 @@ export const loadUrlGraph = async ({
   runtimeSupport,
   startLoading,
 }) => {
-  const urlPromiseCache = {}
-
-  const cookUrl = ({ url, ...rest }) => {
-    const promiseFromCache = urlPromiseCache[url]
-    if (promiseFromCache) return promiseFromCache
-    const promise = _cookUrl({
+  const cook = ({ urlInfo, ...rest }) => {
+    const promiseFromData = urlInfo.data.promise
+    if (promiseFromData) return promiseFromData
+    const promise = _cook({
+      urlInfo,
       outDirectoryName,
       runtimeSupport,
-      url,
       ...rest,
     })
-    urlPromiseCache[url] = promise
+    urlInfo.data.promise = promise
     return promise
   }
 
-  const _cookUrl = async (params) => {
-    const cookedUrl = await kitchen.cookUrl(params)
-    if (cookedUrl.error) {
-      throw cookedUrl.error
+  const _cook = async ({ urlInfo, ...rest }) => {
+    await kitchen.cook({
+      urlInfo,
+      ...rest,
+    })
+    if (urlInfo.error) {
+      throw urlInfo.error
     }
-    const urlInfo = urlGraph.getUrlInfo(cookedUrl.url)
-    const { url, dependencies, dependencyUrlSites } = urlInfo
-    const dependencyUrls = Array.from(dependencies.values())
+    const { references } = urlInfo
     await Promise.all(
-      dependencyUrls.map(async (dependencyUrl) => {
-        await cookUrl({
-          parentUrl: url,
-          urlTrace: {
-            type: "url_site",
-            value: dependencyUrlSites[dependencyUrl],
-          },
-          url: dependencyUrl,
+      references.map(async (reference) => {
+        await cook({
+          reference,
+          urlInfo: urlGraph.getUrlInfo(reference.url),
         })
       }),
     )
-    return cookedUrl
   }
 
   const promises = []
   startLoading((params) => {
-    promises.push(cookUrl(params))
+    promises.push(cook(params))
   })
   await Promise.all(promises)
 }

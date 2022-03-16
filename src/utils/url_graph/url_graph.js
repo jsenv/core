@@ -16,19 +16,21 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     if (!parentUrlInfo) {
       return null
     }
-    const reference = parentUrlInfo.references[url]
-    if (!reference) {
+    const firstReferenceOnThatUrl = parentUrlInfo.references.find(
+      (reference) => reference.url === url,
+    )
+    if (!firstReferenceOnThatUrl) {
       return null
     }
     return {
-      url: reference.url,
-      type: reference.type,
+      url: firstReferenceOnThatUrl.url,
+      type: firstReferenceOnThatUrl.type,
       content:
-        reference.url === parentUrlInfo.url
+        firstReferenceOnThatUrl.url === parentUrlInfo.url
           ? parentUrlInfo.originalContent
           : parentUrlInfo.content,
-      line: reference.line,
-      column: reference.column,
+      line: firstReferenceOnThatUrl.line,
+      column: firstReferenceOnThatUrl.column,
     }
   }
   const findDependent = (url, predicate) => {
@@ -125,7 +127,7 @@ const createUrlInfo = (url) => {
     content: "",
     sourcemap: null,
     type: "",
-    references: {},
+    references: [],
     dependencies: new Set(),
     dependents: new Set(),
   }

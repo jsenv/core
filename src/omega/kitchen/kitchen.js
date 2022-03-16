@@ -269,7 +269,7 @@ ${stringifyUrlSite({
     if (parseResult) {
       const { urlMentions, replaceUrls } = parseResult
       const dependencyUrls = []
-      const references = {}
+      const references = []
       for (const urlMention of urlMentions) {
         const urlMentionPosition = await getPosition({
           urlInfo,
@@ -310,14 +310,14 @@ ${stringifyUrlSite({
           return
         }
         dependencyUrls.push(dependencyReference.url)
-        references[dependencyReference.url] = dependencyReference
+        references.push(dependencyReference)
       }
       urlGraph.updateDependencies(urlInfo, {
         dependencyUrls,
         references,
       })
       const replacements = {}
-      for (const reference of references) {
+      references.forEach((reference) => {
         const specifier = specifierFromReference(reference)
         const specifierFormatted =
           reference.type === "js_import_meta_url_pattern" ||
@@ -325,13 +325,13 @@ ${stringifyUrlSite({
             ? JSON.stringify(specifier)
             : specifier
         replacements[reference.url] = specifierFormatted
-      }
+      })
       const transformReturnValue = await replaceUrls(replacements)
       updateContents(transformReturnValue)
     } else {
       urlGraph.updateDependencies(urlInfo, {
         dependencyUrls: [],
-        references: {},
+        references: [],
       })
     }
     await pluginController.callAsyncHooks(
@@ -350,7 +350,7 @@ ${stringifyUrlSite({
         url: sourcemapUrl,
       })
       urlInfo.sourcemapGeneratedUrl = sourcemapGeneratedUrl
-      urlInfo.content = injectSourcemap(context)
+      urlInfo.content = injectSourcemap(urlInfo)
     }
 
     // "finalize" hook

@@ -16,6 +16,12 @@ export const createFileService = ({
   kitchen,
   scenario,
 }) => {
+  const serveContext = {
+    rootDirectoryUrl: projectDirectoryUrl,
+    urlGraph,
+    scenario,
+  }
+
   const getResponse = async (request) => {
     // serve file inside ".jsenv" directory
     const requestFileUrl = new URL(
@@ -27,7 +33,11 @@ export const createFileService = ({
         headers: request.headers,
       })
     }
-    const responseFromPlugin = pluginController.callHooksUntil("serve", request)
+    const responseFromPlugin = pluginController.callHooksUntil(
+      "serve",
+      request,
+      serveContext,
+    )
     if (responseFromPlugin) {
       return responseFromPlugin
     }
