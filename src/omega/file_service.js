@@ -132,9 +132,14 @@ export const createFileService = ({
   return async (request) => {
     let response = await getResponse(request)
     if (response.url) {
-      pluginController.callPluginHook("augmentResponse", (returnValue) => {
-        response = composeTwoResponses(response, returnValue)
-      })
+      pluginController.callHooks(
+        "augmentResponse",
+        response,
+        {},
+        (returnValue) => {
+          response = composeTwoResponses(response, returnValue)
+        },
+      )
     }
     return response
   }

@@ -1,4 +1,3 @@
-import { fileURLToPath } from "node:url"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
@@ -50,7 +49,7 @@ export const createLoadError = ({ pluginController, urlTrace, url, error }) => {
     loadError.name = "LOAD_ERROR"
     loadError.code = code
     loadError.reason = reason
-    loadError.cause = error
+    loadError.originalError = error
     return loadError
   }
 
@@ -60,25 +59,23 @@ export const createLoadError = ({ pluginController, urlTrace, url, error }) => {
       reason: `no plugin has handled the url during "load" hook`,
     })
   }
-  if (url && error.path === fileURLToPath(url)) {
-    if (error.code === "EPERM") {
-      return createFailedToLoadError({
-        code: "NOT_ALLOWED",
-        reason: `not allowed to read entry on filesystem`,
-      })
-    }
-    if (error.code === "EISDIR") {
-      return createFailedToLoadError({
-        code: "NOT_ALLOWED",
-        reason: `found a directory on filesystem`,
-      })
-    }
-    if (error.code === "ENOENT") {
-      return createFailedToLoadError({
-        code: "NOT_FOUND",
-        reason: "no entry on filesystem",
-      })
-    }
+  if (error.code === "EPERM") {
+    return createFailedToLoadError({
+      code: "NOT_ALLOWED",
+      reason: `not allowed to read entry on filesystem`,
+    })
+  }
+  if (error.code === "EISDIR") {
+    return createFailedToLoadError({
+      code: "NOT_ALLOWED",
+      reason: `found a directory on filesystem`,
+    })
+  }
+  if (error.code === "ENOENT") {
+    return createFailedToLoadError({
+      code: "NOT_FOUND",
+      reason: "no entry on filesystem",
+    })
   }
   return createFailedToLoadError({
     reason: `An error occured during "load"`,
@@ -94,7 +91,7 @@ export const createTransformError = ({
   error,
 }) => {
   const createFailedToTransformError = ({ code, reason, ...details }) => {
-    const loadError = new Error(
+    const transformError = new Error(
       createDetailedMessage(`Failed to transform ${type}`, {
         reason,
         ...details,
@@ -103,11 +100,11 @@ export const createTransformError = ({
         ...detailsFromPluginController(pluginController),
       }),
     )
-    loadError.name = "TRANSFORM_ERROR"
-    loadError.code = code
-    loadError.reason = reason
-    loadError.cause = error
-    return loadError
+    transformError.name = "TRANSFORM_ERROR"
+    transformError.code = code
+    transformError.reason = reason
+    transformError.originalError = error
+    return transformError
   }
   return createFailedToTransformError({
     reason: `An error occured during "transform"`,

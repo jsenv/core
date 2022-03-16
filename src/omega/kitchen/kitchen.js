@@ -129,7 +129,7 @@ export const createKitchen = ({
       },
     }
 
-    const getParamsForUrlTracing = async () => {
+    const getParamsForUrlTracing = () => {
       const { url } = urlInfo
       if (reference) {
         return {
@@ -380,9 +380,9 @@ ${stringifyUrlSite({
       },
     )
   }
-  const cook = async (params) => {
+  const cook = async ({ urlInfo, ...rest }) => {
     try {
-      const urlInfo = await _cook(params)
+      await _cook({ urlInfo, ...rest })
       const { generatedUrl } = urlInfo
       // writing result inside ".jsenv" directory (debug purposes)
       if (generatedUrl && generatedUrl.startsWith("file:")) {
