@@ -1,14 +1,17 @@
 import { createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/filesystem"
-import { createCallbackList } from "@jsenv/abort"
+import {
+  createCallbackList,
+  createCallbackListNotifiedOnce,
+} from "@jsenv/abort"
 
 export const createSSEService = ({
-  stopCallbackList,
   rootDirectoryUrl,
   autoreloadPatterns,
   onFileChange,
   hotUpdateCallbackList,
 }) => {
+  const destroyCallbackList = createCallbackListNotifiedOnce()
   const projectFileModified = createCallbackList()
   const projectFileRemoved = createCallbackList()
   const projectFileAdded = createCallbackList()
@@ -61,10 +64,9 @@ export const createSSEService = ({
         recursive: true,
       },
     )
-
-    stopCallbackList.add(unregisterDirectoryLifecyle)
+    destroyCallbackList.add(unregisterDirectoryLifecyle)
   }, 100)
-  stopCallbackList.add(() => {
+  destroyCallbackList.add(() => {
     clearTimeout(timeout)
   })
 
@@ -119,7 +121,7 @@ export const createSSEService = ({
       },
     })
 
-    const removeSSECleanupCallback = stopCallbackList.add(() => {
+    const removeSSECleanupCallback = destroyCallbackList.add(() => {
       removeSSECleanupCallback()
       sseRoom.close()
     })
@@ -138,5 +140,10 @@ export const createSSEService = ({
     return sseRoom
   }
 
-  return getOrCreateSSERoom
+  return {
+    getOrCreateSSERoom,
+    destroy: () => {
+      destroyCallbackList.notify()
+    },
+  }
 }

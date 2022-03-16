@@ -17,12 +17,11 @@ import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import
 import { data } from "@jsenv/core/old_test/assets/json/importing_json/json_with_dynamic_import_assertion/main.js"
 
 export const jsenvPluginAutoreload = ({
-  stopCallbackList,
   rootDirectoryUrl,
   urlGraph,
   autoreloadPatterns,
 }) => {
-  const eventSourceFileUrl = new URL(
+  const eventSourceClientFileUrl = new URL(
     "./client/event_source_client.js",
     import.meta.url,
   ).href
@@ -144,9 +143,8 @@ export const jsenvPluginAutoreload = ({
     const trace = []
     return iterate(firstUrlInfo, trace)
   }
-  const getOrCreateSSERoom = createSSEService({
+  const sseService = createSSEService({
     rootDirectoryUrl,
-    stopCallbackList,
     autoreloadPatterns,
     onFileChange: ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
@@ -238,7 +236,7 @@ export const jsenvPluginAutoreload = ({
       }
       const { accept } = request.headers
       if (accept && accept.includes("text/event-stream")) {
-        const room = getOrCreateSSERoom(request)
+        const room = sseService.getOrCreateSSERoom(request)
         return room.join(request)
       }
       return null
@@ -259,19 +257,23 @@ export const jsenvPluginAutoreload = ({
       return urlObject.href
     },
     transform: {
-      html: async ({ content }, { rootDirectoryUrl, resolveSpecifier }) => {
+      html: async (
+        { content },
+        { rootDirectoryUrl, createReference, resolveReference },
+      ) => {
         const htmlAst = parseHtmlString(content)
-        const eventSourceResolvedUrl = resolveSpecifier({
+        const eventSourceClientReference = createReference({
           parentUrl: rootDirectoryUrl,
           type: "js_import_export",
-          specifier: eventSourceFileUrl,
+          specifier: eventSourceClientFileUrl,
         })
+        resolveReference(eventSourceClientReference)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: eventSourceResolvedUrl,
+            src: eventSourceClientReference.url,
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)
@@ -357,6 +359,9 @@ export const jsenvPluginAutoreload = ({
         hmr: "",
         v: data.hmrTimestamp,
       })
+    },
+    destroy: () => {
+      sseService.destroy()
     },
   }
   return autoreloadPlugin

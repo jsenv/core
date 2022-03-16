@@ -1,5 +1,4 @@
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
-import { createCallbackList } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
@@ -37,13 +36,11 @@ export const startDevServer = async ({
   const urlGraph = createUrlGraph({
     rootDirectoryUrl: projectDirectoryUrl,
   })
-  const stopCallbackList = createCallbackList()
   const pluginController = createPluginController({
     plugins: [
       ...plugins,
       ...getJsenvPlugins(),
       jsenvPluginAutoreload({
-        stopCallbackList,
         rootDirectoryUrl: projectDirectoryUrl,
         urlGraph,
         autoreloadPatterns,
@@ -74,7 +71,7 @@ export const startDevServer = async ({
   })
   server.addEffect(() => {
     return () => {
-      stopCallbackList.notify()
+      pluginController.callHooks("destroy")
     }
   })
   return server

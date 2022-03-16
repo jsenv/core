@@ -81,10 +81,6 @@ export const createPluginController = ({ plugins, scenario }) => {
     })
   }
 
-  callHooks("init", {
-    // which params?
-  })
-
   return {
     callHooks,
     callHooksUntil,
@@ -103,10 +99,7 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
       pluginEntry.forEach((value) => visitPluginEntry(value))
       return
     }
-    if (typeof pluginEntry === "function") {
-      throw new Error(`plugin must be objects, got a function`)
-    }
-    if (typeof pluginEntry === "object") {
+    if (typeof pluginEntry === "object" && pluginEntry !== null) {
       const { appliesDuring } = pluginEntry
       if (appliesDuring === undefined) {
         console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
@@ -119,7 +112,11 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
         plugins.push(pluginEntry)
         return
       }
+      if (pluginEntry.destroy) {
+        pluginEntry.destroy()
+      }
     }
+    throw new Error(`plugin must be objects, got ${pluginEntry}`)
   }
   pluginsRaw.forEach((plugin) => visitPluginEntry(plugin))
   return plugins
@@ -128,8 +125,8 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
 const getPluginHook = (
   plugin,
   hookName,
-  // can be specifierInfo or urlInfo
-  info,
+  // can be undefined, reference, or urlInfo
+  info = {},
 ) => {
   const hook = plugin[hookName]
   if (!hook) {
