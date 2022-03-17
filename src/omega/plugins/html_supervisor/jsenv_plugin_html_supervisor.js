@@ -8,10 +8,7 @@
  *   I think so when we inject ?js_classic
  */
 
-import {
-  injectQueryParams,
-  injectQueryParamsIntoSpecifier,
-} from "@jsenv/core/src/utils/url_utils.js"
+import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -42,15 +39,7 @@ export const jsenvPluginHtmlSupervisor = () => {
       test: true,
     },
     transform: {
-      html: (
-        { url, content },
-        {
-          rootDirectoryUrl,
-          createReference,
-          resolveReference,
-          specifierFromReference,
-        },
-      ) => {
+      html: ({ content }, { addReference }) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
         visitHtmlAst(htmlAst, (node) => {
@@ -98,44 +87,29 @@ export const jsenvPluginHtmlSupervisor = () => {
         if (scriptsToSupervise.length === 0) {
           return null
         }
-        const htmlSupervisorSetupReference = createReference({
-          parentUrl: rootDirectoryUrl,
+        const htmlSupervisorSetupFileReference = addReference({
           type: "js_import_export",
           specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
             js_classic: "",
           }),
-          specifierTrace: {
-            type: "plugin_injection",
-            value: "injected by jsenv:html_supervisor",
-          },
         })
-        resolveReference(htmlSupervisorSetupReference)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
-            src: htmlSupervisorSetupReference.url,
+            src: htmlSupervisorSetupFileReference.generatedSpecifier,
           }),
         )
-        const htmlSupervisorReference = createReference({
-          parentUrl: rootDirectoryUrl,
+        const htmlSupervisorFileReference = addReference({
           type: "js_import_export",
           specifier: htmlSupervisorFileUrl,
-          specifierTrace: {
-            type: "plugin_injection",
-            value: "injected by jsenv:html_supervisor",
-          },
         })
-        resolveReference(htmlSupervisorReference)
-        const htmlSupervisorSpecifier = specifierFromReference(
-          htmlSupervisorReference,
-        )
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: htmlSupervisorSpecifier,
+            src: htmlSupervisorFileReference.generatedSpecifier,
           }),
         )
         scriptsToSupervise.forEach(
@@ -144,23 +118,15 @@ export const jsenvPluginHtmlSupervisor = () => {
             assignHtmlNodeAttributes(node, {
               "content-src": src,
             })
-            const scriptReference = createReference({
-              parentUrl: url,
-              type: "script_src",
-              specifier:
-                type === "classic"
-                  ? injectQueryParamsIntoSpecifier(src, { js_classic: "" })
-                  : src,
-            })
-            resolveReference(scriptReference)
             setHtmlNodeText(
               node,
               generateCodeToSuperviseScript({
                 type,
-                src: specifierFromReference(scriptReference),
+                src,
                 integrity,
                 crossorigin,
-                htmlSupervisorSpecifier,
+                htmlSupervisorSpecifier:
+                  htmlSupervisorFileReference.generatedSpecifier,
               }),
             )
           },

@@ -15,6 +15,8 @@ import {
   htmlNodePosition,
   parseScriptNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
+import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
+import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
 
 export const jsenvPluginInlineRessources = () => {
   /**
@@ -68,28 +70,30 @@ export const jsenvPluginInlineRessources = () => {
       }
     },
     transform: {
-      html: (
-        { url, originalContent, content },
-        { createReference, resolveReference },
-      ) => {
+      html: ({ url, originalContent, content }, { addReference, urlGraph }) => {
         const htmlAst = parseHtmlString(content)
         const inlineRessources = []
         const createAndResolveInlineReference = ({ node, type, specifier }) => {
           const { line, column } = htmlNodePosition.readNodePosition(node, {
             preferOriginal: true,
           })
-          const inlineReference = createReference({
-            parentUrl: url,
+          const inlineReference = addReference({
+            trace: stringifyUrlSite({
+              url,
+              content: originalContent,
+              line,
+              column,
+            }),
             type,
             specifier,
-            specifierTrace: {
-              type: "url_site",
-              value: { url, content: originalContent, line, column },
-            },
           })
-          const inlineUrlInfo = resolveReference(inlineReference)
+          const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
+          // later we'll infer the reference from url graph
+          // or we'll want to get the proper trace
+          // when transforming this url
+          // check if this works and how to make it work
           inlineUrlInfo.data.isInline = true
-          inlineUrlInfo.data.htmlUrlSite = {
+          inlineUrlInfo.data.inlineUrlSite = {
             url,
             content: originalContent, // original because it's the origin line and column
             line,
@@ -147,7 +151,9 @@ export const jsenvPluginInlineRessources = () => {
             type: "script_src",
             specifier:
               scriptCategory === "classic"
-                ? `${inlineScriptSpecifier}?js_classic`
+                ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
+                    js_classic: "",
+                  })
                 : inlineScriptSpecifier,
           })
           inlineRessources.push({
@@ -159,7 +165,7 @@ export const jsenvPluginInlineRessources = () => {
             content: textNode.value,
           })
           assignHtmlNodeAttributes(node, {
-            "src": inlineScriptReference.specifier,
+            "src": inlineScriptReference.generatedSpecifier,
             "data-externalized": "",
           })
           removeHtmlNodeText(node)

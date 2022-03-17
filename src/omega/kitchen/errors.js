@@ -1,20 +1,13 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
-
-export const createResolveError = ({
-  pluginController,
-  specifierTrace,
-  specifier,
-  error,
-}) => {
+export const createResolveError = ({ pluginController, reference, error }) => {
   const createFailedToResolveError = ({ code, reason, ...details }) => {
     const loadError = new Error(
       createDetailedMessage(`Failed to resolve specifier`, {
         reason,
         ...details,
-        specifier: `"${specifier}"`,
-        ...detailsFromUrlTrace(specifierTrace),
+        "specifier": `"${reference.specifier}"`,
+        "specifier trace": reference.trace,
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -35,14 +28,19 @@ export const createResolveError = ({
   })
 }
 
-export const createLoadError = ({ pluginController, urlTrace, url, error }) => {
+export const createLoadError = ({
+  pluginController,
+  reference,
+  urlInfo,
+  error,
+}) => {
   const createFailedToLoadError = ({ code, reason, ...details }) => {
     const loadError = new Error(
       createDetailedMessage(`Failed to load url`, {
         reason,
         ...details,
-        url,
-        ...detailsFromUrlTrace(urlTrace),
+        "url": urlInfo.url,
+        "url reference trace": reference.trace,
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -85,18 +83,17 @@ export const createLoadError = ({ pluginController, urlTrace, url, error }) => {
 
 export const createTransformError = ({
   pluginController,
-  urlTrace,
-  url,
-  type,
+  reference,
+  urlInfo,
   error,
 }) => {
   const createFailedToTransformError = ({ code, reason, ...details }) => {
     const transformError = new Error(
-      createDetailedMessage(`Failed to transform ${type}`, {
+      createDetailedMessage(`Failed to transform ${urlInfo.type}`, {
         reason,
         ...details,
-        url,
-        ...detailsFromUrlTrace(urlTrace),
+        "url": urlInfo.url,
+        "url reference trace": reference.trace,
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -110,20 +107,6 @@ export const createTransformError = ({
     reason: `An error occured during "transform"`,
     ...detailsFromValueThrown(error),
   })
-}
-
-const detailsFromUrlTrace = (urlTrace) => {
-  if (!urlTrace) {
-    return null
-  }
-  if (urlTrace.type === "url_site") {
-    const urlSite = urlTrace.value
-    if (urlSite.line && urlSite.content) {
-      return { "referenced at": stringifyUrlSite(urlSite) }
-    }
-    return { "referenced in": stringifyUrlSite(urlSite) }
-  }
-  return { "referenced by": urlTrace.value }
 }
 
 const detailsFromPluginController = (pluginController) => {

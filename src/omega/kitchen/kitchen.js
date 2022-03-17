@@ -1,9 +1,10 @@
-/*
- * TODO:
- */
-
 import { fileURLToPath } from "node:url"
-import { urlIsInsideOf, writeFile } from "@jsenv/filesystem"
+import {
+  urlIsInsideOf,
+  writeFile,
+  isFileSystemPath,
+  fileSystemPathToUrl,
+} from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 import { filesystemRootUrl, moveUrl } from "@jsenv/core/src/utils/url_utils.js"
@@ -55,12 +56,12 @@ export const createKitchen = ({
     return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
   }
 
-  const createReference = ({ parentUrl, type, specifier, specifierTrace }) => {
+  const createReference = ({ trace, parentUrl, type, specifier }) => {
     return {
+      trace,
       parentUrl,
       type,
       specifier,
-      specifierTrace,
       data: {},
     }
   }
@@ -86,26 +87,6 @@ export const createKitchen = ({
     Object.assign(urlInfo.data, reference.data)
     return urlInfo
   }
-  const specifierFromReference = (reference) => {
-    // create a copy because .url will be mutated
-    const referencedCopy = {
-      ...reference,
-    }
-    pluginController.callHooks(
-      "transformReferencedUrl",
-      reference,
-      baseContext,
-      (returnValue) => {
-        referencedCopy.url = returnValue
-      },
-    )
-    const returnValue = pluginController.callHooksUntil(
-      "formatReferencedUrl",
-      referencedCopy,
-      baseContext,
-    )
-    return returnValue || referencedCopy.url
-  }
 
   const _cook = async ({
     reference,
@@ -126,19 +107,6 @@ export const createKitchen = ({
           ...params,
         })
       },
-    }
-    const getParamsForUrlTracing = () => {
-      const { url } = urlInfo
-      if (reference && reference.specifierTrace) {
-        return {
-          urlTrace: reference.specifierTrace,
-          url,
-        }
-      }
-      return {
-        urlTrace: null,
-        url,
-      }
     }
 
     // "load" hook
@@ -166,7 +134,8 @@ export const createKitchen = ({
     } catch (error) {
       urlInfo.error = createLoadError({
         pluginController,
-        ...getParamsForUrlTracing(),
+        urlInfo,
+        reference,
         error,
       })
       return
@@ -198,7 +167,112 @@ export const createKitchen = ({
       }
     }
 
+    // parsing
+    const references = []
+    const addReference = ({ trace, type, specifier }) => {
+      if (trace === undefined) {
+        const { prepareStackTrace } = Error
+        Error.prepareStackTrace = (error, stack) => {
+          Error.prepareStackTrace = prepareStackTrace
+          return stack
+        }
+        const { stack } = new Error()
+        const callerCallsite = stack[2]
+        debugger
+        const fileName = callerCallsite.getFileName()
+        trace = stringifyUrlSite({
+          url:
+            fileName && isFileSystemPath(fileName)
+              ? fileSystemPathToUrl(fileName)
+              : fileName,
+          line: callerCallsite.getLineNumber(),
+          column: callerCallsite.getColumnNumber(),
+        })
+      }
+
+      const reference = createReference({
+        trace,
+        parentUrl: urlInfo.url,
+        type,
+        specifier,
+      })
+      references.push(reference)
+      try {
+        resolveReference(reference)
+        if (!reference.url) {
+          throw new Error(`NO_RESOLVE`)
+        }
+      } catch (error) {
+        throw createResolveError({
+          pluginController,
+          reference,
+          error,
+        })
+      }
+
+      // create a copy because .url will be mutated
+      const referencedCopy = {
+        ...reference,
+      }
+      pluginController.callHooks(
+        "transformReferencedUrl",
+        reference,
+        baseContext,
+        (returnValue) => {
+          referencedCopy.url = returnValue
+        },
+      )
+      const returnValue = pluginController.callHooksUntil(
+        "formatReferencedUrl",
+        referencedCopy,
+        baseContext,
+      )
+      const generatedSpecifier = returnValue || referencedCopy.url
+      reference.generatedUrl = referencedCopy.url
+      reference.generatedSpecifier = generatedSpecifier
+      return reference
+    }
+    // TODO: try/catch on "parseUrlMentions" to trigge parse error
+    const parseResult = await parseUrlMentions({
+      type: urlInfo.type,
+      url: urlInfo.url,
+      content: urlInfo.content,
+    })
+    if (parseResult) {
+      const { urlMentions, replaceUrls } = parseResult
+      for (const urlMention of urlMentions) {
+        if (urlMention.specifier.includes("not_found.js")) {
+          debugger
+        }
+        addReference({
+          trace: stringifyUrlSite({
+            url: urlInfo.url,
+            content: urlInfo.content,
+            line: urlMention.line,
+            column: urlMention.column,
+          }),
+          type: urlMention.type,
+          specifier: urlMention.specifier,
+        })
+      }
+      const replacements = []
+      references.forEach((reference, index) => {
+        const specifierFormatted =
+          reference.type === "js_import_meta_url_pattern" ||
+          reference.type === "js_import_export"
+            ? JSON.stringify(reference.generatedSpecifier)
+            : reference.generatedSpecifier
+        replacements.push({
+          url: reference.url,
+          urlMentionIndex: index,
+          value: specifierFormatted,
+        })
+      })
+      const transformReturnValue = await replaceUrls(replacements)
+      updateContents(transformReturnValue)
+    }
     // "transform" hook
+    context.addReference = addReference
     const updateContents = (data) => {
       if (data) {
         const { contentType, content, sourcemap } = data
@@ -222,107 +296,24 @@ export const createKitchen = ({
       )
     } catch (error) {
       if (error.code === "PARSE_ERROR") {
-        const urlSite = await getUrlSite(
-          {
-            line: error.line,
-            column: error.column,
-          },
-          urlInfo,
-        )
-
+        const urlSite = await getUrlSite(urlInfo, {
+          line: error.line,
+          column: error.column,
+        })
         error.message = `${error.reasonCode}
 ${stringifyUrlSite(urlSite)}`
       }
       urlInfo.error = createTransformError({
         pluginController,
-        ...getParamsForUrlTracing(),
-        type: urlInfo.type,
+        reference,
+        urlInfo,
         error,
       })
       return
     }
-
-    // parsing
-    const parseResult = await parseUrlMentions({
-      type: urlInfo.type,
-      url: urlInfo.url,
-      content: urlInfo.content,
-    })
-    if (parseResult) {
-      const { urlMentions, replaceUrls } = parseResult
-      const dependencyUrls = []
-      const references = []
-      for (const urlMention of urlMentions) {
-        if (urlMention.specifier.includes("not_found.js")) {
-          debugger
-        }
-        const referenceUrlSite = await getUrlSite(
-          {
-            line: urlMention.line,
-            column: urlMention.column,
-            originalLine: urlMention.originalLine,
-            originalColumn: urlMention.originalColumn,
-          },
-          urlInfo,
-        )
-        const specifierTrace = {
-          type: "url_site",
-          value: referenceUrlSite,
-        }
-        const dependencyReference = createReference({
-          parentUrl: urlInfo.url,
-          type: urlMention.type,
-          specifier: urlMention.specifier,
-          specifierTrace,
-        })
-        try {
-          resolveReference(dependencyReference)
-          if (!dependencyReference.url) {
-            throw new Error(`NO_RESOLVE`)
-          }
-        } catch (error) {
-          urlInfo.error = createResolveError({
-            pluginController,
-            specifierTrace,
-            specifier: urlMention.specifier,
-            error,
-          })
-          return
-        }
-        dependencyUrls.push(dependencyReference.url)
-        references.push(dependencyReference)
-      }
-      urlGraph.updateDependencies(urlInfo, {
-        dependencyUrls,
-        references,
-      })
-      const replacements = []
-      references.forEach((reference, index) => {
-        const specifier = specifierFromReference(reference)
-        const specifierFormatted =
-          reference.type === "js_import_meta_url_pattern" ||
-          reference.type === "js_import_export"
-            ? JSON.stringify(specifier)
-            : specifier
-        replacements.push({
-          url: reference.url,
-          urlMentionIndex: index,
-          value: specifierFormatted,
-        })
-      })
-      const transformReturnValue = await replaceUrls(replacements)
-      updateContents(transformReturnValue)
-    } else {
-      urlGraph.updateDependencies(urlInfo, {
-        dependencyUrls: [],
-        references: [],
-      })
-    }
-    await pluginController.callAsyncHooks(
-      "referencesResolved",
-      urlInfo,
-      context,
-    )
+    // after "transform" all references from originalContent
+    // and the one injected by plugin are known
+    urlGraph.updateReferences(urlInfo, references)
 
     // sourcemap injection
     const { sourcemap } = urlInfo
@@ -397,18 +388,15 @@ ${stringifyUrlSite(urlSite)}`
 
   const loadSourcemap = async ({ type, urlInfo, sourcemapInfo }) => {
     const sourcemapReference = createReference({
+      trace: stringifyUrlSite({
+        url: urlInfo.url,
+        content: urlInfo.content,
+        line: sourcemapInfo.line,
+        column: sourcemapInfo.column,
+      }),
       parentUrl: urlInfo.url,
       type,
       specifier: sourcemapInfo.specifier,
-      specifierTrace: {
-        type: "url_site",
-        value: {
-          url: urlInfo.url,
-          content: urlInfo.content,
-          line: sourcemapInfo.line,
-          column: sourcemapInfo.column,
-        },
-      },
     })
     const sourcemapUrlInfo = resolveReference(sourcemapReference)
     await cook({
@@ -428,9 +416,6 @@ ${stringifyUrlSite(urlSite)}`
     return sourcemap
   }
 
-  baseContext.createReference = createReference
-  baseContext.resolveReference = resolveReference
-  baseContext.specifierFromReference = specifierFromReference
   baseContext.cook = cook
 
   return {
@@ -478,8 +463,8 @@ const getRessourceType = ({ url, contentType }) => {
 }
 
 const getUrlSite = async (
-  { line, column, originalLine, originalColumn },
   urlInfo,
+  { line, column, originalLine, originalColumn },
 ) => {
   if (typeof originalLine === "number") {
     return adjustUrlSite(

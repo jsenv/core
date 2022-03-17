@@ -36,6 +36,7 @@ import {
   setHtmlNodeText,
   assignHtmlNodeAttributes,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
+import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 
 export const jsenvPluginImportmap = () => {
   const importmapSupervisor = jsenvPluginImportmapSupervisor()
@@ -71,7 +72,7 @@ const jsenvPluginImportmapSupervisor = () => {
     transform: {
       html: async (
         { url, originalContent, content },
-        { createReference, resolveReference, cook },
+        { urlGraph, addReference, cook },
       ) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
@@ -96,18 +97,19 @@ const jsenvPluginImportmapSupervisor = () => {
             },
           )
           const inlineImportmapId = getIdForInlineHtmlNode(htmlAst, importmap)
-          const importmapReference = createReference({
-            parentUrl: url,
+          const importmapReference = addReference({
+            trace: stringifyUrlSite({
+              url,
+              content: originalContent,
+              line,
+              column,
+            }),
             type: "script_src",
             specifier: `${urlToFilename(url)}@${inlineImportmapId}.importmap`,
-            specifierTrace: {
-              type: "url_site",
-              value: { url, content: originalContent, line, column },
-            },
           })
-          const importmapUrlInfo = resolveReference(importmapReference)
+          const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference)
           importmapUrlInfo.data.isInline = true
-          importmapUrlInfo.data.parentReference = {
+          importmapUrlInfo.data.inlineUrlSite = {
             parentUrl: url,
             parentContent: originalContent, // original because it's the origin line and column
             line,
@@ -135,16 +137,18 @@ const jsenvPluginImportmapSupervisor = () => {
               preferOriginal: true,
             },
           )
-          const importmapReference = createReference({
-            parentUrl: url,
+          // ref is already known, just like for inline ressource
+          const importmapReference = addReference({
+            trace: stringifyUrlSite({
+              url,
+              content: originalContent,
+              line,
+              column,
+            }),
             type: "script_src",
             specifier: src,
-            specifierTrace: {
-              type: "url_site",
-              value: { url, content: originalContent, line, column },
-            },
           })
-          const importmapUrlInfo = resolveReference(importmapReference)
+          const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference.url)
           await cook({
             reference: importmapReference,
             urlInfo: importmapUrlInfo,

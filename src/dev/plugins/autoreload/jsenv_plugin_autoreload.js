@@ -71,42 +71,30 @@ const jsenvPluginHot = () => {
       })
     },
     transform: {
-      html: (
-        { url, data, content },
-        {
-          rootDirectoryUrl,
-          createReference,
-          resolveReference,
-          specifierFromReference,
-        },
-      ) => {
+      html: ({ data, content }, { addReference }) => {
         const htmlAst = parseHtmlString(content)
         const { hotReferences } = collectHotDataFromHtmlAst(htmlAst)
         data.hotDecline = false
         data.hotAcceptSelf = false
         data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
-            const reference = createReference({
-              parentUrl: url,
+            const reference = addReference({
               type,
               specifier,
             })
-            resolveReference(reference)
             return reference.url
           },
         )
-        const eventSourceClientReference = createReference({
-          parentUrl: rootDirectoryUrl,
+        const eventSourceClientReference = addReference({
           type: "js_import_export",
           specifier: eventSourceClientFileUrl,
         })
-        resolveReference(eventSourceClientReference)
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: specifierFromReference(eventSourceClientReference),
+            src: eventSourceClientReference.generatedSpecifier,
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)
@@ -119,10 +107,7 @@ const jsenvPluginHot = () => {
         data.hotAcceptSelf = false
         data.hotAcceptDependencies = []
       },
-      js_module: async (
-        { url, data, content },
-        { createReference, resolveReference, specifierFromReference },
-      ) => {
+      js_module: async ({ url, data, content }, { addReference }) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
           url,
@@ -144,20 +129,17 @@ const jsenvPluginHot = () => {
         // better sourcemap than doing the equivalent with babel
         // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
         // which is likely not well supported by babel
-        const importMetaHotClientFileReference = createReference({
+        const importMetaHotClientFileReference = addReference({
           parentUrl: url,
           type: "js_import_export",
           specifier: importMetaHotClientFileUrl,
         })
-        resolveReference(importMetaHotClientFileReference)
         const magicSource = createMagicSource({
           url,
           content,
         })
         magicSource.prepend(
-          `import { createImportMetaHot } from "${specifierFromReference(
-            importMetaHotClientFileReference,
-          )}"
+          `import { createImportMetaHot } from "${importMetaHotClientFileReference.generatedSpecifier}"
 import.meta.hot = createImportMetaHot(import.meta.url)
 `,
         )

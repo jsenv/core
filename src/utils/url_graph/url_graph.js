@@ -40,7 +40,14 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
   }
 
   const prunedCallbackList = createCallbackList()
-  const updateDependencies = (urlInfo, { dependencyUrls, references }) => {
+  const updateReferences = (urlInfo, references) => {
+    const dependencyUrls = []
+    references.forEach((reference) => {
+      if (!dependencyUrls.includes(reference.url)) {
+        dependencyUrls.push(reference.url)
+      }
+    })
+
     pruneDependencies(
       urlInfo,
       Array.from(urlInfo.dependencies).filter(
@@ -86,7 +93,7 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     findDependent,
 
     prunedCallbackList,
-    updateDependencies,
+    updateReferences,
 
     toJSON: () => {
       const data = {}
