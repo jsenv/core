@@ -21,6 +21,7 @@ import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import {
   createResolveError,
   createLoadError,
+  createParseError,
   createTransformError,
 } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
@@ -177,8 +178,7 @@ export const createKitchen = ({
           return stack
         }
         const { stack } = new Error()
-        const callerCallsite = stack[2]
-        debugger
+        const callerCallsite = stack[1]
         const fileName = callerCallsite.getFileName()
         trace = stringifyUrlSite({
           url:
@@ -232,18 +232,36 @@ export const createKitchen = ({
       reference.generatedSpecifier = generatedSpecifier
       return reference
     }
-    // TODO: try/catch on "parseUrlMentions" to trigge parse error
-    const parseResult = await parseUrlMentions({
-      type: urlInfo.type,
-      url: urlInfo.url,
-      content: urlInfo.content,
-    })
+    const updateContents = (data) => {
+      if (data) {
+        const { contentType, content, sourcemap } = data
+        if (contentType) {
+          urlInfo.contentType = contentType
+        }
+        urlInfo.content = content
+        if (sourcemap) {
+          urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
+        }
+      }
+    }
+    let parseResult
+    try {
+      parseResult = await parseUrlMentions({
+        type: urlInfo.type,
+        url: urlInfo.url,
+        content: urlInfo.content,
+      })
+    } catch (error) {
+      urlInfo.error = createParseError({
+        reference,
+        urlInfo,
+        error,
+      })
+      return
+    }
     if (parseResult) {
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
-        if (urlMention.specifier.includes("not_found.js")) {
-          debugger
-        }
         addReference({
           trace: stringifyUrlSite({
             url: urlInfo.url,
@@ -271,20 +289,9 @@ export const createKitchen = ({
       const transformReturnValue = await replaceUrls(replacements)
       updateContents(transformReturnValue)
     }
+
     // "transform" hook
     context.addReference = addReference
-    const updateContents = (data) => {
-      if (data) {
-        const { contentType, content, sourcemap } = data
-        if (contentType) {
-          urlInfo.contentType = contentType
-        }
-        urlInfo.content = content
-        if (sourcemap) {
-          urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
-        }
-      }
-    }
     try {
       await pluginController.callAsyncHooks(
         "transform",

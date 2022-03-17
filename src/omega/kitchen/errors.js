@@ -81,6 +81,28 @@ export const createLoadError = ({
   })
 }
 
+export const createParseError = ({ reference, urlInfo, error }) => {
+  const createFailedToParseError = ({ code, reason, ...details }) => {
+    const parseError = new Error(
+      createDetailedMessage(`Failed to parse ${urlInfo.type}`, {
+        reason,
+        ...details,
+        "url": urlInfo.url,
+        "url reference trace": reference.trace,
+      }),
+    )
+    parseError.name = "PARSE_ERROR"
+    parseError.code = code
+    parseError.reason = reason
+    parseError.originalError = error
+    return parseError
+  }
+  return createFailedToParseError({
+    reason: `An error occured while parsing content`,
+    ...detailsFromValueThrown(error),
+  })
+}
+
 export const createTransformError = ({
   pluginController,
   reference,
