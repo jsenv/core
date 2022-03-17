@@ -71,7 +71,7 @@ const jsenvPluginImportmapSupervisor = () => {
     },
     transform: {
       html: async (
-        { url, originalContent, content },
+        { url, originalContent, content, references },
         { urlGraph, addReference, cook },
       ) => {
         const htmlAst = parseHtmlString(content)
@@ -110,8 +110,8 @@ const jsenvPluginImportmapSupervisor = () => {
           const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference)
           importmapUrlInfo.data.isInline = true
           importmapUrlInfo.data.inlineUrlSite = {
-            parentUrl: url,
-            parentContent: originalContent, // original because it's the origin line and column
+            url,
+            content: originalContent, // original because it's the origin line and column
             line,
             column,
           }
@@ -131,23 +131,14 @@ const jsenvPluginImportmapSupervisor = () => {
         const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")
         const src = srcAttribute ? srcAttribute.value : undefined
         if (src) {
-          const { line, column } = htmlNodePosition.readNodePosition(
-            importmap,
-            {
-              preferOriginal: true,
-            },
+          // Browser would throw on remote importmap
+          // and won't sent a request to the server for it
+          // We must precook the importmap to know its content and inline it into the HTML
+          // In this ituation the ref to the importmap was already discovered
+          // when parsing the HTML
+          const importmapReference = references.find(
+            (reference) => reference.specifier === src,
           )
-          // ref is already known, just like for inline ressource
-          const importmapReference = addReference({
-            trace: stringifyUrlSite({
-              url,
-              content: originalContent,
-              line,
-              column,
-            }),
-            type: "script_src",
-            specifier: src,
-          })
           const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference.url)
           await cook({
             reference: importmapReference,

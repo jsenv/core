@@ -263,12 +263,13 @@ export const createKitchen = ({
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
         addReference({
-          trace: stringifyUrlSite({
-            url: urlInfo.url,
-            content: urlInfo.content,
-            line: urlMention.line,
-            column: urlMention.column,
-          }),
+          trace: stringifyUrlSite(
+            adjustUrlSite(urlInfo, {
+              url: urlInfo.url,
+              line: urlMention.line,
+              column: urlMention.column,
+            }),
+          ),
           type: urlMention.type,
           specifier: urlMention.specifier,
         })
@@ -308,7 +309,7 @@ export const createKitchen = ({
           column: error.column,
         })
         error.message = `${error.reasonCode}
-${stringifyUrlSite(urlSite)}`
+${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
       }
       urlInfo.error = createTransformError({
         pluginController,
@@ -395,12 +396,13 @@ ${stringifyUrlSite(urlSite)}`
 
   const loadSourcemap = async ({ type, urlInfo, sourcemapInfo }) => {
     const sourcemapReference = createReference({
-      trace: stringifyUrlSite({
-        url: urlInfo.url,
-        content: urlInfo.content,
-        line: sourcemapInfo.line,
-        column: sourcemapInfo.column,
-      }),
+      trace: stringifyUrlSite(
+        adjustUrlSite(urlInfo, {
+          url: urlInfo.url,
+          line: sourcemapInfo.line,
+          column: sourcemapInfo.column,
+        }),
+      ),
       parentUrl: urlInfo.url,
       type,
       specifier: sourcemapInfo.specifier,
@@ -474,38 +476,29 @@ const getUrlSite = async (
   { line, column, originalLine, originalColumn },
 ) => {
   if (typeof originalLine === "number") {
-    return adjustUrlSite(
-      {
-        url: urlInfo.url,
-        line: originalLine,
-        column: originalColumn,
-      },
-      urlInfo,
-    )
+    return {
+      url: urlInfo.url,
+      line: originalLine,
+      column: originalColumn,
+    }
   }
   if (urlInfo.content === urlInfo.originalContent) {
-    return adjustUrlSite(
-      {
-        url: urlInfo.url,
-        line,
-        column,
-      },
-      urlInfo,
-    )
+    return {
+      url: urlInfo.url,
+      line,
+      column,
+    }
   }
   // at this point things were transformed: line and column are generated
   // no sourcemap -> cannot map back to original file
   const { sourcemap } = urlInfo
   if (!sourcemap) {
-    return adjustUrlSite(
-      {
-        url: urlInfo.generatedUrl,
-        content: urlInfo.content,
-        line,
-        column,
-      },
-      urlInfo,
-    )
+    return {
+      url: urlInfo.generatedUrl,
+      content: urlInfo.content,
+      line,
+      column,
+    }
   }
   const originalPosition = await getOriginalPosition({
     sourcemap,
@@ -514,26 +507,20 @@ const getUrlSite = async (
   })
   // cannot map back to original file
   if (!originalPosition || originalPosition.line === null) {
-    return adjustUrlSite(
-      {
-        url: urlInfo.generatedUrl,
-        line,
-        column,
-      },
-      urlInfo,
-    )
+    return {
+      url: urlInfo.generatedUrl,
+      line,
+      column,
+    }
   }
-  return adjustUrlSite(
-    {
-      url: urlInfo.url,
-      line: originalPosition.line,
-      column: originalPosition.column,
-    },
-    urlInfo,
-  )
+  return {
+    url: urlInfo.url,
+    line: originalPosition.line,
+    column: originalPosition.column,
+  }
 }
 
-const adjustUrlSite = ({ url, line, column }, urlInfo) => {
+const adjustUrlSite = (urlInfo, { url, line, column }) => {
   const isOriginal = url === urlInfo.url
   const urlSite = {
     isOriginal,
@@ -545,17 +532,17 @@ const adjustUrlSite = ({ url, line, column }, urlInfo) => {
   if (!isOriginal) {
     return urlSite
   }
-  const parentReference = urlInfo.data.parentReference
-  if (!parentReference) {
+  const inlineUrlSite = urlInfo.data.inlineUrlSite
+  if (!inlineUrlSite) {
     return urlSite
   }
   return {
     isOriginal: true,
-    url: parentReference.url,
-    content: parentReference.content,
+    url: inlineUrlSite.url,
+    content: inlineUrlSite.content,
     // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
-    line: parentReference.line + line - 1,
-    column: parentReference.column + column,
+    line: inlineUrlSite.line + line - 1,
+    column: inlineUrlSite.column + column,
   }
 }
 

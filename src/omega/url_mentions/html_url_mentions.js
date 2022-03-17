@@ -8,7 +8,7 @@ import {
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
 export const parseHtmlUrlMentions = ({ url, content }) => {
-  const htmlAst = parseHtmlString(content)
+  const htmlAst = parseHtmlString(content, { storeOriginalPositions: true })
   const htmlUrlMentions = collectHtmlUrlMentions({ url, htmlAst })
   return {
     urlMentions: htmlUrlMentions,
@@ -18,9 +18,7 @@ export const parseHtmlUrlMentions = ({ url, content }) => {
         urlMention.attribute.value = value
       })
       return {
-        content: stringifyHtmlAst(htmlAst, {
-          removeOriginalPositionAttributes: true,
-        }),
+        content: stringifyHtmlAst(htmlAst),
       }
     },
   }
