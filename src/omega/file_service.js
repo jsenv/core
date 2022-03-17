@@ -61,7 +61,7 @@ export const createFileService = ({
     await kitchen.cook({
       reference: referenceFromGraph || reference,
       urlInfo: requestedUrlInfo,
-      outDirectoryName: `${scenario}/${runtimeName}@${runtimeVersion}`,
+      outDirectoryUrl: `${projectDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
       runtimeSupport,
     })
     const { response, error, contentType, content } = requestedUrlInfo

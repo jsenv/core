@@ -37,6 +37,7 @@ export const createKitchen = ({
   scenario,
 
   baseUrl = "/",
+  writeOnFileSystem = true,
 }) => {
   const baseContext = {
     signal,
@@ -92,7 +93,7 @@ export const createKitchen = ({
   const _cook = async ({
     reference,
     urlInfo,
-    outDirectoryName,
+    outDirectoryUrl,
     runtimeSupport,
   }) => {
     const context = {
@@ -103,7 +104,7 @@ export const createKitchen = ({
       },
       cook: (params) => {
         return cook({
-          outDirectoryName,
+          outDirectoryUrl,
           runtimeSupport,
           ...params,
         })
@@ -143,7 +144,7 @@ export const createKitchen = ({
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       rootDirectoryUrl,
-      outDirectoryName,
+      outDirectoryUrl,
       url: urlInfo.url,
     })
 
@@ -329,7 +330,7 @@ ${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
       const sourcemapUrl = generateSourcemapUrl(urlInfo.url)
       const sourcemapGeneratedUrl = determineFileUrlForOutDirectory({
         rootDirectoryUrl,
-        outDirectoryName,
+        outDirectoryUrl,
         url: sourcemapUrl,
       })
       urlInfo.sourcemapGeneratedUrl = sourcemapGeneratedUrl
@@ -369,22 +370,24 @@ ${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
   const cook = async ({ urlInfo, ...rest }) => {
     try {
       await _cook({ urlInfo, ...rest })
-      const { generatedUrl } = urlInfo
-      // writing result inside ".jsenv" directory (debug purposes)
-      if (generatedUrl && generatedUrl.startsWith("file:")) {
-        writeFile(generatedUrl, urlInfo.content)
-        const { sourcemapGeneratedUrl, sourcemap } = urlInfo
-        if (sourcemapGeneratedUrl && sourcemap) {
-          if (sourcemapInjection === "comment") {
-            await writeFile(
-              sourcemapGeneratedUrl,
-              JSON.stringify(sourcemap, null, "  "),
-            )
-          } else if (sourcemapInjection === "inline") {
-            writeFile(
-              sourcemapGeneratedUrl,
-              JSON.stringify(sourcemap, null, "  "),
-            )
+      if (writeOnFileSystem) {
+        const { generatedUrl } = urlInfo
+        // writing result inside ".jsenv" directory (debug purposes)
+        if (generatedUrl && generatedUrl.startsWith("file:")) {
+          writeFile(generatedUrl, urlInfo.content)
+          const { sourcemapGeneratedUrl, sourcemap } = urlInfo
+          if (sourcemapGeneratedUrl && sourcemap) {
+            if (sourcemapInjection === "comment") {
+              await writeFile(
+                sourcemapGeneratedUrl,
+                JSON.stringify(sourcemap, null, "  "),
+              )
+            } else if (sourcemapInjection === "inline") {
+              writeFile(
+                sourcemapGeneratedUrl,
+                JSON.stringify(sourcemap, null, "  "),
+              )
+            }
           }
         }
       }
@@ -549,7 +552,7 @@ const adjustUrlSite = (urlInfo, { url, line, column }) => {
 // this is just for debug (ability to see what is generated)
 const determineFileUrlForOutDirectory = ({
   rootDirectoryUrl,
-  outDirectoryName,
+  outDirectoryUrl,
   url,
 }) => {
   if (!url.startsWith("file:")) {
@@ -558,9 +561,5 @@ const determineFileUrlForOutDirectory = ({
   if (!urlIsInsideOf(url, rootDirectoryUrl)) {
     url = `${rootDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
   }
-  const outDirectoryUrl = new URL(
-    `.jsenv/${outDirectoryName}/`,
-    rootDirectoryUrl,
-  ).href
   return moveUrl(url, rootDirectoryUrl, outDirectoryUrl)
 }

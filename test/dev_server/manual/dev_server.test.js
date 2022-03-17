@@ -1,6 +1,6 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startDevServer } from "@jsenv/core/src/dev/start_dev_server.js"
-import { jsenvPluginPreact } from "@jsenv/core/packages/jsenv-plugin-preact/index.js"
+// import { jsenvPluginPreact } from "@jsenv/core/packages/jsenv-plugin-preact/index.js"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost({
@@ -13,7 +13,7 @@ await startDevServer({
   privateKey: serverCertificatePrivateKey,
   projectDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [
-    jsenvPluginPreact(),
+    //  jsenvPluginPreact(),
     {
       name: "plugin_throwing",
       appliesDuring: "*",
