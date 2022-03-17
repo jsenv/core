@@ -36,7 +36,7 @@ const jsenvPluginHot = () => {
     import.meta.url,
   ).href
   const importMetaHotClientFileUrl = new URL(
-    "./client/import_meta_hot_module.js",
+    "./client/import_meta_hot.js",
     import.meta.url,
   ).href
 
@@ -58,8 +58,9 @@ const jsenvPluginHot = () => {
       urlObject.searchParams.delete("v")
       return urlObject.href
     },
-    transformReferencedUrl: ({ url, data }) => {
-      if (!data.hmr) {
+    transformReferencedUrl: ({ parentUrl, url, data }, { urlGraph }) => {
+      const parentUrlInfo = urlGraph.getUrlInfo(parentUrl)
+      if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
         return null
       }
       if (!data.hmrTimestamp) {
@@ -174,21 +175,22 @@ const jsenvPluginHotSSE = ({
   const updateHmrTimestamp = (urlInfo, hmrTimestamp) => {
     const urlInfos = urlGraph.urlInfos
     const seen = []
-    const iterate = (url) => {
-      if (seen.includes(url)) {
+    const iterate = (urlInfo) => {
+      if (seen.includes(urlInfo.url)) {
         return
       }
-      seen.push(url)
-      const urlInfo = urlInfos[url]
+      seen.push(urlInfo.url)
       urlInfo.data.hmrTimestamp = hmrTimestamp
       urlInfo.dependents.forEach((dependentUrl) => {
-        const dependent = urlInfo[dependentUrl]
-        if (!dependent.data.hotAcceptDependencies.includes(url)) {
-          iterate(dependentUrl, hmrTimestamp)
+        const dependentUrlInfo = urlInfos[dependentUrl]
+        if (
+          !dependentUrlInfo.data.hotAcceptDependencies.includes(urlInfo.url)
+        ) {
+          iterate(dependentUrlInfo, hmrTimestamp)
         }
       })
     }
-    iterate(urlInfo.url)
+    iterate(urlInfo)
   }
   const propagateUpdate = (firstUrlInfo) => {
     const urlInfos = urlGraph.urlInfos

@@ -9,7 +9,7 @@ import {
   reloadDOMNodesUsingUrl,
   reloadJsImport,
 } from "./reload.js"
-import { urlHotMetas } from "./import_meta_hot_module.js"
+import { urlHotMetas } from "./import_meta_hot.js"
 
 const reloadMessages = []
 const reloadMessagesSignal = { onchange: () => {} }
@@ -86,16 +86,19 @@ const applyHotReload = async ({ hotInstructions }) => {
     async (previous, { type, boundary, acceptedBy }) => {
       await previous
 
-      if (acceptedBy === boundary) {
-        console.group(`[jsenv] hot reloading: ${boundary}`)
-      } else {
-        console.group(`[jsenv] hot reloading: ${acceptedBy} inside ${boundary}`)
-      }
       const urlToFetch = new URL(boundary, `${window.location.origin}/`).href
       const urlHotMeta = urlHotMetas[urlToFetch]
       // TODO: we should return when there is no url hot meta because
       // it means code was not executed (code splitting with dynamic import)
       // if (!urlHotMeta) {return }
+
+      if (type === "prune") {
+        console.group(`[jsenv] prune: ${boundary} (inside ${acceptedBy})`)
+      } else if (acceptedBy === boundary) {
+        console.group(`[jsenv] hot reloading: ${boundary}`)
+      } else {
+        console.group(`[jsenv] hot reloading: ${acceptedBy} inside ${boundary}`)
+      }
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         console.log(`call dispose callback`)
         await urlHotMeta.disposeCallback()

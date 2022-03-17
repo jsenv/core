@@ -214,10 +214,11 @@ export const createKitchen = ({
       // create a copy because .url will be mutated
       const referencedCopy = {
         ...reference,
+        data: urlGraph.getUrlInfo(reference.url).data,
       }
       pluginController.callHooks(
         "transformReferencedUrl",
-        reference,
+        referencedCopy,
         baseContext,
         (returnValue) => {
           referencedCopy.url = returnValue

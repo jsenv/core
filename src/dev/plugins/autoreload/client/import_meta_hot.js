@@ -5,8 +5,15 @@
 
 export const urlHotMetas = {}
 
-export const createImportMetaHot = (url) => {
+export const createImportMetaHot = (importMetaUrl) => {
   const data = {}
+
+  const url = asUrlWithoutHmrQuery(importMetaUrl)
+  console.log("create import meta hot for", {
+    importMetaUrl,
+    url,
+    urlHotMetas,
+  })
 
   return {
     data,
@@ -62,15 +69,18 @@ export const createImportMetaHot = (url) => {
 }
 
 const addUrlMeta = (url, meta) => {
-  const urlWithoutHmrQuery = asUrlWithoutHmrQuery(url)
-  urlHotMetas[urlWithoutHmrQuery] = {
-    ...urlHotMetas[urlWithoutHmrQuery],
+  urlHotMetas[url] = {
+    ...urlHotMetas[url],
     ...meta,
   }
 }
 
 const asUrlWithoutHmrQuery = (url) => {
   const urlObject = new URL(url)
-  urlObject.searchParams.delete("hmr")
-  return urlObject.href
+  if (urlObject.searchParams.has("hmr")) {
+    urlObject.searchParams.delete("hmr")
+    urlObject.searchParams.delete("v")
+    return urlObject.href
+  }
+  return url
 }
