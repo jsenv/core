@@ -334,7 +334,7 @@ ${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
         url: sourcemapUrl,
       })
       urlInfo.sourcemapGeneratedUrl = sourcemapGeneratedUrl
-      urlInfo.content = injectSourcemap(urlInfo)
+      urlInfo.content = injectSourcemap(urlInfo, { sourcemapInjection })
     }
 
     // "finalize" hook

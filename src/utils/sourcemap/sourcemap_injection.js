@@ -6,14 +6,10 @@ import {
   sourcemapToBase64Url,
 } from "./sourcemap_utils.js"
 
-export const injectSourcemap = ({
-  url,
-  contentType,
-  content,
-  sourcemap,
-  sourcemapUrl,
-  sourcemapInjection,
-}) => {
+export const injectSourcemap = (
+  { url, contentType, content, sourcemap, sourcemapUrl },
+  { sourcemapInjection },
+) => {
   if (contentType === "application/javascript") {
     if (sourcemapInjection === "comment") {
       return setJavaScriptSourceMappingUrl(
