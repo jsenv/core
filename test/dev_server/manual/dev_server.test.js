@@ -12,6 +12,7 @@ await startDevServer({
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
   projectDirectoryUrl: new URL("./client/", import.meta.url),
+  // autoreload: false,
   plugins: [
     jsenvPluginPreact(),
     {

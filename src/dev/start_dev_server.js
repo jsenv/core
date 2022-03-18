@@ -24,6 +24,7 @@ export const startDevServer = async ({
   plugins = [],
 
   sourcemapInjection = "inline",
+  autoreload = true,
   autoreloadPatterns = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
@@ -40,11 +41,15 @@ export const startDevServer = async ({
     plugins: [
       ...plugins,
       ...getJsenvPlugins(),
-      jsenvPluginAutoreload({
-        rootDirectoryUrl: projectDirectoryUrl,
-        urlGraph,
-        autoreloadPatterns,
-      }),
+      ...(autoreload
+        ? [
+            jsenvPluginAutoreload({
+              rootDirectoryUrl: projectDirectoryUrl,
+              urlGraph,
+              autoreloadPatterns,
+            }),
+          ]
+        : []),
     ],
     scenario: "dev",
   })

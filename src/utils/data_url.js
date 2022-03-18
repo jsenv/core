@@ -32,7 +32,7 @@ export const DataUrl = {
         return `data:,`
       }
       if (base64Flag) {
-        return `data:,${data}`
+        return `data:;base64,${dataToBase64(data)}`
       }
       return `data:,${dataToBase64(data)}`
     }
