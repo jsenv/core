@@ -1,4 +1,10 @@
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/filesystem"
+import {
+  urlToRelativeUrl,
+  resolveUrl,
+  urlToOrigin,
+  urlToExtension,
+  urlToRessource,
+} from "@jsenv/filesystem"
 
 // TODO: move "filesystemRootUrl" and "moveUrl" to @jsenv/filesystem
 export const filesystemRootUrl =
@@ -54,4 +60,16 @@ export const injectQueryParams = (url, params) => {
   // "http://example.com/file.js?hmr="
   // It is technically valid but "=" signs hurts readability
   return urlWithParams.replace(/[=](?=&|$)/g, "")
+}
+
+export const setUrlExtension = (url, extension) => {
+  const origin = urlToOrigin(url)
+  const currentExtension = urlToExtension(url)
+  const ressource = urlToRessource(url)
+  const [pathname, search] = ressource.split("?")
+  const pathnameWithoutExtension = currentExtension
+    ? pathname.slice(0, -currentExtension.length)
+    : pathname
+  const newPathname = `${pathnameWithoutExtension}${extension}`
+  return `${origin}${newPathname}${search ? `?${search}` : ""}`
 }

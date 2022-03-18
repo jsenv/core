@@ -3,9 +3,9 @@ import {
   serveDirectory,
   composeTwoResponses,
 } from "@jsenv/server"
-import { urlIsInsideOf } from "@jsenv/filesystem"
+import { urlIsInsideOf, urlToExtension } from "@jsenv/filesystem"
 
-import { moveUrl } from "@jsenv/core/src/utils/url_utils.js"
+import { moveUrl, setUrlExtension } from "@jsenv/core/src/utils/url_utils.js"
 
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -40,6 +40,21 @@ export const createFileService = ({
     )
     if (responseFromPlugin) {
       return responseFromPlugin
+    }
+    if (urlToExtension(requestFileUrl) === ".map") {
+      const urlWithoutMapExtension = setUrlExtension(requestFileUrl, "")
+      const urlInfo = urlGraph.getUrlInfo(urlWithoutMapExtension)
+      if (urlInfo && urlInfo.sourcemap) {
+        const json = JSON.stringify(urlInfo.sourcemap)
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(json),
+          },
+          body: json,
+        }
+      }
     }
 
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(

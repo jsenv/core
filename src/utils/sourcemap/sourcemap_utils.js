@@ -21,11 +21,12 @@ export const parseJavaScriptSourcemapComment = (javaScriptSource) => {
     return null
   }
   return {
-    specifier: sourceMappingUrl,
+    type: "js_sourcemap_comment",
     // we assume it's on last line
     line: javaScriptSource.split(/\r?\n/).length,
     // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
     column: `${"//#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl,
   }
 }
 
@@ -67,11 +68,12 @@ export const parseCssSourcemapComment = (cssSource) => {
     return null
   }
   return {
-    specifier: sourceMappingUrl,
+    type: "css_sourcemap_comment",
     // we assume it's on last line
     line: cssSource.split(/\r?\n/).length - 1,
     // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
     column: `${"//*#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl,
   }
 }
 

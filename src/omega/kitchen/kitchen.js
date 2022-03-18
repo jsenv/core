@@ -131,7 +131,7 @@ export const createKitchen = ({
         originalContent: content,
         content,
       })
-      urlInfo.type = getRessourceType(urlInfo)
+      urlInfo.type = urlInfo.type || inferUrlInfoType(urlInfo)
       reference.parent = parentReference
     } catch (error) {
       urlInfo.error = createLoadError({
@@ -149,23 +149,42 @@ export const createKitchen = ({
     })
 
     // sourcemap loading
+    let sourcemapReferenceInfo
     if (urlInfo.contentType === "application/javascript") {
-      const sourcemapInfo = parseJavaScriptSourcemapComment(urlInfo.content)
-      if (sourcemapInfo) {
-        urlInfo.sourcemap = await loadSourcemap({
-          type: "js_sourcemap_comment",
-          urlInfo,
-          sourcemapInfo,
-        })
-      }
+      sourcemapReferenceInfo = parseJavaScriptSourcemapComment(urlInfo.content)
     } else if (urlInfo.contentType === "text/css") {
-      const sourcemapInfo = parseCssSourcemapComment(urlInfo.content)
-      if (sourcemapInfo) {
-        urlInfo.sourcemap = await loadSourcemap({
-          type: "css_sourcemap_comment",
-          urlInfo,
-          sourcemapInfo,
+      sourcemapReferenceInfo = parseCssSourcemapComment(urlInfo.content)
+    }
+    if (sourcemapReferenceInfo) {
+      const { type, line, column, specifier } = sourcemapReferenceInfo
+      const sourcemapReference = createReference({
+        trace: stringifyUrlSite(
+          adjustUrlSite(urlInfo, {
+            url: urlInfo.url,
+            line,
+            column,
+          }),
+        ),
+        type,
+        parentUrl: urlInfo.url,
+        specifier,
+      })
+      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      sourcemapUrlInfo.type = "sourcemap"
+      await context.cook({
+        reference: sourcemapReference,
+        urlInfo: sourcemapUrlInfo,
+      })
+      if (sourcemapUrlInfo.error) {
+        logger.error(
+          `Error while handling sourcemap: ${sourcemapUrlInfo.error.message}`,
+        )
+      } else {
+        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
+        sourcemap.sources = sourcemap.sources.map((source) => {
+          return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
         })
+        context.sourcemap = sourcemap
       }
     }
 
@@ -398,37 +417,6 @@ ${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
     }
   }
 
-  const loadSourcemap = async ({ type, urlInfo, sourcemapInfo }) => {
-    const sourcemapReference = createReference({
-      trace: stringifyUrlSite(
-        adjustUrlSite(urlInfo, {
-          url: urlInfo.url,
-          line: sourcemapInfo.line,
-          column: sourcemapInfo.column,
-        }),
-      ),
-      parentUrl: urlInfo.url,
-      type,
-      specifier: sourcemapInfo.specifier,
-    })
-    const sourcemapUrlInfo = resolveReference(sourcemapReference)
-    await cook({
-      reference: sourcemapReference,
-      urlInfo: sourcemapUrlInfo,
-    })
-    if (sourcemapUrlInfo.error) {
-      logger.error(
-        `Error while handling sourcemap: ${sourcemapUrlInfo.error.message}`,
-      )
-      return null
-    }
-    const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-    sourcemap.sources = sourcemap.sources.map((source) => {
-      return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
-    })
-    return sourcemap
-  }
-
   baseContext.cook = cook
 
   return {
@@ -440,7 +428,7 @@ ${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
   }
 }
 
-const getRessourceType = ({ url, contentType }) => {
+const inferUrlInfoType = ({ url, contentType }) => {
   if (contentType === "text/html") {
     return "html"
   }
