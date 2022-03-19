@@ -46,27 +46,16 @@ export const jsenvPluginImportmap = () => {
 }
 
 const jsenvPluginImportmapSupervisor = () => {
-  const importmapContents = {}
-
   return {
     name: "jsenv:importmap_supervisor",
     appliesDuring: "*",
-    resolve: ({ parentUrl, specifier }) => {
-      const url = new URL(specifier, parentUrl).href
-      const importmapContent = importmapContents[url]
-      if (importmapContent) {
-        return url
-      }
-      return null
-    },
-    load: ({ url }) => {
-      const importmapContent = importmapContents[url]
-      if (!importmapContent) {
+    load: ({ inlineInfo }) => {
+      if (!inlineInfo) {
         return null
       }
       return {
-        contentType: "application/importmap+json",
-        content: importmapContent,
+        contentType: inlineInfo.contentType,
+        content: inlineInfo.content,
       }
     },
     transform: {
@@ -108,14 +97,16 @@ const jsenvPluginImportmapSupervisor = () => {
             specifier: `${urlToFilename(url)}@${inlineImportmapId}.importmap`,
           })
           const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference)
-          importmapUrlInfo.data.isInline = true
-          importmapUrlInfo.data.inlineUrlSite = {
-            url,
-            content: originalContent, // original because it's the origin line and column
-            line,
-            column,
+          importmapUrlInfo.inlineInfo = {
+            urlSite: {
+              url,
+              content: originalContent, // original because it's the origin line and column
+              line,
+              column,
+            },
+            contentType: "application/importmap+json",
+            content: textNode.value,
           }
-          importmapContents[importmapReference.url] = textNode.value
           await cook({
             reference: importmapReference,
             urlInfo: importmapUrlInfo,

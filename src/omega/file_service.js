@@ -73,36 +73,45 @@ export const createFileService = ({
       reference.url,
       reference.parentUrl,
     )
-    await kitchen.cook({
-      reference: referenceFromGraph || reference,
-      urlInfo: requestedUrlInfo,
-      outDirectoryUrl: `${projectDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
-      runtimeSupport,
-    })
-    const { response, error, contentType, content } = requestedUrlInfo
-    if (response) {
-      return response
-    }
-    if (error) {
-      if (
-        error.name === "TRANSFORM_ERROR" &&
-        error.originalError.code === "PARSE_ERROR"
-      ) {
+    try {
+      await kitchen.cook({
+        reference: referenceFromGraph || reference,
+        urlInfo: requestedUrlInfo,
+        outDirectoryUrl: `${projectDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
+        runtimeSupport,
+      })
+      const { response, contentType, content } = requestedUrlInfo
+      if (response) {
+        return response
+      }
+      return {
+        url: reference.url,
+        status: 200,
+        headers: {
+          "content-type": contentType,
+          "content-length": Buffer.byteLength(content),
+          "cache-control": `private,max-age=0,must-revalidate`,
+        },
+        body: content,
+      }
+    } catch (e) {
+      const code = e.originalError ? e.originalError.code : e.code
+      if (code === "PARSE_ERROR") {
         // let the browser re-throw the syntax error
         return {
           url: reference.url,
           status: 200,
-          statusText: error.reason,
-          statusMessage: error.message,
+          statusText: e.reason,
+          statusMessage: e.message,
           headers: {
-            "content-type": contentType,
-            "content-length": Buffer.byteLength(content),
+            "content-type": requestedUrlInfo.contentType,
+            "content-length": Buffer.byteLength(requestedUrlInfo.content),
             "cache-control": "no-store",
           },
-          body: content,
+          body: requestedUrlInfo.content,
         }
       }
-      if (error.originalError && error.originalError.code === "EISDIR") {
+      if (code === "EISDIR") {
         return serveDirectory(reference.url, {
           headers: {
             accept: "text/html",
@@ -111,37 +120,27 @@ export const createFileService = ({
           rootDirectoryUrl: projectDirectoryUrl,
         })
       }
-      if (error.code === "NOT_ALLOWED") {
+      if (code === "NOT_ALLOWED") {
         return {
           url: reference.url,
           status: 403,
-          statusText: error.reason,
+          statusText: e.reason,
         }
       }
-      if (error.code === "NOT_FOUND") {
+      if (code === "NOT_FOUND") {
         return {
           url: reference.url,
           status: 404,
-          statusText: error.reason,
-          statusMessage: error.message,
+          statusText: e.reason,
+          statusMessage: e.message,
         }
       }
       return {
         url: reference.url,
         status: 500,
-        statusText: error.reason,
-        statusMessage: error.message,
+        statusText: e.reason,
+        statusMessage: e.message,
       }
-    }
-    return {
-      url: reference.url,
-      status: 200,
-      headers: {
-        "content-type": contentType,
-        "content-length": Buffer.byteLength(content),
-        "cache-control": `private,max-age=0,must-revalidate`,
-      },
-      body: content,
     }
   }
   return async (request) => {

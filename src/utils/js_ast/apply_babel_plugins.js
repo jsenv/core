@@ -12,7 +12,9 @@ export const applyBabelPlugins = async ({
     return { code: content }
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
-  const filepath = urlToFileSystemPath(url)
+  const filepath = url.startsWith("file:")
+    ? urlToFileSystemPath(url)
+    : undefined
   options = {
     ast: false,
     sourceMaps: true,

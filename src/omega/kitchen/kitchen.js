@@ -134,13 +134,12 @@ export const createKitchen = ({
       urlInfo.type = urlInfo.type || inferUrlInfoType(urlInfo)
       reference.parent = parentReference
     } catch (error) {
-      urlInfo.error = createLoadError({
+      throw createLoadError({
         pluginController,
         urlInfo,
         reference,
         error,
       })
-      return
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       rootDirectoryUrl,
@@ -160,6 +159,7 @@ export const createKitchen = ({
       const sourcemapReference = createReference({
         trace: stringifyUrlSite(
           adjustUrlSite(urlInfo, {
+            urlGraph,
             url: urlInfo.url,
             line,
             column,
@@ -171,20 +171,18 @@ export const createKitchen = ({
       })
       const sourcemapUrlInfo = resolveReference(sourcemapReference)
       sourcemapUrlInfo.type = "sourcemap"
-      await context.cook({
-        reference: sourcemapReference,
-        urlInfo: sourcemapUrlInfo,
-      })
-      if (sourcemapUrlInfo.error) {
-        logger.error(
-          `Error while handling sourcemap: ${sourcemapUrlInfo.error.message}`,
-        )
-      } else {
+      try {
+        await context.cook({
+          reference: sourcemapReference,
+          urlInfo: sourcemapUrlInfo,
+        })
         const sourcemap = JSON.parse(sourcemapUrlInfo.content)
         sourcemap.sources = sourcemap.sources.map((source) => {
           return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
         })
         context.sourcemap = sourcemap
+      } catch (e) {
+        logger.error(`Error while handling sourcemap: ${e.message}`)
       }
     }
 
@@ -243,14 +241,13 @@ export const createKitchen = ({
           referencedCopy.url = returnValue
         },
       )
+      reference.generatedUrl = referencedCopy.url
       const returnValue = pluginController.callHooksUntil(
         "formatReferencedUrl",
         referencedCopy,
         baseContext,
       )
-      const generatedSpecifier = returnValue || referencedCopy.url
-      reference.generatedUrl = referencedCopy.url
-      reference.generatedSpecifier = generatedSpecifier
+      reference.generatedSpecifier = returnValue || reference.generatedUrl
       return reference
     }
     const updateContents = (data) => {
@@ -269,16 +266,15 @@ export const createKitchen = ({
     try {
       parseResult = await parseUrlMentions({
         type: urlInfo.type,
-        url: urlInfo.url,
+        url: urlInfo.generatedUrl,
         content: urlInfo.content,
       })
     } catch (error) {
-      urlInfo.error = createParseError({
+      throw createParseError({
         reference,
         urlInfo,
         error,
       })
-      return
     }
     if (parseResult) {
       const { urlMentions, replaceUrls } = parseResult
@@ -286,6 +282,7 @@ export const createKitchen = ({
         addReference({
           trace: stringifyUrlSite(
             adjustUrlSite(urlInfo, {
+              urlGraph,
               url: urlInfo.url,
               line: urlMention.line,
               column: urlMention.column,
@@ -296,6 +293,20 @@ export const createKitchen = ({
         })
       }
       const replacements = []
+      // "formatReferencedUrl" can be async BUT this is an exception
+      // for most cases it will be sync. We want to favor the sync signature to keep things simpler
+      // The only case where it needs to be async is when
+      // the specifier is a `data:*` url
+      // in this case we'll wait for the promise returned by
+      // "formatReferencedUrl"
+      await Promise.all(
+        references.map(async (reference) => {
+          if (reference.generatedSpecifier.then) {
+            const value = await reference.generatedSpecifier
+            reference.generatedSpecifier = value
+          }
+        }),
+      )
       references.forEach((reference, index) => {
         const specifierFormatted =
           reference.type === "js_import_meta_url_pattern" ||
@@ -330,15 +341,19 @@ export const createKitchen = ({
           column: error.column,
         })
         error.message = `${error.reasonCode}
-${stringifyUrlSite(adjustUrlSite(urlInfo, urlSite))}`
+${stringifyUrlSite(
+  adjustUrlSite(urlInfo, {
+    urlGraph,
+    ...urlSite,
+  }),
+)}`
       }
-      urlInfo.error = createTransformError({
+      throw createTransformError({
         pluginController,
         reference,
         urlInfo,
         error,
       })
-      return
     }
     // after "transform" all references from originalContent
     // and the one injected by plugin are known
@@ -512,30 +527,42 @@ const getUrlSite = async (
   }
 }
 
-const adjustUrlSite = (urlInfo, { url, line, column }) => {
+const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
   const isOriginal = url === urlInfo.url
-  const urlSite = {
-    isOriginal,
-    url,
-    content: isOriginal ? urlInfo.originalContent : urlInfo.content,
-    line,
-    column,
+  const adjust = (urlSite, urlInfo) => {
+    if (!urlSite.isOriginal) {
+      return urlSite
+    }
+    const inlineInfo = urlInfo.inlineInfo
+    if (!inlineInfo) {
+      return urlSite
+    }
+    const inlineUrlSite = inlineInfo.urlSite
+    if (!inlineUrlSite) {
+      return urlSite
+    }
+    const parentUrlInfo = urlGraph.getUrlInfo(inlineUrlSite.url)
+    return adjust(
+      {
+        isOriginal: true,
+        url: inlineUrlSite.url,
+        content: inlineUrlSite.content,
+        line: inlineUrlSite.line + urlSite.line,
+        column: inlineUrlSite.column + urlSite.column,
+      },
+      parentUrlInfo,
+    )
   }
-  if (!isOriginal) {
-    return urlSite
-  }
-  const inlineUrlSite = urlInfo.data.inlineUrlSite
-  if (!inlineUrlSite) {
-    return urlSite
-  }
-  return {
-    isOriginal: true,
-    url: inlineUrlSite.url,
-    content: inlineUrlSite.content,
-    // <script>console.log('ok')</script> remove 1 because code starts on same line as script tag
-    line: inlineUrlSite.line + line - 1,
-    column: inlineUrlSite.column + column,
-  }
+  return adjust(
+    {
+      isOriginal,
+      url,
+      content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+      line,
+      column,
+    },
+    urlInfo,
+  )
 }
 
 // this is just for debug (ability to see what is generated)

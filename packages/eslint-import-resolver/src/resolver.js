@@ -58,6 +58,7 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
     }
   }
 
+  const importer = String(fileSystemPathToUrl(file))
   const onUrl = (url) => {
     if (url.startsWith("file:")) {
       url = ensureWindowsDriveLetter(url, importer)
@@ -79,8 +80,11 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
   }
 
   const specifier = source
-  const importer = String(fileSystemPathToUrl(file))
   try {
+    // data:*, http://*, https://*, file://*
+    if (isAbsoluteUrl(specifier)) {
+      return onUrl(specifier)
+    }
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
         logger,
@@ -167,5 +171,15 @@ const handleRemainingUrl = () => {
   return {
     found: true,
     path: null,
+  }
+}
+
+const isAbsoluteUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url)
+    return true
+  } catch (e) {
+    return false
   }
 }

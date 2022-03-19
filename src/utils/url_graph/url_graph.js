@@ -113,10 +113,10 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
 
 const createUrlInfo = (url) => {
   return {
-    error: null,
     data: {}, // plugins can put whatever they want here
     url,
     generatedUrl: null,
+    inlineInfo: null,
     contentType: "",
     originalContent: "",
     content: "",

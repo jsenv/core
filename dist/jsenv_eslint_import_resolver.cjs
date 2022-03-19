@@ -1214,7 +1214,7 @@ const applyLegacySubpathResolution = ({
 
 const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
   for (const condition of conditions) {
-    const resolved = mainLegacyResolvers[condition](packageJson);
+    const resolved = mainLegacyResolvers[condition](packageJson, packageUrl);
     if (resolved) {
       return {
         type: resolved.type,
@@ -1241,20 +1241,38 @@ const mainLegacyResolvers = {
     }
     return null
   },
-  browser: ({ browser }) => {
-    if (typeof browser === "string") {
+  browser: ({ browser, module }, packageUrl) => {
+    const browserMain =
+      typeof browser === "string"
+        ? browser
+        : typeof browser === "object" && browser !== null
+        ? browser["."]
+        : "";
+    if (!browserMain) {
+      return null
+    }
+    if (typeof module !== "string" || module === browserMain) {
       return {
         type: "browser",
-        path: browser,
+        path: browserMain,
       }
     }
-    if (typeof browser === "object" && browser !== null) {
+    const browserMainUrlObject = new URL(browserMain, packageUrl);
+    const content = node_fs.readFileSync(browserMainUrlObject, "utf-8");
+    if (
+      (/typeof exports\s*==/.test(content) &&
+        /typeof module\s*==/.test(content)) ||
+      /module\.exports\s*=/.test(content)
+    ) {
       return {
-        type: "browser",
-        path: browser["."],
+        type: "module",
+        path: module,
       }
     }
-    return null
+    return {
+      type: "browser",
+      path: browserMain,
+    }
   },
   node: ({ main }) => {
     if (typeof main === "string") {
@@ -1353,14 +1371,27 @@ const applyFileSystemMagicResolution = (
   fileUrl,
   { magicDirectoryIndex, magicExtensions },
 ) => {
-  const filestats = fileStatsOrNull(fileUrl);
-  if (filestats && filestats.isFile()) {
+  let lastENOENTError = null;
+  const fileStatOrNull = (url) => {
+    try {
+      return node_fs.statSync(new URL(url))
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        lastENOENTError = e;
+        return null
+      }
+      throw e
+    }
+  };
+
+  const fileStat = fileStatOrNull(fileUrl);
+  if (fileStat && fileStat.isFile()) {
     return {
       found: true,
       url: fileUrl,
     }
   }
-  if (filestats && filestats.isDirectory()) {
+  if (fileStat && fileStat.isDirectory()) {
     if (magicDirectoryIndex) {
       const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
       const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
@@ -1379,47 +1410,28 @@ const applyFileSystemMagicResolution = (
       url: fileUrl,
     }
   }
-  const extensionLeadingToAFile = findExtensionLeadingToFile(
-    fileUrl,
-    magicExtensions,
-  );
-  // magic extension not found
-  if (extensionLeadingToAFile) {
-    // magic extension worked
-    return {
-      magicExtension: extensionLeadingToAFile,
-      found: true,
-      url: `${fileUrl}${extensionLeadingToAFile}`,
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href;
+    const urlFilename = urlToFilename(fileUrl);
+    const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+      const stat = fileStatOrNull(urlCandidate);
+      return stat
+    });
+    if (extensionLeadingToFile) {
+      // magic extension worked
+      return {
+        magicExtension: extensionLeadingToFile,
+        found: true,
+        url: `${fileUrl}${extensionLeadingToFile}`,
+      }
     }
   }
+  // magic extension not found
   return {
     found: false,
     url: fileUrl,
-  }
-};
-
-const findExtensionLeadingToFile = (fileUrl, magicExtensions) => {
-  if (!magicExtensions) {
-    return null
-  }
-  const parentUrl = new URL("./", fileUrl).href;
-  const urlFilename = urlToFilename(fileUrl);
-  const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
-    const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-    const stats = fileStatsOrNull(urlCandidate);
-    return stats
-  });
-  return extensionLeadingToFile
-};
-
-const fileStatsOrNull = (url) => {
-  try {
-    return node_fs.statSync(new URL(url))
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      return null
-    }
-    throw e
+    lastENOENTError,
   }
 };
 
@@ -2129,6 +2141,8 @@ const resolve = (
     packageConditions = ["browser", "import"],
     importmapFileRelativeUrl,
     caseSensitive = true,
+    // NICE TO HAVE: allow more control on when magic resolution applies:
+    // one might want to enable this for node_modules but not for project files
     magicDirectoryIndex = false,
     magicExtensions = false,
   },
@@ -2152,6 +2166,7 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
     }
   }
 
+  const importer = String(fileSystemPathToUrl(file));
   const onUrl = (url) => {
     if (url.startsWith("file:")) {
       url = ensureWindowsDriveLetter(url, importer);
@@ -2173,8 +2188,11 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
   };
 
   const specifier = source;
-  const importer = String(fileSystemPathToUrl(file));
   try {
+    // data:*, http://*, https://*, file://*
+    if (isAbsoluteUrl(specifier)) {
+      return onUrl(specifier)
+    }
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
         logger,
@@ -2261,6 +2279,16 @@ const handleRemainingUrl = () => {
   return {
     found: true,
     path: null,
+  }
+};
+
+const isAbsoluteUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true
+  } catch (e) {
+    return false
   }
 };
 

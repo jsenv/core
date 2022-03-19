@@ -123,11 +123,12 @@ import "${preactDevtoolsReference.generatedSpecifier}"
         // "@babel/plugin-transform-react-jsx" cannot be configured to inject
         // "/node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js" instead of "preact/jsx-runtime"
         // But that's fine we can still replace these imports afterwards as done below
-        ;[
+        const injectedSpecifiers = [
           `"preact"`,
           `"preact/jsx-dev-runtime"`,
           `"preact/jsx-runtime"`,
-        ].forEach((importSpecifier) => {
+        ]
+        for (const importSpecifier of injectedSpecifiers) {
           const index = code.indexOf(importSpecifier)
           if (index > -1) {
             magicSource.replace({
@@ -141,7 +142,7 @@ import "${preactDevtoolsReference.generatedSpecifier}"
               }"`,
             })
           }
-        })
+        }
         if (prefreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
