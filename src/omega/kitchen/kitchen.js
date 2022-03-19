@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url"
+import { writeFileSync } from "node:fs"
 import {
   urlIsInsideOf,
   writeFile,
@@ -15,7 +16,6 @@ import {
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
-import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
 
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import {
@@ -247,6 +247,7 @@ export const createKitchen = ({
         referencedCopy,
         baseContext,
       )
+      // TODO: || faire JSOn.stringify
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       return reference
     }
@@ -279,7 +280,7 @@ export const createKitchen = ({
     if (parseResult) {
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
-        addReference({
+        const reference = addReference({
           trace: stringifyUrlSite(
             adjustUrlSite(urlInfo, {
               urlGraph,
@@ -291,6 +292,7 @@ export const createKitchen = ({
           type: urlMention.type,
           specifier: urlMention.specifier,
         })
+        urlMention.reference = reference
       }
       if (references.length) {
         // "formatReferencedUrl" can be async BUT this is an exception
@@ -308,8 +310,7 @@ export const createKitchen = ({
           }),
         )
         const transformReturnValue = await replaceUrls((urlMention) => {
-          const reference = references[urlMentions.indexOf(urlMention)]
-          return reference.generatedSpecifier
+          return urlMention.reference.generatedSpecifier
         })
         updateContents(transformReturnValue)
       }
@@ -327,19 +328,6 @@ export const createKitchen = ({
         },
       )
     } catch (error) {
-      if (error.code === "PARSE_ERROR") {
-        const urlSite = await getUrlSite(urlInfo, {
-          line: error.line,
-          column: error.column,
-        })
-        error.message = `${error.reasonCode}
-${stringifyUrlSite(
-  adjustUrlSite(urlInfo, {
-    urlGraph,
-    ...urlSite,
-  }),
-)}`
-      }
       throw createTransformError({
         pluginController,
         reference,
@@ -395,31 +383,31 @@ ${stringifyUrlSite(
     )
   }
   const cook = async ({ urlInfo, ...rest }) => {
+    const writeFiles = ({ gotError }) => {
+      if (!writeOnFileSystem) {
+        return
+      }
+      const { generatedUrl } = urlInfo
+      // writing result inside ".jsenv" directory (debug purposes)
+      if (!generatedUrl || !generatedUrl.startsWith("file:")) {
+        return
+      }
+      const write = gotError ? writeFileSync : writeFile
+      write(new URL(generatedUrl), urlInfo.content)
+      const { sourcemapGeneratedUrl, sourcemap } = urlInfo
+      if (sourcemapGeneratedUrl && sourcemap) {
+        write(
+          new URL(sourcemapGeneratedUrl),
+          JSON.stringify(sourcemap, null, "  "),
+        )
+      }
+    }
+
     try {
       await _cook({ urlInfo, ...rest })
-      if (writeOnFileSystem) {
-        const { generatedUrl } = urlInfo
-        // writing result inside ".jsenv" directory (debug purposes)
-        if (generatedUrl && generatedUrl.startsWith("file:")) {
-          writeFile(generatedUrl, urlInfo.content)
-          const { sourcemapGeneratedUrl, sourcemap } = urlInfo
-          if (sourcemapGeneratedUrl && sourcemap) {
-            if (sourcemapInjection === "comment") {
-              await writeFile(
-                sourcemapGeneratedUrl,
-                JSON.stringify(sourcemap, null, "  "),
-              )
-            } else if (sourcemapInjection === "inline") {
-              writeFile(
-                sourcemapGeneratedUrl,
-                JSON.stringify(sourcemap, null, "  "),
-              )
-            }
-          }
-        }
-      }
-      return urlInfo
+      writeFiles({ gotError: false })
     } catch (e) {
+      writeFiles({ gotError: true })
       throw e
     }
   }
@@ -468,55 +456,6 @@ const inferUrlInfoType = ({ url, contentType }) => {
     return "importmap"
   }
   return "other"
-}
-
-const getUrlSite = async (
-  urlInfo,
-  { line, column, originalLine, originalColumn },
-) => {
-  if (typeof originalLine === "number") {
-    return {
-      url: urlInfo.url,
-      line: originalLine,
-      column: originalColumn,
-    }
-  }
-  if (urlInfo.content === urlInfo.originalContent) {
-    return {
-      url: urlInfo.url,
-      line,
-      column,
-    }
-  }
-  // at this point things were transformed: line and column are generated
-  // no sourcemap -> cannot map back to original file
-  const { sourcemap } = urlInfo
-  if (!sourcemap) {
-    return {
-      url: urlInfo.generatedUrl,
-      content: urlInfo.content,
-      line,
-      column,
-    }
-  }
-  const originalPosition = await getOriginalPosition({
-    sourcemap,
-    line,
-    column,
-  })
-  // cannot map back to original file
-  if (!originalPosition || originalPosition.line === null) {
-    return {
-      url: urlInfo.generatedUrl,
-      line,
-      column,
-    }
-  }
-  return {
-    url: urlInfo.url,
-    line: originalPosition.line,
-    column: originalPosition.column,
-  }
 }
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
@@ -571,3 +510,53 @@ const determineFileUrlForOutDirectory = ({
   }
   return moveUrl(url, rootDirectoryUrl, outDirectoryUrl)
 }
+
+// import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
+// const getUrlSite = async (
+//   urlInfo,
+//   { line, column, originalLine, originalColumn },
+// ) => {
+//   if (typeof originalLine === "number") {
+//     return {
+//       url: urlInfo.url,
+//       line: originalLine,
+//       column: originalColumn,
+//     }
+//   }
+//   if (urlInfo.content === urlInfo.originalContent) {
+//     return {
+//       url: urlInfo.url,
+//       line,
+//       column,
+//     }
+//   }
+//   // at this point things were transformed: line and column are generated
+//   // no sourcemap -> cannot map back to original file
+//   const { sourcemap } = urlInfo
+//   if (!sourcemap) {
+//     return {
+//       url: urlInfo.generatedUrl,
+//       content: urlInfo.content,
+//       line,
+//       column,
+//     }
+//   }
+//   const originalPosition = await getOriginalPosition({
+//     sourcemap,
+//     line,
+//     column,
+//   })
+//   // cannot map back to original file
+//   if (!originalPosition || originalPosition.line === null) {
+//     return {
+//       url: urlInfo.generatedUrl,
+//       line,
+//       column,
+//     }
+//   }
+//   return {
+//     url: urlInfo.url,
+//     line: originalPosition.line,
+//     column: originalPosition.column,
+//   }
+// }

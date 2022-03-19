@@ -22,6 +22,9 @@ export const applyBabelPlugins = async ({
     filename: filepath,
     configFile: false,
     babelrc: false,
+    highlightCode: false,
+    // consider using startColumn and startLine for inline scripts?
+    // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
     parserOpts: {
       sourceType: type === "js_module" ? "module" : "script",
       // allowAwaitOutsideFunction: true,
@@ -66,8 +69,9 @@ export const applyBabelPlugins = async ({
   }
 }
 
-const createParseError = ({ message, url, line, column }) => {
+const createParseError = ({ message, reasonCode, url, line, column }) => {
   const parseError = new Error(message)
+  parseError.reasonCode = reasonCode
   parseError.code = "PARSE_ERROR"
   parseError.url = url
   parseError.line = line

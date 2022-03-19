@@ -108,10 +108,13 @@ const jsenvPluginHot = () => {
         data.hotAcceptSelf = false
         data.hotAcceptDependencies = []
       },
-      js_module: async ({ url, data, content }, { addReference }) => {
+      js_module: async (
+        { url, generatedUrl, data, content },
+        { addReference },
+      ) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
-          url,
+          url: generatedUrl,
           content,
         })
         const {

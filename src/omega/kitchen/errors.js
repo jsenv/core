@@ -1,8 +1,12 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
 export const createResolveError = ({ pluginController, reference, error }) => {
-  const createFailedToResolveError = ({ code, reason, ...details }) => {
-    const loadError = new Error(
+  const createFailedToResolveError = ({
+    code = error.code || "RESOLVE_ERROR",
+    reason,
+    ...details
+  }) => {
+    const resolveError = new Error(
       createDetailedMessage(`Failed to resolve specifier`, {
         reason,
         ...details,
@@ -11,11 +15,10 @@ export const createResolveError = ({ pluginController, reference, error }) => {
         ...detailsFromPluginController(pluginController),
       }),
     )
-    loadError.name = "RESOLVE_ERROR"
-    loadError.code = code
-    loadError.reason = reason
-    loadError.originalError = error
-    return loadError
+    resolveError.name = "RESOLVE_ERROR"
+    resolveError.code = code
+    resolveError.reason = reason
+    return resolveError
   }
   if (error.message === "NO_RESOLVE") {
     return createFailedToResolveError({
@@ -34,7 +37,11 @@ export const createLoadError = ({
   urlInfo,
   error,
 }) => {
-  const createFailedToLoadError = ({ code, reason, ...details }) => {
+  const createFailedToLoadError = ({
+    code = error.code || "LOAD_ERROR",
+    reason,
+    ...details
+  }) => {
     const loadError = new Error(
       createDetailedMessage(`Failed to load url`, {
         reason,
@@ -47,7 +54,6 @@ export const createLoadError = ({
     loadError.name = "LOAD_ERROR"
     loadError.code = code
     loadError.reason = reason
-    loadError.originalError = error
     return loadError
   }
 
@@ -65,7 +71,7 @@ export const createLoadError = ({
   }
   if (error.code === "EISDIR") {
     return createFailedToLoadError({
-      code: "NOT_ALLOWED",
+      code: "EISDIR",
       reason: `found a directory on filesystem`,
     })
   }
@@ -82,7 +88,11 @@ export const createLoadError = ({
 }
 
 export const createParseError = ({ reference, urlInfo, error }) => {
-  const createFailedToParseError = ({ code, reason, ...details }) => {
+  const createFailedToParseError = ({
+    code = error.code || "PARSE_ERROR",
+    reason,
+    ...details
+  }) => {
     const parseError = new Error(
       createDetailedMessage(`Failed to parse ${urlInfo.type}`, {
         reason,
@@ -94,7 +104,6 @@ export const createParseError = ({ reference, urlInfo, error }) => {
     parseError.name = "PARSE_ERROR"
     parseError.code = code
     parseError.reason = reason
-    parseError.originalError = error
     return parseError
   }
   return createFailedToParseError({
@@ -109,7 +118,11 @@ export const createTransformError = ({
   urlInfo,
   error,
 }) => {
-  const createFailedToTransformError = ({ code, reason, ...details }) => {
+  const createFailedToTransformError = ({
+    code = error.code || "TRANSFORM_ERROR",
+    reason,
+    ...details
+  }) => {
     const transformError = new Error(
       createDetailedMessage(`Failed to transform ${urlInfo.type}`, {
         reason,
@@ -122,7 +135,6 @@ export const createTransformError = ({
     transformError.name = "TRANSFORM_ERROR"
     transformError.code = code
     transformError.reason = reason
-    transformError.originalError = error
     return transformError
   }
   return createFailedToTransformError({

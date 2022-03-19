@@ -15,12 +15,10 @@ export const jsenvPluginSystemJs = () => {
         // replace type="module" with regular tag using System.import
         return null
       },
-      js_module: async ({
-        isSupportedOnRuntime,
-        runtimeSupport,
-        url,
-        content,
-      }) => {
+      js_module: async (
+        { generatedUrl, content },
+        { isSupportedOnRuntime, runtimeSupport },
+      ) => {
         const shouldBeCompatibleWithNode =
           Object.keys(runtimeSupport).includes("node")
         const requiredFeatureNames = [
@@ -47,7 +45,7 @@ export const jsenvPluginSystemJs = () => {
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [require("@babel/plugin-transform-modules-systemjs")],
-          url,
+          url: generatedUrl,
           content,
         })
         return {

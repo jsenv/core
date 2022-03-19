@@ -95,7 +95,7 @@ export const createFileService = ({
         body: content,
       }
     } catch (e) {
-      const code = e.originalError ? e.originalError.code : e.code
+      const code = e.code
       if (code === "PARSE_ERROR") {
         // let the browser re-throw the syntax error
         return {

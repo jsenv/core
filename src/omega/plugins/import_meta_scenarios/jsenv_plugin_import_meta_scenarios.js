@@ -19,10 +19,10 @@ export const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transform: {
-      js_module: async ({ url, content }, { scenario }) => {
+      js_module: async ({ url, generatedUrl, content }, { scenario }) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          url,
+          url: generatedUrl,
           content,
         })
         const { dev = [], test = [], build = [] } = metadata.importMetaScenarios

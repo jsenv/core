@@ -17,7 +17,7 @@ export const jsenvPluginImportAssertions = () => {
       appliesDuring: "*",
       transform: {
         js_module: async (
-          { url, content },
+          { url, generatedUrl, content },
           { scenario, isSupportedOnRuntime },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
@@ -29,7 +29,7 @@ export const jsenvPluginImportAssertions = () => {
           }
           const { metadata } = await applyBabelPlugins({
             babelPlugins: [babelPluginMetadataImportAssertions],
-            url,
+            url: generatedUrl,
             content,
           })
           const { importAssertions } = metadata

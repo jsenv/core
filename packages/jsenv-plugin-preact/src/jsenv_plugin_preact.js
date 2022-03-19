@@ -74,7 +74,10 @@ import "${preactDevtoolsReference.generatedSpecifier}"
         const htmlModified = stringifyHtmlAst(htmlAst)
         return { content: htmlModified }
       },
-      js_module: async ({ url, content }, { scenario, addReference }) => {
+      js_module: async (
+        { url, generatedUrl, content },
+        { scenario, addReference },
+      ) => {
         //   case "Fragment":
         //   return `${source}/${development ? "jsx-dev-runtime" : "jsx-runtime"}`;
         // case "jsxDEV":
@@ -101,7 +104,7 @@ import "${preactDevtoolsReference.generatedSpecifier}"
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
             ...(prefreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
-          url,
+          url: generatedUrl,
           content,
         })
         const magicSource = createMagicSource({
