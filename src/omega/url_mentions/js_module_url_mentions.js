@@ -15,12 +15,15 @@ export const parseJsModuleUrlMentions = async ({ url, content }) => {
     replaceUrls: async (getReplacement) => {
       const magicSource = createMagicSource({ url, content })
       urlMentions.forEach((urlMention) => {
-        const { start, end } = urlMention
-        magicSource.replace({
-          start,
-          end,
-          replacement: getReplacement(urlMention),
-        })
+        const replacement = getReplacement(urlMention)
+        if (replacement) {
+          const { start, end } = urlMention
+          magicSource.replace({
+            start,
+            end,
+            replacement,
+          })
+        }
       })
       return magicSource.toContentAndSourcemap()
     },
@@ -34,11 +37,12 @@ const babelPluginMetadataUrlMentions = () => {
       Program(programPath, state) {
         const urlMentions = []
         collectProgramUrlMentions(programPath).forEach(
-          ({ type, path, specifierPath }) => {
+          ({ type, subtype, path, specifierPath }) => {
             const specifierNode = specifierPath.node
             if (specifierNode.type === "StringLiteral") {
               urlMentions.push({
                 type,
+                subtype,
                 path,
                 specifier: specifierNode.value,
                 start: specifierNode.start,

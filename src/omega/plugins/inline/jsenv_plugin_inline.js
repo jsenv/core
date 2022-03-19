@@ -190,11 +190,7 @@ const dataUrls = () => {
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.content,
         })
-        const formatter = {
-          js_import_export: JSON.stringify,
-          js_import_meta_url_pattern: JSON.stringify,
-        }[reference.type]
-        return formatter ? formatter(specifier) : specifier
+        return specifier
       })()
     },
   }
@@ -219,11 +215,7 @@ const inlineQueryParam = () => {
           base64Flag: true,
           data: urlInfo.content,
         })
-        const formatter = {
-          js_import_export: JSON.stringify,
-          js_import_meta_url_pattern: JSON.stringify,
-        }[reference.type]
-        return formatter ? formatter(specifier) : specifier
+        return specifier
       })()
     },
   }

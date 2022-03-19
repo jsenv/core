@@ -313,15 +313,18 @@ export const generateBuild = async ({
             content: urlInfo.content,
           })
           if (parseResult) {
-            const { urlMentions, replaceUrls } = parseResult
-            const replacements = {}
-            urlMentions.forEach((urlMention) => {
-              // TODO: if url mention is versioned
-              // (all urls are, oh yeah but no, not import meta url, not dynamic imports)
-              // static import we have no choice until importmap is supported
-              // the rest must use versioned url
+            const { replaceUrls } = parseResult
+            const { content } = await replaceUrls((urlMention) => {
+              if (
+                urlMention.type === "js_import_meta_url_pattern" ||
+                urlMention.subtype === "import_dynamic"
+              ) {
+                // what do we put in JSON.stringify here?
+                return `window.__asVersionedSpecifier__(${JSON.stringify("")})`
+              }
+              return urlInfo.data.version
             })
-            const { content } = await replaceUrls(replacements)
+            // TODO: importmap composition
             urlInfo.content = content
           }
         }),

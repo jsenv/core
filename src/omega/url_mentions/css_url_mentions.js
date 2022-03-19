@@ -47,7 +47,10 @@ export const parseCssUrlMentions = async ({ url, content }) => {
             (urlMention) => urlMention.url === url,
           )
           if (cssUrlMention) {
-            replace(getReplacement(cssUrlMention))
+            const replacement = getReplacement(cssUrlMention)
+            if (replacement) {
+              replace(replacement)
+            }
           }
         },
       })

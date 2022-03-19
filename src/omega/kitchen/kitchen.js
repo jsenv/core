@@ -247,8 +247,28 @@ export const createKitchen = ({
         referencedCopy,
         baseContext,
       )
-      // TODO: || faire JSOn.stringify
-      reference.generatedSpecifier = returnValue || reference.generatedUrl
+      const ensureProperFormattingOfGeneratedSpecifier = (
+        generatedSpecifier,
+      ) => {
+        if (generatedSpecifier.then) {
+          return generatedSpecifier.then(
+            ensureProperFormattingOfGeneratedSpecifier,
+          )
+        }
+        // allow plugin to return a function to bypas default formatting
+        // (which is to use JSON.stringify when url is referenced inside js)
+        if (typeof generatedSpecifier === "function") {
+          return generatedSpecifier()
+        }
+        const formatter = {
+          js_import_export: JSON.stringify,
+          js_import_meta_url_pattern: JSON.stringify,
+        }[reference.type]
+        return formatter ? formatter(generatedSpecifier) : generatedSpecifier
+      }
+      reference.generatedSpecifier = ensureProperFormattingOfGeneratedSpecifier(
+        returnValue || reference.generatedUrl,
+      )
       return reference
     }
     const updateContents = (data) => {

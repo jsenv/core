@@ -14,7 +14,10 @@ export const parseHtmlUrlMentions = ({ url, content }) => {
     urlMentions: htmlUrlMentions,
     replaceUrls: (getReplacement) => {
       htmlUrlMentions.forEach((urlMention) => {
-        urlMention.attribute.value = getReplacement(urlMention)
+        const replacement = getReplacement(urlMention)
+        if (replacement) {
+          urlMention.attribute.value = replacement
+        }
       })
       return {
         content: stringifyHtmlAst(htmlAst),

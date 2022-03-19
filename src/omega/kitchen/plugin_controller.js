@@ -115,6 +115,7 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
       if (pluginEntry.destroy) {
         pluginEntry.destroy()
       }
+      return
     }
     throw new Error(`plugin must be objects, got ${pluginEntry}`)
   }

@@ -33,6 +33,7 @@ export const collectProgramUrlMentions = (programPath) => {
       }
       urlMentions.push({
         type: "js_import_export",
+        subtype: "import_dynamic",
         specifierPath: path.get("arguments")[0],
         path,
       })
@@ -40,6 +41,7 @@ export const collectProgramUrlMentions = (programPath) => {
     ExportAllDeclaration: (path) => {
       urlMentions.push({
         type: "js_import_export",
+        subtype: "export_all",
         specifierPath: path.get("source"),
         path,
       })
@@ -55,6 +57,7 @@ export const collectProgramUrlMentions = (programPath) => {
       }
       urlMentions.push({
         type: "js_import_export",
+        subtype: "export_named",
         specifierPath: path.get("source"),
         path,
       })
@@ -62,6 +65,7 @@ export const collectProgramUrlMentions = (programPath) => {
     ImportDeclaration: (path) => {
       urlMentions.push({
         type: "js_import_export",
+        subtype: "import_static",
         specifierPath: path.get("source"),
         path,
       })
