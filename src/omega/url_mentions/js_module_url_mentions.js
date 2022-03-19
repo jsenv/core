@@ -12,15 +12,14 @@ export const parseJsModuleUrlMentions = async ({ url, content }) => {
   const { urlMentions } = metadata
   return {
     urlMentions,
-    replaceUrls: async (replacements) => {
+    replaceUrls: async (getReplacement) => {
       const magicSource = createMagicSource({ url, content })
-      replacements.forEach(({ urlMentionIndex, value }) => {
-        const urlMention = urlMentions[urlMentionIndex]
+      urlMentions.forEach((urlMention) => {
         const { start, end } = urlMention
         magicSource.replace({
           start,
           end,
-          replacement: value,
+          replacement: getReplacement(urlMention),
         })
       })
       return magicSource.toContentAndSourcemap()

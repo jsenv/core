@@ -93,8 +93,9 @@ export const generateBuild = async ({
   })
   let sourceEntryReferences
   try {
-    sourceEntryReferences = Object.keys(entryPoints).map((key) => {
+    sourceEntryReferences = Object.keys(entryPoints).map((key, index) => {
       const sourceEntryReference = sourceKitchen.createReference({
+        trace: `entry point ${index} in "entryPoints" parameter of "generateBuild"`,
         parentUrl: sourceDirectoryUrl,
         type: "entry_point",
         specifier: key,
@@ -104,7 +105,7 @@ export const generateBuild = async ({
     await loadUrlGraph({
       urlGraph: sourceGraph,
       kitchen: sourceKitchen,
-      outDirectoryName: "build",
+      outDirectoryUrl: new URL(`.jsenv/build/`, sourceDirectoryUrl),
       runtimeSupport,
       startLoading: (cook) => {
         sourceEntryReferences.forEach((sourceEntryReference) => {
@@ -205,7 +206,7 @@ export const generateBuild = async ({
             new URL(specifier, parentUrl).href
           )
         },
-        redirect: ({ type, url }) => {
+        redirect: ({ type, url, data }) => {
           const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(
             url,
@@ -213,11 +214,11 @@ export const generateBuild = async ({
               ? "/"
               : "assets/",
           )
-          buildUrlMappings[buildUrl] = url
+          data.sourceUrl = url
           return buildUrl
         },
-        load: ({ url }) => {
-          const sourceUrl = buildUrlMappings[url]
+        load: ({ data }) => {
+          const sourceUrl = data.sourceUrl
           const urlInfo =
             buildUrlInfos[sourceUrl] || sourceGraph.getUrlInfo(sourceUrl)
           return {
@@ -233,7 +234,6 @@ export const generateBuild = async ({
   const buildGraph = createUrlGraph({
     rootDirectoryUrl: buildDirectoryUrl,
   })
-  const buildUrlMappings = {}
   const buildKitchen = createKitchen({
     rootDirectoryUrl: sourceDirectoryUrl,
     urlGraph: buildGraph,
@@ -249,8 +249,9 @@ export const generateBuild = async ({
       kitchen: buildKitchen,
       outDirectoryName: "postbuild",
       startLoading: (cook) => {
-        Object.keys(entryPoints).forEach((key) => {
+        Object.keys(entryPoints).forEach((key, index) => {
           const buildEntryReference = buildKitchen.createReference({
+            trace: `entry point ${index} in "entryPoints" parameter of "generateBuild"`,
             parentUrl: sourceDirectoryUrl,
             type: "entry_point",
             specifier: key,
@@ -284,9 +285,9 @@ export const generateBuild = async ({
         })
         urlInfo.dependencies.forEach((dependencyUrl) => {
           const dependencyUrlInfo = buildGraph.getUrlInfo(dependencyUrl)
-          if (dependencyUrlInfo.version) {
+          if (dependencyUrlInfo.data.version) {
             urlVersionGenerator.augmentWithDependencyVersion(
-              dependencyUrlInfo.version,
+              dependencyUrlInfo.data.version,
             )
           } else {
             // because all dependencies are know, if the dependency has no version
@@ -300,7 +301,7 @@ export const generateBuild = async ({
             })
           }
         })
-        urlInfo.version = urlVersionGenerator.generate()
+        urlInfo.data.version = urlVersionGenerator.generate()
       })
       // replace all urls to inject versions
       await Promise.all(
@@ -344,15 +345,6 @@ export const generateBuild = async ({
       )
     })
   }
-
-  /* :check: build done in 1s
-   * --- 1 build file ----
-   * dist/file.js (10ko)
-   * --- build summary ---
-   * - build files: 1 (10 ko)
-   * - build sourcemap files: none
-   * ----------------------
-   */
   return null
 }
 

@@ -20,14 +20,18 @@ export const jsenvPluginFileSystemAbsolute = () => {
       const url = new URL(specifier.slice("/@fs".length), rootDirectoryUrl).href
       return url
     },
-    formatReferencedUrl: ({ url }, { baseUrl, rootDirectoryUrl }) => {
+    formatReferencedUrl: ({ type, url }, { baseUrl, rootDirectoryUrl }) => {
       if (!url.startsWith("file:")) {
         return null
       }
-      if (urlIsInsideOf(url, rootDirectoryUrl)) {
-        return `${baseUrl}${urlToRelativeUrl(url, rootDirectoryUrl)}`
-      }
-      return `${baseUrl}@fs/${url.slice(filesystemRootUrl.length)}`
+      const specifier = urlIsInsideOf(url, rootDirectoryUrl)
+        ? `${baseUrl}${urlToRelativeUrl(url, rootDirectoryUrl)}`
+        : `${baseUrl}@fs/${url.slice(filesystemRootUrl.length)}`
+      const formatter = {
+        js_import_export: JSON.stringify,
+        js_import_meta_url_pattern: JSON.stringify,
+      }[type]
+      return formatter ? formatter(specifier) : specifier
     },
   }
 }

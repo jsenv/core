@@ -12,12 +12,13 @@ export const parseCssUrlMentions = async ({ url, content }) => {
     sourcemapMethod: false,
     plugins: [
       postCssPluginUrlVisitor({
-        urlVisitor: ({ type, specifier, urlNode }) => {
+        urlVisitor: ({ type, url, specifier, urlNode }) => {
           cssUrlMentions.push({
             type: `css_${type}`,
             specifier,
             start: urlNode.sourceIndex,
             end: urlNode.sourceEndIndex,
+            url,
           })
         },
       }),
@@ -27,7 +28,7 @@ export const parseCssUrlMentions = async ({ url, content }) => {
   })
   return {
     urlMentions: cssUrlMentions,
-    replaceUrls: async (replacements) => {
+    replaceUrls: async (getReplacement) => {
       // we can't use magic source because urlMention.start/end do not match the url specifier
       // const magicSource = createMagicSource({ url, content })
       // cssUrlMentions.forEach((urlMention) => {
@@ -42,11 +43,11 @@ export const parseCssUrlMentions = async ({ url, content }) => {
         url,
         content,
         urlVisitor: ({ url, replace }) => {
-          const replacement = replacements.find(
-            (replacement) => replacement.url === url,
+          const cssUrlMention = cssUrlMentions.find(
+            (urlMention) => urlMention.url === url,
           )
-          if (replacement) {
-            replace(replacement.value)
+          if (cssUrlMention) {
+            replace(getReplacement(cssUrlMention))
           }
         },
       })

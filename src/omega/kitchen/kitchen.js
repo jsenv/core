@@ -292,35 +292,27 @@ export const createKitchen = ({
           specifier: urlMention.specifier,
         })
       }
-      const replacements = []
-      // "formatReferencedUrl" can be async BUT this is an exception
-      // for most cases it will be sync. We want to favor the sync signature to keep things simpler
-      // The only case where it needs to be async is when
-      // the specifier is a `data:*` url
-      // in this case we'll wait for the promise returned by
-      // "formatReferencedUrl"
-      await Promise.all(
-        references.map(async (reference) => {
-          if (reference.generatedSpecifier.then) {
-            const value = await reference.generatedSpecifier
-            reference.generatedSpecifier = value
-          }
-        }),
-      )
-      references.forEach((reference, index) => {
-        const specifierFormatted =
-          reference.type === "js_import_meta_url_pattern" ||
-          reference.type === "js_import_export"
-            ? JSON.stringify(reference.generatedSpecifier)
-            : reference.generatedSpecifier
-        replacements.push({
-          url: reference.url,
-          urlMentionIndex: index,
-          value: specifierFormatted,
+      if (references.length) {
+        // "formatReferencedUrl" can be async BUT this is an exception
+        // for most cases it will be sync. We want to favor the sync signature to keep things simpler
+        // The only case where it needs to be async is when
+        // the specifier is a `data:*` url
+        // in this case we'll wait for the promise returned by
+        // "formatReferencedUrl"
+        await Promise.all(
+          references.map(async (reference) => {
+            if (reference.generatedSpecifier.then) {
+              const value = await reference.generatedSpecifier
+              reference.generatedSpecifier = value
+            }
+          }),
+        )
+        const transformReturnValue = await replaceUrls((urlMention) => {
+          const reference = references[urlMentions.indexOf(urlMention)]
+          return reference.generatedSpecifier
         })
-      })
-      const transformReturnValue = await replaceUrls(replacements)
-      updateContents(transformReturnValue)
+        updateContents(transformReturnValue)
+      }
     }
 
     // "transform" hook

@@ -1,7 +1,7 @@
 export const loadUrlGraph = async ({
   urlGraph,
   kitchen,
-  outDirectoryName,
+  outDirectoryUrl,
   runtimeSupport,
   startLoading,
 }) => {
@@ -10,7 +10,7 @@ export const loadUrlGraph = async ({
     if (promiseFromData) return promiseFromData
     const promise = _cook({
       urlInfo,
-      outDirectoryName,
+      outDirectoryUrl,
       runtimeSupport,
       ...rest,
     })
@@ -23,9 +23,6 @@ export const loadUrlGraph = async ({
       urlInfo,
       ...rest,
     })
-    if (urlInfo.error) {
-      throw urlInfo.error
-    }
     const { references } = urlInfo
     await Promise.all(
       references.map(async (reference) => {

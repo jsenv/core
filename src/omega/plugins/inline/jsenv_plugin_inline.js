@@ -174,7 +174,7 @@ const dataUrls = () => {
         content: parseResult.data,
       }
     },
-    // TODO: test this
+
     formatReferencedUrl: (reference, { urlGraph, cook }) => {
       if (!reference.url.startsWith("data:")) {
         return null
@@ -185,11 +185,16 @@ const dataUrls = () => {
           reference,
           urlInfo,
         })
-        return DataUrl.stringify({
+        const specifier = DataUrl.stringify({
           mediaType: urlInfo.data.mediaType,
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.content,
         })
+        const formatter = {
+          js_import_export: JSON.stringify,
+          js_import_meta_url_pattern: JSON.stringify,
+        }[reference.type]
+        return formatter ? formatter(specifier) : specifier
       })()
     },
   }
@@ -209,11 +214,16 @@ const inlineQueryParam = () => {
           reference,
           urlInfo,
         })
-        return DataUrl.stringify({
+        const specifier = DataUrl.stringify({
           mediaType: urlInfo.contentType,
           base64Flag: true,
           data: urlInfo.content,
         })
+        const formatter = {
+          js_import_export: JSON.stringify,
+          js_import_meta_url_pattern: JSON.stringify,
+        }[reference.type]
+        return formatter ? formatter(specifier) : specifier
       })()
     },
   }

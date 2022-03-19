@@ -15,7 +15,6 @@ ${ANSI.color(`Total:`, ANSI.GREY)} ${graphReport.total.count} (${byteAsFileSize(
 --------------------`
 }
 
-// TODO: exlude inline files
 // more groups:
 // - js_classic
 // - graphics: jpg, png, fonts, svgs
@@ -39,12 +38,18 @@ const createUrlGraphReport = (urlGraph) => {
   }
   Object.keys(urlInfos).forEach((url) => {
     const urlInfo = urlInfos[url]
+    // ignore inline files, they are already taken into account in the file where they appear
+    if (urlInfo.inlineInfo) {
+      return
+    }
+    // ignore sourcemap files
+    if (urlInfo.type === "sourcemap") {
+      return
+    }
     const urlContentSize = Buffer.byteLength(urlInfo.content)
     countGroups.total++
     sizeGroups.total += urlContentSize
-
     const category = determineCategory(urlInfo)
-
     if (category === "html") {
       countGroups.html++
       sizeGroups.html += urlContentSize
