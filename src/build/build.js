@@ -1,8 +1,5 @@
 /*
- * TODO:
- * - make avoid cascade plugin inject importmap and helper
- * - remove original-stuff from html
- * - put the correct stuff into __asVersionedSpecifier__
+ *
  */
 
 import {
@@ -27,8 +24,6 @@ import { createTaskLog } from "@jsenv/core/src/utils/logs/task_log.js"
 import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
-import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 import { generateSourcemapUrl } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
@@ -39,6 +34,12 @@ import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildWithRollup } from "./build_with_rollup.js"
+import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
+import { injectVersionMapping } from "./inject_version_mapping.js"
+import {
+  parseHtmlString,
+  stringifyHtmlAst,
+} from "../utils/html_ast/html_ast.js"
 
 export const generateBuild = async ({
   signal = new AbortController().signal,
@@ -262,6 +263,16 @@ export const generateBuild = async ({
             sourcemap: urlInfo.sourcemap,
           }
         },
+        transform: {
+          html: ({ content }) => {
+            const htmlAst = parseHtmlString(content)
+            return {
+              content: stringifyHtmlAst(htmlAst, {
+                removeOriginalPositionAttributes: true,
+              }),
+            }
+          },
+        },
       },
     ],
     scenario: "postbuild",
@@ -340,15 +351,6 @@ export const generateBuild = async ({
         urlInfo.data.version = urlVersionGenerator.generate()
       })
       const versionMappings = {}
-      const asVersionedSpecifier = (specifier, version) => {
-        const versionedSpecifier = injectVersionIntoSpecifier({
-          versioningMethod,
-          specifier,
-          version,
-        })
-        versionMappings[specifier] = versionedSpecifier
-        return versionedSpecifier
-      }
       await Promise.all(
         urlsSorted.map(async (url) => {
           const urlInfo = buildGraph.getUrlInfo(url)
@@ -356,6 +358,7 @@ export const generateBuild = async ({
             url: urlInfo.url,
             type: urlInfo.type,
             content: urlInfo.content,
+            scenario: "build",
           })
           if (parseResult) {
             const { replaceUrls } = parseResult
@@ -373,32 +376,39 @@ export const generateBuild = async ({
               if (urlInfo.data.isEntryPoint) {
                 return null
               }
+              const versionedSpecifier = injectVersionIntoSpecifier({
+                versioningMethod,
+                specifier: urlMention.specifier,
+                version: urlInfo.data.version,
+              })
+              versionMappings[urlMention.specifier] = versionedSpecifier
               if (
                 urlMention.type === "js_import_meta_url_pattern" ||
                 urlMention.subtype === "import_dynamic"
               ) {
-                // what do we put in JSON.stringify here?
-                return `window.__asVersionedSpecifier__(${JSON.stringify("")})`
+                return `window.__asVersionedSpecifier__(${JSON.stringify(
+                  urlMention.specifier,
+                )})`
               }
-              return asVersionedSpecifier(
-                urlMention.specifier,
-                urlInfo.data.version,
-              )
+              return versionedSpecifier
             })
-            urlInfo.content = content
             urlInfo.sourcemapUrl = generateSourcemapUrl(urlInfo.url) // make sourcemap url use the version
-            urlInfo.sourcemap = composeTwoSourcemaps(
-              urlInfo.sourcemap,
+            updateContentAndSourcemap(urlInfo, {
+              content,
               sourcemap,
-            )
-            if (sourcemapMethod === "inline") {
-              urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
-            } else if (sourcemapMethod === "file") {
-              urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
-            }
+              sourcemapMethod,
+            })
           }
         }),
       )
+
+      Object.keys(buildGraph.urlInfos).forEach((buildUrl) => {
+        const buildUrlInfo = buildGraph.getUrlInfo(buildUrl)
+        if (!buildUrlInfo.data.isEntryPoint) {
+          return
+        }
+        injectVersionMapping(buildUrlInfo, { versionMappings, sourcemapMethod })
+      })
     } catch (e) {
       urlVersioningLog.fail()
       throw e

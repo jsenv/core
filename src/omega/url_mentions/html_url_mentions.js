@@ -7,8 +7,10 @@ import {
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
 
-export const parseHtmlUrlMentions = ({ url, content }) => {
-  const htmlAst = parseHtmlString(content, { storeOriginalPositions: true })
+export const parseHtmlUrlMentions = ({ url, content, scenario }) => {
+  const htmlAst = parseHtmlString(content, {
+    storeOriginalPositions: scenario !== "build",
+  })
   const htmlUrlMentions = collectHtmlUrlMentions({ url, htmlAst })
   return {
     urlMentions: htmlUrlMentions,
