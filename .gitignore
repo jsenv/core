@@ -17,3 +17,4 @@
 /yarn.lock
 .DS_STORE
 /todo.txt
+/test/**/dist/

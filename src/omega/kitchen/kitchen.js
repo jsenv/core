@@ -32,7 +32,7 @@ export const createKitchen = ({
   logger,
   rootDirectoryUrl,
   pluginController,
-  sourcemapInjection,
+  sourcemapMethod,
   urlGraph,
   scenario,
 
@@ -43,7 +43,7 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    sourcemapInjection,
+    sourcemapMethod,
     urlGraph,
     scenario,
     baseUrl,
@@ -369,7 +369,7 @@ export const createKitchen = ({
         url: sourcemapUrl,
       })
       urlInfo.sourcemapGeneratedUrl = sourcemapGeneratedUrl
-      urlInfo.content = injectSourcemap(urlInfo, { sourcemapInjection })
+      urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
     }
 
     // "finalize" hook

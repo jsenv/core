@@ -8,16 +8,16 @@ import {
 
 export const injectSourcemap = (
   { url, contentType, content, sourcemap, sourcemapUrl },
-  { sourcemapInjection },
+  { sourcemapMethod },
 ) => {
   if (contentType === "application/javascript") {
-    if (sourcemapInjection === "comment") {
+    if (sourcemapMethod === "file") {
       return setJavaScriptSourceMappingUrl(
         content,
         urlToRelativeUrl(sourcemapUrl, url),
       )
     }
-    if (sourcemapInjection === "inline") {
+    if (sourcemapMethod === "inline") {
       return setJavaScriptSourceMappingUrl(
         content,
         sourcemapToBase64Url(sourcemap),
@@ -26,13 +26,13 @@ export const injectSourcemap = (
     return content
   }
   if (contentType === "text/css") {
-    if (sourcemapInjection === "comment") {
+    if (sourcemapMethod === "file") {
       return setCssSourceMappingUrl(
         content,
         urlToRelativeUrl(sourcemapUrl, url),
       )
     }
-    if (sourcemapInjection === "inline") {
+    if (sourcemapMethod === "inline") {
       return setCssSourceMappingUrl(content, sourcemapToBase64Url(sourcemap))
     }
   }

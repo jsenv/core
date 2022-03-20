@@ -73,3 +73,14 @@ export const setUrlExtension = (url, extension) => {
   const newPathname = `${pathnameWithoutExtension}${extension}`
   return `${origin}${newPathname}${search ? `?${search}` : ""}`
 }
+
+export const setUrlFilename = (url, filename) => {
+  const urlObject = new URL(url)
+  let { origin, search, hash } = urlObject
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://"
+  }
+  const parentPathname = new URL("./", urlObject).pathname
+  return `${origin}${parentPathname}${filename}${search}${hash}`
+}

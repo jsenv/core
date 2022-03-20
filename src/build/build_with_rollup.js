@@ -12,7 +12,7 @@ export const buildWithRollup = async ({
   jsModulesUrlsToBuild,
 
   runtimeSupport,
-  sourcemapInjection,
+  sourcemapMethod,
 }) => {
   const resultRef = { current: null }
   await applyRollupPlugins({
@@ -26,7 +26,7 @@ export const buildWithRollup = async ({
         jsModulesUrlsToBuild,
 
         runtimeSupport,
-        sourcemapInjection,
+        sourcemapMethod,
         resultRef,
       }),
     ],
@@ -90,6 +90,8 @@ const rollupPluginJsenv = ({
           }
           jsModuleInfos[url] = {
             // buildRelativeUrl: rollupFileInfo.fileName,
+            data: { isEntryPoint: rollupFileInfo.isEntry },
+            type: "js_module",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
           }

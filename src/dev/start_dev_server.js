@@ -23,7 +23,7 @@ export const startDevServer = async ({
   projectDirectoryUrl,
   plugins = [],
 
-  sourcemapInjection = "inline",
+  sourcemapMethod = "inline",
   autoreload = true,
   autoreloadPatterns = {
     "./**": true,
@@ -60,7 +60,7 @@ export const startDevServer = async ({
     urlGraph,
     scenario: "dev",
     pluginController,
-    sourcemapInjection,
+    sourcemapMethod,
   })
   const server = await startOmegaServer({
     logger,

@@ -1,20 +1,35 @@
 /*
- *
+ * TODO:
+ * - make avoid cascade plugin inject importmap and helper
+ * - remove original-stuff from html
+ * - put the correct stuff into __asVersionedSpecifier__
  */
 
-import { writeFileSync } from "node:fs"
 import {
   assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
+  urlIsInsideOf,
+  urlToBasename,
+  urlToExtension,
+  urlToRelativeUrl,
+  writeFile,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import {
+  injectQueryParamsIntoSpecifier,
+  setUrlFilename,
+  isValidUrl,
+} from "@jsenv/core/src/utils/url_utils.js"
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
 import { loadUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph_load.js"
 import { createTaskLog } from "@jsenv/core/src/utils/logs/task_log.js"
 import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
+import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
+import { generateSourcemapUrl } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 import { createPluginController } from "../omega/kitchen/plugin_controller.js"
@@ -47,12 +62,13 @@ export const generateBuild = async ({
     rhino: "0.0.0",
     safari: "0.0.0",
   },
-  sourcemapInjection = isPreview ? "comment" : false,
+  sourcemapMethod = isPreview ? "file" : false,
 
-  urlVersioning = true,
+  versioning = true,
+  versioningMethod = "filename", // "search_param", "filename"
   lineBreakNormalization = process.platform === "win32",
 
-  writeOnFileSystem = false,
+  writeOnFileSystem = true,
   buildDirectoryClean = true,
   baseUrl = "/",
 }) => {
@@ -87,30 +103,27 @@ export const generateBuild = async ({
     rootDirectoryUrl: sourceDirectoryUrl,
     pluginController: sourcePluginController,
     urlGraph: sourceGraph,
-    sourcemapInjection,
+    sourcemapMethod,
     scenario: "build",
     baseUrl,
   })
-  let sourceEntryReferences
   try {
-    sourceEntryReferences = Object.keys(entryPoints).map((key, index) => {
-      const sourceEntryReference = sourceKitchen.createReference({
-        trace: `entry point ${index} in "entryPoints" parameter of "generateBuild"`,
-        parentUrl: sourceDirectoryUrl,
-        type: "entry_point",
-        specifier: key,
-      })
-      return sourceEntryReference
-    })
     await loadUrlGraph({
       urlGraph: sourceGraph,
       kitchen: sourceKitchen,
       outDirectoryUrl: new URL(`.jsenv/build/`, sourceDirectoryUrl),
       runtimeSupport,
       startLoading: (cook) => {
-        sourceEntryReferences.forEach((sourceEntryReference) => {
+        Object.keys(entryPoints).forEach((key) => {
+          const sourceEntryReference = sourceKitchen.createReference({
+            trace: `"${key}" in entryPoints parameter`,
+            parentUrl: sourceDirectoryUrl,
+            type: "entry_point",
+            specifier: key,
+          })
           const sourcEntryUrlInfo =
             sourceKitchen.resolveReference(sourceEntryReference)
+          sourcEntryUrlInfo.data.isEntryPoint = true
           cook({
             reference: sourceEntryReference,
             urlInfo: sourcEntryUrlInfo,
@@ -128,10 +141,13 @@ export const generateBuild = async ({
 
   const jsModulesUrlsToBuild = []
   const cssUrlsToBuild = []
-  sourceEntryReferences.forEach((sourceEntryReference) => {
-    const sourceEntryUrlInfo = sourceGraph.getUrlInfo(sourceEntryReference.url)
-    if (sourceEntryUrlInfo.type === "html") {
-      sourceEntryUrlInfo.dependencies.forEach((dependencyUrl) => {
+  Object.keys(sourceGraph.urlInfos).forEach((sourceUrl) => {
+    const sourceUrlInfo = sourceGraph.getUrlInfo(sourceUrl)
+    if (!sourceUrlInfo.data.isEntryPoint) {
+      return
+    }
+    if (sourceUrlInfo.type === "html") {
+      sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
         const dependencyUrlInfo = sourceGraph.getUrlInfo(dependencyUrl)
         if (dependencyUrlInfo.type === "js_module") {
           jsModulesUrlsToBuild.push(dependencyUrl)
@@ -144,15 +160,16 @@ export const generateBuild = async ({
       })
       return
     }
-    if (sourceEntryUrlInfo.type === "js_module") {
-      jsModulesUrlsToBuild.push(sourceEntryUrlInfo.url)
+    if (sourceUrlInfo.type === "js_module") {
+      jsModulesUrlsToBuild.push(sourceUrlInfo.url)
       return
     }
-    if (sourceEntryUrlInfo.type === "css") {
-      cssUrlsToBuild.push(sourceEntryUrlInfo.url)
+    if (sourceUrlInfo.type === "css") {
+      cssUrlsToBuild.push(sourceUrlInfo.url)
       return
     }
   })
+
   const buildUrlInfos = {}
   // in the future this should be done in a "bundle" hook
   if (jsModulesUrlsToBuild.length) {
@@ -167,12 +184,13 @@ export const generateBuild = async ({
         jsModulesUrlsToBuild,
 
         runtimeSupport,
-        sourcemapInjection,
+        sourcemapMethod,
       })
       const { jsModuleInfos } = rollupBuild
       Object.keys(jsModuleInfos).forEach((url) => {
         const jsModuleInfo = jsModuleInfos[url]
         buildUrlInfos[url] = {
+          data: jsModuleInfo.data,
           type: "js_module",
           contentType: "application/javascript",
           content: jsModuleInfo.content,
@@ -194,6 +212,7 @@ export const generateBuild = async ({
   const buildUrlsGenerator = createBuilUrlsGenerator({
     buildDirectoryUrl,
   })
+  const buildUrlMappings = {}
   const buildPluginController = createPluginController({
     injectJsenvPlugins: false,
     plugins: [
@@ -206,16 +225,32 @@ export const generateBuild = async ({
             new URL(specifier, parentUrl).href
           )
         },
-        redirect: ({ type, url, data }) => {
+        normalize: ({ url, data }) => {
           const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(
             url,
-            type === "entry_point" || urlInfo.type === "js_module"
+            urlInfo.data.isEntryPoint || urlInfo.type === "js_module"
               ? "/"
               : "assets/",
           )
           data.sourceUrl = url
           return buildUrl
+        },
+        formatReferencedUrl: ({ url }) => {
+          if (!url.startsWith("file:")) {
+            return null
+          }
+          if (!urlIsInsideOf(url, buildDirectoryUrl)) {
+            throw new Error(
+              `file url should be inside build directory at this stage`,
+            )
+          }
+          const specifier = `${baseUrl}${urlToRelativeUrl(
+            url,
+            buildDirectoryUrl,
+          )}`
+          buildUrlMappings[specifier] = url
+          return specifier
         },
         load: ({ data }) => {
           const sourceUrl = data.sourceUrl
@@ -247,17 +282,18 @@ export const generateBuild = async ({
     await loadUrlGraph({
       urlGraph: buildGraph,
       kitchen: buildKitchen,
-      outDirectoryName: "postbuild",
+      outDirectoryUrl: new URL(".jsenv/build/", sourceDirectoryUrl),
       startLoading: (cook) => {
-        Object.keys(entryPoints).forEach((key, index) => {
+        Object.keys(entryPoints).forEach((key) => {
           const buildEntryReference = buildKitchen.createReference({
-            trace: `entry point ${index} in "entryPoints" parameter of "generateBuild"`,
+            trace: `"${key}" in entryPoints parameter`,
             parentUrl: sourceDirectoryUrl,
             type: "entry_point",
             specifier: key,
           })
           const buildEntryUrlInfo =
             buildKitchen.resolveReference(buildEntryReference)
+          buildEntryUrlInfo.data.isEntryPoint = true
           cook({
             reference: buildEntryReference,
             urlInfo: buildEntryUrlInfo,
@@ -271,7 +307,7 @@ export const generateBuild = async ({
   }
   loadBuilGraphLog.done()
 
-  if (urlVersioning) {
+  if (versioning) {
     const urlVersioningLog = createTaskLog("inject version in urls")
     try {
       const urlsSorted = sortUrlGraphByDependencies(buildGraph)
@@ -303,7 +339,16 @@ export const generateBuild = async ({
         })
         urlInfo.data.version = urlVersionGenerator.generate()
       })
-      // replace all urls to inject versions
+      const versionMappings = {}
+      const asVersionedSpecifier = (specifier, version) => {
+        const versionedSpecifier = injectVersionIntoSpecifier({
+          versioningMethod,
+          specifier,
+          version,
+        })
+        versionMappings[specifier] = versionedSpecifier
+        return versionedSpecifier
+      }
       await Promise.all(
         urlsSorted.map(async (url) => {
           const urlInfo = buildGraph.getUrlInfo(url)
@@ -314,7 +359,20 @@ export const generateBuild = async ({
           })
           if (parseResult) {
             const { replaceUrls } = parseResult
-            const { content } = await replaceUrls((urlMention) => {
+            const { content, sourcemap } = await replaceUrls((urlMention) => {
+              // specifier comes from "normalize" hook done a bit earlier in this file
+              // we want to get back their build url to access their infos
+              const buildUrl = buildUrlMappings[urlMention.specifier]
+              if (!buildUrl) {
+                // There is not build mapping for the specifier
+                // if the specifier was not normalized
+                // happens for https://*, http://* , data:*
+                return null
+              }
+              const urlInfo = buildGraph.getUrlInfo(buildUrl)
+              if (urlInfo.data.isEntryPoint) {
+                return null
+              }
               if (
                 urlMention.type === "js_import_meta_url_pattern" ||
                 urlMention.subtype === "import_dynamic"
@@ -322,10 +380,22 @@ export const generateBuild = async ({
                 // what do we put in JSON.stringify here?
                 return `window.__asVersionedSpecifier__(${JSON.stringify("")})`
               }
-              return urlInfo.data.version
+              return asVersionedSpecifier(
+                urlMention.specifier,
+                urlInfo.data.version,
+              )
             })
-            // TODO: importmap composition
             urlInfo.content = content
+            urlInfo.sourcemapUrl = generateSourcemapUrl(urlInfo.url) // make sourcemap url use the version
+            urlInfo.sourcemap = composeTwoSourcemaps(
+              urlInfo.sourcemap,
+              sourcemap,
+            )
+            if (sourcemapMethod === "inline") {
+              urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
+            } else if (sourcemapMethod === "file") {
+              urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
+            }
           }
         }),
       )
@@ -336,19 +406,51 @@ export const generateBuild = async ({
     urlVersioningLog.done()
   }
 
+  const buildFileContents = {}
+  Object.keys(buildGraph.urlInfos).forEach((url) => {
+    const buildUrlInfo = buildGraph.getUrlInfo(url)
+    const buildUrl = buildUrlInfo.url
+    const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
+    buildFileContents[buildRelativeUrl] = buildUrlInfo.content
+  })
+
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {
       await ensureEmptyDirectory(buildDirectoryUrl)
     }
     const buildRelativeUrls = Object.keys(buildFileContents)
-    buildRelativeUrls.forEach((buildRelativeUrl) => {
-      writeFileSync(
-        new URL(buildRelativeUrl, buildDirectoryUrl),
-        buildFileContents[buildRelativeUrl],
-      )
+    await Promise.all(
+      buildRelativeUrls.map(async (buildRelativeUrl) => {
+        await writeFile(
+          new URL(buildRelativeUrl, buildDirectoryUrl),
+          buildFileContents[buildRelativeUrl],
+        )
+      }),
+    )
+  }
+  return {
+    buildFileContents,
+  }
+}
+
+const injectVersionIntoSpecifier = ({
+  specifier,
+  version,
+  versioningMethod,
+}) => {
+  if (versioningMethod === "search_param") {
+    return injectQueryParamsIntoSpecifier(specifier, {
+      v: version,
     })
   }
-  return null
+  const url = new URL(specifier, "https://jsenv.dev")
+  const basename = urlToBasename(url)
+  const extension = urlToExtension(url)
+  const versionedFilename = `${basename}-${version}${extension}`
+  const versionedUrl = setUrlFilename(url, versionedFilename)
+  return isValidUrl(specifier)
+    ? versionedUrl
+    : `/${urlToRelativeUrl(versionedUrl, "https://jsenv.dev")}`
 }
 
 const assertEntryPoints = ({ entryPoints }) => {
