@@ -1,10 +1,7 @@
-import {
-  fileSystemPathToUrl,
-  urlToFileSystemPath,
-  isFileSystemPath,
-} from "@jsenv/filesystem"
+import { isFileSystemPath } from "@jsenv/filesystem"
 
 import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
+import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 
 export const buildWithRollup = async ({
   signal,
@@ -85,11 +82,11 @@ const rollupPluginJsenv = ({
           const { facadeModuleId } = rollupFileInfo
           let url
           if (facadeModuleId) {
-            url = fileSystemPathToUrl(facadeModuleId)
+            url = fileUrlConverter.asFileUrl(facadeModuleId)
           } else {
             const { sources } = rollupFileInfo.map
             const sourcePath = sources[sources.length - 1]
-            url = fileSystemPathToUrl(sourcePath)
+            url = fileUrlConverter.asFileUrl(sourcePath)
           }
           jsModuleInfos[url] = {
             // buildRelativeUrl: rollupFileInfo.fileName,
@@ -107,7 +104,7 @@ const rollupPluginJsenv = ({
     outputOptions: (outputOptions) => {
       Object.assign(outputOptions, {
         format: "esm",
-        dir: urlToFileSystemPath(buildDirectoryUrl),
+        dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
         entryFileNames: () => {
           return `[name].js`
         },
@@ -118,7 +115,7 @@ const rollupPluginJsenv = ({
     },
     resolveId: (specifier, importer = sourceDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
-        importer = fileSystemPathToUrl(importer)
+        importer = fileUrlConverter.asFileUrl(importer)
       }
       const url = new URL(specifier, importer).href
       const existingImporter = urlImporters[url]
@@ -128,32 +125,16 @@ const rollupPluginJsenv = ({
       if (!url.startsWith("file:")) {
         return { url, external: true }
       }
-      return urlToFileSystemPath(url)
+      return fileUrlConverter.asFilePath(url)
     },
     async load(rollupId) {
-      const fileUrl = fileSystemPathToUrl(rollupId)
+      const fileUrl = fileUrlConverter.asFileUrl(rollupId)
       const urlInfo = sourceGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,
         map: urlInfo.sourcemap,
       }
     },
-    // nope: will be done by url versioning
-    // resolveFileUrl: ({ moduleId, referenceId }) => {
-    //   const url = pathToFileURL(moduleId).href
-    //   urlsReferencedByJs.push(url)
-    //   console.log("resolve file url for", url, "referenced by", referenceId)
-    //   return `window.__asVersionedSpecifier__("${true}")`
-    // },
-    // renderDynamicImport: ({ facadeModuleId }) => {
-    //   const url = pathToFileURL(facadeModuleId).href
-    //   urlsReferencedByJs.push(url)
-    //   console.log("render dynamic import", url)
-    //   return {
-    //     left: "import(window.__asVersionedSpecifier__(",
-    //     right: "), import.meta.url)",
-    //   }
-    // },
     renderChunk: (code, chunkInfo) => {
       const { facadeModuleId } = chunkInfo
       if (!facadeModuleId) {

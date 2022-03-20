@@ -5,10 +5,11 @@ import {
   writeFileSync,
   isFileSystemPath,
   fileSystemPathToUrl,
+  moveUrl,
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
-import { filesystemRootUrl, moveUrl } from "@jsenv/core/src/utils/url_utils.js"
+import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseJavaScriptSourcemapComment,
   parseCssSourcemapComment,
@@ -17,6 +18,7 @@ import {
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 
+import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import {
   createResolveError,
@@ -516,7 +518,6 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
   )
 }
 
-// this is just for debug (ability to see what is generated)
 const determineFileUrlForOutDirectory = ({
   rootDirectoryUrl,
   outDirectoryUrl,
@@ -528,7 +529,12 @@ const determineFileUrlForOutDirectory = ({
   if (!urlIsInsideOf(url, rootDirectoryUrl)) {
     url = `${rootDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
   }
-  return moveUrl(url, rootDirectoryUrl, outDirectoryUrl)
+  return moveUrl({
+    url: fileUrlConverter.asUrlWithoutSpecialParams(url),
+    from: rootDirectoryUrl,
+    to: outDirectoryUrl,
+    preferAbsolute: true,
+  })
 }
 
 // import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
