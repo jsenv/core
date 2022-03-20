@@ -10,7 +10,7 @@ import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.
 
 import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 
-export const injectVersionMapping = (
+export const injectVersionMappings = (
   urlInfo,
   { versionMappings, sourcemapMethod },
 ) => {
@@ -27,6 +27,9 @@ export const injectVersionMapping = (
 
 const injectors = {
   html: (urlInfo, { versionMappings }) => {
+    // ideally we would inject an importmap but browser support is too low
+    // (even worse for worker/service worker)
+    // so for now we inject code into entry points
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false,
     })

@@ -14,9 +14,8 @@ import {
 import { createLogger } from "@jsenv/logger"
 
 import {
-  injectQueryParamsIntoSpecifier,
+  injectQueryParams,
   setUrlFilename,
-  isValidUrl,
 } from "@jsenv/core/src/utils/url_utils.js"
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
 import { loadUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph_load.js"
@@ -35,7 +34,7 @@ import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildWithRollup } from "./build_with_rollup.js"
 import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
-import { injectVersionMapping } from "./inject_version_mapping.js"
+import { injectVersionMappings } from "./inject_version_mappings.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -349,6 +348,11 @@ export const generateBuild = async ({
           }
         })
         urlInfo.data.version = urlVersionGenerator.generate()
+        urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
+          buildUrl: urlInfo.url,
+          version: urlInfo.data.version,
+          versioningMethod,
+        })
       })
       const versionMappings = {}
       await Promise.all(
@@ -376,11 +380,10 @@ export const generateBuild = async ({
               if (urlInfo.data.isEntryPoint) {
                 return null
               }
-              const versionedSpecifier = injectVersionIntoSpecifier({
-                versioningMethod,
-                specifier: urlMention.specifier,
-                version: urlInfo.data.version,
-              })
+              const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
+                urlInfo.data.versionedUrl,
+                buildDirectoryUrl,
+              )}`
               versionMappings[urlMention.specifier] = versionedSpecifier
               if (
                 urlMention.type === "js_import_meta_url_pattern" ||
@@ -401,13 +404,15 @@ export const generateBuild = async ({
           }
         }),
       )
-
       Object.keys(buildGraph.urlInfos).forEach((buildUrl) => {
         const buildUrlInfo = buildGraph.getUrlInfo(buildUrl)
         if (!buildUrlInfo.data.isEntryPoint) {
           return
         }
-        injectVersionMapping(buildUrlInfo, { versionMappings, sourcemapMethod })
+        injectVersionMappings(buildUrlInfo, {
+          versionMappings,
+          sourcemapMethod,
+        })
       })
     } catch (e) {
       urlVersioningLog.fail()
@@ -417,13 +422,25 @@ export const generateBuild = async ({
   }
 
   const buildFileContents = {}
+  const buildInlineFileContents = {}
+  const buildManifest = {}
   Object.keys(buildGraph.urlInfos).forEach((url) => {
     const buildUrlInfo = buildGraph.getUrlInfo(url)
-    const buildUrl = buildUrlInfo.url
+    const buildUrl = buildUrlInfo.data.versionedUrl || buildUrlInfo.url
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
-    buildFileContents[buildRelativeUrl] = buildUrlInfo.content
+    if (buildUrlInfo.inlineInfo) {
+      buildInlineFileContents[buildRelativeUrl] = buildUrlInfo.content
+    } else {
+      buildFileContents[buildRelativeUrl] = buildUrlInfo.content
+    }
+    if (buildUrlInfo.data.versionedUrl) {
+      const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+        buildUrlInfo.url,
+        buildDirectoryUrl,
+      )
+      buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
+    }
   })
-
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {
       await ensureEmptyDirectory(buildDirectoryUrl)
@@ -438,29 +455,25 @@ export const generateBuild = async ({
       }),
     )
   }
+  logger.info(createUrlGraphSummary(buildGraph, { title: "build files" }))
   return {
     buildFileContents,
+    buildInlineFileContents,
+    buildManifest,
   }
 }
 
-const injectVersionIntoSpecifier = ({
-  specifier,
-  version,
-  versioningMethod,
-}) => {
+const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
   if (versioningMethod === "search_param") {
-    return injectQueryParamsIntoSpecifier(specifier, {
+    return injectQueryParams(buildUrl, {
       v: version,
     })
   }
-  const url = new URL(specifier, "https://jsenv.dev")
-  const basename = urlToBasename(url)
-  const extension = urlToExtension(url)
+  const basename = urlToBasename(buildUrl)
+  const extension = urlToExtension(buildUrl)
   const versionedFilename = `${basename}-${version}${extension}`
-  const versionedUrl = setUrlFilename(url, versionedFilename)
-  return isValidUrl(specifier)
-    ? versionedUrl
-    : `/${urlToRelativeUrl(versionedUrl, "https://jsenv.dev")}`
+  const versionedUrl = setUrlFilename(buildUrl, versionedFilename)
+  return versionedUrl
 }
 
 const assertEntryPoints = ({ entryPoints }) => {
