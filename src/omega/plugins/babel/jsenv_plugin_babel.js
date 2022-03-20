@@ -13,31 +13,54 @@ export const jsenvPluginBabel = () => {
     transform: {
       js_module: async (
         { url, generatedUrl, content },
-        { isSupportedOnRuntime },
+        { isSupportedOnRuntime, addReference },
       ) => {
         const babelPluginStructure = getBaseBabelPluginStructure({
           url,
           isSupportedOnRuntime,
         })
-        // TODO: when content is inline the code needs to be injected, not the import
+        const getImportSpecifier = (clientFileUrl) =>
+          JSON.parse(
+            addReference({
+              type: "js_import_export",
+              specifier: clientFileUrl,
+            }).generatedSpecifier,
+          )
+
         if (!isSupportedOnRuntime("global_this")) {
-          babelPluginStructure["global-this-as-jsenv-import"] =
-            babelPluginGlobalThisAsJsenvImport
+          babelPluginStructure["global-this-as-jsenv-import"] = [
+            babelPluginGlobalThisAsJsenvImport,
+            {
+              getImportSpecifier,
+            },
+          ]
         }
         if (!isSupportedOnRuntime("async_generator_function")) {
-          babelPluginStructure["regenerator-runtime-as-jsenv-import"] =
-            babelPluginRegeneratorRuntimeAsJsenvImport
+          babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [
+            babelPluginRegeneratorRuntimeAsJsenvImport,
+            {
+              getImportSpecifier,
+            },
+          ]
         }
         if (!isSupportedOnRuntime("new_stylesheet")) {
-          babelPluginStructure["new-stylesheet-as-jsenv-import"] =
-            babelPluginNewStylesheetAsJsenvImport
+          babelPluginStructure["new-stylesheet-as-jsenv-import"] = [
+            babelPluginNewStylesheetAsJsenvImport,
+            {
+              getImportSpecifier,
+            },
+          ]
         }
         const babelPlugins = Object.keys(babelPluginStructure).map(
           (babelPluginName) => babelPluginStructure[babelPluginName],
         )
         if (babelPlugins.length) {
-          // TODO: not if content is inlined
-          babelPlugins.push(babelPluginBabelHelpersAsJsenvImports)
+          babelPlugins.push([
+            babelPluginBabelHelpersAsJsenvImports,
+            {
+              getImportSpecifier,
+            },
+          ])
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins,

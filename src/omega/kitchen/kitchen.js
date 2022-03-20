@@ -1,8 +1,8 @@
 import { fileURLToPath } from "node:url"
-import { writeFileSync } from "node:fs"
 import {
   urlIsInsideOf,
   writeFile,
+  writeFileSync,
   isFileSystemPath,
   fileSystemPathToUrl,
 } from "@jsenv/filesystem"

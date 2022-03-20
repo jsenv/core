@@ -15,7 +15,10 @@ import {
 // a named import
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
 
-export const babelPluginBabelHelpersAsJsenvImports = () => {
+export const babelPluginBabelHelpersAsJsenvImports = (
+  babel,
+  { getImportSpecifier },
+) => {
   return {
     name: "babel-helper-as-jsenv-import",
     pre: (file) => {
@@ -37,7 +40,7 @@ export const babelPluginBabelHelpersAsJsenvImports = () => {
         const babelHelperImportSpecifier = getBabelHelperFileUrl(name)
         const helper = injectImport({
           programPath: file.path,
-          from: babelHelperImportSpecifier,
+          from: getImportSpecifier(babelHelperImportSpecifier),
           nameHint: `_${name}`,
           // disable interop, useless as we work only with js modules
           importedType: "es6",

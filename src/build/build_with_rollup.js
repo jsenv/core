@@ -1,5 +1,8 @@
-import { fileURLToPath, pathToFileURL } from "node:url"
-import { isFileSystemPath } from "@jsenv/filesystem"
+import {
+  fileSystemPathToUrl,
+  urlToFileSystemPath,
+  isFileSystemPath,
+} from "@jsenv/filesystem"
 
 import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
 
@@ -82,11 +85,11 @@ const rollupPluginJsenv = ({
           const { facadeModuleId } = rollupFileInfo
           let url
           if (facadeModuleId) {
-            url = pathToFileURL(facadeModuleId).href
+            url = fileSystemPathToUrl(facadeModuleId)
           } else {
             const { sources } = rollupFileInfo.map
             const sourcePath = sources[sources.length - 1]
-            url = pathToFileURL(sourcePath).href
+            url = fileSystemPathToUrl(sourcePath)
           }
           jsModuleInfos[url] = {
             // buildRelativeUrl: rollupFileInfo.fileName,
@@ -104,7 +107,7 @@ const rollupPluginJsenv = ({
     outputOptions: (outputOptions) => {
       Object.assign(outputOptions, {
         format: "esm",
-        dir: fileURLToPath(buildDirectoryUrl),
+        dir: urlToFileSystemPath(buildDirectoryUrl),
         entryFileNames: () => {
           return `[name].js`
         },
@@ -115,7 +118,7 @@ const rollupPluginJsenv = ({
     },
     resolveId: (specifier, importer = sourceDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
-        importer = pathToFileURL(importer).href
+        importer = fileSystemPathToUrl(importer)
       }
       const url = new URL(specifier, importer).href
       const existingImporter = urlImporters[url]
@@ -125,10 +128,10 @@ const rollupPluginJsenv = ({
       if (!url.startsWith("file:")) {
         return { url, external: true }
       }
-      return fileURLToPath(url)
+      return urlToFileSystemPath(url)
     },
     async load(rollupId) {
-      const fileUrl = pathToFileURL(rollupId).href
+      const fileUrl = fileSystemPathToUrl(rollupId)
       const urlInfo = sourceGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,

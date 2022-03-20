@@ -8,7 +8,10 @@ import { pathToFileURL } from "node:url"
 
 import { injectImport } from "@jsenv/core/src/utils/js_ast/babel_utils.js"
 
-export const babelPluginNewStylesheetAsJsenvImport = () => {
+export const babelPluginNewStylesheetAsJsenvImport = (
+  babel,
+  { getImportSpecifier },
+) => {
   const newStylesheetClientFileUrl = new URL(
     "./client/new_stylesheet.js",
     import.meta.url,
@@ -78,7 +81,7 @@ export const babelPluginNewStylesheetAsJsenvImport = () => {
         if (needsNewStylesheetPolyfill) {
           injectImport({
             programPath,
-            from: newStylesheetClientFileUrl,
+            from: getImportSpecifier(newStylesheetClientFileUrl),
             sideEffect: true,
           })
         }

@@ -2,7 +2,10 @@ import { pathToFileURL } from "node:url"
 
 import { injectImport } from "@jsenv/core/src/utils/js_ast/babel_utils.js"
 
-export const babelPluginGlobalThisAsJsenvImport = () => {
+export const babelPluginGlobalThisAsJsenvImport = (
+  babel,
+  { getImportSpecifier },
+) => {
   const globalThisClientFileUrl = new URL(
     "./client/global_this.js",
     import.meta.url,
@@ -22,7 +25,7 @@ export const babelPluginGlobalThisAsJsenvImport = () => {
         if (node.name === "globalThis") {
           injectImport({
             programPath: path.scope.getProgramParent().path,
-            from: globalThisClientFileUrl,
+            from: getImportSpecifier(globalThisClientFileUrl),
             sideEffect: true,
           })
         }

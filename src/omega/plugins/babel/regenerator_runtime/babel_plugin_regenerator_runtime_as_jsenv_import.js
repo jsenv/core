@@ -2,7 +2,10 @@ import { pathToFileURL } from "node:url"
 
 import { injectImport } from "@jsenv/core/src/utils/js_ast/babel_utils.js"
 
-export const babelPluginRegeneratorRuntimeAsJsenvImport = () => {
+export const babelPluginRegeneratorRuntimeAsJsenvImport = (
+  babel,
+  { getImportSpecifier },
+) => {
   const regeneratorRuntimeClientFileUrl = new URL(
     "./client/regenerator_runtime.js",
     import.meta.url,
@@ -21,7 +24,7 @@ export const babelPluginRegeneratorRuntimeAsJsenvImport = () => {
         if (node.name === "regeneratorRuntime") {
           injectImport({
             programPath: path.scope.getProgramParent().path,
-            from: regeneratorRuntimeClientFileUrl,
+            from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
             sideEffect: true,
           })
         }

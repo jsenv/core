@@ -47,9 +47,11 @@ export const jsenvPluginImportAssertions = () => {
               magicSource.replace({
                 start: importSpecifierPath.node.start,
                 end: importSpecifierPath.node.end,
-                replacement: injectImportTypeInSpecifier(
-                  importSpecifierPath.node.value,
-                  importType,
+                replacement: JSON.stringify(
+                  injectImportTypeInSpecifier(
+                    importSpecifierPath.node.value,
+                    importType,
+                  ),
                 ),
               })
               const secondArgPath = path.get("arguments")[1]
@@ -63,9 +65,11 @@ export const jsenvPluginImportAssertions = () => {
             magicSource.replace({
               start: importSpecifierPath.node.start,
               end: importSpecifierPath.node.end,
-              replacement: injectImportTypeInSpecifier(
-                importSpecifierPath.node.value,
-                importType,
+              replacement: JSON.stringify(
+                injectImportTypeInSpecifier(
+                  importSpecifierPath.node.value,
+                  importType,
+                ),
               ),
             })
             const assertionsPath = path.get("assertions")[0]
@@ -155,7 +159,7 @@ const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
 }
 
 const injectImportTypeInSpecifier = (specifier, importType) => {
-  const fakeOrigin = "http://jsenv.com"
+  const fakeOrigin = "https://jsenv.dev"
   const url = new URL(specifier, fakeOrigin)
   const urlWithImportType = injectQueryParams(url, {
     [importType]: "",
