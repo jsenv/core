@@ -60,60 +60,82 @@ export const createKitchen = ({
     return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
   }
 
-  const createReference = ({ trace, parentUrl, type, specifier }) => {
+  const createReference = ({
+    data = {},
+    trace,
+    parentUrl,
+    type,
+    specifier,
+  }) => {
     return {
+      data,
       trace,
       parentUrl,
       type,
       specifier,
-      data: {},
     }
   }
   const resolveReference = (reference) => {
-    const resolvedUrl = pluginController.callHooksUntil(
-      "resolve",
-      reference,
-      baseContext,
-    )
-    if (!resolvedUrl) {
-      return null
+    try {
+      const resolvedUrl = pluginController.callHooksUntil(
+        "resolve",
+        reference,
+        baseContext,
+      )
+      if (!resolvedUrl) {
+        throw new Error(`NO_RESOLVE`)
+      }
+      reference.url = resolvedUrl
+      pluginController.callHooks(
+        "normalize",
+        reference,
+        baseContext,
+        (returnValue) => {
+          reference.url = returnValue
+        },
+      )
+      // force a last normalization regarding on url search params
+      // some plugin use URLSearchParams to alter the url search params
+      // which can result into "file:///file.css?css_module"
+      // becoming "file:///file.css?css_module="
+      // we want to get rid of the "=" and consider it's the same url
+      reference.url = reference.url.replace(/[=](?=&|$)/g, "")
+      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
+      Object.assign(urlInfo.data, reference.data)
+
+      // create a copy because .url will be mutated
+      const referencedCopy = {
+        ...reference,
+        data: urlInfo.data,
+      }
+      pluginController.callHooks(
+        "transformReferencedUrl",
+        referencedCopy,
+        baseContext,
+        (returnValue) => {
+          referencedCopy.url = returnValue
+        },
+      )
+      reference.generatedUrl = referencedCopy.url
+      const returnValue = pluginController.callHooksUntil(
+        "formatReferencedUrl",
+        referencedCopy,
+        baseContext,
+      )
+      reference.generatedSpecifier = specifierFormat.encode(
+        returnValue || reference.generatedUrl,
+        reference.type,
+      )
+      return urlInfo
+    } catch (error) {
+      throw createResolveError({
+        pluginController,
+        reference,
+        error,
+      })
     }
-    reference.url = resolvedUrl
-    pluginController.callHooks(
-      "normalize",
-      reference,
-      baseContext,
-      (returnValue) => {
-        reference.url = returnValue
-      },
-    )
-    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-    Object.assign(urlInfo.data, reference.data)
-    return urlInfo
   }
-
-  const _cook = async ({
-    reference,
-    urlInfo,
-    outDirectoryUrl,
-    runtimeSupport,
-  }) => {
-    const context = {
-      ...baseContext,
-      reference,
-      isSupportedOnRuntime: (featureName, featureCompat) => {
-        return isSupported({ runtimeSupport, featureName, featureCompat })
-      },
-      cook: (params) => {
-        return cook({
-          outDirectoryUrl,
-          runtimeSupport,
-          ...params,
-        })
-      },
-    }
-
-    // "load" hook
+  const load = async ({ reference, urlInfo, context }) => {
     try {
       const loadReturnValue = await pluginController.callAsyncHooksUntil(
         "load",
@@ -145,10 +167,9 @@ export const createKitchen = ({
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       rootDirectoryUrl,
-      outDirectoryUrl,
+      outDirectoryUrl: context.outDirectoryUrl,
       url: urlInfo.url,
     })
-
     // sourcemap loading
     let sourcemapReferenceInfo
     if (urlInfo.contentType === "application/javascript") {
@@ -182,11 +203,44 @@ export const createKitchen = ({
         sourcemap.sources = sourcemap.sources.map((source) => {
           return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
         })
-        context.sourcemap = sourcemap
+        urlInfo.sourcemap = sourcemap
       } catch (e) {
         logger.error(`Error while handling sourcemap: ${e.message}`)
       }
     }
+  }
+
+  const _cook = async ({
+    reference,
+    urlInfo,
+    outDirectoryUrl,
+    runtimeSupport,
+  }) => {
+    const context = {
+      ...baseContext,
+      reference,
+      outDirectoryUrl,
+      runtimeSupport,
+      isSupportedOnRuntime: (featureName, featureCompat) => {
+        return isSupported({ runtimeSupport, featureName, featureCompat })
+      },
+      cook: (params) => {
+        return cook({
+          outDirectoryUrl,
+          runtimeSupport,
+          ...params,
+        })
+      },
+      load: (params) => {
+        return load({
+          context,
+          ...params,
+        })
+      },
+    }
+
+    // "load" hook
+    await load({ reference, urlInfo, context })
 
     // parsing
     const references = []
@@ -209,7 +263,6 @@ export const createKitchen = ({
           column: callerCallsite.getColumnNumber(),
         })
       }
-
       const reference = createReference({
         trace,
         parentUrl: urlInfo.url,
@@ -217,62 +270,30 @@ export const createKitchen = ({
         specifier,
       })
       references.push(reference)
-      try {
-        resolveReference(reference)
-        if (!reference.url) {
-          throw new Error(`NO_RESOLVE`)
-        }
-      } catch (error) {
-        throw createResolveError({
-          pluginController,
-          reference,
-          error,
-        })
-      }
-
-      // create a copy because .url will be mutated
-      const referencedCopy = {
-        ...reference,
-        data: urlGraph.getUrlInfo(reference.url).data,
-      }
-      pluginController.callHooks(
-        "transformReferencedUrl",
-        referencedCopy,
-        baseContext,
-        (returnValue) => {
-          referencedCopy.url = returnValue
-        },
-      )
-      reference.generatedUrl = referencedCopy.url
-      const returnValue = pluginController.callHooksUntil(
-        "formatReferencedUrl",
-        referencedCopy,
-        baseContext,
-      )
-      const ensureProperFormattingOfGeneratedSpecifier = (
-        generatedSpecifier,
-      ) => {
-        if (generatedSpecifier.then) {
-          return generatedSpecifier.then(
-            ensureProperFormattingOfGeneratedSpecifier,
-          )
-        }
-        // allow plugin to return a function to bypas default formatting
-        // (which is to use JSON.stringify when url is referenced inside js)
-        if (typeof generatedSpecifier === "function") {
-          return generatedSpecifier()
-        }
-        const formatter = {
-          js_import_export: JSON.stringify,
-          js_import_meta_url_pattern: JSON.stringify,
-        }[reference.type]
-        return formatter ? formatter(generatedSpecifier) : generatedSpecifier
-      }
-      reference.generatedSpecifier = ensureProperFormattingOfGeneratedSpecifier(
-        returnValue || reference.generatedUrl,
-      )
+      resolveReference(reference)
       return reference
     }
+    const updateReference = (generatedSpecifier, referenceProps) => {
+      const index = references.findIndex(
+        (reference) => reference.generatedSpecifier === generatedSpecifier,
+      )
+      if (index === -1) {
+        throw new Error(`cannot find reference using "${generatedSpecifier}"`)
+      }
+      const existingReference = references[index]
+      const newReference = createReference({
+        trace: existingReference.trace,
+        parentUrl: existingReference.parentUrl,
+        type: existingReference.type,
+        ...referenceProps,
+      })
+      references[index] = newReference
+      newReference.data.originalReference = existingReference
+      resolveReference(newReference)
+      // si l'ancienne reference n'est plus utilisé on devrait la supprimer du graph?
+      return newReference
+    }
+
     const updateContents = (data) => {
       if (data) {
         const { contentType, content, sourcemap } = data
@@ -340,6 +361,7 @@ export const createKitchen = ({
 
     // "transform" hook
     context.addReference = addReference
+    context.updateReference = updateReference
     try {
       await pluginController.callAsyncHooks(
         "transform",
@@ -535,6 +557,31 @@ const determineFileUrlForOutDirectory = ({
     to: outDirectoryUrl,
     preferAbsolute: true,
   })
+}
+
+const specifierFormat = {
+  encode: (generatedSpecifier, referenceType) => {
+    if (generatedSpecifier.then) {
+      return generatedSpecifier.then((value) => {
+        return specifierFormat.encode(value, referenceType)
+      })
+    }
+    // allow plugin to return a function to bypas default formatting
+    // (which is to use JSON.stringify when url is referenced inside js)
+    if (typeof generatedSpecifier === "function") {
+      return generatedSpecifier()
+    }
+    const formatter = formatters[referenceType]
+    return formatter ? formatter.encode(generatedSpecifier) : generatedSpecifier
+  },
+  decode: (generatedSpecifier, referenceType) => {
+    const formatter = formatters[referenceType]
+    return formatter ? formatter.decode(generatedSpecifier) : generatedSpecifier
+  },
+}
+const formatters = {
+  js_import_export: { encode: JSON.stringify, decode: JSON.parse },
+  js_import_meta_url_pattern: { encode: JSON.stringify, decode: JSON.parse },
 }
 
 // import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"

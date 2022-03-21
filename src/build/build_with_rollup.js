@@ -8,8 +8,8 @@ export const buildWithRollup = async ({
   logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
-  sourceGraph,
-  jsModulesUrlsToBuild,
+  rawGraph,
+  jsModulesUrlsToBundle,
 
   runtimeSupport,
   sourcemapMethod,
@@ -22,8 +22,8 @@ export const buildWithRollup = async ({
         logger,
         sourceDirectoryUrl,
         buildDirectoryUrl,
-        sourceGraph,
-        jsModulesUrlsToBuild,
+        rawGraph,
+        jsModulesUrlsToBundle,
 
         runtimeSupport,
         sourcemapMethod,
@@ -44,8 +44,8 @@ const rollupPluginJsenv = ({
   // logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
-  sourceGraph,
-  jsModulesUrlsToBuild,
+  rawGraph,
+  jsModulesUrlsToBundle,
 
   resultRef,
 }) => {
@@ -64,7 +64,7 @@ const rollupPluginJsenv = ({
     name: "jsenv",
     async buildStart() {
       _rollupEmitFile = (...args) => this.emitFile(...args)
-      jsModulesUrlsToBuild.forEach((jsModuleUrl) => {
+      jsModulesUrlsToBundle.forEach((jsModuleUrl) => {
         // const jsModuleUrlInfo = projectGraph.getUrlInfo(jsModuleUrl)
         emitChunk({
           id: jsModuleUrl,
@@ -129,7 +129,7 @@ const rollupPluginJsenv = ({
     },
     async load(rollupId) {
       const fileUrl = fileUrlConverter.asFileUrl(rollupId)
-      const urlInfo = sourceGraph.getUrlInfo(fileUrl)
+      const urlInfo = rawGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,
         map: urlInfo.sourcemap,

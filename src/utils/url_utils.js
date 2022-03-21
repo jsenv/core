@@ -42,9 +42,9 @@ export const injectQueryParamsIntoSpecifier = (specifier, params) => {
   Object.keys(params).forEach((key) => {
     searchParams.set(key, params[key])
   })
-  const paramsString = searchParams.toString().replace(/[=](?=&|$)/g, "")
+  const paramsString = searchParams.toString()
   if (paramsString) {
-    return `${beforeQuestion}?${paramsString}`
+    return `${beforeQuestion}?${paramsString.replace(/[=](?=&|$)/g, "")}`
   }
   return specifier
 }

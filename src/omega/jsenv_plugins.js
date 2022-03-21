@@ -26,11 +26,11 @@ export const getJsenvPlugins = () => {
     ...(asFewAsPossible ? [] : [jsenvPluginFileSystemMagic()]),
     jsenvPluginUrlVersion(),
     // url loading
+    ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
     jsenvPluginFileUrls(),
     // content transformation
     ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
-    ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
     ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
     jsenvPluginBabel(),
   ]

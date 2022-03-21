@@ -1,9 +1,7 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
-
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { contentTypeIsTextual } from "@jsenv/core/src/utils/content_type.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
+import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
 
 import { babelPluginMetadataImportAssertions } from "./babel_plugin_metadata_import_assertions.js"
 import { convertJsonTextToJavascriptModule } from "./json_module.js"
@@ -18,7 +16,7 @@ export const jsenvPluginImportAssertions = () => {
       transform: {
         js_module: async (
           { url, generatedUrl, content },
-          { scenario, isSupportedOnRuntime },
+          { scenario, isSupportedOnRuntime, updateReference },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
             scenario,
@@ -44,15 +42,18 @@ export const jsenvPluginImportAssertions = () => {
             const importType = `${assertType}_module`
             if (node.type === "CallExpression") {
               const importSpecifierPath = path.get("arguments")[0]
+              const specifier = importSpecifierPath.node.value
+              const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
+                [importType]: "",
+              })
+              const newReference = updateReference(JSON.stringify(specifier), {
+                data: { importType },
+                specifier: newSpecifier,
+              })
               magicSource.replace({
                 start: importSpecifierPath.node.start,
                 end: importSpecifierPath.node.end,
-                replacement: JSON.stringify(
-                  injectImportTypeInSpecifier(
-                    importSpecifierPath.node.value,
-                    importType,
-                  ),
-                ),
+                replacement: newReference.generatedSpecifier,
               })
               const secondArgPath = path.get("arguments")[1]
               magicSource.remove({
@@ -62,15 +63,18 @@ export const jsenvPluginImportAssertions = () => {
               return
             }
             const importSpecifierPath = path.get("source")
+            const specifier = importSpecifierPath.node.value
+            const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
+              [importType]: "",
+            })
+            const newReference = updateReference(JSON.stringify(specifier), {
+              data: { importType },
+              specifier: newSpecifier,
+            })
             magicSource.replace({
               start: importSpecifierPath.node.start,
               end: importSpecifierPath.node.end,
-              replacement: JSON.stringify(
-                injectImportTypeInSpecifier(
-                  importSpecifierPath.node.value,
-                  importType,
-                ),
-              ),
+              replacement: newReference.generatedSpecifier,
             })
             const assertionsPath = path.get("assertions")[0]
             magicSource.remove({
@@ -83,7 +87,6 @@ export const jsenvPluginImportAssertions = () => {
       },
     },
   ]
-
   const importTypeJson = {
     name: "jsenv:import_type_json",
     appliesDuring: "*",
@@ -104,8 +107,18 @@ export const jsenvPluginImportAssertions = () => {
   const importTypeCss = {
     name: "jsenv:import_type_css",
     appliesDuring: "*",
-    finalize: ({ url, contentType, content }) => {
-      if (!new URL(url).searchParams.has("css_module")) {
+    // load the original css url
+    load: ({ data }, { urlGraph, load }) => {
+      if (data.importType !== "css_module") {
+        return null
+      }
+      return load({
+        reference: data.originalReference,
+        urlInfo: urlGraph.getUrlInfo(data.originalReference.url),
+      })
+    },
+    transform: ({ url, data, contentType, content }) => {
+      if (data.importType !== "css_module") {
         return null
       }
       if (contentType !== "text/css") {
@@ -156,21 +169,4 @@ const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
     importTypes.push("text")
   }
   return importTypes
-}
-
-const injectImportTypeInSpecifier = (specifier, importType) => {
-  const fakeOrigin = "https://jsenv.dev"
-  const url = new URL(specifier, fakeOrigin)
-  const urlWithImportType = injectQueryParams(url, {
-    [importType]: "",
-  })
-  if (urlWithImportType.startsWith(fakeOrigin)) {
-    // specifier was relative
-    const specifierWithImportType = urlToRelativeUrl(
-      urlWithImportType,
-      fakeOrigin,
-    )
-    return `./${specifierWithImportType}`
-  }
-  return urlWithImportType
 }

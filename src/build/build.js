@@ -77,12 +77,12 @@ export const generateBuild = async ({
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
-  const sourceGraph = createUrlGraph({
+  const rawGraph = createUrlGraph({
     rootDirectoryUrl: sourceDirectoryUrl,
   })
-  const loadSourceGraphLog = createTaskLog("load source graph")
+  const loadRawGraphLog = createTaskLog("load files")
   let urlCount = 0
-  const sourcePluginController = createPluginController({
+  const rawGraphPluginController = createPluginController({
     plugins: [
       ...plugins,
       {
@@ -90,98 +90,97 @@ export const generateBuild = async ({
         appliesDuring: { build: true },
         cooked: () => {
           urlCount++
-          loadSourceGraphLog.setRightText(urlCount)
+          loadRawGraphLog.setRightText(urlCount)
         },
       },
       ...getJsenvPlugins(),
     ],
     scenario: "build",
   })
-  const sourceKitchen = createKitchen({
+  const rawGraphKitchen = createKitchen({
     signal,
     logger,
     rootDirectoryUrl: sourceDirectoryUrl,
-    pluginController: sourcePluginController,
-    urlGraph: sourceGraph,
+    pluginController: rawGraphPluginController,
+    urlGraph: rawGraph,
     sourcemapMethod,
     scenario: "build",
     baseUrl,
   })
   try {
     await loadUrlGraph({
-      urlGraph: sourceGraph,
-      kitchen: sourceKitchen,
+      urlGraph: rawGraph,
+      kitchen: rawGraphKitchen,
       outDirectoryUrl: new URL(`.jsenv/build/`, sourceDirectoryUrl),
       runtimeSupport,
       startLoading: (cook) => {
         Object.keys(entryPoints).forEach((key) => {
-          const sourceEntryReference = sourceKitchen.createReference({
+          const entryReference = rawGraphKitchen.createReference({
             trace: `"${key}" in entryPoints parameter`,
             parentUrl: sourceDirectoryUrl,
             type: "entry_point",
             specifier: key,
           })
-          const sourcEntryUrlInfo =
-            sourceKitchen.resolveReference(sourceEntryReference)
-          sourcEntryUrlInfo.data.isEntryPoint = true
+          const entryUrlInfo = rawGraphKitchen.resolveReference(entryReference)
+          entryUrlInfo.data.isEntryPoint = true
           cook({
-            reference: sourceEntryReference,
-            urlInfo: sourcEntryUrlInfo,
+            reference: entryReference,
+            urlInfo: entryUrlInfo,
           })
         })
       },
     })
   } catch (e) {
-    loadSourceGraphLog.fail()
+    loadRawGraphLog.fail()
     throw e
   }
   // here we can perform many checks such as ensuring ressource hints are used
-  loadSourceGraphLog.done()
-  logger.info(createUrlGraphSummary(sourceGraph, { title: "source files" }))
+  loadRawGraphLog.done()
+  logger.info(createUrlGraphSummary(rawGraph, { title: "raw build files" }))
 
-  const jsModulesUrlsToBuild = []
-  const cssUrlsToBuild = []
-  Object.keys(sourceGraph.urlInfos).forEach((sourceUrl) => {
-    const sourceUrlInfo = sourceGraph.getUrlInfo(sourceUrl)
+  const jsModulesUrlsToBundle = []
+  const cssUrlsToBundle = []
+  Object.keys(rawGraph.urlInfos).forEach((sourceUrl) => {
+    const sourceUrlInfo = rawGraph.getUrlInfo(sourceUrl)
     if (!sourceUrlInfo.data.isEntryPoint) {
       return
     }
     if (sourceUrlInfo.type === "html") {
       sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = sourceGraph.getUrlInfo(dependencyUrl)
+        const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
         if (dependencyUrlInfo.type === "js_module") {
-          jsModulesUrlsToBuild.push(dependencyUrl)
+          jsModulesUrlsToBundle.push(dependencyUrl)
           return
         }
         if (dependencyUrlInfo.type === "css") {
-          cssUrlsToBuild.push(dependencyUrl)
+          cssUrlsToBundle.push(dependencyUrl)
           return
         }
       })
       return
     }
     if (sourceUrlInfo.type === "js_module") {
-      jsModulesUrlsToBuild.push(sourceUrlInfo.url)
+      jsModulesUrlsToBundle.push(sourceUrlInfo.url)
       return
     }
     if (sourceUrlInfo.type === "css") {
-      cssUrlsToBuild.push(sourceUrlInfo.url)
+      cssUrlsToBundle.push(sourceUrlInfo.url)
       return
     }
   })
 
   const buildUrlInfos = {}
   // in the future this should be done in a "bundle" hook
-  if (jsModulesUrlsToBuild.length) {
-    const rollupBuildLog = createTaskLog(`building js modules with rollup`)
+  if (jsModulesUrlsToBundle.length) {
+    const rollupBuildLog = createTaskLog(`bundle js modules with rollup`)
     try {
       const rollupBuild = await buildWithRollup({
         signal,
         logger,
         sourceDirectoryUrl,
         buildDirectoryUrl,
-        sourceGraph,
-        jsModulesUrlsToBuild,
+        rawGraph,
+        jsModulesUrlsToBundle,
 
         runtimeSupport,
         sourcemapMethod,
@@ -203,7 +202,7 @@ export const generateBuild = async ({
     }
     rollupBuildLog.done()
   }
-  if (cssUrlsToBuild.length) {
+  if (cssUrlsToBundle.length) {
     // on pourrait concat + minify en utilisant post css
   }
   // TODO: minify html, svg, json
@@ -213,7 +212,7 @@ export const generateBuild = async ({
     buildDirectoryUrl,
   })
   const buildUrlMappings = {}
-  const buildPluginController = createPluginController({
+  const finalGraphPluginController = createPluginController({
     injectJsenvPlugins: false,
     plugins: [
       {
@@ -226,7 +225,7 @@ export const generateBuild = async ({
           )
         },
         normalize: ({ url, data }) => {
-          const urlInfo = buildUrlInfos[url] || sourceGraph.getUrlInfo(url)
+          const urlInfo = buildUrlInfos[url] || rawGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(
             url,
             urlInfo.data.isEntryPoint || urlInfo.type === "js_module"
@@ -255,7 +254,7 @@ export const generateBuild = async ({
         load: ({ data }) => {
           const sourceUrl = data.sourceUrl
           const urlInfo =
-            buildUrlInfos[sourceUrl] || sourceGraph.getUrlInfo(sourceUrl)
+            buildUrlInfos[sourceUrl] || rawGraph.getUrlInfo(sourceUrl)
           return {
             contentType: urlInfo.contentType,
             content: urlInfo.content,
@@ -276,53 +275,53 @@ export const generateBuild = async ({
     ],
     scenario: "postbuild",
   })
-  const buildGraph = createUrlGraph({
+  const finalGraph = createUrlGraph({
     rootDirectoryUrl: buildDirectoryUrl,
   })
-  const buildKitchen = createKitchen({
+  const finalGraphKitchen = createKitchen({
     rootDirectoryUrl: sourceDirectoryUrl,
-    urlGraph: buildGraph,
-    pluginController: buildPluginController,
+    urlGraph: finalGraph,
+    pluginController: finalGraphPluginController,
     scenario: "postbuild",
 
     baseUrl,
   })
-  const loadBuilGraphLog = createTaskLog("load build graph")
+  const loadFinalGraphLog = createTaskLog("generating build files")
   try {
     await loadUrlGraph({
-      urlGraph: buildGraph,
-      kitchen: buildKitchen,
+      urlGraph: finalGraph,
+      kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/build/", sourceDirectoryUrl),
       startLoading: (cook) => {
         Object.keys(entryPoints).forEach((key) => {
-          const buildEntryReference = buildKitchen.createReference({
+          const entryReference = finalGraphKitchen.createReference({
             trace: `"${key}" in entryPoints parameter`,
             parentUrl: sourceDirectoryUrl,
             type: "entry_point",
             specifier: key,
           })
-          const buildEntryUrlInfo =
-            buildKitchen.resolveReference(buildEntryReference)
-          buildEntryUrlInfo.data.isEntryPoint = true
+          const entryUrlInfo =
+            finalGraphKitchen.resolveReference(entryReference)
+          entryUrlInfo.data.isEntryPoint = true
           cook({
-            reference: buildEntryReference,
-            urlInfo: buildEntryUrlInfo,
+            reference: entryReference,
+            urlInfo: entryUrlInfo,
           })
         })
       },
     })
   } catch (e) {
-    loadBuilGraphLog.fail()
+    loadFinalGraphLog.fail()
     throw e
   }
-  loadBuilGraphLog.done()
+  loadFinalGraphLog.done()
 
   if (versioning) {
     const urlVersioningLog = createTaskLog("inject version in urls")
     try {
-      const urlsSorted = sortUrlGraphByDependencies(buildGraph)
+      const urlsSorted = sortUrlGraphByDependencies(finalGraph)
       urlsSorted.forEach((url) => {
-        const urlInfo = buildGraph.getUrlInfo(url)
+        const urlInfo = finalGraph.getUrlInfo(url)
         const urlVersionGenerator = createUrlVersionGenerator()
         urlVersionGenerator.augmentWithContent({
           content: urlInfo.content,
@@ -330,7 +329,7 @@ export const generateBuild = async ({
           lineBreakNormalization,
         })
         urlInfo.dependencies.forEach((dependencyUrl) => {
-          const dependencyUrlInfo = buildGraph.getUrlInfo(dependencyUrl)
+          const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
           if (dependencyUrlInfo.data.version) {
             urlVersionGenerator.augmentWithDependencyVersion(
               dependencyUrlInfo.data.version,
@@ -357,7 +356,7 @@ export const generateBuild = async ({
       const versionMappings = {}
       await Promise.all(
         urlsSorted.map(async (url) => {
-          const urlInfo = buildGraph.getUrlInfo(url)
+          const urlInfo = finalGraph.getUrlInfo(url)
           const parseResult = await parseUrlMentions({
             url: urlInfo.url,
             type: urlInfo.type,
@@ -376,7 +375,7 @@ export const generateBuild = async ({
                 // happens for https://*, http://* , data:*
                 return null
               }
-              const urlInfo = buildGraph.getUrlInfo(buildUrl)
+              const urlInfo = finalGraph.getUrlInfo(buildUrl)
               if (urlInfo.data.isEntryPoint) {
                 return null
               }
@@ -404,8 +403,8 @@ export const generateBuild = async ({
           }
         }),
       )
-      Object.keys(buildGraph.urlInfos).forEach((buildUrl) => {
-        const buildUrlInfo = buildGraph.getUrlInfo(buildUrl)
+      Object.keys(finalGraph.urlInfos).forEach((buildUrl) => {
+        const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
         if (!buildUrlInfo.data.isEntryPoint) {
           return
         }
@@ -424,8 +423,8 @@ export const generateBuild = async ({
   const buildFileContents = {}
   const buildInlineFileContents = {}
   const buildManifest = {}
-  Object.keys(buildGraph.urlInfos).forEach((url) => {
-    const buildUrlInfo = buildGraph.getUrlInfo(url)
+  Object.keys(finalGraph.urlInfos).forEach((url) => {
+    const buildUrlInfo = finalGraph.getUrlInfo(url)
     const buildUrl = buildUrlInfo.data.versionedUrl || buildUrlInfo.url
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
     if (buildUrlInfo.inlineInfo) {
@@ -455,7 +454,7 @@ export const generateBuild = async ({
       }),
     )
   }
-  logger.info(createUrlGraphSummary(buildGraph, { title: "build files" }))
+  logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }))
   return {
     buildFileContents,
     buildInlineFileContents,

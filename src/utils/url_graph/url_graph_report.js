@@ -46,6 +46,18 @@ const createUrlGraphReport = (urlGraph) => {
     if (urlInfo.type === "sourcemap") {
       return
     }
+    // file loaded via import assertion are already inside the graph
+    // their js module equivalent are ignored to avoid counting it twice
+    // in the build graph the file targeted by import assertion will likely be gone
+    // and only the js module remain (likely bundled)
+    const urlObject = new URL(urlInfo.url)
+    if (
+      urlObject.searchParams.has("json_module") ||
+      urlObject.searchParams.has("css_module") ||
+      urlObject.searchParams.has("text_module")
+    ) {
+      return
+    }
     const urlContentSize = Buffer.byteLength(urlInfo.content)
     countGroups.total++
     sizeGroups.total += urlContentSize
@@ -86,16 +98,6 @@ const determineCategory = (urlInfo) => {
     return "css"
   }
   if (urlInfo.type === "js_module") {
-    const urlObject = new URL(urlInfo.url)
-    if (urlObject.searchParams.has("json_module")) {
-      return "json"
-    }
-    if (urlObject.searchParams.has("css_module")) {
-      return "css"
-    }
-    if (urlObject.searchParams.has("text_module")) {
-      return "text"
-    }
     return "js_module"
   }
   return urlInfo.type
