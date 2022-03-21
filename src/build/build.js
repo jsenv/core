@@ -40,7 +40,7 @@ import {
   stringifyHtmlAst,
 } from "../utils/html_ast/html_ast.js"
 
-export const generateBuild = async ({
+export const build = async ({
   signal = new AbortController().signal,
   logLevel = "info",
   sourceDirectoryUrl,
