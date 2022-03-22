@@ -24,6 +24,7 @@ import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
+import { jsenvPluginHtmlInlineScriptsAndStyles } from "@jsenv/core/src/omega/plugins/inline/jsenv_plugin_html_scripts_and_styles.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 import { createPluginController } from "../omega/kitchen/plugin_controller.js"
@@ -149,6 +150,15 @@ export const build = async ({
       sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
         const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
         if (dependencyUrlInfo.type === "js_module") {
+          if (dependencyUrlInfo.inlineUrlSite) {
+            // on veut bundle les deps de ce code inline
+            dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+              if (inlineScriptRef.type === "js_import_export") {
+                jsModulesUrlsToBundle.push(inlineScriptRef.url)
+              }
+            })
+            return
+          }
           jsModulesUrlsToBundle.push(dependencyUrl)
           return
         }
@@ -215,10 +225,17 @@ export const build = async ({
   const finalGraphPluginController = createPluginController({
     injectJsenvPlugins: false,
     plugins: [
+      // re-cook html inline scripts and styles (to update their urls)
+      jsenvPluginHtmlInlineScriptsAndStyles(),
       {
         name: "jsenv:postbuild",
         appliesDuring: { postbuild: true },
-        resolve: ({ parentUrl, specifier }) => {
+        resolve: ({ parentUrl, specifier, isInline }) => {
+          if (isInline) {
+            const parentUrlInfo = finalGraph.getUrlInfo(parentUrl)
+            const parentSourceUrl = parentUrlInfo.data.sourceUrl
+            return new URL(specifier, parentSourceUrl).href
+          }
           return (
             applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
             new URL(specifier, parentUrl).href
@@ -403,16 +420,18 @@ export const build = async ({
           }
         }),
       )
-      Object.keys(finalGraph.urlInfos).forEach((buildUrl) => {
-        const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
-        if (!buildUrlInfo.data.isEntryPoint) {
-          return
-        }
-        injectVersionMappings(buildUrlInfo, {
-          versionMappings,
-          sourcemapMethod,
+      if (Object.keys(versionMappings).length) {
+        Object.keys(finalGraph.urlInfos).forEach((buildUrl) => {
+          const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
+          if (!buildUrlInfo.data.isEntryPoint) {
+            return
+          }
+          injectVersionMappings(buildUrlInfo, {
+            versionMappings,
+            sourcemapMethod,
+          })
         })
-      })
+      }
     } catch (e) {
       urlVersioningLog.fail()
       throw e

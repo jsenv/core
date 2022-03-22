@@ -66,6 +66,7 @@ export const createKitchen = ({
     parentUrl,
     type,
     specifier,
+    isInline = false,
   }) => {
     return {
       data,
@@ -73,6 +74,7 @@ export const createKitchen = ({
       parentUrl,
       type,
       specifier,
+      isInline,
     }
   }
   const resolveReference = (reference) => {
@@ -244,7 +246,7 @@ export const createKitchen = ({
 
     // parsing
     const references = []
-    const addReference = ({ trace, type, specifier }) => {
+    const addReference = ({ trace, ...rest }) => {
       if (trace === undefined) {
         const { prepareStackTrace } = Error
         Error.prepareStackTrace = (error, stack) => {
@@ -266,8 +268,7 @@ export const createKitchen = ({
       const reference = createReference({
         trace,
         parentUrl: urlInfo.url,
-        type,
-        specifier,
+        ...rest,
       })
       references.push(reference)
       resolveReference(reference)

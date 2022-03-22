@@ -525,10 +525,10 @@ export const createInlineScriptHash = (script) => {
 }
 
 export const getIdForInlineHtmlNode = (htmlAst, inlineNode) => {
-  // const idAttribute = getHtmlNodeAttributeByName(inlineNode, "id")
-  // if (idAttribute) {
-  //   return idAttribute.value
-  // }
+  const idAttribute = getHtmlNodeAttributeByName(inlineNode, "id")
+  if (idAttribute) {
+    return idAttribute.value
+  }
   const { line, lineEnd, column, columnEnd } =
     htmlNodePosition.readNodePosition(inlineNode) || {}
   const lineTaken = findNode(htmlAst, (nodeCandidate) => {
