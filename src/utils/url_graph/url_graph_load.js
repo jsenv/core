@@ -1,3 +1,5 @@
+import { ensureEmptyDirectory } from "@jsenv/filesystem"
+
 export const loadUrlGraph = async ({
   urlGraph,
   kitchen,
@@ -5,6 +7,8 @@ export const loadUrlGraph = async ({
   outDirectoryUrl,
   runtimeSupport,
 }) => {
+  await ensureEmptyDirectory(outDirectoryUrl)
+
   const cook = ({ urlInfo, ...rest }) => {
     const promiseFromData = urlInfo.data.promise
     if (promiseFromData) return promiseFromData

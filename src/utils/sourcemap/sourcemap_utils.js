@@ -1,3 +1,21 @@
+export const sourcemapComment = {
+  read: ({ contentType, content }) => {
+    const read = {
+      "application/javascript": parseJavaScriptSourcemapComment,
+      "text/css": parseCssSourcemapComment,
+    }[contentType]
+    return read ? read(content) : null
+  },
+
+  write: ({ contentType, content, specifier }) => {
+    const write = {
+      "application/javascript": setJavaScriptSourceMappingUrl,
+      "text/css": setCssSourceMappingUrl,
+    }[contentType]
+    return write ? write(content, specifier) : content
+  },
+}
+
 export const generateSourcemapUrl = (url) => {
   const urlObject = new URL(url)
   let { origin, pathname, search, hash } = urlObject
@@ -9,7 +27,7 @@ export const generateSourcemapUrl = (url) => {
   return sourcemapUrl
 }
 
-export const parseJavaScriptSourcemapComment = (javaScriptSource) => {
+const parseJavaScriptSourcemapComment = (javaScriptSource) => {
   let sourceMappingUrl
   replaceSourceMappingUrl(
     javaScriptSource,
@@ -31,7 +49,7 @@ export const parseJavaScriptSourcemapComment = (javaScriptSource) => {
   }
 }
 
-export const setJavaScriptSourceMappingUrl = (
+const setJavaScriptSourceMappingUrl = (
   javaScriptSource,
   sourceMappingFileUrl,
 ) => {
@@ -56,7 +74,7 @@ ${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}`
     : javaScriptSource
 }
 
-export const parseCssSourcemapComment = (cssSource) => {
+const parseCssSourcemapComment = (cssSource) => {
   let sourceMappingUrl
   replaceSourceMappingUrl(
     cssSource,
@@ -78,7 +96,7 @@ export const parseCssSourcemapComment = (cssSource) => {
   }
 }
 
-export const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
+const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
   let replaced
   const sourceAfterReplace = replaceSourceMappingUrl(
     cssSource,

@@ -1,5 +1,8 @@
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
-import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
+import {
+  sourcemapComment,
+  sourcemapToBase64Url,
+} from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 
 export const updateContentAndSourcemap = (
   urlInfo,
@@ -8,10 +11,13 @@ export const updateContentAndSourcemap = (
   urlInfo.content = content
   if (sourcemap) {
     urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
-    if (sourcemapMethod === "inline") {
-      urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
-    } else if (sourcemapMethod === "file") {
-      urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
-    }
+    urlInfo.content = sourcemapComment.write({
+      contentType: urlInfo.contentType,
+      content: urlInfo.content,
+      specifier:
+        sourcemapMethod === "inline"
+          ? sourcemapToBase64Url(urlInfo.sourcemap)
+          : urlInfo.sourcemapUrl,
+    })
   }
 }

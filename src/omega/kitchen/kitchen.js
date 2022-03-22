@@ -1,25 +1,19 @@
-import { fileURLToPath } from "node:url"
 import {
   urlIsInsideOf,
   writeFileSync,
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
-  urlToExtension,
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
+import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
 import {
-  filesystemRootUrl,
-  setUrlExtension,
-} from "@jsenv/core/src/utils/url_utils.js"
-import {
-  parseJavaScriptSourcemapComment,
-  parseCssSourcemapComment,
+  sourcemapComment,
   generateSourcemapUrl,
+  sourcemapToBase64Url,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
-import { injectSourcemap } from "@jsenv/core/src/utils/sourcemap/sourcemap_injection.js"
 
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
@@ -145,17 +139,33 @@ export const createKitchen = ({
       })
     }
   }
-  const load = async ({ reference, urlInfo, context }) => {
-    const sourcemapLoad = loadSourcemapFromGraph(reference.url)
-    if (sourcemapLoad) {
-      Object.assign(urlInfo, {
-        contentType: sourcemapLoad.contentType,
-        originalContent: sourcemapLoad.content,
-        content: sourcemapLoad.content,
-        type: "sourcemap",
-      })
-      return
+  const getSourcemapReference = (urlInfo, isOriginalSourcemap) => {
+    const sourcemapFound = sourcemapComment.read({
+      contentType: urlInfo.contentType,
+      content: urlInfo.content,
+    })
+    if (!sourcemapFound) {
+      return null
     }
+    const { type, line, column, specifier } = sourcemapFound
+    const sourcemapReference = createReference({
+      trace: stringifyUrlSite(
+        adjustUrlSite(urlInfo, {
+          urlGraph,
+          url: isOriginalSourcemap ? urlInfo.url : urlInfo.generatedUrl,
+          line,
+          column,
+        }),
+      ),
+      type,
+      parentUrl: urlInfo.url,
+      specifier,
+    })
+    const sourcemapUrlInfo = resolveReference(sourcemapReference)
+    sourcemapUrlInfo.type = "sourcemap"
+    return sourcemapReference
+  }
+  const load = async ({ reference, urlInfo, context }) => {
     try {
       const loadReturnValue = await pluginController.callAsyncHooksUntil(
         "load",
@@ -183,66 +193,28 @@ export const createKitchen = ({
         error,
       })
     }
-
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       rootDirectoryUrl,
       outDirectoryUrl: context.outDirectoryUrl,
       url: urlInfo.url,
     })
-    // sourcemap loading
-    let sourcemapReferenceInfo
-    if (urlInfo.contentType === "application/javascript") {
-      sourcemapReferenceInfo = parseJavaScriptSourcemapComment(urlInfo.content)
-    } else if (urlInfo.contentType === "text/css") {
-      sourcemapReferenceInfo = parseCssSourcemapComment(urlInfo.content)
-    }
-    if (!sourcemapReferenceInfo) {
-      return
-    }
-    const { type, line, column, specifier } = sourcemapReferenceInfo
-    const sourcemapReference = createReference({
-      trace: stringifyUrlSite(
-        adjustUrlSite(urlInfo, {
-          urlGraph,
-          url: urlInfo.url,
-          line,
-          column,
-        }),
-      ),
-      type,
-      parentUrl: urlInfo.url,
-      specifier,
-    })
-    const sourcemapUrlInfo = resolveReference(sourcemapReference)
-    sourcemapUrlInfo.type = "sourcemap"
-    try {
-      await context.cook({
-        reference: sourcemapReference,
-        urlInfo: sourcemapUrlInfo,
-      })
-      const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-      // we could do that in a plugin, it's a "transform" while cooking the sourcemap
-      sourcemap.sources = sourcemap.sources.map((source) => {
-        return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
-      })
-      urlInfo.originalSourcemap = sourcemap
-      urlInfo.sourcemap = sourcemap
-    } catch (e) {
-      logger.error(`Error while handling sourcemap: ${e.message}`)
-    }
-  }
-  const loadSourcemapFromGraph = (url) => {
-    if (urlToExtension(url) !== ".map") {
-      return null
-    }
-    const urlWithoutMapExtension = setUrlExtension(url, "")
-    const urlInfo = urlGraph.getUrlInfo(urlWithoutMapExtension)
-    if (!urlInfo || !urlInfo.sourcemap) {
-      return null
-    }
-    return {
-      contentType: "application/json",
-      content: JSON.stringify(urlInfo.sourcemap),
+
+    const sourcemapReference = getSourcemapReference(urlInfo, true)
+    if (sourcemapReference) {
+      try {
+        const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
+        await context.cook({
+          reference: sourcemapReference,
+          urlInfo: sourcemapUrlInfo,
+        })
+        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
+        urlInfo.sourcemapUrl = sourcemapUrlInfo.url
+        urlInfo.originalSourcemap = sourcemap
+        urlInfo.sourcemap = sourcemap
+      } catch (e) {
+        logger.error(`Error while handling sourcemap: ${e.message}`)
+        return
+      }
     }
   }
 
@@ -419,18 +391,36 @@ export const createKitchen = ({
     // and the one injected by plugin are known
     urlGraph.updateReferences(urlInfo, references)
 
-    // sourcemap injection
-    const { sourcemap } = urlInfo
-    if (sourcemap) {
-      const sourcemapUrl = generateSourcemapUrl(urlInfo.url)
-      const sourcemapGeneratedUrl = determineFileUrlForOutDirectory({
-        rootDirectoryUrl,
-        outDirectoryUrl,
-        url: sourcemapUrl,
+    // append sourcemap comment
+    if (urlInfo.sourcemap) {
+      urlInfo.sourcemapUrl = generateSourcemapUrl(urlInfo.url)
+      urlInfo.content = sourcemapComment.write({
+        contentType: urlInfo.contentType,
+        content: urlInfo.content,
+        specifier:
+          sourcemapMethod === "inline"
+            ? sourcemapToBase64Url(urlInfo.sourcemap)
+            : urlInfo.sourcemapUrl,
       })
-      urlInfo.sourcemapUrl = sourcemapUrl
-      urlInfo.sourcemapGeneratedUrl = sourcemapGeneratedUrl
-      urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
+      const sourcemapReference = getSourcemapReference(urlInfo)
+      if (sourcemapReference) {
+        const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
+        await context.cook({
+          reference: sourcemapReference,
+          urlInfo: sourcemapUrlInfo,
+        })
+        const generatedSpecifier = await reference.generatedSpecifier
+        // sourcemap url or content (when inline)
+        // was modified by a plugin
+        // let's update comment to respect that
+        if (generatedSpecifier !== reference.specifier) {
+          urlInfo.content = sourcemapComment.write({
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            specifier: generatedSpecifier,
+          })
+        }
+      }
     }
 
     // "finalize" hook
