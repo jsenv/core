@@ -352,10 +352,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             name: "jsenv:versioning",
             appliesDuring: { build: true },
             resolve: ({ parentUrl, specifier }) => {
-              return (
+              const url =
                 applyLeadingSlashUrlResolution(specifier, buildDirectoryUrl) ||
                 new URL(specifier, parentUrl).href
-              )
+              return url
             },
             formatReferencedUrl: ({ url, type, subtype, isInline }) => {
               if (isInline) {
@@ -402,9 +402,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         ],
         scenario: "build",
       })
+      // arrange state before reloading all files
       Object.keys(finalGraph.urlInfos).forEach((url) => {
         const urlInfo = finalGraph.urlInfos[url]
         urlInfo.data.promise = null
+        urlInfo.originalContent = urlInfo.content
       })
       await loadUrlGraph({
         urlGraph: finalGraph,
@@ -429,10 +431,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     }
     urlVersioningLog.done()
   }
-  logger.debug(
-    `graph urls post-versioning:
-${Object.keys(finalGraph.urlInfos).join("\n")}`,
-  )
 
   const buildFileContents = {}
   const buildInlineFileContents = {}

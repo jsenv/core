@@ -1,7 +1,9 @@
 /*
  * Keep in mind: "no sourcemap is better than wrong sourcemap"
  *
- * What about https://github.com/parcel-bundler/source-map ?
+ * What about https://parceljs.org/plugin-system/source-maps ?
+ * see https://github.com/parcel-bundler/source-map ?
+ *
  *
  * "@ampproject/remapping"
  *   - can compose/merge sourcemap composed of a single source

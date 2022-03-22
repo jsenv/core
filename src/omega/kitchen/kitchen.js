@@ -5,10 +5,14 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
+  urlToExtension,
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
-import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
+import {
+  filesystemRootUrl,
+  setUrlExtension,
+} from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseJavaScriptSourcemapComment,
   parseCssSourcemapComment,
@@ -142,6 +146,16 @@ export const createKitchen = ({
     }
   }
   const load = async ({ reference, urlInfo, context }) => {
+    const sourcemapLoad = loadSourcemapFromGraph(reference.url)
+    if (sourcemapLoad) {
+      Object.assign(urlInfo, {
+        contentType: sourcemapLoad.contentType,
+        originalContent: sourcemapLoad.content,
+        content: sourcemapLoad.content,
+        type: "sourcemap",
+      })
+      return
+    }
     try {
       const loadReturnValue = await pluginController.callAsyncHooksUntil(
         "load",
@@ -154,7 +168,6 @@ export const createKitchen = ({
       const {
         contentType = "application/octet-stream",
         content, // can be a buffer (used for binary files) or a string
-        parentReference,
       } = loadReturnValue
       Object.assign(urlInfo, {
         contentType,
@@ -162,7 +175,6 @@ export const createKitchen = ({
         content,
       })
       urlInfo.type = urlInfo.type || inferUrlInfoType(urlInfo)
-      reference.parent = parentReference
     } catch (error) {
       throw createLoadError({
         pluginController,
@@ -171,6 +183,7 @@ export const createKitchen = ({
         error,
       })
     }
+
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       rootDirectoryUrl,
       outDirectoryUrl: context.outDirectoryUrl,
@@ -183,36 +196,53 @@ export const createKitchen = ({
     } else if (urlInfo.contentType === "text/css") {
       sourcemapReferenceInfo = parseCssSourcemapComment(urlInfo.content)
     }
-    if (sourcemapReferenceInfo) {
-      const { type, line, column, specifier } = sourcemapReferenceInfo
-      const sourcemapReference = createReference({
-        trace: stringifyUrlSite(
-          adjustUrlSite(urlInfo, {
-            urlGraph,
-            url: urlInfo.url,
-            line,
-            column,
-          }),
-        ),
-        type,
-        parentUrl: urlInfo.url,
-        specifier,
+    if (!sourcemapReferenceInfo) {
+      return
+    }
+    const { type, line, column, specifier } = sourcemapReferenceInfo
+    const sourcemapReference = createReference({
+      trace: stringifyUrlSite(
+        adjustUrlSite(urlInfo, {
+          urlGraph,
+          url: urlInfo.url,
+          line,
+          column,
+        }),
+      ),
+      type,
+      parentUrl: urlInfo.url,
+      specifier,
+    })
+    const sourcemapUrlInfo = resolveReference(sourcemapReference)
+    sourcemapUrlInfo.type = "sourcemap"
+    try {
+      await context.cook({
+        reference: sourcemapReference,
+        urlInfo: sourcemapUrlInfo,
       })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
-      sourcemapUrlInfo.type = "sourcemap"
-      try {
-        await context.cook({
-          reference: sourcemapReference,
-          urlInfo: sourcemapUrlInfo,
-        })
-        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-        sourcemap.sources = sourcemap.sources.map((source) => {
-          return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
-        })
-        urlInfo.sourcemap = sourcemap
-      } catch (e) {
-        logger.error(`Error while handling sourcemap: ${e.message}`)
-      }
+      const sourcemap = JSON.parse(sourcemapUrlInfo.content)
+      // we could do that in a plugin, it's a "transform" while cooking the sourcemap
+      sourcemap.sources = sourcemap.sources.map((source) => {
+        return fileURLToPath(new URL(source, sourcemapUrlInfo.url).href)
+      })
+      urlInfo.originalSourcemap = sourcemap
+      urlInfo.sourcemap = sourcemap
+    } catch (e) {
+      logger.error(`Error while handling sourcemap: ${e.message}`)
+    }
+  }
+  const loadSourcemapFromGraph = (url) => {
+    if (urlToExtension(url) !== ".map") {
+      return null
+    }
+    const urlWithoutMapExtension = setUrlExtension(url, "")
+    const urlInfo = urlGraph.getUrlInfo(urlWithoutMapExtension)
+    if (!urlInfo || !urlInfo.sourcemap) {
+      return null
+    }
+    return {
+      contentType: "application/json",
+      content: JSON.stringify(urlInfo.sourcemap),
     }
   }
 
@@ -398,6 +428,7 @@ export const createKitchen = ({
         outDirectoryUrl,
         url: sourcemapUrl,
       })
+      urlInfo.sourcemapUrl = sourcemapUrl
       urlInfo.sourcemapGeneratedUrl = sourcemapGeneratedUrl
       urlInfo.content = injectSourcemap(urlInfo, { sourcemapMethod })
     }

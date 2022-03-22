@@ -68,6 +68,7 @@
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.5.7",
     "@jsenv/uneval": "1.6.0",
+    "@parcel/source-map": "2.0.2",
     "@rollup/plugin-commonjs": "21.0.1",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "13.1.3",
