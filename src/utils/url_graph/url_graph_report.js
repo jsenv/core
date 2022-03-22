@@ -39,7 +39,7 @@ const createUrlGraphReport = (urlGraph) => {
   Object.keys(urlInfos).forEach((url) => {
     const urlInfo = urlInfos[url]
     // ignore inline files, they are already taken into account in the file where they appear
-    if (urlInfo.inlineInfo) {
+    if (urlInfo.inlineUrlSite) {
       return
     }
     // ignore sourcemap files

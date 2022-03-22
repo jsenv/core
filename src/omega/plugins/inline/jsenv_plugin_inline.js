@@ -11,10 +11,9 @@ import {
   visitHtmlAst,
   getHtmlNodeTextNode,
   getIdForInlineHtmlNode,
-  removeHtmlNodeText,
-  assignHtmlNodeAttributes,
   htmlNodePosition,
   parseScriptNode,
+  setHtmlNodeText,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
@@ -27,19 +26,22 @@ const htmlInlineScriptsAndStyles = () => {
   return {
     name: "jsenv:inline_scripts_and_styles",
     appliesDuring: "*",
-    load: ({ data }) => {
-      if (data.inlineInfo) {
-        return {
-          contentType: data.inlineInfo.contentType,
-          content: data.inlineInfo.content,
-        }
+    load: ({ contentType, originalContent }) => {
+      if (!contentType) {
+        return null
       }
-      return null
+      return {
+        contentType,
+        content: originalContent,
+      }
     },
     transform: {
-      html: ({ url, originalContent, content }, { addReference, urlGraph }) => {
+      html: async (
+        { url, originalContent, content },
+        { cook, addReference, urlGraph },
+      ) => {
         const htmlAst = parseHtmlString(content)
-        let foundSomethingInline = false
+        const actions = []
         const addInlineReference = ({
           node,
           type,
@@ -47,7 +49,6 @@ const htmlInlineScriptsAndStyles = () => {
           inlineContentType,
           inlineContent,
         }) => {
-          foundSomethingInline = true
           const { line, column } = htmlNodePosition.readNodePosition(node, {
             preferOriginal: true,
           })
@@ -62,18 +63,16 @@ const htmlInlineScriptsAndStyles = () => {
             specifier,
           })
           const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
-          inlineUrlInfo.inlineInfo = {
-            urlSite: {
-              url,
-              content: originalContent, // original because it's the origin line and column
-              // we remove 1 to the line because imagine the following html:
-              // <script>console.log('ok')</script>
-              // -> code starts at the same line than script tag
-              line: line - 1,
-              column,
-            },
-            contentType: inlineContentType,
-            content: inlineContent,
+          inlineUrlInfo.contentType = inlineContentType
+          inlineUrlInfo.originalContent = inlineContent
+          inlineUrlInfo.inlineUrlSite = {
+            url,
+            content: originalContent, // original because it's the origin line and column
+            // we remove 1 to the line because imagine the following html:
+            // <script>console.log('ok')</script>
+            // -> code starts at the same line than script tag
+            line: line - 1,
+            column,
           }
           return inlineReference
         }
@@ -85,64 +84,75 @@ const htmlInlineScriptsAndStyles = () => {
           if (!textNode) {
             return
           }
-          const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
-          const inlineStyleReference = addInlineReference({
-            node,
-            type: "link_href",
-            specifier: `${urlToFilename(url)}@${inlineStyleId}.js`,
-            inlineContentType: "text/css",
-            inlineContent: textNode.value,
+          actions.push(async () => {
+            const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
+            const inlineStyleSpecifier = `${urlToFilename(
+              url,
+            )}@${inlineStyleId}.css`
+            const inlineStyleReference = addInlineReference({
+              node,
+              type: "link_href",
+              specifier: inlineStyleSpecifier,
+              inlineContentType: "text/css",
+              inlineContent: textNode.value,
+            })
+            const inlineUrlInfo = urlGraph.getUrlInfo(inlineStyleReference.url)
+            await cook({
+              reference: inlineStyleReference,
+              urlInfo: inlineUrlInfo,
+            })
+            setHtmlNodeText(node, inlineUrlInfo.content)
           })
-          node.nodeName = "link"
-          node.tagName = "link"
-          assignHtmlNodeAttributes(node, {
-            rel: "stylesheet",
-            href: inlineStyleReference.specifier,
-          })
-          removeHtmlNodeText(node)
         }
         const handleInlineScript = (node) => {
           if (node.nodeName !== "script") {
-            return
-          }
-          const scriptCategory = parseScriptNode(node)
-          if (scriptCategory === "importmap") {
-            // do not externalize importmap for now
             return
           }
           const textNode = getHtmlNodeTextNode(node)
           if (!textNode) {
             return
           }
-          const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
-          const inlineScriptSpecifier = `${urlToFilename(
-            url,
-          )}@${inlineScriptId}.js`
-          const inlineScriptReference = addInlineReference({
-            node,
-            type: "script_src",
-            specifier:
-              scriptCategory === "classic"
-                ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
-                    js_classic: "",
-                  })
-                : inlineScriptSpecifier,
-            inlineContentType: "application/javascript",
-            inlineContent: textNode.value,
+          actions.push(async () => {
+            const scriptCategory = parseScriptNode(node)
+            const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
+            const inlineScriptSpecifier = `${urlToFilename(
+              url,
+            )}@${inlineScriptId}.js`
+            const inlineScriptReference = addInlineReference({
+              node,
+              type: "script_src",
+              specifier:
+                scriptCategory === "classic"
+                  ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
+                      js_classic: "",
+                    })
+                  : inlineScriptSpecifier,
+              inlineContentType:
+                scriptCategory === "importmap"
+                  ? "application/importmap+json"
+                  : "application/javascript",
+              inlineContent: textNode.value,
+            })
+            const inlineUrlInfo = urlGraph.getUrlInfo(inlineScriptReference.url)
+            await cook({
+              reference: inlineScriptReference,
+              urlInfo: inlineUrlInfo,
+            })
+            setHtmlNodeText(node, inlineUrlInfo.content)
           })
-          assignHtmlNodeAttributes(node, {
-            "src": inlineScriptReference.generatedSpecifier,
-            "data-externalized": "",
-          })
-          removeHtmlNodeText(node)
         }
         visitHtmlAst(htmlAst, (node) => {
           handleInlineStyle(node)
           handleInlineScript(node)
         })
-        if (!foundSomethingInline) {
+        if (actions.length === 0) {
           return null
         }
+        await Promise.all(
+          actions.map(async (action) => {
+            await action()
+          }),
+        )
         const htmlModified = stringifyHtmlAst(htmlAst)
         return {
           content: htmlModified,

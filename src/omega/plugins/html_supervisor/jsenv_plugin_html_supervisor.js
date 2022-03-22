@@ -8,7 +8,12 @@
  *   I think so when we inject ?js_classic
  */
 
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
+import { urlToFilename } from "@jsenv/filesystem"
+
+import {
+  injectQueryParams,
+  injectQueryParamsIntoSpecifier,
+} from "@jsenv/core/src/utils/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -20,7 +25,12 @@ import {
   parseScriptNode,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
+  htmlNodePosition,
+  getIdForInlineHtmlNode,
+  removeHtmlNodeText,
+  getHtmlNodeTextNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
+import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 
 export const jsenvPluginHtmlSupervisor = () => {
   const htmlSupervisorSetupFileUrl = new URL(
@@ -38,29 +48,81 @@ export const jsenvPluginHtmlSupervisor = () => {
       dev: true,
       test: true,
     },
+    load: ({ contentType, originalContent }) => {
+      if (!contentType) {
+        return null
+      }
+      return {
+        contentType,
+        content: originalContent,
+      }
+    },
     transform: {
-      html: ({ content }, { addReference }) => {
+      html: ({ url, originalContent, content }, { urlGraph, addReference }) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
-        visitHtmlAst(htmlAst, (node) => {
-          if (node.nodeName !== "script") {
-            return
+
+        const addInlineReference = ({
+          node,
+          type,
+          specifier,
+          inlineContentType,
+          inlineContent,
+        }) => {
+          const { line, column } = htmlNodePosition.readNodePosition(node, {
+            preferOriginal: true,
+          })
+          const inlineReference = addReference({
+            trace: stringifyUrlSite({
+              url,
+              content: originalContent,
+              line,
+              column,
+            }),
+            type,
+            specifier,
+          })
+          const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
+          inlineUrlInfo.contentType = inlineContentType
+          inlineUrlInfo.originalContent = inlineContent
+          inlineUrlInfo.inlineUrlSite = {
+            url,
+            content: originalContent, // original because it's the origin line and column
+            // we remove 1 to the line because imagine the following html:
+            // <script>console.log('ok')</script>
+            // -> code starts at the same line than script tag
+            line: line - 1,
+            column,
           }
+          return inlineReference
+        }
+
+        const handleInlineScript = (node, textNode) => {
           const scriptCategory = parseScriptNode(node)
-          if (scriptCategory !== "classic" && scriptCategory !== "module") {
-            return
-          }
-          const dataInjectedAttribute = getHtmlNodeAttributeByName(
+          const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
+          const inlineScriptSpecifier = `${urlToFilename(
+            url,
+          )}@${inlineScriptId}.js`
+          const inlineScriptReference = addInlineReference({
             node,
-            "data-injected",
-          )
-          if (dataInjectedAttribute) {
-            return
-          }
-          const srcAttribute = getHtmlNodeAttributeByName(node, "src")
-          if (!srcAttribute) {
-            return
-          }
+            type: "script_src",
+            specifier:
+              scriptCategory === "classic"
+                ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
+                    js_classic: "",
+                  })
+                : inlineScriptSpecifier,
+            inlineContentType: "application/javascript",
+            inlineContent: textNode.value,
+          })
+          assignHtmlNodeAttributes(node, {
+            "src": inlineScriptReference.generatedSpecifier,
+            "data-externalized": "",
+          })
+          removeHtmlNodeText(node)
+        }
+        const handleScriptWithSrc = (node, srcAttribute) => {
+          const scriptCategory = parseScriptNode(node)
           let src = srcAttribute ? srcAttribute.value : undefined
           const integrityAttribute = getHtmlNodeAttributeByName(
             node,
@@ -83,6 +145,33 @@ export const jsenvPluginHtmlSupervisor = () => {
             integrity,
             crossorigin,
           })
+        }
+
+        visitHtmlAst(htmlAst, (node) => {
+          if (node.nodeName !== "script") {
+            return
+          }
+          const scriptCategory = parseScriptNode(node)
+          if (scriptCategory !== "classic" && scriptCategory !== "module") {
+            return
+          }
+          const dataInjectedAttribute = getHtmlNodeAttributeByName(
+            node,
+            "data-injected",
+          )
+          if (dataInjectedAttribute) {
+            return
+          }
+          const textNode = getHtmlNodeTextNode(node)
+          if (textNode) {
+            handleInlineScript(node)
+            return
+          }
+          const srcAttribute = getHtmlNodeAttributeByName(node, "src")
+          if (srcAttribute) {
+            handleScriptWithSrc(node)
+            return
+          }
         })
         if (scriptsToSupervise.length === 0) {
           return null

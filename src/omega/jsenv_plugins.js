@@ -19,6 +19,7 @@ export const getJsenvPlugins = () => {
     // url resolution
     jsenvPluginFileSystemAbsolute(),
     jsenvPluginLeadingSlash(),
+    ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]), // before inline as it turns inline <script> into <script src>
     ...(asFewAsPossible ? [] : [jsenvPluginInline()]), // must come first to resolve inline urls
     jsenvPluginImportmap(), // must come before node esm to handle bare specifiers before node esm
     jsenvPluginNodeEsmResolution(), // must come before url resolution to handle "js_import_export" resolution
@@ -29,7 +30,6 @@ export const getJsenvPlugins = () => {
     ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
     jsenvPluginFileUrls(),
     // content transformation
-    ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor()]),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
     jsenvPluginBabel(),

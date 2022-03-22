@@ -508,11 +508,7 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
     if (!urlSite.isOriginal) {
       return urlSite
     }
-    const inlineInfo = urlInfo.inlineInfo
-    if (!inlineInfo) {
-      return urlSite
-    }
-    const inlineUrlSite = inlineInfo.urlSite
+    const inlineUrlSite = urlInfo.inlineUrlSite
     if (!inlineUrlSite) {
       return urlSite
     }

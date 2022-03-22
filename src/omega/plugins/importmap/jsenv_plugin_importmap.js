@@ -22,46 +22,33 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap"
-import { urlToFilename } from "@jsenv/filesystem"
 
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  getIdForInlineHtmlNode,
   findNode,
   getHtmlNodeAttributeByName,
-  getHtmlNodeTextNode,
   htmlNodePosition,
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
   assignHtmlNodeAttributes,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
-import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 
 export const jsenvPluginImportmap = () => {
-  const importmapSupervisor = jsenvPluginImportmapSupervisor()
+  const importmapInlining = jsenvPluginImportmapInlining()
   const importmapResolution = jsenvPluginImportmapResolution()
 
-  return [importmapSupervisor, importmapResolution]
+  return [importmapInlining, importmapResolution]
 }
 
-const jsenvPluginImportmapSupervisor = () => {
+const jsenvPluginImportmapInlining = () => {
   return {
-    name: "jsenv:importmap_supervisor",
+    name: "jsenv:importmap_inlining",
     appliesDuring: "*",
-    load: ({ inlineInfo }) => {
-      if (!inlineInfo) {
-        return null
-      }
-      return {
-        contentType: inlineInfo.contentType,
-        content: inlineInfo.content,
-      }
-    },
     transform: {
       html: async (
-        { url, originalContent, content, references },
-        { urlGraph, addReference, cook },
+        { url, content, originalContent, references },
+        { urlGraph, cook },
       ) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
@@ -77,74 +64,44 @@ const jsenvPluginImportmapSupervisor = () => {
         if (!importmap) {
           return null
         }
-        const textNode = getHtmlNodeTextNode(importmap)
-        if (textNode) {
-          const { line, column } = htmlNodePosition.readNodePosition(
-            importmap,
-            {
-              preferOriginal: true,
-            },
-          )
-          const inlineImportmapId = getIdForInlineHtmlNode(htmlAst, importmap)
-          const importmapReference = addReference({
-            trace: stringifyUrlSite({
-              url,
-              content: originalContent,
-              line,
-              column,
-            }),
-            type: "script_src",
-            specifier: `${urlToFilename(url)}@${inlineImportmapId}.importmap`,
-          })
-          const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference)
-          importmapUrlInfo.inlineInfo = {
-            urlSite: {
-              url,
-              content: originalContent, // original because it's the origin line and column
-              line,
-              column,
-            },
-            contentType: "application/importmap+json",
-            content: textNode.value,
-          }
-          await cook({
-            reference: importmapReference,
-            urlInfo: importmapUrlInfo,
-          })
-          setHtmlNodeText(importmap, importmapUrlInfo.content)
-          assignHtmlNodeAttributes(importmap, {
-            "content-src": importmapReference.specifier,
-          })
-          return {
-            content: stringifyHtmlAst(htmlAst),
-          }
-        }
         const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")
         const src = srcAttribute ? srcAttribute.value : undefined
-        if (src) {
-          // Browser would throw on remote importmap
-          // and won't sent a request to the server for it
-          // We must precook the importmap to know its content and inline it into the HTML
-          // In this ituation the ref to the importmap was already discovered
-          // when parsing the HTML
-          const importmapReference = references.find(
-            (reference) => reference.specifier === src,
-          )
-          const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference.url)
-          await cook({
-            reference: importmapReference,
-            urlInfo: importmapUrlInfo,
-          })
-          removeHtmlNodeAttributeByName(importmap, "src")
-          assignHtmlNodeAttributes(importmap, {
-            "content-src": src,
-          })
-          setHtmlNodeText(importmap, importmapUrlInfo.content)
-          return {
-            content: stringifyHtmlAst(htmlAst),
-          }
+        if (!src) {
+          return null
         }
-        return null
+        // Browser would throw on remote importmap
+        // and won't sent a request to the server for it
+        // We must precook the importmap to know its content and inline it into the HTML
+        // In this ituation the ref to the importmap was already discovered
+        // when parsing the HTML
+        const importmapReference = references.find(
+          (reference) => reference.specifier === src,
+        )
+        const { line, column } = htmlNodePosition.readNodePosition(importmap, {
+          preferOriginal: true,
+        })
+        const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference.url)
+        await cook({
+          reference: importmapReference,
+          urlInfo: importmapUrlInfo,
+        })
+        removeHtmlNodeAttributeByName(importmap, "src")
+        assignHtmlNodeAttributes(importmap, {
+          "content-src": src,
+        })
+        setHtmlNodeText(importmap, importmapUrlInfo.content)
+        importmapUrlInfo.inlineUrlSite = {
+          url,
+          content: originalContent, // original because it's the origin line and column
+          // we remove 1 to the line because imagine the following html:
+          // <script>console.log('ok')</script>
+          // -> code starts at the same line than script tag
+          line: line - 1,
+          column,
+        }
+        return {
+          content: stringifyHtmlAst(htmlAst),
+        }
       },
     },
   }

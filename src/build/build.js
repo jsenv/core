@@ -427,7 +427,7 @@ export const build = async ({
     const buildUrlInfo = finalGraph.getUrlInfo(url)
     const buildUrl = buildUrlInfo.data.versionedUrl || buildUrlInfo.url
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
-    if (buildUrlInfo.inlineInfo) {
+    if (buildUrlInfo.inlineUrlSite) {
       buildInlineFileContents[buildRelativeUrl] = buildUrlInfo.content
     } else {
       buildFileContents[buildRelativeUrl] = buildUrlInfo.content
