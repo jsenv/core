@@ -6,7 +6,7 @@ import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 export const buildWithRollup = async ({
   signal,
   logger,
-  sourceDirectoryUrl,
+  rootDirectoryUrl,
   buildDirectoryUrl,
   rawGraph,
   jsModulesUrlsToBundle,
@@ -20,7 +20,7 @@ export const buildWithRollup = async ({
       rollupPluginJsenv({
         signal,
         logger,
-        sourceDirectoryUrl,
+        rootDirectoryUrl,
         buildDirectoryUrl,
         rawGraph,
         jsModulesUrlsToBundle,
@@ -42,7 +42,7 @@ export const buildWithRollup = async ({
 
 const rollupPluginJsenv = ({
   // logger,
-  sourceDirectoryUrl,
+  rootDirectoryUrl,
   buildDirectoryUrl,
   rawGraph,
   jsModulesUrlsToBundle,
@@ -117,7 +117,7 @@ const rollupPluginJsenv = ({
         // },
       })
     },
-    resolveId: (specifier, importer = sourceDirectoryUrl) => {
+    resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
         importer = fileUrlConverter.asFileUrl(importer)
       }

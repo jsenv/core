@@ -40,7 +40,7 @@ import {
 export const build = async ({
   signal = new AbortController().signal,
   logLevel = "info",
-  sourceDirectoryUrl,
+  rootDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
   // for now it's here but I think preview will become an other script
@@ -70,7 +70,7 @@ export const build = async ({
   baseUrl = "/",
 }) => {
   const logger = createLogger({ logLevel })
-  sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl)
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
@@ -80,7 +80,7 @@ export const build = async ({
   const rawGraphKitchen = createKitchen({
     signal,
     logger,
-    rootDirectoryUrl: sourceDirectoryUrl,
+    rootDirectoryUrl,
     urlGraph: rawGraph,
     sourcemapMethod,
     plugins: [
@@ -103,7 +103,6 @@ export const build = async ({
     Object.keys(entryPoints).forEach((key) => {
       cookEntryFile({
         trace: `"${key}" in entryPoints parameter`,
-        parentUrl: sourceDirectoryUrl,
         type: "entry_point",
         specifier: key,
       })
@@ -113,7 +112,7 @@ export const build = async ({
     await loadUrlGraph({
       urlGraph: rawGraph,
       kitchen: rawGraphKitchen,
-      outDirectoryUrl: new URL(`.jsenv/build/`, sourceDirectoryUrl),
+      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
       runtimeSupport,
       startLoading: loadEntryFiles,
     })
@@ -173,7 +172,7 @@ export const build = async ({
       const rollupBuild = await buildWithRollup({
         signal,
         logger,
-        sourceDirectoryUrl,
+        rootDirectoryUrl,
         buildDirectoryUrl,
         rawGraph,
         jsModulesUrlsToBundle,
@@ -207,11 +206,11 @@ export const build = async ({
   const buildUrlsGenerator = createBuilUrlsGenerator({
     buildDirectoryUrl,
   })
-  const buildUrlMappings = {}
-  const specifierBuildMappings = {}
+  const sourceUrls = {}
+  const buildSpecifiers = {}
   const finalGraph = createUrlGraph()
   const finalGraphKitchen = createKitchen({
-    rootDirectoryUrl: sourceDirectoryUrl,
+    rootDirectoryUrl,
     urlGraph: finalGraph,
     plugins: [
       jsenvPluginInline(),
@@ -225,13 +224,13 @@ export const build = async ({
             return new URL(specifier, parentSourceUrl).href
           }
           return (
-            applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
+            applyLeadingSlashUrlResolution(specifier, rootDirectoryUrl) ||
             new URL(specifier, parentUrl).href
           )
         },
         normalize: ({ url, data }) => {
           // already a build url
-          const sourceUrl = buildUrlMappings[url]
+          const sourceUrl = sourceUrls[url]
           if (sourceUrl) {
             data.sourceUrl = sourceUrl
             return url
@@ -244,7 +243,7 @@ export const build = async ({
               : "assets/",
           )
           data.sourceUrl = url
-          buildUrlMappings[buildUrl] = url
+          sourceUrls[buildUrl] = url
           return buildUrl
         },
         formatReferencedUrl: ({ url }) => {
@@ -260,7 +259,7 @@ export const build = async ({
             url,
             buildDirectoryUrl,
           )}`
-          specifierBuildMappings[specifier] = url
+          buildSpecifiers[url] = specifier
           return specifier
         },
         load: ({ data }) => {
@@ -278,7 +277,8 @@ export const build = async ({
             const htmlAst = parseHtmlString(content)
             return {
               content: stringifyHtmlAst(htmlAst, {
-                removeOriginalPositionAttributes: true,
+                // we'll see that later
+                // removeOriginalPositionAttributes: true,
               }),
             }
           },
@@ -292,7 +292,7 @@ export const build = async ({
     await loadUrlGraph({
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
-      outDirectoryUrl: new URL(".jsenv/build/", sourceDirectoryUrl),
+      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
       startLoading: loadEntryFiles,
     })
   } catch (e) {
@@ -301,9 +301,10 @@ export const build = async ({
   }
   loadFinalGraphLog.done()
 
-  const buildFileContents = {}
-  const buildInlineFileContents = {}
-  const buildManifest = {}
+  logger.debug(
+    `graph urls pre-versioning:
+${Object.keys(finalGraph.urlInfos).join("\n")}`,
+  )
   if (versioning) {
     const urlVersioningLog = createTaskLog("inject version in urls")
     try {
@@ -343,53 +344,33 @@ export const build = async ({
       })
       const versionMappings = {}
       const versioningKitchen = createKitchen({
-        rootDirectoryUrl: sourceDirectoryUrl,
+        rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
         plugins: [
           jsenvPluginInline(),
           {
             name: "jsenv:versioning",
             appliesDuring: { build: true },
-            resolve: ({ parentUrl, specifier, isInline }) => {
-              if (isInline) {
-                const parentUrlInfo = finalGraph.getUrlInfo(parentUrl)
-                const parentSourceUrl = parentUrlInfo.data.sourceUrl
-                return new URL(specifier, parentSourceUrl).href
-              }
+            resolve: ({ parentUrl, specifier }) => {
               return (
-                applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
+                applyLeadingSlashUrlResolution(specifier, buildDirectoryUrl) ||
                 new URL(specifier, parentUrl).href
               )
             },
-            normalize: ({ url, data }) => {
-              // already a build url
-              const sourceUrl = buildUrlMappings[url]
-              if (sourceUrl) {
-                data.sourceUrl = sourceUrl
-                return url
+            formatReferencedUrl: ({ url, type, subtype, isInline }) => {
+              if (isInline) {
+                return null
               }
-              const urlInfo = buildUrlInfos[url] || rawGraph.getUrlInfo(url)
-              const buildUrl = buildUrlsGenerator.generate(
-                url,
-                urlInfo.data.isEntryPoint || urlInfo.type === "js_module"
-                  ? "/"
-                  : "assets/",
-              )
-              data.sourceUrl = url
-              buildUrlMappings[buildUrl] = url
-              return buildUrl
-            },
-            formatReferencedUrl: ({ type, subtype, specifier }) => {
               // specifier comes from "normalize" hook done a bit earlier in this file
               // we want to get back their build url to access their infos
-              const buildUrl = specifierBuildMappings[specifier]
-              if (!buildUrl) {
+              const buildSpecifier = buildSpecifiers[url]
+              if (!buildSpecifier) {
                 // There is not build mapping for the specifier
                 // if the specifier was not normalized
                 // happens for https://*, http://* , data:*
                 return null
               }
-              const referencedUrlInfo = finalGraph.getUrlInfo(buildUrl)
+              const referencedUrlInfo = finalGraph.getUrlInfo(url)
               // if (referencedUrlInfo.data.isEntryPoint) {
               //   return null
               // }
@@ -397,21 +378,20 @@ export const build = async ({
                 referencedUrlInfo.data.versionedUrl,
                 buildDirectoryUrl,
               )}`
-              versionMappings[specifier] = versionedSpecifier
+              versionMappings[buildSpecifier] = versionedSpecifier
               if (
                 type === "js_import_meta_url_pattern" ||
                 subtype === "import_dynamic"
               ) {
-                return `window.__asVersionedSpecifier__(${JSON.stringify(
-                  specifier,
-                )})`
+                return () =>
+                  `window.__asVersionedSpecifier__(${JSON.stringify(
+                    buildSpecifier,
+                  )})`
               }
               return versionedSpecifier
             },
-            load: ({ data }) => {
-              const sourceUrl = data.sourceUrl
-              const urlInfo =
-                buildUrlInfos[sourceUrl] || rawGraph.getUrlInfo(sourceUrl)
+            load: ({ url }) => {
+              const urlInfo = finalGraph.getUrlInfo(url)
               return {
                 contentType: urlInfo.contentType,
                 content: urlInfo.content,
@@ -449,10 +429,20 @@ export const build = async ({
     }
     urlVersioningLog.done()
   }
+  logger.debug(
+    `graph urls post-versioning:
+${Object.keys(finalGraph.urlInfos).join("\n")}`,
+  )
 
+  const buildFileContents = {}
+  const buildInlineFileContents = {}
+  const buildManifest = {}
   Object.keys(finalGraph.urlInfos).forEach((url) => {
     const buildUrlInfo = finalGraph.getUrlInfo(url)
     const buildUrl = buildUrlInfo.data.versionedUrl || buildUrlInfo.url
+    if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
+      throw new Error(`build url outside build directory`)
+    }
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
     if (buildUrlInfo.inlineUrlSite) {
       buildInlineFileContents[buildRelativeUrl] = buildUrlInfo.content

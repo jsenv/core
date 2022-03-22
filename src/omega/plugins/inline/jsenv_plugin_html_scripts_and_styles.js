@@ -79,7 +79,7 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = () => {
           }
           actions.push(async () => {
             const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
-            const inlineStyleSpecifier = `${urlToFilename(
+            const inlineStyleSpecifier = `./${urlToFilename(
               url,
             )}@${inlineStyleId}.css`
             const inlineStyleReference = addInlineReference({
@@ -108,7 +108,7 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = () => {
           actions.push(async () => {
             const scriptCategory = parseScriptNode(node)
             const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
-            const inlineScriptSpecifier = `${urlToFilename(
+            const inlineScriptSpecifier = `./${urlToFilename(
               url,
             )}@${inlineScriptId}.js`
             const inlineScriptReference = addInlineReference({

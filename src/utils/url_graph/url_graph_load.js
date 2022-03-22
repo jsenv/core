@@ -35,22 +35,24 @@ export const loadUrlGraph = async ({
   }
 
   const promises = []
-  startLoading(({ trace, parentUrl, type, specifier }) => {
-    const entryReference = kitchen.createReference({
-      trace,
-      parentUrl,
-      type,
-      specifier,
-    })
-    const entryUrlInfo = kitchen.resolveReference(entryReference)
-    entryUrlInfo.data.isEntryPoint = true
-    promises.push(
-      cook({
-        reference: entryReference,
-        urlInfo: entryUrlInfo,
-      }),
-    )
-  })
+  startLoading(
+    ({ trace, parentUrl = kitchen.rootDirectoryUrl, type, specifier }) => {
+      const entryReference = kitchen.createReference({
+        trace,
+        parentUrl,
+        type,
+        specifier,
+      })
+      const entryUrlInfo = kitchen.resolveReference(entryReference)
+      entryUrlInfo.data.isEntryPoint = true
+      promises.push(
+        cook({
+          reference: entryReference,
+          urlInfo: entryUrlInfo,
+        }),
+      )
+    },
+  )
   await Promise.all(promises)
 }
 

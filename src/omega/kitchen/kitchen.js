@@ -1,7 +1,6 @@
 import { fileURLToPath } from "node:url"
 import {
   urlIsInsideOf,
-  writeFile,
   writeFileSync,
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -433,9 +432,11 @@ export const createKitchen = ({
       },
     )
   }
-  const cook = async ({ urlInfo, ...rest }) => {
+  const cook = async ({ urlInfo, outDirectoryUrl, ...rest }) => {
+    outDirectoryUrl = outDirectoryUrl ? String(outDirectoryUrl) : undefined
+
     const writeFiles = ({ gotError }) => {
-      if (!writeOnFileSystem) {
+      if (!writeOnFileSystem || !outDirectoryUrl) {
         return
       }
       const { generatedUrl } = urlInfo
@@ -443,7 +444,8 @@ export const createKitchen = ({
       if (!generatedUrl || !generatedUrl.startsWith("file:")) {
         return
       }
-      const write = gotError ? writeFileSync : writeFile
+      // use writeSync to avoid concurrency on writing the file
+      const write = gotError ? writeFileSync : writeFileSync
       write(new URL(generatedUrl), urlInfo.content)
       const { sourcemapGeneratedUrl, sourcemap } = urlInfo
       if (sourcemapGeneratedUrl && sourcemap) {
@@ -455,7 +457,11 @@ export const createKitchen = ({
     }
 
     try {
-      await _cook({ urlInfo, ...rest })
+      await _cook({
+        urlInfo,
+        outDirectoryUrl,
+        ...rest,
+      })
       writeFiles({ gotError: false })
     } catch (e) {
       writeFiles({ gotError: true })
@@ -467,6 +473,7 @@ export const createKitchen = ({
 
   return {
     pluginController,
+    rootDirectoryUrl,
     jsenvDirectoryUrl,
     isSupported,
     createReference,
