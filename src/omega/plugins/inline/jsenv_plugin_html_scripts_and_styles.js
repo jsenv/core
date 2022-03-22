@@ -131,7 +131,9 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = () => {
               reference: inlineScriptReference,
               urlInfo: inlineUrlInfo,
             })
-            assignHtmlNodeAttributes(node, { id: inlineScriptId })
+            assignHtmlNodeAttributes(node, {
+              "original-inline-id": inlineScriptId,
+            })
             setHtmlNodeText(node, inlineUrlInfo.content)
           })
         }
