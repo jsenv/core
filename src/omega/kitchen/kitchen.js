@@ -4,6 +4,7 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
+  urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
@@ -13,7 +14,7 @@ import {
   generateSourcemapUrl,
   sourcemapToBase64Url,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v2.js"
 
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
@@ -178,11 +179,14 @@ export const createKitchen = ({
       const {
         contentType = "application/octet-stream",
         content, // can be a buffer (used for binary files) or a string
+        sourcemap,
       } = loadReturnValue
       Object.assign(urlInfo, {
         contentType,
         originalContent: content,
         content,
+        originalSourcemap: sourcemap,
+        sourcemap,
       })
       urlInfo.type = urlInfo.type || inferUrlInfoType(urlInfo)
     } catch (error) {
@@ -198,7 +202,9 @@ export const createKitchen = ({
       outDirectoryUrl: context.outDirectoryUrl,
       url: urlInfo.url,
     })
-
+    if (urlInfo.sourcemap) {
+      return
+    }
     const sourcemapReference = getSourcemapReference(urlInfo, true)
     if (sourcemapReference) {
       try {
@@ -309,7 +315,11 @@ export const createKitchen = ({
         }
         urlInfo.content = content
         if (sourcemap) {
-          urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
+          urlInfo.sourcemap = composeTwoSourcemaps(
+            urlInfo.sourcemap,
+            sourcemap,
+            rootDirectoryUrl,
+          )
         }
       }
     }
@@ -400,7 +410,7 @@ export const createKitchen = ({
         specifier:
           sourcemapMethod === "inline"
             ? sourcemapToBase64Url(urlInfo.sourcemap)
-            : urlInfo.sourcemapUrl,
+            : urlToRelativeUrl(urlInfo.sourcemapUrl, urlInfo.url),
       })
       const sourcemapReference = getSourcemapReference(urlInfo)
       if (sourcemapReference) {

@@ -64,7 +64,8 @@ export const jsenvPluginBabel = () => {
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
-          url: generatedUrl,
+          url,
+          generatedUrl,
           content,
         })
         return {

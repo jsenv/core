@@ -40,7 +40,8 @@ const parseJavaScriptSourcemapComment = (javaScriptSource) => {
     return null
   }
   return {
-    type: "js_sourcemap_comment",
+    type: "sourcemap_comment",
+    subtype: "js",
     // we assume it's on last line
     line: javaScriptSource.split(/\r?\n/).length,
     // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
@@ -87,7 +88,8 @@ const parseCssSourcemapComment = (cssSource) => {
     return null
   }
   return {
-    type: "css_sourcemap_comment",
+    type: "sourcemap_comment",
+    subtype: "css",
     // we assume it's on last line
     line: cssSource.split(/\r?\n/).length - 1,
     // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file

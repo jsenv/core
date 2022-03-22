@@ -3,6 +3,7 @@ import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 export const applyBabelPlugins = async ({
   babelPlugins,
   url,
+  generatedUrl,
   type = "js_module",
   ast,
   content,
@@ -12,14 +13,19 @@ export const applyBabelPlugins = async ({
     return { code: content }
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
-  const filepath = url.startsWith("file:")
+  const sourceFileName = url.startsWith("file:")
     ? urlToFileSystemPath(url)
     : undefined
   options = {
     ast: false,
+    // https://babeljs.io/docs/en/options#source-map-options
     sourceMaps: true,
-    sourceFileName: filepath,
-    filename: filepath,
+    sourceFileName,
+    filename: generatedUrl
+      ? generatedUrl.startsWith("file:")
+        ? urlToFileSystemPath(url)
+        : undefined
+      : sourceFileName,
     configFile: false,
     babelrc: false,
     highlightCode: false,

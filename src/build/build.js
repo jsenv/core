@@ -61,6 +61,7 @@ export const build = async ({
   },
   sourcemapMethod = isPreview ? "file" : false,
 
+  bundling = true,
   versioning = true,
   versioningMethod = "filename", // "search_param", "filename"
   lineBreakNormalization = process.platform === "win32",
@@ -123,82 +124,87 @@ export const build = async ({
   // here we can perform many checks such as ensuring ressource hints are used
   loadRawGraphLog.done()
   logger.info(createUrlGraphSummary(rawGraph, { title: "raw build files" }))
-
-  const jsModulesUrlsToBundle = []
-  const cssUrlsToBundle = []
-  Object.keys(rawGraph.urlInfos).forEach((sourceUrl) => {
-    const sourceUrlInfo = rawGraph.getUrlInfo(sourceUrl)
-    if (!sourceUrlInfo.data.isEntryPoint) {
-      return
-    }
-    if (sourceUrlInfo.type === "html") {
-      sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-        if (dependencyUrlInfo.type === "js_module") {
-          if (dependencyUrlInfo.inlineUrlSite) {
-            // on veut bundle les deps de ce code inline
-            dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-              if (inlineScriptRef.type === "js_import_export") {
-                jsModulesUrlsToBundle.push(inlineScriptRef.url)
-              }
-            })
-            return
-          }
-          jsModulesUrlsToBundle.push(dependencyUrl)
-          return
-        }
-        if (dependencyUrlInfo.type === "css") {
-          cssUrlsToBundle.push(dependencyUrl)
-          return
-        }
-      })
-      return
-    }
-    if (sourceUrlInfo.type === "js_module") {
-      jsModulesUrlsToBundle.push(sourceUrlInfo.url)
-      return
-    }
-    if (sourceUrlInfo.type === "css") {
-      cssUrlsToBundle.push(sourceUrlInfo.url)
-      return
-    }
-  })
+  logger.debug(
+    `raw graph urls:
+${Object.keys(rawGraph.urlInfos).join("\n")}`,
+  )
 
   const buildUrlInfos = {}
-  // in the future this should be done in a "bundle" hook
-  if (jsModulesUrlsToBundle.length) {
-    const rollupBuildLog = createTaskLog(`bundle js modules with rollup`)
-    try {
-      const rollupBuild = await buildWithRollup({
-        signal,
-        logger,
-        rootDirectoryUrl,
-        buildDirectoryUrl,
-        rawGraph,
-        jsModulesUrlsToBundle,
+  if (bundling) {
+    const jsModulesUrlsToBundle = []
+    const cssUrlsToBundle = []
+    Object.keys(rawGraph.urlInfos).forEach((sourceUrl) => {
+      const sourceUrlInfo = rawGraph.getUrlInfo(sourceUrl)
+      if (!sourceUrlInfo.data.isEntryPoint) {
+        return
+      }
+      if (sourceUrlInfo.type === "html") {
+        sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
+          const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
+          if (dependencyUrlInfo.type === "js_module") {
+            if (dependencyUrlInfo.inlineUrlSite) {
+              // on veut bundle les deps de ce code inline
+              dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+                if (inlineScriptRef.type === "js_import_export") {
+                  jsModulesUrlsToBundle.push(inlineScriptRef.url)
+                }
+              })
+              return
+            }
+            jsModulesUrlsToBundle.push(dependencyUrl)
+            return
+          }
+          if (dependencyUrlInfo.type === "css") {
+            cssUrlsToBundle.push(dependencyUrl)
+            return
+          }
+        })
+        return
+      }
+      if (sourceUrlInfo.type === "js_module") {
+        jsModulesUrlsToBundle.push(sourceUrlInfo.url)
+        return
+      }
+      if (sourceUrlInfo.type === "css") {
+        cssUrlsToBundle.push(sourceUrlInfo.url)
+        return
+      }
+    })
+    // in the future this should be done in a "bundle" hook
+    if (jsModulesUrlsToBundle.length) {
+      const rollupBuildLog = createTaskLog(`bundle js modules with rollup`)
+      try {
+        const rollupBuild = await buildWithRollup({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          rawGraph,
+          jsModulesUrlsToBundle,
 
-        runtimeSupport,
-        sourcemapMethod,
-      })
-      const { jsModuleInfos } = rollupBuild
-      Object.keys(jsModuleInfos).forEach((url) => {
-        const jsModuleInfo = jsModuleInfos[url]
-        buildUrlInfos[url] = {
-          data: jsModuleInfo.data,
-          type: "js_module",
-          contentType: "application/javascript",
-          content: jsModuleInfo.content,
-          sourcemap: jsModuleInfo.sourcemap,
-        }
-      })
-    } catch (e) {
-      rollupBuildLog.fail()
-      throw e
+          runtimeSupport,
+          sourcemapMethod,
+        })
+        const { jsModuleInfos } = rollupBuild
+        Object.keys(jsModuleInfos).forEach((url) => {
+          const jsModuleInfo = jsModuleInfos[url]
+          buildUrlInfos[url] = {
+            data: jsModuleInfo.data,
+            type: "js_module",
+            contentType: "application/javascript",
+            content: jsModuleInfo.content,
+            sourcemap: jsModuleInfo.sourcemap,
+          }
+        })
+      } catch (e) {
+        rollupBuildLog.fail()
+        throw e
+      }
+      rollupBuildLog.done()
     }
-    rollupBuildLog.done()
-  }
-  if (cssUrlsToBundle.length) {
-    // on pourrait concat + minify en utilisant post css
+    if (cssUrlsToBundle.length) {
+      // on pourrait concat + minify en utilisant post css
+    }
   }
   // TODO: minify html, svg, json
   // in the future this should be done in a "optimize" hook
@@ -235,15 +241,36 @@ export const build = async ({
             data.sourceUrl = sourceUrl
             return url
           }
-          const urlInfo = buildUrlInfos[url] || rawGraph.getUrlInfo(url)
-          const buildUrl = buildUrlsGenerator.generate(
-            url,
-            urlInfo.data.isEntryPoint || urlInfo.type === "js_module"
-              ? "/"
-              : "assets/",
-          )
-          data.sourceUrl = url
-          sourceUrls[buildUrl] = url
+          const buildUrlInfo = buildUrlInfos[url]
+          // from rollup or postcss
+          if (buildUrlInfo) {
+            const buildUrl = buildUrlsGenerator.generate(
+              url,
+              buildUrlInfo.data.isEntryPoint ||
+                buildUrlInfo.type === "js_module"
+                ? "/"
+                : "assets/",
+            )
+            data.sourceUrl = url
+            sourceUrls[buildUrl] = url
+            return buildUrl
+          }
+          const rawUrlInfo = rawGraph.getUrlInfo(url)
+          // files from root directory but not given to rollup not postcss
+          if (rawUrlInfo) {
+            const buildUrl = buildUrlsGenerator.generate(
+              url,
+              rawUrlInfo.data.isEntryPoint || rawUrlInfo.type === "js_module"
+                ? "/"
+                : "assets/",
+            )
+            data.sourceUrl = url
+            sourceUrls[buildUrl] = url
+            return buildUrl
+          }
+          // files generated during the final graph (sourcemaps)
+          // const finalUrlInfo = finalGraph.getUrlInfo(url)
+          const buildUrl = buildUrlsGenerator.generate(url, "assets/")
           return buildUrl
         },
         formatReferencedUrl: ({ url }) => {
@@ -371,9 +398,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 return null
               }
               const referencedUrlInfo = finalGraph.getUrlInfo(url)
-              // if (referencedUrlInfo.data.isEntryPoint) {
-              //   return null
-              // }
+              if (referencedUrlInfo.data.isEntryPoint) {
+                return buildSpecifier
+              }
               const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
                 referencedUrlInfo.data.versionedUrl,
                 buildDirectoryUrl,

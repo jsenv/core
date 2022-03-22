@@ -93,6 +93,8 @@ const rollupPluginJsenv = ({
             data: { isEntryPoint: rollupFileInfo.isEntry },
             type: "js_module",
             content: rollupFileInfo.code,
+            // the source map sources are not great
+            // the sourcesContent is "incorrect" it should point to the original content I think
             sourcemap: rollupFileInfo.map,
           }
         }
@@ -105,6 +107,8 @@ const rollupPluginJsenv = ({
       Object.assign(outputOptions, {
         format: "esm",
         dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
+        sourcemap: true,
+        // sourcemapPathTransform: (relativePath) => {},
         entryFileNames: () => {
           return `[name].js`
         },
