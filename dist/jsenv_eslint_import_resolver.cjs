@@ -5,10 +5,11 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var node_module = require('module');
 var url = require('url');
 var node_fs = require('fs');
-var fs = require('fs');
 require('crypto');
+var fs = require('fs');
 require('path');
 var util = require('util');
+require('path');
 var node_url = require('url');
 
 const ensureUrlTrailingSlash = (url) => {
@@ -180,6 +181,8 @@ const urlIsInsideOf = (url, otherUrl) => {
   const isInside = urlPathname.startsWith(otherUrlPathname);
   return isInside
 };
+
+process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///";
 
 const getRealFileSystemUrlSync = (
   fileUrl,
@@ -1318,7 +1321,10 @@ const comparePatternKeys = (keyA, keyB) => {
 };
 
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
-const determineModuleSystem = (url) => {
+const determineModuleSystem = (
+  url,
+  { ambiguousExtensions = [".js"] } = {},
+) => {
   const inputTypeArgv = process.execArgv.find((argv) =>
     argv.startsWith("--input-type="),
   );
@@ -1341,7 +1347,7 @@ const determineModuleSystem = (url) => {
   if (extension === ".json") {
     return "json"
   }
-  if (extension === ".js") {
+  if (ambiguousExtensions.includes(extension)) {
     const packageUrl = lookupPackageScope(url);
     if (!packageUrl) {
       return "commonjs"
@@ -2204,7 +2210,9 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
         return onUrl(urlFromImportmap)
       }
     }
-    const moduleSystem = determineModuleSystem(importer);
+    const moduleSystem = determineModuleSystem(importer, {
+      ambiguousExtensions: [".js", ".html"],
+    });
     if (moduleSystem === "commonjs") {
       return onUrl(node_module.createRequire(importer).resolve(specifier))
     }

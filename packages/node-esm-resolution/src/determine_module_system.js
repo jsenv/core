@@ -2,7 +2,10 @@ import { lookupPackageScope } from "./lookup_package_scope.js"
 import { readPackageJson } from "./read_package_json.js"
 
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
-export const determineModuleSystem = (url) => {
+export const determineModuleSystem = (
+  url,
+  { ambiguousExtensions = [".js"] } = {},
+) => {
   const inputTypeArgv = process.execArgv.find((argv) =>
     argv.startsWith("--input-type="),
   )
@@ -25,7 +28,7 @@ export const determineModuleSystem = (url) => {
   if (extension === ".json") {
     return "json"
   }
-  if (extension === ".js") {
+  if (ambiguousExtensions.includes(extension)) {
     const packageUrl = lookupPackageScope(url)
     if (!packageUrl) {
       return "commonjs"

@@ -96,7 +96,9 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
         return onUrl(urlFromImportmap)
       }
     }
-    const moduleSystem = determineModuleSystem(importer)
+    const moduleSystem = determineModuleSystem(importer, {
+      ambiguousExtensions: [".js", ".html"],
+    })
     if (moduleSystem === "commonjs") {
       return onUrl(createRequire(importer).resolve(specifier))
     }
