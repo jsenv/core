@@ -104,7 +104,8 @@ import "${preactDevtoolsReference.generatedSpecifier}"
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
             ...(prefreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
-          url: generatedUrl,
+          url,
+          generatedUrl,
           content,
         })
         const magicSource = createMagicSource({

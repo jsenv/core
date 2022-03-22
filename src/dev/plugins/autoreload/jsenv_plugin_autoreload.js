@@ -114,7 +114,8 @@ const jsenvPluginHot = () => {
       ) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
-          url: generatedUrl,
+          url,
+          generatedUrl,
           content,
         })
         const {

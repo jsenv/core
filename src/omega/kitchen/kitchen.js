@@ -14,7 +14,7 @@ import {
   generateSourcemapUrl,
   sourcemapToBase64Url,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v2.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
 
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
@@ -327,7 +327,8 @@ export const createKitchen = ({
     try {
       parseResult = await parseUrlMentions({
         type: urlInfo.type,
-        url: urlInfo.generatedUrl,
+        url: urlInfo.url,
+        generatedUrl: urlInfo.generatedUrl,
         content: urlInfo.content,
       })
     } catch (error) {

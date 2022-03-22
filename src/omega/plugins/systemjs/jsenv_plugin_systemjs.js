@@ -16,7 +16,7 @@ export const jsenvPluginSystemJs = () => {
         return null
       },
       js_module: async (
-        { generatedUrl, content },
+        { url, generatedUrl, content },
         { isSupportedOnRuntime, runtimeSupport },
       ) => {
         const shouldBeCompatibleWithNode =
@@ -45,7 +45,8 @@ export const jsenvPluginSystemJs = () => {
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [require("@babel/plugin-transform-modules-systemjs")],
-          url: generatedUrl,
+          url,
+          generatedUrl,
           content,
         })
         return {

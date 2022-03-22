@@ -27,7 +27,8 @@ export const jsenvPluginImportAssertions = () => {
           }
           const { metadata } = await applyBabelPlugins({
             babelPlugins: [babelPluginMetadataImportAssertions],
-            url: generatedUrl,
+            url,
+            generatedUrl,
             content,
           })
           const { importAssertions } = metadata

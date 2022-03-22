@@ -3,10 +3,15 @@ import { collectProgramUrlMentions } from "@jsenv/core/src/utils/js_ast/program_
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 
-export const parseJsModuleUrlMentions = async ({ url, content }) => {
+export const parseJsModuleUrlMentions = async ({
+  url,
+  generatedUrl,
+  content,
+}) => {
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [babelPluginMetadataUrlMentions],
     url,
+    generatedUrl,
     content,
   })
   const { urlMentions } = metadata

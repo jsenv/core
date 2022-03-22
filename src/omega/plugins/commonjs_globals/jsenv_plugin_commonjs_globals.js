@@ -36,7 +36,8 @@ export const jsenvPluginCommonJsGlobals = () => {
               },
             ],
           ],
-          url: generatedUrl,
+          url,
+          generatedUrl,
           content,
         })
         const { expressionPaths } = metadata

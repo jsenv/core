@@ -1,2 +1,3 @@
-const value = 42
+import { value } from "./file.js"
+
 console.log(value)
