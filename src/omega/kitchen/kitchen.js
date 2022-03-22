@@ -405,19 +405,23 @@ export const createKitchen = ({
       const sourcemapReference = getSourcemapReference(urlInfo)
       if (sourcemapReference) {
         const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
+        sourcemapUrlInfo.contentType = "application/json"
+        sourcemapUrlInfo.content = sourcemapUrlInfo.originalContent =
+          JSON.stringify(urlInfo.sourcemap, null, "  ")
         await context.cook({
           reference: sourcemapReference,
           urlInfo: sourcemapUrlInfo,
         })
-        const generatedSpecifier = await reference.generatedSpecifier
+        const sourcemapGeneratedSpecifier =
+          await sourcemapReference.generatedSpecifier
         // sourcemap url or content (when inline)
         // was modified by a plugin
         // let's update comment to respect that
-        if (generatedSpecifier !== reference.specifier) {
+        if (sourcemapGeneratedSpecifier !== sourcemapReference.specifier) {
           urlInfo.content = sourcemapComment.write({
             contentType: urlInfo.contentType,
             content: urlInfo.content,
-            specifier: generatedSpecifier,
+            specifier: sourcemapGeneratedSpecifier,
           })
         }
       }
