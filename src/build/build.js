@@ -23,18 +23,14 @@ import { createTaskLog } from "@jsenv/core/src/utils/logs/task_log.js"
 import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
-import { generateSourcemapUrl } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { jsenvPluginHtmlInlineScriptsAndStyles } from "@jsenv/core/src/omega/plugins/inline/jsenv_plugin_html_scripts_and_styles.js"
+import { jsenvPluginInline } from "@jsenv/core/src/omega/plugins/inline/jsenv_plugin_inline.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
-import { createPluginController } from "../omega/kitchen/plugin_controller.js"
 import { getJsenvPlugins } from "../omega/jsenv_plugins.js"
 
 import { createKitchen } from "../omega/kitchen/kitchen.js"
-import { parseUrlMentions } from "../omega/url_mentions/parse_url_mentions.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildWithRollup } from "./build_with_rollup.js"
-import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
 import {
   parseHtmlString,
@@ -78,12 +74,15 @@ export const build = async ({
   assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
-  const rawGraph = createUrlGraph({
-    rootDirectoryUrl: sourceDirectoryUrl,
-  })
+  const rawGraph = createUrlGraph()
   const loadRawGraphLog = createTaskLog("load files")
   let urlCount = 0
-  const rawGraphPluginController = createPluginController({
+  const rawGraphKitchen = createKitchen({
+    signal,
+    logger,
+    rootDirectoryUrl: sourceDirectoryUrl,
+    urlGraph: rawGraph,
+    sourcemapMethod,
     plugins: [
       ...plugins,
       {
@@ -94,42 +93,29 @@ export const build = async ({
           loadRawGraphLog.setRightText(urlCount)
         },
       },
-      ...getJsenvPlugins(),
+      ...getJsenvPlugins({
+        baseUrl,
+      }),
     ],
     scenario: "build",
   })
-  const rawGraphKitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl: sourceDirectoryUrl,
-    pluginController: rawGraphPluginController,
-    urlGraph: rawGraph,
-    sourcemapMethod,
-    scenario: "build",
-    baseUrl,
-  })
+  const loadEntryFiles = (cookEntryFile) => {
+    Object.keys(entryPoints).forEach((key) => {
+      cookEntryFile({
+        trace: `"${key}" in entryPoints parameter`,
+        parentUrl: sourceDirectoryUrl,
+        type: "entry_point",
+        specifier: key,
+      })
+    })
+  }
   try {
     await loadUrlGraph({
       urlGraph: rawGraph,
       kitchen: rawGraphKitchen,
       outDirectoryUrl: new URL(`.jsenv/build/`, sourceDirectoryUrl),
       runtimeSupport,
-      startLoading: (cook) => {
-        Object.keys(entryPoints).forEach((key) => {
-          const entryReference = rawGraphKitchen.createReference({
-            trace: `"${key}" in entryPoints parameter`,
-            parentUrl: sourceDirectoryUrl,
-            type: "entry_point",
-            specifier: key,
-          })
-          const entryUrlInfo = rawGraphKitchen.resolveReference(entryReference)
-          entryUrlInfo.data.isEntryPoint = true
-          cook({
-            reference: entryReference,
-            urlInfo: entryUrlInfo,
-          })
-        })
-      },
+      startLoading: loadEntryFiles,
     })
   } catch (e) {
     loadRawGraphLog.fail()
@@ -222,14 +208,16 @@ export const build = async ({
     buildDirectoryUrl,
   })
   const buildUrlMappings = {}
-  const finalGraphPluginController = createPluginController({
-    injectJsenvPlugins: false,
+  const specifierBuildMappings = {}
+  const finalGraph = createUrlGraph()
+  const finalGraphKitchen = createKitchen({
+    rootDirectoryUrl: sourceDirectoryUrl,
+    urlGraph: finalGraph,
     plugins: [
-      // re-cook html inline scripts and styles (to update their urls)
-      jsenvPluginHtmlInlineScriptsAndStyles(),
+      jsenvPluginInline(),
       {
         name: "jsenv:postbuild",
-        appliesDuring: { postbuild: true },
+        appliesDuring: { build: true },
         resolve: ({ parentUrl, specifier, isInline }) => {
           if (isInline) {
             const parentUrlInfo = finalGraph.getUrlInfo(parentUrl)
@@ -242,6 +230,12 @@ export const build = async ({
           )
         },
         normalize: ({ url, data }) => {
+          // already a build url
+          const sourceUrl = buildUrlMappings[url]
+          if (sourceUrl) {
+            data.sourceUrl = sourceUrl
+            return url
+          }
           const urlInfo = buildUrlInfos[url] || rawGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(
             url,
@@ -250,6 +244,7 @@ export const build = async ({
               : "assets/",
           )
           data.sourceUrl = url
+          buildUrlMappings[buildUrl] = url
           return buildUrl
         },
         formatReferencedUrl: ({ url }) => {
@@ -265,7 +260,7 @@ export const build = async ({
             url,
             buildDirectoryUrl,
           )}`
-          buildUrlMappings[specifier] = url
+          specifierBuildMappings[specifier] = url
           return specifier
         },
         load: ({ data }) => {
@@ -290,18 +285,7 @@ export const build = async ({
         },
       },
     ],
-    scenario: "postbuild",
-  })
-  const finalGraph = createUrlGraph({
-    rootDirectoryUrl: buildDirectoryUrl,
-  })
-  const finalGraphKitchen = createKitchen({
-    rootDirectoryUrl: sourceDirectoryUrl,
-    urlGraph: finalGraph,
-    pluginController: finalGraphPluginController,
-    scenario: "postbuild",
-
-    baseUrl,
+    scenario: "build",
   })
   const loadFinalGraphLog = createTaskLog("generating build files")
   try {
@@ -309,23 +293,7 @@ export const build = async ({
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/build/", sourceDirectoryUrl),
-      startLoading: (cook) => {
-        Object.keys(entryPoints).forEach((key) => {
-          const entryReference = finalGraphKitchen.createReference({
-            trace: `"${key}" in entryPoints parameter`,
-            parentUrl: sourceDirectoryUrl,
-            type: "entry_point",
-            specifier: key,
-          })
-          const entryUrlInfo =
-            finalGraphKitchen.resolveReference(entryReference)
-          entryUrlInfo.data.isEntryPoint = true
-          cook({
-            reference: entryReference,
-            urlInfo: entryUrlInfo,
-          })
-        })
-      },
+      startLoading: loadEntryFiles,
     })
   } catch (e) {
     loadFinalGraphLog.fail()
@@ -333,6 +301,9 @@ export const build = async ({
   }
   loadFinalGraphLog.done()
 
+  const buildFileContents = {}
+  const buildInlineFileContents = {}
+  const buildManifest = {}
   if (versioning) {
     const urlVersioningLog = createTaskLog("inject version in urls")
     try {
@@ -371,55 +342,95 @@ export const build = async ({
         })
       })
       const versionMappings = {}
-      await Promise.all(
-        urlsSorted.map(async (url) => {
-          const urlInfo = finalGraph.getUrlInfo(url)
-          const parseResult = await parseUrlMentions({
-            url: urlInfo.url,
-            type: urlInfo.type,
-            content: urlInfo.content,
-            scenario: "build",
-          })
-          if (parseResult) {
-            const { replaceUrls } = parseResult
-            const { content, sourcemap } = await replaceUrls((urlMention) => {
+      const versioningKitchen = createKitchen({
+        rootDirectoryUrl: sourceDirectoryUrl,
+        urlGraph: finalGraph,
+        plugins: [
+          jsenvPluginInline(),
+          {
+            name: "jsenv:versioning",
+            appliesDuring: { build: true },
+            resolve: ({ parentUrl, specifier, isInline }) => {
+              if (isInline) {
+                const parentUrlInfo = finalGraph.getUrlInfo(parentUrl)
+                const parentSourceUrl = parentUrlInfo.data.sourceUrl
+                return new URL(specifier, parentSourceUrl).href
+              }
+              return (
+                applyLeadingSlashUrlResolution(specifier, sourceDirectoryUrl) ||
+                new URL(specifier, parentUrl).href
+              )
+            },
+            normalize: ({ url, data }) => {
+              // already a build url
+              const sourceUrl = buildUrlMappings[url]
+              if (sourceUrl) {
+                data.sourceUrl = sourceUrl
+                return url
+              }
+              const urlInfo = buildUrlInfos[url] || rawGraph.getUrlInfo(url)
+              const buildUrl = buildUrlsGenerator.generate(
+                url,
+                urlInfo.data.isEntryPoint || urlInfo.type === "js_module"
+                  ? "/"
+                  : "assets/",
+              )
+              data.sourceUrl = url
+              buildUrlMappings[buildUrl] = url
+              return buildUrl
+            },
+            formatReferencedUrl: ({ type, subtype, specifier }) => {
               // specifier comes from "normalize" hook done a bit earlier in this file
               // we want to get back their build url to access their infos
-              const buildUrl = buildUrlMappings[urlMention.specifier]
+              const buildUrl = specifierBuildMappings[specifier]
               if (!buildUrl) {
                 // There is not build mapping for the specifier
                 // if the specifier was not normalized
                 // happens for https://*, http://* , data:*
                 return null
               }
-              const urlInfo = finalGraph.getUrlInfo(buildUrl)
-              if (urlInfo.data.isEntryPoint) {
-                return null
-              }
+              const referencedUrlInfo = finalGraph.getUrlInfo(buildUrl)
+              // if (referencedUrlInfo.data.isEntryPoint) {
+              //   return null
+              // }
               const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
-                urlInfo.data.versionedUrl,
+                referencedUrlInfo.data.versionedUrl,
                 buildDirectoryUrl,
               )}`
-              versionMappings[urlMention.specifier] = versionedSpecifier
+              versionMappings[specifier] = versionedSpecifier
               if (
-                urlMention.type === "js_import_meta_url_pattern" ||
-                urlMention.subtype === "import_dynamic"
+                type === "js_import_meta_url_pattern" ||
+                subtype === "import_dynamic"
               ) {
                 return `window.__asVersionedSpecifier__(${JSON.stringify(
-                  urlMention.specifier,
+                  specifier,
                 )})`
               }
               return versionedSpecifier
-            })
-            urlInfo.sourcemapUrl = generateSourcemapUrl(urlInfo.url) // make sourcemap url use the version
-            updateContentAndSourcemap(urlInfo, {
-              content,
-              sourcemap,
-              sourcemapMethod,
-            })
-          }
-        }),
-      )
+            },
+            load: ({ data }) => {
+              const sourceUrl = data.sourceUrl
+              const urlInfo =
+                buildUrlInfos[sourceUrl] || rawGraph.getUrlInfo(sourceUrl)
+              return {
+                contentType: urlInfo.contentType,
+                content: urlInfo.content,
+                sourcemap: urlInfo.sourcemap,
+              }
+            },
+          },
+        ],
+        scenario: "build",
+      })
+      Object.keys(finalGraph.urlInfos).forEach((url) => {
+        const urlInfo = finalGraph.urlInfos[url]
+        urlInfo.data.promise = null
+      })
+      await loadUrlGraph({
+        urlGraph: finalGraph,
+        kitchen: versioningKitchen,
+        startLoading: loadEntryFiles,
+      })
       if (Object.keys(versionMappings).length) {
         Object.keys(finalGraph.urlInfos).forEach((buildUrl) => {
           const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
@@ -439,9 +450,6 @@ export const build = async ({
     urlVersioningLog.done()
   }
 
-  const buildFileContents = {}
-  const buildInlineFileContents = {}
-  const buildManifest = {}
   Object.keys(finalGraph.urlInfos).forEach((url) => {
     const buildUrlInfo = finalGraph.getUrlInfo(url)
     const buildUrl = buildUrlInfo.data.versionedUrl || buildUrlInfo.url

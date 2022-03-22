@@ -27,18 +27,16 @@ export const startOmegaServer = async ({
   serverPlugins,
   services,
 
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   scenario,
   urlGraph,
-  pluginController,
   kitchen,
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const coreServices = {
     "service:file": createFileService({
-      projectDirectoryUrl,
+      rootDirectoryUrl,
       urlGraph,
-      pluginController,
       kitchen,
       scenario,
     }),

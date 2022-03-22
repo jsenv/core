@@ -22,3 +22,52 @@ export const memoize = (compute) => {
 
   return fnWithMemoization
 }
+
+export const memoizeUrlAndParentUrl = (fn) => {
+  const cache = {}
+  return createMemoizedFunction(fn, {
+    getMemoryEntryFromArguments: ([specifier, importer]) => {
+      return {
+        get: () => {
+          const specifierCacheForImporter = cache[importer]
+          return specifierCacheForImporter
+            ? specifierCacheForImporter[specifier]
+            : null
+        },
+        set: (value) => {
+          const specifierCacheForImporter = cache[importer]
+          if (specifierCacheForImporter) {
+            specifierCacheForImporter[specifier] = value
+          } else {
+            cache[importer] = {
+              [specifier]: value,
+            }
+          }
+        },
+        delete: () => {
+          const specifierCacheForImporter = cache[importer]
+          if (specifierCacheForImporter) {
+            delete specifierCacheForImporter[specifier]
+          }
+        },
+      }
+    },
+  })
+}
+
+const createMemoizedFunction = (fn, { getMemoryEntryFromArguments }) => {
+  const memoized = (...args) => {
+    const memoryEntry = getMemoryEntryFromArguments(args)
+    const valueFromMemory = memoryEntry.get()
+    if (valueFromMemory) {
+      return valueFromMemory
+    }
+    const value = fn(...args)
+    memoryEntry.set(value)
+    return value
+  }
+  memoized.isInMemory = (...args) => {
+    return Boolean(getMemoryEntryFromArguments(args).get())
+  }
+  return memoized
+}

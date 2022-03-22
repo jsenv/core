@@ -349,9 +349,9 @@ const jsenvPluginHotSSE = ({
   return {
     name: "jsenv:hot_sse",
     appliesDuring: { dev: true },
-    serve: (request, { urlGraph }) => {
+    serve: (request, { urlGraph, rootDirectoryUrl }) => {
       if (request.ressource === "/__graph__") {
-        const graphJson = JSON.stringify(urlGraph)
+        const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl))
         return {
           status: 200,
           headers: {

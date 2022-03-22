@@ -111,6 +111,10 @@ const rollupPluginJsenv = ({
         chunkFileNames: () => {
           return `[name].js`
         },
+        // https://rollupjs.org/guide/en/#outputpaths
+        // paths: (id) => {
+        //   return id
+        // },
       })
     },
     resolveId: (specifier, importer = sourceDirectoryUrl) => {

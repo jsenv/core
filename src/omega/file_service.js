@@ -10,30 +10,27 @@ import { moveUrl, setUrlExtension } from "@jsenv/core/src/utils/url_utils.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
 export const createFileService = ({
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   urlGraph,
-  pluginController,
   kitchen,
   scenario,
 }) => {
   const serveContext = {
-    rootDirectoryUrl: projectDirectoryUrl,
+    rootDirectoryUrl,
     urlGraph,
     scenario,
   }
 
   const getResponse = async (request) => {
     // serve file inside ".jsenv" directory
-    const requestFileUrl = new URL(
-      request.ressource.slice(1),
-      projectDirectoryUrl,
-    ).href
+    const requestFileUrl = new URL(request.ressource.slice(1), rootDirectoryUrl)
+      .href
     if (urlIsInsideOf(requestFileUrl, kitchen.jsenvDirectoryUrl)) {
       return fetchFileSystem(requestFileUrl, {
         headers: request.headers,
       })
     }
-    const responseFromPlugin = pluginController.callHooksUntil(
+    const responseFromPlugin = kitchen.pluginController.callHooksUntil(
       "serve",
       request,
       serveContext,
@@ -64,7 +61,7 @@ export const createFileService = ({
       [runtimeName]: runtimeVersion,
     }
     const reference = kitchen.createReference({
-      parentUrl: inferParentFromRequest(request, projectDirectoryUrl),
+      parentUrl: inferParentFromRequest(request, rootDirectoryUrl),
       type: "entry_point",
       specifier: request.ressource,
     })
@@ -77,7 +74,7 @@ export const createFileService = ({
       await kitchen.cook({
         reference: referenceFromGraph || reference,
         urlInfo: requestedUrlInfo,
-        outDirectoryUrl: `${projectDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
+        outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
         runtimeSupport,
       })
       const { response, contentType, content } = requestedUrlInfo
@@ -117,7 +114,7 @@ export const createFileService = ({
             accept: "text/html",
           },
           canReadDirectory: true,
-          rootDirectoryUrl: projectDirectoryUrl,
+          rootDirectoryUrl,
         })
       }
       if (code === "NOT_ALLOWED") {
@@ -146,7 +143,7 @@ export const createFileService = ({
   return async (request) => {
     let response = await getResponse(request)
     if (response.url) {
-      pluginController.callHooks(
+      kitchen.pluginController.callHooks(
         "augmentResponse",
         response,
         {},

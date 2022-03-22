@@ -28,19 +28,23 @@ import {
 } from "./errors.js"
 import { featuresCompatMap } from "./features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
+import { createPluginController } from "./plugin_controller.js"
 
 export const createKitchen = ({
   signal,
   logger,
   rootDirectoryUrl,
-  pluginController,
   sourcemapMethod,
   urlGraph,
+  plugins,
   scenario,
 
-  baseUrl = "/",
   writeOnFileSystem = true,
 }) => {
+  const pluginController = createPluginController({
+    plugins,
+    scenario,
+  })
   const baseContext = {
     signal,
     logger,
@@ -48,7 +52,6 @@ export const createKitchen = ({
     sourcemapMethod,
     urlGraph,
     scenario,
-    baseUrl,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
 
@@ -65,6 +68,7 @@ export const createKitchen = ({
     trace,
     parentUrl,
     type,
+    subtype,
     specifier,
     isInline = false,
   }) => {
@@ -73,6 +77,7 @@ export const createKitchen = ({
       trace,
       parentUrl,
       type,
+      subtype,
       specifier,
       isInline,
     }
@@ -334,6 +339,7 @@ export const createKitchen = ({
             }),
           ),
           type: urlMention.type,
+          subtype: urlMention.subtype,
           specifier: urlMention.specifier,
         })
         urlMention.reference = reference
@@ -460,6 +466,7 @@ export const createKitchen = ({
   baseContext.cook = cook
 
   return {
+    pluginController,
     jsenvDirectoryUrl,
     isSupported,
     createReference,
@@ -542,6 +549,9 @@ const determineFileUrlForOutDirectory = ({
   outDirectoryUrl,
   url,
 }) => {
+  if (!outDirectoryUrl) {
+    return url
+  }
   if (!url.startsWith("file:")) {
     return url
   }

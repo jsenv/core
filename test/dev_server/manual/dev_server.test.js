@@ -1,4 +1,5 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
+
 import { startDevServer } from "@jsenv/core/src/dev/start_dev_server.js"
 import { jsenvPluginPreact } from "@jsenv/core/packages/jsenv-plugin-preact/index.js"
 
@@ -11,7 +12,7 @@ await startDevServer({
   protocol: "https",
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
-  projectDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
   // autoreload: false,
   plugins: [
     jsenvPluginPreact(),

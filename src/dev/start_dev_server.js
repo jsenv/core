@@ -2,7 +2,6 @@ import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
-import { createPluginController } from "@jsenv/core/src/omega/kitchen/plugin_controller.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 import { getJsenvPlugins } from "@jsenv/core/src/omega/jsenv_plugins.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
@@ -20,7 +19,7 @@ export const startDevServer = async ({
   certificate,
   privateKey,
 
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   plugins = [],
 
   sourcemapMethod = "inline",
@@ -33,18 +32,20 @@ export const startDevServer = async ({
   },
 }) => {
   const logger = createLogger({ logLevel })
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
-  const urlGraph = createUrlGraph({
-    rootDirectoryUrl: projectDirectoryUrl,
-  })
-  const pluginController = createPluginController({
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+  const urlGraph = createUrlGraph()
+  const kitchen = createKitchen({
+    signal,
+    logger,
+    rootDirectoryUrl,
+    urlGraph,
     plugins: [
       ...plugins,
       ...getJsenvPlugins(),
       ...(autoreload
         ? [
             jsenvPluginAutoreload({
-              rootDirectoryUrl: projectDirectoryUrl,
+              rootDirectoryUrl,
               urlGraph,
               autoreloadPatterns,
             }),
@@ -52,14 +53,6 @@ export const startDevServer = async ({
         : []),
     ],
     scenario: "dev",
-  })
-  const kitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl: projectDirectoryUrl,
-    urlGraph,
-    scenario: "dev",
-    pluginController,
     sourcemapMethod,
   })
   const server = await startOmegaServer({
@@ -70,15 +63,14 @@ export const startDevServer = async ({
     http2,
     certificate,
     privateKey,
-    projectDirectoryUrl,
-    pluginController,
+    rootDirectoryUrl,
     urlGraph,
     kitchen,
     scenario: "dev",
   })
   server.addEffect(() => {
     return () => {
-      pluginController.callHooks("destroy")
+      kitchen.pluginController.callHooks("destroy")
     }
   })
   return server

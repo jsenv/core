@@ -1,16 +1,8 @@
-// todo
-// - must be able to update the inline script code inside the html
-// + the inline script will statically import from an helper
-// + use a dynamic import that will also use the same helper
-
 /*
- ce qu'on veut je pense c'est:
- build le code inline avec rollup mais en considérant les imports dynamic comme externes
- on les remplacera par la suite avec le résultat rollup pour ce fichier la
-
- pour les imports statiques idéalement on veut le bundle
- sauf que on va donc se retrouver avec util qui est dupliqué
-*/
+ * souci restants:
+ * - pas de version sur le fichier html
+ *   ni aucun entry point, sauf si ce point d'entrée vient en fait du html
+ */
 
 import { build } from "@jsenv/core/src/build/build.js"
 

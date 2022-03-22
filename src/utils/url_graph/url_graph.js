@@ -1,7 +1,7 @@
 import { createCallbackList } from "@jsenv/abort"
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
-export const createUrlGraph = ({ rootDirectoryUrl }) => {
+export const createUrlGraph = () => {
   const urlInfos = {}
   const getUrlInfo = (url) => urlInfos[url]
   const reuseOrCreateUrlInfo = (url) => {
@@ -95,7 +95,7 @@ export const createUrlGraph = ({ rootDirectoryUrl }) => {
     prunedCallbackList,
     updateReferences,
 
-    toJSON: () => {
+    toJSON: (rootDirectoryUrl) => {
       const data = {}
       Object.keys(urlInfos).forEach((url) => {
         const dependencyUrls = Array.from(urlInfos[url].dependencies)

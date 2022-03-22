@@ -2,7 +2,7 @@ import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
 
-export const jsenvPluginFileSystemAbsolute = () => {
+export const jsenvPluginFileSystemAbsolute = ({ baseUrl }) => {
   return {
     name: "jsenv:filesystem_absolute",
     appliesDuring: {
@@ -20,7 +20,7 @@ export const jsenvPluginFileSystemAbsolute = () => {
       const url = new URL(specifier.slice("/@fs".length), rootDirectoryUrl).href
       return url
     },
-    formatReferencedUrl: ({ url }, { baseUrl, rootDirectoryUrl }) => {
+    formatReferencedUrl: ({ url }, { rootDirectoryUrl }) => {
       if (!url.startsWith("file:")) {
         return null
       }
