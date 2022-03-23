@@ -15,6 +15,6 @@ await build({
     "./main.html": "main.html",
   },
   sourcemaps: "file",
-  bundling: true,
-  versioning: false,
+  bundling: false,
+  versioning: true,
 })

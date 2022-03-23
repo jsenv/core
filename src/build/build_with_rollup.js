@@ -10,7 +10,7 @@ export const buildWithRollup = async ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   rawGraph,
-  jsModulesUrlsToBundle,
+  jsModuleUrlInfosToBundle,
 
   runtimeSupport,
   sourcemaps,
@@ -24,7 +24,7 @@ export const buildWithRollup = async ({
         rootDirectoryUrl,
         buildDirectoryUrl,
         rawGraph,
-        jsModulesUrlsToBundle,
+        jsModuleUrlInfosToBundle,
 
         runtimeSupport,
         sourcemaps,
@@ -46,7 +46,7 @@ const rollupPluginJsenv = ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   rawGraph,
-  jsModulesUrlsToBundle,
+  jsModuleUrlInfosToBundle,
   sourcemaps,
 
   resultRef,
@@ -66,11 +66,22 @@ const rollupPluginJsenv = ({
     name: "jsenv",
     async buildStart() {
       _rollupEmitFile = (...args) => this.emitFile(...args)
-      jsModulesUrlsToBundle.forEach((jsModuleUrl) => {
-        // const jsModuleUrlInfo = projectGraph.getUrlInfo(jsModuleUrl)
+      let previousNonEntryPointModuleId
+      jsModuleUrlInfosToBundle.forEach((jsModuleUrlInfoToBundle) => {
+        const id = jsModuleUrlInfoToBundle.url
+        if (jsModuleUrlInfoToBundle.data.isEntryPoint) {
+          emitChunk({
+            id,
+          })
+          return
+        }
         emitChunk({
-          id: jsModuleUrl,
+          id,
+          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
+            ? [previousNonEntryPointModuleId]
+            : [],
         })
+        previousNonEntryPointModuleId = id
       })
     },
     async generateBundle(outputOptions, rollupResult) {
@@ -92,7 +103,7 @@ const rollupPluginJsenv = ({
           }
           const jsModuleBundleUrlInfo = {
             // buildRelativeUrl: rollupFileInfo.fileName,
-            data: { isEntryPoint: rollupFileInfo.isEntry },
+            data: {},
             type: "js_module",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,

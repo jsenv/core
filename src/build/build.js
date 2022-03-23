@@ -131,8 +131,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
 
   const buildUrlInfos = {}
   if (bundling) {
-    const jsModulesUrlsToBundle = []
-    const cssUrlsToBundle = []
+    const jsModuleUrlInfosToBundle = []
+    const cssUrlInfosToBundle = []
     Object.keys(rawGraph.urlInfos).forEach((sourceUrl) => {
       const sourceUrlInfo = rawGraph.getUrlInfo(sourceUrl)
       if (!sourceUrlInfo.data.isEntryPoint) {
@@ -143,36 +143,38 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
           if (dependencyUrlInfo.type === "js_module") {
             if (dependencyUrlInfo.inlineUrlSite) {
-              // on veut bundle les deps de ce code inline
+              // bundle inline script type module deps
               dependencyUrlInfo.references.forEach((inlineScriptRef) => {
                 if (inlineScriptRef.type === "js_import_export") {
-                  jsModulesUrlsToBundle.push(inlineScriptRef.url)
+                  jsModuleUrlInfosToBundle.push(
+                    rawGraph.getUrlInfo(inlineScriptRef.url),
+                  )
                 }
               })
               return
             }
-            jsModulesUrlsToBundle.push(dependencyUrl)
+            jsModuleUrlInfosToBundle.push(dependencyUrlInfo)
             return
           }
           if (dependencyUrlInfo.type === "css") {
-            cssUrlsToBundle.push(dependencyUrl)
+            cssUrlInfosToBundle.push(dependencyUrlInfo)
             return
           }
         })
         return
       }
       if (sourceUrlInfo.type === "js_module") {
-        jsModulesUrlsToBundle.push(sourceUrlInfo.url)
+        jsModuleUrlInfosToBundle.push(sourceUrlInfo)
         return
       }
       if (sourceUrlInfo.type === "css") {
-        cssUrlsToBundle.push(sourceUrlInfo.url)
+        jsModuleUrlInfosToBundle.push(sourceUrlInfo)
         return
       }
     })
     // in the future this should be done in a "bundle" hook
-    if (jsModulesUrlsToBundle.length) {
-      const rollupBuildLog = createTaskLog(`bundle js modules with rollup`)
+    if (jsModuleUrlInfosToBundle.length) {
+      const rollupBuildLog = createTaskLog(`bundle js modules`)
       try {
         const rollupBuild = await buildWithRollup({
           signal,
@@ -180,7 +182,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           rootDirectoryUrl,
           buildDirectoryUrl,
           rawGraph,
-          jsModulesUrlsToBundle,
+          jsModuleUrlInfosToBundle,
 
           runtimeSupport,
           sourcemaps,
@@ -202,7 +204,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       }
       rollupBuildLog.done()
     }
-    if (cssUrlsToBundle.length) {
+    if (cssUrlInfosToBundle.length) {
       // on pourrait concat + minify en utilisant post css
     }
   }
@@ -466,7 +468,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   const buildManifest = {}
   Object.keys(finalGraph.urlInfos).forEach((url) => {
     const buildUrlInfo = finalGraph.getUrlInfo(url)
-    const buildUrl = buildUrlInfo.data.versionedUrl || buildUrlInfo.url
+    const versionedUrl = buildUrlInfo.data.versionedUrl
+    const useVersionedUrl = versionedUrl && !buildUrlInfo.data.isEntryPoint
+    const buildUrl = useVersionedUrl ? versionedUrl : buildUrlInfo.url
     if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
       throw new Error(`build url outside build directory`)
     }
@@ -476,7 +480,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     } else {
       buildFileContents[buildRelativeUrl] = buildUrlInfo.content
     }
-    if (buildUrlInfo.data.versionedUrl) {
+    if (useVersionedUrl) {
       const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
         buildUrlInfo.url,
         buildDirectoryUrl,

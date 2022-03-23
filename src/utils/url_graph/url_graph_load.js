@@ -7,7 +7,9 @@ export const loadUrlGraph = async ({
   outDirectoryUrl,
   runtimeSupport,
 }) => {
-  await ensureEmptyDirectory(outDirectoryUrl)
+  if (outDirectoryUrl) {
+    await ensureEmptyDirectory(outDirectoryUrl)
+  }
 
   const cook = ({ urlInfo, ...rest }) => {
     const promiseFromData = urlInfo.data.promise
