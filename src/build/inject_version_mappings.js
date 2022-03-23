@@ -56,7 +56,7 @@ const injectors = {
 
 const generateClientCodeForVersionMappings = (versionMappings) => {
   return `
-var __versionMappings__ = ${JSON.stringify(versionMappings)}
+var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")}
 self.__asVersionedSpecifier__ = function (specifier) {
   return __versionMappings__[specifier] || specifier
 }

@@ -215,7 +215,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     buildDirectoryUrl,
   })
   const sourceUrls = {}
-  const buildSpecifiers = {}
+  const buildUrls = {}
   const finalGraph = createUrlGraph()
   const finalGraphKitchen = createKitchen({
     rootDirectoryUrl,
@@ -288,7 +288,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             url,
             buildDirectoryUrl,
           )}`
-          buildSpecifiers[url] = specifier
+          buildUrls[specifier] = url
           return specifier
         },
         load: ({ data }) => {
@@ -382,40 +382,41 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             name: "jsenv:versioning",
             appliesDuring: { build: true },
             resolve: ({ parentUrl, specifier }) => {
-              const url =
-                applyLeadingSlashUrlResolution(specifier, buildDirectoryUrl) ||
-                new URL(specifier, parentUrl).href
+              const buildUrl = buildUrls[specifier]
+              if (buildUrl) {
+                return buildUrl
+              }
+              const url = new URL(specifier, parentUrl).href
               return url
             },
-            formatReferencedUrl: ({ url, type, subtype, isInline }) => {
+            formatReferencedUrl: ({
+              specifier,
+              url,
+              type,
+              subtype,
+              isInline,
+            }) => {
               if (isInline) {
                 return null
               }
               // specifier comes from "normalize" hook done a bit earlier in this file
               // we want to get back their build url to access their infos
-              const buildSpecifier = buildSpecifiers[url]
-              if (!buildSpecifier) {
-                // There is not build mapping for the specifier
-                // if the specifier was not normalized
-                // happens for https://*, http://* , data:*
-                return null
-              }
               const referencedUrlInfo = finalGraph.getUrlInfo(url)
               if (referencedUrlInfo.data.isEntryPoint) {
-                return buildSpecifier
+                return specifier
               }
               const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
                 referencedUrlInfo.data.versionedUrl,
                 buildDirectoryUrl,
               )}`
-              versionMappings[buildSpecifier] = versionedSpecifier
+              versionMappings[specifier] = versionedSpecifier
               if (
                 type === "js_import_meta_url_pattern" ||
                 subtype === "import_dynamic"
               ) {
                 return () =>
                   `window.__asVersionedSpecifier__(${JSON.stringify(
-                    buildSpecifier,
+                    specifier,
                   )})`
               }
               return versionedSpecifier
@@ -488,6 +489,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
     }
   })
+  logger.debug(
+    `graph urls post-versioning:
+${Object.keys(finalGraph.urlInfos).join("\n")}`,
+  )
+
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {
       await ensureEmptyDirectory(buildDirectoryUrl)
