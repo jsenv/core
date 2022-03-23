@@ -424,10 +424,11 @@ export const createKitchen = ({
     if (urlInfo.sourcemap) {
       const sourcemap = normalizeSourcemap(urlInfo.sourcemap)
       urlInfo.sourcemap = sourcemap
-      urlInfo.sourcemapUrl = generateSourcemapUrl(urlInfo.url)
+      urlInfo.sourcemapUrl =
+        urlInfo.sourcemapUrl || generateSourcemapUrl(urlInfo.url)
       if (sourcemaps === "file" || sourcemaps === "inline") {
         const sourcemapReference = createReference({
-          trace: "sourcemap comment placeholder",
+          trace: `sourcemap comment placeholder for ${urlInfo.url}`,
           type: "sourcemap_comment",
           parentUrl: urlInfo.url,
           specifier:
@@ -444,6 +445,8 @@ export const createKitchen = ({
         //   reference: sourcemapReference,
         //   urlInfo: sourcemapUrlInfo,
         // })
+        // take normalize into account
+        urlInfo.sourcemapUrl = sourcemapUrlInfo.url
         urlInfo.content = sourcemapComment.write({
           contentType: urlInfo.contentType,
           content: urlInfo.content,

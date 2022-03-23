@@ -236,7 +236,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             new URL(specifier, parentUrl).href
           )
         },
-        normalize: ({ url, data }) => {
+        normalize: ({ url, type, data }) => {
           // already a build url
           const sourceUrl = sourceUrls[url]
           if (sourceUrl) {
@@ -272,7 +272,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
           // files generated during the final graph (sourcemaps)
           // const finalUrlInfo = finalGraph.getUrlInfo(url)
-          const buildUrl = buildUrlsGenerator.generate(url, "assets/")
+          const buildUrl = buildUrlsGenerator.generate(
+            url,
+            type === "sourcemap_comment" ? "sourcemaps/" : "assets/",
+          )
           return buildUrl
         },
         formatReferencedUrl: ({ url }) => {
@@ -341,6 +344,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       const urlsSorted = sortUrlGraphByDependencies(finalGraph)
       urlsSorted.forEach((url) => {
         const urlInfo = finalGraph.getUrlInfo(url)
+        if (urlInfo.type === "sourcemap") {
+          return
+        }
         const urlVersionGenerator = createUrlVersionGenerator()
         urlVersionGenerator.augmentWithContent({
           content: urlInfo.content,
@@ -373,6 +379,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         })
       })
       const versionMappings = {}
+      const usedVersionMappings = []
       const versioningKitchen = createKitchen({
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
@@ -405,6 +412,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               if (referencedUrlInfo.data.isEntryPoint) {
                 return specifier
               }
+              if (type === "sourcemap_comment") {
+                return `${baseUrl}${urlToRelativeUrl(
+                  referencedUrlInfo.url,
+                  buildDirectoryUrl,
+                )}`
+              }
               const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
                 referencedUrlInfo.data.versionedUrl,
                 buildDirectoryUrl,
@@ -414,6 +427,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 type === "js_import_meta_url_pattern" ||
                 subtype === "import_dynamic"
               ) {
+                usedVersionMappings.push(specifier)
                 return () =>
                   `window.__asVersionedSpecifier__(${JSON.stringify(
                     specifier,
@@ -438,21 +452,26 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       Object.keys(finalGraph.urlInfos).forEach((url) => {
         const urlInfo = finalGraph.urlInfos[url]
         urlInfo.data.promise = null
-        urlInfo.originalContent = urlInfo.content
+        urlInfo.contentType = null
+        urlInfo.originalContent = ""
       })
       await loadUrlGraph({
         urlGraph: finalGraph,
         kitchen: versioningKitchen,
         startLoading: loadEntryFiles,
       })
-      if (Object.keys(versionMappings).length) {
+      if (usedVersionMappings.length) {
+        const versionMappingsNeeded = {}
+        usedVersionMappings.forEach((specifier) => {
+          versionMappingsNeeded[specifier] = versionMappings[specifier]
+        })
         Object.keys(finalGraph.urlInfos).forEach((buildUrl) => {
           const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
           if (!buildUrlInfo.data.isEntryPoint) {
             return
           }
           injectVersionMappings(buildUrlInfo, {
-            versionMappings,
+            versionMappings: versionMappingsNeeded,
             sourcemaps,
           })
         })
