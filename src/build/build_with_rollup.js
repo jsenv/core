@@ -79,7 +79,7 @@ const rollupPluginJsenv = ({
           id,
           implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
             ? [previousNonEntryPointModuleId]
-            : [],
+            : null,
         })
         previousNonEntryPointModuleId = id
       })

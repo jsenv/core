@@ -61,6 +61,13 @@ export const createKitchen = ({
     scenario,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
+  const normalizeSourcemap = (sourcemap) => {
+    sourcemap = sourcemapConverter.toFileUrls(sourcemap)
+    if (!sourcemapsSources) {
+      sourcemap.sourcesContent = null
+    }
+    return sourcemap
+  }
 
   const isSupported = ({
     runtimeSupport,
@@ -222,7 +229,9 @@ export const createKitchen = ({
           reference: sourcemapReference,
           urlInfo: sourcemapUrlInfo,
         })
-        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
+        const sourcemap = normalizeSourcemap(
+          JSON.parse(sourcemapUrlInfo.content),
+        )
         urlInfo.sourcemapUrl = sourcemapUrlInfo.url
         urlInfo.originalSourcemap = sourcemap
         urlInfo.sourcemap = sourcemap
@@ -412,39 +421,35 @@ export const createKitchen = ({
     urlGraph.updateReferences(urlInfo, references)
 
     // append sourcemap comment
-    if (
-      (sourcemaps === "file" || sourcemaps === "inline") &&
-      urlInfo.sourcemap
-    ) {
-      let { sourcemap } = urlInfo
-      sourcemap = sourcemapConverter.toFileUrls(sourcemap)
-      if (!sourcemapsSources) {
-        sourcemap.sourcesContent = null
-      }
+    if (urlInfo.sourcemap) {
+      const sourcemap = normalizeSourcemap(urlInfo.sourcemap)
+      urlInfo.sourcemap = sourcemap
       urlInfo.sourcemapUrl = generateSourcemapUrl(urlInfo.url)
-      const sourcemapReference = createReference({
-        trace: "sourcemap comment placeholder",
-        type: "sourcemap_comment",
-        parentUrl: urlInfo.url,
-        specifier:
-          sourcemaps === "inline"
-            ? sourcemapToBase64Url(sourcemap)
-            : urlToRelativeUrl(urlInfo.sourcemapUrl, urlInfo.url),
-      })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
-      sourcemapUrlInfo.contentType = "application/json"
-      sourcemapUrlInfo.type = "sourcemap"
-      sourcemapUrlInfo.content = sourcemapUrlInfo.originalContent =
-        JSON.stringify(sourcemap, null, "  ")
-      // await context.cook({
-      //   reference: sourcemapReference,
-      //   urlInfo: sourcemapUrlInfo,
-      // })
-      urlInfo.content = sourcemapComment.write({
-        contentType: urlInfo.contentType,
-        content: urlInfo.content,
-        specifier: await sourcemapReference.generatedSpecifier,
-      })
+      if (sourcemaps === "file" || sourcemaps === "inline") {
+        const sourcemapReference = createReference({
+          trace: "sourcemap comment placeholder",
+          type: "sourcemap_comment",
+          parentUrl: urlInfo.url,
+          specifier:
+            sourcemaps === "inline"
+              ? sourcemapToBase64Url(sourcemap)
+              : urlToRelativeUrl(urlInfo.sourcemapUrl, urlInfo.url),
+        })
+        const sourcemapUrlInfo = resolveReference(sourcemapReference)
+        sourcemapUrlInfo.contentType = "application/json"
+        sourcemapUrlInfo.type = "sourcemap"
+        sourcemapUrlInfo.content = sourcemapUrlInfo.originalContent =
+          JSON.stringify(sourcemap, null, "  ")
+        // await context.cook({
+        //   reference: sourcemapReference,
+        //   urlInfo: sourcemapUrlInfo,
+        // })
+        urlInfo.content = sourcemapComment.write({
+          contentType: urlInfo.contentType,
+          content: urlInfo.content,
+          specifier: await sourcemapReference.generatedSpecifier,
+        })
+      }
     }
 
     // "finalize" hook
