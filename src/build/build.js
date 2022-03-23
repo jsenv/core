@@ -468,7 +468,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           }
           injectVersionMappings(buildUrlInfo, {
             versionMappings: versionMappingsNeeded,
-            sourcemaps,
+            rootDirectoryUrl,
           })
         })
       }

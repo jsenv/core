@@ -7,7 +7,7 @@ import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v2.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,

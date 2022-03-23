@@ -12,7 +12,7 @@ import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 
 export const injectVersionMappings = (
   urlInfo,
-  { versionMappings, sourcemaps },
+  { versionMappings, rootDirectoryUrl },
 ) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
@@ -20,7 +20,7 @@ export const injectVersionMappings = (
     updateContentAndSourcemap(urlInfo, {
       content,
       sourcemap,
-      sourcemaps,
+      rootDirectoryUrl,
     })
   }
 }

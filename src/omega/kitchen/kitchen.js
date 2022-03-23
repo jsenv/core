@@ -13,7 +13,7 @@ import {
   generateSourcemapUrl,
   sourcemapToBase64Url,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v2.js"
 
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
@@ -224,7 +224,7 @@ export const createKitchen = ({
           urlInfo: sourcemapUrlInfo,
         })
         const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-        urlInfo.sourcemap = sourcemap
+        urlInfo.sourcemap = normalizeSourcemap(sourcemap, urlInfo)
         urlInfo.sourcemapUrl = sourcemapUrlInfo.url
       } catch (e) {
         logger.error(`Error while handling sourcemap: ${e.message}`)
@@ -325,10 +325,13 @@ export const createKitchen = ({
         }
         urlInfo.content = content
         if (sourcemap) {
-          urlInfo.sourcemap = composeTwoSourcemaps(
-            urlInfo.sourcemap,
-            sourcemap,
-            rootDirectoryUrl,
+          urlInfo.sourcemap = normalizeSourcemap(
+            composeTwoSourcemaps(
+              urlInfo.sourcemap,
+              normalizeSourcemap(sourcemap, urlInfo),
+              rootDirectoryUrl,
+            ),
+            urlInfo,
           )
         }
       }
@@ -416,18 +419,7 @@ export const createKitchen = ({
     if (urlInfo.sourcemap) {
       urlInfo.sourcemapUrl =
         urlInfo.sourcemapUrl || generateSourcemapUrl(urlInfo.url)
-      urlInfo.sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
-      if (
-        // for inline content (<script> insdide html)
-        // chrome won't be able to fetch the file as it does not exists
-        // so sourcemap must contain sources
-        urlInfo.inlineUrlSite ||
-        sourcemapsSources
-      ) {
-        urlInfo.sourcemap.sourcesContent = [urlInfo.originalContent]
-      } else {
-        urlInfo.sourcemap.sourcesContent = null
-      }
+
       // append sourcemap comment
       if (sourcemaps === "file" || sourcemaps === "inline") {
         const sourcemapReference = createReference({
@@ -528,6 +520,22 @@ export const createKitchen = ({
   }
 
   baseContext.cook = cook
+
+  const normalizeSourcemap = (sourcemap, urlInfo) => {
+    sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
+    if (
+      // for inline content (<script> insdide html)
+      // chrome won't be able to fetch the file as it does not exists
+      // so sourcemap must contain sources
+      urlInfo.inlineUrlSite ||
+      sourcemapsSources
+    ) {
+      sourcemap.sourcesContent = [urlInfo.originalContent]
+    } else {
+      sourcemap.sourcesContent = undefined
+    }
+    return sourcemap
+  }
 
   return {
     pluginController,

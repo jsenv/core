@@ -5,14 +5,14 @@
  */
 
 import parcelSourceMap from "@parcel/source-map"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { fileSystemRootUrl, urlToFileSystemPath } from "@jsenv/filesystem"
 
 const SourceMap = parcelSourceMap.default
 
 export const composeTwoSourcemaps = (
   firstSourcemap,
   secondSourcemap,
-  rootDirectoryUrl,
+  rootDirectoryUrl = fileSystemRootUrl,
 ) => {
   if (!firstSourcemap && !secondSourcemap) {
     return null
@@ -28,9 +28,10 @@ export const composeTwoSourcemaps = (
   map.addVLQMap(firstSourcemap)
   map.addVLQMap(secondSourcemap)
   const result = map.toVLQ()
-  result.sources = result.sources.map((source) =>
-    urlToFileSystemPath(new URL(source, rootDirectoryUrl).href),
+  result.sources = result.sources.map(
+    (source) => new URL(source, rootDirectoryUrl).href,
   )
+  result.sourcesContent = null
   // result.sourcesContent = null
   return result
 }

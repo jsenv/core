@@ -6,18 +6,25 @@ import {
 
 export const updateContentAndSourcemap = (
   urlInfo,
-  { content, sourcemap, sourcemaps },
+  { content, sourcemap, rootDirectoryUrl },
 ) => {
   urlInfo.content = content
   if (sourcemap) {
-    urlInfo.sourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemap)
+    urlInfo.sourcemap = composeTwoSourcemaps(
+      urlInfo.sourcemap,
+      sourcemap,
+      rootDirectoryUrl,
+    )
+    const specifier = sourcemapComment.read({
+      contentType: urlInfo.contentType,
+      content: urlInfo.content,
+    }).specifier
     urlInfo.content = sourcemapComment.write({
       contentType: urlInfo.contentType,
       content: urlInfo.content,
-      specifier:
-        sourcemaps === "inline"
-          ? sourcemapToBase64Url(urlInfo.sourcemap)
-          : urlInfo.sourcemapUrl,
+      specifier: specifier.startsWith("data:")
+        ? sourcemapToBase64Url(urlInfo.sourcemap)
+        : specifier,
     })
   }
 }
