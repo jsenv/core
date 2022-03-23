@@ -15,7 +15,7 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  sourcemapMethod: "file",
+  sourcemaps: "file",
   bundling: false,
   versioning: false,
 })

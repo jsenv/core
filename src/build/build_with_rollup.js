@@ -2,6 +2,7 @@ import { isFileSystemPath } from "@jsenv/filesystem"
 
 import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
+import { sourcemapConverter } from "@jsenv/core/src/utils/sourcemap/sourcemap_converter.js"
 
 export const buildWithRollup = async ({
   signal,
@@ -12,7 +13,7 @@ export const buildWithRollup = async ({
   jsModulesUrlsToBundle,
 
   runtimeSupport,
-  sourcemapMethod,
+  sourcemaps,
 }) => {
   const resultRef = { current: null }
   await applyRollupPlugins({
@@ -26,7 +27,7 @@ export const buildWithRollup = async ({
         jsModulesUrlsToBundle,
 
         runtimeSupport,
-        sourcemapMethod,
+        sourcemaps,
         resultRef,
       }),
     ],
@@ -46,6 +47,7 @@ const rollupPluginJsenv = ({
   buildDirectoryUrl,
   rawGraph,
   jsModulesUrlsToBundle,
+  sourcemaps,
 
   resultRef,
 }) => {
@@ -88,15 +90,14 @@ const rollupPluginJsenv = ({
             const sourcePath = sources[sources.length - 1]
             url = fileUrlConverter.asFileUrl(sourcePath)
           }
-          jsModuleInfos[url] = {
+          const jsModuleBundleUrlInfo = {
             // buildRelativeUrl: rollupFileInfo.fileName,
             data: { isEntryPoint: rollupFileInfo.isEntry },
             type: "js_module",
             content: rollupFileInfo.code,
-            // the source map sources are not great
-            // the sourcesContent is "incorrect" it should point to the original content I think
             sourcemap: rollupFileInfo.map,
           }
+          jsModuleInfos[url] = jsModuleBundleUrlInfo
         }
       })
       resultRef.current = {
@@ -104,11 +105,15 @@ const rollupPluginJsenv = ({
       }
     },
     outputOptions: (outputOptions) => {
+      // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
         format: "esm",
         dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
-        sourcemap: true,
-        // sourcemapPathTransform: (relativePath) => {},
+        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
+        // sourcemapFile,
+        sourcemapPathTransform: (relativePath) => {
+          return new URL(relativePath, buildDirectoryUrl).href
+        },
         entryFileNames: () => {
           return `[name].js`
         },
@@ -133,14 +138,17 @@ const rollupPluginJsenv = ({
       if (!url.startsWith("file:")) {
         return { url, external: true }
       }
-      return fileUrlConverter.asFilePath(url)
+      const filePath = fileUrlConverter.asFilePath(url)
+      return filePath
     },
     async load(rollupId) {
       const fileUrl = fileUrlConverter.asFileUrl(rollupId)
       const urlInfo = rawGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,
-        map: urlInfo.sourcemap,
+        map: urlInfo.sourcemap
+          ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
+          : urlInfo.sourcemap,
       }
     },
     renderChunk: (code, chunkInfo) => {

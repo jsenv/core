@@ -12,7 +12,7 @@ import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 
 export const injectVersionMappings = (
   urlInfo,
-  { versionMappings, sourcemapMethod },
+  { versionMappings, sourcemaps },
 ) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
@@ -20,7 +20,7 @@ export const injectVersionMappings = (
     updateContentAndSourcemap(urlInfo, {
       content,
       sourcemap,
-      sourcemapMethod,
+      sourcemaps,
     })
   }
 }
@@ -46,7 +46,7 @@ const injectors = {
   },
   js_module: (urlInfo, { versionMappings }) => {
     const magicSource = createMagicSource({
-      url: urlInfo.url,
+      url: urlInfo.data.sourceUrl || urlInfo.url,
       content: urlInfo.content,
     })
     magicSource.prepend(generateClientCodeForVersionMappings(versionMappings))

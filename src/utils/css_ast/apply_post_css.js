@@ -1,7 +1,7 @@
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 export const applyPostCss = async ({
-  sourcemapMethod = "comment",
+  sourcemaps = "comment",
   plugins,
   // https://github.com/postcss/postcss#options
   options = {},
@@ -18,8 +18,8 @@ export const applyPostCss = async ({
       from: urlToFileSystemPath(cssFileUrl),
       to: urlToFileSystemPath(cssFileUrl),
       map: {
-        annotation: sourcemapMethod === "comment",
-        inline: sourcemapMethod === "inline",
+        annotation: sourcemaps === "file",
+        inline: sourcemaps === "inline",
         // https://postcss.org/api/#sourcemapoptions
         ...(map ? { prev: JSON.stringify(map) } : {}),
       },

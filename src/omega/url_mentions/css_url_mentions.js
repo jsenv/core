@@ -9,7 +9,7 @@ import { replaceCssUrls } from "@jsenv/core/src/utils/css_ast/replace_css_urls.j
 export const parseCssUrlMentions = async ({ url, content }) => {
   const cssUrlMentions = []
   await applyPostCss({
-    sourcemapMethod: false,
+    sourcemaps: false,
     plugins: [
       postCssPluginUrlVisitor({
         urlVisitor: ({ type, url, specifier, urlNode }) => {

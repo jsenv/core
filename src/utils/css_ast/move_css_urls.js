@@ -6,7 +6,7 @@ import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
 export const moveCssUrls = async ({
   from,
   to,
-  sourcemapMethod,
+  sourcemaps,
   map,
   content,
 } = {}) => {
@@ -30,7 +30,7 @@ export const moveCssUrls = async ({
       }),
     ],
     url: from,
-    sourcemapMethod,
+    sourcemaps,
     map,
     content,
   })

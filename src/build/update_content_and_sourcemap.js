@@ -6,7 +6,7 @@ import {
 
 export const updateContentAndSourcemap = (
   urlInfo,
-  { content, sourcemap, sourcemapMethod },
+  { content, sourcemap, sourcemaps },
 ) => {
   urlInfo.content = content
   if (sourcemap) {
@@ -15,7 +15,7 @@ export const updateContentAndSourcemap = (
       contentType: urlInfo.contentType,
       content: urlInfo.content,
       specifier:
-        sourcemapMethod === "inline"
+        sourcemaps === "inline"
           ? sourcemapToBase64Url(urlInfo.sourcemap)
           : urlInfo.sourcemapUrl,
     })

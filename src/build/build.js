@@ -59,7 +59,7 @@ export const build = async ({
     rhino: "0.0.0",
     safari: "0.0.0",
   },
-  sourcemapMethod = isPreview ? "file" : false,
+  sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
   versioning = true,
@@ -83,7 +83,6 @@ export const build = async ({
     logger,
     rootDirectoryUrl,
     urlGraph: rawGraph,
-    sourcemapMethod,
     plugins: [
       ...plugins,
       {
@@ -99,6 +98,7 @@ export const build = async ({
       }),
     ],
     scenario: "build",
+    sourcemaps,
   })
   const loadEntryFiles = (cookEntryFile) => {
     Object.keys(entryPoints).forEach((key) => {
@@ -183,7 +183,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           jsModulesUrlsToBundle,
 
           runtimeSupport,
-          sourcemapMethod,
+          sourcemaps,
         })
         const { jsModuleInfos } = rollupBuild
         Object.keys(jsModuleInfos).forEach((url) => {
@@ -313,6 +313,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       },
     ],
     scenario: "build",
+    sourcemaps,
   })
   const loadFinalGraphLog = createTaskLog("generating build files")
   try {
@@ -428,6 +429,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           },
         ],
         scenario: "build",
+        sourcemaps,
       })
       // arrange state before reloading all files
       Object.keys(finalGraph.urlInfos).forEach((url) => {
@@ -448,7 +450,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           }
           injectVersionMappings(buildUrlInfo, {
             versionMappings,
-            sourcemapMethod,
+            sourcemaps,
           })
         })
       }
