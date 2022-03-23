@@ -7,43 +7,40 @@ export const createUrlGraphSummary = (
   { title = "graph summary" } = {},
 ) => {
   const graphReport = createUrlGraphReport(urlGraph)
+  const totalLabel = graphReport.sourcemaps.count
+    ? `Total (ignoring sourcemaps):`
+    : `Total`
+
   return `--- ${title} ---  
 ${createRepartitionMessage(graphReport)}
-${ANSI.color(`Total:`, ANSI.GREY)} ${graphReport.total.count} (${byteAsFileSize(
-    graphReport.total.size,
-  )})
+${ANSI.color(totalLabel, ANSI.GREY)} ${
+    graphReport.total.count
+  } (${byteAsFileSize(graphReport.total.size)})
 --------------------`
 }
 
-// more groups:
-// - js_classic
-// - graphics: jpg, png, fonts, svgs
-// - audio: mp3, ogg, midi
-// - video: mp4
 const createUrlGraphReport = (urlGraph) => {
   const { urlInfos } = urlGraph
   const countGroups = {
     html: 0,
     css: 0,
-    js_module: 0,
-    other: 0,
+    js: 0,
+    assets: 0,
+    sourcemaps: 0,
     total: 0,
   }
   const sizeGroups = {
     html: 0,
     css: 0,
-    js_module: 0,
-    other: 0,
+    js: 0,
+    sourcemaps: 0,
+    assets: 0,
     total: 0,
   }
   Object.keys(urlInfos).forEach((url) => {
     const urlInfo = urlInfos[url]
     // ignore inline files, they are already taken into account in the file where they appear
     if (urlInfo.inlineUrlSite) {
-      return
-    }
-    // ignore sourcemap files
-    if (urlInfo.type === "sourcemap") {
       return
     }
     // file loaded via import assertion are already inside the graph
@@ -59,9 +56,14 @@ const createUrlGraphReport = (urlGraph) => {
       return
     }
     const urlContentSize = Buffer.byteLength(urlInfo.content)
+    const category = determineCategory(urlInfo)
+    if (category === "sourcemap") {
+      countGroups.sourcemaps++
+      sizeGroups.sourcemaps += urlContentSize
+      return
+    }
     countGroups.total++
     sizeGroups.total += urlContentSize
-    const category = determineCategory(urlInfo)
     if (category === "html") {
       countGroups.html++
       sizeGroups.html += urlContentSize
@@ -72,38 +74,49 @@ const createUrlGraphReport = (urlGraph) => {
       sizeGroups.css += urlContentSize
       return
     }
-    if (category === "js_module") {
-      countGroups.js_module++
-      sizeGroups.js_module += urlContentSize
+    if (category === "js") {
+      countGroups.js++
+      sizeGroups.js += urlContentSize
       return
     }
-    countGroups.other++
-    sizeGroups.other += urlContentSize
+    countGroups.assets++
+    sizeGroups.assets += urlContentSize
     return
   })
   return {
     html: { count: countGroups.html, size: sizeGroups.html },
     css: { count: countGroups.css, size: sizeGroups.css },
-    js_module: { count: countGroups.js_module, size: sizeGroups.js_module },
-    other: { count: countGroups.other, size: sizeGroups.other },
+    js: { count: countGroups.js, size: sizeGroups.js },
+    sourcemaps: { count: countGroups.sourcemaps, size: sizeGroups.sourcemaps },
+    assets: { count: countGroups.assets, size: sizeGroups.assets },
     total: { count: countGroups.total, size: sizeGroups.total },
   }
 }
 
 const determineCategory = (urlInfo) => {
+  if (urlInfo.type === "sourcemap") {
+    return "sourcemap"
+  }
   if (urlInfo.type === "html") {
     return "html"
   }
   if (urlInfo.type === "css") {
     return "css"
   }
-  if (urlInfo.type === "js_module") {
-    return "js_module"
+  if (
+    urlInfo.type === "js_module" ||
+    urlInfo.type === "js_classic" ||
+    urlInfo.type === "worker_module" ||
+    urlInfo.type === "worker_classic" ||
+    urlInfo.type === "service_worker_module" ||
+    urlInfo.type === "service_worker_classic"
+  ) {
+    return "js"
   }
-  return urlInfo.type
+  return "assets"
 }
 
-const createRepartitionMessage = ({ html, css, js_module, other }) => {
+const createRepartitionMessage = ({ html, css, js, sourcemaps, assets }) => {
   const parts = []
   if (html.count) {
     parts.push(
@@ -119,17 +132,24 @@ const createRepartitionMessage = ({ html, css, js_module, other }) => {
       )})`,
     )
   }
-  if (js_module.count) {
+  if (js.count) {
     parts.push(
-      `${ANSI.color(`js module:`, ANSI.GREY)} ${
-        js_module.count
-      } (${byteAsFileSize(js_module.size)})`,
+      `${ANSI.color(`js:`, ANSI.GREY)} ${js.count} (${byteAsFileSize(
+        js.size,
+      )})`,
     )
   }
-  if (other.count) {
+  if (sourcemaps.count) {
     parts.push(
-      `${ANSI.color(`other:`, ANSI.GREY)} ${other.count} (${byteAsFileSize(
-        other.size,
+      `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
+        sourcemaps.count
+      } (${byteAsFileSize(sourcemaps.size)})`,
+    )
+  }
+  if (assets.count) {
+    parts.push(
+      `${ANSI.color(`assets:`, ANSI.GREY)} ${assets.count} (${byteAsFileSize(
+        assets.size,
       )})`,
     )
   }

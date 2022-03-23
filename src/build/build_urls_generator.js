@@ -3,20 +3,14 @@ import { urlToFilename } from "@jsenv/filesystem"
 import { memoizeByUrl } from "@jsenv/core/src/utils/memoize/memoize_by_url.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
-  // TODO: normalize baseUrl
-  // if a valid url:
-  //   - ensure trailing slash
-  // otherwise assert it's a string +
-  //   - ensure leading slash
-  //   - ensure trailing slash
-
   const cache = {}
-  const generate = memoizeByUrl((url, directoryRelativeUrl) => {
+  const generate = memoizeByUrl((url, urlInfo) => {
+    const directoryPath = determineDirectoryPath(urlInfo)
     const name = urlToFilename(url)
-    let names = cache[directoryRelativeUrl]
+    let names = cache[directoryPath]
     if (!names) {
       names = []
-      cache[directoryRelativeUrl] = names
+      cache[directoryPath] = names
     }
 
     let nameCandidate = name
@@ -30,13 +24,43 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
       integer++
       nameCandidate = `${name}${integer}`
     }
-    if (directoryRelativeUrl === "/") {
+    if (directoryPath === "/") {
       return `${buildDirectoryUrl}${nameCandidate}`
     }
-    return `${buildDirectoryUrl}${directoryRelativeUrl}${nameCandidate}`
+    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}`
   })
 
   return {
     generate,
   }
+}
+
+const determineDirectoryPath = (urlInfo) => {
+  if (urlInfo.data.isEntryPoint) {
+    return "/"
+  }
+  if (
+    urlInfo.type === "service_worker_module" ||
+    urlInfo.type === "service_worker_classic"
+  ) {
+    return "/"
+  }
+  if (urlInfo.type === "sourcemap") {
+    return "/sourcemaps/"
+  }
+  if (urlInfo.type === "html") {
+    return "/html/"
+  }
+  if (urlInfo.type === "css") {
+    return "/css/"
+  }
+  if (
+    urlInfo.type === "js_module" ||
+    urlInfo.type === "js_classic" ||
+    urlInfo.type === "worker_module" ||
+    urlInfo.type === "worker_classic"
+  ) {
+    return "/js/"
+  }
+  return "/assets/"
 }

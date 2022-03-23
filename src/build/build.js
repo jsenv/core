@@ -246,13 +246,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const buildUrlInfo = buildUrlInfos[url]
           // from rollup or postcss
           if (buildUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(
-              url,
-              buildUrlInfo.data.isEntryPoint ||
-                buildUrlInfo.type === "js_module"
-                ? "/"
-                : "assets/",
-            )
+            const buildUrl = buildUrlsGenerator.generate(url, buildUrlInfo)
             data.sourceUrl = url
             sourceUrls[buildUrl] = url
             return buildUrl
@@ -260,22 +254,17 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const rawUrlInfo = rawGraph.getUrlInfo(url)
           // files from root directory but not given to rollup not postcss
           if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(
-              url,
-              rawUrlInfo.data.isEntryPoint || rawUrlInfo.type === "js_module"
-                ? "/"
-                : "assets/",
-            )
+            const buildUrl = buildUrlsGenerator.generate(url, rawUrlInfo)
             data.sourceUrl = url
             sourceUrls[buildUrl] = url
             return buildUrl
           }
           // files generated during the final graph (sourcemaps)
           // const finalUrlInfo = finalGraph.getUrlInfo(url)
-          const buildUrl = buildUrlsGenerator.generate(
-            url,
-            type === "sourcemap_comment" ? "sourcemaps/" : "assets/",
-          )
+          const buildUrl = buildUrlsGenerator.generate(url, {
+            data: {},
+            type: type === "sourcemap_comment" ? "sourcemap" : "asset",
+          })
           return buildUrl
         },
         formatReferencedUrl: ({ url }) => {
