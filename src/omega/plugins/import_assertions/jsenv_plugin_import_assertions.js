@@ -32,7 +32,7 @@ export const jsenvPluginImportAssertions = () => {
             content,
           })
           const { importAssertions } = metadata
-          const magicSource = createMagicSource({ url, content })
+          const magicSource = createMagicSource(content)
           importAssertions.forEach((importAssertion) => {
             const assertType = importAssertion.assert.type
             if (!importTypesToHandle.includes(assertType)) {

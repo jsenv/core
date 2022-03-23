@@ -12,7 +12,7 @@ export const jsenvPluginBabel = () => {
     appliesDuring: "*",
     transform: {
       js_module: async (
-        { url, generatedUrl, originalContent, content },
+        { url, generatedUrl, content },
         { isSupportedOnRuntime, addReference },
       ) => {
         const babelPluginStructure = getBaseBabelPluginStructure({
@@ -66,7 +66,6 @@ export const jsenvPluginBabel = () => {
           babelPlugins,
           url,
           generatedUrl,
-          originalContent,
           content,
         })
         return {

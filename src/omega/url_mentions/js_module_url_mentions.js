@@ -18,7 +18,7 @@ export const parseJsModuleUrlMentions = async ({
   return {
     urlMentions,
     replaceUrls: async (getReplacement) => {
-      const magicSource = createMagicSource({ url, content })
+      const magicSource = createMagicSource(content)
       urlMentions.forEach((urlMention) => {
         const replacement = getReplacement(urlMention)
         if (replacement) {

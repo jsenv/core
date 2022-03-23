@@ -222,7 +222,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     rootDirectoryUrl,
     urlGraph: finalGraph,
     plugins: [
-      jsenvPluginInline(),
+      jsenvPluginInline({
+        skipHtmlInlineLoad: true,
+      }),
       {
         name: "jsenv:postbuild",
         appliesDuring: { build: true },
@@ -289,8 +291,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const urlInfo =
             buildUrlInfos[sourceUrl] || rawGraph.getUrlInfo(sourceUrl)
           return {
-            // originalContent: urlInfo.originalContent,
-            // originalSourcemap: urlInfo.originalSourcemap,
+            originalContent: urlInfo.originalContent,
             contentType: urlInfo.contentType,
             content: urlInfo.content,
             sourcemap: urlInfo.sourcemap,
@@ -377,7 +378,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
         plugins: [
-          jsenvPluginInline(),
+          jsenvPluginInline({
+            skipHtmlInlineLoad: true,
+          }),
           {
             name: "jsenv:versioning",
             appliesDuring: { build: true },
@@ -431,6 +434,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             load: ({ url }) => {
               const urlInfo = finalGraph.getUrlInfo(url)
               return {
+                originalContent: urlInfo.originalContent,
                 contentType: urlInfo.contentType,
                 content: urlInfo.content,
                 sourcemap: urlInfo.sourcemap,
@@ -444,9 +448,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       // arrange state before reloading all files
       Object.keys(finalGraph.urlInfos).forEach((url) => {
         const urlInfo = finalGraph.urlInfos[url]
-        if (urlInfo.url.includes("L9-L15.js")) {
-          debugger
-        }
         urlInfo.data.promise = null
         urlInfo.contentType = null
       })

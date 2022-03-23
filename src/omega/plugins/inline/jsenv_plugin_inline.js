@@ -6,9 +6,9 @@ import { DataUrl } from "@jsenv/core/src/utils/data_url.js"
 
 import { jsenvPluginHtmlInlineScriptsAndStyles } from "./jsenv_plugin_html_scripts_and_styles.js"
 
-export const jsenvPluginInline = () => {
+export const jsenvPluginInline = ({ skipHtmlInlineLoad } = {}) => {
   return [
-    jsenvPluginHtmlInlineScriptsAndStyles(),
+    jsenvPluginHtmlInlineScriptsAndStyles({ skipHtmlInlineLoad }),
     dataUrls(),
     inlineQueryParam(),
   ]

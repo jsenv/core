@@ -45,10 +45,7 @@ const injectors = {
     }
   },
   js_module: (urlInfo, { versionMappings }) => {
-    const magicSource = createMagicSource({
-      url: urlInfo.data.sourceUrl || urlInfo.url,
-      content: urlInfo.content,
-    })
+    const magicSource = createMagicSource(urlInfo.content)
     magicSource.prepend(generateClientCodeForVersionMappings(versionMappings))
     return magicSource.toContentAndSourcemap()
   },

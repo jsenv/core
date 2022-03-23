@@ -120,7 +120,6 @@ const createUrlInfo = (url) => {
     contentType: "",
     originalContent: "",
     content: "",
-    originalSourcemap: null,
     sourcemap: null,
     type: "",
     references: [],

@@ -45,10 +45,7 @@ export const jsenvPluginCommonJsGlobals = () => {
         if (keys.length === 0) {
           return null
         }
-        const magicSource = createMagicSource({
-          url,
-          content,
-        })
+        const magicSource = createMagicSource(content)
         keys.forEach((key) => {
           expressionPaths[key].forEach((path) => {
             magicSource.replace({

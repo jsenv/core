@@ -75,7 +75,7 @@ import "${preactDevtoolsReference.generatedSpecifier}"
         return { content: htmlModified }
       },
       js_module: async (
-        { url, generatedUrl, originalContent, content },
+        { url, generatedUrl, content },
         { scenario, addReference },
       ) => {
         //   case "Fragment":
@@ -106,13 +106,9 @@ import "${preactDevtoolsReference.generatedSpecifier}"
           ],
           url,
           generatedUrl,
-          originalContent,
           content,
         })
-        const magicSource = createMagicSource({
-          url,
-          content: code,
-        })
+        const magicSource = createMagicSource(code)
         // When a plugin wants to inject import, it must use "generatedSpecifier" returned by "addReference":
         // const preactJsxRuntimeReference = addReference({
         //   type: "js_import_export",

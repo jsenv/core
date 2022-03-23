@@ -8,13 +8,7 @@ const parsers = {
   js_module: parseJsModuleUrlMentions,
 }
 
-export const parseUrlMentions = async ({
-  type,
-  url,
-  generatedUrl,
-  content,
-  scenario,
-}) => {
+export const parseUrlMentions = async ({ type, url, content, scenario }) => {
   const parser = parsers[type]
   if (!parser) {
     return null
@@ -24,7 +18,7 @@ export const parseUrlMentions = async ({
     hotDecline = false,
     hotAcceptSelf = false,
     replaceUrls,
-  } = await parser({ url, generatedUrl, content, scenario })
+  } = await parser({ url, content, scenario })
   return {
     urlMentions,
     hotDecline,

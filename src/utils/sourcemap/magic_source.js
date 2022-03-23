@@ -1,7 +1,6 @@
-import { fileURLToPath } from "node:url"
 import MagicString from "magic-string"
 
-export const createMagicSource = ({ url, content }) => {
+export const createMagicSource = (content) => {
   if (content === undefined) {
     throw new Error("content missing")
   }
@@ -42,8 +41,6 @@ export const createMagicSource = ({ url, content }) => {
       const map = magicString.generateMap({
         hires: true,
       })
-      map.sources = [fileURLToPath(url)]
-      map.sourcesContent = [content]
       return {
         content: code,
         sourcemap: map,

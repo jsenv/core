@@ -14,29 +14,24 @@ import {
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
 
-export const jsenvPluginHtmlInlineScriptsAndStyles = () => {
+export const jsenvPluginHtmlInlineScriptsAndStyles = ({
+  skipHtmlInlineLoad = false,
+}) => {
   return {
     name: "jsenv:inline_scripts_and_styles",
     appliesDuring: "*",
-    load: ({
-      url,
-      inlineUrlSite,
-      contentType,
-      originalContent,
-      originalSourcemap,
-    }) => {
-      if (!inlineUrlSite) {
-        return null
-      }
-      if (originalSourcemap) {
-        debugger
-      }
-      return {
-        contentType,
-        content: originalContent,
-        sourcemap: originalSourcemap,
-      }
-    },
+    load: skipHtmlInlineLoad
+      ? null
+      : (urlInfo) => {
+          const { inlineUrlSite, contentType, originalContent } = urlInfo
+          if (!inlineUrlSite) {
+            return null
+          }
+          return {
+            contentType,
+            content: originalContent,
+          }
+        },
     transform: {
       html: async (
         { url, originalContent, content },

@@ -139,10 +139,7 @@ const jsenvPluginHot = () => {
           type: "js_import_export",
           specifier: importMetaHotClientFileUrl,
         })
-        const magicSource = createMagicSource({
-          url,
-          content,
-        })
+        const magicSource = createMagicSource(content)
         magicSource.prepend(
           `import { createImportMetaHot } from "${importMetaHotClientFileReference.generatedSpecifier}"
 import.meta.hot = createImportMetaHot(import.meta.url)

@@ -9,7 +9,6 @@ import {
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
-import { sourcemapConverter } from "@jsenv/core/src/utils/sourcemap/sourcemap_converter.js"
 import {
   sourcemapComment,
   generateSourcemapUrl,
@@ -61,20 +60,6 @@ export const createKitchen = ({
     scenario,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-  const normalizeSourcemap = (urlInfo) => {
-    let { sourcemap } = urlInfo
-    sourcemap = sourcemapConverter.toFileUrls(sourcemap)
-    if (
-      // for inline content (<script> insdide html)
-      // chrome won't be able to fetch the file as it does not exists
-      // so sourcemap must contain sources
-      !urlInfo.inlineUrlSite &&
-      !sourcemapsSources
-    ) {
-      sourcemap.sourcesContent = null
-    }
-    return sourcemap
-  }
 
   const isSupported = ({
     runtimeSupport,
@@ -199,22 +184,18 @@ export const createKitchen = ({
       if (!loadReturnValue) {
         throw new Error("NO_LOAD")
       }
-      if (urlInfo.url.includes("L9-L15.js") && loadReturnValue.sourcemap) {
-        debugger
-      }
+
       const {
         contentType = "application/octet-stream",
         content, // can be a buffer (used for binary files) or a string
         sourcemap,
-        // during build urls info are reused and load returns originalContent and originalSourcemap
+        // during build urls info are reused and load returns originalContent
         // that we want to keep
         originalContent = content,
-        originalSourcemap = sourcemap,
       } = loadReturnValue
       Object.assign(urlInfo, {
         contentType,
         originalContent,
-        originalSourcemap,
         content,
         sourcemap,
       })
@@ -244,9 +225,7 @@ export const createKitchen = ({
           urlInfo: sourcemapUrlInfo,
         })
         const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-        urlInfo.originalSourcemap = sourcemap
         urlInfo.sourcemap = sourcemap
-        normalizeSourcemap(urlInfo)
         urlInfo.sourcemapUrl = sourcemapUrlInfo.url
       } catch (e) {
         logger.error(`Error while handling sourcemap: ${e.message}`)
@@ -433,11 +412,23 @@ export const createKitchen = ({
     // and the one injected by plugin are known
     urlGraph.updateReferences(urlInfo, references)
 
-    // append sourcemap comment
+    // handle sourcemap
     if (urlInfo.sourcemap) {
-      normalizeSourcemap(urlInfo)
       urlInfo.sourcemapUrl =
         urlInfo.sourcemapUrl || generateSourcemapUrl(urlInfo.url)
+      urlInfo.sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
+      if (
+        // for inline content (<script> insdide html)
+        // chrome won't be able to fetch the file as it does not exists
+        // so sourcemap must contain sources
+        urlInfo.inlineUrlSite ||
+        sourcemapsSources
+      ) {
+        urlInfo.sourcemap.sourcesContent = [urlInfo.originalContent]
+      } else {
+        urlInfo.sourcemap.sourcesContent = null
+      }
+      // append sourcemap comment
       if (sourcemaps === "file" || sourcemaps === "inline") {
         const sourcemapReference = createReference({
           trace: `sourcemap comment placeholder for ${urlInfo.url}`,

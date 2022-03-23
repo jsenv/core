@@ -3,7 +3,7 @@ import { createMagicSource } from "./magic_source.js"
 const content = `import { inferContextFrom, createUrlContext } from "../url_context.js";
 // toto
 `
-const magic = createMagicSource({ content })
+const magic = createMagicSource(content)
 magic.replace({
   start: 51,
   end: 70,

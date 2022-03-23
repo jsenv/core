@@ -37,7 +37,7 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
     secondSourcemap.sources.length === 1
   ) {
     const map = remapping([firstSourcemap, secondSourcemap], () => null, {
-      excludeContent: false,
+      excludeContent: true,
     })
     return map
   }
@@ -58,7 +58,7 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
         return { ...nullSourceMap }
       },
       {
-        excludeContent: false,
+        excludeContent: true,
       },
     )
     return map
