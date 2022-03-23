@@ -52,7 +52,7 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
     const map = remapping(
       firstSourcemap,
       (firstSourceUrl) => {
-        if (secondSourcemap.source[0] === firstSourceUrl) {
+        if (secondSourcemap.sources[0] === firstSourceUrl) {
           return secondSourcemap
         }
         return { ...nullSourceMap }
