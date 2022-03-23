@@ -449,7 +449,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       Object.keys(finalGraph.urlInfos).forEach((url) => {
         const urlInfo = finalGraph.urlInfos[url]
         urlInfo.data.promise = null
-        urlInfo.contentType = null
       })
       await loadUrlGraph({
         urlGraph: finalGraph,

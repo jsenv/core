@@ -22,14 +22,13 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
     appliesDuring: "*",
     load: skipHtmlInlineLoad
       ? null
-      : (urlInfo) => {
-          const { inlineUrlSite, contentType, originalContent } = urlInfo
-          if (!inlineUrlSite) {
+      : ({ data }) => {
+          if (!data.inlineContent) {
             return null
           }
           return {
-            contentType,
-            content: originalContent,
+            contentType: data.inlineContentType,
+            content: data.inlineContent,
           }
         },
     transform: {
@@ -61,8 +60,8 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
             isInline: true,
           })
           const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
-          inlineUrlInfo.contentType = inlineContentType
-          inlineUrlInfo.originalContent = inlineContent
+          inlineUrlInfo.data.inlineContentType = inlineContentType
+          inlineUrlInfo.data.inlineContent = inlineContent
           inlineUrlInfo.inlineUrlSite = {
             url,
             content: originalContent, // original because it's the origin line and column

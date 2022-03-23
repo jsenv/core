@@ -48,13 +48,13 @@ export const jsenvPluginHtmlSupervisor = () => {
       dev: true,
       test: true,
     },
-    load: ({ inlineUrlSite, contentType, originalContent }) => {
-      if (!inlineUrlSite) {
+    load: ({ data }) => {
+      if (!data.supervisedContent) {
         return null
       }
       return {
-        contentType,
-        content: originalContent,
+        contentType: "application/javascript",
+        content: data.supervisedContent,
       }
     },
     transform: {
@@ -66,8 +66,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           node,
           type,
           specifier,
-          inlineContentType,
-          inlineContent,
+          scriptContent,
         }) => {
           const { line, column } = htmlNodePosition.readNodePosition(node, {
             preferOriginal: true,
@@ -83,8 +82,7 @@ export const jsenvPluginHtmlSupervisor = () => {
             specifier,
           })
           const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
-          inlineUrlInfo.contentType = inlineContentType
-          inlineUrlInfo.originalContent = inlineContent
+          inlineUrlInfo.data.supervisedContent = scriptContent
           inlineUrlInfo.inlineUrlSite = {
             url,
             content: originalContent, // original because it's the origin line and column
@@ -112,8 +110,7 @@ export const jsenvPluginHtmlSupervisor = () => {
                     js_classic: "",
                   })
                 : inlineScriptSpecifier,
-            inlineContentType: "application/javascript",
-            inlineContent: textNode.value,
+            scriptContent: textNode.value,
           })
           assignHtmlNodeAttributes(node, {
             "src": inlineScriptReference.generatedSpecifier,

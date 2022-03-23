@@ -33,6 +33,11 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
 }
 
 const determineDirectoryPath = (urlInfo) => {
+  if (urlInfo.inlineUrlSite) {
+    // should inherit the parent location?
+    // should just not reach this
+    return ""
+  }
   if (urlInfo.data.isEntryPoint) {
     return ""
   }
