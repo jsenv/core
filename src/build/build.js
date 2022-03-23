@@ -223,7 +223,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     urlGraph: finalGraph,
     plugins: [
       jsenvPluginInline({
-        skipHtmlInlineLoad: true,
+        skipHtmlInlineLoad: true, // we can and want to load from rawGraph
       }),
       {
         name: "jsenv:postbuild",

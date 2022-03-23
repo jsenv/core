@@ -27,6 +27,7 @@ export const loadUrlGraph = async ({
   const _cook = async ({ urlInfo, ...rest }) => {
     await kitchen.cook({
       urlInfo,
+      cookDuringCook: cook,
       ...rest,
     })
     const { references } = urlInfo

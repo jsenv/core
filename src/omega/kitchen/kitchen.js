@@ -4,7 +4,6 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
-  urlToRelativeUrl,
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
@@ -239,6 +238,7 @@ export const createKitchen = ({
     urlInfo,
     outDirectoryUrl,
     runtimeSupport,
+    cookDuringCook = cook,
   }) => {
     const context = {
       ...baseContext,
@@ -249,7 +249,7 @@ export const createKitchen = ({
         return isSupported({ runtimeSupport, featureName, featureCompat })
       },
       cook: (params) => {
-        return cook({
+        return cookDuringCook({
           outDirectoryUrl,
           runtimeSupport,
           ...params,
@@ -433,11 +433,13 @@ export const createKitchen = ({
         const sourcemapReference = createReference({
           trace: `sourcemap comment placeholder for ${urlInfo.url}`,
           type: "sourcemap_comment",
+          subtype:
+            urlInfo.contentType === "application/javascript" ? "js" : "css",
           parentUrl: urlInfo.url,
           specifier:
             sourcemaps === "inline"
               ? sourcemapToBase64Url(urlInfo.sourcemap)
-              : urlToRelativeUrl(urlInfo.sourcemapUrl, urlInfo.url),
+              : urlInfo.sourcemapUrl,
         })
         const sourcemapUrlInfo = resolveReference(sourcemapReference)
         sourcemapUrlInfo.contentType = "application/json"

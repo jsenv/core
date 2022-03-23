@@ -1,9 +1,3 @@
-/*
- * TODO
- * for inline scripts, sources and sourcesContent
- * are incorrect
- */
-
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
@@ -22,6 +16,6 @@ await build({
     "./main.html": "main.html",
   },
   sourcemaps: "file",
-  bundling: false,
-  versioning: false,
+  bundling: true,
+  versioning: true,
 })
