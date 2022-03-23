@@ -218,6 +218,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   const buildUrls = {}
   const finalGraph = createUrlGraph()
   const finalGraphKitchen = createKitchen({
+    logger,
     rootDirectoryUrl,
     urlGraph: finalGraph,
     plugins: [
@@ -288,6 +289,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const urlInfo =
             buildUrlInfos[sourceUrl] || rawGraph.getUrlInfo(sourceUrl)
           return {
+            // originalContent: urlInfo.originalContent,
+            // originalSourcemap: urlInfo.originalSourcemap,
             contentType: urlInfo.contentType,
             content: urlInfo.content,
             sourcemap: urlInfo.sourcemap,
@@ -370,6 +373,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       const versionMappings = {}
       const usedVersionMappings = []
       const versioningKitchen = createKitchen({
+        logger,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
         plugins: [
@@ -440,9 +444,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       // arrange state before reloading all files
       Object.keys(finalGraph.urlInfos).forEach((url) => {
         const urlInfo = finalGraph.urlInfos[url]
+        if (urlInfo.url.includes("L9-L15.js")) {
+          debugger
+        }
         urlInfo.data.promise = null
         urlInfo.contentType = null
-        urlInfo.originalContent = ""
       })
       await loadUrlGraph({
         urlGraph: finalGraph,

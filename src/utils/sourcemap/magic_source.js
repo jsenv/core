@@ -42,7 +42,6 @@ export const createMagicSource = ({ url, content }) => {
       const map = magicString.generateMap({
         hires: true,
       })
-      // should we do map.file = urlToFilename(urlFacade) OR map.file = urlToFilename(url)
       map.sources = [fileURLToPath(url)]
       map.sourcesContent = [content]
       return {

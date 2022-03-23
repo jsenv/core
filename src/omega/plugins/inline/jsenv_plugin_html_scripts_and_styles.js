@@ -18,13 +18,23 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = () => {
   return {
     name: "jsenv:inline_scripts_and_styles",
     appliesDuring: "*",
-    load: ({ contentType, originalContent }) => {
-      if (!contentType) {
+    load: ({
+      url,
+      inlineUrlSite,
+      contentType,
+      originalContent,
+      originalSourcemap,
+    }) => {
+      if (!inlineUrlSite) {
         return null
+      }
+      if (originalSourcemap) {
+        debugger
       }
       return {
         contentType,
         content: originalContent,
+        sourcemap: originalSourcemap,
       }
     },
     transform: {

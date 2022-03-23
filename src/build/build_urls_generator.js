@@ -24,9 +24,6 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
       integer++
       nameCandidate = `${name}${integer}`
     }
-    if (directoryPath === "/") {
-      return `${buildDirectoryUrl}${nameCandidate}`
-    }
     return `${buildDirectoryUrl}${directoryPath}${nameCandidate}`
   })
 
@@ -37,22 +34,22 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
 
 const determineDirectoryPath = (urlInfo) => {
   if (urlInfo.data.isEntryPoint) {
-    return "/"
+    return ""
   }
   if (
     urlInfo.type === "service_worker_module" ||
     urlInfo.type === "service_worker_classic"
   ) {
-    return "/"
+    return ""
   }
   if (urlInfo.type === "sourcemap") {
-    return "/sourcemaps/"
+    return "sourcemaps/"
   }
   if (urlInfo.type === "html") {
-    return "/html/"
+    return "html/"
   }
   if (urlInfo.type === "css") {
-    return "/css/"
+    return "css/"
   }
   if (
     urlInfo.type === "js_module" ||
@@ -60,7 +57,7 @@ const determineDirectoryPath = (urlInfo) => {
     urlInfo.type === "worker_module" ||
     urlInfo.type === "worker_classic"
   ) {
-    return "/js/"
+    return "js/"
   }
-  return "/assets/"
+  return "assets/"
 }

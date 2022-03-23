@@ -48,8 +48,8 @@ export const jsenvPluginHtmlSupervisor = () => {
       dev: true,
       test: true,
     },
-    load: ({ contentType, originalContent }) => {
-      if (!contentType) {
+    load: ({ inlineUrlSite, contentType, originalContent }) => {
+      if (!inlineUrlSite) {
         return null
       }
       return {

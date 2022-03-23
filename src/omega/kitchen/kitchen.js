@@ -61,9 +61,16 @@ export const createKitchen = ({
     scenario,
   }
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-  const normalizeSourcemap = (sourcemap) => {
+  const normalizeSourcemap = (urlInfo) => {
+    let { sourcemap } = urlInfo
     sourcemap = sourcemapConverter.toFileUrls(sourcemap)
-    if (!sourcemapsSources) {
+    if (
+      // for inline content (<script> insdide html)
+      // chrome won't be able to fetch the file as it does not exists
+      // so sourcemap must contain sources
+      !urlInfo.inlineUrlSite &&
+      !sourcemapsSources
+    ) {
       sourcemap.sourcesContent = null
     }
     return sourcemap
@@ -192,16 +199,23 @@ export const createKitchen = ({
       if (!loadReturnValue) {
         throw new Error("NO_LOAD")
       }
+      if (urlInfo.url.includes("L9-L15.js") && loadReturnValue.sourcemap) {
+        debugger
+      }
       const {
         contentType = "application/octet-stream",
         content, // can be a buffer (used for binary files) or a string
         sourcemap,
+        // during build urls info are reused and load returns originalContent and originalSourcemap
+        // that we want to keep
+        originalContent = content,
+        originalSourcemap = sourcemap,
       } = loadReturnValue
       Object.assign(urlInfo, {
         contentType,
-        originalContent: content,
+        originalContent,
+        originalSourcemap,
         content,
-        originalSourcemap: sourcemap,
         sourcemap,
       })
       urlInfo.type = urlInfo.type || inferUrlInfoType(urlInfo)
@@ -229,12 +243,11 @@ export const createKitchen = ({
           reference: sourcemapReference,
           urlInfo: sourcemapUrlInfo,
         })
-        const sourcemap = normalizeSourcemap(
-          JSON.parse(sourcemapUrlInfo.content),
-        )
-        urlInfo.sourcemapUrl = sourcemapUrlInfo.url
+        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
         urlInfo.originalSourcemap = sourcemap
         urlInfo.sourcemap = sourcemap
+        normalizeSourcemap(urlInfo)
+        urlInfo.sourcemapUrl = sourcemapUrlInfo.url
       } catch (e) {
         logger.error(`Error while handling sourcemap: ${e.message}`)
         return
@@ -422,8 +435,7 @@ export const createKitchen = ({
 
     // append sourcemap comment
     if (urlInfo.sourcemap) {
-      const sourcemap = normalizeSourcemap(urlInfo.sourcemap)
-      urlInfo.sourcemap = sourcemap
+      normalizeSourcemap(urlInfo)
       urlInfo.sourcemapUrl =
         urlInfo.sourcemapUrl || generateSourcemapUrl(urlInfo.url)
       if (sourcemaps === "file" || sourcemaps === "inline") {
@@ -433,14 +445,14 @@ export const createKitchen = ({
           parentUrl: urlInfo.url,
           specifier:
             sourcemaps === "inline"
-              ? sourcemapToBase64Url(sourcemap)
+              ? sourcemapToBase64Url(urlInfo.sourcemap)
               : urlToRelativeUrl(urlInfo.sourcemapUrl, urlInfo.url),
         })
         const sourcemapUrlInfo = resolveReference(sourcemapReference)
         sourcemapUrlInfo.contentType = "application/json"
         sourcemapUrlInfo.type = "sourcemap"
         sourcemapUrlInfo.content = sourcemapUrlInfo.originalContent =
-          JSON.stringify(sourcemap, null, "  ")
+          JSON.stringify(urlInfo.sourcemap, null, "  ")
         // await context.cook({
         //   reference: sourcemapReference,
         //   urlInfo: sourcemapUrlInfo,

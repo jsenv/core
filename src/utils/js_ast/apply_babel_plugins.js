@@ -61,6 +61,7 @@ export const applyBabelPlugins = async ({
     }
     const { map } = babelReturnValue
     if (map && map.sourcesContent.length === 1) {
+      // this could be done inside kitchen because this is always what we want
       map.sourcesContent = [originalContent]
     }
     return babelReturnValue
