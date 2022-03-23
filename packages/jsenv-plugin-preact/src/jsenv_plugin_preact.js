@@ -75,7 +75,7 @@ import "${preactDevtoolsReference.generatedSpecifier}"
         return { content: htmlModified }
       },
       js_module: async (
-        { url, generatedUrl, content },
+        { url, generatedUrl, originalContent, content },
         { scenario, addReference },
       ) => {
         //   case "Fragment":
@@ -106,6 +106,7 @@ import "${preactDevtoolsReference.generatedSpecifier}"
           ],
           url,
           generatedUrl,
+          originalContent,
           content,
         })
         const magicSource = createMagicSource({

@@ -6,6 +6,7 @@ export const applyBabelPlugins = async ({
   generatedUrl,
   type = "js_module",
   ast,
+  originalContent,
   content,
   options = {},
 }) => {
@@ -54,12 +55,24 @@ export const applyBabelPlugins = async ({
     plugins: babelPlugins,
     ...options,
   }
+  const normalize = (babelReturnValue) => {
+    if (originalContent === undefined) {
+      return babelReturnValue
+    }
+    const { map } = babelReturnValue
+    if (map && map.sourcesContent.length === 1) {
+      map.sourcesContent = [originalContent]
+    }
+    return babelReturnValue
+  }
+
   try {
     if (ast) {
       const result = await transformFromAstAsync(ast, content, options)
-      return result
+      return normalize(result)
     }
-    return await transformAsync(content, options)
+    const result = await transformAsync(content, options)
+    return normalize(result)
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createParseError({
