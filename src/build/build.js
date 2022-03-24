@@ -411,6 +411,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               if (referencedUrlInfo.data.isEntryPoint) {
                 return specifier
               }
+              // data:* urls and so on
+              if (!referencedUrlInfo.url.startsWith("file:")) {
+                return null
+              }
               if (type === "sourcemap_comment") {
                 return `${baseUrl}${urlToRelativeUrl(
                   referencedUrlInfo.url,

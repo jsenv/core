@@ -111,7 +111,12 @@ export const createKitchen = ({
       // which can result into "file:///file.css?css_module"
       // becoming "file:///file.css?css_module="
       // we want to get rid of the "=" and consider it's the same url
-      reference.url = reference.url.replace(/[=](?=&|$)/g, "")
+      if (
+        // disable on data urls (would mess up base64 encoding)
+        !reference.url.startsWith("data:")
+      ) {
+        reference.url = reference.url.replace(/[=](?=&|$)/g, "")
+      }
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
       Object.assign(urlInfo.data, reference.data)
 

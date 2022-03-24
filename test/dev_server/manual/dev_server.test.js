@@ -14,6 +14,7 @@ await startDevServer({
   privateKey: serverCertificatePrivateKey,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   // autoreload: false,
+  // sourcemaps: "file",
   plugins: [
     jsenvPluginPreact(),
     {
