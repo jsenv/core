@@ -13,7 +13,7 @@ import {
   generateSourcemapUrl,
   sourcemapToBase64Url,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v2.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v3.js"
 
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
@@ -317,7 +317,7 @@ export const createKitchen = ({
       return newReference
     }
 
-    const updateContents = (data) => {
+    const updateContents = async (data) => {
       if (data) {
         const { contentType, content, sourcemap } = data
         if (contentType) {
@@ -326,7 +326,7 @@ export const createKitchen = ({
         urlInfo.content = content
         if (sourcemap) {
           urlInfo.sourcemap = normalizeSourcemap(
-            composeTwoSourcemaps(
+            await composeTwoSourcemaps(
               urlInfo.sourcemap,
               normalizeSourcemap(sourcemap, urlInfo),
               rootDirectoryUrl,
@@ -387,7 +387,7 @@ export const createKitchen = ({
         const transformReturnValue = await replaceUrls((urlMention) => {
           return urlMention.reference.generatedSpecifier
         })
-        updateContents(transformReturnValue)
+        await updateContents(transformReturnValue)
       }
     }
 
@@ -399,8 +399,8 @@ export const createKitchen = ({
         "transform",
         urlInfo,
         context,
-        (transformReturnValue) => {
-          updateContents(transformReturnValue)
+        async (transformReturnValue) => {
+          await updateContents(transformReturnValue)
         },
       )
     } catch (error) {
@@ -417,8 +417,8 @@ export const createKitchen = ({
 
     // handle sourcemap
     if (urlInfo.sourcemap) {
-      urlInfo.sourcemapUrl =
-        urlInfo.sourcemapUrl || generateSourcemapUrl(urlInfo.url)
+      urlInfo.sourcemapGeneratedUrl =
+        urlInfo.sourcemapGeneratedUrl || generateSourcemapUrl(urlInfo.url)
 
       // append sourcemap comment
       if (sourcemaps === "file" || sourcemaps === "inline") {
@@ -431,7 +431,7 @@ export const createKitchen = ({
           specifier:
             sourcemaps === "inline"
               ? sourcemapToBase64Url(urlInfo.sourcemap)
-              : urlInfo.sourcemapUrl,
+              : urlInfo.sourcemapGeneratedUrl,
         })
         const sourcemapUrlInfo = resolveReference(sourcemapReference)
         sourcemapUrlInfo.contentType = "application/json"
@@ -497,12 +497,9 @@ export const createKitchen = ({
       // use writeSync to avoid concurrency on writing the file
       const write = gotError ? writeFileSync : writeFileSync
       write(new URL(generatedUrl), urlInfo.content)
-      const { sourcemapGeneratedUrl, sourcemap } = urlInfo
-      if (sourcemapGeneratedUrl && sourcemap) {
-        write(
-          new URL(sourcemapGeneratedUrl),
-          JSON.stringify(sourcemap, null, "  "),
-        )
+      const { sourcemapUrl, sourcemap } = urlInfo
+      if (sourcemapUrl && sourcemap) {
+        write(new URL(sourcemapUrl), JSON.stringify(sourcemap, null, "  "))
       }
     }
 
@@ -522,16 +519,23 @@ export const createKitchen = ({
   baseContext.cook = cook
 
   const normalizeSourcemap = (sourcemap, urlInfo) => {
-    sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
-    if (
+    const wantSourcesContent =
       // for inline content (<script> insdide html)
       // chrome won't be able to fetch the file as it does not exists
       // so sourcemap must contain sources
-      urlInfo.inlineUrlSite ||
-      sourcemapsSources
-    ) {
-      sourcemap.sourcesContent = [urlInfo.originalContent]
-    } else {
+      urlInfo.inlineUrlSite || sourcemapsSources
+    if (sourcemap.sources && sourcemap.sources.length > 1) {
+      sourcemap.sources = sourcemap.sources.map(
+        (source) => new URL(source, urlInfo.data.sourceUrl || urlInfo.url).href,
+      )
+      if (!wantSourcesContent) {
+        sourcemap.sourcesContent = undefined
+      }
+      return sourcemap
+    }
+    sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
+    sourcemap.sourcesContent = [urlInfo.originalContent]
+    if (!wantSourcesContent) {
       sourcemap.sourcesContent = undefined
     }
     return sourcemap

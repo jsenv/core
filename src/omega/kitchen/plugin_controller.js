@@ -70,7 +70,7 @@ export const createPluginController = ({ plugins, scenario }) => {
       await previous
       const returnValue = await callPluginAsyncHook(hook, info, context)
       if (returnValue && callback) {
-        callback(returnValue)
+        await callback(returnValue)
       }
     }, Promise.resolve())
   }

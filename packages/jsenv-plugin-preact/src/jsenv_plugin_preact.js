@@ -7,7 +7,7 @@ import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v2.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v3.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -67,7 +67,7 @@ export const jsenvPluginPreact = ({
             tagName: "script",
             type: "module",
             textContent: `
-import "${preactDevtoolsReference.generatedSpecifier}"
+import ${preactDevtoolsReference.generatedSpecifier}
 `,
           }),
         )
@@ -135,12 +135,10 @@ import "${preactDevtoolsReference.generatedSpecifier}"
             magicSource.replace({
               start: index,
               end: index + importSpecifier.length,
-              replacement: `"${
-                addReference({
-                  type: "js_import_export",
-                  specifier: importSpecifier.slice(1, -1),
-                }).generatedSpecifier
-              }"`,
+              replacement: addReference({
+                type: "js_import_export",
+                specifier: importSpecifier.slice(1, -1),
+              }).generatedSpecifier,
             })
           }
         }
@@ -152,9 +150,9 @@ import "${preactDevtoolsReference.generatedSpecifier}"
               type: "js_import_export",
               specifier: "@jsenv/plugin-preact/src/client/prefresh.js",
             })
-            magicSource.prepend(`import { installPrefresh } from "${
+            magicSource.prepend(`import { installPrefresh } from ${
               prefreshClientFileReference.generatedSpecifier
-            }"
+            }
             const __prefresh__ = installPrefresh(${JSON.stringify(url)})
             `)
             if (hasReg) {
@@ -167,7 +165,7 @@ import "${preactDevtoolsReference.generatedSpecifier}"
         const result = magicSource.toContentAndSourcemap()
         return {
           content: result.content,
-          sourcemap: composeTwoSourcemaps(map, result.sourcemap),
+          sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
         }
       },
     },

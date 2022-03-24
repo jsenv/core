@@ -10,14 +10,14 @@ import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.
 
 import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 
-export const injectVersionMappings = (
+export const injectVersionMappings = async (
   urlInfo,
   { versionMappings, rootDirectoryUrl },
 ) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = injector(urlInfo, { versionMappings })
-    updateContentAndSourcemap(urlInfo, {
+    await updateContentAndSourcemap(urlInfo, {
       content,
       sourcemap,
       rootDirectoryUrl,

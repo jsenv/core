@@ -120,7 +120,7 @@ export const createFileService = ({
         url: reference.url,
         status: 500,
         statusText: e.reason,
-        statusMessage: e.message,
+        statusMessage: e.stack,
       }
     }
   }

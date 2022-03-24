@@ -94,7 +94,6 @@ export const jsenvPluginHtmlSupervisor = () => {
           }
           return inlineReference
         }
-
         const handleInlineScript = (node, textNode) => {
           const scriptCategory = parseScriptNode(node)
           const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
@@ -117,10 +116,14 @@ export const jsenvPluginHtmlSupervisor = () => {
             "data-externalized": "",
           })
           removeHtmlNodeText(node)
+          scriptsToSupervise.push({
+            node,
+            type: scriptCategory,
+            src: inlineScriptReference.generatedSpecifier,
+          })
         }
         const handleScriptWithSrc = (node, srcAttribute) => {
           const scriptCategory = parseScriptNode(node)
-          let src = srcAttribute ? srcAttribute.value : undefined
           const integrityAttribute = getHtmlNodeAttributeByName(
             node,
             "integrity",
@@ -138,12 +141,11 @@ export const jsenvPluginHtmlSupervisor = () => {
           scriptsToSupervise.push({
             node,
             type: scriptCategory,
-            src,
+            src: srcAttribute.value,
             integrity,
             crossorigin,
           })
         }
-
         visitHtmlAst(htmlAst, (node) => {
           if (node.nodeName !== "script") {
             return
@@ -161,12 +163,12 @@ export const jsenvPluginHtmlSupervisor = () => {
           }
           const textNode = getHtmlNodeTextNode(node)
           if (textNode) {
-            handleInlineScript(node)
+            handleInlineScript(node, textNode)
             return
           }
           const srcAttribute = getHtmlNodeAttributeByName(node, "src")
           if (srcAttribute) {
-            handleScriptWithSrc(node)
+            handleScriptWithSrc(node, srcAttribute)
             return
           }
         })
@@ -174,7 +176,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           return null
         }
         const htmlSupervisorSetupFileReference = addReference({
-          type: "js_import_export",
+          type: "script_src",
           specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
             js_classic: "",
           }),
@@ -187,7 +189,7 @@ export const jsenvPluginHtmlSupervisor = () => {
           }),
         )
         const htmlSupervisorFileReference = addReference({
-          type: "js_import_export",
+          type: "script_src",
           specifier: htmlSupervisorFileUrl,
         })
         injectScriptAsEarlyAsPossible(

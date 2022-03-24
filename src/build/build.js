@@ -240,6 +240,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           )
         },
         normalize: ({ url, type, data }) => {
+          if (!url.startsWith("file:")) {
+            return null
+          }
           // already a build url
           const sourceUrl = sourceUrls[url]
           if (sourceUrl) {
@@ -460,16 +463,18 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         usedVersionMappings.forEach((specifier) => {
           versionMappingsNeeded[specifier] = versionMappings[specifier]
         })
-        Object.keys(finalGraph.urlInfos).forEach((buildUrl) => {
-          const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
-          if (!buildUrlInfo.data.isEntryPoint) {
-            return
-          }
-          injectVersionMappings(buildUrlInfo, {
-            versionMappings: versionMappingsNeeded,
-            rootDirectoryUrl,
-          })
-        })
+        await Promise.all(
+          Object.keys(finalGraph.urlInfos).map(async (buildUrl) => {
+            const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
+            if (!buildUrlInfo.data.isEntryPoint) {
+              return
+            }
+            await injectVersionMappings(buildUrlInfo, {
+              versionMappings: versionMappingsNeeded,
+              rootDirectoryUrl,
+            })
+          }),
+        )
       }
     } catch (e) {
       urlVersioningLog.fail()
@@ -482,6 +487,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   const buildInlineFileContents = {}
   const buildManifest = {}
   Object.keys(finalGraph.urlInfos).forEach((url) => {
+    if (!url.startsWith("file:")) {
+      return
+    }
     const buildUrlInfo = finalGraph.getUrlInfo(url)
     const versionedUrl = buildUrlInfo.data.versionedUrl
     const useVersionedUrl = versionedUrl && !buildUrlInfo.data.isEntryPoint

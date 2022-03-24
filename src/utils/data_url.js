@@ -1,3 +1,8 @@
+/*
+ * data:[<mediatype>][;base64],<data>
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
+ */
+
 /* eslint-env browser, node */
 
 export const DataUrl = {

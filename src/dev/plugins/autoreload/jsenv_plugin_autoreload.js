@@ -87,7 +87,7 @@ const jsenvPluginHot = () => {
           },
         )
         const eventSourceClientReference = addReference({
-          type: "js_import_export",
+          type: "script_src",
           specifier: eventSourceClientFileUrl,
         })
         injectScriptAsEarlyAsPossible(
@@ -141,7 +141,7 @@ const jsenvPluginHot = () => {
         })
         const magicSource = createMagicSource(content)
         magicSource.prepend(
-          `import { createImportMetaHot } from "${importMetaHotClientFileReference.generatedSpecifier}"
+          `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier}
 import.meta.hot = createImportMetaHot(import.meta.url)
 `,
         )

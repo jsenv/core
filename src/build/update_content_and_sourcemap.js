@@ -1,16 +1,16 @@
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition.js"
+import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v3.js"
 import {
   sourcemapComment,
   sourcemapToBase64Url,
 } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 
-export const updateContentAndSourcemap = (
+export const updateContentAndSourcemap = async (
   urlInfo,
   { content, sourcemap, rootDirectoryUrl },
 ) => {
   urlInfo.content = content
   if (sourcemap) {
-    urlInfo.sourcemap = composeTwoSourcemaps(
+    urlInfo.sourcemap = await composeTwoSourcemaps(
       urlInfo.sourcemap,
       sourcemap,
       rootDirectoryUrl,
