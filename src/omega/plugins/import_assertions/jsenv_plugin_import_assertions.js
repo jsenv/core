@@ -1,5 +1,5 @@
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
-import { contentTypeIsTextual } from "@jsenv/core/src/utils/content_type.js"
+import { ContentType } from "@jsenv/core/src/utils/content_type.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
 
@@ -140,7 +140,7 @@ export const jsenvPluginImportAssertions = () => {
       if (!new URL(url).searchParams.has("text_module")) {
         return null
       }
-      if (contentTypeIsTextual(contentType)) {
+      if (ContentType.isTextual(contentType)) {
         throw new Error(
           `Unexpected content type on ${url}, should be "text/*" but got ${contentType}`,
         )

@@ -417,8 +417,9 @@ export const createKitchen = ({
 
     // handle sourcemap
     if (urlInfo.sourcemap) {
-      urlInfo.sourcemapGeneratedUrl =
-        urlInfo.sourcemapGeneratedUrl || generateSourcemapUrl(urlInfo.url)
+      urlInfo.sourcemapGeneratedUrl = generateSourcemapUrl(urlInfo.generatedUrl)
+      urlInfo.sourcemapUrl =
+        urlInfo.sourcemapUrl || urlInfo.sourcemapGeneratedUrl
 
       // append sourcemap comment
       if (sourcemaps === "file" || sourcemaps === "inline") {
@@ -431,7 +432,7 @@ export const createKitchen = ({
           specifier:
             sourcemaps === "inline"
               ? sourcemapToBase64Url(urlInfo.sourcemap)
-              : urlInfo.sourcemapGeneratedUrl,
+              : urlInfo.sourcemapUrl,
         })
         const sourcemapUrlInfo = resolveReference(sourcemapReference)
         sourcemapUrlInfo.contentType = "application/json"
@@ -447,7 +448,7 @@ export const createKitchen = ({
         urlInfo.content = sourcemapComment.write({
           contentType: urlInfo.contentType,
           content: urlInfo.content,
-          specifier: await sourcemapReference.generatedSpecifier,
+          specifier: sourcemapReference.generatedSpecifier,
         })
       }
     }
@@ -497,9 +498,12 @@ export const createKitchen = ({
       // use writeSync to avoid concurrency on writing the file
       const write = gotError ? writeFileSync : writeFileSync
       write(new URL(generatedUrl), urlInfo.content)
-      const { sourcemapUrl, sourcemap } = urlInfo
-      if (sourcemapUrl && sourcemap) {
-        write(new URL(sourcemapUrl), JSON.stringify(sourcemap, null, "  "))
+      const { sourcemapGeneratedUrl, sourcemap } = urlInfo
+      if (sourcemapGeneratedUrl && sourcemap) {
+        write(
+          new URL(sourcemapGeneratedUrl),
+          JSON.stringify(sourcemap, null, "  "),
+        )
       }
     }
 

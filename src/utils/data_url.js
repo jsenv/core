@@ -6,54 +6,45 @@
 /* eslint-env browser, node */
 
 export const DataUrl = {
-  parse: (string, { as = "raw" } = {}) => {
+  parse: (string) => {
     const afterDataProtocol = string.slice("data:".length)
     const commaIndex = afterDataProtocol.indexOf(",")
     const beforeComma = afterDataProtocol.slice(0, commaIndex)
 
-    let mediaType
+    let contentType
     let base64Flag
     if (beforeComma.endsWith(`;base64`)) {
-      mediaType = beforeComma.slice(0, -`;base64`.length)
+      contentType = beforeComma.slice(0, -`;base64`.length)
       base64Flag = true
     } else {
-      mediaType = beforeComma
+      contentType = beforeComma
       base64Flag = false
     }
 
+    contentType =
+      contentType === "" ? "text/plain;charset=US-ASCII" : contentType
     const afterComma = afterDataProtocol.slice(commaIndex + 1)
     return {
-      mediaType: mediaType === "" ? "text/plain;charset=US-ASCII" : mediaType,
+      contentType,
       base64Flag,
-      data:
-        as === "string" && base64Flag ? base64ToString(afterComma) : afterComma,
+      data: afterComma,
     }
   },
 
-  stringify: ({ mediaType, base64Flag = true, data }) => {
-    if (!mediaType || mediaType === "text/plain;charset=US-ASCII") {
+  stringify: ({ contentType, base64Flag = true, data }) => {
+    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
       // can be a buffer or a string, hence check on data.length instead of !data or data === ''
       if (data.length === 0) {
         return `data:,`
       }
       if (base64Flag) {
-        return `data:;base64,${dataToBase64(data)}`
+        return `data:;base64,${data}`
       }
-      return `data:,${dataToBase64(data)}`
+      return `data:,${data}`
     }
     if (base64Flag) {
-      return `data:${mediaType};base64,${dataToBase64(data)}`
+      return `data:${contentType};base64,${data}`
     }
-    return `data:${mediaType},${data}`
+    return `data:${contentType},${data}`
   },
 }
-
-const dataToBase64 =
-  typeof window === "object"
-    ? window.atob
-    : (data) => Buffer.from(data).toString("base64")
-
-const base64ToString =
-  typeof window === "object"
-    ? window.btoa
-    : (base64String) => Buffer.from(base64String, "base64").toString("utf8")

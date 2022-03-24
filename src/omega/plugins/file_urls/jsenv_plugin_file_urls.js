@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { urlToContentType } from "@jsenv/server"
 
-import { contentTypeIsTextual } from "@jsenv/core/src/utils/content_type.js"
+import { ContentType } from "@jsenv/core/src/utils/content_type.js"
 
 export const jsenvPluginFileUrls = () => {
   return {
@@ -14,7 +14,7 @@ export const jsenvPluginFileUrls = () => {
       const urlObject = new URL(url)
       const fileBuffer = readFileSync(urlObject)
       const contentType = urlToContentType(url)
-      if (contentTypeIsTextual(contentType)) {
+      if (ContentType.isTextual(contentType)) {
         return {
           contentType,
           content: String(fileBuffer),
