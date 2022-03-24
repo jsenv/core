@@ -15,13 +15,7 @@ export const jsenvPluginDataUrls = () => {
       if (!url.startsWith("data:")) {
         return null
       }
-      const {
-        contentType,
-        base64Flag,
-        data: urlData,
-      } = DataUrl.parse(url, {
-        as: "raw",
-      })
+      const { contentType, base64Flag, data: urlData } = DataUrl.parse(url)
       data.base64Flag = base64Flag
       return {
         contentType,
@@ -46,7 +40,7 @@ export const jsenvPluginDataUrls = () => {
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.data.base64Flag
             ? dataToBase64(urlInfo.content)
-            : String(urlInfo.data),
+            : String(urlInfo.content),
         })
         return specifier
       })()
