@@ -15,7 +15,6 @@ nodeProcess.run = async ({
   collectPerformance,
   collectCoverage = false,
   coverageForceIstanbul,
-  coverageConfig,
 
   stoppedCallbackList,
   errorCallbackList,
@@ -75,7 +74,6 @@ nodeProcess.run = async ({
       measurePerformance,
       collectPerformance,
       collectCoverage,
-      coverageConfig,
     },
   })
   signal.removeEventListener("abort", stop)
