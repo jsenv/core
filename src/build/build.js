@@ -1,5 +1,8 @@
 /*
- *
+ * 1. load raw build files
+ * 2. bundle files
+ * 3. optimize files (minify mostly)
+ * 4. urls versioning
  */
 
 import {
@@ -24,6 +27,7 @@ import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
 import { jsenvPluginInline } from "@jsenv/core/src/omega/plugins/inline/jsenv_plugin_inline.js"
+import { generateSourcemapUrl } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 import { getJsenvPlugins } from "../omega/jsenv_plugins.js"
@@ -239,7 +243,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             new URL(specifier, parentUrl).href
           )
         },
-        normalize: ({ url, type, data }) => {
+        normalize: ({ url, parentUrl, type, data }) => {
           if (!url.startsWith("file:")) {
             return null
           }
@@ -265,11 +269,15 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             sourceUrls[buildUrl] = url
             return buildUrl
           }
+          if (type === "sourcemap_comment") {
+            // inherit parent build url
+            return generateSourcemapUrl(parentUrl)
+          }
           // files generated during the final graph (sourcemaps)
           // const finalUrlInfo = finalGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(url, {
             data: {},
-            type: type === "sourcemap_comment" ? "sourcemap" : "asset",
+            type: "asset",
           })
           return buildUrl
         },
@@ -282,6 +290,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               `file url should be inside build directory at this stage`,
             )
           }
+          // if a file is in the same directory we could prefer the relative notation
+          // but to keep things simple let's keep the notation relative to baseUrl for now
           const specifier = `${baseUrl}${urlToRelativeUrl(
             url,
             buildDirectoryUrl,
@@ -415,14 +425,16 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               if (!referencedUrlInfo.url.startsWith("file:")) {
                 return null
               }
-              if (type === "sourcemap_comment") {
+              const versionedUrl = referencedUrlInfo.data.versionedUrl
+              if (!versionedUrl) {
+                // happens for sourcemap
                 return `${baseUrl}${urlToRelativeUrl(
                   referencedUrlInfo.url,
                   buildDirectoryUrl,
                 )}`
               }
               const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
-                referencedUrlInfo.data.versionedUrl,
+                versionedUrl,
                 buildDirectoryUrl,
               )}`
               versionMappings[specifier] = versionedSpecifier

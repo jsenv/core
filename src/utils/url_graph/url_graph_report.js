@@ -7,10 +7,7 @@ export const createUrlGraphSummary = (
   { title = "graph summary" } = {},
 ) => {
   const graphReport = createUrlGraphReport(urlGraph)
-  const totalLabel = graphReport.sourcemaps.count
-    ? `Total (ignoring sourcemaps):`
-    : `Total`
-
+  const totalLabel = `Total`
   return `--- ${title} ---  
 ${createRepartitionMessage(graphReport)}
 ${ANSI.color(totalLabel, ANSI.GREY)} ${
@@ -116,7 +113,7 @@ const determineCategory = (urlInfo) => {
   return "assets"
 }
 
-const createRepartitionMessage = ({ html, css, js, sourcemaps, assets }) => {
+const createRepartitionMessage = ({ html, css, js, assets }) => {
   const parts = []
   if (html.count) {
     parts.push(
@@ -139,13 +136,13 @@ const createRepartitionMessage = ({ html, css, js, sourcemaps, assets }) => {
       )})`,
     )
   }
-  if (sourcemaps.count) {
-    parts.push(
-      `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
-        sourcemaps.count
-      } (${byteAsFileSize(sourcemaps.size)})`,
-    )
-  }
+  // if (sourcemaps.count) {
+  //   parts.push(
+  //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
+  //       sourcemaps.count
+  //     } (${byteAsFileSize(sourcemaps.size)})`,
+  //   )
+  // }
   if (assets.count) {
     parts.push(
       `${ANSI.color(`assets:`, ANSI.GREY)} ${assets.count} (${byteAsFileSize(

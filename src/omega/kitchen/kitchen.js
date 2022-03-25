@@ -36,7 +36,7 @@ export const createKitchen = ({
   scenario,
 
   sourcemaps = {
-    dev: "inline", // "file" is also allowed
+    dev: "inline", // "programmatic" and "file" also allowed
     test: "inline",
     build: "none",
   }[scenario],
@@ -46,6 +46,10 @@ export const createKitchen = ({
 
   writeOnFileSystem = true,
 }) => {
+  const sourcemapsEnabled =
+    sourcemaps === "inline" ||
+    sourcemaps === "file" ||
+    sourcemaps === "programmatic"
   const pluginController = createPluginController({
     plugins,
     scenario,
@@ -220,20 +224,22 @@ export const createKitchen = ({
     if (urlInfo.sourcemap) {
       return
     }
-    const sourcemapReference = getSourcemapReference(urlInfo, true)
-    if (sourcemapReference) {
-      try {
-        const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
-        await context.cook({
-          reference: sourcemapReference,
-          urlInfo: sourcemapUrlInfo,
-        })
-        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-        urlInfo.sourcemap = normalizeSourcemap(sourcemap, urlInfo)
-        urlInfo.sourcemapUrl = sourcemapUrlInfo.url
-      } catch (e) {
-        logger.error(`Error while handling sourcemap: ${e.message}`)
-        return
+    if (sourcemapsEnabled) {
+      const sourcemapReference = getSourcemapReference(urlInfo, true)
+      if (sourcemapReference) {
+        try {
+          const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
+          await context.cook({
+            reference: sourcemapReference,
+            urlInfo: sourcemapUrlInfo,
+          })
+          const sourcemap = JSON.parse(sourcemapUrlInfo.content)
+          urlInfo.sourcemap = normalizeSourcemap(sourcemap, urlInfo)
+          urlInfo.sourcemapUrl = sourcemapUrlInfo.url
+        } catch (e) {
+          logger.error(`Error while handling sourcemap: ${e.message}`)
+          return
+        }
       }
     }
   }
@@ -322,18 +328,18 @@ export const createKitchen = ({
       return newReference
     }
 
-    const updateContents = async (data) => {
-      if (data) {
-        const { contentType, content, sourcemap } = data
+    const updateContents = async (contentInfo) => {
+      if (contentInfo) {
+        const { contentType, content } = contentInfo
         if (contentType) {
           urlInfo.contentType = contentType
         }
         urlInfo.content = content
-        if (sourcemap) {
+        if (sourcemapsEnabled && contentInfo.sourcemap) {
           urlInfo.sourcemap = normalizeSourcemap(
             await composeTwoSourcemaps(
               urlInfo.sourcemap,
-              normalizeSourcemap(sourcemap, urlInfo),
+              normalizeSourcemap(contentInfo.sourcemap, urlInfo),
               rootDirectoryUrl,
             ),
             urlInfo,
@@ -421,12 +427,12 @@ export const createKitchen = ({
     urlGraph.updateReferences(urlInfo, references)
 
     // handle sourcemap
-    if (urlInfo.sourcemap) {
+    if (sourcemapsEnabled && urlInfo.sourcemap) {
+      // during build it's urlInfo.url to be inside the build
+      // but otherwise it's generatedUrl to be inside .jsenv/ directory
       urlInfo.sourcemapGeneratedUrl = generateSourcemapUrl(urlInfo.generatedUrl)
       urlInfo.sourcemapUrl =
         urlInfo.sourcemapUrl || urlInfo.sourcemapGeneratedUrl
-
-      // append sourcemap comment
       if (sourcemaps === "file" || sourcemaps === "inline") {
         const sourcemapReference = createReference({
           trace: `sourcemap comment placeholder for ${urlInfo.url}`,
@@ -442,13 +448,7 @@ export const createKitchen = ({
         const sourcemapUrlInfo = resolveReference(sourcemapReference)
         sourcemapUrlInfo.contentType = "application/json"
         sourcemapUrlInfo.type = "sourcemap"
-        sourcemapUrlInfo.content = sourcemapUrlInfo.originalContent =
-          JSON.stringify(urlInfo.sourcemap, null, "  ")
-        // await context.cook({
-        //   reference: sourcemapReference,
-        //   urlInfo: sourcemapUrlInfo,
-        // })
-        // take normalize into account
+        sourcemapUrlInfo.content = JSON.stringify(urlInfo.sourcemap, null, "  ")
         urlInfo.sourcemapUrl = sourcemapUrlInfo.url
         urlInfo.content = sourcemapComment.write({
           contentType: urlInfo.contentType,
