@@ -1,6 +1,4 @@
-import { createRequire } from "node:module"
-
-const require = createRequire(import.meta.url)
+import { require } from "@jsenv/core/src/utils/require.js"
 
 // see also https://github.com/sindresorhus/execa/issues/96
 export const killProcessTree = async (

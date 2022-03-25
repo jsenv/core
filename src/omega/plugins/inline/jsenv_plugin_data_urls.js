@@ -35,6 +35,9 @@ export const jsenvPluginDataUrls = () => {
           reference,
           urlInfo,
         })
+        if (urlInfo.originalContent === urlInfo.content) {
+          return reference.url
+        }
         const specifier = DataUrl.stringify({
           contentType: urlInfo.contentType,
           base64Flag: urlInfo.data.base64Flag,
