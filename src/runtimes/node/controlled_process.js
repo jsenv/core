@@ -151,6 +151,18 @@ export const createControlledProcess = async ({
       }
       await new Promise((resolve) => stoppedCallbackList.add(resolve))
     }
+
+    // all libraries are facing problem on windows when trying
+    // to kill a process spawning other processes.
+    // "killProcessTree" is theorically correct but sometimes keep process handing forever.
+    // Inside GitHub workflow the whole Virtual machine gets unresponsive and ends up being killed
+    // There is no satisfying solution to this problem so we stick to the basic
+    // childProcess.kill()
+    if (process.platform === "win32") {
+      childProcess.kill()
+      await createStoppedPromise()
+      return { graceful: false }
+    }
     if (gracefulStopAllocatedMs) {
       try {
         await killProcessTree(childProcess.pid, {
