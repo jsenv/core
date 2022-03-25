@@ -9,6 +9,8 @@ export {
 export { firefox, firefoxIsolatedTab } from "./src/runtimes/browsers/firefox.js"
 export { webkit, webkitIsolatedTab } from "./src/runtimes/browsers/webkit.js"
 export { nodeProcess } from "./src/runtimes/node/node_process.js"
-export { nodeWorkerThread } from "./src/runtimes/node/node_worker_thread.js"
 // build
 export { build } from "./src/build/build.js"
+
+// advanced
+export { execute } from "./src/execute/execute.js"

@@ -1,12 +1,7 @@
 import { fork } from "node:child_process"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
-import {
-  Abort,
-  raceCallbacks,
-  createCallbackList,
-  createCallbackListNotifiedOnce,
-} from "@jsenv/abort"
+import { createDetailedMessage } from "@jsenv/logger"
+import { Abort, raceCallbacks } from "@jsenv/abort"
 import { uneval } from "@jsenv/uneval"
 
 import { createChildExecOptions } from "./child_exec_options.js"
@@ -14,13 +9,13 @@ import { ExecOptions } from "./exec_options.js"
 import { killProcessTree } from "./kill_process_tree.js"
 
 const NODE_CONTROLLABLE_FILE_URL = new URL(
-  "./node_controllable_file.mjs",
+  "./controllable_file.mjs",
   import.meta.url,
 ).href
 
-export const createControllableNodeProcess = async ({
+export const createControlledProcess = async ({
   signal = new AbortController().signal,
-  logLevel,
+  logger,
   debugPort,
   debugMode,
   debugModeInheritBreak,
@@ -28,12 +23,15 @@ export const createControllableNodeProcess = async ({
   env,
   inheritProcessEnv = true,
 
+  errorCallbackList,
+  outputCallbackList,
+  stoppedCallbackList,
+
   stdin = "pipe",
   stdout = "pipe",
   stderr = "pipe",
   logProcessCommand = false,
 }) => {
-  const logger = createLogger({ logLevel })
   const childExecOptions = await createChildExecOptions({
     signal,
     debugPort,
@@ -58,14 +56,12 @@ export const createControllableNodeProcess = async ({
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     env: envForChildProcess,
   })
-
   logger.debug(
     createDetailedMessage(`fork child process pid ${childProcess.pid}`, {
       "execArgv": execArgv.join(`\n`),
       "custom env": JSON.stringify(env, null, "  "),
     }),
   )
-
   // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
   if (typeof stdin === "object") {
     stdin.pipe(childProcess.stdin)
@@ -88,7 +84,6 @@ export const createControllableNodeProcess = async ({
     onceProcessMessage(childProcess, "ready", resolve)
   })
 
-  const outputCallbackList = createCallbackList()
   const removeOutputListener = installProcessOutputListener(
     childProcess,
     ({ type, text }) => {
@@ -96,8 +91,6 @@ export const createControllableNodeProcess = async ({
     },
   )
 
-  const errorCallbackList = createCallbackList()
-  const stoppedCallbackList = createCallbackListNotifiedOnce()
   raceCallbacks(
     {
       // https://nodejs.org/api/child_process.html#child_process_event_disconnect
@@ -152,14 +145,12 @@ export const createControllableNodeProcess = async ({
     if (stoppedCallbackList.notified) {
       return {}
     }
-
     const createStoppedPromise = async () => {
       if (stoppedCallbackList.notified) {
         return
       }
       await new Promise((resolve) => stoppedCallbackList.add(resolve))
     }
-
     if (gracefulStopAllocatedMs) {
       try {
         await killProcessTree(childProcess.pid, {
@@ -182,7 +173,6 @@ export const createControllableNodeProcess = async ({
         throw e
       }
     }
-
     await killProcessTree(childProcess.pid, { signal: STOP_SIGNAL })
     await createStoppedPromise()
     return { graceful: false }
@@ -199,7 +189,6 @@ export const createControllableNodeProcess = async ({
     return new Promise(async (resolve, reject) => {
       actionOperation.throwIfAborted()
       await childProcessReadyPromise
-
       onceProcessMessage(childProcess, "action-result", ({ status, value }) => {
         if (status === "action-completed") {
           resolve(value)
@@ -207,14 +196,12 @@ export const createControllableNodeProcess = async ({
           reject(value)
         }
       })
-
       logger.debug(
         createDetailedMessage(`ask child process to perform an action`, {
           actionType,
           actionParams: JSON.stringify(actionParams, null, "  "),
         }),
       )
-
       try {
         actionOperation.throwIfAborted()
         await sendToProcess(childProcess, "action", {
@@ -237,9 +224,6 @@ export const createControllableNodeProcess = async ({
 
   return {
     execArgv,
-    stoppedCallbackList,
-    errorCallbackList,
-    outputCallbackList,
     stop,
     requestActionOnChildProcess,
   }

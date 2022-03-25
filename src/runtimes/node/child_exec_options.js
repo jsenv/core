@@ -45,7 +45,7 @@ const AVAILABLE_DEBUG_MODE = [
 ]
 
 const mutateDebuggingOptions = async (
-  childProcessOptions,
+  childExecOptions,
   {
     // ensure multiline
     signal,
@@ -55,7 +55,7 @@ const mutateDebuggingOptions = async (
     debugModeInheritBreak,
   },
 ) => {
-  const parentDebugInfo = getDebugInfo(childProcessOptions)
+  const parentDebugInfo = getDebugInfo(childExecOptions)
   const parentDebugModeOptionName = parentDebugInfo.debugModeOptionName
   const parentDebugPortOptionName = parentDebugInfo.debugPortOptionName
   const childDebugModeOptionName = getChildDebugModeOptionName({
@@ -67,10 +67,10 @@ const mutateDebuggingOptions = async (
   if (!childDebugModeOptionName) {
     // remove debug mode and debug port fron child options
     if (parentDebugModeOptionName) {
-      delete childProcessOptions[parentDebugModeOptionName]
+      delete childExecOptions[parentDebugModeOptionName]
     }
     if (parentDebugPortOptionName) {
-      delete childProcessOptions[parentDebugPortOptionName]
+      delete childExecOptions[parentDebugPortOptionName]
     }
     return
   }
@@ -80,9 +80,9 @@ const mutateDebuggingOptions = async (
     parentDebugModeOptionName &&
     parentDebugModeOptionName !== childDebugModeOptionName
   ) {
-    delete childProcessOptions[parentDebugModeOptionName]
+    delete childExecOptions[parentDebugModeOptionName]
   }
-  childProcessOptions[childDebugModeOptionName] = ""
+  childExecOptions[childDebugModeOptionName] = ""
 
   // this is required because vscode does not
   // support assigning a child spawned without a specific port
@@ -92,9 +92,9 @@ const mutateDebuggingOptions = async (
       : debugPort
   // replace child debug port
   if (parentDebugPortOptionName) {
-    delete childProcessOptions[parentDebugPortOptionName]
+    delete childExecOptions[parentDebugPortOptionName]
   }
-  childProcessOptions[childDebugModeOptionName] = portToArgValue(
+  childExecOptions[childDebugModeOptionName] = portToArgValue(
     childDebugPortOptionValue,
   )
 }
@@ -137,7 +137,6 @@ const getDebugInfo = (processOptions) => {
       debugPortOptionName: "--inspect-port",
     }
   }
-
   const inspectBreakOption = processOptions["--inspect-brk"]
   if (inspectBreakOption !== undefined) {
     return {
@@ -145,7 +144,6 @@ const getDebugInfo = (processOptions) => {
       debugPortOptionName: "--inspect-port",
     }
   }
-
   const debugOption = processOptions["--debug"]
   if (debugOption !== undefined) {
     return {
@@ -153,7 +151,6 @@ const getDebugInfo = (processOptions) => {
       debugPortOptionName: "--debug-port",
     }
   }
-
   const debugBreakOption = processOptions["--debug-brk"]
   if (debugBreakOption !== undefined) {
     return {
@@ -161,7 +158,6 @@ const getDebugInfo = (processOptions) => {
       debugPortOptionName: "--debug-port",
     }
   }
-
   return {}
 }
 
