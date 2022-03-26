@@ -10,7 +10,6 @@ import { moveUrl } from "@jsenv/filesystem"
 import { filterV8Coverage } from "@jsenv/core/src/utils/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/utils/coverage/istanbul_coverage_composition.js"
 import { escapeRegexpSpecialCharacters } from "@jsenv/core/src/utils/regexp_escape.js"
-import { memoize } from "@jsenv/core/src/utils/memoize.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
@@ -27,7 +26,7 @@ export const createRuntimeFromPlaywright = ({
   let browserAndContextPromise
   runtime.run = async ({
     signal = new AbortController().signal,
-    logger,
+    // logger,
     rootDirectoryUrl,
     server,
     fileUrl,
@@ -38,38 +37,29 @@ export const createRuntimeFromPlaywright = ({
     coverageForceIstanbul,
     coverageIgnorePredicate,
 
-    stoppedCallbackList,
-    errorCallbackList,
-    outputCallbackList,
-    stopAfterExecute = false,
-    stopAfterExecuteReason = "",
-    stopOnExit = true,
+    stopAfterAllSignal,
+    stopSignal,
+    keepRunning,
+    onStop,
+    onError,
+    onConsole,
 
     executablePath,
     headless = true,
     ignoreHTTPSErrors = true,
-    stopAfterAllExecutionCallbackList,
   }) => {
-    const stopCallbackList = createCallbackListNotifiedOnce()
-    const stop = memoize(async (reason) => {
-      await stopCallbackList.notify({ reason })
-      stoppedCallbackList.notify({ reason })
-    })
-    const closeBrowser = async () => {
-      const { browser } = await browserAndContextPromise
-      browserAndContextPromise = null
-      await stopBrowser(browser)
+    const cleanupCallbackList = createCallbackListNotifiedOnce()
+    const cleanup = async (reason) => {
+      await cleanupCallbackList.notify({ reason })
     }
-    if (
-      !browserAndContextPromise ||
-      isolatedTab ||
-      !stopAfterAllExecutionCallbackList
-    ) {
+
+    const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal
+    if (isBrowserDedicatedToExecution || !browserAndContextPromise) {
       browserAndContextPromise = (async () => {
         const browser = await launchBrowserUsingPlaywright({
           signal,
           browserName,
-          stopOnExit,
+          stopOnExit: true,
           playwrightOptions: {
             headless,
             executablePath,
@@ -78,44 +68,59 @@ export const createRuntimeFromPlaywright = ({
         const browserContext = await browser.newContext({ ignoreHTTPSErrors })
         return { browser, browserContext }
       })()
-      // when using chromium tab during multiple executions we reuse the chromium browser
-      // and only once all executions are done we close the browser
-      if (!isolatedTab && stopAfterAllExecutionCallbackList) {
-        stopAfterAllExecutionCallbackList.add(async () => {
-          await closeBrowser()
-        })
-      } else {
-        stopCallbackList.add(async () => {
-          await closeBrowser()
-        })
-      }
     }
     const { browser, browserContext } = await browserAndContextPromise
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-    browser.on("disconnected", () => {
-      stop()
-    })
+    const closeBrowser = async () => {
+      try {
+        await stopBrowser(browser)
+      } catch (e) {
+        onError(e)
+      }
+    }
     const page = await browserContext.newPage()
-    stoppedCallbackList.add(async () => {
+    const closePage = async () => {
       try {
         await page.close()
       } catch (e) {
         if (isTargetClosedError(e)) {
           return
         }
-        throw e
+        onError(e)
       }
-    })
+    }
+    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+    if (isBrowserDedicatedToExecution) {
+      browser.on("disconnected", async () => {
+        await cleanup("browser disconnected")
+        onStop({ reason: "browser disconnected" })
+      })
+      cleanupCallbackList.add(closePage)
+      cleanupCallbackList.add(closeBrowser)
+    } else {
+      const disconnectedCallback = async () => {
+        await cleanup("browser disconnected")
+        onError(new Error("browser disconnected during execution"))
+      }
+      browser.on("disconnected", disconnectedCallback)
+      page.on("close", () => {
+        onStop({ reason: "page closed" })
+      })
+      cleanupCallbackList.add(closePage)
+      stopAfterAllSignal.notify = () => {
+        browser.removeListener("disconnected", disconnectedCallback)
+        closeBrowser()
+      }
+    }
     const stopTrackingToNotify = trackPageToNotify(page, {
       onError: (error) => {
         error = transformErrorHook(error)
         if (!ignoreErrorHook(error)) {
-          errorCallbackList.notify(error)
+          onError(error)
         }
       },
-      onConsole: outputCallbackList.notify,
+      onConsole,
     })
-    stoppedCallbackList.add(stopTrackingToNotify)
+    cleanupCallbackList.add(stopTrackingToNotify)
 
     let resultTransformer = (result) => result
     if (collectCoverage) {
@@ -133,7 +138,7 @@ export const createRuntimeFromPlaywright = ({
               (v8CoveragesWithWebUrl) => {
                 const fsUrl = moveUrl({
                   url: v8CoveragesWithWebUrl.url,
-                  from: server.origin,
+                  from: `${server.origin}/`,
                   to: rootDirectoryUrl,
                   preferAbsolute: true,
                 })
@@ -173,7 +178,6 @@ export const createRuntimeFromPlaywright = ({
         return result
       })
     }
-
     const fileClientUrl = moveUrl({
       url: fileUrl,
       from: rootDirectoryUrl,
@@ -181,50 +185,21 @@ export const createRuntimeFromPlaywright = ({
       preferAbsolute: true,
     })
     await page.goto(fileClientUrl, { timeout: 0 })
-    const result = await page.evaluate(
-      /* istanbul ignore next */
-      () => {
-        // eslint-disable-next-line no-undef
-        return window.__jsenv__.executionResultPromise
-      },
-    )
-    if (stopAfterExecute) {
-      logger.debug(`stop ${browserName} because ${stopAfterExecuteReason}`)
-      await closeBrowser()
-      logger.debug(`${browserName} stopped`)
-    } else {
-      errorCallbackList.add((error) => {
-        throw error
-      })
-      stoppedCallbackList.add(() => {
-        logger.debug(`${browserName} stopped after execution`)
-      })
-    }
-    const { fileExecutionResultMap } = result
-    const fileErrored = Object.keys(fileExecutionResultMap).find(
-      (fileRelativeUrl) => {
-        const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
-        return fileExecutionResult.status === "errored"
-      },
-    )
-    if (fileErrored) {
-      const { exceptionSource } = fileExecutionResultMap[fileErrored]
-      const error = evalException(exceptionSource, {
-        rootDirectoryUrl,
-        server,
-        transformErrorHook,
-      })
-      return resultTransformer({
-        status: "errored",
-        error,
-        namespace: fileExecutionResultMap,
-      })
-    }
-    return resultTransformer({
-      status: "completed",
-      namespace: fileExecutionResultMap,
+    let result = await getResult({
+      page,
+      rootDirectoryUrl,
+      server,
+      transformErrorHook,
     })
+    result = await resultTransformer(result)
+    if (keepRunning) {
+      stopSignal.notify = cleanup
+    } else {
+      await cleanup("execution done")
+    }
+    return result
   }
+
   if (!isolatedTab) {
     runtime.isolatedTab = createRuntimeFromPlaywright({
       browserName,
@@ -236,6 +211,45 @@ export const createRuntimeFromPlaywright = ({
     })
   }
   return runtime
+}
+
+const getResult = async ({
+  page,
+  rootDirectoryUrl,
+  server,
+  transformErrorHook,
+}) => {
+  const result = await page.evaluate(
+    /* istanbul ignore next */
+    () => {
+      // eslint-disable-next-line no-undef
+      return window.__jsenv__.executionResultPromise
+    },
+  )
+  const { fileExecutionResultMap } = result
+  const fileErrored = Object.keys(fileExecutionResultMap).find(
+    (fileRelativeUrl) => {
+      const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
+      return fileExecutionResult.status === "errored"
+    },
+  )
+  if (fileErrored) {
+    const { exceptionSource } = fileExecutionResultMap[fileErrored]
+    const error = evalException(exceptionSource, {
+      rootDirectoryUrl,
+      server,
+      transformErrorHook,
+    })
+    return {
+      status: "errored",
+      error,
+      namespace: fileExecutionResultMap,
+    }
+  }
+  return {
+    status: "completed",
+    namespace: fileExecutionResultMap,
+  }
 }
 
 const generateCoverageForPage = (scriptExecutionResults) => {
@@ -266,7 +280,6 @@ const stopBrowser = async (browser) => {
   // for some reason without this 100ms timeout
   // browser.close() never resolves (playwright does not like something)
   await new Promise((resolve) => setTimeout(resolve, 100))
-
   try {
     await browser.close()
   } catch (e) {
@@ -364,14 +377,12 @@ const trackPageToNotify = (page, { onError, onConsole }) => {
     eventType: "error",
     callback: onError,
   })
-
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
   const removePageErrorListener = registerEvent({
     object: page,
     eventType: "pageerror",
     callback: onError,
   })
-
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
   const removeConsoleListener = registerEvent({
     object: page,
@@ -385,7 +396,6 @@ const trackPageToNotify = (page, { onError, onConsole }) => {
       })
     },
   })
-
   return () => {
     removeErrorListener()
     removePageErrorListener()

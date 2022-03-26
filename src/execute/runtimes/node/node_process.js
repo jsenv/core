@@ -11,17 +11,18 @@ nodeProcess.run = async ({
   logProcessCommand,
   fileUrl,
 
+  keepRunning,
+  gracefulStopAllocatedMs = 4000,
+  stopSignal,
+  onStop,
+  onError,
+  onConsole,
+  onResult,
+
   measurePerformance,
   collectPerformance,
   collectCoverage = false,
   coverageForceIstanbul,
-
-  stoppedCallbackList,
-  errorCallbackList,
-  outputCallbackList,
-  stopAfterExecute = false,
-  stopAfterExecuteReason = "",
-  gracefulStopAllocatedMs = 4000,
 
   debugPort,
   debugMode,
@@ -61,11 +62,11 @@ nodeProcess.run = async ({
     stderr,
     logProcessCommand,
 
-    stoppedCallbackList,
-    errorCallbackList,
-    outputCallbackList,
+    stopSignal,
+    onStop,
+    onError,
+    onConsole,
   })
-  signal.addEventListener("abort", stop)
   const namespace = await requestActionOnChildProcess({
     signal,
     actionType: "execute-using-dynamic-import",
@@ -76,29 +77,15 @@ nodeProcess.run = async ({
       collectCoverage,
     },
   })
-  signal.removeEventListener("abort", stop)
-  if (stopAfterExecute) {
-    logger.debug(`stop node process because ${stopAfterExecuteReason}`)
-    const { graceful } = await stop({
-      reason: stopAfterExecuteReason,
-      gracefulStopAllocatedMs,
-    })
-    if (graceful) {
-      logger.debug(`node process stopped gracefully`)
-    } else {
-      logger.debug(`node process stopped`)
-    }
-  } else {
-    // node process is kept alive after execution
-    errorCallbackList.add((error) => {
-      throw error
-    })
-    stoppedCallbackList.add(() => {
-      logger.debug(`node stopped after execution`)
-    })
-  }
-  return {
+  onResult({
     status: "completed",
     namespace,
+  })
+  if (keepRunning) {
+    stopSignal.notify = stop
+    return
   }
+  await stop({
+    gracefulStopAllocatedMs,
+  })
 }

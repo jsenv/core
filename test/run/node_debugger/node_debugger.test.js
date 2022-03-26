@@ -1,8 +1,9 @@
 import { assert } from "@jsenv/assert"
 
-import { execute, nodeProcess } from "@jsenv/core"
+import { nodeProcess } from "@jsenv/core"
+import { run } from "@jsenv/core/src/execute/run.js"
 
-const result = await execute({
+const result = await run({
   // logLevel: "debug",
   runtime: nodeProcess,
   runtimeParams: {

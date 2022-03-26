@@ -1,8 +1,14 @@
 import { fork } from "node:child_process"
 import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
-import { Abort, raceCallbacks } from "@jsenv/abort"
+import {
+  Abort,
+  raceCallbacks,
+  createCallbackListNotifiedOnce,
+} from "@jsenv/abort"
 import { uneval } from "@jsenv/uneval"
+
+import { memoize } from "@jsenv/core/src/utils/memoize.js"
 
 import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"
@@ -16,6 +22,12 @@ const NODE_CONTROLLABLE_FILE_URL = new URL(
 export const createControlledProcess = async ({
   signal = new AbortController().signal,
   logger,
+  logProcessCommand = false,
+
+  onStop,
+  onError,
+  onConsole,
+
   debugPort,
   debugMode,
   debugModeInheritBreak,
@@ -23,15 +35,18 @@ export const createControlledProcess = async ({
   env,
   inheritProcessEnv = true,
 
-  errorCallbackList,
-  outputCallbackList,
-  stoppedCallbackList,
-
   stdin = "pipe",
   stdout = "pipe",
   stderr = "pipe",
-  logProcessCommand = false,
 }) => {
+  if (env !== undefined && typeof env !== "object") {
+    throw new TypeError(`env must be an object, got ${env}`)
+  }
+  const cleanupCallbackList = createCallbackListNotifiedOnce()
+  const cleanup = async (reason) => {
+    await cleanupCallbackList.notify({ reason })
+  }
+
   const childExecOptions = await createChildExecOptions({
     signal,
     debugPort,
@@ -42,14 +57,15 @@ export const createControlledProcess = async ({
     ...childExecOptions,
     ...ExecOptions.fromExecArgv(commandLineOptions),
   })
-
-  if (env !== undefined && typeof env !== "object") {
-    throw new TypeError(`env must be an object, got ${env}`)
-  }
   const envForChildProcess = {
     ...(inheritProcessEnv ? process.env : {}),
     ...env,
   }
+  logger[logProcessCommand ? "info" : "debug"](
+    `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(
+      NODE_CONTROLLABLE_FILE_URL,
+    )}`,
+  )
   const childProcess = fork(urlToFileSystemPath(NODE_CONTROLLABLE_FILE_URL), {
     execArgv,
     // silent: true
@@ -57,12 +73,12 @@ export const createControlledProcess = async ({
     env: envForChildProcess,
   })
   logger.debug(
-    createDetailedMessage(`fork child process pid ${childProcess.pid}`, {
+    createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
       "execArgv": execArgv.join(`\n`),
       "custom env": JSON.stringify(env, null, "  "),
     }),
   )
-  // if we passe stream, pipe them https://github.com/sindresorhus/execa/issues/81
+  // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
   if (typeof stdin === "object") {
     stdin.pipe(childProcess.stdin)
   }
@@ -72,25 +88,49 @@ export const createControlledProcess = async ({
   if (typeof stderr === "object") {
     childProcess.stderr.pipe(stderr)
   }
-  if (logProcessCommand) {
-    console.log(
-      `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(
-        NODE_CONTROLLABLE_FILE_URL,
-      )}`,
-    )
-  }
-
   const childProcessReadyPromise = new Promise((resolve) => {
     onceProcessMessage(childProcess, "ready", resolve)
   })
-
   const removeOutputListener = installProcessOutputListener(
     childProcess,
     ({ type, text }) => {
-      outputCallbackList.notify({ type, text })
+      onConsole({ type, text })
     },
   )
-
+  const stop = memoize(async ({ gracefulStopAllocatedMs } = {}) => {
+    // all libraries are facing problem on windows when trying
+    // to kill a process spawning other processes.
+    // "killProcessTree" is theorically correct but sometimes keep process handing forever.
+    // Inside GitHub workflow the whole Virtual machine gets unresponsive and ends up being killed
+    // There is no satisfying solution to this problem so we stick to the basic
+    // childProcess.kill()
+    if (process.platform === "win32") {
+      childProcess.kill()
+      return
+    }
+    if (gracefulStopAllocatedMs) {
+      try {
+        await killProcessTree(childProcess.pid, {
+          signal: GRACEFUL_STOP_SIGNAL,
+          timeout: gracefulStopAllocatedMs,
+        })
+        return
+      } catch (e) {
+        if (e.code === "TIMEOUT") {
+          logger.debug(
+            `kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+          )
+          await killProcessTree(childProcess.pid, {
+            signal: GRACEFUL_STOP_FAILED_SIGNAL,
+          })
+          return
+        }
+        throw e
+      }
+    }
+    await killProcessTree(childProcess.pid, { signal: STOP_SIGNAL })
+    return
+  })
   raceCallbacks(
     {
       // https://nodejs.org/api/child_process.html#child_process_event_disconnect
@@ -120,9 +160,9 @@ export const createControlledProcess = async ({
           ) {
             return
           }
-          errorCallbackList.notify(error)
+          onError(error)
         },
-        exit: ({ code, signal }) => {
+        exit: async ({ code, signal }) => {
           // process.exit(1) in child process or process.exitCode = 1 + process.exit()
           // means there was an error even if we don't know exactly what.
           if (
@@ -132,64 +172,15 @@ export const createControlledProcess = async ({
             code !== SIGTERM_EXIT_CODE &&
             code !== SIGABORT_EXIT_CODE
           ) {
-            errorCallbackList.notify(createExitWithFailureCodeError(code))
+            onError(createExitWithFailureCodeError(code))
           }
-          stoppedCallbackList.notify({ code, signal })
+          await cleanup("process exit")
+          onStop({ code, signal })
         },
       }
       raceEffects[winner.name](winner.data)
     },
   )
-
-  const stop = async ({ gracefulStopAllocatedMs } = {}) => {
-    if (stoppedCallbackList.notified) {
-      return {}
-    }
-    const createStoppedPromise = async () => {
-      if (stoppedCallbackList.notified) {
-        return
-      }
-      await new Promise((resolve) => stoppedCallbackList.add(resolve))
-    }
-
-    // all libraries are facing problem on windows when trying
-    // to kill a process spawning other processes.
-    // "killProcessTree" is theorically correct but sometimes keep process handing forever.
-    // Inside GitHub workflow the whole Virtual machine gets unresponsive and ends up being killed
-    // There is no satisfying solution to this problem so we stick to the basic
-    // childProcess.kill()
-    if (process.platform === "win32") {
-      childProcess.kill()
-      await createStoppedPromise()
-      return { graceful: false }
-    }
-    if (gracefulStopAllocatedMs) {
-      try {
-        await killProcessTree(childProcess.pid, {
-          signal: GRACEFUL_STOP_SIGNAL,
-          timeout: gracefulStopAllocatedMs,
-        })
-        await createStoppedPromise()
-        return { graceful: true }
-      } catch (e) {
-        if (e.code === "TIMEOUT") {
-          logger.debug(
-            `kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
-          )
-          await killProcessTree(childProcess.pid, {
-            signal: GRACEFUL_STOP_FAILED_SIGNAL,
-          })
-          await createStoppedPromise()
-          return { graceful: false }
-        }
-        throw e
-      }
-    }
-    await killProcessTree(childProcess.pid, { signal: STOP_SIGNAL })
-    await createStoppedPromise()
-    return { graceful: false }
-  }
-
   const requestActionOnChildProcess = ({
     signal,
     actionType,
@@ -197,7 +188,6 @@ export const createControlledProcess = async ({
   }) => {
     const actionOperation = Abort.startOperation()
     actionOperation.addAbortSignal(signal)
-
     return new Promise(async (resolve, reject) => {
       actionOperation.throwIfAborted()
       await childProcessReadyPromise
@@ -233,7 +223,6 @@ export const createControlledProcess = async ({
       }
     })
   }
-
   return {
     execArgv,
     stop,
