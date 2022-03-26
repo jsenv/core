@@ -1,15 +1,14 @@
 import { assert } from "@jsenv/assert"
 
-import { nodeProcess } from "@jsenv/core"
-import { run } from "@jsenv/core/src/execute/run.js"
+import { execute, nodeProcess } from "@jsenv/core"
 
-const result = await run({
+const result = await execute({
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  fileRelativeUrl: `./file.js`,
   // logLevel: "debug",
   runtime: nodeProcess,
-  runtimeParams: {
-    fileUrl: new URL("./file.js", import.meta.url),
-  },
   mirrorConsole: false,
+  keepRunning: true, // node will naturally exit
 })
 const actual = result
 const expected = {
