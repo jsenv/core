@@ -447,7 +447,13 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
 }
 
 export const injectScriptAsEarlyAsPossible = (htmlAst, scriptNode) => {
-  assignHtmlNodeAttributes(scriptNode, { "data-injected": "" })
+  const injectedByAttribute = getHtmlNodeAttributeByName(
+    scriptNode,
+    "injected-by",
+  )
+  if (!injectedByAttribute) {
+    assignHtmlNodeAttributes(scriptNode, { "injected-by": "jsenv" })
+  }
   const isModule = parseScriptNode(scriptNode) === "module"
   if (isModule) {
     const firstImportmapScript = findHtmlNode(htmlAst, (node) => {

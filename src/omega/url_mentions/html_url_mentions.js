@@ -31,13 +31,14 @@ export const parseHtmlUrlMentions = ({ url, content, scenario }) => {
 const collectHtmlUrlMentions = ({ url, htmlAst }) => {
   const htmlUrlMentions = []
   const addDependency = ({ type, node, attribute, specifier }) => {
-    const injected = Boolean(getHtmlNodeAttributeByName(node, "data-injected"))
-    const externalized = Boolean(
-      getHtmlNodeAttributeByName(node, "data-externalized"),
+    const injected = Boolean(getHtmlNodeAttributeByName(node, "injected-by"))
+    const srcGeneratedFromInlineContent = Boolean(
+      getHtmlNodeAttributeByName(node, "src-generated-from-inline-content"),
     )
     let position
-    if (externalized) {
-      // when externalized, the real line, column is not the content-src but the original-position
+    if (srcGeneratedFromInlineContent) {
+      // when generated from inline content,
+      // line, column is not "src" nor "content-src" but "original-position"
       position = htmlNodePosition.readNodePosition(node)
     } else {
       position = htmlNodePosition.readAttributePosition(node, attribute.name)
@@ -48,7 +49,7 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
       htmlNode: node,
       attribute,
       injected,
-      externalized,
+      srcGeneratedFromInlineContent,
       specifier,
       line,
       column,

@@ -93,9 +93,10 @@ const jsenvPluginHot = () => {
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            tagName: "script",
-            type: "module",
-            src: eventSourceClientReference.generatedSpecifier,
+            "tagName": "script",
+            "type": "module",
+            "src": eventSourceClientReference.generatedSpecifier,
+            "injected-by": "jsenv:hot",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

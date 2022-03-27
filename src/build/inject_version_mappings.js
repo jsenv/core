@@ -36,8 +36,9 @@ const injectors = {
     injectScriptAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
-        tagName: "script",
-        textContent: generateClientCodeForVersionMappings(versionMappings),
+        "tagName": "script",
+        "textContent": generateClientCodeForVersionMappings(versionMappings),
+        "injected-by": "jsenv:versioning",
       }),
     )
     return {

@@ -116,7 +116,7 @@ export const jsenvPluginHtmlSupervisor = ({
           })
           assignHtmlNodeAttributes(node, {
             "src": inlineScriptReference.generatedSpecifier,
-            "data-externalized": "",
+            "src-generated-from-inline-content": "",
           })
           removeHtmlNodeText(node)
           scriptsToSupervise.push({
@@ -157,11 +157,11 @@ export const jsenvPluginHtmlSupervisor = ({
           if (scriptCategory !== "classic" && scriptCategory !== "module") {
             return
           }
-          const dataInjectedAttribute = getHtmlNodeAttributeByName(
+          const injectedByAttribute = getHtmlNodeAttributeByName(
             node,
-            "data-injected",
+            "injected-by",
           )
-          if (dataInjectedAttribute) {
+          if (injectedByAttribute) {
             return
           }
           const textNode = getHtmlNodeTextNode(node)
@@ -187,8 +187,9 @@ export const jsenvPluginHtmlSupervisor = ({
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            tagName: "script",
-            src: htmlSupervisorSetupFileReference.generatedSpecifier,
+            "tagName": "script",
+            "src": htmlSupervisorSetupFileReference.generatedSpecifier,
+            "injected-by": "jsenv:html_supervisor",
           }),
         )
         const htmlSupervisorInstallerFileReference = addReference({
@@ -198,9 +199,9 @@ export const jsenvPluginHtmlSupervisor = ({
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `
+            "tagName": "script",
+            "type": "module",
+            "textContent": `
 import { installHtmlSupervisor } from ${
               htmlSupervisorInstallerFileReference.generatedSpecifier
             }
@@ -212,6 +213,7 @@ installHtmlSupervisor(${JSON.stringify(
               null,
               "  ",
             )})`,
+            "injected-by": "jsenv:html_supervisor",
           }),
         )
         scriptsToSupervise.forEach(
