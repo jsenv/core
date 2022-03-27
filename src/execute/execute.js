@@ -22,7 +22,7 @@ export const execute = async ({
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
-  captureConsole,
+  collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
 
@@ -53,12 +53,7 @@ export const execute = async ({
     })
   }
 
-  if (runtime.name === "node") {
-    runtimeParams = {
-      fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl),
-      ...runtimeParams,
-    }
-  } else {
+  if (runtime.needsServer) {
     const urlGraph = createUrlGraph()
     const kitchen = createKitchen({
       signal,
@@ -69,9 +64,10 @@ export const execute = async ({
       scenario,
       sourcemaps,
     })
+    const serverLogger = createLogger({ logLevel: "warn" })
     const server = await startOmegaServer({
       signal: executeOperation.signal,
-      logger,
+      logger: serverLogger,
       keepProcessAlive: false,
       port,
       protocol,
@@ -87,8 +83,15 @@ export const execute = async ({
       await server.stop("execution done")
     })
     runtimeParams = {
+      rootDirectoryUrl,
       fileUrl: new URL(fileRelativeUrl, `${server.origin}/`),
       server,
+      ...runtimeParams,
+    }
+  } else {
+    runtimeParams = {
+      rootDirectoryUrl,
+      fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl),
       ...runtimeParams,
     }
   }
@@ -99,7 +102,7 @@ export const execute = async ({
     allocatedMs,
     keepRunning,
     mirrorConsole,
-    captureConsole,
+    collectConsole,
     collectCoverage,
     coverageTempDirectoryUrl,
     runtime,
@@ -113,7 +116,7 @@ export const execute = async ({
       }
       /*
   Warning: when node launched with --unhandled-rejections=strict, despites
-  this promise being rejected by throw result.error node will compltely ignore it.
+  this promise being rejected by throw result.error node will completely ignore it.
 
   The error can be logged by doing
   ```js

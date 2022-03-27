@@ -9,7 +9,7 @@ export const run = async ({
   allocatedMs,
   keepRunning = false,
   mirrorConsole = false,
-  captureConsole = false, // rename collectConsole ?
+  collectConsole = false,
   collectCoverage = false,
   coverageTempDirectoryUrl,
 
@@ -58,11 +58,11 @@ export const run = async ({
         process.stdout.write(text)
       }
     }
-    if (captureConsole) {
+    if (collectConsole) {
       consoleCalls.push({ type, text })
     }
   }
-  if (captureConsole) {
+  if (collectConsole) {
     resultTransformer = composeTransformer(resultTransformer, (result) => {
       result.consoleCalls = consoleCalls
       return result
@@ -174,7 +174,11 @@ export const run = async ({
     const result = winner.data
     return await resultTransformer(result)
   } catch (error) {
-    return await resultTransformer(createErroredExecutionResult(error))
+    return await resultTransformer(
+      createErroredExecutionResult({
+        error,
+      }),
+    )
   } finally {
     await runOperation.end()
   }
@@ -197,7 +201,7 @@ const createTimedoutResult = () => {
     status: "timedout",
   }
 }
-const createErroredExecutionResult = (error) => {
+const createErroredExecutionResult = ({ error }) => {
   return {
     status: "errored",
     error,

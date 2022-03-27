@@ -22,6 +22,7 @@ export const createRuntimeFromPlaywright = ({
   const runtime = {
     name: browserName,
     version: browserVersion,
+    needsServer: true,
   }
   let browserAndContextPromise
   runtime.run = async ({
@@ -43,9 +44,10 @@ export const createRuntimeFromPlaywright = ({
     onStop,
     onError,
     onConsole,
+    onResult,
 
     executablePath,
-    headless = true,
+    headful = false,
     ignoreHTTPSErrors = true,
   }) => {
     const cleanupCallbackList = createCallbackListNotifiedOnce()
@@ -61,7 +63,7 @@ export const createRuntimeFromPlaywright = ({
           browserName,
           stopOnExit: true,
           playwrightOptions: {
-            headless,
+            headless: !headful,
             executablePath,
           },
         })
@@ -192,6 +194,7 @@ export const createRuntimeFromPlaywright = ({
       transformErrorHook,
     })
     result = await resultTransformer(result)
+    onResult(result)
     if (keepRunning) {
       stopSignal.notify = cleanup
     } else {
@@ -220,21 +223,16 @@ const getResult = async ({
   transformErrorHook,
 }) => {
   const result = await page.evaluate(
+    /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      // eslint-disable-next-line no-undef
-      return window.__jsenv__.executionResultPromise
+      return window.__html_supervisor__.htmlSupervisor.collectScriptResults()
     },
+    /* eslint-enable no-undef */
   )
-  const { fileExecutionResultMap } = result
-  const fileErrored = Object.keys(fileExecutionResultMap).find(
-    (fileRelativeUrl) => {
-      const fileExecutionResult = fileExecutionResultMap[fileRelativeUrl]
-      return fileExecutionResult.status === "errored"
-    },
-  )
-  if (fileErrored) {
-    const { exceptionSource } = fileExecutionResultMap[fileErrored]
+  const { status, scriptExecutionResults } = result
+  if (status === "errored") {
+    const { exceptionSource } = result
     const error = evalException(exceptionSource, {
       rootDirectoryUrl,
       server,
@@ -243,12 +241,12 @@ const getResult = async ({
     return {
       status: "errored",
       error,
-      namespace: fileExecutionResultMap,
+      namespace: scriptExecutionResults,
     }
   }
   return {
     status: "completed",
-    namespace: fileExecutionResultMap,
+    namespace: scriptExecutionResults,
   }
 }
 
