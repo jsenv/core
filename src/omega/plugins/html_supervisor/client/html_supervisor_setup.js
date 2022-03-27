@@ -1,17 +1,22 @@
 window.__html_supervisor__ = {
-  htmlSupervisor: {
-    executions: [],
-    addExecution: (execution) => {
-      window.__html_supervisor__.htmlSupervisor.executions.push(execution)
-    },
-
-    collectScriptResults: () => {
-      throw new Error("htmlSupervisor not set")
-    },
+  // "html_supervisor_installer.js" will implement
+  // - "addExecution"
+  // - "collectScriptResults"
+  // - "superviseScriptTypeModule"
+  // and take all executions in "executions" and implement their supervision
+  executions: [],
+  addExecution: (execution) => {
+    window.__html_supervisor__.executions.push(execution)
+  },
+  collectScriptResults: () => {
+    throw new Error("htmlSupervisor not installed")
+  },
+  superviseScriptTypeModule: () => {
+    throw new Error("htmlSupervisor not installed")
   },
 
   superviseScript: ({ src, crossorigin, integrity }) => {
-    window.__html_supervisor__.htmlSupervisor.addExecution({
+    window.__html_supervisor__.addExecution({
       type: "js_classic",
       improveErrorWithFetch: true,
       currentScript: document.currentScript,
@@ -53,16 +58,6 @@ window.__html_supervisor__ = {
       }),
     })
   },
-
-  setHtmlSupervisor: (htmlSupervisor) => {
-    const executions = window.__html_supervisor__.htmlSupervisor.executions
-    window.__html_supervisor__.htmlSupervisor = htmlSupervisor
-    executions.forEach((execution) => {
-      htmlSupervisor.addExecution(execution)
-    })
-    executions.length = 0
-  },
-
   getScriptExecutionResults: () => {
     // wait for page to load before collecting script execution results
     const htmlReadyPromise = new Promise((resolve) => {
@@ -77,7 +72,7 @@ window.__html_supervisor__ = {
       window.addEventListener("load", loadCallback)
     })
     return htmlReadyPromise.then(() => {
-      return window.__html_supervisor__.htmlSupervisor.collectScriptResults()
+      return window.__html_supervisor__.collectScriptResults()
     })
   },
 }

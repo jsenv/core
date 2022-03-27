@@ -60,7 +60,14 @@ export const execute = async ({
       logger,
       rootDirectoryUrl,
       urlGraph,
-      plugins: [...plugins, ...getJsenvPlugins({ baseUrl: "/" })],
+      plugins: [
+        ...plugins,
+        ...getJsenvPlugins({
+          fileSystemAbsolute: {
+            baseUrl: "/",
+          },
+        }),
+      ],
       scenario,
       sourcemaps,
     })

@@ -7,6 +7,7 @@ import {
 } from "@jsenv/abort"
 import { moveUrl } from "@jsenv/filesystem"
 
+import { memoize } from "@jsenv/core/src/utils/memoize.js"
 import { filterV8Coverage } from "@jsenv/core/src/utils/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/utils/coverage/istanbul_coverage_composition.js"
 import { escapeRegexpSpecialCharacters } from "@jsenv/core/src/utils/regexp_escape.js"
@@ -51,9 +52,9 @@ export const createRuntimeFromPlaywright = ({
     ignoreHTTPSErrors = true,
   }) => {
     const cleanupCallbackList = createCallbackListNotifiedOnce()
-    const cleanup = async (reason) => {
+    const cleanup = memoize(async (reason) => {
       await cleanupCallbackList.notify({ reason })
-    }
+    })
 
     const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal
     if (isBrowserDedicatedToExecution || !browserAndContextPromise) {
@@ -226,7 +227,7 @@ const getResult = async ({
     /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      return window.__html_supervisor__.htmlSupervisor.collectScriptResults()
+      return window.__html_supervisor__.collectScriptResults()
     },
     /* eslint-enable no-undef */
   )

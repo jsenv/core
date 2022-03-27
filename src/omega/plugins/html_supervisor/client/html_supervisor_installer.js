@@ -2,9 +2,11 @@ import { unevalException } from "./uneval_exception.js"
 import { displayErrorInDocument } from "./error_in_document.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
-export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
-  const scriptExecutionResults = {}
+const { __html_supervisor__ } = window
 
+export const installHtmlSupervisor = ({ logs, measurePerf }) => {
+  const errorTransformer = null // could implement error stack remapping if needed
+  const scriptExecutionResults = {}
   let collectCalled = false
   let pendingExecutionCount = 0
   let resolveScriptExecutionsPromise
@@ -14,18 +16,68 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
   const onExecutionStart = (name) => {
     scriptExecutionResults[name] = null // ensure execution order is reflected into the object
     pendingExecutionCount++
-    performance.mark(`execution_start`)
+    if (measurePerf) {
+      performance.mark(`execution_start`)
+    }
   }
   const onExecutionSettled = (name, executionResult) => {
-    performance.measure(`execution`, `execution_start`)
+    if (measurePerf) {
+      performance.measure(`execution`, `execution_start`)
+    }
     scriptExecutionResults[name] = executionResult
     pendingExecutionCount--
     if (pendingExecutionCount === 0 && collectCalled) {
       resolveScriptExecutionsPromise()
     }
   }
-  const addExecution = async ({ type, src, currentScript, promise }) => {
-    console.group(`[jsenv] loading ${type} ${src}`)
+  const onExecutionError = (
+    executionResult,
+    {
+      currentScript,
+      errorExposureInNotification = false,
+      errorExposureInDocument = true,
+    },
+  ) => {
+    const error = executionResult.error
+    if (error && error.code === "NETWORK_FAILURE") {
+      if (currentScript) {
+        const errorEvent = new Event("error")
+        currentScript.dispatchEvent(errorEvent)
+      }
+    } else if (typeof error === "object") {
+      const globalErrorEvent = new Event("error")
+      globalErrorEvent.filename = error.filename
+      globalErrorEvent.lineno = error.line || error.lineno
+      globalErrorEvent.colno = error.column || error.columnno
+      globalErrorEvent.message = error.message
+      window.dispatchEvent(globalErrorEvent)
+    }
+    if (errorExposureInNotification) {
+      displayErrorNotification(error)
+    }
+    if (errorExposureInDocument) {
+      displayErrorInDocument(error)
+    }
+    executionResult.exceptionSource = unevalException(error)
+    delete executionResult.error
+  }
+  const getNavigationStartTime = () => {
+    try {
+      return window.performance.timing.navigationStart
+    } catch (e) {
+      return Date.now()
+    }
+  }
+
+  __html_supervisor__.addExecution = async ({
+    type,
+    src,
+    currentScript,
+    promise,
+  }) => {
+    if (logs) {
+      console.group(`[jsenv] loading ${type} ${src}`)
+    }
     onExecutionStart(src)
     promise.then(
       (namespace) => {
@@ -35,8 +87,11 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
           coverage: window.__coverage__,
         }
         onExecutionSettled(src, executionResult)
-        console.log(`${type} load ended`)
-        console.groupEnd()
+        if (logs) {
+          console.log(`${type} load ended`)
+
+          console.groupEnd()
+        }
       },
       async (e) => {
         let error = e
@@ -69,8 +124,7 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       },
     )
   }
-
-  const collectScriptResults = async () => {
+  __html_supervisor__.collectScriptResults = async () => {
     collectCalled = true
     if (pendingExecutionCount === 0) {
       resolveScriptExecutionsPromise()
@@ -95,49 +149,20 @@ export const initHtmlSupervisor = ({ errorTransformer } = {}) => {
       scriptExecutionResults,
     }
   }
-
-  return {
-    addExecution,
-    collectScriptResults,
-  }
 }
 
-const onExecutionError = (
-  executionResult,
-  {
-    currentScript,
-    errorExposureInNotification = false,
-    errorExposureInDocument = true,
-  },
-) => {
-  const error = executionResult.error
-  if (error && error.code === "NETWORK_FAILURE") {
-    if (currentScript) {
-      const errorEvent = new Event("error")
-      currentScript.dispatchEvent(errorEvent)
-    }
-  } else if (typeof error === "object") {
-    const globalErrorEvent = new Event("error")
-    globalErrorEvent.filename = error.filename
-    globalErrorEvent.lineno = error.line || error.lineno
-    globalErrorEvent.colno = error.column || error.columnno
-    globalErrorEvent.message = error.message
-    window.dispatchEvent(globalErrorEvent)
-  }
-  if (errorExposureInNotification) {
-    displayErrorNotification(error)
-  }
-  if (errorExposureInDocument) {
-    displayErrorInDocument(error)
-  }
-  executionResult.exceptionSource = unevalException(error)
-  delete executionResult.error
+export const superviseScriptTypeModule = ({ src }) => {
+  __html_supervisor__.addExecution({
+    type: "js_module",
+    currentScript: null,
+    improveErrorWithFetch: true,
+    src,
+    promise: import(new URL(src, document.location.href).href),
+  })
 }
 
-const getNavigationStartTime = () => {
-  try {
-    return window.performance.timing.navigationStart
-  } catch (e) {
-    return Date.now()
-  }
-}
+const { executions } = __html_supervisor__
+executions.forEach((execution) => {
+  __html_supervisor__.addExecution(execution)
+})
+executions.length = 0

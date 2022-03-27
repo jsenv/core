@@ -6,8 +6,8 @@ import { execute, chromium, firefox, webkit } from "@jsenv/core"
 ;[
   // ensure multiline
   chromium,
-  // firefox,
-  // webkit,
+  firefox,
+  webkit,
 ].reduce(async (previous, runtime) => {
   await previous
   const { status, namespace, consoleCalls } = await execute({

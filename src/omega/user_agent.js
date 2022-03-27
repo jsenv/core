@@ -9,9 +9,9 @@ export const parseUserAgentHeader = (userAgent) => {
       runtimeVersion: process.version.slice(1),
     }
   }
-  // TODO: normalize user agent (chromium -> chrome for example)
-  const useragent = require("@financial-times/useragent_parser")
-  const { family, major, minor, patch } = useragent(userAgent)
+  const UA = require("@financial-times/polyfill-useragent-normaliser")
+  const { ua } = new UA(userAgent)
+  const { family, major, minor, patch } = ua
   return {
     runtimeName: family.toLowerCase(),
     runtimeVersion:

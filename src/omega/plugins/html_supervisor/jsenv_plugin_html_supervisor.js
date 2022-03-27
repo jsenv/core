@@ -32,13 +32,16 @@ import {
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 
-export const jsenvPluginHtmlSupervisor = () => {
+export const jsenvPluginHtmlSupervisor = ({
+  logs = false,
+  measurePerf = false,
+} = {}) => {
   const htmlSupervisorSetupFileUrl = new URL(
     "./client/html_supervisor_setup.js",
     import.meta.url,
   ).href
-  const htmlSupervisorFileUrl = new URL(
-    "./client/html_supervisor.js",
+  const htmlSupervisorInstallerFileUrl = new URL(
+    "./client/html_supervisor_installer.js",
     import.meta.url,
   ).href
 
@@ -188,16 +191,27 @@ export const jsenvPluginHtmlSupervisor = () => {
             src: htmlSupervisorSetupFileReference.generatedSpecifier,
           }),
         )
-        const htmlSupervisorFileReference = addReference({
-          type: "script_src",
-          specifier: htmlSupervisorFileUrl,
+        const htmlSupervisorInstallerFileReference = addReference({
+          type: "js_import_export",
+          specifier: htmlSupervisorInstallerFileUrl,
         })
         injectScriptAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: htmlSupervisorFileReference.generatedSpecifier,
+            textContent: `
+import { installHtmlSupervisor } from ${
+              htmlSupervisorInstallerFileReference.generatedSpecifier
+            }
+installHtmlSupervisor(${JSON.stringify(
+              {
+                logs,
+                measurePerf,
+              },
+              null,
+              "  ",
+            )})`,
           }),
         )
         scriptsToSupervise.forEach(
@@ -213,8 +227,8 @@ export const jsenvPluginHtmlSupervisor = () => {
                 src,
                 integrity,
                 crossorigin,
-                htmlSupervisorSpecifier:
-                  htmlSupervisorFileReference.generatedSpecifier,
+                htmlSupervisorInstallerSpecifier:
+                  htmlSupervisorInstallerFileReference.generatedSpecifier,
               }),
             )
           },
@@ -235,11 +249,11 @@ const generateCodeToSuperviseScript = ({
   src,
   integrity,
   crossorigin,
-  htmlSupervisorSpecifier,
+  htmlSupervisorInstallerSpecifier,
 }) => {
   const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
   if (type === "module") {
-    return `import { superviseScriptTypeModule } from "${htmlSupervisorSpecifier}"
+    return `import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}
 superviseScriptTypeModule(${paramsAsJson})`
   }
   return `window.__html_supervisor__.superviseScript(${paramsAsJson})`

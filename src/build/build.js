@@ -98,7 +98,9 @@ export const build = async ({
         },
       },
       ...getJsenvPlugins({
-        baseUrl,
+        fileSystemAbsolute: {
+          baseUrl,
+        },
       }),
     ],
     scenario: "build",
