@@ -148,9 +148,6 @@ export const executePlan = async (
                   : []),
               ],
             },
-            fileSystemAbsolute: {
-              baseUrl: "/",
-            },
           }),
         ],
         scenario,

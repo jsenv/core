@@ -20,21 +20,19 @@ await startDevServer({
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,
   port: 3456,
-  jsenvPlugins: {
-    explorer: {
-      groups: {
-        main: {
-          "./dev_exploring/main/**/*.html": true,
-        },
-        autoreload: {
-          "./dev_exploring/autoreload/**/*.html": true,
-        },
-        errors: {
-          "./dev_exploring/errors/**/*.html": true,
-        },
-        other: {
-          "./dev_exploring/other/**/*.html": true,
-        },
+  explorer: {
+    groups: {
+      main: {
+        "./dev_exploring/main/**/*.html": true,
+      },
+      autoreload: {
+        "./dev_exploring/autoreload/**/*.html": true,
+      },
+      errors: {
+        "./dev_exploring/errors/**/*.html": true,
+      },
+      other: {
+        "./dev_exploring/other/**/*.html": true,
       },
     },
   },

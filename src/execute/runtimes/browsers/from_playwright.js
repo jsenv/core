@@ -181,7 +181,7 @@ export const createRuntimeFromPlaywright = ({
         return result
       })
     }
-    const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`)
+    const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href
     await page.goto(fileClientUrl, { timeout: 0 })
     let result = await getResult({
       page,

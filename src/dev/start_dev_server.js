@@ -41,11 +41,7 @@ export const startDevServer = async ({
     urlGraph,
     plugins: [
       ...plugins,
-      ...getJsenvPlugins({
-        fileSystemAbsolute: {
-          baseUrl: "/",
-        },
-      }),
+      ...getJsenvPlugins(),
       ...(autoreload
         ? [
             jsenvPluginAutoreload({

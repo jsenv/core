@@ -97,11 +97,7 @@ export const build = async ({
           loadRawGraphLog.setRightText(urlCount)
         },
       },
-      ...getJsenvPlugins({
-        fileSystemAbsolute: {
-          baseUrl,
-        },
-      }),
+      ...getJsenvPlugins(),
     ],
     scenario: "build",
     sourcemaps,

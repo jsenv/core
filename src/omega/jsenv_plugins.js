@@ -1,4 +1,3 @@
-import { jsenvPluginFileSystemAbsolute } from "@jsenv/core/src/omega/plugins/filesystem_absolute/jsenv_plugin_filesystem_absolute.js"
 import { jsenvPluginLeadingSlash } from "@jsenv/core/src/omega/plugins/leading_slash/jsenv_plugin_leading_slash.js"
 import { jsenvPluginImportmap } from "@jsenv/core/src/omega/plugins/importmap/jsenv_plugin_importmap.js"
 import { jsenvPluginUrlResolution } from "@jsenv/core/src/omega/plugins/url_resolution/jsenv_plugin_url_resolution.js"
@@ -13,29 +12,28 @@ import { jsenvPluginImportAssertions } from "@jsenv/core/src/omega/plugins/impor
 import { jsenvPluginImportMetaScenarios } from "@jsenv/core/src/omega/plugins/import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginBabel } from "@jsenv/core/src/omega/plugins/babel/jsenv_plugin_babel.js"
 
-export const getJsenvPlugins = (jsenvPlugins) => {
+export const getJsenvPlugins = ({
+  htmlSupervisor,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  babel,
+} = {}) => {
   const asFewAsPossible = false // useful during dev
   return [
-    // url resolution
-    jsenvPluginFileSystemAbsolute(jsenvPlugins.fileSystemAbsolute),
-    jsenvPluginLeadingSlash(),
-    ...(asFewAsPossible
-      ? []
-      : [jsenvPluginHtmlSupervisor(jsenvPlugins.htmlSupervisor)]), // before inline as it turns inline <script> into <script src>
+    ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
+    ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor(htmlSupervisor)]), // before inline as it turns inline <script> into <script src>
     ...(asFewAsPossible ? [] : [jsenvPluginInline()]), // must come first to resolve inline urls
+    jsenvPluginFileUrls(),
+    jsenvPluginLeadingSlash(),
     jsenvPluginImportmap(), // must come before node esm to handle bare specifiers before node esm
-    jsenvPluginNodeEsmResolution(jsenvPlugins.nodeEsm), // must come before url resolution to handle "js_import_export" resolution
+    jsenvPluginNodeEsmResolution(nodeEsmResolution), // must come before url resolution to handle "js_import_export" resolution
     jsenvPluginUrlResolution(),
     ...(asFewAsPossible
       ? []
-      : [jsenvPluginFileSystemMagic(jsenvPlugins.fileSystemMagic)]),
+      : [jsenvPluginFileSystemMagic(fileSystemMagicResolution)]),
     jsenvPluginUrlVersion(),
-    // url loading
-    ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
-    jsenvPluginFileUrls(),
-    // content transformation
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
-    jsenvPluginBabel(jsenvPlugins.babel),
+    jsenvPluginBabel(babel),
   ]
 }

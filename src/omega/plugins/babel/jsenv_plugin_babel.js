@@ -52,7 +52,7 @@ export const jsenvPluginBabel = ({ customBabelPlugins = [] } = {}) => {
           ]
         }
         const babelPlugins = [
-          Object.keys(babelPluginStructure).map(
+          ...Object.keys(babelPluginStructure).map(
             (babelPluginName) => babelPluginStructure[babelPluginName],
           ),
           ...customBabelPlugins,
