@@ -3,8 +3,9 @@
  */
 
 import { updateWorkspaceVersions } from "@jsenv/package-workspace"
-import { projectDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
+
+import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 
 await updateWorkspaceVersions({
-  directoryUrl: projectDirectoryUrl,
+  directoryUrl: rootDirectoryUrl,
 })

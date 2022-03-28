@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "26.0.1",
+  "version": "27.0.0-alpha.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -24,7 +24,6 @@
   "main": "main.js",
   "files": [
     "/dist/",
-    "/helpers/",
     "/src/",
     "/main.js"
   ],
@@ -52,7 +51,6 @@
     "playwright": "1.x"
   },
   "dependencies": {
-    "@ampproject/remapping": "2.1.2",
     "@babel/core": "7.16.12",
     "@babel/helper-module-imports": "7.16.7",
     "@babel/helpers": "7.16.7",
@@ -73,7 +71,6 @@
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "13.1.3",
     "@rollup/plugin-replace": "3.0.1",
-    "acorn-import-assertions": "1.8.0",
     "ansi-to-html": "0.7.2",
     "bytes": "3.1.2",
     "cjs-module-lexer": "1.2.2",

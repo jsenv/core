@@ -13,7 +13,7 @@
 
 import { generateFileSizeReport, raw, gzip } from "@jsenv/file-size-impact"
 
-import { projectDirectoryUrl } from "../../jsenv.config.mjs"
+import { rootDirectoryUrl } from "../../jsenv.config.mjs"
 
 const dist = {
   "./dist/**/*.html": true,
@@ -27,7 +27,7 @@ const dist = {
 
 export const fileSizeReport = await generateFileSizeReport({
   log: process.argv.includes("--log"),
-  projectDirectoryUrl,
+  projectDirectoryUrl: rootDirectoryUrl,
   transformations: { raw, gzip },
   trackingConfig: { dist },
   manifestConfig: {

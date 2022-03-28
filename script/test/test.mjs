@@ -1,40 +1,40 @@
-import { executeTestPlan, nodeRuntime } from "@jsenv/core"
+import { executeTestPlan, nodeProcess } from "@jsenv/core"
 
-import { projectDirectoryUrl, runtimeSupport } from "../../jsenv.config.mjs"
+import { rootDirectoryUrl, runtimeSupport } from "../../jsenv.config.mjs"
 
 await executeTestPlan({
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   runtimeSupport,
   logLevel: "debug",
   testPlan: {
     "test/**/*.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         allocatedMs: 30 * 1000,
       },
     },
     // give more time to some tests
     "test/coverage/**/*.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         allocatedMs: 60 * 1000,
       },
     },
     "test/dev_server/**/*.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         allocatedMs: 60 * 1000,
       },
     },
     "test/execute/**/*.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         allocatedMs: 60 * 1000,
       },
     },
     "test/test_plan/**/*.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         allocatedMs: 60 * 1000,
       },
     },

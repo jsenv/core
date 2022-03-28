@@ -5,7 +5,8 @@
 import { readFile } from "@jsenv/filesystem"
 
 import { publishWorkspace } from "@jsenv/package-workspace"
-import { projectDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
+
+import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 
 if (!process.env.CI) {
   const secrets = await readFile(
@@ -15,5 +16,5 @@ if (!process.env.CI) {
   Object.assign(process.env, secrets)
 }
 await publishWorkspace({
-  directoryUrl: projectDirectoryUrl,
+  directoryUrl: rootDirectoryUrl,
 })
