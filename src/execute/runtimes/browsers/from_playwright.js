@@ -30,8 +30,8 @@ export const createRuntimeFromPlaywright = ({
     signal = new AbortController().signal,
     // logger,
     rootDirectoryUrl,
+    fileRelativeUrl,
     server,
-    fileUrl,
 
     // measurePerformance,
     // collectPerformance,
@@ -109,9 +109,9 @@ export const createRuntimeFromPlaywright = ({
         onStop({ reason: "page closed" })
       })
       cleanupCallbackList.add(closePage)
-      stopAfterAllSignal.notify = () => {
+      stopAfterAllSignal.notify = async () => {
         browser.removeListener("disconnected", disconnectedCallback)
-        closeBrowser()
+        await closeBrowser()
       }
     }
     const stopTrackingToNotify = trackPageToNotify(page, {
@@ -181,12 +181,7 @@ export const createRuntimeFromPlaywright = ({
         return result
       })
     }
-    const fileClientUrl = moveUrl({
-      url: fileUrl,
-      from: rootDirectoryUrl,
-      to: `${server.origin}/`,
-      preferAbsolute: true,
-    })
+    const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`)
     await page.goto(fileClientUrl, { timeout: 0 })
     let result = await getResult({
       page,

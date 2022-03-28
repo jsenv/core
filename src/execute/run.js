@@ -1,25 +1,23 @@
 import cuid from "cuid"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { resolveUrl, writeFile } from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage } from "@jsenv/logger"
+import { createDetailedMessage } from "@jsenv/logger"
 
 export const run = async ({
   signal = new AbortController().signal,
-  logLevel,
+  logger,
   allocatedMs,
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
   collectCoverage = false,
   coverageTempDirectoryUrl,
-
   // measurePerformance,
   // collectPerformance = false,
 
   runtime,
   runtimeParams,
 }) => {
-  const logger = createLogger({ logLevel })
   const onErrorRef = { current: () => {} }
   const onConsoleRef = { current: () => {} }
   const onStopRef = { current: () => {} }

@@ -3,19 +3,17 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 export const generateExecutionSteps = async (
   plan,
-  { signal, projectDirectoryUrl },
+  { signal, rootDirectoryUrl },
 ) => {
   const structuredMetaMap = {
     filePlan: plan,
   }
-
   const fileResultArray = await collectFiles({
     signal,
-    directoryUrl: projectDirectoryUrl,
+    directoryUrl: rootDirectoryUrl,
     structuredMetaMap,
     predicate: ({ filePlan }) => filePlan,
   })
-
   const executionSteps = []
   fileResultArray.forEach(({ relativeUrl, meta }) => {
     const fileExecutionSteps = generateFileExecutionSteps({
@@ -29,13 +27,11 @@ export const generateExecutionSteps = async (
 
 export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
   const fileExecutionSteps = []
-
   Object.keys(filePlan).forEach((executionName) => {
     const stepConfig = filePlan[executionName]
     if (stepConfig === null || stepConfig === undefined) {
       return
     }
-
     if (typeof stepConfig !== "object") {
       throw new TypeError(
         createDetailedMessage(
@@ -48,13 +44,11 @@ export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
         ),
       )
     }
-
     fileExecutionSteps.push({
       executionName,
       fileRelativeUrl,
       ...stepConfig,
     })
   })
-
   return fileExecutionSteps
 }

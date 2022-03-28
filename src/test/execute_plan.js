@@ -3,64 +3,56 @@ import { memoryUsage } from "node:process"
 import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
 import cuid from "cuid"
-import { createDetailedMessage, loggerToLevels } from "@jsenv/logger"
-import { createLog, startSpinner } from "@jsenv/log"
-import {
-  Abort,
-  raceProcessTeardownEvents,
-  createCallbackListNotifiedOnce,
-} from "@jsenv/abort"
 import {
   urlToFileSystemPath,
-  resolveUrl,
   writeDirectory,
   ensureEmptyDirectory,
   normalizeStructuredMetaMap,
   urlToMeta,
   writeFile,
 } from "@jsenv/filesystem"
+import {
+  createLogger,
+  createDetailedMessage,
+  loggerToLevels,
+} from "@jsenv/logger"
+import { createLog, startSpinner } from "@jsenv/log"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { startCompileServer } from "@jsenv/core/src/internal/compile_server/compile_server.js"
-import { babelPluginInstrument } from "@jsenv/core/src/internal/coverage/babel_plugin_instrument.js"
-import { reportToCoverage } from "@jsenv/core/src/internal/coverage/report_to_coverage.js"
+import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
+import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
+import { getJsenvPlugins } from "@jsenv/core/src/omega/jsenv_plugins.js"
+import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
+import { run } from "@jsenv/core/src/execute/run.js"
+import { babelPluginInstrument } from "@jsenv/core/src/utils/coverage/babel_plugin_instrument.js"
+import { reportToCoverage } from "@jsenv/core/src/utils/coverage/report_to_coverage.js"
 
 import { ensureGlobalGc } from "./gc.js"
-import { launchAndExecute } from "./launch_and_execute.js"
 import { generateExecutionSteps } from "./execution_steps.js"
 import {
   formatExecuting,
   formatExecutionResult,
+  createSummaryLog,
 } from "./logs_file_execution.js"
-import { createSummaryLog } from "./logs_plan_summary.js"
 
 export const executePlan = async (
   plan,
   {
     signal,
     handleSIGINT,
-
     logger,
-    compileServerLogLevel,
-    launchAndExecuteLogLevel,
-
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    jsenvDirectoryClean,
-
-    importResolutionMethod,
-    importDefaultExtension,
-
     logSummary,
     logMemoryHeapUsage,
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
 
+    rootDirectoryUrl,
+    keepRunning,
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
     failFast,
     gcBetweenExecutions,
-    stopAfterExecute,
     cooldownBetweenExecutions,
 
     coverage,
@@ -70,34 +62,23 @@ export const executePlan = async (
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
+    plugins,
+    scenario = "test",
+    sourcemaps = "inline",
+
     protocol,
     privateKey,
     certificate,
     ip,
     port,
-    compileServerCanReadFromFilesystem,
-    compileServerCanWriteOnFilesystem,
-    babelPluginMap,
-    babelConfigFileUrl,
-    preservedUrls,
-    workers,
-    serviceWorkers,
-    importMapInWebWorkers,
-    customCompilers,
 
     beforeExecutionCallback = () => {},
     afterExecutionCallback = () => {},
   } = {},
 ) => {
-  if (coverage) {
-    babelPluginMap = {
-      ...babelPluginMap,
-      "transform-instrument": [
-        babelPluginInstrument,
-        { projectDirectoryUrl, coverageConfig },
-      ],
-    }
-  }
+  const stopAfterAllSignal = { notify: () => {} }
+
+  let someNeedsServer = false
   const runtimes = {}
   Object.keys(plan).forEach((filePattern) => {
     const filePlan = plan[filePattern]
@@ -106,6 +87,9 @@ export const executePlan = async (
       const { runtime } = executionConfig
       if (runtime) {
         runtimes[runtime.name] = runtime.version
+        if (runtime.needsServer) {
+          someNeedsServer = true
+        }
       }
     })
   })
@@ -135,46 +119,74 @@ export const executePlan = async (
   }
 
   try {
-    const compileServer = await startCompileServer({
-      signal: multipleExecutionsOperation.signal,
-      logLevel: compileServerLogLevel,
+    let runtimeParams = {
+      rootDirectoryUrl,
+      collectCoverage: coverage,
+      coverageForceIstanbul,
+      stopAfterAllSignal,
+    }
+    if (someNeedsServer) {
+      const urlGraph = createUrlGraph()
+      const kitchen = createKitchen({
+        signal,
+        logger,
+        rootDirectoryUrl,
+        urlGraph,
+        plugins: [
+          ...plugins,
+          ...getJsenvPlugins({
+            babel: {
+              customBabelPlugins: [
+                ...(coverage
+                  ? [
+                      babelPluginInstrument,
+                      {
+                        rootDirectoryUrl,
+                        coverageConfig,
+                      },
+                    ]
+                  : []),
+              ],
+            },
+            fileSystemAbsolute: {
+              baseUrl: "/",
+            },
+          }),
+        ],
+        scenario,
+        sourcemaps,
+      })
+      const serverLogger = createLogger({ logLevel: "warn" })
+      const server = await startOmegaServer({
+        signal: multipleExecutionsOperation.signal,
+        logger: serverLogger,
+        rootDirectoryUrl,
+        urlGraph,
+        kitchen,
+        scenario,
+        keepProcessAlive: false,
+        port,
+        ip,
+        protocol,
+        certificate,
+        privateKey,
+      })
+      multipleExecutionsOperation.addEndCallback(async () => {
+        await server.stop()
+      })
+      runtimeParams = {
+        ...runtimeParams,
+        server,
+      }
+    }
 
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-
-      importResolutionMethod,
-      importDefaultExtension,
-
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port,
-      compileServerCanReadFromFilesystem,
-      compileServerCanWriteOnFilesystem,
-      keepProcessAlive: true, // to be sure it stays alive
-      babelPluginMap,
-      babelConfigFileUrl,
-      preservedUrls,
-      workers,
-      serviceWorkers,
-      importMapInWebWorkers,
-      customCompilers,
-    })
-    babelPluginMap = compileServer.babelPluginMap
-    multipleExecutionsOperation.addEndCallback(async () => {
-      await compileServer.stop()
-    })
     logger.debug(`Generate executions`)
     const executionSteps = await getExecutionAsSteps({
       plan,
-      compileServer,
       multipleExecutionsOperation,
-      projectDirectoryUrl,
+      rootDirectoryUrl,
     })
     logger.debug(`${executionSteps.length} executions planned`)
-
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
       completedExecutionLogMerging = false
       logger.debug(
@@ -186,33 +198,33 @@ export const executePlan = async (
 
     const startMs = Date.now()
     const report = {}
-    const executionCount = executionSteps.length
     let rawOutput = ""
 
     let transformReturnValue = (value) => value
-
     if (gcBetweenExecutions) {
       ensureGlobalGc()
     }
 
-    const coverageTempDirectoryUrl = resolveUrl(
+    const coverageTempDirectoryUrl = new URL(
       coverageTempDirectoryRelativeUrl,
-      projectDirectoryUrl,
-    )
-    const structuredMetaMapForCover = normalizeStructuredMetaMap(
-      {
-        cover: coverageConfig,
-      },
-      projectDirectoryUrl,
-    )
-    const coverageIgnorePredicate = (url) => {
-      return !urlToMeta({
-        url: resolveUrl(url, projectDirectoryUrl),
-        structuredMetaMap: structuredMetaMapForCover,
-      }).cover
-    }
+      rootDirectoryUrl,
+    ).href
 
     if (coverage) {
+      const structuredMetaMapForCover = normalizeStructuredMetaMap(
+        {
+          cover: coverageConfig,
+        },
+        rootDirectoryUrl,
+      )
+      const coverageIgnorePredicate = (url) => {
+        return !urlToMeta({
+          url: new URL(url, rootDirectoryUrl).href,
+          structuredMetaMap: structuredMetaMapForCover,
+        }).cover
+      }
+      runtimeParams.coverageIgnorePredicate = coverageIgnorePredicate
+
       // in case runned multiple times, we don't want to keep writing lot of files in this directory
       if (!process.env.NODE_V8_COVERAGE) {
         await ensureEmptyDirectory(coverageTempDirectoryUrl)
@@ -221,28 +233,25 @@ export const executePlan = async (
         // v8 coverage is written in a directoy and auto propagate to subprocesses
         // through process.env.NODE_V8_COVERAGE.
         if (!coverageForceIstanbul && !process.env.NODE_V8_COVERAGE) {
-          const v8CoverageDirectory = resolveUrl(
+          const v8CoverageDirectory = new URL(
             `./node_v8/${cuid()}`,
             coverageTempDirectoryUrl,
-          )
+          ).href
           await writeDirectory(v8CoverageDirectory, { allowUseless: true })
           process.env.NODE_V8_COVERAGE =
             urlToFileSystemPath(v8CoverageDirectory)
         }
       }
-
       transformReturnValue = async (value) => {
         if (multipleExecutionsOperation.signal.aborted) {
           // don't try to do the coverage stuff
           return value
         }
-
         try {
           value.coverage = await reportToCoverage(value.report, {
             signal: multipleExecutionsOperation.signal,
             logger,
-            projectDirectoryUrl,
-            babelPluginMap,
+            rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
             coverageForceIstanbul,
@@ -261,13 +270,14 @@ export const executePlan = async (
 
     logger.info("")
     let executionLog = createLog({ newLine: "" })
-    let abortedCount = 0
-    let timedoutCount = 0
-    let erroredCount = 0
-    let completedCount = 0
-    const stopAfterAllExecutionCallbackList = createCallbackListNotifiedOnce()
-
-    let executionDoneCount = 0
+    const counters = {
+      total: executionSteps.length,
+      aborted: 0,
+      timedout: 0,
+      errored: 0,
+      completed: 0,
+      done: 0,
+    }
     await executeInParallel({
       multipleExecutionsOperation,
       maxExecutionsInParallel,
@@ -278,22 +288,16 @@ export const executePlan = async (
         const { executionName, fileRelativeUrl, runtime } = paramsFromStep
         const runtimeName = runtime.name
         const runtimeVersion = runtime.version
-
         const executionParams = {
-          // the params below can be overriden by executionDefaultParams
           measurePerformance: false,
           collectPerformance: false,
-          captureConsole: true,
-          stopAfterExecute,
-          stopAfterExecuteReason: "execution-done",
+          collectConsole: true,
           allocatedMs: defaultMsAllocatedPerExecution,
           ...paramsFromStep,
-          runtime,
-          // mirrorConsole: false because file will be executed in parallel
-          // so log would be a mess to read
-          mirrorConsole: false,
+          runtimeParams: {
+            fileRelativeUrl,
+          },
         }
-
         const beforeExecutionInfo = {
           fileRelativeUrl,
           runtimeName,
@@ -301,17 +305,12 @@ export const executePlan = async (
           executionIndex,
           executionParams,
         }
-
         let spinner
         if (executionSpinner) {
           spinner = startSpinner({
             log: executionLog,
             text: formatExecuting(beforeExecutionInfo, {
-              executionCount,
-              abortedCount,
-              timedoutCount,
-              erroredCount,
-              completedCount,
+              counters,
               ...(logMemoryHeapUsage
                 ? { memoryHeap: memoryUsage().heapUsed }
                 : {}),
@@ -320,36 +319,23 @@ export const executePlan = async (
         }
         beforeExecutionCallback(beforeExecutionInfo)
 
-        const filePath = urlToFileSystemPath(
-          `${projectDirectoryUrl}${fileRelativeUrl}`,
-        )
+        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`
         let executionResult
-        if (existsSync(filePath)) {
-          executionResult = await launchAndExecute({
+        if (existsSync(new URL(fileUrl))) {
+          executionResult = await run({
             signal: multipleExecutionsOperation.signal,
-            launchAndExecuteLogLevel,
-
-            ...executionParams,
+            logger,
+            allocatedMs: executionParams.allocatedMs,
+            keepRunning,
+            mirrorConsole: false, // file are executed in parallel, log would be a mess to read
+            collectConsole: executionParams.collectConsole,
             collectCoverage: coverage,
             coverageTempDirectoryUrl,
+            runtime: executionParams.runtime,
             runtimeParams: {
-              projectDirectoryUrl,
-              compileServerOrigin: compileServer.origin,
-              compileServerId: compileServer.id,
-              jsenvDirectoryRelativeUrl:
-                compileServer.jsenvDirectoryRelativeUrl,
-
-              collectCoverage: coverage,
-              coverageIgnorePredicate,
-              coverageForceIstanbul,
-              stopAfterAllExecutionCallbackList,
+              ...runtimeParams,
               ...executionParams.runtimeParams,
             },
-            executeParams: {
-              fileRelativeUrl,
-              ...executionParams.executeParams,
-            },
-            coverageV8ConflictWarning,
           })
         } else {
           executionResult = {
@@ -359,7 +345,7 @@ export const executePlan = async (
             ),
           }
         }
-        executionDoneCount++
+        counters.done++
         if (fileRelativeUrl in report === false) {
           report[fileRelativeUrl] = {}
         }
@@ -372,13 +358,13 @@ export const executePlan = async (
         afterExecutionCallback(afterExecutionInfo)
 
         if (executionResult.status === "aborted") {
-          abortedCount++
+          counters.aborted++
         } else if (executionResult.status === "timedout") {
-          timedoutCount++
+          counters.timedout++
         } else if (executionResult.status === "errored") {
-          erroredCount++
+          counters.errored++
         } else if (executionResult.status === "completed") {
-          completedCount++
+          counters.completed++
         }
         if (gcBetweenExecutions) {
           global.gc()
@@ -386,11 +372,7 @@ export const executePlan = async (
         if (executionLogsEnabled) {
           let log = formatExecutionResult(afterExecutionInfo, {
             completedExecutionLogAbbreviation,
-            executionCount,
-            abortedCount,
-            timedoutCount,
-            erroredCount,
-            completedCount,
+            counters,
             ...(logMemoryHeapUsage
               ? { memoryHeap: memoryUsage().heapUsed }
               : {}),
@@ -424,24 +406,21 @@ export const executePlan = async (
         if (
           failFast &&
           executionResult.status !== "completed" &&
-          executionDoneCount < executionCount
+          counters.done < counters.total
         ) {
           logger.info(`"failFast" enabled -> cancel remaining executions`)
           failFastAbortController.abort()
         }
       },
     })
-
-    if (stopAfterExecute) {
-      stopAfterAllExecutionCallbackList.notify()
+    if (!keepRunning) {
+      await stopAfterAllSignal.notify()
     }
 
-    const summaryCounts = reportToSummary(report)
+    counters.cancelled = counters.total - counters.done
     const summary = {
-      executionCount,
-      ...summaryCounts,
+      counters,
       // when execution is aborted, the remaining executions are "cancelled"
-      cancelledCount: executionCount - executionDoneCount,
       duration: Date.now() - startMs,
     }
     if (logSummary) {
@@ -449,8 +428,8 @@ export const executePlan = async (
       rawOutput += stripAnsi(summaryLog)
       logger.info(summaryLog)
     }
-    if (summary.executionCount !== summary.completedCount) {
-      const logFileUrl = new URL(logFileRelativeUrl, projectDirectoryUrl)
+    if (summary.counters.total !== summary.counters.completed) {
+      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href
       writeFile(logFileUrl, rawOutput)
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
     }
@@ -471,21 +450,14 @@ export const executePlan = async (
 
 const getExecutionAsSteps = async ({
   plan,
-  compileServer,
   multipleExecutionsOperation,
-  projectDirectoryUrl,
+  rootDirectoryUrl,
 }) => {
   try {
-    const executionSteps = await generateExecutionSteps(
-      {
-        ...plan,
-        [compileServer.jsenvDirectoryRelativeUrl]: null,
-      },
-      {
-        signal: multipleExecutionsOperation.signal,
-        projectDirectoryUrl,
-      },
-    )
+    const executionSteps = await generateExecutionSteps(plan, {
+      signal: multipleExecutionsOperation.signal,
+      rootDirectoryUrl,
+    })
     return executionSteps
   } catch (e) {
     if (Abort.isAbortError(e)) {
@@ -569,36 +541,4 @@ const executeInParallel = async ({
   await nextChunk()
 
   return executionResults
-}
-
-const reportToSummary = (report) => {
-  const fileNames = Object.keys(report)
-  const countResultMatching = (predicate) => {
-    return fileNames.reduce((previous, fileName) => {
-      const fileExecutionResult = report[fileName]
-
-      return (
-        previous +
-        Object.keys(fileExecutionResult).filter((executionName) => {
-          const fileExecutionResultForRuntime =
-            fileExecutionResult[executionName]
-          return predicate(fileExecutionResultForRuntime)
-        }).length
-      )
-    }, 0)
-  }
-  const abortedCount = countResultMatching(({ status }) => status === "aborted")
-  const timedoutCount = countResultMatching(
-    ({ status }) => status === "timedout",
-  )
-  const erroredCount = countResultMatching(({ status }) => status === "errored")
-  const completedCount = countResultMatching(
-    ({ status }) => status === "completed",
-  )
-  return {
-    abortedCount,
-    timedoutCount,
-    erroredCount,
-    completedCount,
-  }
 }

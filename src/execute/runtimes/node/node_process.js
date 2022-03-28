@@ -9,7 +9,8 @@ nodeProcess.run = async ({
   signal = new AbortController().signal,
   logger,
   logProcessCommand,
-  fileUrl,
+  rootDirectoryUrl,
+  fileRelativeUrl,
 
   keepRunning,
   gracefulStopAllocatedMs = 4000,
@@ -71,7 +72,7 @@ nodeProcess.run = async ({
     signal,
     actionType: "execute-using-dynamic-import",
     actionParams: {
-      fileUrl: String(fileUrl),
+      fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
       measurePerformance,
       collectPerformance,
       collectCoverage,

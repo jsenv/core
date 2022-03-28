@@ -36,6 +36,6 @@ export const getJsenvPlugins = (jsenvPlugins) => {
     // content transformation
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
-    jsenvPluginBabel(),
+    jsenvPluginBabel(jsenvPlugins.babel),
   ]
 }

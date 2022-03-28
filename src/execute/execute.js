@@ -17,14 +17,14 @@ export const execute = async ({
   rootDirectoryUrl,
 
   fileRelativeUrl,
-  runtime,
-  runtimeParams,
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
+  runtime,
+  runtimeParams,
 
   plugins = [],
   scenario = "dev",
@@ -53,6 +53,11 @@ export const execute = async ({
     })
   }
 
+  runtimeParams = {
+    rootDirectoryUrl,
+    fileRelativeUrl,
+    ...runtimeParams,
+  }
   if (runtime.needsServer) {
     const urlGraph = createUrlGraph()
     const kitchen = createKitchen({
@@ -75,37 +80,29 @@ export const execute = async ({
     const server = await startOmegaServer({
       signal: executeOperation.signal,
       logger: serverLogger,
+      rootDirectoryUrl,
+      urlGraph,
+      kitchen,
+      scenario,
       keepProcessAlive: false,
       port,
       protocol,
       http2,
       certificate,
       privateKey,
-      rootDirectoryUrl,
-      urlGraph,
-      kitchen,
-      scenario: "dev",
     })
     executeOperation.addEndCallback(async () => {
       await server.stop("execution done")
     })
     runtimeParams = {
-      rootDirectoryUrl,
-      fileUrl: new URL(fileRelativeUrl, `${server.origin}/`),
+      ...runtimeParams,
       server,
-      ...runtimeParams,
-    }
-  } else {
-    runtimeParams = {
-      rootDirectoryUrl,
-      fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl),
-      ...runtimeParams,
     }
   }
 
   const result = await run({
     signal: executeOperation.signal,
-    logLevel,
+    logger,
     allocatedMs,
     keepRunning,
     mirrorConsole,
