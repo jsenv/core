@@ -5,7 +5,7 @@ import {
   createHtmlNode,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
-export const jsenvPluginToolbar = () => {
+export const jsenvPluginToolbar = ({ logs = false } = {}) => {
   const toolbarInjectorClientFileUrl = new URL(
     "./client/toolbar_injector.js",
     import.meta.url,
@@ -21,11 +21,18 @@ export const jsenvPluginToolbar = () => {
       dev: true,
     },
     transform: {
-      html: ({ content }, { addReference }) => {
+      html: ({ url, content }, { addReference }) => {
+        if (url === toolbarHtmlClientFileUrl) {
+          return null
+        }
         const htmlAst = parseHtmlString(content)
         const toolbarInjectorReference = addReference({
           type: "js_import_export",
           specifier: toolbarInjectorClientFileUrl,
+        })
+        const toolbarClientFileReference = addReference({
+          type: "iframe_src",
+          specifier: toolbarHtmlClientFileUrl,
         })
         injectScriptAsEarlyAsPossible(
           htmlAst,
@@ -36,7 +43,8 @@ export const jsenvPluginToolbar = () => {
 import { injectToolbar } from ${toolbarInjectorReference.generatedSpecifier}
 injectToolbar(${JSON.stringify(
               {
-                toolbarUrl: toolbarHtmlClientFileUrl,
+                toolbarUrl: toolbarClientFileReference.generatedSpecifier,
+                logs,
               },
               null,
               "  ",

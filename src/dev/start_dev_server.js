@@ -8,6 +8,7 @@ import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
 
 import { jsenvPluginAutoreload } from "./plugins/autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js"
+import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -40,6 +41,7 @@ export const startDevServer = async ({
       "./test/**/*.test.html": true,
     },
   },
+  toolbar = true,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
@@ -64,6 +66,7 @@ export const startDevServer = async ({
       jsenvPluginExplorer({
         groups: explorerGroups,
       }),
+      ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
     ],
     scenario: "dev",
     sourcemaps,

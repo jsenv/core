@@ -42,7 +42,6 @@ const renderToolbar = async () => {
     document.querySelector(".toolbar-icon-wrapper"),
     "/",
   )
-
   renderToolbarNotification()
   makeToolbarResponsive()
   renderToolbarSettings()
@@ -186,9 +185,9 @@ window.toolbar = {
 }
 
 // const { currentScript } = document
-addExternalCommandCallback("renderToolbar", () => {
+addExternalCommandCallback("renderToolbar", ({ logs }) => {
   renderToolbar({
-    //  toolbarScript: currentScript,
+    logs,
   })
 })
 addExternalCommandCallback("showToolbar", () => {

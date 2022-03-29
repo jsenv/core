@@ -1,5 +1,4 @@
 @import "./execution/execution.css";
-@import "./compilation/compilation.css";
 @import "./focus/focus.css";
 @import "./eventsource/eventsource.css";
 @import "./responsive/overflow_menu.css";
@@ -78,29 +77,6 @@ html {
 
 #toolbar a:hover {
   cursor: pointer;
-}
-
-/* file name input & indicators */
-#file {
-  max-width: 40%;
-  padding: 0 1.2em;
-}
-
-#file-input {
-  width: 100%;
-  padding: 0px;
-  font-family: monospace;
-  font-size: 15px;
-  color: #cecece;
-  background: transparent;
-  border: transparent;
-  display: inline-block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-#file-input:focus {
-  border-bottom: 1px solid grey;
 }
 
 /* file and settings icons */

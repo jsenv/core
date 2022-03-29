@@ -47,11 +47,6 @@ html[data-theme="jsenv"] .switch .slider:before {
   background-color: grey;
 }
 
-/* file input */
-html[data-theme="jsenv"] #file[data-active] {
-  background: rgba(222, 86, 0, 0.7);
-}
-
 /* tooltips */
 html[data-theme="jsenv"] .tooltip {
   background-color: #ffd390;
@@ -70,7 +65,7 @@ html[data-theme="jsenv"] .tooltip::after {
   border-color: #ffd390 transparent transparent transparent;
 }
 
-/*  page file list */
+/* page file list */
 html[data-theme="jsenv"] h2 {
   color: orange;
 }

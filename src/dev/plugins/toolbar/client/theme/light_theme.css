@@ -52,14 +52,6 @@ html[data-theme="light"] .switch input:checked + * .square {
   background-color: #076570;
 }
 
-/* file input */
-html[data-theme="light"] #file[data-active] {
-  background: rgba(129, 177, 214, 0.34);
-}
-html[data-theme="light"] #file-input {
-  color: #076570;
-}
-
 /* tooltips */
 html[data-theme="light"] .tooltip {
   background-color: rgb(138, 145, 154);

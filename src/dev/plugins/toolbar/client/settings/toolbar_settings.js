@@ -9,6 +9,7 @@ import { enableVariant } from "../variant/variant.js"
 export const renderToolbarSettings = () => {
   document.querySelector("#settings-button").onclick = toggleSettings
   document.querySelector("#button-close-settings").onclick = toggleSettings
+  disableWarningStyle()
 }
 
 const toggleSettings = () => {

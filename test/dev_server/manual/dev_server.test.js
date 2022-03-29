@@ -46,6 +46,7 @@ await startDevServer({
       "./errors/**/*.html": true,
     },
   },
+  // toolbar: false,
 })
 
 // const { fetchUrl } = await import("@jsenv/core/src/internal/fetching.js")
