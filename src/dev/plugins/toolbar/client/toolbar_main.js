@@ -153,11 +153,9 @@ const addExternalCommandCallback = (command, callback) => {
     if (!__jsenv__) {
       return
     }
-
     if (__jsenv__.command !== command) {
       return
     }
-
     callback(...__jsenv__.args)
   }
 

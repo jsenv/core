@@ -3,6 +3,11 @@ import { setAttributes, setStyles } from "./util/dom.js"
 const jsenvLogoSvgUrl = new URL("./jsenv_logo.svg", import.meta.url)
 
 export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
+  if (document.readyState !== "complete") {
+    await new Promise((resolve) => {
+      window.addEventListener("load", resolve)
+    })
+  }
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
       window.requestIdleCallback(resolve, { timeout: 400 })
@@ -159,7 +164,6 @@ const addToolbarEventCallback = (iframe, eventName, callback) => {
     }
     callback(__jsenv__.data)
   }
-
   window.addEventListener("message", messageEventCallback, false)
   return () => {
     window.removeEventListener("message", messageEventCallback, false)
@@ -211,15 +215,4 @@ const iframeToLoadedPromise = (iframe) => {
     }
     iframe.addEventListener("load", onload, true)
   })
-}
-
-if (document.readyState === "complete") {
-  injectToolbar()
-} else {
-  window.addEventListener("load", injectToolbar)
-  // document.addEventListener("readystatechange", () => {
-  //   if (document.readyState === "complete") {
-  //     injectToolbar()
-  //   }
-  // })
 }

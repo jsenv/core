@@ -164,6 +164,13 @@ export const jsenvPluginHtmlSupervisor = ({
           if (injectedByAttribute) {
             return
           }
+          const noHtmlSupervisor = getHtmlNodeAttributeByName(
+            node,
+            "no-html-supervisor",
+          )
+          if (noHtmlSupervisor) {
+            return
+          }
           const textNode = getHtmlNodeTextNode(node)
           if (textNode) {
             handleInlineScript(node, textNode)

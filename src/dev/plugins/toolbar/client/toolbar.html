@@ -447,15 +447,11 @@
         <circle fill="currentColor" cx="362.721" cy="309.694" r="36.012" />
       </svg>
     </div>
-    <script>
-      // here we should create something like window.toolbar = {}
-      // and a promise the toolbar injector can listen to act on the toolbar
-      // or we could just consider all communication should pass by postmessage
-    </script>
     <script
       type="module"
       src="./toolbar_main.js"
       data-jsenv-force-inline
+      no-html-supervisor
     ></script>
   </body>
 </html>
