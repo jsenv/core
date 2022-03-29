@@ -405,14 +405,14 @@
         .map(
           (file) =>
             `<li>
-  <a
-    class="execution-link"
-    data-relative-url=${file.relativeUrl}
-    href=${urlToVisitFromRelativeUrl(file.relativeUrl)}
-  >
-    ${file.relativeUrl}
-  </a>
-</li>`,
+        <a
+          class="execution-link"
+          data-relative-url=${file.relativeUrl}
+          href=${urlToVisitFromRelativeUrl(file.relativeUrl)}
+        >
+          ${file.relativeUrl}
+        </a>
+      </li>`,
         )
         .join("")
 
@@ -421,15 +421,17 @@
       groupFieldset.innerHTML = groupNames
         .map(
           (key) => `<label data-contains-hidden-input class="item">
-  <input type="radio" name="filter-group" value="${key}"/>
-  <span>${key}</span>
-</label>`,
+        <input type="radio" name="filter-group" value="${key}"/>
+        <span>${key}</span>
+      </label>`,
         )
         .join("")
 
-      const currentGroup = groupPreference.has()
-        ? groupPreference.get()
-        : groupNames[0]
+      const groupFromLocalStorage = groupPreference.get()
+      const currentGroup =
+        groupFromLocalStorage && groupNames.includes(groupFromLocalStorage)
+          ? groupFromLocalStorage
+          : groupNames[0]
       Array.from(groupFieldset.querySelectorAll("input")).forEach(
         (inputRadio) => {
           inputRadio.checked = inputRadio.value === currentGroup
@@ -466,11 +468,11 @@
         h4.innerHTML =
           arrayOfElementToShow.length === 0
             ? `No file found.
-Config for this section: <pre>${JSON.stringify(
-                groups[groupName],
-                null,
-                "  ",
-              )}</pre>`
+      Config for this section: <pre>${JSON.stringify(
+        groups[groupName],
+        null,
+        "  ",
+      )}</pre>`
             : `${arrayOfElementToShow.length} files found. Click on the one you want to execute`
       }
       enableGroup(currentGroup)
