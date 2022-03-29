@@ -7,13 +7,7 @@ export const urlHotMetas = {}
 
 export const createImportMetaHot = (importMetaUrl) => {
   const data = {}
-
   const url = asUrlWithoutHmrQuery(importMetaUrl)
-  console.log("create import meta hot for", {
-    importMetaUrl,
-    url,
-    urlHotMetas,
-  })
 
   return {
     data,

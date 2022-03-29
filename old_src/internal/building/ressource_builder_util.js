@@ -1,16 +1,6 @@
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { DataUrl } from "@jsenv/core/src/internal/data_url.js"
-
-export const getRessourceAsBase64Url = ({ bufferAfterBuild, contentType }) => {
-  return DataUrl.stringify({
-    data: bufferAfterBuild,
-    base64Flag: true,
-    mediaType: contentType,
-  })
-}
-
 export const isReferencedOnlyByRessourceHint = (ressource) => {
   return ressource.references.every((reference) => {
     return reference.isRessourceHint

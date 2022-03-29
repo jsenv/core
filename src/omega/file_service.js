@@ -30,11 +30,12 @@ export const createFileService = ({
         headers: request.headers,
       })
     }
-    const responseFromPlugin = kitchen.pluginController.callHooksUntil(
-      "serve",
-      request,
-      serveContext,
-    )
+    const responseFromPlugin =
+      await kitchen.pluginController.callAsyncHooksUntil(
+        "serve",
+        request,
+        serveContext,
+      )
     if (responseFromPlugin) {
       return responseFromPlugin
     }

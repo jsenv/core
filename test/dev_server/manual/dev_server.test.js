@@ -35,6 +35,17 @@ await startDevServer({
       },
     },
   ],
+  explorerGroups: {
+    main: {
+      "./main/**/*.html": true,
+    },
+    autoreload: {
+      "./autoreload/**/*.html": true,
+    },
+    errors: {
+      "./errors/**/*.html": true,
+    },
+  },
 })
 
 // const { fetchUrl } = await import("@jsenv/core/src/internal/fetching.js")

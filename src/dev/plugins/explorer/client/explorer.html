@@ -4,7 +4,7 @@
     <title>Exploring</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
-    <link rel="icon" href="../jsenv.png" />
+    <link rel="icon" href="FAVICON_HREF" />
     <style>
       button:focus,
       a:focus,
@@ -365,6 +365,241 @@
         </section>
       </article>
     </div>
-    <script type="module" src="./exploring.js"></script>
+    <script>
+      // eslint-disable-next-line no-undef
+      const { rootDirectoryUrl, groups, files } = SERVER_PARAMS
+
+      const groupPreference = {
+        has: () => localStorage.hasOwnProperty("explorer_active_group"),
+        get: () =>
+          localStorage.hasOwnProperty("explorer_active_group")
+            ? JSON.parse(localStorage.getItem("explorer_active_group"))
+            : undefined,
+        set: (value) =>
+          localStorage.setItem("explorer_active_group", JSON.stringify(value)),
+      }
+      const directoryNameFromUrl = (directoryUrl) => {
+        const slashLastIndex = directoryUrl.lastIndexOf(
+          "/",
+          // ignore last slash
+          directoryUrl.length - 2,
+        )
+        if (slashLastIndex === -1) return ""
+        return directoryUrl.slice(slashLastIndex + 1)
+      }
+      const urlToVisitFromRelativeUrl = (relativeUrl) => {
+        return `${window.origin}/${relativeUrl}`
+      }
+
+      const fileListElement = document
+        .querySelector(`[data-page="file-list"]`)
+        .cloneNode(true)
+      const directoryName = directoryNameFromUrl(rootDirectoryUrl)
+      const span = fileListElement.querySelector("#directory_relative_url")
+      span.title = rootDirectoryUrl
+      span.textContent = directoryName
+
+      const h4 = fileListElement.querySelector("h4")
+      const ul = fileListElement.querySelector("ul")
+      ul.innerHTML = files
+        .map(
+          (file) =>
+            `<li>
+  <a
+    class="execution-link"
+    data-relative-url=${file.relativeUrl}
+    href=${urlToVisitFromRelativeUrl(file.relativeUrl)}
+  >
+    ${file.relativeUrl}
+  </a>
+</li>`,
+        )
+        .join("")
+
+      const groupFieldset = fileListElement.querySelector("#filter-group-set")
+      const groupNames = Object.keys(groups)
+      groupFieldset.innerHTML = groupNames
+        .map(
+          (key) => `<label data-contains-hidden-input class="item">
+  <input type="radio" name="filter-group" value="${key}"/>
+  <span>${key}</span>
+</label>`,
+        )
+        .join("")
+
+      const currentGroup = groupPreference.has()
+        ? groupPreference.get()
+        : groupNames[0]
+      Array.from(groupFieldset.querySelectorAll("input")).forEach(
+        (inputRadio) => {
+          inputRadio.checked = inputRadio.value === currentGroup
+          inputRadio.onchange = () => {
+            if (inputRadio.checked) {
+              groupPreference.set(inputRadio.value)
+              enableGroup(inputRadio.value)
+            }
+          }
+        },
+      )
+
+      const enableGroup = (groupName) => {
+        const arrayOfElementToShow = []
+        const arrayOfElementToHide = []
+        files.forEach((file) => {
+          const fileLink = fileListElement.querySelector(
+            `a[data-relative-url="${file.relativeUrl}"]`,
+          )
+          const fileLi = fileLink.parentNode
+          if (file.meta[groupName]) {
+            arrayOfElementToShow.push(fileLi)
+          } else {
+            arrayOfElementToHide.push(fileLi)
+          }
+        })
+        arrayOfElementToShow.forEach((element) => {
+          element.removeAttribute("data-force-hide")
+        })
+        arrayOfElementToHide.forEach((element) => {
+          element.setAttribute("data-force-hide", "")
+        })
+
+        h4.innerHTML =
+          arrayOfElementToShow.length === 0
+            ? `No file found.
+Config for this section: <pre>${JSON.stringify(
+                groups[groupName],
+                null,
+                "  ",
+              )}</pre>`
+            : `${arrayOfElementToShow.length} files found. Click on the one you want to execute`
+      }
+      enableGroup(currentGroup)
+
+      document.querySelector("main").appendChild(fileListElement)
+    </script>
+    <script>
+      // make menu scrollable
+      const getMenuWrapperSize = () => {
+        return document.querySelector(".menu-wrapper").getBoundingClientRect()
+          .width
+      }
+      const getMenuSize = () => {
+        return document.querySelector(".menu").getBoundingClientRect().width
+      }
+      const getMenuPosition = () => {
+        return document.querySelector(".menu-wrapper").scrollLeft
+      }
+
+      let menuWrapperSize = getMenuWrapperSize()
+      let menuSize = getMenuSize()
+      const menuVisibleSize = menuWrapperSize
+      let menuInvisibleSize = menuSize - menuVisibleSize
+      const scrollDuration = 300
+      const leftPaddle = document.querySelector(".left-paddle")
+      const rightPaddle = document.querySelector(".right-paddle")
+
+      const handleMenuScroll = () => {
+        menuInvisibleSize = menuSize - menuWrapperSize
+        const menuPosition = getMenuPosition()
+        const menuEndOffset = menuInvisibleSize
+        // show & hide the paddles, depending on scroll position
+        if (menuPosition <= 0 && menuEndOffset <= 0) {
+          // hide both paddles if the window is large enough to display all tabs
+          leftPaddle.classList.add("hidden")
+          rightPaddle.classList.add("hidden")
+        } else if (menuPosition <= 0) {
+          leftPaddle.classList.add("hidden")
+          rightPaddle.classList.remove("hidden")
+        } else if (menuPosition < Math.floor(menuEndOffset)) {
+          // show both paddles in the middle
+          leftPaddle.classList.remove("hidden")
+          rightPaddle.classList.remove("hidden")
+        } else if (menuPosition >= Math.floor(menuEndOffset)) {
+          leftPaddle.classList.remove("hidden")
+          rightPaddle.classList.add("hidden")
+        }
+      }
+      handleMenuScroll()
+
+      window.onresize = () => {
+        menuWrapperSize = getMenuWrapperSize()
+        menuSize = getMenuSize()
+        handleMenuScroll()
+      }
+      // finally, what happens when we are actually scrolling the menu
+      document.querySelector(".menu-wrapper").onscroll = () => {
+        handleMenuScroll()
+      }
+
+      const startJavaScriptAnimation = ({
+        duration = 300,
+        timingFunction = (t) => t,
+        onProgress = () => {},
+        onCancel = () => {},
+        onComplete = () => {},
+      }) => {
+        duration = parseInt(duration, 10)
+        const startMs = performance.now()
+        let currentRequestAnimationFrameId
+        let done = false
+        let rawProgress = 0
+        let progress = 0
+        const handler = () => {
+          currentRequestAnimationFrameId = null
+          const nowMs = performance.now()
+          rawProgress = Math.min((nowMs - startMs) / duration, 1)
+          progress = timingFunction(rawProgress)
+          done = rawProgress === 1
+          onProgress({
+            done,
+            rawProgress,
+            progress,
+          })
+          if (done) {
+            onComplete()
+          } else {
+            currentRequestAnimationFrameId =
+              window.requestAnimationFrame(handler)
+          }
+        }
+        handler()
+        const stop = () => {
+          if (currentRequestAnimationFrameId) {
+            window.cancelAnimationFrame(currentRequestAnimationFrameId)
+            currentRequestAnimationFrameId = null
+          }
+          if (!done) {
+            done = true
+            onCancel({
+              rawProgress,
+              progress,
+            })
+          }
+        }
+        return stop
+      }
+      rightPaddle.onclick = () => {
+        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft
+        const scrollEnd = scrollStart + menuWrapperSize
+        startJavaScriptAnimation({
+          duration: scrollDuration,
+          onProgress: ({ progress }) => {
+            document.querySelector(".menu-wrapper").scrollLeft =
+              scrollStart + (scrollEnd - scrollStart) * progress
+          },
+        })
+      }
+      leftPaddle.onclick = () => {
+        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft
+        const scrollEnd = scrollStart - menuWrapperSize
+        startJavaScriptAnimation({
+          duration: scrollDuration,
+          onProgress: ({ progress }) => {
+            document.querySelector(".menu-wrapper").scrollLeft =
+              scrollStart + (scrollEnd - scrollStart) * progress
+          },
+        })
+      }
+    </script>
   </body>
 </html>

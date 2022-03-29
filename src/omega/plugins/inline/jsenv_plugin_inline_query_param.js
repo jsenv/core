@@ -1,3 +1,4 @@
+// TODO: ?inline on <link> or <script> should inline the content into the html
 import { DataUrl } from "@jsenv/core/src/utils/data_url.js"
 
 export const jsenvPluginInlineQueryParam = () => {
