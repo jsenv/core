@@ -8,7 +8,7 @@ import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_co
 export const generateCoverageHtmlDirectory = async (
   coverage,
   {
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     coverageHtmlDirectoryRelativeUrl,
     coverageSkipEmpty,
     coverageSkipFull,
@@ -18,11 +18,11 @@ export const generateCoverageHtmlDirectory = async (
   const reports = require("istanbul-reports")
 
   const context = libReport.createContext({
-    dir: urlToFileSystemPath(projectDirectoryUrl),
+    dir: urlToFileSystemPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
     sourceFinder: (path) => {
       return readFileSync(
-        urlToFileSystemPath(resolveUrl(path, projectDirectoryUrl)),
+        urlToFileSystemPath(resolveUrl(path, rootDirectoryUrl)),
         "utf8",
       )
     },

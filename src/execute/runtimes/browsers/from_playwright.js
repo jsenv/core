@@ -109,7 +109,9 @@ export const createRuntimeFromPlaywright = ({
         onStop({ reason: "page closed" })
       })
       cleanupCallbackList.add(closePage)
+      const notifyPrevious = stopAfterAllSignal.notify
       stopAfterAllSignal.notify = async () => {
+        await notifyPrevious()
         browser.removeListener("disconnected", disconnectedCallback)
         await closeBrowser()
       }

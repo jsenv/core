@@ -6,15 +6,13 @@ import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_g
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_helper/babel_plugin_babel_helpers_as_jsenv_imports.js"
 
-export const jsenvPluginBabel = ({ customBabelPlugins = [] } = {}) => {
+export const jsenvPluginBabel = ({ getCustomBabelPlugins } = {}) => {
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
     transform: {
-      js_module: async (
-        { url, generatedUrl, content },
-        { isSupportedOnRuntime, addReference },
-      ) => {
+      js_module: async ({ url, generatedUrl, content }, context) => {
+        const { isSupportedOnRuntime, addReference } = context
         const babelPluginStructure = getBaseBabelPluginStructure({
           url,
           isSupportedOnRuntime,
@@ -51,12 +49,12 @@ export const jsenvPluginBabel = ({ customBabelPlugins = [] } = {}) => {
             },
           ]
         }
-        const babelPlugins = [
-          ...Object.keys(babelPluginStructure).map(
-            (babelPluginName) => babelPluginStructure[babelPluginName],
-          ),
-          ...customBabelPlugins,
-        ]
+        if (getCustomBabelPlugins) {
+          Object.assign(babelPluginStructure, getCustomBabelPlugins(context))
+        }
+        const babelPlugins = Object.keys(babelPluginStructure).map(
+          (babelPluginName) => babelPluginStructure[babelPluginName],
+        )
         if (babelPlugins.length) {
           babelPlugins.push([
             babelPluginBabelHelpersAsJsenvImports,
