@@ -15,7 +15,7 @@ export const relativeUrlToEmptyCoverage = async (
 
   try {
     const fileUrl = resolveUrl(relativeUrl, rootDirectoryUrl)
-    const content = await readFile(fileUrl)
+    const content = await readFile(fileUrl, { as: "string" })
 
     operation.throwIfAborted()
     const { metadata } = await applyBabelPlugins({

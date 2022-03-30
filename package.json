@@ -59,7 +59,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "2.0.1",
     "@jsenv/abort": "4.1.2",
-    "@jsenv/filesystem": "3.0.0",
+    "@jsenv/filesystem": "3.1.0",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "1.5.1",

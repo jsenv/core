@@ -1,5 +1,6 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
 // https://nodejs.org/api/worker_threads.html
+// https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 // import { Worker } from "node:worker_threads"
 
 // export const nodeWorkerThread = {

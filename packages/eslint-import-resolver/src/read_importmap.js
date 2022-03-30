@@ -1,6 +1,9 @@
-import { readFileSync } from "node:fs"
+import {
+  urlIsInsideOf,
+  urlToFileSystemPath,
+  readFileSync,
+} from "@jsenv/filesystem"
 import { normalizeImportMap } from "@jsenv/importmap"
-import { urlIsInsideOf, urlToFileSystemPath } from "@jsenv/filesystem"
 
 import { applyUrlResolution } from "./url_resolution.js"
 
@@ -29,12 +32,11 @@ ${urlToFileSystemPath(importmapFileUrl)}
 ${urlToFileSystemPath(projectDirectoryUrl)}`)
   }
   let importmapFileBuffer
-  const importmapFilePath = urlToFileSystemPath(importmapFileUrl)
   try {
-    importmapFileBuffer = readFileSync(importmapFilePath)
+    importmapFileBuffer = readFileSync(importmapFileUrl)
   } catch (e) {
     if (e && e.code === "ENOENT") {
-      logger.error(`importmap file not found at ${importmapFilePath}`)
+      logger.error(`importmap file not found at ${importmapFileUrl}`)
       return null
     }
     throw e
@@ -49,7 +51,7 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
 --- error stack ---
 ${e.stack}
 --- importmap file ---
-${importmapFilePath}`)
+${importmapFileUrl}`)
       return null
     }
     throw e

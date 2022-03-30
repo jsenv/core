@@ -41,7 +41,7 @@ export const startDevServer = async ({
       "./test/**/*.test.html": true,
     },
   },
-  toolbar = true,
+  toolbar = false,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
