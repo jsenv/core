@@ -75,12 +75,12 @@ export const visitNodeV8Directory = async ({
   }
 }
 
-export const filterV8Coverage = (v8Coverage, { coverageIgnorePredicate }) => {
+export const filterV8Coverage = (v8Coverage, { urlShouldBeCovered }) => {
   const v8CoverageFiltered = {
     ...v8Coverage,
-    result: v8Coverage.result.filter((fileReport) => {
-      return !coverageIgnorePredicate(fileReport.url)
-    }),
+    result: v8Coverage.result.filter((fileReport) =>
+      urlShouldBeCovered(fileReport.url),
+    ),
   }
   return v8CoverageFiltered
 }

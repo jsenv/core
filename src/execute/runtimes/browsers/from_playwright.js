@@ -37,7 +37,7 @@ export const createRuntimeFromPlaywright = ({
     // collectPerformance,
     collectCoverage = false,
     coverageForceIstanbul,
-    coverageIgnorePredicate,
+    urlShouldBeCovered,
 
     stopAfterAllSignal,
     stopSignal,
@@ -154,7 +154,7 @@ export const createRuntimeFromPlaywright = ({
             const coverage = filterV8Coverage(
               { result: v8CoveragesWithFsUrls },
               {
-                coverageIgnorePredicate,
+                urlShouldBeCovered,
               },
             )
             return {

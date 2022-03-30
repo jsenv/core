@@ -3,12 +3,12 @@ import { ContentType } from "@jsenv/core/src/utils/content_type.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
 
-import { babelPluginMetadataImportAssertions } from "./babel_plugin_metadata_import_assertions.js"
-import { convertJsonTextToJavascriptModule } from "./json_module.js"
-import { convertCssTextToJavascriptModule } from "./css_module.js"
-import { convertTextToJavascriptModule } from "./text_module.js"
+import { babelPluginMetadataImportAssertions } from "./utils/babel_plugin_metadata_import_assertions.js"
+import { convertJsonTextToJavascriptModule } from "./utils/json_module.js"
+import { convertCssTextToJavascriptModule } from "./utils/css_module.js"
+import { convertTextToJavascriptModule } from "./utils/text_module.js"
 
-export const corePluginImportAssertions = () => {
+export const jsenvPluginImportAssertions = () => {
   const importAssertions = [
     {
       name: "jsenv:import_assertions",

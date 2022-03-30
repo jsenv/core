@@ -10,9 +10,9 @@
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 
-import { babelPluginMetadataExpressionPaths } from "./babel_plugin_metadata_expression_paths.js"
+import { babelPluginMetadataExpressionPaths } from "./utils/babel_plugin_metadata_expression_paths.js"
 
-export const corePluginCommonJsGlobals = () => {
+export const jsenvPluginCommonJsGlobals = () => {
   return {
     name: "jsenv:commonjs_globals",
     appliesDuring: "*",

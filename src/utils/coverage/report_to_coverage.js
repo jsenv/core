@@ -20,7 +20,7 @@ export const reportToCoverage = async (
     rootDirectoryUrl,
     coverageConfig,
     coverageIncludeMissing,
-    coverageIgnorePredicate,
+    urlShouldBeCovered,
     coverageForceIstanbul,
     coverageV8ConflictWarning,
   },
@@ -66,7 +66,7 @@ export const reportToCoverage = async (
       NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
       onV8Coverage: (nodeV8Coverage) => {
         const nodeV8CoverageLight = filterV8Coverage(nodeV8Coverage, {
-          coverageIgnorePredicate,
+          urlShouldBeCovered,
         })
         v8Coverage = v8Coverage
           ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight)

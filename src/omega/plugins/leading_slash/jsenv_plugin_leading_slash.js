@@ -1,4 +1,4 @@
-export const corePluginLeadingSlash = () => {
+export const jsenvPluginLeadingSlash = () => {
   return {
     name: "jsenv:leading_slash",
     appliesDuring: "*",

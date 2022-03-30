@@ -1,4 +1,4 @@
-export const corePluginUrlResolution = () => {
+export const jsenvPluginUrlResolution = () => {
   const urlResolver = ({ parentUrl, specifier }) => {
     return new URL(specifier, parentUrl).href
   }

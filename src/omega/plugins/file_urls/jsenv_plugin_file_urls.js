@@ -7,11 +7,11 @@ import {
 } from "@jsenv/filesystem"
 import { ContentType } from "@jsenv/core/src/utils/content_type.js"
 
-export const corePluginFileUrls = () => {
-  return [corePluginResolveAbsoluteFileUrls(), corePluginLoadFileUrls()]
+export const jsenvPluginFileUrls = () => {
+  return [jsenvPluginResolveAbsoluteFileUrls(), jsenvPluginLoadFileUrls()]
 }
 
-const corePluginResolveAbsoluteFileUrls = () => {
+const jsenvPluginResolveAbsoluteFileUrls = () => {
   return {
     name: "jsenv:resolve_absolute_file_urls",
     appliesDuring: {
@@ -41,7 +41,7 @@ const corePluginResolveAbsoluteFileUrls = () => {
   }
 }
 
-const corePluginLoadFileUrls = () => {
+const jsenvPluginLoadFileUrls = () => {
   return {
     name: "jsenv:load_file_urls",
     appliesDuring: "*",

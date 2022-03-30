@@ -34,14 +34,14 @@ import {
   assignHtmlNodeAttributes,
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 
-export const corePluginImportmap = () => {
-  const importmapInlining = corePluginImportmapInlining()
-  const importmapResolution = corePluginImportmapResolution()
+export const jsenvPluginImportmap = () => {
+  const importmapInlining = jsenvPluginImportmapInlining()
+  const importmapResolution = jsenvPluginImportmapResolution()
 
   return [importmapInlining, importmapResolution]
 }
 
-const corePluginImportmapInlining = () => {
+const jsenvPluginImportmapInlining = () => {
   return {
     name: "jsenv:importmap_inlining",
     appliesDuring: "*",
@@ -107,7 +107,7 @@ const corePluginImportmapInlining = () => {
   }
 }
 
-const corePluginImportmapResolution = () => {
+const jsenvPluginImportmapResolution = () => {
   const importmaps = []
   let importmap = {}
   const updateImportmap = () => {

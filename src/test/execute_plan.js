@@ -214,13 +214,13 @@ export const executePlan = async (
         },
         rootDirectoryUrl,
       )
-      const coverageIgnorePredicate = (url) => {
-        return !urlToMeta({
+      const urlShouldBeCovered = (url) => {
+        return urlToMeta({
           url: new URL(url, rootDirectoryUrl).href,
           structuredMetaMap: structuredMetaMapForCover,
         }).cover
       }
-      runtimeParams.coverageIgnorePredicate = coverageIgnorePredicate
+      runtimeParams.urlShouldBeCovered = urlShouldBeCovered
 
       // in case runned multiple times, we don't want to keep writing lot of files in this directory
       if (!process.env.NODE_V8_COVERAGE) {
@@ -252,7 +252,7 @@ export const executePlan = async (
             coverageConfig,
             coverageIncludeMissing,
             coverageForceIstanbul,
-            coverageIgnorePredicate,
+            urlShouldBeCovered,
             coverageV8ConflictWarning,
           })
         } catch (e) {

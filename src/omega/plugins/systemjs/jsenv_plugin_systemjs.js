@@ -1,7 +1,7 @@
 import { require } from "@jsenv/core/src/utils/require.js"
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 
-export const corePluginSystemJs = () => {
+export const jsenvPluginSystemJs = () => {
   return {
     name: "jsenv:systemjs",
     appliesDuring: {

@@ -1,12 +1,12 @@
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 
-import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js"
+import { getBaseBabelPluginStructure } from "./utils/babel_plugin_structure.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
 import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_helper/babel_plugin_babel_helpers_as_jsenv_imports.js"
 
-export const corePluginBabel = ({ customBabelPlugins = [] } = {}) => {
+export const jsenvPluginBabel = ({ customBabelPlugins = [] } = {}) => {
   return {
     name: "jsenv:babel",
     appliesDuring: "*",

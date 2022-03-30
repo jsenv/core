@@ -6,7 +6,7 @@ const { testPlanCoverage } = await executeTestPlan({
   logLevel: "info",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./main.hml": {
+    "./main.html": {
       chrome: {
         runtime: chromium,
         runtimeParams: {

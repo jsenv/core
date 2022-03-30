@@ -83,6 +83,7 @@ export const run = async ({
           result.coverageFileUrl = coverageFileUrl
           delete result.coverage
         }
+        return result
       },
     )
   } else {

@@ -12,9 +12,9 @@
 import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
 
-import { babelPluginMetadataImportMetaScenarios } from "./babel_plugin_metadata_import_meta_scenarios.js"
+import { babelPluginMetadataImportMetaScenarios } from "./utils/babel_plugin_metadata_import_meta_scenarios.js"
 
-export const corePluginImportMetaScenarios = () => {
+export const jsenvPluginImportMetaScenarios = () => {
   return {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",

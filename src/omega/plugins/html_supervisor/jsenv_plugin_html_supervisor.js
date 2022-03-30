@@ -32,7 +32,7 @@ import {
 } from "@jsenv/core/src/utils/html_ast/html_ast.js"
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 
-export const corePluginHtmlSupervisor = ({
+export const jsenvPluginHtmlSupervisor = ({
   logs = false,
   measurePerf = false,
 } = {}) => {
