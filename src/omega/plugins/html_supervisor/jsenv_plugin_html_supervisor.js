@@ -185,20 +185,6 @@ export const jsenvPluginHtmlSupervisor = ({
         if (scriptsToSupervise.length === 0) {
           return null
         }
-        const htmlSupervisorSetupFileReference = addReference({
-          type: "script_src",
-          specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
-            js_classic: "",
-          }),
-        })
-        injectScriptAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            "tagName": "script",
-            "src": htmlSupervisorSetupFileReference.generatedSpecifier,
-            "injected-by": "jsenv:html_supervisor",
-          }),
-        )
         const htmlSupervisorInstallerFileReference = addReference({
           type: "js_import_export",
           specifier: htmlSupervisorInstallerFileUrl,
@@ -220,6 +206,20 @@ installHtmlSupervisor(${JSON.stringify(
               null,
               "  ",
             )})`,
+            "injected-by": "jsenv:html_supervisor",
+          }),
+        )
+        const htmlSupervisorSetupFileReference = addReference({
+          type: "script_src",
+          specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
+            js_classic: "",
+          }),
+        })
+        injectScriptAsEarlyAsPossible(
+          htmlAst,
+          createHtmlNode({
+            "tagName": "script",
+            "src": htmlSupervisorSetupFileReference.generatedSpecifier,
             "injected-by": "jsenv:html_supervisor",
           }),
         )
