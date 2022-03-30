@@ -4,6 +4,7 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 export const createUrlGraph = () => {
   const urlInfos = {}
   const getUrlInfo = (url) => urlInfos[url]
+  const deleteUrlInfo = (url) => delete urlInfos[url]
   const reuseOrCreateUrlInfo = (url) => {
     const existingUrlInfo = urlInfos[url]
     if (existingUrlInfo) return existingUrlInfo
@@ -47,7 +48,6 @@ export const createUrlGraph = () => {
         dependencyUrls.push(reference.url)
       }
     })
-
     pruneDependencies(
       urlInfo,
       Array.from(urlInfo.dependencies).filter(
@@ -89,6 +89,7 @@ export const createUrlGraph = () => {
     urlInfos,
     reuseOrCreateUrlInfo,
     getUrlInfo,
+    deleteUrlInfo,
     inferReference,
     findDependent,
 

@@ -90,6 +90,7 @@ const jsenvPluginImportmapInlining = () => {
           "content-src": src,
         })
         setHtmlNodeText(importmap, importmapUrlInfo.content)
+        importmapReference.isInline = true // it becomes inline
         importmapUrlInfo.inlineUrlSite = {
           url,
           content: originalContent, // original because it's the origin line and column

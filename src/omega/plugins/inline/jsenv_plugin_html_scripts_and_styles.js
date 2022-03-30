@@ -10,6 +10,7 @@ import {
   parseScriptNode,
   setHtmlNodeText,
   assignHtmlNodeAttributes,
+  getHtmlNodeAttributeByName,
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
@@ -109,12 +110,23 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
           if (!textNode) {
             return
           }
+          const contentSrc = getHtmlNodeAttributeByName(node, "content-src")
+          if (contentSrc) {
+            // it's inline but there is a corresponding "src" somewhere
+            // - for instance the importmap was inlined by importmap plugin
+            //   in that case the content is already cooked and can be kept as it is
+            // - any other logic that would turn a remote script into some content
+            //   but don't want to cook the content
+            return
+          }
           actions.push(async () => {
             const scriptCategory = parseScriptNode(node)
             const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
             const inlineScriptSpecifier = `./${urlToFilename(
               url,
-            )}@${inlineScriptId}.js`
+            )}@${inlineScriptId}${
+              scriptCategory === "importmap" ? ".importmap" : ".js"
+            }`
             const inlineScriptReference = addInlineReference({
               node,
               type: "script_src",

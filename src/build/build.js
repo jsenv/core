@@ -338,6 +338,15 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   }
   loadFinalGraphLog.done()
 
+  // remove files no longer referenced
+  // (for instance importmap being inlined into html)
+  Object.keys(finalGraph.urlInfos).forEach((url) => {
+    const urlInfo = finalGraph.urlInfos[url]
+    if (urlInfo.references.length === 0) {
+      delete finalGraph.urlInfos[url]
+    }
+  })
+
   logger.debug(
     `graph urls pre-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,

@@ -22,11 +22,11 @@ export const getCorePlugins = ({
   return [
     ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
     ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor(htmlSupervisor)]), // before inline as it turns inline <script> into <script src>
-    ...(asFewAsPossible ? [] : [jsenvPluginInline()]), // must come first to resolve inline urls
+    ...(asFewAsPossible ? [] : [jsenvPluginInline()]), // before "file urls" to resolve and load inline urls
     jsenvPluginFileUrls(),
     jsenvPluginLeadingSlash(),
-    jsenvPluginImportmap(), // must come before node esm to handle bare specifiers before node esm
-    jsenvPluginNodeEsmResolution(nodeEsmResolution), // must come before url resolution to handle "js_import_export" resolution
+    jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
+    jsenvPluginNodeEsmResolution(nodeEsmResolution), // before url resolution to handle "js_import_export" resolution
     jsenvPluginUrlResolution(),
     ...(asFewAsPossible
       ? []

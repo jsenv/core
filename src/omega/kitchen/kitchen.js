@@ -323,8 +323,15 @@ export const createKitchen = ({
       })
       references[index] = newReference
       newReference.data.originalReference = existingReference
-      resolveReference(newReference)
-      // si l'ancienne reference n'est plus utilisé on devrait la supprimer du graph?
+      const existingUrlInfo = urlGraph.getUrlInfo(existingReference.url)
+      const newUrlInfo = resolveReference(newReference)
+      // this url is no longer referenced and nothing else references it, it can be deleted
+      if (
+        existingUrlInfo !== newUrlInfo &&
+        existingUrlInfo.dependents.size === 0
+      ) {
+        urlGraph.deleteUrlInfo(existingUrlInfo.url)
+      }
       return newReference
     }
 
