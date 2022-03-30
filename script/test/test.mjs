@@ -1,6 +1,5 @@
 import { executeTestPlan, nodeProcess } from "@jsenv/core"
-
-import { rootDirectoryUrl, runtimeSupport } from "../../jsenv.config.mjs"
+import { rootDirectoryUrl, runtimeSupport } from "@jsenv/core/jsenv.config.mjs"
 
 await executeTestPlan({
   rootDirectoryUrl,
@@ -11,31 +10,6 @@ await executeTestPlan({
       node: {
         runtime: nodeProcess,
         allocatedMs: 30 * 1000,
-      },
-    },
-    // give more time to some tests
-    "test/coverage/**/*.test.js": {
-      node: {
-        runtime: nodeProcess,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/dev_server/**/*.test.js": {
-      node: {
-        runtime: nodeProcess,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/execute/**/*.test.js": {
-      node: {
-        runtime: nodeProcess,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/test_plan/**/*.test.js": {
-      node: {
-        runtime: nodeProcess,
-        allocatedMs: 60 * 1000,
       },
     },
   },

@@ -75,7 +75,7 @@ const jsenvPluginImportmapInlining = () => {
         // In this ituation the ref to the importmap was already discovered
         // when parsing the HTML
         const importmapReference = references.find(
-          (reference) => reference.specifier === src,
+          (reference) => reference.url === src,
         )
         const { line, column } = htmlNodePosition.readNodePosition(importmap, {
           preferOriginal: true,

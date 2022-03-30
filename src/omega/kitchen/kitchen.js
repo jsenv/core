@@ -403,6 +403,7 @@ export const createKitchen = ({
     }
 
     // "transform" hook
+    urlInfo.references = references
     context.addReference = addReference
     context.updateReference = updateReference
     try {

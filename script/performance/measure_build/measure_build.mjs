@@ -6,17 +6,15 @@ const measures = startMeasures({
   filesystemUsage: true,
 })
 
-const { buildProject } = await import("@jsenv/core")
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "./dist/",
-  format: "esmodule",
+const { build } = await import("@jsenv/core")
+await build({
+  logLevel: "warn",
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  buildDirectoryClean: true,
   entryPoints: {
     "./main.html": "main.min.html",
   },
-  jsenvDirectoryClean: true,
-  buildDirectoryClean: true,
-  logLevel: "warn",
   minify: true,
 })
 

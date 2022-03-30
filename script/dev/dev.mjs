@@ -1,8 +1,7 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
+import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 import { startDevServer } from "@jsenv/core"
-
-import { rootDirectoryUrl } from "../../jsenv.config.mjs"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost({
