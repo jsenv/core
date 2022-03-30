@@ -12,6 +12,7 @@ export const createPluginController = ({ plugins, scenario }) => {
     formatReferencedUrl: [],
     finalize: [],
     cooked: [],
+    destroy: [],
   }
   plugins.forEach((plugin) => {
     Object.keys(hookGroups).forEach((hookName) => {

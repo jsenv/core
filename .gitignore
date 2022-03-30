@@ -9,6 +9,7 @@
 /packages/node_modules/
 /script/**/.jsenv/
 /script/**/dist/
+/script/**/.coverage/
 /test-manual/**/.jsenv/
 /node_resolution.importmap
 /package-lock.json

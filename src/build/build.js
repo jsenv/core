@@ -80,7 +80,7 @@ export const build = async ({
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
   const rawGraph = createUrlGraph()
-  const loadRawGraphLog = createTaskLog("load files")
+  const loadRawGraphLog = createTaskLog(logger, "load files")
   let urlCount = 0
   const rawGraphKitchen = createKitchen({
     signal,
@@ -176,7 +176,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     })
     // in the future this should be done in a "bundle" hook
     if (jsModuleUrlInfosToBundle.length) {
-      const rollupBuildLog = createTaskLog(`bundle js modules`)
+      const rollupBuildLog = createTaskLog(logger, `bundle js modules`)
       try {
         const rollupBuild = await buildWithRollup({
           signal,
@@ -324,7 +324,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     scenario: "build",
     sourcemaps,
   })
-  const loadFinalGraphLog = createTaskLog("generating build files")
+  const loadFinalGraphLog = createTaskLog(logger, "generating build files")
   try {
     await loadUrlGraph({
       urlGraph: finalGraph,
@@ -343,7 +343,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   )
   if (versioning) {
-    const urlVersioningLog = createTaskLog("inject version in urls")
+    const urlVersioningLog = createTaskLog(logger, "inject version in urls")
     try {
       const urlsSorted = sortUrlGraphByDependencies(finalGraph)
       urlsSorted.forEach((url) => {

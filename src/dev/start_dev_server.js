@@ -20,6 +20,7 @@ export const startDevServer = async ({
   http2 = false,
   certificate,
   privateKey,
+  keepProcessAlive = true,
 
   rootDirectoryUrl,
   plugins = [],
@@ -73,7 +74,7 @@ export const startDevServer = async ({
   })
   const server = await startOmegaServer({
     logger,
-    keepProcessAlive: true,
+    keepProcessAlive,
     port,
     protocol,
     http2,
