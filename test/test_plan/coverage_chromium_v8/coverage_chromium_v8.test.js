@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { executeTestPlan, chromium } from "@jsenv/core"
 
 const { testPlanCoverage } = await executeTestPlan({
-  logLevel: "info",
+  logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./main.html": {
@@ -16,10 +16,12 @@ const { testPlanCoverage } = await executeTestPlan({
       },
     },
   },
+  // keepRunning: true,
   coverage: true,
   coverageConfig: {
     "./file.js": true,
   },
+  coverageTextLog: false,
   coverageHtmlDirectory: false,
 })
 const actual = testPlanCoverage

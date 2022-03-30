@@ -139,11 +139,13 @@ export const executePlan = async (
               customBabelPlugins: [
                 ...(coverage
                   ? [
-                      babelPluginInstrument,
-                      {
-                        rootDirectoryUrl,
-                        coverageConfig,
-                      },
+                      [
+                        babelPluginInstrument,
+                        {
+                          rootDirectoryUrl,
+                          coverageConfig,
+                        },
+                      ],
                     ]
                   : []),
               ],
@@ -293,6 +295,7 @@ export const executePlan = async (
           ...paramsFromStep,
           runtimeParams: {
             fileRelativeUrl,
+            ...paramsFromStep.runtimeParams,
           },
         }
         const beforeExecutionInfo = {
