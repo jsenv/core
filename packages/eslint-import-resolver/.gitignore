@@ -1,7 +1,6 @@
 /.jsenv/
-/coverage/
+/.coverage/
 /node_modules/
 /package-lock.json
+/test/**/temp/
 .DS_STORE
-/jsconfig.json
-/test/temp/**

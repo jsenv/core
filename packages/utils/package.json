@@ -1,12 +1,13 @@
 {
   "name": "@jsenv/utils",
   "version": "1.0.0",
-  "type": "module",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
     "directory": "packages/utils"
   },
+  "type": "module",
   "dependencies": {
     "@babel/parser": "7.17.8",
     "@jsenv/abort": "4.1.2",

@@ -1,1 +1,8 @@
-{}
+{
+  "name": "@jsenv/plugin-systemjs",
+  "private": true,
+  "dependencies": {
+    "@babel/plugin-transform-modules-systemjs": "7.17.8",
+    "@jsenv/utils": "1.0.0"
+  }
+}

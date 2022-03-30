@@ -1,6 +1,12 @@
 {
   "name": "@jsenv/node-esm-resolution",
   "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/node-esm-resolution"
+  },
   "type": "module",
   "exports": {
     ".": {
