@@ -1,7 +1,7 @@
 import { ANSI, UNICODE } from "@jsenv/log"
 
-import { msAsDuration } from "@jsenv/core/src/utils/logs/duration_log.js"
-import { byteAsMemoryUsage } from "@jsenv/core/src/utils/logs/size_log.js"
+import { msAsDuration } from "@jsenv/utils/logs/duration_log.js"
+import { byteAsMemoryUsage } from "@jsenv/utils/logs/size_log.js"
 
 import { EXECUTION_COLORS } from "./execution_colors.js"
 

@@ -4,8 +4,8 @@ import {
   getHtmlNodeAttributeByName,
   htmlNodePosition,
   visitHtmlAst,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
-import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
+import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
 
 export const parseHtmlUrlMentions = ({ url, content, scenario }) => {
   const htmlAst = parseHtmlString(content, {

@@ -9,8 +9,8 @@
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  */
 
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 import { babelPluginMetadataImportMetaScenarios } from "./utils/babel_plugin_metadata_import_meta_scenarios.js"
 

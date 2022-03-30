@@ -1,7 +1,7 @@
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
-import { ContentType } from "@jsenv/core/src/utils/content_type.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
-import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { ContentType } from "@jsenv/utils/src/content_type.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 
 import { babelPluginMetadataImportAssertions } from "./utils/babel_plugin_metadata_import_assertions.js"
 import { convertJsonTextToJavascriptModule } from "./utils/json_module.js"

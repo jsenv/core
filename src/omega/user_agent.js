@@ -1,4 +1,6 @@
-import { require } from "@jsenv/core/src/utils/require.js"
+import { createRequire } from "node:module"
+
+const require = createRequire(import.meta.url)
 
 export const parseUserAgentHeader = (userAgent) => {
   if (userAgent.includes("node-fetch/")) {

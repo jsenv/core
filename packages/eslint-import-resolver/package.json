@@ -9,6 +9,9 @@
     "./*": "./*"
   },
   "main": "./main.js",
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@jsenv/filesystem": "3.1.0",
+    "@jsenv/importmap": "1.2.0",
+    "@jsenv/node-esm-resolution": "0.0.1"
+  }
 }

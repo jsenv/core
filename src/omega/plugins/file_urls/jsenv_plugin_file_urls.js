@@ -5,7 +5,7 @@ import {
   urlToRelativeUrl,
   fileSystemRootUrl,
 } from "@jsenv/filesystem"
-import { ContentType } from "@jsenv/core/src/utils/content_type.js"
+import { ContentType } from "@jsenv/utils/src/content_type.js"
 
 export const jsenvPluginFileUrls = () => {
   return [jsenvPluginResolveAbsoluteFileUrls(), jsenvPluginLoadFileUrls()]

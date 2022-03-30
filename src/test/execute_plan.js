@@ -19,13 +19,13 @@ import {
 import { createLog, startSpinner } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
+import { createUrlGraph } from "@jsenv/utils/url_graph/url_graph.js"
+import { babelPluginInstrument } from "@jsenv/utils/coverage/babel_plugin_instrument.js"
+import { reportToCoverage } from "@jsenv/utils/coverage/report_to_coverage.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
 import { getCorePlugins } from "@jsenv/core/src/omega/core_plugins.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
 import { run } from "@jsenv/core/src/execute/run.js"
-import { babelPluginInstrument } from "@jsenv/core/src/utils/coverage/babel_plugin_instrument.js"
-import { reportToCoverage } from "@jsenv/core/src/utils/coverage/report_to_coverage.js"
 
 import { ensureGlobalGc } from "./gc.js"
 import { generateExecutionSteps } from "./execution_steps.js"

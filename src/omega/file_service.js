@@ -3,9 +3,7 @@ import {
   serveDirectory,
   composeTwoResponses,
 } from "@jsenv/server"
-import { urlIsInsideOf } from "@jsenv/filesystem"
-
-import { moveUrl } from "@jsenv/core/src/utils/url_utils.js"
+import { urlIsInsideOf, moveUrl } from "@jsenv/filesystem"
 
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -141,10 +139,15 @@ export const createFileService = ({
   }
 }
 
-const inferParentFromRequest = (request, projectDirectoryUrl) => {
+const inferParentFromRequest = (request, rootDirectoryUrl) => {
   const { referer } = request.headers
   if (!referer) {
-    return projectDirectoryUrl
+    return rootDirectoryUrl
   }
-  return moveUrl(referer, request.origin, projectDirectoryUrl)
+  return moveUrl({
+    url: referer,
+    from: `${request.origin}/`,
+    to: rootDirectoryUrl,
+    preferAbsolute: true,
+  })
 }

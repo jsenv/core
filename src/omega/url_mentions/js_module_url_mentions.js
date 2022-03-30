@@ -1,7 +1,6 @@
-import { collectProgramUrlMentions } from "@jsenv/core/src/utils/js_ast/program_url_mentions.js"
-
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
+import { collectProgramUrlMentions } from "@jsenv/utils/js_ast/program_url_mentions.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const parseJsModuleUrlMentions = async ({
   url,

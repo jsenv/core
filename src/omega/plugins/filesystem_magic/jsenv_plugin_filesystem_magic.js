@@ -3,8 +3,7 @@
 import { realpathSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { urlToExtension } from "@jsenv/filesystem"
-
-import { applyFileSystemMagicResolution } from "@jsenv/core/packages/node-esm-resolution/main.js"
+import { applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginFileSystemMagic = ({
   magicExtensions = ["inherit"],

@@ -1,12 +1,12 @@
 /.jsenv/
-/coverage/
+/.coverage/
 /dist/
 /docs/**/.jsenv/
 /docs/**/node_modules/
 /helpers/babel/
 /helpers/regenerator-runtime/
 /node_modules/
-/packages/*/coverage/
+/packages/*/.coverage/
 /packages/*/node_modules/
 
 **/s.js

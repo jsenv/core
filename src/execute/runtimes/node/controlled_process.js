@@ -8,7 +8,7 @@ import {
 } from "@jsenv/abort"
 import { uneval } from "@jsenv/uneval"
 
-import { memoize } from "@jsenv/core/src/utils/memoize.js"
+import { memoize } from "@jsenv/utils/memoize/memoize.js"
 
 import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"

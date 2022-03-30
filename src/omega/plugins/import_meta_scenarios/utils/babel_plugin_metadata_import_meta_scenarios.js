@@ -1,4 +1,4 @@
-import { collectProgramImportMetas } from "@jsenv/core/src/utils/js_ast/program_import_metas.js"
+import { collectProgramImportMetas } from "@jsenv/utils/js_ast/program_import_metas.js"
 
 export const babelPluginMetadataImportMetaScenarios = () => {
   return {

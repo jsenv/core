@@ -1,7 +1,7 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
-import { startDevServer } from "@jsenv/core/src/dev/start_dev_server.js"
 import { jsenvPluginPreact } from "@jsenv/core/packages/jsenv-plugin-preact/index.js"
+import { startDevServer } from "@jsenv/core"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost({

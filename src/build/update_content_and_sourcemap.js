@@ -1,8 +1,8 @@
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v3.js"
+import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {
   sourcemapComment,
   sourcemapToBase64Url,
-} from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
+} from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 
 export const updateContentAndSourcemap = async (
   urlInfo,

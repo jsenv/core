@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url"
 
-import { injectImport } from "@jsenv/core/src/utils/js_ast/babel_utils.js"
+import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js"
 
 import {
   getBabelHelperFileUrl,

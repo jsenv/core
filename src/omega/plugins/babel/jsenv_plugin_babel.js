@@ -1,4 +1,4 @@
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 
 import { getBaseBabelPluginStructure } from "./utils/babel_plugin_structure.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"

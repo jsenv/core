@@ -3,7 +3,7 @@ import {
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
 
 export const jsenvPluginToolbar = ({ logs = false } = {}) => {
   const toolbarInjectorClientFileUrl = new URL(

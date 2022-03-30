@@ -11,7 +11,7 @@ import {
   applyNodeEsmResolution,
   lookupPackageScope,
   readPackageJson,
-} from "@jsenv/core/packages/node-esm-resolution/main.js"
+} from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification

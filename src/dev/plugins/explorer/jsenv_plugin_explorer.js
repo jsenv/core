@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { urlToContentType } from "@jsenv/server"
 import { collectFiles, normalizeStructuredMetaMap } from "@jsenv/filesystem"
 
-import { DataUrl } from "@jsenv/core/src/utils/data_url.js"
+import { DataUrl } from "@jsenv/utils/urls/data_url.js"
 
 export const jsenvPluginExplorer = ({ groups }) => {
   const htmlClientFileUrl = new URL("./client/explorer.html", import.meta.url)

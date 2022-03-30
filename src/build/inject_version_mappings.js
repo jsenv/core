@@ -5,8 +5,8 @@ import {
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 

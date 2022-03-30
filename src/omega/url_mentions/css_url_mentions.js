@@ -2,9 +2,9 @@
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
 
-import { applyPostCss } from "@jsenv/core/src/utils/css_ast/apply_post_css.js"
-import { postCssPluginUrlVisitor } from "@jsenv/core/src/utils/css_ast/postcss_plugin_url_visitor.js"
-import { replaceCssUrls } from "@jsenv/core/src/utils/css_ast/replace_css_urls.js"
+import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js"
+import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js"
+import { replaceCssUrls } from "@jsenv/utils/css_ast/replace_css_urls.js"
 
 export const parseCssUrlMentions = async ({ url, content }) => {
   const cssUrlMentions = []

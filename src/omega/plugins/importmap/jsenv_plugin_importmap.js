@@ -32,7 +32,7 @@ import {
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
   assignHtmlNodeAttributes,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
 
 export const jsenvPluginImportmap = () => {
   const importmapInlining = jsenvPluginImportmapInlining()

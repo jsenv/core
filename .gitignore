@@ -1,11 +1,10 @@
 .jsenv/
-/coverage/
+/.coverage/
 /docs/**/.jsenv/
-/docs/**/coverage/
+/docs/**/.coverage/
 /docs/**/dist/
 /docs/**/node_modules/
 /docs/**/package-lock.json
-/coverage-v8/
 /node_modules/
 /packages/node_modules/
 /script/**/.jsenv/
@@ -19,4 +18,4 @@
 .DS_STORE
 /todo.txt
 /test/**/dist/
-/test/**/coverage/
+/test/**/.coverage/

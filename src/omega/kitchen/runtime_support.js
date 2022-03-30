@@ -1,4 +1,4 @@
-import { findHighestVersion } from "@jsenv/core/src/utils/semantic_versioning/highest_version.js"
+import { findHighestVersion } from "@jsenv/utils/semantic_versioning/highest_version.js"
 
 export const isFeatureSupportedOnRuntimes = (
   runtimeSupport,

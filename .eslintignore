@@ -2,9 +2,7 @@
 .jsenv/
 node_modules/
 dist/
-/coverage/
-/helpers/chromium/
-/helpers/regenerator-runtime/
+/.coverage/
 
 **/s.js
 /src/**/system.js
@@ -16,8 +14,8 @@ dist/
 /**/*error_syntax*.js
 !/**/*error_syntax*.test.js
 
-/test-manual/**/coverage/
-/packages/*/coverage/
+/test-manual/**/.coverage/
+/packages/*/.coverage/
 /**/*.es5.js
 /**/*.jsx
 !.eslintrc.js

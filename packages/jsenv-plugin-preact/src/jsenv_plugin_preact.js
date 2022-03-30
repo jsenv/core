@@ -5,15 +5,15 @@
 
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v3.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
 
 export const jsenvPluginPreact = ({
   hotRefreshPatterns = {

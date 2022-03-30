@@ -1,8 +1,7 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
-
-import { build } from "@jsenv/core/src/build/build.js"
+import { build } from "@jsenv/core"
 
 await build({
   logLevel: "debug",

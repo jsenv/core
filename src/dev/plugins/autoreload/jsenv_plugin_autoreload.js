@@ -1,15 +1,15 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { createCallbackList } from "@jsenv/abort"
 
-import { injectQueryParams } from "@jsenv/core/src/utils/url_utils.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
+import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 
 import { createSSEService } from "./sse_service.js"
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"

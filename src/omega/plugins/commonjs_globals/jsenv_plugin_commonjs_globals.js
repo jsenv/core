@@ -7,8 +7,8 @@
  * - global
  */
 
-import { applyBabelPlugins } from "@jsenv/core/src/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.js"
+import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 import { babelPluginMetadataExpressionPaths } from "./utils/babel_plugin_metadata_expression_paths.js"
 

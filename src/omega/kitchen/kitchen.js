@@ -4,16 +4,16 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
+  fileSystemRootUrl,
 } from "@jsenv/filesystem"
 
-import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
-import { filesystemRootUrl } from "@jsenv/core/src/utils/url_utils.js"
+import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import {
   sourcemapComment,
   generateSourcemapUrl,
   sourcemapToBase64Url,
-} from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
-import { composeTwoSourcemaps } from "@jsenv/core/src/utils/sourcemap/sourcemap_composition_v3.js"
+} from "@jsenv/utils/sourcemap/sourcemap_utils.js"
+import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
@@ -642,7 +642,7 @@ const determineFileUrlForOutDirectory = ({
     return url
   }
   if (!urlIsInsideOf(url, rootDirectoryUrl)) {
-    url = `${rootDirectoryUrl}@fs/${url.slice(filesystemRootUrl.length)}`
+    url = `${rootDirectoryUrl}@fs/${url.slice(fileSystemRootUrl.length)}`
   }
   return moveUrl({
     url: fileUrlConverter.asUrlWithoutSpecialParams(url),

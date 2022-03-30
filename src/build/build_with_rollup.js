@@ -1,8 +1,8 @@
 import { isFileSystemPath } from "@jsenv/filesystem"
 
-import { applyRollupPlugins } from "@jsenv/core/src/utils/js_ast/apply_rollup_plugins.js"
+import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
+import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
-import { sourcemapConverter } from "@jsenv/core/src/utils/sourcemap/sourcemap_converter.js"
 
 export const buildWithRollup = async ({
   signal,

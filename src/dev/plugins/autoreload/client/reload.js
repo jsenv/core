@@ -1,4 +1,4 @@
-import { htmlAttributeSrcSet } from "@jsenv/core/src/utils/html_ast/html_attribute_src_set.js"
+import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
 
 import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
 

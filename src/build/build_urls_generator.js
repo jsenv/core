@@ -1,6 +1,6 @@
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { memoizeByUrl } from "@jsenv/core/src/utils/memoize/memoize_by_url.js"
+import { memoizeByUrl } from "@jsenv/utils/memoize/memoize_by_url.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}

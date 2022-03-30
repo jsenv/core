@@ -1,4 +1,4 @@
-import { build } from "@jsenv/core/src/build/build.js"
+import { build } from "@jsenv/core"
 
 await build({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),

@@ -8,10 +8,9 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { generateCoverageJsonFile } from "@jsenv/core/src/utils/coverage/coverage_reporter_json_file.js"
-import { generateCoverageHtmlDirectory } from "@jsenv/core/src/utils/coverage/coverage_reporter_html_directory.js"
-import { generateCoverageTextLog } from "@jsenv/core/src/utils/coverage/coverage_reporter_text_log.js"
-
+import { generateCoverageJsonFile } from "@jsenv/utils/coverage/coverage_reporter_json_file.js"
+import { generateCoverageHtmlDirectory } from "@jsenv/utils/coverage/coverage_reporter_html_directory.js"
+import { generateCoverageTextLog } from "@jsenv/utils/coverage/coverage_reporter_text_log.js"
 import { executePlan } from "./execute_plan.js"
 
 /**
@@ -57,7 +56,7 @@ export const executeTestPlan = async ({
 
   coverage = process.argv.includes("--cover") ||
     process.argv.includes("--coverage"),
-  coverageTempDirectoryRelativeUrl = "./coverage/tmp/",
+  coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
   coverageConfig = {
     "./index.js": true,
     "./main.js": true,
@@ -72,9 +71,9 @@ export const executeTestPlan = async ({
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
-  coverageJsonFileRelativeUrl = "./coverage/coverage.json",
+  coverageJsonFileRelativeUrl = "./.coverage/coverage.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage/",
+  coverageHtmlDirectoryRelativeUrl = "./.coverage/",
   coverageHtmlDirectoryIndexLog = true,
   // skip empty means empty files won't appear in the coverage reports (log and html)
   coverageSkipEmpty = false,

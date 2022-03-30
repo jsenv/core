@@ -13,7 +13,7 @@ import { urlToFilename } from "@jsenv/filesystem"
 import {
   injectQueryParams,
   injectQueryParamsIntoSpecifier,
-} from "@jsenv/core/src/utils/url_utils.js"
+} from "@jsenv/utils/urls/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -29,8 +29,8 @@ import {
   getIdForInlineHtmlNode,
   removeHtmlNodeText,
   getHtmlNodeTextNode,
-} from "@jsenv/core/src/utils/html_ast/html_ast.js"
-import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
+} from "@jsenv/utils/html_ast/html_ast.js"
+import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 
 export const jsenvPluginHtmlSupervisor = ({
   logs = false,
