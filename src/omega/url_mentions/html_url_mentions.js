@@ -138,6 +138,12 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     const attribute = getHtmlNodeAttributeByName(node, attributeName)
     const value = attribute ? attribute.value : undefined
     if (value) {
+      const inlinedBy = getHtmlNodeAttributeByName(node, "inlined-by")
+      if (inlinedBy) {
+        // during build the importmap is inlined
+        // and shoud not be considered as a dependency anymore
+        return
+      }
       addDependency({
         type,
         node,

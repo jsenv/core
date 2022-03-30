@@ -16,7 +16,7 @@ export const jsenvPluginImportAssertions = () => {
       transform: {
         js_module: async (
           { url, generatedUrl, content },
-          { scenario, isSupportedOnRuntime, updateReference },
+          { scenario, isSupportedOnRuntime, references, updateReference },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
             scenario,
@@ -47,7 +47,10 @@ export const jsenvPluginImportAssertions = () => {
               const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
                 [importType]: "",
               })
-              const newReference = updateReference(JSON.stringify(specifier), {
+              const existingReference = references.find(
+                (ref) => ref.generatedSpecifier === JSON.stringify(specifier),
+              )
+              const newReference = updateReference(existingReference, {
                 data: { importType },
                 specifier: newSpecifier,
               })
@@ -68,7 +71,10 @@ export const jsenvPluginImportAssertions = () => {
             const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
               [importType]: "",
             })
-            const newReference = updateReference(JSON.stringify(specifier), {
+            const existingReference = references.find(
+              (ref) => ref.generatedSpecifier === JSON.stringify(specifier),
+            )
+            const newReference = updateReference(existingReference, {
               data: { importType },
               specifier: newSpecifier,
             })

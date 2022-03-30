@@ -22,6 +22,7 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap"
+import { urlToFilename } from "@jsenv/filesystem"
 
 import {
   parseHtmlString,
@@ -31,6 +32,7 @@ import {
   htmlNodePosition,
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
+  getIdForInlineHtmlNode,
   assignHtmlNodeAttributes,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
@@ -48,7 +50,7 @@ const jsenvPluginImportmapInlining = () => {
     transform: {
       html: async (
         { url, content, originalContent, references },
-        { urlGraph, cook },
+        { urlGraph, cook, updateReference },
       ) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
@@ -72,7 +74,7 @@ const jsenvPluginImportmapInlining = () => {
         // Browser would throw on remote importmap
         // and won't sent a request to the server for it
         // We must precook the importmap to know its content and inline it into the HTML
-        // In this ituation the ref to the importmap was already discovered
+        // In this situation the ref to the importmap was already discovered
         // when parsing the HTML
         const importmapReference = references.find(
           (reference) => reference.url === src,
@@ -88,10 +90,22 @@ const jsenvPluginImportmapInlining = () => {
         removeHtmlNodeAttributeByName(importmap, "src")
         assignHtmlNodeAttributes(importmap, {
           "content-src": src,
+          "inlined-by": "jsenv:importmap",
         })
         setHtmlNodeText(importmap, importmapUrlInfo.content)
-        importmapReference.isInline = true // it becomes inline
-        importmapUrlInfo.inlineUrlSite = {
+
+        const inlineScriptId = getIdForInlineHtmlNode(htmlAst, importmap)
+        const inlineImportmapSpecifier = `./${urlToFilename(
+          url,
+        )}@${inlineScriptId}.importmap`
+        const inlineReference = updateReference(importmapReference, {
+          isInline: true,
+          specifier: inlineImportmapSpecifier,
+        })
+        const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
+        inlineUrlInfo.data.inlineContentType = "application/importmap+json"
+        inlineUrlInfo.data.inlineContent = importmapUrlInfo.content
+        inlineUrlInfo.inlineUrlSite = {
           url,
           content: originalContent, // original because it's the origin line and column
           // we remove 1 to the line because imagine the following html:

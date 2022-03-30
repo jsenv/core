@@ -6,6 +6,6 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  bundling: false,
-  versioning: false,
+  // bundling: false,
+  // versioning: true,
 })

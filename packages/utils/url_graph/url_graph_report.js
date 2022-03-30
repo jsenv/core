@@ -35,6 +35,9 @@ const createUrlGraphReport = (urlGraph) => {
     total: 0,
   }
   Object.keys(urlInfos).forEach((url) => {
+    if (url.startsWith("data:")) {
+      return
+    }
     const urlInfo = urlInfos[url]
     // ignore inline files, they are already taken into account in the file where they appear
     if (urlInfo.inlineUrlSite) {

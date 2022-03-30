@@ -307,31 +307,23 @@ export const createKitchen = ({
       resolveReference(reference)
       return reference
     }
-    const updateReference = (generatedSpecifier, referenceProps) => {
-      const index = references.findIndex(
-        (reference) => reference.generatedSpecifier === generatedSpecifier,
-      )
+    const updateReference = (existingReference, newReferenceProps) => {
+      const index = references.indexOf(existingReference)
       if (index === -1) {
-        throw new Error(`cannot find reference using "${generatedSpecifier}"`)
+        throw new Error(`must be an existing reference`)
       }
-      const existingReference = references[index]
       const newReference = createReference({
         trace: existingReference.trace,
         parentUrl: existingReference.parentUrl,
         type: existingReference.type,
-        ...referenceProps,
+        specifier: existingReference.specifier,
+        ...newReferenceProps,
       })
       references[index] = newReference
       newReference.data.originalReference = existingReference
-      const existingUrlInfo = urlGraph.getUrlInfo(existingReference.url)
-      const newUrlInfo = resolveReference(newReference)
-      // this url is no longer referenced and nothing else references it, it can be deleted
-      if (
-        existingUrlInfo !== newUrlInfo &&
-        existingUrlInfo.dependents.size === 0
-      ) {
-        urlGraph.deleteUrlInfo(existingUrlInfo.url)
-      }
+      // const existingUrlInfo = urlGraph.getUrlInfo(existingReference.url)
+      // const newUrlInfo =
+      resolveReference(newReference)
       return newReference
     }
 
