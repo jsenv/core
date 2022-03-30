@@ -21,7 +21,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
-import { getJsenvPlugins } from "@jsenv/core/src/omega/jsenv_plugins.js"
+import { getCorePlugins } from "@jsenv/core/src/omega/core_plugins.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 import { babelPluginInstrument } from "@jsenv/core/src/utils/coverage/babel_plugin_instrument.js"
@@ -134,7 +134,7 @@ export const executePlan = async (
         urlGraph,
         plugins: [
           ...plugins,
-          ...getJsenvPlugins({
+          ...getCorePlugins({
             babel: {
               customBabelPlugins: [
                 ...(coverage

@@ -26,11 +26,11 @@ import { createTaskLog } from "@jsenv/core/src/utils/logs/task_log.js"
 import { createUrlGraphSummary } from "@jsenv/core/src/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/core/src/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/core/src/utils/url_version_generator.js"
-import { jsenvPluginInline } from "@jsenv/core/src/omega/plugins/inline/jsenv_plugin_inline.js"
+import { corePluginInline } from "@jsenv/core/src/omega/plugins/inline/core_plugin_inline.js"
 import { generateSourcemapUrl } from "@jsenv/core/src/utils/sourcemap/sourcemap_utils.js"
 
 import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
-import { getJsenvPlugins } from "../omega/jsenv_plugins.js"
+import { getCorePlugins } from "../omega/core_plugins.js"
 
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
@@ -97,7 +97,7 @@ export const build = async ({
           loadRawGraphLog.setRightText(urlCount)
         },
       },
-      ...getJsenvPlugins(),
+      ...getCorePlugins(),
     ],
     scenario: "build",
     sourcemaps,
@@ -224,7 +224,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     rootDirectoryUrl,
     urlGraph: finalGraph,
     plugins: [
-      jsenvPluginInline({
+      corePluginInline({
         skipHtmlInlineLoad: true, // we can and want to load from rawGraph
       }),
       {
@@ -389,7 +389,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
         plugins: [
-          jsenvPluginInline({
+          corePluginInline({
             skipHtmlInlineLoad: true,
           }),
           {

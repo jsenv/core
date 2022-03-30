@@ -1,4 +1,4 @@
-export const jsenvPluginUrlVersion = ({
+export const corePluginUrlVersion = ({
   longTermCache = false, // will become true once things get more stable
 } = {}) => {
   return {

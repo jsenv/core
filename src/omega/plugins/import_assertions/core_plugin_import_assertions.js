@@ -8,7 +8,7 @@ import { convertJsonTextToJavascriptModule } from "./json_module.js"
 import { convertCssTextToJavascriptModule } from "./css_module.js"
 import { convertTextToJavascriptModule } from "./text_module.js"
 
-export const jsenvPluginImportAssertions = () => {
+export const corePluginImportAssertions = () => {
   const importAssertions = [
     {
       name: "jsenv:import_assertions",

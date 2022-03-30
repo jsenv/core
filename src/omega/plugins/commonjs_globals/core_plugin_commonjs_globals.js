@@ -12,7 +12,7 @@ import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.
 
 import { babelPluginMetadataExpressionPaths } from "./babel_plugin_metadata_expression_paths.js"
 
-export const jsenvPluginCommonJsGlobals = () => {
+export const corePluginCommonJsGlobals = () => {
   return {
     name: "jsenv:commonjs_globals",
     appliesDuring: "*",

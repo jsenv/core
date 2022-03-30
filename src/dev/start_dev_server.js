@@ -3,7 +3,7 @@ import { createLogger } from "@jsenv/logger"
 
 import { createUrlGraph } from "@jsenv/core/src/utils/url_graph/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
-import { getJsenvPlugins } from "@jsenv/core/src/omega/jsenv_plugins.js"
+import { getCorePlugins } from "@jsenv/core/src/omega/core_plugins.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
 
 import { jsenvPluginAutoreload } from "./plugins/autoreload/jsenv_plugin_autoreload.js"
@@ -53,7 +53,7 @@ export const startDevServer = async ({
     urlGraph,
     plugins: [
       ...plugins,
-      ...getJsenvPlugins(),
+      ...getCorePlugins(),
       ...(autoreload
         ? [
             jsenvPluginAutoreload({

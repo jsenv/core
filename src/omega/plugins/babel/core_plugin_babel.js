@@ -6,7 +6,7 @@ import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_g
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_helper/babel_plugin_babel_helpers_as_jsenv_imports.js"
 
-export const jsenvPluginBabel = ({ customBabelPlugins = [] } = {}) => {
+export const corePluginBabel = ({ customBabelPlugins = [] } = {}) => {
   return {
     name: "jsenv:babel",
     appliesDuring: "*",

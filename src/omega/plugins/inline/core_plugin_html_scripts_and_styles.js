@@ -14,7 +14,7 @@ import {
 import { stringifyUrlSite } from "@jsenv/core/src/utils/url_trace.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/core/src/utils/url_utils.js"
 
-export const jsenvPluginHtmlInlineScriptsAndStyles = ({
+export const corePluginHtmlInlineScriptsAndStyles = ({
   skipHtmlInlineLoad = false,
 }) => {
   return {

@@ -13,7 +13,7 @@ import {
   readPackageJson,
 } from "@jsenv/core/packages/node-esm-resolution/main.js"
 
-export const jsenvPluginNodeEsmResolution = ({
+export const corePluginNodeEsmResolution = ({
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = ["browser", "import"],
 } = {}) => {

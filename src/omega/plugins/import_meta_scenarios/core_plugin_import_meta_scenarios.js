@@ -14,7 +14,7 @@ import { createMagicSource } from "@jsenv/core/src/utils/sourcemap/magic_source.
 
 import { babelPluginMetadataImportMetaScenarios } from "./babel_plugin_metadata_import_meta_scenarios.js"
 
-export const jsenvPluginImportMetaScenarios = () => {
+export const corePluginImportMetaScenarios = () => {
   return {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
