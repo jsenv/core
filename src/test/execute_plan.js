@@ -62,7 +62,7 @@ export const executePlan = async (
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    plugins,
+    plugins = [],
     scenario = "test",
     sourcemaps = "inline",
 

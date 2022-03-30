@@ -5,17 +5,15 @@ import { relativeUrlToEmptyCoverage } from "./empty_coverage_factory.js"
 
 export const getMissingFileByFileCoverage = async ({
   signal,
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   coverageConfig,
   fileByFileCoverage,
-  babelPluginMap,
 }) => {
   const relativeUrlsToCover = await listRelativeFileUrlToCover({
     signal,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     coverageConfig,
   })
-
   const relativeUrlsMissing = relativeUrlsToCover.filter((relativeUrlToCover) =>
     Object.keys(fileByFileCoverage).every((key) => {
       return key !== `./${relativeUrlToCover}`
@@ -24,7 +22,6 @@ export const getMissingFileByFileCoverage = async ({
 
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
-
   const missingFileByFileCoverage = {}
   await relativeUrlsMissing.reduce(async (previous, relativeUrlMissing) => {
     operation.throwIfAborted()
@@ -34,13 +31,11 @@ export const getMissingFileByFileCoverage = async ({
         relativeUrlMissing,
         {
           signal,
-          projectDirectoryUrl,
-          babelPluginMap,
+          rootDirectoryUrl,
         },
       )
       missingFileByFileCoverage[`./${relativeUrlMissing}`] = emptyCoverage
     })
   }, Promise.resolve())
-
   return missingFileByFileCoverage
 }

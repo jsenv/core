@@ -17,8 +17,7 @@ export const reportToCoverage = async (
   {
     signal,
     logger,
-    projectDirectoryUrl,
-    babelPluginMap,
+    rootDirectoryUrl,
     coverageConfig,
     coverageIncludeMissing,
     coverageIgnorePredicate,
@@ -85,13 +84,13 @@ export const reportToCoverage = async (
 
     v8FileByFileCoverage = normalizeFileByFileCoveragePaths(
       v8FileByFileCoverage,
-      projectDirectoryUrl,
+      rootDirectoryUrl,
     )
 
     if (fileByFileIstanbulCoverage) {
       fileByFileIstanbulCoverage = normalizeFileByFileCoveragePaths(
         fileByFileIstanbulCoverage,
-        projectDirectoryUrl,
+        rootDirectoryUrl,
       )
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
@@ -106,7 +105,7 @@ export const reportToCoverage = async (
   else if (fileByFileIstanbulCoverage) {
     fileByFileCoverage = normalizeFileByFileCoveragePaths(
       fileByFileIstanbulCoverage,
-      projectDirectoryUrl,
+      rootDirectoryUrl,
     )
   }
   // no coverage found in execution (or zero file where executed)
@@ -118,16 +117,15 @@ export const reportToCoverage = async (
   if (coverageIncludeMissing) {
     const missingFileByFileCoverage = await getMissingFileByFileCoverage({
       signal,
-      projectDirectoryUrl,
+      rootDirectoryUrl,
       coverageConfig,
       fileByFileCoverage,
-      babelPluginMap,
     })
     Object.assign(
       fileByFileCoverage,
       normalizeFileByFileCoveragePaths(
         missingFileByFileCoverage,
-        projectDirectoryUrl,
+        rootDirectoryUrl,
       ),
     )
   }

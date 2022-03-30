@@ -21,19 +21,16 @@ export const relativeUrlToEmptyCoverage = async (
     const { metadata } = await applyBabelPlugins({
       url: fileUrl,
       content,
-      plugins: [[babelPluginInstrument, { rootDirectoryUrl }]],
+      babelPlugins: [[babelPluginInstrument, { rootDirectoryUrl }]],
     })
-
     const { coverage } = metadata
     if (!coverage) {
       throw new Error(`missing coverage for file`)
     }
-
     // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
     Object.keys(coverage.s).forEach(function (key) {
       coverage.s[key] = 0
     })
-
     return coverage
   } catch (e) {
     if (e && e.code === "BABEL_PARSE_ERROR") {

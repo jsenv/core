@@ -1,7 +1,7 @@
 import {
-  resolveUrl,
   normalizeStructuredMetaMap,
   urlToMeta,
+  fileSystemPathToUrl,
 } from "@jsenv/filesystem"
 
 import { require } from "@jsenv/core/src/utils/require.js"
@@ -26,9 +26,9 @@ export const babelPluginInstrument = (
     },
     rootDirectoryUrl,
   )
-  const shouldInstrument = (relativeUrl) => {
+  const shouldInstrument = (url) => {
     return urlToMeta({
-      url: resolveUrl(relativeUrl, rootDirectoryUrl),
+      url,
       structuredMetaMap: structuredMetaMapForCover,
     }).cover
   }
@@ -40,13 +40,16 @@ export const babelPluginInstrument = (
         enter(path) {
           const { file } = this
           const { opts } = file
-
-          const relativeUrl = optionsToRelativeUrl(opts)
-          if (!relativeUrl) {
-            console.warn("file without relativeUrl", relativeUrl)
+          if (!opts.sourceFileName) {
+            console.warn(
+              `cannot instrument file when "sourceFileName" option is not set`,
+            )
             return
           }
-          if (!shouldInstrument(relativeUrl)) return
+          const fileUrl = fileSystemPathToUrl(opts.sourceFileName)
+          if (!shouldInstrument(fileUrl)) {
+            return
+          }
 
           this.__dv__ = null
 
@@ -84,9 +87,4 @@ export const babelPluginInstrument = (
       },
     },
   }
-}
-
-const optionsToRelativeUrl = ({ filenameRelative }) => {
-  if (filenameRelative) return filenameRelative
-  return ""
 }
