@@ -50,6 +50,10 @@ export const build = async ({
   // and this function will be agnostic about "preview" concept
   isPreview = false,
   plugins = [],
+  htmlSupervisor,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  babel,
   runtimeSupport = {
     android: "0.0.0",
     chrome: "0.0.0",
@@ -99,7 +103,12 @@ export const build = async ({
           loadRawGraphLog.setRightText(urlCount)
         },
       },
-      ...getCorePlugins(),
+      ...getCorePlugins({
+        htmlSupervisor,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        babel,
+      }),
     ],
     scenario: "build",
     sourcemaps,

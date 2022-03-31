@@ -5,7 +5,11 @@ import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 const require = createRequire(import.meta.url)
 
-export const getBaseBabelPluginStructure = ({ url, isSupportedOnRuntime }) => {
+export const getBaseBabelPluginStructure = ({
+  url,
+  isSupportedOnRuntime,
+  topLevelAwait = "simple",
+}) => {
   const isBabelPluginNeeded = (babelPluginName) => {
     return !isSupportedOnRuntime(
       babelPluginName,
@@ -43,7 +47,7 @@ export const getBaseBabelPluginStructure = ({ url, isSupportedOnRuntime }) => {
     babelPluginStructure["transform-async-to-promises"] = [
       require("babel-plugin-transform-async-to-promises"),
       {
-        topLevelAwait: "simple",
+        topLevelAwait,
       },
     ]
   }
