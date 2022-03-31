@@ -83,10 +83,10 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
             return
           }
           actions.push(async () => {
-            const inlineStyleId = getIdForInlineHtmlNode(htmlAst, node)
+            const inlineId = getIdForInlineHtmlNode(htmlAst, node)
             const inlineStyleSpecifier = `./${urlToFilename(
               url,
-            )}@${inlineStyleId}.css`
+            )}@${inlineId}.css`
             const inlineStyleReference = addInlineReference({
               node,
               type: "link_href",
@@ -98,6 +98,9 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
             await cook({
               reference: inlineStyleReference,
               urlInfo: inlineUrlInfo,
+            })
+            assignHtmlNodeAttributes(node, {
+              "original-inline-id": inlineId,
             })
             setHtmlNodeText(node, inlineUrlInfo.content)
           })
@@ -121,10 +124,8 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
           }
           actions.push(async () => {
             const scriptCategory = parseScriptNode(node)
-            const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
-            const inlineScriptSpecifier = `./${urlToFilename(
-              url,
-            )}@${inlineScriptId}${
+            const inlineId = getIdForInlineHtmlNode(htmlAst, node)
+            const inlineScriptSpecifier = `./${urlToFilename(url)}@${inlineId}${
               scriptCategory === "importmap" ? ".importmap" : ".js"
             }`
             const inlineScriptReference = addInlineReference({
@@ -148,7 +149,7 @@ export const jsenvPluginHtmlInlineScriptsAndStyles = ({
               urlInfo: inlineUrlInfo,
             })
             assignHtmlNodeAttributes(node, {
-              "original-inline-id": inlineScriptId,
+              "original-inline-id": inlineId,
             })
             setHtmlNodeText(node, inlineUrlInfo.content)
           })
