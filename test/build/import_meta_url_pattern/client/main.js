@@ -1,4 +1,5 @@
 import "./file.js"
 
-const url = new URL("file.txt", import.meta.url)
-console.log(url.href)
+export const textFileUrl = new URL("file.txt", import.meta.url).href
+
+console.log(textFileUrl)
