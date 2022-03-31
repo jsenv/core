@@ -1,8 +1,15 @@
 /*
+ * Things hapenning here:
  * 1. load raw build files
  * 2. bundle files
  * 3. optimize files (minify mostly)
  * 4. urls versioning
+ *
+ * Needs to be fixed:
+ * When content becomes inlined we have an issue:
+ * For html it works because we reuse jsenv plugin inline to re-parse the content
+ * and be replace original urls to build urls (same is applied for versioning)
+ * But for import assertion for instance it's more problematic
  */
 
 import {
