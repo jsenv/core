@@ -33,9 +33,7 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { jsenvPluginInline } from "../omega/plugins/inline/jsenv_plugin_inline.js"
-import { applyLeadingSlashUrlResolution } from "../omega/kitchen/leading_slash_url_resolution.js"
 import { getCorePlugins } from "../omega/core_plugins.js"
-
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { buildWithRollup } from "./build_with_rollup.js"
@@ -66,8 +64,7 @@ export const build = async ({
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
-  versioning = true,
-  versioningMethod = "filename", // "search_param", "filename"
+  versioning = "filename", //  "filename", "search_param", "none"
   lineBreakNormalization = process.platform === "win32",
 
   writeOnFileSystem = true,
@@ -76,8 +73,13 @@ export const build = async ({
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
-  assertEntryPoints({ entryPoints })
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
+  assertEntryPoints({ entryPoints })
+  if (!["filename", "search_param", "none"].includes(versioning)) {
+    throw new Error(
+      `Unexpected "versioning": must be "filename", "search_param" or "none"; got ${versioning}`,
+    )
+  }
 
   const rawGraph = createUrlGraph()
   const loadRawGraphLog = createTaskLog(logger, "load files")
@@ -236,10 +238,11 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             const parentSourceUrl = parentUrlInfo.data.sourceUrl
             return new URL(specifier, parentSourceUrl).href
           }
-          return (
-            applyLeadingSlashUrlResolution(specifier, rootDirectoryUrl) ||
-            new URL(specifier, parentUrl).href
-          )
+          if (specifier[0] === "/") {
+            const url = new URL(specifier.slice(1), rootDirectoryUrl).href
+            return url
+          }
+          return new URL(specifier, parentUrl).href
         },
         normalize: ({ url, parentUrl, type, data }) => {
           if (!url.startsWith("file:")) {
@@ -342,7 +345,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     `graph urls pre-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   )
-  if (versioning) {
+  if (versioning !== "none") {
     const urlVersioningLog = createTaskLog(logger, "inject version in urls")
     try {
       const urlsSorted = sortUrlGraphByDependencies(finalGraph)
@@ -382,7 +385,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
           buildUrl: urlInfo.url,
           version: urlInfo.data.version,
-          versioningMethod,
+          versioning,
         })
       })
       const versionMappings = {}
@@ -555,8 +558,8 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   }
 }
 
-const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
-  if (versioningMethod === "search_param") {
+const injectVersionIntoBuildUrl = ({ buildUrl, version, versioning }) => {
+  if (versioning === "search_param") {
     return injectQueryParams(buildUrl, {
       v: version,
     })
