@@ -15,8 +15,8 @@ export const jsenvPluginImportAssertions = () => {
       appliesDuring: "*",
       transform: {
         js_module: async (
-          { url, generatedUrl, content },
-          { scenario, isSupportedOnRuntime, references, updateReference },
+          { url, generatedUrl, content, references },
+          { scenario, isSupportedOnRuntime, updateReference },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
             scenario,
