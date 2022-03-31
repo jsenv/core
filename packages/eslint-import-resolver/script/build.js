@@ -1,10 +1,3 @@
-/*
- * This file uses "@jsenv/core" to convert source files into commonjs format
- * and write them into "./dist/" directory.
- *
- * Read more at https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#node-package-build
- */
-
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { writeFile } from "@jsenv/filesystem"
 
@@ -52,10 +45,9 @@ const esToCjs = async ({ url, map, content }) => {
   }
 }
 const { content } = await esToCjs({
-  url: new URL("../../packages/eslint-import-resolver/main.js", import.meta.url)
-    .href,
+  url: new URL("../main.js", import.meta.url).href,
 })
 await writeFile(
-  new URL("../../dist/jsenv_eslint_import_resolver.cjs", import.meta.url),
+  new URL("../dist/jsenv_eslint_import_resolver.cjs", import.meta.url),
   content,
 )

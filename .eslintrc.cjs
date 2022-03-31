@@ -34,7 +34,7 @@ const eslintConfig = composeEslintConfig(
     plugins: ["import"],
     settings: {
       "import/resolver": {
-        [require.resolve("./dist/jsenv_eslint_import_resolver.cjs")]: {
+        "@jsenv/eslint-import-resolver": {
           projectDirectoryUrl: __dirname,
           // logLevel: "debug",
           packageConditions: ["node", "import"],
@@ -112,7 +112,7 @@ const eslintConfig = composeEslintConfig(
         },
         settings: {
           "import/resolver": {
-            [require.resolve("./dist/jsenv_eslint_import_resolver.cjs")]: {
+            "@jsenv/eslint-import-resolver": {
               projectDirectoryUrl: __dirname,
               packageConditions: ["browser", "import"],
               // logLevel: "debug",
