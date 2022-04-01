@@ -39,6 +39,7 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
+import { defaultRuntimeSupport } from "../omega/runtime_support/default_runtime_support.js"
 import { jsenvPluginInline } from "../omega/plugins/inline/jsenv_plugin_inline.js"
 import { getCorePlugins } from "../omega/core_plugins.js"
 import { createKitchen } from "../omega/kitchen/kitchen.js"
@@ -61,17 +62,7 @@ export const build = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   babel,
-  runtimeSupport = {
-    android: "0.0.0",
-    chrome: "0.0.0",
-    edge: "0.0.0",
-    electron: "0.0.0",
-    firefox: "0.0.0",
-    ios: "0.0.0",
-    opera: "0.0.0",
-    rhino: "0.0.0",
-    safari: "0.0.0",
-  },
+  runtimeSupport = defaultRuntimeSupport,
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
@@ -229,8 +220,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       // on pourrait concat + minify en utilisant post css
     }
   }
-  // TODO: minify html, svg, json
-  // in the future this should be done in a "optimize" hook
 
   const buildUrlsGenerator = createBuilUrlsGenerator({
     buildDirectoryUrl,
@@ -403,6 +392,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   }
   loadFinalGraphLog.done()
 
+  // TODO: minify html, js, svg, json
+  // in the future we'll do an "optimize" hook for plugins
+
   logger.debug(
     `graph urls pre-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
@@ -419,6 +411,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         if (urlInfo.type === "sourcemap") {
           return
         }
+        if (urlInfo.isInline) {
+          return
+        }
         const urlVersionGenerator = createUrlVersionGenerator()
         urlVersionGenerator.augmentWithContent({
           content: urlInfo.content,
@@ -427,6 +422,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         })
         urlInfo.dependencies.forEach((dependencyUrl) => {
           const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
+          if (dependencyUrlInfo.isInline) {
+            // this content is part of the file, no need to take into account twice
+            return
+          }
           if (dependencyUrlInfo.data.version) {
             urlVersionGenerator.augmentWithDependencyVersion(
               dependencyUrlInfo.data.version,
@@ -469,21 +468,15 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               const url = new URL(specifier, parentUrl).href
               return url
             },
-            formatReferencedUrl: ({
-              specifier,
-              url,
-              type,
-              subtype,
-              isInline,
-            }) => {
-              if (isInline) {
+            formatReferencedUrl: (reference) => {
+              if (reference.isInline) {
                 return null
               }
               // specifier comes from "normalize" hook done a bit earlier in this file
               // we want to get back their build url to access their infos
-              const referencedUrlInfo = finalGraph.getUrlInfo(url)
+              const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
               if (referencedUrlInfo.data.isEntryPoint) {
-                return specifier
+                return reference.specifier
               }
               // data:* urls and so on
               if (!referencedUrlInfo.url.startsWith("file:")) {
@@ -501,18 +494,36 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 versionedUrl,
                 buildDirectoryUrl,
               )}`
-              versionMappings[specifier] = versionedSpecifier
+              versionMappings[reference.specifier] = versionedSpecifier
+
               if (
-                type === "js_import_meta_url_pattern" ||
-                subtype === "import_dynamic"
+                reference.type === "js_import_meta_url_pattern" ||
+                reference.subtype === "import_dynamic"
               ) {
-                usedVersionMappings.push(specifier)
+                usedVersionMappings.push(reference.specifier)
                 return () =>
                   `window.__asVersionedSpecifier__(${JSON.stringify(
-                    specifier,
+                    reference.specifier,
                   )})`
               }
-              return versionedSpecifier
+              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+              if (parentUrlInfo.isInline) {
+                const grandParentUrlInfo = finalGraph.getUrlInfo(
+                  parentUrlInfo.inlineUrlSite.url,
+                )
+                if (
+                  grandParentUrlInfo.type === "js_module" ||
+                  grandParentUrlInfo === "js_classic"
+                ) {
+                  // content inlined inside js is inside template literals
+                  usedVersionMappings.push(reference.specifier)
+                  return () =>
+                    `\${window.__asVersionedSpecifier__(${JSON.stringify(
+                      reference.specifier,
+                    )})}`
+                }
+              }
+              return reference.specifier
             },
             load: ({ url }) => {
               const urlInfo = finalGraph.getUrlInfo(url)
@@ -550,8 +561,8 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               return
             }
             await injectVersionMappings(buildUrlInfo, {
-              versionMappings: versionMappingsNeeded,
               rootDirectoryUrl,
+              versionMappings: versionMappingsNeeded,
             })
           }),
         )

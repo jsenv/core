@@ -2,9 +2,9 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { ContentType } from "@jsenv/utils/src/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
+import { escapeTemplateStringSpecialCharacters } from "@jsenv/utils/src/escape_template_string.js"
 
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
-import { escapeTemplateStringSpecialCharacters } from "./helpers/template_string_escape.js"
 import { convertJsonTextToJavascriptModule } from "./helpers/json_module.js"
 import { convertTextToJavascriptModule } from "./helpers/text_module.js"
 

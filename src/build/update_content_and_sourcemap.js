@@ -6,10 +6,10 @@ import {
 
 export const updateContentAndSourcemap = async (
   urlInfo,
-  { content, sourcemap, rootDirectoryUrl },
+  { rootDirectoryUrl, content, sourcemap },
 ) => {
   urlInfo.content = content
-  if (sourcemap) {
+  if (urlInfo.sourcemap) {
     urlInfo.sourcemap = await composeTwoSourcemaps(
       urlInfo.sourcemap,
       sourcemap,

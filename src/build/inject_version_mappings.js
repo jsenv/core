@@ -12,15 +12,15 @@ import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
 
 export const injectVersionMappings = async (
   urlInfo,
-  { versionMappings, rootDirectoryUrl },
+  { rootDirectoryUrl, versionMappings },
 ) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = injector(urlInfo, { versionMappings })
     await updateContentAndSourcemap(urlInfo, {
+      rootDirectoryUrl,
       content,
       sourcemap,
-      rootDirectoryUrl,
     })
   }
 }

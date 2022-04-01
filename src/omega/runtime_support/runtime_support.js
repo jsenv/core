@@ -12,6 +12,9 @@ export const isFeatureSupportedOnRuntimes = (
       runtimeVersion,
       runtimeVersionCompatible,
     )
-    return highestVersion === runtimeVersion
+    if (highestVersion !== runtimeVersion) {
+      return false
+    }
+    return true
   })
 }

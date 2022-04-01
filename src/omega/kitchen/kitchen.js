@@ -15,6 +15,8 @@ import {
 } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 
+import { featuresCompatMap } from "../runtime_support/features_compatibility.js"
+import { isFeatureSupportedOnRuntimes } from "../runtime_support/runtime_support.js"
 import { fileUrlConverter } from "../file_url_converter.js"
 import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
 import {
@@ -23,8 +25,6 @@ import {
   createParseError,
   createTransformError,
 } from "./errors.js"
-import { featuresCompatMap } from "./features_compatibility.js"
-import { isFeatureSupportedOnRuntimes } from "./runtime_support.js"
 import { createPluginController } from "./plugin_controller.js"
 
 export const createKitchen = ({

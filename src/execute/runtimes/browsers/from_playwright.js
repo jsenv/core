@@ -10,7 +10,7 @@ import { moveUrl } from "@jsenv/filesystem"
 import { memoize } from "@jsenv/utils/memoize/memoize.js"
 import { filterV8Coverage } from "@jsenv/utils/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/utils/coverage/istanbul_coverage_composition.js"
-import { escapeRegexpSpecialCharacters } from "@jsenv/utils/src/regexp_escape.js"
+import { escapeRegexpSpecialCharacters } from "@jsenv/utils/src/escape_regexp.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,

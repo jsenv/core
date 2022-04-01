@@ -8,5 +8,5 @@ await build({
     "./main.js": "main.js",
   },
   // bundling: false,
-  versioning: "none",
+  // versioning: "none",
 })
