@@ -8,12 +8,7 @@
  *   I think so when we inject ?js_classic
  */
 
-import { urlToFilename } from "@jsenv/filesystem"
-
-import {
-  injectQueryParams,
-  injectQueryParamsIntoSpecifier,
-} from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -26,10 +21,10 @@ import {
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   htmlNodePosition,
-  getIdForInlineHtmlNode,
   removeHtmlNodeText,
   getHtmlNodeTextNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
+import { generateInlineContentUrl } from "@jsenv/core/packages/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginHtmlSupervisor = ({
   logs = false,
@@ -57,25 +52,29 @@ export const jsenvPluginHtmlSupervisor = ({
 
         const handleInlineScript = (node, textNode) => {
           const scriptCategory = parseScriptNode(node)
-          const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
-          const inlineScriptSpecifier = `${urlToFilename(
-            url,
-          )}@${inlineScriptId}.js`
-          const { line, column, isOriginal } =
+          const { line, column, lineEnd, columnEnd, isOriginal } =
             htmlNodePosition.readNodePosition(node, {
               preferOriginal: true,
             })
+          let inlineScriptUrl = generateInlineContentUrl({
+            url,
+            extension: ".js",
+            line,
+            column,
+            lineEnd,
+            columnEnd,
+          })
+          if (scriptCategory === "classic") {
+            inlineScriptUrl = injectQueryParams(inlineScriptUrl, {
+              js_classic: "",
+            })
+          }
           const [inlineScriptReference] = referenceUtils.foundInline({
             type: "script_src",
             line: line - 1,
             column,
             isOriginal,
-            specifier:
-              scriptCategory === "classic"
-                ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
-                    js_classic: "",
-                  })
-                : inlineScriptSpecifier,
+            specifier: inlineScriptUrl,
             contentType: "application/javascript",
             content: textNode.value,
           })

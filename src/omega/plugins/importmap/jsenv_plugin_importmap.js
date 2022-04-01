@@ -22,7 +22,6 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap"
-import { urlToFilename } from "@jsenv/filesystem"
 
 import {
   parseHtmlString,
@@ -32,11 +31,11 @@ import {
   htmlNodePosition,
   removeHtmlNodeAttributeByName,
   setHtmlNodeText,
-  getIdForInlineHtmlNode,
   assignHtmlNodeAttributes,
   getHtmlNodeTextNode,
   removeHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
+import { generateInlineContentUrl } from "@jsenv/core/packages/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginImportmap = () => {
   let finalImportmap = null
@@ -113,21 +112,25 @@ export const jsenvPluginImportmap = () => {
           return null
         }
         const handleInlineImportmap = async (importmap, textNode) => {
-          const inlineId = getIdForInlineHtmlNode(htmlAst, importmap)
-          const inlineImportmapSpecifier = `./${urlToFilename(
-            url,
-          )}@${inlineId}.importmap`
-          const { line, column, isOriginal } =
+          const { line, column, lineEnd, columnEnd, isOriginal } =
             htmlNodePosition.readNodePosition(importmap, {
               preferOriginal: true,
             })
+          const inlineImportmapUrl = generateInlineContentUrl({
+            url,
+            extension: ".importmap",
+            line,
+            column,
+            lineEnd,
+            columnEnd,
+          })
           const [inlineImportmapReference, inlineImportmapUrlInfo] =
             referenceUtils.foundInline({
               type: "script_src",
               line: line - 1,
               column,
               isOriginal,
-              specifier: inlineImportmapSpecifier,
+              specifier: inlineImportmapUrl,
               contentType: "application/importmap+json",
               content: textNode.value,
             })
@@ -160,19 +163,23 @@ export const jsenvPluginImportmap = () => {
           })
           setHtmlNodeText(importmap, importmapUrlInfo.content)
 
-          const inlineScriptId = getIdForInlineHtmlNode(htmlAst, importmap)
-          const inlineImportmapSpecifier = `./${urlToFilename(
-            url,
-          )}@${inlineScriptId}.importmap`
-          const { line, column, isOriginal } =
+          const { line, column, lineEnd, columnEnd, isOriginal } =
             htmlNodePosition.readNodePosition(importmap, {
               preferOriginal: true,
             })
+          const inlineImportmapUrl = generateInlineContentUrl({
+            url,
+            extension: ".importmap",
+            line,
+            column,
+            lineEnd,
+            columnEnd,
+          })
           referenceUtils.becomesInline(importmapReference, {
             line: line - 1,
             column,
             isOriginal,
-            specifier: inlineImportmapSpecifier,
+            specifier: inlineImportmapUrl,
             contentType: "application/importmap+json",
             content: importmapUrlInfo.content,
           })

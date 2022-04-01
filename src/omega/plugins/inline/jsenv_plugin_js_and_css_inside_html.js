@@ -1,17 +1,15 @@
-import { urlToFilename } from "@jsenv/filesystem"
-
 import {
   parseHtmlString,
   stringifyHtmlAst,
   visitHtmlAst,
   getHtmlNodeTextNode,
-  getIdForInlineHtmlNode,
   htmlNodePosition,
   parseScriptNode,
   setHtmlNodeText,
   getHtmlNodeAttributeByName,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
+import { generateInlineContentUrl } from "@jsenv/core/packages/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginJsAndCssInsideHtml = () => {
   return {
@@ -30,14 +28,18 @@ export const jsenvPluginJsAndCssInsideHtml = () => {
             return
           }
           actions.push(async () => {
-            const inlineId = getIdForInlineHtmlNode(htmlAst, node)
-            const inlineStyleSpecifier = `./${urlToFilename(
-              url,
-            )}@${inlineId}.css`
-            const { line, column, isOriginal } =
+            const { line, column, lineEnd, columnEnd, isOriginal } =
               htmlNodePosition.readNodePosition(node, {
                 preferOriginal: true,
               })
+            const inlineStyleUrl = generateInlineContentUrl({
+              url,
+              extension: ".css",
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+            })
             const [inlineStyleReference, inlineStyleUrlInfo] =
               referenceUtils.foundInline({
                 type: "link_href",
@@ -47,7 +49,7 @@ export const jsenvPluginJsAndCssInsideHtml = () => {
                 line: line - 1,
                 column,
                 isOriginal,
-                specifier: inlineStyleSpecifier,
+                specifier: inlineStyleUrl,
                 contentType: "text/css",
                 content: textNode.value,
               })
@@ -77,14 +79,23 @@ export const jsenvPluginJsAndCssInsideHtml = () => {
           }
           actions.push(async () => {
             const scriptCategory = parseScriptNode(node)
-            const inlineId = getIdForInlineHtmlNode(htmlAst, node)
-            const inlineScriptSpecifier = `./${urlToFilename(url)}@${inlineId}${
-              scriptCategory === "importmap" ? ".importmap" : ".js"
-            }`
-            const { line, column, isOriginal } =
+            const { line, column, lineEnd, columnEnd, isOriginal } =
               htmlNodePosition.readNodePosition(node, {
                 preferOriginal: true,
               })
+            let inlineScriptUrl = generateInlineContentUrl({
+              url,
+              extension: scriptCategory === "importmap" ? ".importmap" : ".js",
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+            })
+            if (scriptCategory === "classic") {
+              inlineScriptUrl = injectQueryParams(inlineScriptUrl, {
+                js_classic: "",
+              })
+            }
             const [inlineScriptReference, inlineScriptUrlInfo] =
               referenceUtils.foundInline({
                 node,
@@ -95,12 +106,7 @@ export const jsenvPluginJsAndCssInsideHtml = () => {
                 line: line - 1,
                 column,
                 isOriginal,
-                specifier:
-                  scriptCategory === "classic"
-                    ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
-                        js_classic: "",
-                      })
-                    : inlineScriptSpecifier,
+                specifier: inlineScriptUrl,
                 contentType:
                   scriptCategory === "importmap"
                     ? "application/importmap+json"

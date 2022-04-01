@@ -4,8 +4,8 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
+import { escapeTemplateStringSpecialCharacters } from "./helpers/template_string_escape.js"
 import { convertJsonTextToJavascriptModule } from "./helpers/json_module.js"
-import { convertCssTextToJavascriptModule } from "./helpers/css_module.js"
 import { convertTextToJavascriptModule } from "./helpers/text_module.js"
 
 export const jsenvPluginImportAssertions = () => {
@@ -107,33 +107,7 @@ export const jsenvPluginImportAssertions = () => {
       })
     },
   }
-  const importTypeCss = {
-    name: "jsenv:import_type_css",
-    appliesDuring: "*",
-    // load the original css url
-    load: ({ data }, { urlGraph, load }) => {
-      if (data.importType !== "css_module") {
-        return null
-      }
-      return load({
-        reference: data.originalReference,
-        urlInfo: urlGraph.getUrlInfo(data.originalReference.url),
-      })
-    },
-    transform: ({ url, data, contentType, content }) => {
-      if (data.importType !== "css_module") {
-        return null
-      }
-      if (contentType !== "text/css") {
-        throw new Error(
-          `Unexpected content type on ${url}, should be "text/css" but got ${contentType}`,
-        )
-      }
-      return convertCssTextToJavascriptModule({
-        content,
-      })
-    },
-  }
+
   // not standard but I expect this to happen one day?
   const importTypeText = {
     name: "jsenv:import_type_text",
@@ -152,7 +126,57 @@ export const jsenvPluginImportAssertions = () => {
       })
     },
   }
-  return [importAssertions, importTypeJson, importTypeCss, importTypeText]
+  return [
+    importAssertions,
+    importTypeJson,
+    jsenvPluginImportTypeCss(),
+    importTypeText,
+  ]
+}
+
+const jsenvPluginImportTypeCss = () => {
+  const cssTagClientFileUrl = new URL(
+    "../inline/client/css_template_literal_tag.js",
+    import.meta.url,
+  ).href
+
+  return {
+    name: "jsenv:import_type_css",
+    appliesDuring: "*",
+    // load the original css url
+    load: ({ data }, { urlGraph, load }) => {
+      if (data.importType !== "css_module") {
+        return null
+      }
+      return load({
+        reference: data.originalReference,
+        urlInfo: urlGraph.getUrlInfo(data.originalReference.url),
+      })
+    },
+    transform: ({ url, data, contentType, content }, { referenceUtils }) => {
+      if (data.importType !== "css_module") {
+        return null
+      }
+      if (contentType !== "text/css") {
+        throw new Error(
+          `Unexpected content type on ${url}, should be "text/css" but got ${contentType}`,
+        )
+      }
+      const cssTextEscaped = escapeTemplateStringSpecialCharacters(content)
+      const [reference] = referenceUtils.inject({
+        type: "js_import_export",
+        specifier: cssTagClientFileUrl,
+      })
+      return {
+        contentType: "application/javascript",
+        content: `import { css } from ${reference.generatedSpecifier}
+
+const stylesheet = new CSSStyleSheet()
+stylesheet.replaceSync(css\`${cssTextEscaped}\`)
+export default stylesheet`,
+      }
+    },
+  }
 }
 
 const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
