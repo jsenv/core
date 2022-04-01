@@ -7,4 +7,6 @@ await build({
   entryPoints: {
     "./main.js": "main.js",
   },
+  // bundling: false,
+  versioning: "none",
 })

@@ -1,3 +1,13 @@
+/*
+ * Needs to be updated so that it sill works in the following cases:
+ * - templates literals transformed to regular stuff by babel
+ * - tagged name renamed by rollup
+ * - the template named is minified by terser
+ * In the cases above I must remain capable to recoginize the template literal
+ * to be able to update the urls inside (and even version the urls)
+ * because url versioning happens after minification it can be challenging
+ */
+
 import { createMagicSource } from "@jsenv/core/packages/utils/sourcemap/magic_source.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
