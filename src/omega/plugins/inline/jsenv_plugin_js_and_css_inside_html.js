@@ -13,9 +13,9 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 
-export const jsenvPluginHtmlInlineScriptsAndStyles = () => {
+export const jsenvPluginJsAndCssInsideHtml = () => {
   return {
-    name: "jsenv:inline_scripts_and_styles",
+    name: "jsenv:js_and_css_inside_html",
     appliesDuring: "*",
     transform: {
       html: async ({ url, content }, { cook, referenceUtils }) => {

@@ -12,7 +12,7 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-import { babelPluginMetadataImportMetaScenarios } from "./utils/babel_plugin_metadata_import_meta_scenarios.js"
+import { collectProgramImportMetas } from "@jsenv/utils/js_ast/program_import_metas.js"
 
 export const jsenvPluginImportMetaScenarios = () => {
   return {
@@ -58,6 +58,22 @@ export const jsenvPluginImportMetaScenarios = () => {
           })
         })
         return magicSource.toContentAndSourcemap()
+      },
+    },
+  }
+}
+
+const babelPluginMetadataImportMetaScenarios = () => {
+  return {
+    name: "metadata-import-meta-scenarios",
+    visitor: {
+      Program(programPath, state) {
+        const importMetas = collectProgramImportMetas(programPath)
+        state.file.metadata.importMetaScenarios = {
+          dev: importMetas.dev,
+          test: importMetas.test,
+          build: importMetas.build,
+        }
       },
     },
   }
