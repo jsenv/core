@@ -103,7 +103,6 @@ const rollupPluginJsenv = ({
           }
           const jsModuleBundleUrlInfo = {
             // buildRelativeUrl: rollupFileInfo.fileName,
-            data: {},
             type: "js_module",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,

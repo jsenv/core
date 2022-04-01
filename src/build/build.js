@@ -153,13 +153,13 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   if (bundling) {
     const jsModuleUrlInfosToBundle = []
     const cssUrlInfosToBundle = []
-    Object.keys(rawGraph.urlInfos).forEach((sourceUrl) => {
-      const sourceUrlInfo = rawGraph.getUrlInfo(sourceUrl)
-      if (!sourceUrlInfo.data.isEntryPoint) {
+    Object.keys(rawGraph.urlInfos).forEach((rawUrl) => {
+      const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+      if (!rawUrlInfo.data.isEntryPoint) {
         return
       }
-      if (sourceUrlInfo.type === "html") {
-        sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
+      if (rawUrlInfo.type === "html") {
+        rawUrlInfo.dependencies.forEach((dependencyUrl) => {
           const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
           if (dependencyUrlInfo.type === "js_module") {
             if (dependencyUrlInfo.isInline) {
@@ -183,12 +183,12 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         })
         return
       }
-      if (sourceUrlInfo.type === "js_module") {
-        jsModuleUrlInfosToBundle.push(sourceUrlInfo)
+      if (rawUrlInfo.type === "js_module") {
+        jsModuleUrlInfosToBundle.push(rawUrlInfo)
         return
       }
-      if (sourceUrlInfo.type === "css") {
-        jsModuleUrlInfosToBundle.push(sourceUrlInfo)
+      if (rawUrlInfo.type === "css") {
+        jsModuleUrlInfosToBundle.push(rawUrlInfo)
         return
       }
     })
@@ -210,8 +210,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         const { jsModuleInfos } = rollupBuild
         Object.keys(jsModuleInfos).forEach((url) => {
           const jsModuleInfo = jsModuleInfos[url]
+          const rawUrlInfo = rawGraph.getUrlInfo(url)
           buildUrlInfos[url] = {
-            data: jsModuleInfo.data,
+            data: rawUrlInfo ? rawUrlInfo.data : {},
             type: "js_module",
             contentType: "application/javascript",
             content: jsModuleInfo.content,
@@ -295,7 +296,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               reference.url,
               buildUrlInfo,
             )
-            reference.data.sourceUrl = reference.url
+            reference.data.rawUrl = reference.url
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
