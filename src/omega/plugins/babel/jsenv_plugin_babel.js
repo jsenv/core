@@ -15,19 +15,19 @@ export const jsenvPluginBabel = ({
     appliesDuring: "*",
     transform: {
       js_module: async ({ url, generatedUrl, content }, context) => {
-        const { isSupportedOnRuntime, addReference } = context
+        const { isSupportedOnRuntime, referenceUtils } = context
         const babelPluginStructure = getBaseBabelPluginStructure({
           url,
           isSupportedOnRuntime,
           topLevelAwait,
         })
-        const getImportSpecifier = (clientFileUrl) =>
-          JSON.parse(
-            addReference({
-              type: "js_import_export",
-              specifier: clientFileUrl,
-            }).generatedSpecifier,
-          )
+        const getImportSpecifier = (clientFileUrl) => {
+          const [reference] = referenceUtils.inject({
+            type: "js_import_export",
+            specifier: clientFileUrl,
+          })
+          return JSON.parse(reference.generatedSpecifier)
+        }
 
         if (!isSupportedOnRuntime("global_this")) {
           babelPluginStructure["global-this-as-jsenv-import"] = [

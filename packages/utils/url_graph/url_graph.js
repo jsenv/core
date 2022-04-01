@@ -117,6 +117,7 @@ const createUrlInfo = (url) => {
     data: {}, // plugins can put whatever they want here
     url,
     generatedUrl: null,
+    isInline: false,
     inlineUrlSite: null,
     contentType: "",
     originalContent: "",

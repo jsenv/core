@@ -16,5 +16,5 @@ await build({
   },
   sourcemaps: "file",
   bundling: false,
-  versioning: true,
+  versioning: "filename",
 })

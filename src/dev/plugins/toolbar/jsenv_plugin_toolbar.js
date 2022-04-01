@@ -21,16 +21,16 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
       dev: true,
     },
     transform: {
-      html: ({ url, content }, { addReference }) => {
+      html: ({ url, content }, { referenceUtils }) => {
         if (url === toolbarHtmlClientFileUrl) {
           return null
         }
         const htmlAst = parseHtmlString(content)
-        const toolbarInjectorReference = addReference({
+        const toolbarInjectorReference = referenceUtils.inject({
           type: "js_import_export",
           specifier: toolbarInjectorClientFileUrl,
         })
-        const toolbarClientFileReference = addReference({
+        const toolbarClientFileReference = referenceUtils.inject({
           type: "iframe_src",
           specifier: toolbarHtmlClientFileUrl,
         })

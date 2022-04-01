@@ -162,7 +162,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         sourceUrlInfo.dependencies.forEach((dependencyUrl) => {
           const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
           if (dependencyUrlInfo.type === "js_module") {
-            if (dependencyUrlInfo.inlineUrlSite) {
+            if (dependencyUrlInfo.isInline) {
               // bundle inline script type module deps
               dependencyUrlInfo.references.forEach((inlineScriptRef) => {
                 if (inlineScriptRef.type === "js_import_export") {
@@ -234,92 +234,137 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   const buildUrlsGenerator = createBuilUrlsGenerator({
     buildDirectoryUrl,
   })
-  const sourceUrls = {}
+  const rawUrls = {}
   const buildUrls = {}
   const finalGraph = createUrlGraph()
   const finalGraphKitchen = createKitchen({
     logger,
     rootDirectoryUrl,
     urlGraph: finalGraph,
+    // Inline content, such as <script> inside html, is transformed during the previous phase.
+    // If we read the inline content it would be considered as the original content.
+    // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+    //   as the original content.
+    //   - But it would not work when sourcemap are not generated
+    //   - would be a bit slower
+    // - So instead of reading the inline content directly, we search into raw graph
+    //   to get "originalContent" and "sourcemap"
+    loadInlineUrlInfos: (finalUrlInfo) => {
+      const rawUrl = finalUrlInfo.data.rawUrl
+      const urlInfo = buildUrlInfos[rawUrl] || rawGraph.getUrlInfo(rawUrl)
+      if (!urlInfo) {
+        return {
+          contentType: finalUrlInfo.contentType,
+          content: finalUrlInfo.content,
+        }
+      }
+      return {
+        originalContent: urlInfo.originalContent,
+        contentType: urlInfo.contentType,
+        content: urlInfo.content,
+        sourcemap: urlInfo.sourcemap,
+      }
+    },
     plugins: [
-      jsenvPluginInline({
-        skipHtmlInlineLoad: true, // we can and want to load from rawGraph
-      }),
+      jsenvPluginInline(),
       {
         name: "jsenv:postbuild",
         appliesDuring: { build: true },
-        resolve: ({ parentUrl, specifier, isInline }) => {
-          if (isInline) {
-            const parentUrlInfo = finalGraph.getUrlInfo(parentUrl)
-            const parentSourceUrl = parentUrlInfo.data.sourceUrl
-            return new URL(specifier, parentSourceUrl).href
-          }
-          if (specifier[0] === "/") {
-            const url = new URL(specifier.slice(1), rootDirectoryUrl).href
+        resolve: (reference) => {
+          if (reference.specifier[0] === "/") {
+            const url = new URL(reference.specifier.slice(1), rootDirectoryUrl)
+              .href
             return url
           }
-          return new URL(specifier, parentUrl).href
+          return new URL(reference.specifier, reference.parentUrl).href
         },
-        normalize: ({ url, parentUrl, type, data }) => {
-          if (!url.startsWith("file:")) {
+        normalize: (reference) => {
+          if (!reference.url.startsWith("file:")) {
             return null
           }
           // already a build url
-          const sourceUrl = sourceUrls[url]
-          if (sourceUrl) {
-            data.sourceUrl = sourceUrl
-            return url
+          const rawUrl = rawUrls[reference.url]
+          if (rawUrl) {
+            reference.data.rawUrl = rawUrl
+            return reference.url
           }
-          const buildUrlInfo = buildUrlInfos[url]
+          const buildUrlInfo = buildUrlInfos[reference.url]
           // from rollup or postcss
           if (buildUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(url, buildUrlInfo)
-            data.sourceUrl = url
-            sourceUrls[buildUrl] = url
+            const buildUrl = buildUrlsGenerator.generate(
+              reference.url,
+              buildUrlInfo,
+            )
+            reference.data.sourceUrl = reference.url
+            rawUrls[buildUrl] = reference.url
             return buildUrl
           }
-          const rawUrlInfo = rawGraph.getUrlInfo(url)
-          // files from root directory but not given to rollup not postcss
+          const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
+          // files from root directory but not given to rollup nor postcss
           if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(url, rawUrlInfo)
-            data.sourceUrl = url
-            sourceUrls[buildUrl] = url
+            const buildUrl = buildUrlsGenerator.generate(
+              reference.url,
+              rawUrlInfo,
+            )
+            reference.data.rawUrl = reference.url
+            rawUrls[buildUrl] = reference.url
             return buildUrl
           }
-          if (type === "sourcemap_comment") {
+          if (reference.isInline) {
+            const rawUrl = Object.keys(rawGraph.urlInfos).find((url) => {
+              const rawUrlInfo = rawGraph.urlInfos[url]
+              if (!rawUrlInfo.isInline) {
+                return false
+              }
+              if (rawUrlInfo.content !== reference.content) {
+                return false
+              }
+              return true
+            })
+            const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+            const buildUrl = buildUrlsGenerator.generate(
+              reference.url,
+              rawUrlInfo,
+              parentUrlInfo,
+            )
+            rawUrls[buildUrl] = reference.url
+            reference.data.rawUrl = rawUrl
+            return buildUrl
+          }
+          if (reference.type === "sourcemap_comment") {
             // inherit parent build url
-            return generateSourcemapUrl(parentUrl)
+            return generateSourcemapUrl(reference.parentUrl)
           }
           // files generated during the final graph (sourcemaps)
           // const finalUrlInfo = finalGraph.getUrlInfo(url)
-          const buildUrl = buildUrlsGenerator.generate(url, {
+          const buildUrl = buildUrlsGenerator.generate(reference.url, {
             data: {},
             type: "asset",
           })
           return buildUrl
         },
-        formatReferencedUrl: ({ url }) => {
-          if (!url.startsWith("file:")) {
+        formatReferencedUrl: (reference) => {
+          if (!reference.url.startsWith("file:")) {
             return null
           }
-          if (!urlIsInsideOf(url, buildDirectoryUrl)) {
+          if (!urlIsInsideOf(reference.url, buildDirectoryUrl)) {
             throw new Error(
-              `file url should be inside build directory at this stage`,
+              `urls should be inside build directory at this stage, found "${reference.url}"`,
             )
           }
           // if a file is in the same directory we could prefer the relative notation
           // but to keep things simple let's keep the notation relative to baseUrl for now
           const specifier = `${baseUrl}${urlToRelativeUrl(
-            url,
+            reference.url,
             buildDirectoryUrl,
           )}`
-          buildUrls[specifier] = url
+          buildUrls[specifier] = reference.url
           return specifier
         },
-        load: ({ data }) => {
-          const sourceUrl = data.sourceUrl
-          const urlInfo =
-            buildUrlInfos[sourceUrl] || rawGraph.getUrlInfo(sourceUrl)
+        load: (finalUrlInfo) => {
+          const rawUrl = finalUrlInfo.data.rawUrl
+          const urlInfo = buildUrlInfos[rawUrl] || rawGraph.getUrlInfo(rawUrl)
           return {
             originalContent: urlInfo.originalContent,
             contentType: urlInfo.contentType,
@@ -411,9 +456,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
         plugins: [
-          jsenvPluginInline({
-            skipHtmlInlineLoad: true,
-          }),
+          jsenvPluginInline(),
           {
             name: "jsenv:versioning",
             appliesDuring: { build: true },
@@ -534,7 +577,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       throw new Error(`build url outside build directory`)
     }
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
-    if (buildUrlInfo.inlineUrlSite) {
+    if (buildUrlInfo.isInline) {
       buildInlineFileContents[buildRelativeUrl] = buildUrlInfo.content
     } else {
       buildFileContents[buildRelativeUrl] = buildUrlInfo.content

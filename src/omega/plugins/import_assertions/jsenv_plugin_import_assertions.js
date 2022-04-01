@@ -15,8 +15,8 @@ export const jsenvPluginImportAssertions = () => {
       appliesDuring: "*",
       transform: {
         js_module: async (
-          { url, generatedUrl, content, references },
-          { scenario, isSupportedOnRuntime, updateReference },
+          { url, generatedUrl, content },
+          { scenario, isSupportedOnRuntime, referenceUtils },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
             scenario,
@@ -47,13 +47,11 @@ export const jsenvPluginImportAssertions = () => {
               const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
                 [importType]: "",
               })
-              const existingReference = references.find(
-                (ref) => ref.generatedSpecifier === JSON.stringify(specifier),
+              const newReference = referenceUtils.updateSpecifier(
+                JSON.stringify(specifier),
+                newSpecifier,
               )
-              const newReference = updateReference(existingReference, {
-                data: { importType },
-                specifier: newSpecifier,
-              })
+              newReference.data.importType = importType
               magicSource.replace({
                 start: importSpecifierPath.node.start,
                 end: importSpecifierPath.node.end,
@@ -71,13 +69,11 @@ export const jsenvPluginImportAssertions = () => {
             const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
               [importType]: "",
             })
-            const existingReference = references.find(
-              (ref) => ref.generatedSpecifier === JSON.stringify(specifier),
+            const newReference = referenceUtils.updateSpecifier(
+              JSON.stringify(specifier),
+              newSpecifier,
             )
-            const newReference = updateReference(existingReference, {
-              data: { importType },
-              specifier: newSpecifier,
-            })
+            newReference.data.importType = importType
             magicSource.replace({
               start: importSpecifierPath.node.start,
               end: importSpecifierPath.node.end,
@@ -160,8 +156,9 @@ export const jsenvPluginImportAssertions = () => {
 }
 
 const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
-  // during build always replace import assertions with the js to feed
-  // solely js to rollup
+  // during build always replace import assertions with the js
+  // to avoid passing js containing import assertions to rollup
+  // This means rollup will be able to bundle more imports
   if (scenario === "build") {
     return ["json", "css", "text"]
   }

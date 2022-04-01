@@ -49,12 +49,12 @@ export const jsenvPluginPreact = ({
       },
     },
     transform: {
-      html: ({ content }, { scenario, addReference }) => {
+      html: ({ content }, { scenario, referenceUtils }) => {
         if (!preactDevtoolsDuringBuild && scenario === "build") {
           return null
         }
         const htmlAst = parseHtmlString(content)
-        const preactDevtoolsReference = addReference({
+        const preactDevtoolsReference = referenceUtils.inject({
           type: "js_import_export",
           specifier:
             scenario === "dev" || scenario === "test"
@@ -77,7 +77,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
       },
       js_module: async (
         { url, generatedUrl, content },
-        { scenario, addReference },
+        { scenario, referenceUtils },
       ) => {
         //   case "Fragment":
         //   return `${source}/${development ? "jsx-dev-runtime" : "jsx-runtime"}`;
@@ -136,7 +136,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             magicSource.replace({
               start: index,
               end: index + importSpecifier.length,
-              replacement: addReference({
+              replacement: referenceUtils.inject({
                 type: "js_import_export",
                 specifier: importSpecifier.slice(1, -1),
               }).generatedSpecifier,
@@ -147,7 +147,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const prefreshClientFileReference = addReference({
+            const prefreshClientFileReference = referenceUtils.inject({
               type: "js_import_export",
               specifier: "@jsenv/plugin-preact/src/client/prefresh.js",
             })

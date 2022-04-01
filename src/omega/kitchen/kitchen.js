@@ -43,6 +43,12 @@ export const createKitchen = ({
   // we don't need sources in sourcemap as long as the url in the
   // sourcemap uses file:/// (chrome will understand and read from filesystem)
   sourcemapsSources = false,
+  loadInlineUrlInfos = (urlInfo) => {
+    return {
+      contentType: urlInfo.contentType,
+      content: urlInfo.content,
+    }
+  },
 
   writeOnFileSystem = true,
 }) => {
@@ -80,6 +86,8 @@ export const createKitchen = ({
     subtype,
     specifier,
     isInline = false,
+    content,
+    contentType,
   }) => {
     return {
       data,
@@ -89,6 +97,9 @@ export const createKitchen = ({
       subtype,
       specifier,
       isInline,
+      // for inline ressources the reference contains the content
+      content,
+      contentType,
     }
   }
   const resolveReference = (reference) => {
@@ -184,11 +195,9 @@ export const createKitchen = ({
   }
   const load = async ({ reference, urlInfo, context }) => {
     try {
-      const loadReturnValue = await pluginController.callAsyncHooksUntil(
-        "load",
-        urlInfo,
-        context,
-      )
+      const loadReturnValue = urlInfo.isInline
+        ? loadInlineUrlInfos(urlInfo)
+        : await pluginController.callAsyncHooksUntil("load", urlInfo, context)
       if (!loadReturnValue) {
         throw new Error("NO_LOAD")
       }
@@ -279,52 +288,123 @@ export const createKitchen = ({
 
     // parsing
     const references = []
-    const addReference = ({ trace, ...rest }) => {
-      if (trace === undefined) {
-        const { prepareStackTrace } = Error
-        Error.prepareStackTrace = (error, stack) => {
-          Error.prepareStackTrace = prepareStackTrace
-          return stack
-        }
-        const { stack } = new Error()
-        const callerCallsite = stack[1]
-        const fileName = callerCallsite.getFileName()
-        trace = stringifyUrlSite({
-          url:
-            fileName && isFileSystemPath(fileName)
-              ? fileSystemPathToUrl(fileName)
-              : fileName,
-          line: callerCallsite.getLineNumber(),
-          column: callerCallsite.getColumnNumber(),
-        })
-      }
+    const addReference = (props) => {
       const reference = createReference({
-        trace,
         parentUrl: urlInfo.url,
-        ...rest,
+        ...props,
       })
       references.push(reference)
-      resolveReference(reference)
-      return reference
+      return [reference, resolveReference(reference)]
     }
-    const updateReference = (existingReference, newReferenceProps) => {
-      const index = references.indexOf(existingReference)
-      if (index === -1) {
-        throw new Error(`must be an existing reference`)
-      }
-      const newReference = createReference({
-        trace: existingReference.trace,
-        parentUrl: existingReference.parentUrl,
-        type: existingReference.type,
-        specifier: existingReference.specifier,
-        ...newReferenceProps,
-      })
-      references[index] = newReference
-      newReference.data.originalReference = existingReference
-      // const existingUrlInfo = urlGraph.getUrlInfo(existingReference.url)
-      // const newUrlInfo =
-      resolveReference(newReference)
-      return newReference
+    const referenceUtils = {
+      inject: ({ trace, ...rest }) => {
+        if (trace === undefined) {
+          const { prepareStackTrace } = Error
+          Error.prepareStackTrace = (error, stack) => {
+            Error.prepareStackTrace = prepareStackTrace
+            return stack
+          }
+          const { stack } = new Error()
+          const callerCallsite = stack[1]
+          const fileName = callerCallsite.getFileName()
+          trace = stringifyUrlSite({
+            url:
+              fileName && isFileSystemPath(fileName)
+                ? fileSystemPathToUrl(fileName)
+                : fileName,
+            line: callerCallsite.getLineNumber(),
+            column: callerCallsite.getColumnNumber(),
+          })
+        }
+        return addReference({
+          trace,
+          ...rest,
+        })
+      },
+      foundInline: ({
+        type,
+        isOriginal,
+        line,
+        column,
+        specifier,
+        contentType,
+        content,
+      }) => {
+        const parentUrl = isOriginal ? urlInfo.url : urlInfo.generatedUrl
+        const parentContent = isOriginal
+          ? urlInfo.originalContent
+          : urlInfo.content
+        const [inlineReference, inlineUrlInfo] = addReference({
+          trace: stringifyUrlSite({
+            url: parentUrl,
+            content: parentContent,
+            line,
+            column,
+          }),
+          type,
+          specifier,
+          isInline: true,
+          contentType,
+          content,
+        })
+        inlineUrlInfo.isInline = true
+        inlineUrlInfo.inlineUrlSite = {
+          url: urlInfo.url,
+          content: parentContent,
+          line,
+          column,
+        }
+        inlineUrlInfo.contentType = contentType
+        inlineUrlInfo.originalContent = inlineUrlInfo.content = content
+        return [inlineReference, inlineUrlInfo]
+      },
+      updateSpecifier: (generatedSpecifier, newSpecifier) => {
+        const index = references.findIndex(
+          (ref) => ref.generatedSpecifier === generatedSpecifier,
+        )
+        if (index === -1) {
+          throw new Error(
+            `Cannot find a reference for the following generatedSpecifier "${generatedSpecifier}"`,
+          )
+        }
+        const newReference = createReference({
+          ...reference,
+          specifier: newSpecifier,
+        })
+        references[index] = newReference
+        newReference.data.originalReference = reference
+        return newReference
+      },
+      becomesInline: (
+        reference,
+        { isOriginal, line, column, specifier, contentType, content },
+      ) => {
+        const parentUrl = isOriginal ? urlInfo.url : urlInfo.generatedUrl
+        const parentContent = isOriginal
+          ? urlInfo.originalContent
+          : urlInfo.content
+        reference.trace = stringifyUrlSite({
+          url: parentUrl,
+          content: parentContent,
+          line,
+          column,
+        })
+        reference.isInline = true
+        reference.specifier = specifier
+        reference.contentType = contentType
+        reference.content = content
+        const urlInfo = resolveReference(reference)
+        urlInfo.isInline = true
+        urlInfo.inlineUrlSite = {
+          url: urlInfo.url,
+          content: parentContent,
+          line,
+          column,
+        }
+        urlInfo.contentType = contentType
+        urlInfo.content = content
+        return reference
+      },
     }
 
     const updateContents = async (contentInfo) => {
@@ -364,7 +444,7 @@ export const createKitchen = ({
     if (parseResult) {
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
-        const reference = addReference({
+        const [reference] = addReference({
           trace: stringifyUrlSite(
             adjustUrlSite(urlInfo, {
               urlGraph,
@@ -403,8 +483,7 @@ export const createKitchen = ({
 
     // "transform" hook
     urlInfo.references = references
-    context.addReference = addReference
-    context.updateReference = updateReference
+    context.referenceUtils = referenceUtils
     try {
       await pluginController.callAsyncHooks(
         "transform",
@@ -532,7 +611,7 @@ export const createKitchen = ({
       // for inline content (<script> insdide html)
       // chrome won't be able to fetch the file as it does not exists
       // so sourcemap must contain sources
-      urlInfo.inlineUrlSite || sourcemapsSources
+      urlInfo.isInline || sourcemapsSources
     if (sourcemap.sources && sourcemap.sources.length > 1) {
       sourcemap.sources = sourcemap.sources.map(
         (source) => new URL(source, urlInfo.data.sourceUrl || urlInfo.url).href,

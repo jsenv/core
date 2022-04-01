@@ -4,8 +4,8 @@ import { memoizeByUrl } from "@jsenv/utils/memoize/memoize_by_url.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}
-  const generate = memoizeByUrl((url, urlInfo) => {
-    const directoryPath = determineDirectoryPath(urlInfo)
+  const generate = memoizeByUrl((url, urlInfo, parentUrlInfo) => {
+    const directoryPath = determineDirectoryPath(urlInfo, parentUrlInfo)
     const name = urlToFilename(url)
     let names = cache[directoryPath]
     if (!names) {
@@ -32,11 +32,10 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   }
 }
 
-const determineDirectoryPath = (urlInfo) => {
-  if (urlInfo.inlineUrlSite) {
-    // should inherit the parent location?
-    // should just not reach this
-    return ""
+const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
+  if (urlInfo.isInline) {
+    const parentDirectoryPath = determineDirectoryPath(parentUrlInfo)
+    return parentDirectoryPath
   }
   if (urlInfo.data.isEntryPoint) {
     return ""

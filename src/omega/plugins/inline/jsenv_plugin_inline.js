@@ -2,9 +2,11 @@ import { jsenvPluginHtmlInlineScriptsAndStyles } from "./jsenv_plugin_html_scrip
 import { jsenvPluginDataUrls } from "./jsenv_plugin_data_urls.js"
 import { jsenvPluginInlineQueryParam } from "./jsenv_plugin_inline_query_param.js"
 
-export const jsenvPluginInline = ({ skipHtmlInlineLoad } = {}) => {
+// TODO: consider JSON.parse(jsonString)
+// and and replaceSync(cssString) as inline urls for js
+export const jsenvPluginInline = () => {
   return [
-    jsenvPluginHtmlInlineScriptsAndStyles({ skipHtmlInlineLoad }),
+    jsenvPluginHtmlInlineScriptsAndStyles(),
     jsenvPluginDataUrls(),
     jsenvPluginInlineQueryParam(),
   ]

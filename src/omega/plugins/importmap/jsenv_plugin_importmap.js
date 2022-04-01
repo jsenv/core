@@ -24,7 +24,6 @@ import {
 } from "@jsenv/importmap"
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -95,8 +94,8 @@ export const jsenvPluginImportmap = () => {
     },
     transform: {
       html: async (
-        { url, content, originalContent, references },
-        { scenario, urlGraph, cook, addReference, updateReference },
+        { url, content, references },
+        { scenario, cook, urlGraph, referenceUtils },
       ) => {
         const htmlAst = parseHtmlString(content)
         const importmap = findNode(htmlAst, (node) => {
@@ -118,44 +117,26 @@ export const jsenvPluginImportmap = () => {
           const inlineImportmapSpecifier = `./${urlToFilename(
             url,
           )}@${inlineId}.importmap`
-          const { line, column } = htmlNodePosition.readNodePosition(
-            importmap,
-            {
+          const { line, column, isOriginal } =
+            htmlNodePosition.readNodePosition(importmap, {
               preferOriginal: true,
-            },
-          )
-          const inlineReference = addReference({
-            trace: stringifyUrlSite({
-              url,
-              content: originalContent,
-              line,
+            })
+          const [inlineImportmapReference, inlineImportmapUrlInfo] =
+            referenceUtils.foundInline({
+              type: "script_src",
+              line: line - 1,
               column,
-            }),
-            type: "script_src",
-            specifier: inlineImportmapSpecifier,
-            isInline: true,
-          })
-          const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
-          inlineUrlInfo.data.inlineContentType = "application/importmap+json"
-          inlineUrlInfo.data.inlineContent = textNode.value
-          inlineUrlInfo.inlineUrlSite = {
-            url,
-            content: originalContent, // original because it's the origin line and column
-            // we remove 1 to the line because imagine the following html:
-            // <script>console.log('ok')</script>
-            // -> code starts at the same line than script tag
-            line: line - 1,
-            column,
-          }
+              isOriginal,
+              specifier: inlineImportmapSpecifier,
+              contentType: "application/importmap+json",
+              content: textNode.value,
+            })
           await cook({
-            reference: inlineReference,
-            urlInfo: inlineUrlInfo,
+            reference: inlineImportmapReference,
+            urlInfo: inlineImportmapUrlInfo,
           })
-          assignHtmlNodeAttributes(importmap, {
-            "original-inline-id": inlineId,
-          })
-          setHtmlNodeText(importmap, inlineUrlInfo.content)
-          onHtmlImportmapParsed(JSON.parse(inlineUrlInfo.content), url)
+          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content)
+          onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), url)
         }
         const handleImportmapWithSrc = async (importmap, src) => {
           // Browser would throw on remote importmap
@@ -183,28 +164,18 @@ export const jsenvPluginImportmap = () => {
           const inlineImportmapSpecifier = `./${urlToFilename(
             url,
           )}@${inlineScriptId}.importmap`
-          const inlineReference = updateReference(importmapReference, {
-            isInline: true,
-            specifier: inlineImportmapSpecifier,
-          })
-          const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
-          inlineUrlInfo.data.inlineContentType = "application/importmap+json"
-          inlineUrlInfo.data.inlineContent = importmapUrlInfo.content
-          const { line, column } = htmlNodePosition.readNodePosition(
-            importmap,
-            {
+          const { line, column, isOriginal } =
+            htmlNodePosition.readNodePosition(importmap, {
               preferOriginal: true,
-            },
-          )
-          inlineUrlInfo.inlineUrlSite = {
-            url,
-            content: originalContent, // original because it's the origin line and column
-            // we remove 1 to the line because imagine the following html:
-            // <script>console.log('ok')</script>
-            // -> code starts at the same line than script tag
+            })
+          referenceUtils.becomesInline(importmapReference, {
             line: line - 1,
             column,
-          }
+            isOriginal,
+            specifier: inlineImportmapSpecifier,
+            contentType: "application/importmap+json",
+            content: importmapUrlInfo.content,
+          })
         }
 
         const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")

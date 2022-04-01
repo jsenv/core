@@ -1,3 +1,7 @@
+// HOW TO FIX:
+// when parsing js, check for replaceSync
+// and when found consider it's CSS and parse it as CSS inlined in JS
+
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"

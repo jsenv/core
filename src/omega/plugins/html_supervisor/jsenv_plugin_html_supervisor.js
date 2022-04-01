@@ -30,7 +30,6 @@ import {
   removeHtmlNodeText,
   getHtmlNodeTextNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 
 export const jsenvPluginHtmlSupervisor = ({
   logs = false,
@@ -51,68 +50,34 @@ export const jsenvPluginHtmlSupervisor = ({
       dev: true,
       test: true,
     },
-    load: ({ data }) => {
-      if (!data.supervisedContent) {
-        return null
-      }
-      return {
-        contentType: "application/javascript",
-        content: data.supervisedContent,
-      }
-    },
     transform: {
-      html: ({ url, originalContent, content }, { urlGraph, addReference }) => {
+      html: ({ url, content }, { referenceUtils }) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
 
-        const addInlineReference = ({
-          node,
-          type,
-          specifier,
-          scriptContent,
-        }) => {
-          const { line, column } = htmlNodePosition.readNodePosition(node, {
-            preferOriginal: true,
-          })
-          const inlineReference = addReference({
-            trace: stringifyUrlSite({
-              url,
-              content: originalContent,
-              line,
-              column,
-            }),
-            type,
-            specifier,
-          })
-          const inlineUrlInfo = urlGraph.getUrlInfo(inlineReference.url)
-          inlineUrlInfo.data.supervisedContent = scriptContent
-          inlineUrlInfo.inlineUrlSite = {
-            url,
-            content: originalContent, // original because it's the origin line and column
-            // we remove 1 to the line because imagine the following html:
-            // <script>console.log('ok')</script>
-            // -> code starts at the same line than script tag
-            line: line - 1,
-            column,
-          }
-          return inlineReference
-        }
         const handleInlineScript = (node, textNode) => {
           const scriptCategory = parseScriptNode(node)
           const inlineScriptId = getIdForInlineHtmlNode(htmlAst, node)
           const inlineScriptSpecifier = `${urlToFilename(
             url,
           )}@${inlineScriptId}.js`
-          const inlineScriptReference = addInlineReference({
-            node,
+          const { line, column, isOriginal } =
+            htmlNodePosition.readNodePosition(node, {
+              preferOriginal: true,
+            })
+          const [inlineScriptReference] = referenceUtils.foundInline({
             type: "script_src",
+            line: line - 1,
+            column,
+            isOriginal,
             specifier:
               scriptCategory === "classic"
                 ? injectQueryParamsIntoSpecifier(inlineScriptSpecifier, {
                     js_classic: "",
                   })
                 : inlineScriptSpecifier,
-            scriptContent: textNode.value,
+            contentType: "application/javascript",
+            content: textNode.value,
           })
           assignHtmlNodeAttributes(node, {
             "src": inlineScriptReference.generatedSpecifier,
@@ -185,7 +150,7 @@ export const jsenvPluginHtmlSupervisor = ({
         if (scriptsToSupervise.length === 0) {
           return null
         }
-        const htmlSupervisorInstallerFileReference = addReference({
+        const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
           type: "js_import_export",
           specifier: htmlSupervisorInstallerFileUrl,
         })
@@ -209,7 +174,7 @@ installHtmlSupervisor(${JSON.stringify(
             "injected-by": "jsenv:html_supervisor",
           }),
         )
-        const htmlSupervisorSetupFileReference = addReference({
+        const [htmlSupervisorSetupFileReference] = referenceUtils.inject({
           type: "script_src",
           specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
             js_classic: "",

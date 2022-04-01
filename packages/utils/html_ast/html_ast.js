@@ -85,6 +85,7 @@ export const htmlNodePosition = {
       if (preferOriginal) {
         position.line = position.originalLine
         position.column = position.originalColumn
+        position.isOriginal = true
       }
     }
 
@@ -171,7 +172,6 @@ export const stringifyHtmlAst = (
         removeHtmlNodeAttributeByName(node, "original-position")
         removeHtmlNodeAttributeByName(node, "original-src-position")
         removeHtmlNodeAttributeByName(node, "original-href-position")
-        removeHtmlNodeAttributeByName(node, "original-inline-id")
       })
     }
   }
@@ -532,13 +532,6 @@ export const createInlineScriptHash = (script) => {
 }
 
 export const getIdForInlineHtmlNode = (htmlAst, inlineNode) => {
-  const originalInlineIdAttribute = getHtmlNodeAttributeByName(
-    inlineNode,
-    "original-inline-id",
-  )
-  if (originalInlineIdAttribute) {
-    return originalInlineIdAttribute.value
-  }
   const { line, lineEnd, column, columnEnd } =
     htmlNodePosition.readNodePosition(inlineNode) || {}
   const lineTaken = findNode(htmlAst, (nodeCandidate) => {

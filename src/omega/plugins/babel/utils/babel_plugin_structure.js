@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url)
 export const getBaseBabelPluginStructure = ({
   url,
   isSupportedOnRuntime,
-  topLevelAwait = "simple",
+  topLevelAwait = "simple", // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
     return !isSupportedOnRuntime(
