@@ -754,6 +754,7 @@ const specifierFormat = {
 const formatters = {
   js_import_export: { encode: JSON.stringify, decode: JSON.parse },
   js_import_meta_url_pattern: { encode: JSON.stringify, decode: JSON.parse },
+  // https://github.com/webpack-contrib/css-loader/pull/627/files
   css_url: {
     encode: (url) => {
       // If url is already wrapped in quotes, remove them

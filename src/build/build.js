@@ -305,6 +305,12 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               }
               return true
             })
+            if (!rawUrl) {
+              // TODO: ne marche pas pour le css puisqu'on modifie le contenu
+              // inline avec "formatReferencedUrl"
+              // y'a un truc a fix
+              throw new Error(`cannot find raw url`)
+            }
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             const buildUrl = buildUrlsGenerator.generate(
@@ -378,6 +384,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+      runtimeSupport,
       startLoading: loadEntryFiles,
     })
   } catch (e) {
@@ -509,7 +516,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                   // content inlined inside js is inside template literals
                   usedVersionMappings.push(reference.specifier)
                   return () =>
-                    `\${__v__(${JSON.stringify(reference.specifier)})}`
+                    `'+__v__(${JSON.stringify(reference.specifier)})+'`
                 }
               }
               return reference.specifier
@@ -536,6 +543,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       await loadUrlGraph({
         urlGraph: finalGraph,
         kitchen: versioningKitchen,
+        runtimeSupport,
         startLoading: loadEntryFiles,
       })
       if (usedVersionMappings.length) {

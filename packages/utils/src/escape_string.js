@@ -70,16 +70,19 @@ const surroundStringWith = (
   while (i < string.length) {
     const char = string[i]
     i++
-    let needEscape = false
-    if (escapeInternalQuotes && char === quote) {
-      needEscape = true
-    } else if (
-      escapeLines &&
-      (char === "\n" || char === "\r" || char === "\u2028" || char === "\u2029")
-    ) {
-      needEscape = true
+    if (char === quote) {
+      escapedString += escapeInternalQuotes ? `\\${char}` : char
+    } else if (escapeLines && char === "\n") {
+      escapedString += "\\n"
+    } else if (escapeLines && char === "\r") {
+      escapedString += "\\r"
+    } else if (escapeLines && char === "\u2028") {
+      escapedString += "\\u2028"
+    } else if (escapeLines && char === "\u2029") {
+      escapedString += "\\u2029"
+    } else {
+      escapedString += char
     }
-    escapedString += needEscape ? `\\${char}` : char
   }
   return `${quote}${escapedString}${quote}`
 }

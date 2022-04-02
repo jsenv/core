@@ -14,6 +14,7 @@
 import { createMagicSource } from "@jsenv/core/packages/utils/sourcemap/magic_source.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
+import { escapeString } from "@jsenv/utils/src/escape_string.js"
 
 export const jsenvPluginNewInlineContent = () => {
   return {
@@ -65,7 +66,11 @@ export const jsenvPluginNewInlineContent = () => {
           magicSource.replace({
             start: inlineContentCall.start,
             end: inlineContentCall.end,
-            replacement: inlineContentCall.formatContent(inlineUrlInfo.content),
+            replacement: escapeString(inlineUrlInfo.content, {
+              quote: `'`,
+              // allow internal quotes (needed for __v__)
+              escapeInternalQuotes: false,
+            }),
           })
         }, Promise.resolve())
         return magicSource.toContentAndSourcemap()
@@ -81,78 +86,69 @@ const babelPluginMetadataInlineTemplateLiterals = () => {
       Program: (programPath, state) => {
         const inlineContentCalls = []
         programPath.traverse({
-          TaggedTemplateExpression: (path) => {
-            const node = path.node
-            const tag = node.tag
-            if (!tag) {
-              return
-            }
-            const quasis = node.quasi.quasis
-            if (quasis.length !== 1) {
-              return
-            }
-            const templateElementNode = quasis[0]
-            const raw = templateElementNode.value.raw
-            const tagName = getImportedName(path, tag.name) || tag.name
-            if (tagName === "css") {
-              inlineContentCalls.push({
-                contentType: "text/css",
-                content: raw,
-                ...getNodePosition(templateElementNode),
-                formatContent: (content) => content,
-              })
-              return
+          NewExpression: (path) => {
+            const newInlineContentCall = parseAsNewInlineContentCall(path.node)
+            if (newInlineContentCall) {
+              inlineContentCalls.push(newInlineContentCall)
             }
           },
-          // will not happen in practice because
-          // template literals support is good enough by default for jsenv
-          // default browser support
-          // CallExpression: (path) => {
-          //   const node = path.node
-          //   const callee = node.callee
-          //   if (callee.type !== "Identifier") {
-          //     return
-          //   }
-          //   const calleeName = getImportedName(path, callee.name) || callee.name
-          //   if (calleeName !== "_taggedTemplateLiteral") {
-          //     return
-          //   }
-          //   const firstArgumentNode = node.arguments[0]
-          //   if (firstArgumentNode.type !== "ArrayExpression") {
-          //     return
-          //   }
-          //   const firstArrayElementNode = firstArgumentNode.elements[0]
-          //   if (firstArrayElementNode.type !== "StringLiteral") {
-          //     return
-          //   }
-          //   const raw = firstArrayElementNode.value
-          //   const parentCallExpressionPath = path.findParent(
-          //     (path) => path.node.type === "CallExpression",
-          //   )
-          //   if (!parentCallExpressionPath) {
-          //     return
-          //   }
-          //   const parentCallee = parentCallExpressionPath.node.callee
-          //   if (parentCallee.type !== "Identifier") {
-          //     return
-          //   }
-          //   const tagName =
-          //     getImportedName(parentCallExpressionPath, parentCallee.name) ||
-          //     parentCallee.name
-          //   if (tagName === "css") {
-          //     inlineTemplateLiterals.push({
-          //       contentType: "text/css",
-          //       content: raw,
-          //       ...getNodePosition(firstArrayElementNode),
-          //       formatContent: (content) => `'${content}'`,
-          //     })
-          //   }
-          // },
         })
         state.file.metadata.inlineContentCalls = inlineContentCalls
       },
     },
   }
+}
+
+const parseAsNewInlineContentCall = (node) => {
+  if (node.callee.type !== "Identifier") {
+    return null
+  }
+  if (node.callee.name !== "InlineContent") {
+    return null
+  }
+  if (node.arguments.length !== 2) {
+    return null
+  }
+  const [firstArg, secondArg] = node.arguments
+  if (secondArg.type !== "ObjectExpression") {
+    return null
+  }
+  const typePropertyNode = secondArg.properties.find((property) => {
+    return (
+      property.key.type === "Identifier" &&
+      property.key.name === "type" &&
+      property.type === "ObjectProperty" &&
+      property.value.type === "StringLiteral"
+    )
+  })
+  if (!typePropertyNode) {
+    return null
+  }
+  const type = typePropertyNode.value.value
+  if (firstArg.type === "StringLiteral") {
+    const position = getNodePosition(firstArg)
+    return {
+      rawType: "StringLiteral",
+      raw: firstArg.value,
+      type,
+      ...position,
+    }
+  }
+  if (firstArg.type === "TemplateLiteral") {
+    const quasis = firstArg.quasis
+    if (quasis.length !== 1) {
+      return null
+    }
+    const templateElementNode = quasis[0]
+    const position = getNodePosition(firstArg)
+    return {
+      rawType: "TemplateLiteral",
+      raw: templateElementNode.value.cooked,
+      type,
+      ...position,
+    }
+  }
+  return null
 }
 
 const getNodePosition = (node) => {
@@ -166,10 +162,10 @@ const getNodePosition = (node) => {
   }
 }
 
-const getImportedName = (path, name) => {
-  const binding = path.scope.getBinding(name)
-  if (binding.path.type === "ImportSpecifier") {
-    return binding.path.node.imported.name
-  }
-  return null
-}
+// const getImportedName = (path, name) => {
+//   const binding = path.scope.getBinding(name)
+//   if (binding.path.type === "ImportSpecifier") {
+//     return binding.path.node.imported.name
+//   }
+//   return null
+// }

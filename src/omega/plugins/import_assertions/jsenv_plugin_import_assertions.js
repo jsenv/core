@@ -181,7 +181,7 @@ const jsenvPluginImportTypeCss = () => {
 
 const css = new InlineContent(${cssText}, { type: "text/css" })
 const stylesheet = new CSSStyleSheet()
-stylesheet.replaceSync(css.raw)
+stylesheet.replaceSync(css.text)
 export default stylesheet`,
       }
     },

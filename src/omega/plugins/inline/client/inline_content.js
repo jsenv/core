@@ -1,5 +1,5 @@
-function InlineContent(text, { type = "text/plain" }) {
-  this.raw = text
+function InlineContent(content, { type = "text/plain" }) {
+  this.text = content
   this.type = type
 }
 
