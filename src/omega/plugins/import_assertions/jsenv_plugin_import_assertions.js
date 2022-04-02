@@ -135,8 +135,8 @@ export const jsenvPluginImportAssertions = () => {
 }
 
 const jsenvPluginImportTypeCss = () => {
-  const cssTagClientFileUrl = new URL(
-    "../inline/client/css_template_literal_tag.js",
+  const inlineContentClientFileUrl = new URL(
+    "../inline/client/inline_content.js",
     import.meta.url,
   ).href
 
@@ -162,17 +162,18 @@ const jsenvPluginImportTypeCss = () => {
           `Unexpected content type on ${url}, should be "text/css" but got ${contentType}`,
         )
       }
-      const cssTextEscaped = escapeTemplateStringSpecialCharacters(content)
       const [reference] = referenceUtils.inject({
         type: "js_import_export",
-        specifier: cssTagClientFileUrl,
+        specifier: inlineContentClientFileUrl,
       })
+      const cssText = `\`${escapeTemplateStringSpecialCharacters(content)}\``
       return {
         contentType: "application/javascript",
-        content: `import { css } from ${reference.generatedSpecifier}
+        content: `import { InlineContent } from ${reference.generatedSpecifier}
 
+const css = new InlineContent(${cssText}, { type: "text/css" })
 const stylesheet = new CSSStyleSheet()
-stylesheet.replaceSync(css\`${cssTextEscaped}\`)
+stylesheet.replaceSync(css.raw)
 export default stylesheet`,
       }
     },

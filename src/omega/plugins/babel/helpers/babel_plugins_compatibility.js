@@ -161,13 +161,13 @@ export const babelPluginCompatMap = {
   "transform-template-literals": {
     chrome: "41",
     opera: "28",
-    edge: "12",
+    edge: "13",
     electron: "0.22",
     firefox: "34",
-    safari: "11",
+    safari: "13",
     node: "4",
-    ios: "11",
-    samsung: "8",
+    ios: "13",
+    samsung: "3.4",
   },
   "transform-literals": {
     chrome: "44",

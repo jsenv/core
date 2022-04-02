@@ -6,15 +6,18 @@
  * In the cases above I must remain capable to recoginize the template literal
  * to be able to update the urls inside (and even version the urls)
  * because url versioning happens after minification it can be challenging
+ *
+ * TODO: use "keep_classnames" https://github.com/terser/terser#compress-options
+ * so that new InlineContent can be recognized after minification
  */
 
 import { createMagicSource } from "@jsenv/core/packages/utils/sourcemap/magic_source.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
-export const jsenvPluginInlineTemplateLiterals = () => {
+export const jsenvPluginNewInlineContent = () => {
   return {
-    name: "jsenv:inline_template_literals",
+    name: "jsenv:new_inline_content",
     appliesDuring: "*",
     transform: {
       js_module: async (
@@ -27,49 +30,44 @@ export const jsenvPluginInlineTemplateLiterals = () => {
           generatedUrl,
           content,
         })
-        const { inlineTemplateLiterals } = metadata
-        if (inlineTemplateLiterals.length === 0) {
+        const { inlineContentCalls } = metadata
+        if (inlineContentCalls.length === 0) {
           return null
         }
         const magicSource = createMagicSource(content)
-        await inlineTemplateLiterals.reduce(
-          async (previous, inlineTemplateLiteral) => {
-            await previous
-            const inlineUrl = generateInlineContentUrl({
-              url,
-              extension: { "text/css": ".css" }[
-                inlineTemplateLiteral.contentType
-              ],
-              line: inlineTemplateLiteral.line,
-              column: inlineTemplateLiteral.column,
-              lineEnd: inlineTemplateLiteral.lineEnd,
-              columnEnd: inlineTemplateLiteral.columnEnd,
-            })
-            const [inlineReference, inlineUrlInfo] = referenceUtils.foundInline(
-              {
-                type: "js_inline_template_literal",
-                isOriginal: content === originalContent,
-                line: inlineTemplateLiteral.line,
-                column: inlineTemplateLiteral.column,
-                specifier: inlineUrl,
-                contentType: inlineTemplateLiteral.contentType,
-                content: inlineTemplateLiteral.content,
-              },
-            )
-            await cook({
-              reference: inlineReference,
-              urlInfo: inlineUrlInfo,
-            })
-            magicSource.replace({
-              start: inlineTemplateLiteral.start,
-              end: inlineTemplateLiteral.end,
-              replacement: inlineTemplateLiteral.formatContent(
-                inlineUrlInfo.content,
-              ),
-            })
-          },
-          Promise.resolve(),
-        )
+        await inlineContentCalls.reduce(async (previous, inlineContentCall) => {
+          await previous
+          const inlineUrl = generateInlineContentUrl({
+            url,
+            extension: {
+              "text/css": ".css",
+              "application/json": ".json",
+              "text/plain": ".txt",
+            }[inlineContentCall.type],
+            line: inlineContentCall.line,
+            column: inlineContentCall.column,
+            lineEnd: inlineContentCall.lineEnd,
+            columnEnd: inlineContentCall.columnEnd,
+          })
+          const [inlineReference, inlineUrlInfo] = referenceUtils.foundInline({
+            type: "js_inline_template_literal",
+            isOriginal: content === originalContent,
+            line: inlineContentCall.line,
+            column: inlineContentCall.column,
+            specifier: inlineUrl,
+            contentType: inlineContentCall.type,
+            content: inlineContentCall.raw,
+          })
+          await cook({
+            reference: inlineReference,
+            urlInfo: inlineUrlInfo,
+          })
+          magicSource.replace({
+            start: inlineContentCall.start,
+            end: inlineContentCall.end,
+            replacement: inlineContentCall.formatContent(inlineUrlInfo.content),
+          })
+        }, Promise.resolve())
         return magicSource.toContentAndSourcemap()
       },
     },
@@ -78,10 +76,10 @@ export const jsenvPluginInlineTemplateLiterals = () => {
 
 const babelPluginMetadataInlineTemplateLiterals = () => {
   return {
-    name: "metadata-inline-template-literals",
+    name: "metadata-new-inline-content",
     visitor: {
       Program: (programPath, state) => {
-        const inlineTemplateLiterals = []
+        const inlineContentCalls = []
         programPath.traverse({
           TaggedTemplateExpression: (path) => {
             const node = path.node
@@ -97,7 +95,7 @@ const babelPluginMetadataInlineTemplateLiterals = () => {
             const raw = templateElementNode.value.raw
             const tagName = getImportedName(path, tag.name) || tag.name
             if (tagName === "css") {
-              inlineTemplateLiterals.push({
+              inlineContentCalls.push({
                 contentType: "text/css",
                 content: raw,
                 ...getNodePosition(templateElementNode),
@@ -151,7 +149,7 @@ const babelPluginMetadataInlineTemplateLiterals = () => {
           //   }
           // },
         })
-        state.file.metadata.inlineTemplateLiterals = inlineTemplateLiterals
+        state.file.metadata.inlineContentCalls = inlineContentCalls
       },
     },
   }
