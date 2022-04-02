@@ -2,7 +2,7 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { ContentType } from "@jsenv/utils/src/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
-import { escapeTemplateStringSpecialCharacters } from "@jsenv/utils/src/escape_template_string.js"
+import { escapeString } from "@jsenv/utils/src/escape_string.js"
 
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
 import { convertJsonTextToJavascriptModule } from "./helpers/json_module.js"
@@ -90,6 +90,7 @@ export const jsenvPluginImportAssertions = () => {
       },
     },
   ]
+
   const importTypeJson = {
     name: "jsenv:import_type_json",
     appliesDuring: "*",
@@ -126,6 +127,7 @@ export const jsenvPluginImportAssertions = () => {
       })
     },
   }
+
   return [
     importAssertions,
     importTypeJson,
@@ -166,7 +168,13 @@ const jsenvPluginImportTypeCss = () => {
         type: "js_import_export",
         specifier: inlineContentClientFileUrl,
       })
-      const cssText = `\`${escapeTemplateStringSpecialCharacters(content)}\``
+      // here we could decide to use template literal no matter what, babel would take
+      const cssText = escapeString(content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true,
+      })
       return {
         contentType: "application/javascript",
         content: `import { InlineContent } from ${reference.generatedSpecifier}
@@ -181,9 +189,11 @@ export default stylesheet`,
 }
 
 const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
-  // during build always replace import assertions with the js
-  // to avoid passing js containing import assertions to rollup
-  // This means rollup will be able to bundle more imports
+  // during build always replace import assertions with the js:
+  // - means rollup can bundle more js file together
+  // - means url versioning can work for css inlined in js
+  // - avoid rollup to see import assertions
+  //   We would have to tell rollup to ignore import with assertion
   if (scenario === "build") {
     return ["json", "css", "text"]
   }
