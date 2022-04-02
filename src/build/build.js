@@ -4,12 +4,6 @@
  * 2. bundle files
  * 3. optimize files (minify mostly)
  * 4. urls versioning
- *
- * Needs to be fixed:
- * When content becomes inlined we have an issue:
- * For html it works because we reuse jsenv plugin inline to re-parse the content
- * and be replace original urls to build urls (same is applied for versioning)
- * But for import assertion for instance it's more problematic
  */
 
 import {
@@ -501,10 +495,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 reference.subtype === "import_dynamic"
               ) {
                 usedVersionMappings.push(reference.specifier)
-                return () =>
-                  `window.__asVersionedSpecifier__(${JSON.stringify(
-                    reference.specifier,
-                  )})`
+                return () => `__v__(${JSON.stringify(reference.specifier)})`
               }
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (parentUrlInfo.isInline) {
@@ -518,9 +509,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                   // content inlined inside js is inside template literals
                   usedVersionMappings.push(reference.specifier)
                   return () =>
-                    `\${window.__asVersionedSpecifier__(${JSON.stringify(
-                      reference.specifier,
-                    )})}`
+                    `\${__v__(${JSON.stringify(reference.specifier)})}`
                 }
               }
               return reference.specifier

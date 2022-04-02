@@ -1,3 +1,8 @@
+/*
+ * Useful when writin a babel plugin:
+ * - https://astexplorer.net/
+ * - https://bvaughn.github.io/babel-repl
+ */
 import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 
 export const applyBabelPlugins = async ({
