@@ -300,10 +300,13 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               if (!rawUrlInfo.isInline) {
                 return false
               }
-              if (rawUrlInfo.content !== reference.content) {
-                return false
+              if (rawUrlInfo.content === reference.content) {
+                return true
               }
-              return true
+              if (rawUrlInfo.rawContent === reference.content) {
+                return true
+              }
+              return false
             })
             if (!rawUrl) {
               // TODO: ne marche pas pour le css puisqu'on modifie le contenu

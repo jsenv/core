@@ -126,6 +126,10 @@ const parseAsNewInlineContentCall = (node) => {
   }
   const type = typePropertyNode.value.value
   if (firstArg.type === "StringLiteral") {
+    const useDoubleQuote = firstArg.extra.raw[0] === `"`
+    if (useDoubleQuote) {
+      // TODO: replace all single quote not escaped
+    }
     const position = getNodePosition(firstArg)
     return {
       rawType: "StringLiteral",

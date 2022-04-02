@@ -30,6 +30,7 @@ body {
   background-color: red;
   background-image: url(/assets/jsenv-25e95a00.png);
   background-image: url(/assets/jsenv-25e95a00.png);
+  background-image: url(/assets/jsenv-25e95a00.png);
 }`,
   cssTextB: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
   txtA: `
@@ -40,5 +41,6 @@ body {
 {}`,
   txtD: `
   toto`,
+  txtE: `'`,
 }
 assert({ actual, expected })
