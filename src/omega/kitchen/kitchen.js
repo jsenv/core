@@ -754,6 +754,29 @@ const specifierFormat = {
 const formatters = {
   js_import_export: { encode: JSON.stringify, decode: JSON.parse },
   js_import_meta_url_pattern: { encode: JSON.stringify, decode: JSON.parse },
+  css_url: {
+    encode: (url) => {
+      // If url is already wrapped in quotes, remove them
+      url = formatters.css_url.decode(url)
+      // Should url be wrapped?
+      // See https://drafts.csswg.org/css-values-3/#urls
+      if (/["'() \t\n]/.test(url)) {
+        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`
+      }
+      return url
+    },
+    decode: (url) => {
+      const firstChar = url[0]
+      const lastChar = url[url.length - 1]
+      if (firstChar === `"` && lastChar === `"`) {
+        return url.slice(1, -1)
+      }
+      if (firstChar === `'` && lastChar === `'`) {
+        return url.slice(1, -1)
+      }
+      return url
+    },
+  },
 }
 
 // import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"

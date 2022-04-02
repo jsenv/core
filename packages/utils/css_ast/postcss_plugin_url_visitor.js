@@ -148,6 +148,22 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 column,
                 replace: (newUrlSpecifier) => {
                   urlMutations.push(() => {
+                    // the specifier desires to be inside double quotes
+                    if (newUrlSpecifier[0] === `"`) {
+                      urlNode.type = "word"
+                      urlNode.value = newUrlSpecifier
+                      return
+                    }
+                    // the specifier desires to be inside simple quotes
+                    if (newUrlSpecifier[0] === `'`) {
+                      urlNode.type = "word"
+                      urlNode.value = newUrlSpecifier
+                      return
+                    }
+                    // the specifier desired to be just a word
+                    // for the "word" type so that newUrlSpecifier can opt-out of being between quotes
+                    // useful to inject __v__ calls for css inside js
+                    urlNode.type = "word"
                     urlNode.value = newUrlSpecifier
                   })
                 },
