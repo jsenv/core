@@ -1,30 +1,40 @@
-export const createPluginController = ({ plugins, scenario }) => {
+export const createPluginController = ({
+  plugins,
+  scenario,
+  hooks = [
+    "resolve",
+    "normalize",
+    "load",
+    "transform",
+    "transformReferencedUrl",
+    "formatReferencedUrl",
+    "finalize",
+    "cooked",
+    "destroy",
+  ],
+}) => {
   plugins = flattenAndFilterPlugins(plugins, { scenario })
-  const hookGroups = {
-    serve: [],
-    augmentResponse: [],
-
-    resolve: [],
-    normalize: [],
-    load: [],
-    transform: [],
-    transformReferencedUrl: [],
-    formatReferencedUrl: [],
-    finalize: [],
-    cooked: [],
-    destroy: [],
-  }
-  plugins.forEach((plugin) => {
-    Object.keys(hookGroups).forEach((hookName) => {
+  // precompute a list of hooks per hookName
+  // For one major reason:
+  // - When debugging, there is less iteration
+  // And also it should increase perf as there is less work to do
+  const hookGroups = {}
+  const addHook = (hookName) => {
+    const hooks = []
+    plugins.forEach((plugin) => {
       const hook = plugin[hookName]
       if (hook) {
-        hookGroups[hookName].push({
+        hooks.push({
           plugin,
           hookName,
           value: hook,
         })
       }
     })
+    hookGroups[hookName] = hooks
+  }
+  hooks.forEach((hookName) => {
+    addHook(hookName)
   })
 
   let currentPlugin = null
@@ -107,6 +117,8 @@ export const createPluginController = ({ plugins, scenario }) => {
   }
 
   return {
+    addHook,
+
     callHooks,
     callHooksUntil,
     callAsyncHooks,
