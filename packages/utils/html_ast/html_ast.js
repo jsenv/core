@@ -52,9 +52,9 @@ export const htmlNodePosition = {
     if (!sourceCodeLocation) {
       return false
     }
-    const { startLine, startCol } = sourceCodeLocation
+    const { startLine, startCol, endLine, endCol } = sourceCodeLocation
     assignHtmlNodeAttributes(node, {
-      [originalPositionAttributeName]: `${startLine}:${startCol}`,
+      [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
     })
     return true
   },
@@ -63,7 +63,7 @@ export const htmlNodePosition = {
     const position = {}
     const { sourceCodeLocation } = node
     if (sourceCodeLocation) {
-      const { startLine, endLine, startCol, endCol } = sourceCodeLocation
+      const { startLine, startCol, endLine, endCol } = sourceCodeLocation
       Object.assign(position, {
         line: startLine,
         lineEnd: endLine,
@@ -76,19 +76,23 @@ export const htmlNodePosition = {
       "original-position",
     )
     if (originalPositionAttribute) {
-      const [originalLine, originalColumn] =
-        originalPositionAttribute.value.split(":")
+      const [start, end] = originalPositionAttribute.value.split(";")
+      const [originalLine, originalColumn] = start.split(":")
+      const [originalLineEnd, originalColumnEnd] = end.split(":")
       Object.assign(position, {
         originalLine: parseInt(originalLine),
         originalColumn: parseInt(originalColumn),
+        originalLineEnd: parseInt(originalLineEnd),
+        originalColumnEnd: parseInt(originalColumnEnd),
       })
       if (preferOriginal) {
         position.line = position.originalLine
         position.column = position.originalColumn
+        position.lineEnd = position.originalLineEnd
+        position.columnEnd = position.originalColumnEnd
         position.isOriginal = true
       }
     }
-
     return position
   },
 
@@ -113,10 +117,9 @@ export const htmlNodePosition = {
     if (originalPositionAttribute) {
       return true
     }
-    const line = attributeLocation.startLine
-    const column = attributeLocation.startCol
+    const { startLine, startCol, endLine, endCol } = attributeLocation
     assignHtmlNodeAttributes(node, {
-      [originalPositionAttributeName]: `${line}:${column}`,
+      [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
     })
     return true
   },
@@ -144,11 +147,14 @@ export const htmlNodePosition = {
       originalPositionAttributeName,
     )
     if (originalPositionAttribute) {
-      const [originalLine, originalColumn] =
-        originalPositionAttribute.value.split(":")
+      const [start, end] = originalPositionAttribute.value.split(";")
+      const [originalLine, originalColumn] = start.split(":")
+      const [originalLineEnd, originalColumnEnd] = end.split(":")
       Object.assign(position, {
         originalLine: parseInt(originalLine),
         originalColumn: parseInt(originalColumn),
+        originalLineEnd: parseInt(originalLineEnd),
+        originalColumnEnd: parseInt(originalColumnEnd),
       })
     }
     return position
