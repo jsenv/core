@@ -309,9 +309,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               return false
             })
             if (!rawUrl) {
-              // TODO: ne marche pas pour le css puisqu'on modifie le contenu
-              // inline avec "formatReferencedUrl"
-              // y'a un truc a fix
               throw new Error(`cannot find raw url`)
             }
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
