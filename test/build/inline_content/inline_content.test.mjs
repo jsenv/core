@@ -25,22 +25,18 @@ const { returnValue } = await executeInChromium({
 })
 const actual = returnValue
 const expected = {
-  cssTextA: `
-body {
-  background-color: red;
-  background-image: url(/assets/jsenv-25e95a00.png);
-  background-image: url(/assets/jsenv-25e95a00.png);
-  background-image: url(/assets/jsenv-25e95a00.png);
-}`,
-  cssTextB: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
-  txtA: `
-{}`,
-  txtB: `
-{}`,
-  txtC: `
-{}`,
-  txtD: `
-  toto`,
-  txtE: `'`,
+  //   cssTextA: `
+  // body {
+  //   background-color: red;
+  //   background-image: url(/assets/jsenv-25e95a00.png);
+  //   background-image: url(/assets/jsenv-25e95a00.png);
+  //   background-image: url(/assets/jsenv-25e95a00.png);
+  // }`,
+  cssTextWithUrl: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
+  cssTextWithUrl2: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
+  doubleQuote: `"`,
+  lineEnding: `\n`,
+  lineEnding2: `\n`,
+  singleQuote: `'`,
 }
 assert({ actual, expected })

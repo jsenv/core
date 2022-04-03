@@ -2,7 +2,7 @@ const DOUBLE_QUOTE = `"`
 const SINGLE_QUOTE = `'`
 const BACKTICK = "`"
 
-export const escapeString = (
+export const jsStringFromString = (
   value,
   {
     quote = "auto",

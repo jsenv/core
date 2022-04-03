@@ -10,7 +10,7 @@ import { moveUrl } from "@jsenv/filesystem"
 import { memoize } from "@jsenv/utils/memoize/memoize.js"
 import { filterV8Coverage } from "@jsenv/utils/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/utils/coverage/istanbul_coverage_composition.js"
-import { escapeRegexpSpecialCharacters } from "@jsenv/utils/src/escape_regexp.js"
+import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_special_chars.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
@@ -454,7 +454,7 @@ const evalException = (
   const error = script.runInThisContext()
   if (error && error instanceof Error) {
     const remoteRootRegexp = new RegExp(
-      escapeRegexpSpecialCharacters(`${server.origin}/`),
+      escapeRegexpSpecialChars(`${server.origin}/`),
       "g",
     )
     error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl)

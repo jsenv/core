@@ -11,10 +11,11 @@
  * so that new InlineContent can be recognized after minification
  */
 
-import { createMagicSource } from "@jsenv/core/packages/utils/sourcemap/magic_source.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { escapeStringSpecialChars } from "@jsenv/utils/string/escape_string_special_chars.js"
+import { escapeLineEndings } from "@jsenv/utils/string/escape_line_endings.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
-import { escapeString } from "@jsenv/utils/src/escape_string.js"
 
 export const jsenvPluginNewInlineContent = () => {
   return {
@@ -56,9 +57,15 @@ export const jsenvPluginNewInlineContent = () => {
             line: inlineContentCall.line,
             column: inlineContentCall.column,
             specifier: inlineUrl,
-            contentType: inlineContentCall.type,
-            content: inlineContentCall.raw,
+            contentType: inlineContentCall.contentType,
+            content: inlineContentCall.content,
           })
+          const { quote } = inlineContentCall
+          inlineUrlInfo.isInsideStringLiteral = true
+          inlineUrlInfo.stringLiteralQuote = quote
+          inlineReference.escape = (value) =>
+            escapeStringSpecialChars(value, quote)
+
           await cook({
             reference: inlineReference,
             urlInfo: inlineUrlInfo,
@@ -66,11 +73,9 @@ export const jsenvPluginNewInlineContent = () => {
           magicSource.replace({
             start: inlineContentCall.start,
             end: inlineContentCall.end,
-            replacement: escapeString(inlineUrlInfo.content, {
-              quote: `'`,
-              // allow internal quotes (needed for __v__)
-              escapeInternalQuotes: false,
-            }),
+            replacement: `${quote}${escapeLineEndings(
+              inlineUrlInfo.content,
+            )}${quote}`,
           })
         }, Promise.resolve())
         return magicSource.toContentAndSourcemap()
@@ -126,15 +131,12 @@ const parseAsNewInlineContentCall = (node) => {
   }
   const type = typePropertyNode.value.value
   if (firstArg.type === "StringLiteral") {
-    const useDoubleQuote = firstArg.extra.raw[0] === `"`
-    if (useDoubleQuote) {
-      // TODO: replace all single quote not escaped
-    }
     const position = getNodePosition(firstArg)
     return {
-      rawType: "StringLiteral",
-      raw: firstArg.value,
-      type,
+      nodeType: "StringLiteral",
+      quote: firstArg.extra.raw[0],
+      contentType: type,
+      content: firstArg.value,
       ...position,
     }
   }

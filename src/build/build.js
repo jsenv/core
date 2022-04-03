@@ -500,27 +500,21 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               )}`
               versionMappings[reference.specifier] = versionedSpecifier
 
+              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+              if (parentUrlInfo.isInsideStringLiteral) {
+                // content inlined inside js is inside template literals
+                usedVersionMappings.push(reference.specifier)
+                return () =>
+                  `${parentUrlInfo.stringLiteralQuote}+__v__(${JSON.stringify(
+                    reference.specifier,
+                  )})+${parentUrlInfo.stringLiteralQuote}`
+              }
               if (
                 reference.type === "js_import_meta_url_pattern" ||
                 reference.subtype === "import_dynamic"
               ) {
                 usedVersionMappings.push(reference.specifier)
                 return () => `__v__(${JSON.stringify(reference.specifier)})`
-              }
-              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
-              if (parentUrlInfo.isInline) {
-                const grandParentUrlInfo = finalGraph.getUrlInfo(
-                  parentUrlInfo.inlineUrlSite.url,
-                )
-                if (
-                  grandParentUrlInfo.type === "js_module" ||
-                  grandParentUrlInfo === "js_classic"
-                ) {
-                  // content inlined inside js is inside template literals
-                  usedVersionMappings.push(reference.specifier)
-                  return () =>
-                    `'+__v__(${JSON.stringify(reference.specifier)})+'`
-                }
               }
               return reference.specifier
             },

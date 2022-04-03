@@ -154,10 +154,8 @@ export const createKitchen = ({
         referencedCopy,
         baseContext,
       )
-      reference.generatedSpecifier = specifierFormat.encode(
-        returnValue || reference.generatedUrl,
-        reference.type,
-      )
+      reference.generatedSpecifier = returnValue || reference.generatedUrl
+      reference.generatedSpecifier = specifierFormat.encode(reference)
       return urlInfo
     } catch (error) {
       throw createResolveError({
@@ -732,10 +730,12 @@ const determineFileUrlForOutDirectory = ({
 }
 
 const specifierFormat = {
-  encode: (generatedSpecifier, referenceType) => {
+  encode: (reference) => {
+    const { generatedSpecifier } = reference
     if (generatedSpecifier.then) {
       return generatedSpecifier.then((value) => {
-        return specifierFormat.encode(value, referenceType)
+        reference.generatedSpecifier = value
+        return specifierFormat.encode(reference)
       })
     }
     // allow plugin to return a function to bypas default formatting
@@ -743,12 +743,20 @@ const specifierFormat = {
     if (typeof generatedSpecifier === "function") {
       return generatedSpecifier()
     }
-    const formatter = formatters[referenceType]
-    return formatter ? formatter.encode(generatedSpecifier) : generatedSpecifier
+    const formatter = formatters[reference.type]
+    const value = formatter
+      ? formatter.encode(generatedSpecifier)
+      : generatedSpecifier
+    if (reference.escape) {
+      return reference.escape(value)
+    }
+    return value
   },
-  decode: (generatedSpecifier, referenceType) => {
-    const formatter = formatters[referenceType]
-    return formatter ? formatter.decode(generatedSpecifier) : generatedSpecifier
+  decode: (reference) => {
+    const formatter = formatters[reference.type]
+    return formatter
+      ? formatter.decode(reference.generatedSpecifier)
+      : reference.generatedSpecifier
   },
 }
 const formatters = {

@@ -2,7 +2,7 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { ContentType } from "@jsenv/utils/src/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
-import { escapeString } from "@jsenv/utils/src/escape_string.js"
+import { jsStringFromString } from "@jsenv/utils/string/js_string_from_string.js"
 
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
 import { convertJsonTextToJavascriptModule } from "./helpers/json_module.js"
@@ -169,7 +169,7 @@ const jsenvPluginImportTypeCss = () => {
         specifier: inlineContentClientFileUrl,
       })
       // here we could decide to use template literal no matter what, babel would take
-      const cssText = escapeString(content, {
+      const cssText = jsStringFromString(content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
         // and convert template strings into raw strings
