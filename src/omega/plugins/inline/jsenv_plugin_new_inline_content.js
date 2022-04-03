@@ -12,7 +12,7 @@
  */
 
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-import { escapeStringSpecialChars } from "@jsenv/utils/string/escape_string_special_chars.js"
+import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
@@ -23,7 +23,7 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
     transform: {
       js_module: async (
         { url, generatedUrl, content, originalContent },
-        { referenceUtils, cook },
+        { referenceUtils, cook, isSupportedOnRuntime },
       ) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataInlineTemplateLiterals],
@@ -41,8 +41,8 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
           const inlineUrl = generateInlineContentUrl({
             url,
             extension: {
-              "text/css": ".css",
               "application/json": ".json",
+              "text/css": ".css",
               "text/plain": ".txt",
               "application/octet-stream": "",
             }[inlineContentCall.contentType],
@@ -51,8 +51,18 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
             lineEnd: inlineContentCall.lineEnd,
             columnEnd: inlineContentCall.columnEnd,
           })
+          let { quote } = inlineContentCall
+          if (
+            quote === "`" &&
+            !isSupportedOnRuntime("transform-template-literals")
+          ) {
+            // if quote is "`" and template literals are not supported
+            // we'll use a regular string (single or double quote)
+            // when rendering the string
+            quote = JS_QUOTES.pickBest(inlineContentCall.content)
+          }
           const [inlineReference, inlineUrlInfo] = referenceUtils.foundInline({
-            type: "js_inline_template_literal",
+            type: "js_inline_content",
             isOriginal: content === originalContent,
             line: inlineContentCall.line,
             column: inlineContentCall.column,
@@ -60,11 +70,9 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
             contentType: inlineContentCall.contentType,
             content: inlineContentCall.content,
           })
-          const { quote } = inlineContentCall
-          inlineUrlInfo.isInsideStringLiteral = true
-          inlineUrlInfo.stringLiteralQuote = quote
+          inlineUrlInfo.jsQuote = quote
           inlineReference.escape = (value) =>
-            escapeStringSpecialChars(value, { quote })
+            JS_QUOTES.escapeSpecialChars(value, { quote })
           await cook({
             reference: inlineReference,
             urlInfo: inlineUrlInfo,
@@ -72,9 +80,12 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
           magicSource.replace({
             start: inlineContentCall.start,
             end: inlineContentCall.end,
-            replacement: `${quote}${escapeStringSpecialChars(
+            replacement: `${quote}${JS_QUOTES.escapeSpecialChars(
               inlineUrlInfo.content,
-              { quote, allowEscapeForVersioning },
+              {
+                quote,
+                allowEscapeForVersioning,
+              },
             )}${quote}`,
           })
         }, Promise.resolve())
@@ -148,9 +159,10 @@ const parseAsNewInlineContentCall = (node) => {
     const templateElementNode = quasis[0]
     const position = getNodePosition(firstArg)
     return {
-      rawType: "TemplateLiteral",
-      raw: templateElementNode.value.cooked,
-      type,
+      nodeType: "TemplateLiteral",
+      quote: "`",
+      contentType: type,
+      content: templateElementNode.value.cooked,
       ...position,
     }
   }

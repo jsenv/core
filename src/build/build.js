@@ -503,13 +503,13 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               versionMappings[reference.specifier] = versionedSpecifier
 
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
-              if (parentUrlInfo.isInsideStringLiteral) {
-                // content inlined inside js string literals
+              if (parentUrlInfo.jsQuote) {
+                // the url is inline inside js quotes
                 usedVersionMappings.push(reference.specifier)
                 return () =>
-                  `${parentUrlInfo.stringLiteralQuote}+__v__(${JSON.stringify(
+                  `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
                     reference.specifier,
-                  )})+${parentUrlInfo.stringLiteralQuote}`
+                  )})+${parentUrlInfo.jsQuote}`
               }
               if (
                 reference.type === "js_import_meta_url_pattern" ||

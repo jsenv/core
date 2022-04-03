@@ -22,7 +22,7 @@ export const jsenvPluginUrlResolution = () => {
       "css_url": urlResolver,
       "sourcemap_comment": urlResolver,
       "js_import_meta_url_pattern": urlResolver,
-      "js_inline_template_literal": urlResolver,
+      "js_inline_content": urlResolver,
     },
   }
 }

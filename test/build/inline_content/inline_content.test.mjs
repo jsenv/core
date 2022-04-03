@@ -5,7 +5,7 @@ import { build } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const { buildManifest } = await build({
-  logLevel: "debug",
+  // logLevel: "debug",
   rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
@@ -27,10 +27,23 @@ const actual = returnValue
 const expected = {
   complexInsideDoubleQuotes: `\n'😀'\n`,
   complexInsideSingleQuotes: `\n"😀"\n`,
+  cssAndTemplate: `
+body {
+  background-image: url(/assets/jsenv-25e95a00.png);
+  background-image: url(/assets/jsenv-25e95a00.png);
+  background-image: url(/assets/jsenv-25e95a00.png);
+}
+`,
   cssTextWithUrl: `\nbody { background-image: url(/assets/jsenv-25e95a00.png); }\n`,
   cssTextWithUrl2: `\nbody { background-image: url(/assets/jsenv-25e95a00.png); }\n`,
   doubleQuote: `"`,
   doubleQuoteEscaped: `"`,
+  fromTemplate: `"`,
+  fromTemplate2: `'`,
+  fromTemplate3: `\n'"`,
+  fromTemplate4: `
+'"
+`,
   lineEnding: `\n`,
   lineEnding2: `\n`,
   singleQuote: `'`,
