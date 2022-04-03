@@ -13,11 +13,10 @@
 
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { escapeStringSpecialChars } from "@jsenv/utils/string/escape_string_special_chars.js"
-import { escapeLineEndings } from "@jsenv/utils/string/escape_line_endings.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
-export const jsenvPluginNewInlineContent = () => {
+export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
   return {
     name: "jsenv:new_inline_content",
     appliesDuring: "*",
@@ -45,7 +44,8 @@ export const jsenvPluginNewInlineContent = () => {
               "text/css": ".css",
               "application/json": ".json",
               "text/plain": ".txt",
-            }[inlineContentCall.type],
+              "application/octet-stream": "",
+            }[inlineContentCall.contentType],
             line: inlineContentCall.line,
             column: inlineContentCall.column,
             lineEnd: inlineContentCall.lineEnd,
@@ -64,8 +64,7 @@ export const jsenvPluginNewInlineContent = () => {
           inlineUrlInfo.isInsideStringLiteral = true
           inlineUrlInfo.stringLiteralQuote = quote
           inlineReference.escape = (value) =>
-            escapeStringSpecialChars(value, quote)
-
+            escapeStringSpecialChars(value, { quote })
           await cook({
             reference: inlineReference,
             urlInfo: inlineUrlInfo,
@@ -73,8 +72,9 @@ export const jsenvPluginNewInlineContent = () => {
           magicSource.replace({
             start: inlineContentCall.start,
             end: inlineContentCall.end,
-            replacement: `${quote}${escapeLineEndings(
+            replacement: `${quote}${escapeStringSpecialChars(
               inlineUrlInfo.content,
+              { quote, allowEscapeForVersioning },
             )}${quote}`,
           })
         }, Promise.resolve())

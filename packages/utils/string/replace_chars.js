@@ -7,15 +7,15 @@ export const replaceChars = (string, replace) => {
       typeof replace === "object"
         ? replace[string[i]]
         : replace(string[i], i, string)
+    i++
     if (replacement) {
-      if (last === i) {
+      if (last === i - 1) {
         result += replacement
       } else {
-        result += `${string.slice(last, i)}${replacement}`
+        result += `${string.slice(last, i - 1)}${replacement}`
       }
-      last = i + 1
+      last = i
     }
-    i++
   }
   if (last !== string.length) {
     result += string.slice(last)

@@ -173,7 +173,8 @@ const jsenvPluginImportTypeCss = () => {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
         // and convert template strings into raw strings
-        canUseTemplateString: true,
+        // for now keep it to false until it's tested and proved that it works
+        // canUseTemplateString: true,
       })
       return {
         contentType: "application/javascript",

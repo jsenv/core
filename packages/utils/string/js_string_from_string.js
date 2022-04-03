@@ -1,88 +1,52 @@
-const DOUBLE_QUOTE = `"`
-const SINGLE_QUOTE = `'`
-const BACKTICK = "`"
+import { escapeStringSpecialChars } from "./escape_string_special_chars.js"
+import { escapeChars } from "./escape_chars.js"
+
+const QUOTES = {
+  DOUBLE: `"`,
+  SINGLE: `'`,
+  BACKTICK: "`",
+}
 
 export const jsStringFromString = (
   value,
   {
     quote = "auto",
     canUseTemplateString = true,
-    fallback = DOUBLE_QUOTE,
-    escapeInternalQuotes = true,
-    escapeLines = true,
+    defaultQuote = QUOTES.DOUBLE,
   } = {},
 ) => {
   quote =
     quote === "auto"
-      ? determineQuote(value, canUseTemplateString) || fallback
+      ? determineQuote(value, { canUseTemplateString, defaultQuote })
       : quote
-  if (quote === BACKTICK) {
-    return `\`${escapeTemplateString(value)}`
+  if (quote === QUOTES.BACKTICK) {
+    // https://github.com/mgenware/string-to-template-literal/blob/main/src/main.ts#L1
+    return `\`${escapeChars(value, {
+      "\\": "\\\\",
+      "`": "\\`",
+      "$": "\\$",
+    })}\``
   }
-  return surroundStringWith(value, { quote, escapeLines, escapeInternalQuotes })
+  return `${quote}${escapeStringSpecialChars(value)}${quote}`
 }
 
-// https://github.com/mgenware/string-to-template-literal/blob/main/src/main.ts#L1
-
-const escapeTemplateString = (string) => {
-  string = String(string)
-  let i = 0
-  let escapedString = ""
-  while (i < string.length) {
-    const char = string[i]
-    i++
-    escapedString += isTemplateStringSpecialChar(char) ? `\\${char}` : char
+const determineQuote = (string, { canUseTemplateString, defaultQuote }) => {
+  // check default first, once tested do no re-test it
+  if (!string.includes(defaultQuote)) {
+    return defaultQuote
   }
-  return `${BACKTICK}${escapedString}${BACKTICK}`
-}
-const isTemplateStringSpecialChar = (char) =>
-  templateStringSpecialChars.indexOf(char) > -1
-const templateStringSpecialChars = ["\\", "`", "$"]
-
-const determineQuote = (string, canUseTemplateString) => {
-  const containsDoubleQuote = string.includes(DOUBLE_QUOTE)
-  if (!containsDoubleQuote) {
-    return DOUBLE_QUOTE
+  if (defaultQuote !== QUOTES.DOUBLE && !string.includes(QUOTES.DOUBLE)) {
+    return QUOTES.DOUBLE
   }
-  const containsSimpleQuote = string.includes(SINGLE_QUOTE)
-  if (!containsSimpleQuote) {
-    return SINGLE_QUOTE
+  if (defaultQuote !== QUOTES.SINGLE && !string.includes(QUOTES.SINGLE)) {
+    return QUOTES.SINGLE
   }
-  if (canUseTemplateString) {
-    const containsBackTick = string.includes(BACKTICK)
-    if (!containsBackTick) {
-      return BACKTICK
-    }
+  if (
+    canUseTemplateString &&
+    defaultQuote !== QUOTES.BACKTICK &&
+    !string.includes(QUOTES.BACKTICK)
+  ) {
+    return QUOTES.BACKTICK
   }
-  return null
-}
-
-// https://github.com/jsenv/jsenv-uneval/blob/6c97ef9d8f2e9425a66f2c88347e0a118d427f3a/src/internal/escapeString.js#L3
-// https://github.com/jsenv/jsenv-inspect/blob/bb11de3adf262b68f71ed82b0a37d4528dd42229/src/internal/string.js#L3
-// https://github.com/joliss/js-string-escape/blob/master/index.js
-// http://javascript.crockford.com/remedial.html
-const surroundStringWith = (
-  string,
-  { quote, escapeLines, escapeInternalQuotes },
-) => {
-  let escapedString = ""
-  let i = 0
-  while (i < string.length) {
-    const char = string[i]
-    i++
-    if (char === quote) {
-      escapedString += escapeInternalQuotes ? `\\${char}` : char
-    } else if (escapeLines && char === "\n") {
-      escapedString += "\\n"
-    } else if (escapeLines && char === "\r") {
-      escapedString += "\\r"
-    } else if (escapeLines && char === "\u2028") {
-      escapedString += "\\u2028"
-    } else if (escapeLines && char === "\u2029") {
-      escapedString += "\\u2029"
-    } else {
-      escapedString += char
-    }
-  }
-  return `${quote}${escapedString}${quote}`
+  return defaultQuote
 }

@@ -460,7 +460,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
         plugins: [
-          jsenvPluginInline(),
+          jsenvPluginInline({
+            allowEscapeForVersioning: true,
+          }),
           {
             name: "jsenv:versioning",
             appliesDuring: { build: true },
@@ -502,7 +504,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
 
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (parentUrlInfo.isInsideStringLiteral) {
-                // content inlined inside js is inside template literals
+                // content inlined inside js string literals
                 usedVersionMappings.push(reference.specifier)
                 return () =>
                   `${parentUrlInfo.stringLiteralQuote}+__v__(${JSON.stringify(
