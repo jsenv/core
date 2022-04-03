@@ -47,11 +47,11 @@ export const jsenvPluginImportAssertions = () => {
               const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
                 [importType]: "",
               })
-              const newReference = referenceUtils.updateSpecifier(
+              const [newReference, newUrlInfo] = referenceUtils.updateSpecifier(
                 JSON.stringify(specifier),
                 newSpecifier,
               )
-              newReference.data.importType = importType
+              newUrlInfo.data.importType = importType
               magicSource.replace({
                 start: importSpecifierPath.node.start,
                 end: importSpecifierPath.node.end,
@@ -69,11 +69,11 @@ export const jsenvPluginImportAssertions = () => {
             const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
               [importType]: "",
             })
-            const newReference = referenceUtils.updateSpecifier(
+            const [newReference, newUrlInfo] = referenceUtils.updateSpecifier(
               JSON.stringify(specifier),
               newSpecifier,
             )
-            newReference.data.importType = importType
+            newUrlInfo.data.importType = importType
             magicSource.replace({
               start: importSpecifierPath.node.start,
               end: importSpecifierPath.node.end,
@@ -175,6 +175,7 @@ const jsenvPluginImportTypeCss = () => {
         canUseTemplateString: true,
       })
       return {
+        type: "js_module",
         contentType: "application/javascript",
         content: `import { InlineContent } from ${reference.generatedSpecifier}
 

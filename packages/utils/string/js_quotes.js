@@ -83,7 +83,7 @@ export const JS_QUOTES = {
     if (last !== string.length) {
       result += string.slice(last)
     }
-    return result
+    return `${quote}${result}${quote}`
   },
 }
 

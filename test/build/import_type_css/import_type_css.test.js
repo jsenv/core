@@ -1,7 +1,3 @@
-// HOW TO FIX:
-// when parsing js, check for replaceSync
-// and when found consider it's CSS and parse it as CSS inlined in JS
-
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -35,15 +31,15 @@ const test = async (options) => {
 }
 
 // with bundling (default)
-{
-  const { serverOrigin, buildManifest, returnValue } = await test()
-  const actual = returnValue
-  const expected = {
-    bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${serverOrigin}/assets/${buildManifest["js/main.js"]}")`,
-  }
-  assert({ actual, expected })
-}
+// {
+//   const { serverOrigin, buildManifest, returnValue } = await test()
+//   const actual = returnValue
+//   const expected = {
+//     bodyBackgroundColor: "rgb(255, 0, 0)",
+//     bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["assets/jsenv.png"]}")`,
+//   }
+//   assert({ actual, expected })
+// }
 
 // without bundling
 {
@@ -53,7 +49,7 @@ const test = async (options) => {
   const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${serverOrigin}/assets/${buildManifest["js/main.js"]}")`,
+    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["assets/jsenv.png"]}")`,
   }
   assert({ actual, expected })
 }

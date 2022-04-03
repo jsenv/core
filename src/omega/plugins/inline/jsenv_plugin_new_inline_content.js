@@ -72,7 +72,7 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
           })
           inlineUrlInfo.jsQuote = quote
           inlineReference.escape = (value) =>
-            JS_QUOTES.escapeSpecialChars(value, { quote })
+            JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote })
           await cook({
             reference: inlineReference,
             urlInfo: inlineUrlInfo,
@@ -80,13 +80,10 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
           magicSource.replace({
             start: inlineContentCall.start,
             end: inlineContentCall.end,
-            replacement: `${quote}${JS_QUOTES.escapeSpecialChars(
-              inlineUrlInfo.content,
-              {
-                quote,
-                allowEscapeForVersioning,
-              },
-            )}${quote}`,
+            replacement: JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
+              quote,
+              allowEscapeForVersioning,
+            }),
           })
         }, Promise.resolve())
         return magicSource.toContentAndSourcemap()

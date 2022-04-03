@@ -356,7 +356,7 @@ export const createKitchen = ({
         inlineUrlInfo.originalContent = inlineUrlInfo.content = content
         return [inlineReference, inlineUrlInfo]
       },
-      updateSpecifier: (generatedSpecifier, newSpecifier) => {
+      updateSpecifier: (generatedSpecifier, newSpecifier, data) => {
         const index = references.findIndex(
           (ref) => ref.generatedSpecifier === generatedSpecifier,
         )
@@ -365,13 +365,19 @@ export const createKitchen = ({
             `Cannot find a reference for the following generatedSpecifier "${generatedSpecifier}"`,
           )
         }
+        const referenceFound = references[index]
         const newReference = createReference({
-          ...reference,
+          ...referenceFound,
           specifier: newSpecifier,
+          data: {
+            ...referenceFound.data,
+            ...data,
+          },
         })
         references[index] = newReference
-        newReference.data.originalReference = reference
-        return newReference
+        newReference.data.originalReference = referenceFound
+        const newUrlInfo = resolveReference(newReference)
+        return [newReference, newUrlInfo]
       },
       becomesInline: (
         reference,
@@ -407,7 +413,10 @@ export const createKitchen = ({
 
     const updateContents = async (contentInfo) => {
       if (contentInfo) {
-        const { contentType, content } = contentInfo
+        const { type, contentType, content } = contentInfo
+        if (type) {
+          urlInfo.type = type
+        }
         if (contentType) {
           urlInfo.contentType = contentType
         }
