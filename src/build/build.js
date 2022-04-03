@@ -303,9 +303,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               if (rawUrlInfo.content === reference.content) {
                 return true
               }
-              if (rawUrlInfo.rawContent === reference.content) {
-                return true
-              }
               return false
             })
             if (!rawUrl) {
@@ -498,7 +495,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 buildDirectoryUrl,
               )}`
               versionMappings[reference.specifier] = versionedSpecifier
-
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (parentUrlInfo.jsQuote) {
                 // the url is inline inside js quotes
@@ -515,7 +511,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 usedVersionMappings.push(reference.specifier)
                 return () => `__v__(${JSON.stringify(reference.specifier)})`
               }
-              return reference.specifier
+              return versionedSpecifier
             },
             load: ({ url }) => {
               const urlInfo = finalGraph.getUrlInfo(url)

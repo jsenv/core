@@ -41,16 +41,15 @@ const test = async (options) => {
   assert({ actual, expected })
 }
 
-// TODO: retest and fix (first we'll re-test versioning without bundling)
 // without bundling
-// {
-//   const { serverOrigin, buildManifest, returnValue } = await test({
-//     bundling: false,
-//   })
-//   const actual = returnValue
-//   const expected = {
-//     bodyBackgroundColor: "rgb(255, 0, 0)",
-//     bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["assets/jsenv.png"]}")`,
-//   }
-//   assert({ actual, expected })
-// }
+{
+  const { serverOrigin, buildManifest, returnValue } = await test({
+    bundling: false,
+  })
+  const actual = returnValue
+  const expected = {
+    bodyBackgroundColor: "rgb(255, 0, 0)",
+    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["assets/jsenv.png"]}")`,
+  }
+  assert({ actual, expected })
+}

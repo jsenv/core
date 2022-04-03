@@ -6,7 +6,15 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}
   const generate = memoizeByUrl((url, urlInfo, parentUrlInfo) => {
     const directoryPath = determineDirectoryPath(urlInfo, parentUrlInfo)
-    const name = urlToFilename(url)
+    let name = urlToFilename(url)
+    const { searchParams } = new URL(url)
+    if (
+      searchParams.has("css_module") ||
+      searchParams.has("json_module") ||
+      searchParams.has("text_module")
+    ) {
+      name = `${name}.js`
+    }
     let names = cache[directoryPath]
     if (!names) {
       names = []
