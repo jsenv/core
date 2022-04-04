@@ -4,13 +4,49 @@ import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 
+export const jsenvPluginBundleJsModule = () => {
+  return {
+    name: "jsenv:bundle_js_module",
+    appliesDuring: {
+      build: true,
+    },
+    bundle: {
+      js_module: async (
+        jsModuleUrlInfos,
+        {
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          urlGraph,
+          runtimeSupport,
+          sourcemaps,
+        },
+      ) => {
+        const { jsModuleBundleUrlInfos } = await buildWithRollup({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          urlGraph,
+          jsModuleUrlInfos,
+
+          runtimeSupport,
+          sourcemaps,
+        })
+        return jsModuleBundleUrlInfos
+      },
+    },
+  }
+}
+
 export const buildWithRollup = async ({
   signal,
   logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  rawGraph,
-  jsModuleUrlInfosToBundle,
+  urlGraph,
+  jsModuleUrlInfos,
 
   runtimeSupport,
   sourcemaps,
@@ -23,8 +59,8 @@ export const buildWithRollup = async ({
         logger,
         rootDirectoryUrl,
         buildDirectoryUrl,
-        rawGraph,
-        jsModuleUrlInfosToBundle,
+        urlGraph,
+        jsModuleUrlInfos,
 
         runtimeSupport,
         sourcemaps,
@@ -45,8 +81,8 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  rawGraph,
-  jsModuleUrlInfosToBundle,
+  urlGraph,
+  jsModuleUrlInfos,
   sourcemaps,
 
   resultRef,
@@ -67,9 +103,9 @@ const rollupPluginJsenv = ({
     async buildStart() {
       _rollupEmitFile = (...args) => this.emitFile(...args)
       let previousNonEntryPointModuleId
-      jsModuleUrlInfosToBundle.forEach((jsModuleUrlInfoToBundle) => {
-        const id = jsModuleUrlInfoToBundle.url
-        if (jsModuleUrlInfoToBundle.data.isEntryPoint) {
+      jsModuleUrlInfos.forEach((jsModuleUrlInfo) => {
+        const id = jsModuleUrlInfo.url
+        if (jsModuleUrlInfo.data.isEntryPoint) {
           emitChunk({
             id,
           })
@@ -87,7 +123,7 @@ const rollupPluginJsenv = ({
     async generateBundle(outputOptions, rollupResult) {
       _rollupEmitFile = (...args) => this.emitFile(...args)
 
-      const jsModuleInfos = {}
+      const jsModuleBundleUrlInfos = {}
       Object.keys(rollupResult).forEach((fileName) => {
         const rollupFileInfo = rollupResult[fileName]
         // there is 3 types of file: "placeholder", "asset", "chunk"
@@ -103,15 +139,15 @@ const rollupPluginJsenv = ({
           }
           const jsModuleBundleUrlInfo = {
             // buildRelativeUrl: rollupFileInfo.fileName,
-            type: "js_module",
+            contentType: "application/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
           }
-          jsModuleInfos[url] = jsModuleBundleUrlInfo
+          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo
         }
       })
       resultRef.current = {
-        jsModuleInfos,
+        jsModuleBundleUrlInfos,
       }
     },
     outputOptions: (outputOptions) => {
@@ -153,7 +189,7 @@ const rollupPluginJsenv = ({
     },
     async load(rollupId) {
       const fileUrl = fileUrlConverter.asFileUrl(rollupId)
-      const urlInfo = rawGraph.getUrlInfo(fileUrl)
+      const urlInfo = urlGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,
         map: urlInfo.sourcemap

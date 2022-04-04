@@ -32,6 +32,7 @@ export const createPluginController = ({
       }
     })
     hookGroups[hookName] = hooks
+    return hooks
   }
   hooks.forEach((hookName) => {
     addHook(hookName)
@@ -39,7 +40,7 @@ export const createPluginController = ({
 
   let currentPlugin = null
   let currentHookName = null
-  const callPluginHook = (hook, info, context) => {
+  const callHook = (hook, info, context) => {
     const hookFn = getHookFunction(hook, info)
     if (!hookFn) {
       return null
@@ -52,7 +53,7 @@ export const createPluginController = ({
     currentHookName = null
     return valueReturned
   }
-  const callPluginAsyncHook = async (hook, info, context) => {
+  const callAsyncHook = async (hook, info, context) => {
     const hookFn = getHookFunction(hook, info)
     if (!hookFn) {
       return null
@@ -69,7 +70,7 @@ export const createPluginController = ({
   const callHooks = (hookName, info, context, callback) => {
     const hooks = hookGroups[hookName]
     for (const hook of hooks) {
-      const returnValue = callPluginHook(hook, info, context)
+      const returnValue = callHook(hook, info, context)
       if (returnValue) {
         callback(returnValue)
       }
@@ -79,7 +80,7 @@ export const createPluginController = ({
     const hooks = hookGroups[hookName]
     await hooks.reduce(async (previous, hook) => {
       await previous
-      const returnValue = await callPluginAsyncHook(hook, info, context)
+      const returnValue = await callAsyncHook(hook, info, context)
       if (returnValue && callback) {
         await callback(returnValue)
       }
@@ -89,7 +90,7 @@ export const createPluginController = ({
   const callHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName]
     for (const hook of hooks) {
-      const returnValue = callPluginHook(hook, info, context)
+      const returnValue = callHook(hook, info, context)
       if (returnValue) {
         return returnValue
       }
@@ -104,7 +105,7 @@ export const createPluginController = ({
           return resolve()
         }
         const hook = hooks[index]
-        const returnValue = callPluginAsyncHook(hook, info, context)
+        const returnValue = callAsyncHook(hook, info, context)
         return Promise.resolve(returnValue).then((output) => {
           if (output) {
             return resolve(output)
@@ -117,7 +118,11 @@ export const createPluginController = ({
   }
 
   return {
+    plugins,
     addHook,
+    getHookFunction,
+    callHook,
+    callAsyncHook,
 
     callHooks,
     callHooksUntil,

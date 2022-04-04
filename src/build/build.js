@@ -17,13 +17,13 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import {
   injectQueryParams,
   setUrlFilename,
 } from "@jsenv/utils/urls/url_utils.js"
 import { createUrlGraph } from "@jsenv/utils/url_graph/url_graph.js"
 import { loadUrlGraph } from "@jsenv/utils/url_graph/url_graph_load.js"
-import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import { createUrlGraphSummary } from "@jsenv/utils/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "@jsenv/utils/url_graph/url_graph_sort.js"
 import { createUrlVersionGenerator } from "@jsenv/utils/urls/url_version_generator.js"
@@ -38,8 +38,8 @@ import { jsenvPluginInline } from "../omega/plugins/inline/jsenv_plugin_inline.j
 import { getCorePlugins } from "../omega/core_plugins.js"
 import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
-import { buildWithRollup } from "./build_with_rollup.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
+import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
 
 export const build = async ({
   signal = new AbortController().signal,
@@ -77,6 +77,14 @@ export const build = async ({
     )
   }
 
+  const entryPointKeys = Object.keys(entryPoints)
+  if (entryPointKeys.length === 1) {
+    logger.info(`
+build ${entryPointKeys[0]}`)
+  } else {
+    logger.info(`
+build ${entryPointKeys.length} entry points`)
+  }
   const rawGraph = createUrlGraph()
   const loadRawGraphLog = createTaskLog(logger, "load files")
   let urlCount = 0
@@ -101,6 +109,7 @@ export const build = async ({
         fileSystemMagicResolution,
         babel,
       }),
+      jsenvPluginBundleJsModule(),
     ],
     scenario: "build",
     sourcemaps,
@@ -128,7 +137,6 @@ export const build = async ({
   }
   // here we can perform many checks such as ensuring ressource hints are used
   loadRawGraphLog.done()
-  logger.info(createUrlGraphSummary(rawGraph, { title: "raw build files" }))
   logger.debug(
     `raw graph urls:
 ${Object.keys(rawGraph.urlInfos).join("\n")}`,
@@ -136,83 +144,101 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
 
   const buildUrlInfos = {}
   if (bundling) {
-    const jsModuleUrlInfosToBundle = []
-    const cssUrlInfosToBundle = []
+    const bundlers = {}
+    rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
+      const bundle = plugin.bundle
+      if (!bundle) {
+        return
+      }
+      if (typeof bundle !== "object") {
+        throw new Error(
+          `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
+        )
+      }
+      Object.keys(bundle).forEach((type) => {
+        const bundlerForThatType = bundlers[type]
+        if (bundlerForThatType) {
+          // first plugin to define a bundle hook wins
+          return
+        }
+        bundlers[type] = {
+          plugin,
+          bundleFunction: bundle[type],
+          urlInfos: [],
+        }
+      })
+    })
+    const addToBundlerIfAny = (rawUrlInfo) => {
+      const bundler = bundlers[rawUrlInfo.type]
+      if (bundler) {
+        bundler.urlInfos.push(rawUrlInfo)
+        return
+      }
+    }
     Object.keys(rawGraph.urlInfos).forEach((rawUrl) => {
       const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
       if (!rawUrlInfo.data.isEntryPoint) {
         return
       }
+      addToBundlerIfAny(rawUrlInfo)
       if (rawUrlInfo.type === "html") {
         rawUrlInfo.dependencies.forEach((dependencyUrl) => {
           const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-          if (dependencyUrlInfo.type === "js_module") {
-            if (dependencyUrlInfo.isInline) {
+          if (dependencyUrlInfo.isInline) {
+            if (dependencyUrlInfo.type === "js_module") {
               // bundle inline script type module deps
               dependencyUrlInfo.references.forEach((inlineScriptRef) => {
                 if (inlineScriptRef.type === "js_import_export") {
-                  jsModuleUrlInfosToBundle.push(
-                    rawGraph.getUrlInfo(inlineScriptRef.url),
-                  )
+                  addToBundlerIfAny(rawGraph.getUrlInfo(inlineScriptRef.url))
                 }
               })
-              return
             }
-            jsModuleUrlInfosToBundle.push(dependencyUrlInfo)
+            // inline content cannot be bundled
             return
           }
-          if (dependencyUrlInfo.type === "css") {
-            cssUrlInfosToBundle.push(dependencyUrlInfo)
-            return
-          }
+          addToBundlerIfAny(dependencyUrlInfo)
         })
-        return
-      }
-      if (rawUrlInfo.type === "js_module") {
-        jsModuleUrlInfosToBundle.push(rawUrlInfo)
-        return
-      }
-      if (rawUrlInfo.type === "css") {
-        jsModuleUrlInfosToBundle.push(rawUrlInfo)
         return
       }
     })
-    // in the future this should be done in a "bundle" hook
-    if (jsModuleUrlInfosToBundle.length) {
-      const rollupBuildLog = createTaskLog(logger, `bundle js modules`)
+    await Object.keys(bundlers).reduce(async (previous, type) => {
+      await previous
+      const bundler = bundlers[type]
+      const bundleTask = createTaskLog(logger, `bundle ${type} files`)
       try {
-        const rollupBuild = await buildWithRollup({
-          signal,
-          logger,
-          rootDirectoryUrl,
-          buildDirectoryUrl,
-          rawGraph,
-          jsModuleUrlInfosToBundle,
-
-          runtimeSupport,
-          sourcemaps,
-        })
-        const { jsModuleInfos } = rollupBuild
-        Object.keys(jsModuleInfos).forEach((url) => {
-          const jsModuleInfo = jsModuleInfos[url]
+        const bundleUrlInfos =
+          await rawGraphKitchen.pluginController.callAsyncHook(
+            {
+              plugin: bundler.plugin,
+              hookName: "bundle",
+              value: bundler.bundleFunction,
+            },
+            bundler.urlInfos,
+            {
+              signal,
+              logger,
+              rootDirectoryUrl,
+              buildDirectoryUrl,
+              urlGraph: rawGraph,
+              runtimeSupport,
+              sourcemaps,
+            },
+          )
+        Object.keys(bundleUrlInfos).forEach((url) => {
+          const bundleUrlInfo = bundleUrlInfos[url]
           const rawUrlInfo = rawGraph.getUrlInfo(url)
           buildUrlInfos[url] = {
             data: rawUrlInfo ? rawUrlInfo.data : {},
-            type: "js_module",
-            contentType: "application/javascript",
-            content: jsModuleInfo.content,
-            sourcemap: jsModuleInfo.sourcemap,
+            type,
+            ...bundleUrlInfo,
           }
         })
       } catch (e) {
-        rollupBuildLog.fail()
+        bundleTask.fail()
         throw e
       }
-      rollupBuildLog.done()
-    }
-    if (cssUrlInfosToBundle.length) {
-      // on pourrait concat + minify en utilisant post css
-    }
+      bundleTask.done()
+    }, Promise.resolve())
   }
 
   const buildUrlsGenerator = createBuilUrlsGenerator({
