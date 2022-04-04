@@ -149,6 +149,22 @@ export const createKitchen = ({
   }
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
+    urlGraph,
+    sourcemaps,
+    sourcemapsSources,
+    injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
+      const sourcemapReference = createReference({
+        trace: `sourcemap comment placeholder for ${urlInfo.url}`,
+        type: "sourcemap_comment",
+        subtype:
+          urlInfo.contentType === "application/javascript" ? "js" : "css",
+        parentUrl: urlInfo.url,
+        specifier,
+      })
+      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      sourcemapUrlInfo.type = "sourcemap"
+      return [sourcemapReference, sourcemapUrlInfo]
+    },
     foundSourcemap: ({ urlInfo, line, column, type, specifier }) => {
       const sourcemapReference = createReference({
         trace: stringifyUrlSite(
@@ -167,21 +183,6 @@ export const createKitchen = ({
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
-    injectSourcemapPlaceholder: (urlInfo, specifier) => {
-      const sourcemapReference = createReference({
-        trace: `sourcemap comment placeholder for ${urlInfo.url}`,
-        type: "sourcemap_comment",
-        subtype:
-          urlInfo.contentType === "application/javascript" ? "js" : "css",
-        parentUrl: urlInfo.url,
-        specifier,
-      })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
-      sourcemapUrlInfo.type = "sourcemap"
-      return [sourcemapReference, sourcemapUrlInfo]
-    },
-    sourcemaps,
-    sourcemapsSources,
   })
 
   const isSupported = ({
@@ -467,7 +468,7 @@ export const createKitchen = ({
         const replaceReturnValue = await replaceUrls((urlMention) => {
           return urlMention.reference.generatedSpecifier
         })
-        await urlInfoTransformer.applyTransformations(
+        await urlInfoTransformer.applyIntermediateTransformations(
           urlInfo,
           replaceReturnValue,
         )
@@ -483,7 +484,7 @@ export const createKitchen = ({
         urlInfo,
         context,
         async (transformReturnValue) => {
-          await urlInfoTransformer.applyTransformations(
+          await urlInfoTransformer.applyIntermediateTransformations(
             urlInfo,
             transformReturnValue,
           )
@@ -575,6 +576,7 @@ export const createKitchen = ({
 
   return {
     pluginController,
+    urlInfoTransformer,
     rootDirectoryUrl,
     jsenvDirectoryUrl,
     isSupported,

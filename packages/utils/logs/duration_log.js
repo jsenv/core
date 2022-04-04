@@ -4,11 +4,11 @@ import { require } from "../require.js"
 const humanizeDuration = require("humanize-duration")
 
 export const msAsDuration = (ms) => {
-  // below 100 ms it would display "0 seconds", so use milliseconds
+  // below 100 ms it would display "0 seconds", add more decimals
   if (ms < 100) {
     return humanizeDuration(ms, {
-      maxDecimalPoints: 0,
-      units: ["ms"],
+      maxDecimalPoints: 3,
+      units: ["s"],
     })
   }
   // below 1s we want "0.01 seconds" and "0.3 seconds"

@@ -123,6 +123,7 @@ const createUrlInfo = (url) => {
     originalContent: "",
     content: "",
     sourcemap: null,
+    sourcemapReference: null,
     type: "",
     references: [],
     dependencies: new Set(),

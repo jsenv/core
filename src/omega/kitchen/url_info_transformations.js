@@ -1,6 +1,6 @@
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {
-  sourcemapComment,
+  SOURCEMAP,
   sourcemapToBase64Url,
   generateSourcemapUrl,
 } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
@@ -10,8 +10,8 @@ export const createUrlInfoTransformer = ({
   sourcemaps,
   sourcemapsSources,
   urlGraph,
-  foundSourcemap,
   injectSourcemapPlaceholder,
+  foundSourcemap,
 }) => {
   const sourcemapsEnabled =
     sourcemaps === "inline" ||
@@ -26,14 +26,14 @@ export const createUrlInfoTransformer = ({
       urlInfo.isInline || sourcemapsSources
     if (sourcemap.sources && sourcemap.sources.length > 1) {
       sourcemap.sources = sourcemap.sources.map(
-        (source) => new URL(source, urlInfo.data.sourceUrl || urlInfo.url).href,
+        (source) => new URL(source, urlInfo.data.rawUrl || urlInfo.url).href,
       )
       if (!wantSourcesContent) {
         sourcemap.sourcesContent = undefined
       }
       return sourcemap
     }
-    sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
+    sourcemap.sources = [urlInfo.data.rawUrl || urlInfo.url]
     sourcemap.sourcesContent = [urlInfo.originalContent]
     if (!wantSourcesContent) {
       sourcemap.sourcesContent = undefined
@@ -45,20 +45,31 @@ export const createUrlInfoTransformer = ({
     if (!sourcemapsEnabled) {
       return
     }
-    if (urlInfo.sourcemap) {
+    if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
       return
     }
+    // sourcemap is a special kind of reference:
+    // It's a reference to a content generated dynamically the content itself.
+    // For this reason sourcemap are not added to urlInfo.references
+    // Instead they are stored into urlInfo.sourcemapReference
     // create a placeholder reference for the sourcemap that will be generated
     // when jsenv is done cooking the file
     //   during build it's urlInfo.url to be inside the build
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
     urlInfo.sourcemapGeneratedUrl = generateSourcemapUrl(urlInfo.generatedUrl)
-    injectSourcemapPlaceholder({
+    const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
       urlInfo,
       specifier: urlInfo.sourcemapGeneratedUrl,
     })
+    urlInfo.sourcemapReference = sourcemapReference
+    sourcemapUrlInfo.isInline = sourcemaps === "inline"
+
+    // already loaded during "load" hook (happens during build)
+    if (urlInfo.sourcemap) {
+      return
+    }
     // check for existing sourcemap for this content
-    const sourcemapFound = sourcemapComment.read({
+    const sourcemapFound = SOURCEMAP.readComment({
       contentType: urlInfo.contentType,
       content: urlInfo.content,
     })
@@ -77,7 +88,7 @@ export const createUrlInfoTransformer = ({
           urlInfo: sourcemapUrlInfo,
         })
         const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-        urlInfo.sourcemap = normalizeSourcemap(sourcemap, urlInfo)
+        urlInfo.sourcemap = normalizeSourcemap(urlInfo, sourcemap)
       } catch (e) {
         logger.error(`Error while handling existing sourcemap: ${e.message}`)
         return
@@ -123,22 +134,17 @@ export const createUrlInfoTransformer = ({
       // - to inject versioning into the entry point content
       // in this scenarion we don't want to call injectSourcemap
       // just update the content and the
-
-      const sourcemapReference = urlInfo.references.find(
-        (ref) => ref.type === "sourcemap_comment",
-      )
+      const sourcemapReference = urlInfo.sourcemapReference
       const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
       sourcemapUrlInfo.contentType = "application/json"
       sourcemapUrlInfo.content = JSON.stringify(urlInfo.sourcemap, null, "  ")
-      urlInfo.sourcemapUrl = sourcemapUrlInfo.url
-
       if (sourcemaps === "inline") {
         sourcemapReference.generatedSpecifier = sourcemapToBase64Url(
           urlInfo.sourcemap,
         )
       }
       if (sourcemaps === "file" || sourcemaps === "inline") {
-        urlInfo.content = sourcemapComment.write({
+        urlInfo.content = SOURCEMAP.writeComment({
           contentType: urlInfo.contentType,
           content: urlInfo.content,
           specifier: sourcemapReference.generatedSpecifier,

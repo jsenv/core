@@ -62,7 +62,7 @@ export const build = async ({
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
-  versioning = "none", //  "filename", "search_param", "none"
+  versioning = "filename", //  "filename", "search_param", "none"
   lineBreakNormalization = process.platform === "win32",
 
   writeOnFileSystem = true,
@@ -599,7 +599,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               return
             }
             await injectVersionMappings(buildUrlInfo, {
-              rootDirectoryUrl,
+              kitchen: finalGraphKitchen,
               versionMappings: versionMappingsNeeded,
             })
           }),
