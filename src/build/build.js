@@ -40,6 +40,8 @@ import { createKitchen } from "../omega/kitchen/kitchen.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
 import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
+import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
+import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
 
 export const build = async ({
   signal = new AbortController().signal,
@@ -60,7 +62,7 @@ export const build = async ({
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
-  versioning = "filename", //  "filename", "search_param", "none"
+  versioning = "none", //  "filename", "search_param", "none"
   lineBreakNormalization = process.platform === "win32",
 
   writeOnFileSystem = true,
@@ -110,6 +112,8 @@ build ${entryPointKeys.length} entry points`)
         babel,
       }),
       jsenvPluginBundleJsModule(),
+      jsenvPluginMinifyJs(),
+      jsenvPluginMinifyHtml(),
     ],
     scenario: "build",
     sourcemaps,
@@ -204,6 +208,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     await Object.keys(bundlers).reduce(async (previous, type) => {
       await previous
       const bundler = bundlers[type]
+      const urlInfosToBundle = bundler.urlInfos
+      if (urlInfosToBundle.length === 0) {
+        return
+      }
       const bundleTask = createTaskLog(logger, `bundle ${type} files`)
       try {
         const bundleUrlInfos =
@@ -213,7 +221,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               hookName: "bundle",
               value: bundler.bundleFunction,
             },
-            bundler.urlInfos,
+            urlInfosToBundle,
             {
               signal,
               logger,
@@ -416,8 +424,23 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   }
   loadFinalGraphLog.done()
 
-  // TODO: minify html, js, svg, json
-  // in the future we'll do an "optimize" hook for plugins
+  // const optimizeContext = {
+  //   rootDirectoryUrl,
+  // }
+  // rawGraphKitchen.pluginController.addHook("optimize")
+  // Object.keys(finalGraph.urlInfos).forEach(async (url) => {
+  //   const finalUrlInfo = finalGraph.urlInfos[url]
+  //   await rawGraphKitchen.pluginController.callAsyncHooks(
+  //     "optimize",
+  //     finalUrlInfo,
+  //     optimizeContext,
+  //     async (optimizeReturnValue) => {
+  //       await applyUrlInfoTransformations(finalUrlInfo, optimizeReturnValue, {
+  //         sourcemaps: "none",
+  //       })
+  //     },
+  //   )
+  // })
 
   logger.debug(
     `graph urls pre-versioning:

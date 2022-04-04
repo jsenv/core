@@ -8,12 +8,6 @@ import {
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
-import {
-  sourcemapComment,
-  generateSourcemapUrl,
-  sourcemapToBase64Url,
-} from "@jsenv/utils/sourcemap/sourcemap_utils.js"
-import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 
 import { featuresCompatMap } from "../runtime_support/features_compatibility.js"
 import { isFeatureSupportedOnRuntimes } from "../runtime_support/runtime_support.js"
@@ -26,6 +20,7 @@ import {
   createTransformError,
 } from "./errors.js"
 import { createPluginController } from "./plugin_controller.js"
+import { createUrlInfoTransformer } from "./url_info_transformations.js"
 
 export const createKitchen = ({
   signal,
@@ -52,14 +47,11 @@ export const createKitchen = ({
 
   writeOnFileSystem = true,
 }) => {
-  const sourcemapsEnabled =
-    sourcemaps === "inline" ||
-    sourcemaps === "file" ||
-    sourcemaps === "programmatic"
   const pluginController = createPluginController({
     plugins,
     scenario,
   })
+  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
   const baseContext = {
     signal,
     logger,
@@ -68,16 +60,6 @@ export const createKitchen = ({
     urlGraph,
     scenario,
   }
-  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-
-  const isSupported = ({
-    runtimeSupport,
-    featureName,
-    featureCompat = featuresCompatMap[featureName],
-  }) => {
-    return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
-  }
-
   const createReference = ({
     data = {},
     trace,
@@ -165,32 +147,51 @@ export const createKitchen = ({
       })
     }
   }
-  const getSourcemapReference = (urlInfo, isOriginalSourcemap) => {
-    const sourcemapFound = sourcemapComment.read({
-      contentType: urlInfo.contentType,
-      content: urlInfo.content,
-    })
-    if (!sourcemapFound) {
-      return null
-    }
-    const { type, line, column, specifier } = sourcemapFound
-    const sourcemapReference = createReference({
-      trace: stringifyUrlSite(
-        adjustUrlSite(urlInfo, {
-          urlGraph,
-          url: isOriginalSourcemap ? urlInfo.url : urlInfo.generatedUrl,
-          line,
-          column,
-        }),
-      ),
-      type,
-      parentUrl: urlInfo.url,
-      specifier,
-    })
-    const sourcemapUrlInfo = resolveReference(sourcemapReference)
-    sourcemapUrlInfo.type = "sourcemap"
-    return sourcemapReference
+  const urlInfoTransformer = createUrlInfoTransformer({
+    logger,
+    foundSourcemap: ({ urlInfo, line, column, type, specifier }) => {
+      const sourcemapReference = createReference({
+        trace: stringifyUrlSite(
+          adjustUrlSite(urlInfo, {
+            urlGraph,
+            url: urlInfo.url,
+            line,
+            column,
+          }),
+        ),
+        type,
+        parentUrl: urlInfo.url,
+        specifier,
+      })
+      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      sourcemapUrlInfo.type = "sourcemap"
+      return [sourcemapReference, sourcemapUrlInfo]
+    },
+    injectSourcemapPlaceholder: (urlInfo, specifier) => {
+      const sourcemapReference = createReference({
+        trace: `sourcemap comment placeholder for ${urlInfo.url}`,
+        type: "sourcemap_comment",
+        subtype:
+          urlInfo.contentType === "application/javascript" ? "js" : "css",
+        parentUrl: urlInfo.url,
+        specifier,
+      })
+      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      sourcemapUrlInfo.type = "sourcemap"
+      return [sourcemapReference, sourcemapUrlInfo]
+    },
+    sourcemaps,
+    sourcemapsSources,
+  })
+
+  const isSupported = ({
+    runtimeSupport,
+    featureName,
+    featureCompat = featuresCompatMap[featureName],
+  }) => {
+    return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
   }
+
   const load = async ({ reference, urlInfo, context }) => {
     try {
       const loadReturnValue = urlInfo.isInline
@@ -214,7 +215,31 @@ export const createKitchen = ({
         content,
         sourcemap,
       })
-      urlInfo.type = urlInfo.type || inferUrlInfoType(urlInfo)
+      if (!urlInfo.type) {
+        const type = inferUrlInfoType(urlInfo)
+        if (type === "js") {
+          const urlObject = new URL(urlInfo.url)
+          if (urlObject.searchParams.has("js_classic")) {
+            urlInfo.type = "js_classic"
+          } else if (urlObject.searchParams.has("worker_classic")) {
+            urlInfo.type = "js_classic"
+            urlInfo.subtype = "worker"
+          } else if (urlObject.searchParams.has("worker_module")) {
+            urlInfo.type = "js_module"
+            urlInfo.subtype = "worker"
+          } else if (urlObject.searchParams.has("service_worker_classic")) {
+            urlInfo.type = "js_classic"
+            urlInfo.subtype = "service_worker"
+          } else if (urlObject.searchParams.has("service_worker_module")) {
+            urlInfo.type = "js_module"
+            urlInfo.subtype = "service_worker"
+          } else {
+            urlInfo.type = "js_module"
+          }
+        } else {
+          urlInfo.type = type
+        }
+      }
     } catch (error) {
       throw createLoadError({
         pluginController,
@@ -228,27 +253,7 @@ export const createKitchen = ({
       outDirectoryUrl: context.outDirectoryUrl,
       url: urlInfo.url,
     })
-    if (urlInfo.sourcemap) {
-      return
-    }
-    if (sourcemapsEnabled) {
-      const sourcemapReference = getSourcemapReference(urlInfo, true)
-      if (sourcemapReference) {
-        try {
-          const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
-          await context.cook({
-            reference: sourcemapReference,
-            urlInfo: sourcemapUrlInfo,
-          })
-          const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-          urlInfo.sourcemap = normalizeSourcemap(sourcemap, urlInfo)
-          urlInfo.sourcemapUrl = sourcemapUrlInfo.url
-        } catch (e) {
-          logger.error(`Error while handling sourcemap: ${e.message}`)
-          return
-        }
-      }
-    }
+    await urlInfoTransformer.initTransformations(urlInfo, context)
   }
 
   const _cook = async ({
@@ -411,28 +416,6 @@ export const createKitchen = ({
       },
     }
 
-    const updateContents = async (contentInfo) => {
-      if (contentInfo) {
-        const { type, contentType, content } = contentInfo
-        if (type) {
-          urlInfo.type = type
-        }
-        if (contentType) {
-          urlInfo.contentType = contentType
-        }
-        urlInfo.content = content
-        if (sourcemapsEnabled && contentInfo.sourcemap) {
-          urlInfo.sourcemap = normalizeSourcemap(
-            await composeTwoSourcemaps(
-              urlInfo.sourcemap,
-              normalizeSourcemap(contentInfo.sourcemap, urlInfo),
-              rootDirectoryUrl,
-            ),
-            urlInfo,
-          )
-        }
-      }
-    }
     let parseResult
     try {
       parseResult = await parseUrlMentions({
@@ -481,10 +464,13 @@ export const createKitchen = ({
             }
           }),
         )
-        const transformReturnValue = await replaceUrls((urlMention) => {
+        const replaceReturnValue = await replaceUrls((urlMention) => {
           return urlMention.reference.generatedSpecifier
         })
-        await updateContents(transformReturnValue)
+        await urlInfoTransformer.applyTransformations(
+          urlInfo,
+          replaceReturnValue,
+        )
       }
     }
 
@@ -497,7 +483,10 @@ export const createKitchen = ({
         urlInfo,
         context,
         async (transformReturnValue) => {
-          await updateContents(transformReturnValue)
+          await urlInfoTransformer.applyTransformations(
+            urlInfo,
+            transformReturnValue,
+          )
         },
       )
     } catch (error) {
@@ -512,45 +501,16 @@ export const createKitchen = ({
     // and the one injected by plugin are known
     urlGraph.updateReferences(urlInfo, references)
 
-    // handle sourcemap
-    if (sourcemapsEnabled && urlInfo.sourcemap) {
-      // during build it's urlInfo.url to be inside the build
-      // but otherwise it's generatedUrl to be inside .jsenv/ directory
-      urlInfo.sourcemapGeneratedUrl = generateSourcemapUrl(urlInfo.generatedUrl)
-      urlInfo.sourcemapUrl =
-        urlInfo.sourcemapUrl || urlInfo.sourcemapGeneratedUrl
-      if (sourcemaps === "file" || sourcemaps === "inline") {
-        const sourcemapReference = createReference({
-          trace: `sourcemap comment placeholder for ${urlInfo.url}`,
-          type: "sourcemap_comment",
-          subtype:
-            urlInfo.contentType === "application/javascript" ? "js" : "css",
-          parentUrl: urlInfo.url,
-          specifier:
-            sourcemaps === "inline"
-              ? sourcemapToBase64Url(urlInfo.sourcemap)
-              : urlInfo.sourcemapUrl,
-        })
-        const sourcemapUrlInfo = resolveReference(sourcemapReference)
-        sourcemapUrlInfo.contentType = "application/json"
-        sourcemapUrlInfo.type = "sourcemap"
-        sourcemapUrlInfo.content = JSON.stringify(urlInfo.sourcemap, null, "  ")
-        urlInfo.sourcemapUrl = sourcemapUrlInfo.url
-        urlInfo.content = sourcemapComment.write({
-          contentType: urlInfo.contentType,
-          content: urlInfo.content,
-          specifier: sourcemapReference.generatedSpecifier,
-        })
-      }
-    }
-
     // "finalize" hook
     const finalizeReturnValue = await pluginController.callHooksUntil(
       "finalize",
       urlInfo,
       context,
     )
-    updateContents(finalizeReturnValue)
+    await urlInfoTransformer.applyFinalTransformations(
+      urlInfo,
+      finalizeReturnValue,
+    )
 
     // "cooked" hook
     pluginController.callHooks(
@@ -613,29 +573,6 @@ export const createKitchen = ({
 
   baseContext.cook = cook
 
-  const normalizeSourcemap = (sourcemap, urlInfo) => {
-    const wantSourcesContent =
-      // for inline content (<script> insdide html)
-      // chrome won't be able to fetch the file as it does not exists
-      // so sourcemap must contain sources
-      urlInfo.isInline || sourcemapsSources
-    if (sourcemap.sources && sourcemap.sources.length > 1) {
-      sourcemap.sources = sourcemap.sources.map(
-        (source) => new URL(source, urlInfo.data.sourceUrl || urlInfo.url).href,
-      )
-      if (!wantSourcesContent) {
-        sourcemap.sourcesContent = undefined
-      }
-      return sourcemap
-    }
-    sourcemap.sources = [urlInfo.data.sourceUrl || urlInfo.url]
-    sourcemap.sourcesContent = [urlInfo.originalContent]
-    if (!wantSourcesContent) {
-      sourcemap.sourcesContent = undefined
-    }
-    return sourcemap
-  }
-
   return {
     pluginController,
     rootDirectoryUrl,
@@ -645,41 +582,6 @@ export const createKitchen = ({
     resolveReference,
     cook,
   }
-}
-
-const inferUrlInfoType = ({ url, contentType }) => {
-  if (contentType === "text/html") {
-    return "html"
-  }
-  if (contentType === "text/css") {
-    return "css"
-  }
-  if (contentType === "application/javascript") {
-    const urlObject = new URL(url)
-    if (urlObject.searchParams.has("js_classic")) {
-      return "js_classic"
-    }
-    if (urlObject.searchParams.has("worker_classic")) {
-      return "worker_classic"
-    }
-    if (urlObject.searchParams.has("worker_module")) {
-      return "worker_module"
-    }
-    if (urlObject.searchParams.has("service_worker_classic")) {
-      return "service_worker_classic"
-    }
-    if (urlObject.searchParams.has("service_worker_module")) {
-      return "service_worker_module"
-    }
-    return "js_module"
-  }
-  if (contentType === "application/json") {
-    return "json"
-  }
-  if (contentType === "application/importmap+json") {
-    return "importmap"
-  }
-  return "other"
 }
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
@@ -714,6 +616,25 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
     },
     urlInfo,
   )
+}
+
+const inferUrlInfoType = ({ contentType }) => {
+  if (contentType === "text/html") {
+    return "html"
+  }
+  if (contentType === "text/css") {
+    return "css"
+  }
+  if (contentType === "application/javascript") {
+    return "js"
+  }
+  if (contentType === "application/json") {
+    return "json"
+  }
+  if (contentType === "application/importmap+json") {
+    return "importmap"
+  }
+  return "other"
 }
 
 const determineFileUrlForOutDirectory = ({

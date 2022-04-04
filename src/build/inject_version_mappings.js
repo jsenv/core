@@ -8,17 +8,13 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-import { updateContentAndSourcemap } from "./update_content_and_sourcemap.js"
+import { applyUrlInfoTransformations } from "../omega/url_info_transformations.js"
 
-export const injectVersionMappings = async (
-  urlInfo,
-  { rootDirectoryUrl, versionMappings },
-) => {
+export const injectVersionMappings = async (urlInfo, { versionMappings }) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = injector(urlInfo, { versionMappings })
-    await updateContentAndSourcemap(urlInfo, {
-      rootDirectoryUrl,
+    await applyUrlInfoTransformations(urlInfo, {
       content,
       sourcemap,
     })
