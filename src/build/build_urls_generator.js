@@ -48,12 +48,6 @@ const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
   if (urlInfo.data.isEntryPoint) {
     return ""
   }
-  if (
-    urlInfo.type === "service_worker_module" ||
-    urlInfo.type === "service_worker_classic"
-  ) {
-    return ""
-  }
   if (urlInfo.type === "sourcemap") {
     return "sourcemaps/"
   }
@@ -63,12 +57,10 @@ const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
   if (urlInfo.type === "css") {
     return "css/"
   }
-  if (
-    urlInfo.type === "js_module" ||
-    urlInfo.type === "js_classic" ||
-    urlInfo.type === "worker_module" ||
-    urlInfo.type === "worker_classic"
-  ) {
+  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
+    if (urlInfo.subtype === "service_worker") {
+      return ""
+    }
     return "js/"
   }
   return "assets/"

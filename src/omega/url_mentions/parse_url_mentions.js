@@ -6,9 +6,13 @@ import { parseWorkerClassicUrlMentions } from "./worker_classic_url_mentions.js"
 const parsers = {
   html: parseHtmlUrlMentions,
   css: parseCssUrlMentions,
+  js_classic: (urlInfo) => {
+    if (urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker") {
+      return parseWorkerClassicUrlMentions(urlInfo)
+    }
+    return null
+  },
   js_module: parseJsModuleUrlMentions,
-  worker_classic: parseWorkerClassicUrlMentions,
-  service_worker_classic: parseWorkerClassicUrlMentions,
 }
 
 export const parseUrlMentions = async ({ type, url, content, scenario }) => {

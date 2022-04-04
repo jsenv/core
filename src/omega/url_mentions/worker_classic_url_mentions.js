@@ -2,7 +2,7 @@ export const jsenvPluginImportScriptsBundler = () => {
   return {
     name: "jsenv:import_scripts_bundler",
     bundle: {
-      worker_classic: async (workerUrlInfos, { urlGraph }) => {
+      js_classic: async (workerUrlInfos, { urlGraph }) => {
         const bundleResult = {}
         workerUrlInfos.forEach((workerUrlInfo) => {
           const magicSource = createMagicSource(workerUrlInfo.content)
@@ -25,7 +25,6 @@ export const jsenvPluginImportScriptsBundler = () => {
         })
         return bundleResult
       },
-      service_worker_classic: () => {},
     },
   }
 }
