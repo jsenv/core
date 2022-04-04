@@ -269,18 +269,18 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     //   to get "originalContent" and "sourcemap"
     loadInlineUrlInfos: (finalUrlInfo) => {
       const rawUrl = finalUrlInfo.data.rawUrl
-      const urlInfo = buildUrlInfos[rawUrl] || rawGraph.getUrlInfo(rawUrl)
-      if (!urlInfo) {
-        return {
-          contentType: finalUrlInfo.contentType,
-          content: finalUrlInfo.content,
-        }
-      }
+      const buildUrlInfo = buildUrlInfos[rawUrl]
+      const urlInfo = buildUrlInfo || finalUrlInfo
+      const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
       return {
-        originalContent: urlInfo.originalContent,
+        originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+        sourcemap: buildUrlInfo
+          ? buildUrlInfo.sourcemap
+          : rawUrlInfo
+          ? rawUrlInfo.sourcemap
+          : undefined,
         contentType: urlInfo.contentType,
         content: urlInfo.content,
-        sourcemap: urlInfo.sourcemap,
       }
     },
     plugins: [
@@ -502,6 +502,18 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         logger,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
+        loadInlineUrlInfos: (versionedUrlInfo) => {
+          const rawUrlInfo = rawGraph.getUrlInfo(versionedUrlInfo.data.rawUrl)
+          const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
+          return {
+            originalContent: rawUrlInfo
+              ? rawUrlInfo.originalContent
+              : undefined,
+            sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
+            contentType: versionedUrlInfo.contentType,
+            content: versionedUrlInfo.content,
+          }
+        },
         plugins: [
           jsenvPluginInline({
             allowEscapeForVersioning: true,
