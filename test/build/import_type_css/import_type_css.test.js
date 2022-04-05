@@ -5,7 +5,7 @@ import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const test = async (options) => {
   const { buildManifest } = await build({
-    logLevel: "warn",
+    logLevel: "info",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {

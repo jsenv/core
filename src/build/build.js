@@ -90,7 +90,7 @@ build ${entryPointKeys[0]}`)
 build ${entryPointKeys.length} entry points`)
   }
   const rawGraph = createUrlGraph()
-  const loadRawGraphLog = createTaskLog(logger, "load files")
+  const prebuildTask = createTaskLog(logger, "prebuild")
   let urlCount = 0
   const rawGraphKitchen = createKitchen({
     signal,
@@ -104,7 +104,7 @@ build ${entryPointKeys.length} entry points`)
         appliesDuring: { build: true },
         cooked: () => {
           urlCount++
-          loadRawGraphLog.setRightText(urlCount)
+          prebuildTask.setRightText(urlCount)
         },
       },
       ...getCorePlugins({
@@ -137,11 +137,11 @@ build ${entryPointKeys.length} entry points`)
       startLoading: loadEntryFiles,
     })
   } catch (e) {
-    loadRawGraphLog.fail()
+    prebuildTask.fail()
     throw e
   }
   // here we can perform many checks such as ensuring ressource hints are used
-  loadRawGraphLog.done()
+  prebuildTask.done()
   logger.debug(
     `raw graph urls:
 ${Object.keys(rawGraph.urlInfos).join("\n")}`,
@@ -213,7 +213,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       if (urlInfosToBundle.length === 0) {
         return
       }
-      const bundleTask = createTaskLog(logger, `bundle ${type} files`)
+      const bundleTask = createTaskLog(logger, `bundle "${type}"`)
       try {
         const bundleUrlInfos =
           await rawGraphKitchen.pluginController.callAsyncHook(
@@ -410,7 +410,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     scenario: "build",
     sourcemaps,
   })
-  const loadFinalGraphLog = createTaskLog(logger, "generating build files")
+  const buildTask = createTaskLog(logger, "build")
   try {
     await loadUrlGraph({
       urlGraph: finalGraph,
@@ -420,35 +420,46 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       startLoading: loadEntryFiles,
     })
   } catch (e) {
-    loadFinalGraphLog.fail()
+    buildTask.fail()
     throw e
   }
-  loadFinalGraphLog.done()
+  buildTask.done()
 
-  // const optimizeContext = {
-  //   rootDirectoryUrl,
-  // }
-  // rawGraphKitchen.pluginController.addHook("optimize")
-  // Object.keys(finalGraph.urlInfos).forEach(async (url) => {
-  //   const finalUrlInfo = finalGraph.urlInfos[url]
-  //   await rawGraphKitchen.pluginController.callAsyncHooks(
-  //     "optimize",
-  //     finalUrlInfo,
-  //     optimizeContext,
-  //     async (optimizeReturnValue) => {
-  //       await applyUrlInfoTransformations(finalUrlInfo, optimizeReturnValue, {
-  //         sourcemaps: "none",
-  //       })
-  //     },
-  //   )
-  // })
+  const optimizeContext = {
+    rootDirectoryUrl,
+  }
+  const optimizeHooks = rawGraphKitchen.pluginController.addHook("optimize")
+  if (optimizeHooks.length) {
+    const optimizeTask = createTaskLog(logger, "optimize")
+    try {
+      await Object.keys(finalGraph.urlInfos).reduce(async (previous, url) => {
+        await previous
+        const finalUrlInfo = finalGraph.urlInfos[url]
+        await rawGraphKitchen.pluginController.callAsyncHooks(
+          "optimize",
+          finalUrlInfo,
+          optimizeContext,
+          async (optimizeReturnValue) => {
+            await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+              finalUrlInfo,
+              optimizeReturnValue,
+            )
+          },
+        )
+      }, Promise.resolve())
+    } catch (e) {
+      optimizeTask.fail()
+      throw e
+    }
+    optimizeTask.done()
+  }
 
   logger.debug(
     `graph urls pre-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   )
   if (versioning !== "none") {
-    const urlVersioningLog = createTaskLog(logger, "inject version in urls")
+    const versioningTask = createTaskLog(logger, "inject version in urls")
     try {
       const urlsSorted = sortUrlGraphByDependencies(finalGraph)
       urlsSorted.forEach((url) => {
@@ -619,10 +630,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         )
       }
     } catch (e) {
-      urlVersioningLog.fail()
+      versioningTask.fail()
       throw e
     }
-    urlVersioningLog.done()
+    versioningTask.done()
   }
 
   const buildFileContents = {}

@@ -100,7 +100,7 @@ const babelPluginMetadataInlineTemplateLiterals = () => {
         const inlineContentCalls = []
         programPath.traverse({
           NewExpression: (path) => {
-            const newInlineContentCall = parseAsNewInlineContentCall(path.node)
+            const newInlineContentCall = parseAsNewInlineContentCall(path)
             if (newInlineContentCall) {
               inlineContentCalls.push(newInlineContentCall)
             }
@@ -112,12 +112,23 @@ const babelPluginMetadataInlineTemplateLiterals = () => {
   }
 }
 
-const parseAsNewInlineContentCall = (node) => {
-  if (node.callee.type !== "Identifier") {
-    return null
-  }
-  if (node.callee.name !== "InlineContent") {
-    return null
+const parseAsNewInlineContentCall = (path) => {
+  const node = path.node
+  if (node.callee.type === "Identifier") {
+    // terser rename import to use a shorter name
+    const name = getOriginalName(path, node.callee.name)
+    if (name !== "InlineContent") {
+      return null
+    }
+  } else if (node.callee.id) {
+    // terser might combine new InlineContent('') declaration and usage
+    if (node.callee.id.type !== "Identifier") {
+      return null
+    }
+    const name = getOriginalName(path, node.callee.id.name)
+    if (name !== "InlineContent") {
+      return null
+    }
   }
   if (node.arguments.length !== 2) {
     return null
@@ -177,10 +188,23 @@ const getNodePosition = (node) => {
   }
 }
 
-// const getImportedName = (path, name) => {
-//   const binding = path.scope.getBinding(name)
-//   if (binding.path.type === "ImportSpecifier") {
-//     return binding.path.node.imported.name
-//   }
-//   return null
-// }
+const getOriginalName = (path, name) => {
+  const binding = path.scope.getBinding(name)
+  if (!binding) {
+    return name
+  }
+  if (binding.path.type === "ImportSpecifier") {
+    const importedName = binding.path.node.imported.name
+    if (name === importedName) {
+      return name
+    }
+    return getOriginalName(path, importedName)
+  }
+  if (binding.path.type === "VariableDeclarator") {
+    if (binding.path.node.init.type === "Identifier") {
+      const previousName = binding.path.node.init.name
+      return getOriginalName(path, previousName)
+    }
+  }
+  return name
+}
