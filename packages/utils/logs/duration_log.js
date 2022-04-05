@@ -1,33 +1,111 @@
-import { require } from "../require.js"
-
-// https://github.com/EvanHahn/HumanizeDuration.js
-const humanizeDuration = require("humanize-duration")
-
 export const msAsDuration = (ms) => {
-  // below 100 ms it would display "0 seconds", add more decimals
-  if (ms < 100) {
-    return humanizeDuration(ms, {
-      maxDecimalPoints: 3,
-      units: ["s"],
-    })
+  if (ms < 1) {
+    // it would be messy to write 0.0001 second (stands for 0.1 milliseconds)
+    // but is not in the scope of this for now
+    return "not implemented"
   }
-  // below 1s we want "0.01 seconds" and "0.3 seconds"
-  if (ms < 1000) {
-    return humanizeDuration(ms, {
-      maxDecimalPoints: 2,
-      units: ["s"],
-    })
+  const { primary, remaining } = parseMs(ms)
+  if (!remaining) {
+    return formatUnit(primary, determineMaxDecimals(primary))
   }
-  // below 60s we just display the exact amount of seconds
-  if (ms < 60000) {
-    return humanizeDuration(ms, {
-      largest: 1,
-      maxDecimalPoints: 0,
-    })
+  return `${formatUnit(primary)} and ${formatUnit(remaining)}`
+}
+
+const determineMaxDecimals = (unit) => {
+  if (unit.name !== "second") {
+    return 0
   }
-  return humanizeDuration(ms, {
-    largest: 2,
-    maxDecimalPoints: 0,
-    delimiter: " and ",
+  const count = unit.count
+  if (count < 0.001) {
+    return 4
+  }
+  if (count < 0.01) {
+    return 3
+  }
+  if (count < 0.1) {
+    return 2
+  }
+  if (count < 1) {
+    return 1
+  }
+  return 1
+}
+
+const formatUnit = (unit, maxDecimals = 0) => {
+  const count = roundNumber(unit.count, maxDecimals)
+  if (count <= 1) {
+    return `${count} ${unit.name}`
+  }
+  return `${count} ${unit.name}s`
+}
+
+const roundNumber = (value, maxDecimals) => {
+  const expValue = Math.pow(10, maxDecimals)
+  const roundedValue = Math.round(expValue * value) / expValue
+  const valueAsString = roundedValue.toFixed(maxDecimals)
+  return parseFloat(valueAsString)
+}
+
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+}
+
+const parseMs = (ms) => {
+  const unitNames = Object.keys(MS_PER_UNITS)
+  const smallestUnitName = unitNames[unitNames.length - 1]
+  let firstUnitName = smallestUnitName
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName]
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
+    if (unitName === smallestUnitName) {
+      return false
+    }
+    const msPerUnit = MS_PER_UNITS[unitName]
+    const unitCount = Math.floor(ms / msPerUnit)
+    if (unitCount) {
+      firstUnitName = unitName
+      firstUnitCount = unitCount
+      return true
+    }
+    return false
   })
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    }
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName]
+  const remainingUnitName = unitNames[firstUnitIndex + 1]
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName]
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    }
+  }
+  // - 1 year and 1 month is great
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount,
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount,
+    },
+  }
 }
