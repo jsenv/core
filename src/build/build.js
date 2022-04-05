@@ -256,6 +256,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   const rawUrls = {}
   const buildUrls = {}
   const finalGraph = createUrlGraph()
+  const optimizeHooks = rawGraphKitchen.pluginController.addHook("optimize")
   const finalGraphKitchen = createKitchen({
     logger,
     rootDirectoryUrl,
@@ -395,15 +396,35 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
         },
         transform: {
-          html: ({ content }) => {
-            const htmlAst = parseHtmlString(content)
+          html: (urlInfo) => {
+            const htmlAst = parseHtmlString(urlInfo.content, {
+              storeOriginalPositions: false,
+            })
             return {
               content: stringifyHtmlAst(htmlAst, {
-                // we'll see that later
-                // removeOriginalPositionAttributes: true,
+                removeOriginalPositionAttributes: true,
               }),
             }
           },
+        },
+      },
+      {
+        name: "jsenv:optimize",
+        appliesDuring: { build: true },
+        transform: async (urlInfo, context) => {
+          if (optimizeHooks.length) {
+            await rawGraphKitchen.pluginController.callAsyncHooks(
+              "optimize",
+              urlInfo,
+              context,
+              async (optimizeReturnValue) => {
+                await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+                  urlInfo,
+                  optimizeReturnValue,
+                )
+              },
+            )
+          }
         },
       },
     ],
@@ -424,35 +445,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     throw e
   }
   buildTask.done()
-
-  const optimizeContext = {
-    rootDirectoryUrl,
-  }
-  const optimizeHooks = rawGraphKitchen.pluginController.addHook("optimize")
-  if (optimizeHooks.length) {
-    const optimizeTask = createTaskLog(logger, "optimize")
-    try {
-      await Object.keys(finalGraph.urlInfos).reduce(async (previous, url) => {
-        await previous
-        const finalUrlInfo = finalGraph.urlInfos[url]
-        await rawGraphKitchen.pluginController.callAsyncHooks(
-          "optimize",
-          finalUrlInfo,
-          optimizeContext,
-          async (optimizeReturnValue) => {
-            await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
-              finalUrlInfo,
-              optimizeReturnValue,
-            )
-          },
-        )
-      }, Promise.resolve())
-    } catch (e) {
-      optimizeTask.fail()
-      throw e
-    }
-    optimizeTask.done()
-  }
 
   logger.debug(
     `graph urls pre-versioning:

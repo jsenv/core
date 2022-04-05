@@ -39,7 +39,9 @@ const injectors = {
       }),
     )
     return {
-      content: stringifyHtmlAst(htmlAst),
+      content: stringifyHtmlAst(htmlAst, {
+        removeOriginalPositionAttributes: true,
+      }),
     }
   },
   js_module: (urlInfo, { versionMappings }) => {
