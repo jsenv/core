@@ -37,7 +37,7 @@ const minifyJs = async ({ url, content, sourcemap, isJsModule }) => {
       module: isJsModule,
       // We need to preserve "new InlineContent()" calls to be able to recognize them
       // after minification in order to version urls inside inline content text
-      keep_classnames: /InlineContent/,
+      keep_fnames: /InlineContent/,
     },
   )
   return {

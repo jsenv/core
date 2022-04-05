@@ -1,1 +1,1 @@
-export { InlineContent } from "./src/omega/plugins/inline/client/inline_content.js"
+export { InlineContent } from "./src/omega/core_plugins/inline/client/inline_content.js"

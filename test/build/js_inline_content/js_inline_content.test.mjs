@@ -48,5 +48,7 @@ body {
   lineEnding2: `\n`,
   singleQuote: `'`,
   singleQuoteEscaped: `'`,
+  whenInlined: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
+  whenRenamed: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
 }
 assert({ actual, expected })
