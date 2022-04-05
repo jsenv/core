@@ -10,7 +10,7 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 import { loggerToLogLevel } from "@jsenv/logger"
 
-import { createFileService } from "./file_service.js"
+import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
   signal,

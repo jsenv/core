@@ -9,11 +9,11 @@ import {
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 
-import { createUrlInfoTransformer } from "../url_graph/url_info_transformations.js"
-import { featuresCompatMap } from "../runtime_support/features_compatibility.js"
-import { isFeatureSupportedOnRuntimes } from "../runtime_support/runtime_support.js"
-import { fileUrlConverter } from "../file_url_converter.js"
-import { parseUrlMentions } from "../url_mentions/parse_url_mentions.js"
+import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
+import { featuresCompatMap } from "./runtime_support/features_compatibility.js"
+import { isFeatureSupportedOnRuntimes } from "./runtime_support/runtime_support.js"
+import { fileUrlConverter } from "./file_url_converter.js"
+import { parseUrlMentions } from "./url_mentions/parse_url_mentions.js"
 import {
   createResolveError,
   createLoadError,

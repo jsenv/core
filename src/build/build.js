@@ -30,13 +30,14 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { defaultRuntimeSupport } from "../omega/runtime_support/default_runtime_support.js"
-import { jsenvPluginInline } from "../omega/plugins/inline/jsenv_plugin_inline.js"
-import { createUrlGraph } from "../omega/url_graph/url_graph.js"
+import { jsenvPluginInline } from "../omega/core_plugins/inline/jsenv_plugin_inline.js"
+import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../omega/core_plugins.js"
-import { createKitchen } from "../omega/kitchen/kitchen.js"
+import { createKitchen } from "../omega/kitchen.js"
 import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
+
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
 import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
@@ -62,6 +63,7 @@ export const build = async ({
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
+  minify = true,
   versioning = "filename", //  "filename", "search_param", "none"
   lineBreakNormalization = process.platform === "win32",
 
@@ -112,8 +114,7 @@ build ${entryPointKeys.length} entry points`)
         babel,
       }),
       jsenvPluginBundleJsModule(),
-      jsenvPluginMinifyJs(),
-      jsenvPluginMinifyHtml(),
+      ...(minify ? [jsenvPluginMinifyJs(), jsenvPluginMinifyHtml()] : []),
     ],
     scenario: "build",
     sourcemaps,

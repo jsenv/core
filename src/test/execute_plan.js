@@ -21,10 +21,10 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 import { babelPluginInstrument } from "@jsenv/utils/coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "@jsenv/utils/coverage/report_to_coverage.js"
-import { createUrlGraph } from "@jsenv/core/src/omega/url_graph/url_graph.js"
-import { createKitchen } from "@jsenv/core/src/omega/kitchen/kitchen.js"
+import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { getCorePlugins } from "@jsenv/core/src/omega/core_plugins.js"
-import { startOmegaServer } from "@jsenv/core/src/omega/server.js"
+import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
+import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 
 import { ensureGlobalGc } from "./gc.js"
