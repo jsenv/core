@@ -6,7 +6,7 @@ await executeTestPlan({
   runtimeSupport,
   logLevel: "info",
   testPlan: {
-    "test/**/*.test.js": {
+    "test/**/*.test.mjs": {
       node: {
         runtime: nodeProcess,
         allocatedMs: 30 * 1000,

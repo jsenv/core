@@ -224,7 +224,7 @@ const getResult = async ({
     /* eslint-disable no-undef */
     /* istanbul ignore next */
     () => {
-      return window.__html_supervisor__.collectScriptResults()
+      return window.__html_supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   )

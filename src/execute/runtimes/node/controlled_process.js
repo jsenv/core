@@ -181,47 +181,56 @@ export const createControlledProcess = async ({
       raceEffects[winner.name](winner.data)
     },
   )
-  const requestActionOnChildProcess = ({
+  const requestActionOnChildProcess = async ({
     signal,
     actionType,
     actionParams,
   }) => {
     const actionOperation = Abort.startOperation()
     actionOperation.addAbortSignal(signal)
-    return new Promise(async (resolve, reject) => {
-      actionOperation.throwIfAborted()
-      await childProcessReadyPromise
-      onceProcessMessage(childProcess, "action-result", ({ status, value }) => {
-        if (status === "action-completed") {
-          resolve(value)
-        } else {
-          reject(value)
-        }
-      })
-      logger.debug(
-        createDetailedMessage(`ask child process to perform an action`, {
-          actionType,
-          actionParams: JSON.stringify(actionParams, null, "  "),
-        }),
-      )
-      try {
+    try {
+      const result = await new Promise(async (resolve, reject) => {
         actionOperation.throwIfAborted()
-        await sendToProcess(childProcess, "action", {
-          actionType,
-          actionParams,
-        })
-      } catch (e) {
-        if (Abort.isAbortError(e) && actionOperation.signal.aborted) {
-          throw e
-        }
-        logger.error(
-          createDetailedMessage(`error while sending message to child`, {
-            ["error stack"]: e.stack,
+        await childProcessReadyPromise
+        onceProcessMessage(
+          childProcess,
+          "action-result",
+          ({ status, value }) => {
+            if (status === "action-completed") {
+              resolve(value)
+            } else {
+              reject(value)
+            }
+          },
+        )
+        logger.debug(
+          createDetailedMessage(`ask child process to perform an action`, {
+            actionType,
+            actionParams: JSON.stringify(actionParams, null, "  "),
           }),
         )
-        throw e
-      }
-    })
+        try {
+          actionOperation.throwIfAborted()
+          await sendToProcess(childProcess, "action", {
+            actionType,
+            actionParams,
+          })
+        } catch (e) {
+          if (Abort.isAbortError(e) && actionOperation.signal.aborted) {
+            throw e
+          }
+          logger.error(
+            createDetailedMessage(`error while sending message to child`, {
+              ["error stack"]: e.stack,
+            }),
+          )
+          throw e
+        }
+      })
+      return result
+    } finally {
+      await actionOperation.end()
+    }
   }
   return {
     execArgv,

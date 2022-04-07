@@ -14,7 +14,6 @@ window.__html_supervisor__ = {
   superviseScriptTypeModule: () => {
     throw new Error("htmlSupervisor not installed")
   },
-
   superviseScript: ({ src, crossorigin, integrity }) => {
     window.__html_supervisor__.addExecution({
       type: "js_classic",
