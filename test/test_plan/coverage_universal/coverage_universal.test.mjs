@@ -9,7 +9,7 @@ import {
 } from "@jsenv/core"
 
 const { testPlanCoverage } = await executeTestPlan({
-  logLevel: "warn",
+  logLevel: "info",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./main.html": {
