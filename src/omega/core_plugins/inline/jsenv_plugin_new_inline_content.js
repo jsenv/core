@@ -26,7 +26,7 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
         { referenceUtils, cook, isSupportedOnRuntime },
       ) => {
         const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataInlineTemplateLiterals],
+          babelPlugins: [babelPluginMetadataInlineContentCalls],
           url,
           generatedUrl,
           content,
@@ -92,9 +92,9 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
   }
 }
 
-const babelPluginMetadataInlineTemplateLiterals = () => {
+const babelPluginMetadataInlineContentCalls = () => {
   return {
-    name: "metadata-new-inline-content",
+    name: "metadata-inline-content-calls",
     visitor: {
       Program: (programPath, state) => {
         const inlineContentCalls = []

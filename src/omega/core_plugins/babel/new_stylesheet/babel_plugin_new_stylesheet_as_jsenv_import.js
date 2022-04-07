@@ -25,12 +25,9 @@ export const babelPluginNewStylesheetAsJsenvImport = (
         if (fileUrl === newStylesheetClientFileUrl) {
           return
         }
-        let needsNewStylesheetPolyfill = false
+        let usesNewStylesheet = false
         programPath.traverse({
           CallExpression: (path) => {
-            if (needsNewStylesheetPolyfill) {
-              return
-            }
             if (path.node.callee.type !== "Import") {
               // Some other function call, not import();
               return
@@ -42,30 +39,30 @@ export const babelPluginNewStylesheetAsJsenvImport = (
               return
             }
             const sourcePath = path.get("arguments")[0]
-            needsNewStylesheetPolyfill =
+            usesNewStylesheet =
               hasCssModuleQueryParam(sourcePath) ||
               hasImportTypeCssAssertion(path)
+            if (usesNewStylesheet) {
+              path.stop()
+            }
           },
           ImportDeclaration: (path) => {
-            if (needsNewStylesheetPolyfill) {
-              return
-            }
             const sourcePath = path.get("source")
-            needsNewStylesheetPolyfill =
+            usesNewStylesheet =
               hasCssModuleQueryParam(sourcePath) ||
               hasImportTypeCssAssertion(path)
+            if (usesNewStylesheet) {
+              path.stop()
+            }
           },
           ExportAllDeclaration: (path) => {
-            if (needsNewStylesheetPolyfill) {
-              return
-            }
             const sourcePath = path.get("source")
-            needsNewStylesheetPolyfill = hasCssModuleQueryParam(sourcePath)
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath)
+            if (usesNewStylesheet) {
+              path.stop()
+            }
           },
           ExportNamedDeclaration: (path) => {
-            if (needsNewStylesheetPolyfill) {
-              return
-            }
             if (!path.node.source) {
               // This export has no "source", so it's probably
               // a local variable or function, e.g.
@@ -75,10 +72,13 @@ export const babelPluginNewStylesheetAsJsenvImport = (
               return
             }
             const sourcePath = path.get("source")
-            needsNewStylesheetPolyfill = hasCssModuleQueryParam(sourcePath)
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath)
+            if (usesNewStylesheet) {
+              path.stop()
+            }
           },
         })
-        if (needsNewStylesheetPolyfill) {
+        if (usesNewStylesheet) {
           injectImport({
             programPath,
             from: getImportSpecifier(newStylesheetClientFileUrl),
