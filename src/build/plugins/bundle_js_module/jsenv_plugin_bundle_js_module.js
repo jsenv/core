@@ -1,4 +1,4 @@
-import { isFileSystemPath } from "@jsenv/filesystem"
+import { isFileSystemPath, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
@@ -142,6 +142,9 @@ const rollupPluginJsenv = ({
           }
           const jsModuleBundleUrlInfo = {
             // buildRelativeUrl: rollupFileInfo.fileName,
+            data: {
+              generatedBy: "rollup",
+            },
             contentType: "application/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
@@ -166,8 +169,15 @@ const rollupPluginJsenv = ({
         entryFileNames: () => {
           return `[name].js`
         },
-        chunkFileNames: () => {
-          return `[name].js`
+        chunkFileNames: (chunkInfo) => {
+          // preserves relative path parts:
+          // the goal is to mantain the original relative path (relative to the root directory)
+          // so that later in the build process, when resolving these urls, we are able to
+          // re-resolve the specifier againt the original parent url and find the original url
+          const { facadeModuleId } = chunkInfo
+          const fileUrl = fileUrlConverter.asFileUrl(facadeModuleId)
+          const relativePath = urlToRelativeUrl(fileUrl, rootDirectoryUrl)
+          return relativePath
         },
         // https://rollupjs.org/guide/en/#outputpaths
         // paths: (id) => {
@@ -200,6 +210,9 @@ const rollupPluginJsenv = ({
           : urlInfo.sourcemap,
       }
     },
+    // resolveFileUrl: ({ moduleId }) => {
+    //   return `${fileUrlConverter.asFileUrl(moduleId)}`
+    // },
     renderChunk: (code, chunkInfo) => {
       const { facadeModuleId } = chunkInfo
       if (!facadeModuleId) {

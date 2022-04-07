@@ -209,6 +209,7 @@ export const createKitchen = ({
         // during build urls info are reused and load returns originalContent
         // that we want to keep
         originalContent = content,
+        data,
       } = loadReturnValue
       Object.assign(urlInfo, {
         contentType,
@@ -216,6 +217,9 @@ export const createKitchen = ({
         content,
         sourcemap,
       })
+      if (data) {
+        Object.assign(urlInfo.data, data)
+      }
       if (!urlInfo.type) {
         const type = inferUrlInfoType(urlInfo)
         if (type === "js") {
