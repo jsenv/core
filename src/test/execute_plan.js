@@ -193,8 +193,10 @@ export const executePlan = async (
         `Force completedExecutionLogMerging to false because process.stdout.isTTY is false`,
       )
     }
+    const debugLogsEnabled = loggerToLevels(logger).debug
     const executionLogsEnabled = loggerToLevels(logger).info
-    const executionSpinner = executionLogsEnabled && process.stdout.isTTY
+    const executionSpinner =
+      !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY
 
     const startMs = Date.now()
     const report = {}

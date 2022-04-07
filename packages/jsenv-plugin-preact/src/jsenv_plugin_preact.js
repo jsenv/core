@@ -54,7 +54,7 @@ export const jsenvPluginPreact = ({
           return null
         }
         const htmlAst = parseHtmlString(content)
-        const preactDevtoolsReference = referenceUtils.inject({
+        const [preactDevtoolsReference] = referenceUtils.inject({
           type: "js_import_export",
           specifier:
             scenario === "dev" || scenario === "test"

@@ -76,8 +76,6 @@ export const startDevServer = async ({
     scenario: "dev",
     sourcemaps,
   })
-  kitchen.pluginController.addHook("serve")
-  kitchen.pluginController.addHook("augmentResponse")
   const server = await startOmegaServer({
     logger,
     keepProcessAlive,

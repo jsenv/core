@@ -26,11 +26,11 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
           return null
         }
         const htmlAst = parseHtmlString(content)
-        const toolbarInjectorReference = referenceUtils.inject({
+        const [toolbarInjectorReference] = referenceUtils.inject({
           type: "js_import_export",
           specifier: toolbarInjectorClientFileUrl,
         })
-        const toolbarClientFileReference = referenceUtils.inject({
+        const [toolbarClientFileReference] = referenceUtils.inject({
           type: "iframe_src",
           specifier: toolbarHtmlClientFileUrl,
         })

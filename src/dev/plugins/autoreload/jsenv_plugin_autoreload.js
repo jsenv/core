@@ -79,14 +79,14 @@ const jsenvPluginHot = () => {
         data.hotAcceptSelf = false
         data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
-            const reference = referenceUtils.inject({
+            const [reference] = referenceUtils.inject({
               type,
               specifier,
             })
             return reference.url
           },
         )
-        const eventSourceClientReference = referenceUtils.inject({
+        const [eventSourceClientReference] = referenceUtils.inject({
           type: "script_src",
           specifier: eventSourceClientFileUrl,
         })
@@ -135,7 +135,7 @@ const jsenvPluginHot = () => {
         // better sourcemap than doing the equivalent with babel
         // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
         // which is likely not well supported by babel
-        const importMetaHotClientFileReference = referenceUtils.inject({
+        const [importMetaHotClientFileReference] = referenceUtils.inject({
           parentUrl: url,
           type: "js_import_export",
           specifier: importMetaHotClientFileUrl,
