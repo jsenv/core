@@ -167,7 +167,7 @@ export const executeTestPlan = async ({
   })
   if (
     updateProcessExitCode &&
-    result.planSummary.executionCount !== result.planSummary.counters.completed
+    result.planSummary.counters.total !== result.planSummary.counters.completed
   ) {
     process.exitCode = 1
   }
