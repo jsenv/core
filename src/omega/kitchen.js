@@ -224,22 +224,23 @@ export const createKitchen = ({
         const type = inferUrlInfoType(urlInfo)
         if (type === "js") {
           const urlObject = new URL(urlInfo.url)
-          if (urlObject.searchParams.has("js_classic")) {
-            urlInfo.type = "js_classic"
-          } else if (urlObject.searchParams.has("worker_classic")) {
+          if (urlObject.searchParams.has("worker_type_classic")) {
             urlInfo.type = "js_classic"
             urlInfo.subtype = "worker"
-          } else if (urlObject.searchParams.has("worker_module")) {
-            urlInfo.type = "js_module"
-            urlInfo.subtype = "worker"
-          } else if (urlObject.searchParams.has("service_worker_classic")) {
+          } else if (
+            urlObject.searchParams.has("service_worker_type_classic")
+          ) {
             urlInfo.type = "js_classic"
             urlInfo.subtype = "service_worker"
-          } else if (urlObject.searchParams.has("service_worker_module")) {
-            urlInfo.type = "js_module"
-            urlInfo.subtype = "service_worker"
+          } else if (urlObject.searchParams.has("js_classic")) {
+            urlInfo.type = "js_classic"
           } else {
             urlInfo.type = "js_module"
+          }
+          if (urlObject.searchParams.has("worker")) {
+            urlInfo.subtype = "worker"
+          } else if (urlObject.searchParams.has("service_worker")) {
+            urlInfo.subtype = "service_worker"
           }
         } else {
           urlInfo.type = type

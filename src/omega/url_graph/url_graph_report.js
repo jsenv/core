@@ -103,14 +103,7 @@ const determineCategory = (urlInfo) => {
   if (urlInfo.type === "css") {
     return "css"
   }
-  if (
-    urlInfo.type === "js_module" ||
-    urlInfo.type === "js_classic" ||
-    urlInfo.type === "worker_module" ||
-    urlInfo.type === "worker_classic" ||
-    urlInfo.type === "service_worker_module" ||
-    urlInfo.type === "service_worker_classic"
-  ) {
+  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
     return "js"
   }
   return "assets"
