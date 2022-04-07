@@ -6,12 +6,18 @@
   </head>
 
   <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
     <script type="module">
       import { util } from "./util.js"
 
       util()
 
-      import("./main.js")
+      const dynamicImportNamespace = await import("./main.js")
+      window.resolveNamespacePromise(dynamicImportNamespace)
     </script>
   </body>
 </html>

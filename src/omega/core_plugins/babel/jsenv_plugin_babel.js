@@ -14,12 +14,14 @@ export const jsenvPluginBabel = ({
     name: "jsenv:babel",
     appliesDuring: "*",
     transform: {
-      js_module: async ({ url, generatedUrl, content }, context) => {
+      js_module: async ({ url, generatedUrl, content, data }, context) => {
         const { isSupportedOnRuntime, referenceUtils } = context
         const babelPluginStructure = getBaseBabelPluginStructure({
           url,
           isSupportedOnRuntime,
           topLevelAwait,
+          usesTopLevelAwait: data.usesTopLevelAwait,
+          isJsModule: true,
         })
         const getImportSpecifier = (clientFileUrl) => {
           const [reference] = referenceUtils.inject({

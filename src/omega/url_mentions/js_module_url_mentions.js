@@ -8,12 +8,15 @@ export const parseJsModuleUrlMentions = async ({
   content,
 }) => {
   const { metadata } = await applyBabelPlugins({
-    babelPlugins: [babelPluginMetadataUrlMentions],
+    babelPlugins: [
+      babelPluginMetadataUrlMentions,
+      babelPluginMetadataUsesTopLevelAwait,
+    ],
     url,
     generatedUrl,
     content,
   })
-  const { urlMentions } = metadata
+  const { urlMentions, usesTopLevelAwait } = metadata
   return {
     urlMentions,
     replaceUrls: async (getReplacement) => {
@@ -30,6 +33,9 @@ export const parseJsModuleUrlMentions = async ({
         }
       })
       return magicSource.toContentAndSourcemap()
+    },
+    data: {
+      usesTopLevelAwait,
     },
   }
 }
@@ -58,6 +64,27 @@ const babelPluginMetadataUrlMentions = () => {
           },
         )
         state.file.metadata.urlMentions = urlMentions
+      },
+    },
+  }
+}
+
+const babelPluginMetadataUsesTopLevelAwait = () => {
+  return {
+    name: "metadata-uses-top-level-await",
+    visitor: {
+      Program: (programPath, state) => {
+        let usesTopLevelAwait = false
+        programPath.traverse({
+          AwaitExpression: (awaitPath) => {
+            const closestFunction = awaitPath.getFunctionParent()
+            if (!closestFunction) {
+              usesTopLevelAwait = true
+              awaitPath.stop()
+            }
+          },
+        })
+        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait
       },
     },
   }

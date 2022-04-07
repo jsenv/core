@@ -8,6 +8,7 @@ const require = createRequire(import.meta.url)
 export const getBaseBabelPluginStructure = ({
   url,
   isSupportedOnRuntime,
+  usesTopLevelAwait,
   topLevelAwait = "simple", // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
@@ -43,7 +44,13 @@ export const getBaseBabelPluginStructure = ({
       "proposal-unicode-property-regex"
     ] = require("@babel/plugin-proposal-unicode-property-regex")
   }
-  if (isBabelPluginNeeded("transform-async-to-promises")) {
+  // we should search for top level await and
+  // if present we should enable async-to-promises
+
+  if (
+    (usesTopLevelAwait && !isSupportedOnRuntime("top_level_await")) ||
+    isBabelPluginNeeded("transform-async-to-promises")
+  ) {
     babelPluginStructure["transform-async-to-promises"] = [
       require("babel-plugin-transform-async-to-promises"),
       {

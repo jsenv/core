@@ -10,7 +10,7 @@ const parsers = {
     if (urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker") {
       return parseWorkerClassicUrlMentions(urlInfo)
     }
-    return null
+    return {}
   },
   js_module: parseJsModuleUrlMentions,
 }
@@ -25,11 +25,13 @@ export const parseUrlMentions = async ({ type, url, content, scenario }) => {
     hotDecline = false,
     hotAcceptSelf = false,
     replaceUrls,
+    data,
   } = await parser({ url, content, scenario })
   return {
     urlMentions,
     hotDecline,
     hotAcceptSelf,
     replaceUrls,
+    data,
   }
 }
