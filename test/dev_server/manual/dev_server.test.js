@@ -13,7 +13,7 @@ await startDevServer({
   listenAnyIp: true,
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   // autoreload: false,
   // sourcemaps: "file",
   plugins: [
