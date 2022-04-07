@@ -13,6 +13,8 @@ export const createFileService = ({
   kitchen,
   scenario,
 }) => {
+  kitchen.pluginController.addHook("serve")
+  kitchen.pluginController.addHook("augmentResponse")
   const serveContext = {
     rootDirectoryUrl,
     urlGraph,
