@@ -70,6 +70,9 @@ export const buildWithRollup = async ({
     inputOptions: {
       input: [],
       onwarn: (warning) => {
+        if (warning.code === "CIRCULAR_DEPENDENCY") {
+          return
+        }
         logger.warn(String(warning))
       },
     },

@@ -10,7 +10,7 @@ export const loadUrlGraph = async ({
   if (outDirectoryUrl) {
     await ensureEmptyDirectory(outDirectoryUrl)
   }
-
+  const promises = []
   const cook = ({ urlInfo, ...rest }) => {
     const promiseFromData = urlInfo.data.promise
     if (promiseFromData) return promiseFromData
@@ -20,10 +20,10 @@ export const loadUrlGraph = async ({
       runtimeSupport,
       ...rest,
     })
+    promises.push(promise)
     urlInfo.data.promise = promise
     return promise
   }
-
   const _cook = async ({ urlInfo, ...rest }) => {
     await kitchen.cook({
       urlInfo,
@@ -31,17 +31,13 @@ export const loadUrlGraph = async ({
       ...rest,
     })
     const { references } = urlInfo
-    await Promise.all(
-      references.map(async (reference) => {
-        await cook({
-          reference,
-          urlInfo: urlGraph.getUrlInfo(reference.url),
-        })
-      }),
-    )
+    references.forEach((reference) => {
+      cook({
+        reference,
+        urlInfo: urlGraph.getUrlInfo(reference.url),
+      })
+    })
   }
-
-  const promises = []
   startLoading(
     ({ trace, parentUrl = kitchen.rootDirectoryUrl, type, specifier }) => {
       const entryReference = kitchen.createReference({
@@ -52,26 +48,21 @@ export const loadUrlGraph = async ({
       })
       const entryUrlInfo = kitchen.resolveReference(entryReference)
       entryUrlInfo.data.isEntryPoint = true
-      promises.push(
-        cook({
-          reference: entryReference,
-          urlInfo: entryUrlInfo,
-        }),
-      )
+      cook({
+        reference: entryReference,
+        urlInfo: entryUrlInfo,
+      })
     },
   )
-  await Promise.all(promises)
-}
 
-// export const reloadUrlGraph = async ({
-//   urlGraph,
-//   kitchen,
-//   outDirectoryUrl,
-//   runtimeSupport,
-//   startLoading,
-// }) => {
-//   Object.keys(urlGraph.urlInfos).forEach((url) => {
-//     const urlInfo = urlGraph.urlInfos[url]
-//     urlInfo.data.promise = null
-//   })
-// }
+  const waitAll = async () => {
+    if (promises.length === 0) {
+      return
+    }
+    const promisesToWait = promises.slice()
+    promises.length = 0
+    await Promise.all(promisesToWait)
+    await waitAll()
+  }
+  await waitAll()
+}
