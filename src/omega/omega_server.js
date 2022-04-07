@@ -20,7 +20,8 @@ export const startOmegaServer = async ({
   http2 = protocol === "https",
   privateKey,
   certificate,
-  ip = "0.0.0.0",
+  listenAnyIp,
+  ip,
   port = 0,
   keepProcessAlive = false,
   onStop = () => {},
@@ -48,11 +49,13 @@ export const startOmegaServer = async ({
     stopOnInternalError: false,
     keepProcessAlive,
     logLevel: loggerToLogLevel(logger),
+    startLog: false,
 
     protocol,
     http2,
     certificate,
     privateKey,
+    listenAnyIp,
     ip,
     port,
     plugins: {

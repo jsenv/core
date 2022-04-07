@@ -48,9 +48,6 @@ const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
   if (urlInfo.data.isEntryPoint) {
     return ""
   }
-  if (urlInfo.type === "sourcemap") {
-    return "sourcemaps/"
-  }
   if (urlInfo.type === "html") {
     return "html/"
   }

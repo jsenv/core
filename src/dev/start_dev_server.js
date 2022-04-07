@@ -1,6 +1,7 @@
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { getCorePlugins } from "@jsenv/core/src/omega/core_plugins.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
@@ -15,6 +16,7 @@ export const startDevServer = async ({
   logLevel,
   port,
   protocol,
+  listenAnyIp,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
@@ -45,6 +47,8 @@ export const startDevServer = async ({
   toolbar = false,
 }) => {
   const logger = createLogger({ logLevel })
+  const startServerTask = createTaskLog(logger, "start server")
+
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const urlGraph = createUrlGraph()
   const kitchen = createKitchen({
@@ -77,6 +81,7 @@ export const startDevServer = async ({
   const server = await startOmegaServer({
     logger,
     keepProcessAlive,
+    listenAnyIp,
     port,
     protocol,
     http2,
@@ -87,6 +92,12 @@ export const startDevServer = async ({
     kitchen,
     scenario: "dev",
   })
+  startServerTask.done()
+  logger.info(``)
+  Object.keys(server.origins).forEach((key) => {
+    logger.info(`- ${server.origins[key]}`)
+  })
+  logger.info(``)
   server.addEffect(() => {
     return () => {
       kitchen.pluginController.callHooks("destroy")
