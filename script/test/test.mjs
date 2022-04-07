@@ -4,7 +4,7 @@ import { rootDirectoryUrl, runtimeSupport } from "@jsenv/core/jsenv.config.mjs"
 await executeTestPlan({
   rootDirectoryUrl,
   runtimeSupport,
-  logLevel: "debug",
+  logLevel: "info",
   testPlan: {
     "test/**/*.test.js": {
       node: {
@@ -13,7 +13,7 @@ await executeTestPlan({
       },
     },
   },
-  completedExecutionLogMerging: true,
+  // completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,
   // completedExecutionLogAbbreviation: false,
