@@ -403,16 +403,16 @@ export const createKitchen = ({
         reference.specifier = specifier
         reference.contentType = contentType
         reference.content = content
-        const urlInfo = resolveReference(reference)
-        urlInfo.isInline = true
-        urlInfo.inlineUrlSite = {
+        const inlineUrlInfo = resolveReference(reference)
+        inlineUrlInfo.isInline = true
+        inlineUrlInfo.inlineUrlSite = {
           url: urlInfo.url,
           content: parentContent,
           line,
           column,
         }
-        urlInfo.contentType = contentType
-        urlInfo.content = content
+        inlineUrlInfo.contentType = contentType
+        inlineUrlInfo.content = content
         return reference
       },
     }
@@ -433,6 +433,7 @@ export const createKitchen = ({
       })
     }
     if (parseResult) {
+      Object.assign(urlInfo.data, parseResult.data)
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
         const [reference] = addReference({
