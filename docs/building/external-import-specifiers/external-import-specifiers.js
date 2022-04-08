@@ -1,6 +1,6 @@
-import { buildProject } from "@jsenv/core"
+import { build } from "@jsenv/core"
 
-buildProject({
+build({
   format: "commonjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPoints: {
@@ -9,7 +9,7 @@ buildProject({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-buildProject({
+build({
   format: "systemjs",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPoints: {
@@ -18,7 +18,7 @@ buildProject({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-buildProject({
+build({
   format: "esmodule",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPoints: {
@@ -27,7 +27,7 @@ buildProject({
   externalImportSpecifiers: ["./answer.js"],
 })
 
-buildProject({
+build({
   format: "global",
   projectDirectoryUrl: new URL("./", import.meta.url),
   entryPoints: {

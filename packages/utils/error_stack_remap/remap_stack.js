@@ -1,7 +1,7 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { DataUrl } from "@jsenv/utils/urls/data_url.js"
-import { sourcemapComment } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
+import { SOURCEMAP } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 
 import { remapCallSite } from "./remap_call_site.js"
 
@@ -53,14 +53,14 @@ export const remapStack = async ({
           return null
         }
 
-        const jsSourcemapUrl = sourcemapComment.read({
+        const jsSourcemapComment = SOURCEMAP.readComment({
           contentType: "application/javascript",
           content: text,
         })
-        if (!jsSourcemapUrl) {
+        if (!jsSourcemapComment) {
           return null
         }
-
+        const jsSourcemapUrl = jsSourcemapComment.specifier
         let sourcemapUrl
         let sourcemapString
         if (jsSourcemapUrl.startsWith("data:")) {

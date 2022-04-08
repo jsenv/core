@@ -1,11 +1,11 @@
-import { executeTestPlan, nodeRuntime } from "@jsenv/core"
+import { executeTestPlan, nodeProcess } from "@jsenv/core"
 
 await executeTestPlan({
-  projectDirectoryUrl: new URL("../../", import.meta.url),
+  rootDirectoryUrl: new URL("../../", import.meta.url),
   testPlan: {
     "test/**/*.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
       },
     },
   },

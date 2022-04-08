@@ -1,5 +1,6 @@
 {
   "name": "whatever",
+  "type": "module",
   "dependencies": {
     "@jsenv/toto": "*"
   }

@@ -332,13 +332,21 @@ const applyPackageExportsResolution = ({
         packageUrl,
       })
     }
-    return applyPackageTargetResolution({
+    const resolved = applyPackageTargetResolution({
       conditions,
       parentUrl,
       packageUrl,
       packageJson,
       key: ".",
       target: mainExport,
+    })
+    if (resolved) {
+      return resolved
+    }
+    throw createPackagePathNotExportedError({
+      subpath: packageSubpath,
+      parentUrl,
+      packageUrl,
     })
   }
   if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
@@ -532,7 +540,7 @@ const applyPackageTargetResolution = ({
         }
       }
     }
-    return undefined
+    return null
   }
   throw createInvalidPackageTargetError({
     parentUrl,

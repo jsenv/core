@@ -1,14 +1,18 @@
 /.jsenv/
 /.coverage/
+/dev_exploring/
 /dist/
 /docs/**/.jsenv/
 /docs/**/node_modules/
+/experimental/
 /node_modules/
 /old_src/
 /old_test/
 /packages/*/.coverage/
 /packages/*/node_modules/
 /src/**/babel_helper/client/
+
+/client/regenerator_runtime.js
 
 /**/*syntax_error*.js
 !/**/*syntax_error*.test.js

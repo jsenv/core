@@ -922,13 +922,21 @@ const applyPackageExportsResolution = ({
         packageUrl,
       })
     }
-    return applyPackageTargetResolution({
+    const resolved = applyPackageTargetResolution({
       conditions,
       parentUrl,
       packageUrl,
       packageJson,
       key: ".",
       target: mainExport,
+    });
+    if (resolved) {
+      return resolved
+    }
+    throw createPackagePathNotExportedError({
+      subpath: packageSubpath,
+      parentUrl,
+      packageUrl,
     })
   }
   if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
@@ -1122,7 +1130,7 @@ const applyPackageTargetResolution = ({
         }
       }
     }
-    return undefined
+    return null
   }
   throw createInvalidPackageTargetError({
     parentUrl,
@@ -2273,7 +2281,9 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
     }
     throw new Error("not found")
   } catch (e) {
-    logger.error(e.stack);
+    logger.debug(`Error while resolving "${source}" imported from "${file}"
+--- error stack ---
+${e.stack}`);
     return {
       found: false,
       path: null,

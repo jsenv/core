@@ -1,3 +1,5 @@
+import { createMagicSource } from "@jsenv/core/packages/utils/sourcemap/magic_source.js"
+
 export const jsenvPluginImportScriptsBundler = () => {
   return {
     name: "jsenv:import_scripts_bundler",

@@ -1,23 +1,33 @@
 !/.github/
 /.jsenv/
 /.coverage/
+/dev_exploring/
 /dist/
 /docs/**/.jsenv/
 /docs/**/node_modules/
+/docs/**/dist/
+/experimental/
 /node_modules/
 /old_src/
 /old_test/
 /packages/*/.coverage/
+/packages/*/dist/
 /packages/*/node_modules/
+/packages/*/test/**/node_modules/
 /src/**/babel_helper/client/
+/test/**/dist/
+
+**/client/regenerator_runtime.js
 
 /**/*syntax_error*.js
+/**/*syntax_error/main.js
+/**/*syntax_error/main.html
 /**/*syntax_error*.html
 !/**/*syntax_error*.test.js
 /**/*error_syntax*.js
 !/**/*error_syntax*.test.js
 
-/test-manual/**/.coverage/
+/test-manual/**/
 /**/*.es5.js
 /**/*.jsx
 !.eslintrc.js
