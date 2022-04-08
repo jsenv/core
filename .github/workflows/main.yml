@@ -48,8 +48,6 @@ jobs:
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
-      - name: Generate importmap
-        run: npm run importmap
       - name: Install playwright
         run: npm run playwright-install
       - name: Run ESLint
@@ -82,8 +80,6 @@ jobs:
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
-      - name: Generate importmap
-        run: npm run importmap
       - name: publish package
         run: node ./.github/workflows/main/publish_package.mjs
         env:

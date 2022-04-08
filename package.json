@@ -32,7 +32,6 @@
   ],
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
-    "importmap": "node ./script/importmap/importmap.mjs",
     "build": "node ./script/build/build.mjs",
     "test": "node --experimental-import-meta-resolve ./script/test/test.mjs",
     "test-with-coverage": "npm run test -- --coverage",
