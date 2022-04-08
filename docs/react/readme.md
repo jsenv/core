@@ -23,7 +23,7 @@ npm i react-dom
 
 2 - Remap react imports using an importmap
 
-As documented in [2. Remap package with importmap](./npm_package.md#2-remap-package-with-importmap), remap "react" and "react-dom" using an importmap.
+As documented in [2. Remap package with importmap](../npm_package/readme.md#2-remap-package-with-importmap), remap "react" and "react-dom" using an importmap.
 
 ```html
 <script type="importmap">
@@ -38,7 +38,7 @@ As documented in [2. Remap package with importmap](./npm_package.md#2-remap-pack
 
 3 - Convert react from CommonJS to JS modules
 
-As documented in [3. Adapt to the module format](./npm_package.md#3-adapt-to-module-format), convert "react" and "react-dom" to import/export.
+As documented in [3. Adapt to the module format](../npm_package/readme.md#3-adapt-to-the-module-format), convert "react" and "react-dom" to import/export.
 
 ```js
 import { commonJsToJsModule } from "@jsenv/core"
@@ -98,7 +98,8 @@ module.exports = {
 </html>
 ```
 
-The code above is using preact, it cannot be runned directly by the browser. To make it possible follow the steps below.
+The code above is using preact, it cannot be runned directly by the browser.
+To make it possible follow the steps below.
 
 1 - Install preact
 
@@ -108,7 +109,7 @@ npm i preact
 
 2 - Remap preact imports using an importmap
 
-As documented in [2. Remap package with importmap](./npm_package.md#2-remap-package-with-importmap), remap "preact" using an importmap.
+As documented in [2. Remap package with importmap](../npm_package/readme.md#2-remap-package-with-importmap), remap "preact" using an importmap.
 
 ```html
 <script type="importmap">

@@ -2,18 +2,20 @@
 
 This is an in-depth documentation about jsenv test runner. For a quick overview go to [test runner overview](../../readme.md#Test-runner-overview).
 
-This documentation list [key features](#key-features) and gives the [definition of a test for jsenv](#Definition-of-a-test-for-jsenv) to get an idea of how things where designed. Then it documents [How tests are executed?](#How-tests-are-executed), [How to test async code?](#How-to-test-async-code) and finally the [executeTestPlan](#executeTestPlan) function.
+This documentation contains: 
+
+- [Key features](#key-features)
+- [Definition of a test for jsenv](#Definition-of-a-test-for-jsenv)
+- [How tests are executed?](#How-tests-are-executed)
+- [How to write tests?](#How-to-write-tests)
+- [executeTestPlan](#executeTestPlan)
 
 # Key features
 
-- Test files are "normal" files:
-  - **Almost zero context switching when opening a test file**
-  - Tests are written like the rest of the codebase
-  - Tests are debugged like the rest of the codebase
-  - Tests can be executed independently
 - Tests can be executed on Chrome, Firefox, Safari and Node.js
 - Tests are executed in total isolation: a dedicated browser or node process per test
-- Tests have a configurable amount of ms to end; This is also configurable per test
+- Tests can be written like other files; experience gained on the rest of the codebase can be reused in tests; less context switching.
+- Tests can be executed independently
 
 # Definition of a test for jsenv
 
@@ -26,19 +28,33 @@ Jsenv provides an api to execute your test files inside one or many environments
 
 # How tests are executed?
 
-Each test file will be executed in his own browser or node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
+Each test file will be executed in his own browser or Node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
 
-jsenv provides several test execution environments, called _runtime_.
+jsenv provides the following test execution environments, called _runtime_.
+You can use one, some or all of them depending what you want to achieve. 
 
-- A chromium browser per test
-- A chromium browser tab per test
-- A firefox browser per test
-- A firefox tab per test
-- A webkit browser per test
-- A webkit tab per test
-- A node process per test
+```js
+import {
+  chromiumRuntime, // engine used by chrome
+  firefoxRuntime,
+  webkitRuntime, // engine used by safari
+  nodeRuntime,
+} from "@jsenv/core"
+```
 
-Test is executed by something equivalent to a dynamic import.
+You can also use the "tab runtime" versions for browser runtimes.
+They are executing tests in a browser tab instead of a whole browser instance;
+which is enough for most tests. 
+
+```js
+import {
+  chromiumTabRuntime,
+  firefoxTabRuntime,
+  webkitTabRuntime,
+} from "@jsenv/core"
+```
+
+Each test is executed by something equivalent to a dynamic import.
 
 ```js
 await import("file:///file.test.js")
@@ -97,7 +113,23 @@ Note: An empty file is a completed execution.
 
 You can abort test execution from the terminal. Hit Ctrl+C and test executions will stop immediatly.
 
-# How to test async code?
+# How to write tests?
+
+Jsenv provides a powerful and simple assertion library, a typical test looks like this:
+
+```js
+import { assert } from "@jsenv/assert"
+import { getCircleArea } from "./circle.js"
+
+const actual = getCircleArea(1)
+const expected = Math.PI
+assert({ actual, expected })
+```
+
+You can read more about it at [@jsenv/assert](https://github.com/jsenv/assert).
+You are free to use other way to write tests; @jsenv/assert is just an helper.
+
+## top level await
 
 Top level await is a standard (and damn cool) way to make your top level code execution asynchronous. Use it to test async code.
 
