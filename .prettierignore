@@ -3,16 +3,13 @@
 /dist/
 /docs/**/.jsenv/
 /docs/**/node_modules/
-/helpers/babel/
-/helpers/regenerator-runtime/
 /node_modules/
+/old_src/
+/old_test/
 /packages/*/.coverage/
 /packages/*/node_modules/
+/src/**/babel_helper/client/
 
-**/s.js
-/src/**/system.js
-**/jquery.js
-**/flight.js
 /**/*syntax_error*.js
 !/**/*syntax_error*.test.js
 /**/*error_syntax*.js

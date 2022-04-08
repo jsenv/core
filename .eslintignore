@@ -1,13 +1,16 @@
 !/.github/
-.jsenv/
-node_modules/
-dist/
+/.jsenv/
 /.coverage/
+/dist/
+/docs/**/.jsenv/
+/docs/**/node_modules/
+/node_modules/
+/old_src/
+/old_test/
+/packages/*/.coverage/
+/packages/*/node_modules/
+/src/**/babel_helper/client/
 
-**/s.js
-/src/**/system.js
-**/jquery.js
-**/flight.js
 /**/*syntax_error*.js
 /**/*syntax_error*.html
 !/**/*syntax_error*.test.js
@@ -15,7 +18,6 @@ dist/
 !/**/*error_syntax*.test.js
 
 /test-manual/**/.coverage/
-/packages/*/.coverage/
 /**/*.es5.js
 /**/*.jsx
 !.eslintrc.js

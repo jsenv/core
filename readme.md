@@ -1,4 +1,4 @@
-# jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core) [![github main worflow](https://github.com/jsenv/jsenv-core/workflows/main/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=main) [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
+# jsenv [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
 _@jsenv/core_ is a quick start pack to launch a js project. It provides what you need from the beginning: develoment, testing and building all in one.
 
@@ -51,21 +51,17 @@ export const countDogs = (animals) => {
 2 - Create _test.mjs_
 
 ```js
-import {
-  executeTestPlan,
-  chromiumTabRuntime,
-  firefoxTabRuntime,
-} from "@jsenv/core"
+import { executeTestPlan, chromium, firefox } from "@jsenv/core"
 
 await executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        runtime: chromiumTabRuntime,
+        runtime: chromium,
       },
       firefox: {
-        runtime: firefoxTabRuntime,
+        runtime: firefox,
       },
     },
   },
@@ -133,8 +129,8 @@ npm install --save-dev @jsenv/core
 import { startDevServer } from "@jsenv/core"
 
 await startDevServer({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  explorableConfig: {
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  explorerGroups: {
     source: {
       "./*.html": true,
     },
@@ -147,8 +143,9 @@ await startDevServer({
 
 ```console
 > node ./start_dev_server.mjs
+✔ server started (done in 0.01 second)
 
-server started at http://localhost:3456
+- http://localhost:3456
 ```
 
 4 - Open a browser and navigate to `http://localhost:3456`
@@ -197,16 +194,14 @@ npm install --save-dev @jsenv/core
 2 - Create _build.mjs_
 
 ```js
-import { buildProject } from "@jsenv/core"
+import { build } from "@jsenv/core"
 
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "dist",
+await build({
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./main.html": "main.prod.html",
   },
-  format: "esmodule",
-  minify: true,
 })
 ```
 
@@ -282,30 +277,29 @@ The presence of a jsenv configuration file is **optional**.
  * Read more at https://github.com/jsenv/jsenv-core#configuration
  */
 
-export const projectDirectoryUrl = new URL("./", import.meta.url)
+export const rootDirectoryUrl = new URL("./", import.meta.url)
 ```
 
 _jsenv.config.mjs_ is meant to share configuration, other files will simply import what they need.
 
 ```diff
-import { buildProject } from '@jsenv/core'
+import { build } from '@jsenv/core'
 
-+ import { projectDirectoryUrl } from "./jsenv.config.mjs"
++ import { rootDirectoryUrl } from "./jsenv.config.mjs"
 ```
 
 > We recommend to use ".mjs" extension when a file is written for Node.js but you can name the file as you want, "jsenv.config.js" is fine too.
 
 # Documentation
 
-| Link                                                     | Description                                |
-| -------------------------------------------------------- | ------------------------------------------ |
-| [Browser support](./docs/browser_support/readme.md)      | Documentation around browser support       |
-| [Assets](./docs/assets/readme.md)                        | How to use assets (CSS, JSON, images, ...) |
-| [Web workers](./docs/web_workers/readme.md)              | How to use web workers                     |
-| [NPM package](./docs/npm_package/readme.md)              | How to use a NPM package                   |
-| [CDN](./docs/cdn/readme.md)                              | How to use ressources from CDN             |
-| [React](./docs/react/readme.md)                          | How to enable react (or preact) and JSX    |
-| [TypeScript (Experimental)](./docs/typescript/readme.md) | How to enable TypeScript                   |
+| Link                                                | Description                                |
+| --------------------------------------------------- | ------------------------------------------ |
+| [Browser support](./docs/browser_support/readme.md) | Documentation around browser support       |
+| [Assets](./docs/assets/readme.md)                   | How to use assets (CSS, JSON, images, ...) |
+| [Web workers](./docs/web_workers/readme.md)         | How to use web workers                     |
+| [NPM package](./docs/npm_package/readme.md)         | How to use a NPM package                   |
+| [CDN](./docs/cdn/readme.md)                         | How to use ressources from CDN             |
+| [React](./docs/react/readme.md)                     | How to enable react (or preact) and JSX    |
 
 # About
 
@@ -378,10 +372,9 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 # See also
 
-| Link                                                                                                                     | Description                                                               |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application              |
-| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                             |
-| [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | NPM package to write assertions                                           |
-| [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience                   |
-| [Jsenv compile server](./docs/jsenv-compile-server.md)                                                                   | Documentation about jsenv progressive compilation with a filesystem cache |
+| Link                                                                                                                     | Description                                                  |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application |
+| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                |
+| [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | NPM package to write assertions                              |
+| [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience      |
