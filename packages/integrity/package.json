@@ -24,7 +24,7 @@
     "test": "node ./script/test/test.mjs"
   },
   "devDependencies": {
-    "@jsenv/assert": "2.5.2",
+    "@jsenv/assert": "2.5.3",
     "@jsenv/core": "../../",
     "@jsenv/eslint-config": "16.0.9",
     "eslint": "8.12.0"

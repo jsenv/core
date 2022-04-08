@@ -44,7 +44,7 @@
     "@babel/plugin-transform-new-target": "7.16.7",
     "@babel/plugin-transform-object-super": "7.16.7",
     "@babel/plugin-transform-parameters": "7.16.7",
-    "@babel/plugin-transform-regenerator": "7.16.7",
+    "@babel/plugin-transform-regenerator": "7.17.9",
     "@babel/plugin-transform-shorthand-properties": "7.16.7",
     "@babel/plugin-transform-spread": "7.16.7",
     "@babel/plugin-transform-sticky-regex": "7.16.7",
