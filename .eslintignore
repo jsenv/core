@@ -1,21 +1,15 @@
+.jsenv/
+.coverage/
+dist/
+node_modules/
+
 !/.github/
-/.jsenv/
-/.coverage/
 /dev_exploring/
-/dist/
-/docs/**/.jsenv/
-/docs/**/node_modules/
-/docs/**/dist/
 /experimental/
 /node_modules/
 /old_src/
 /old_test/
-/packages/*/.coverage/
-/packages/*/dist/
-/packages/*/node_modules/
-/packages/*/test/**/node_modules/
 /src/**/babel_helper/client/
-/test/**/dist/
 
 **/client/regenerator_runtime.js
 
