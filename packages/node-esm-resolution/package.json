@@ -7,6 +7,9 @@
     "url": "https://github.com/jsenv/jsenv-core",
     "directory": "packages/node-esm-resolution"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -15,6 +18,9 @@
     "./*": "./*"
   },
   "main": "./main.js",
-  "dependencies": {},
-  "devDependencies": {}
+  "files": [
+    "/dist/",
+    "/src/",
+    "/main.js"
+  ]
 }

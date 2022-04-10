@@ -6,7 +6,7 @@ export const applyImportmapResolution = (
   specifier,
   {
     logger,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     importmapFileRelativeUrl,
     importDefaultExtension,
     importer,
@@ -14,7 +14,7 @@ export const applyImportmapResolution = (
 ) => {
   const importmap = readImportmap({
     logger,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     importmapFileRelativeUrl,
   })
   try {

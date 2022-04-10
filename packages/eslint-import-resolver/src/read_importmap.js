@@ -9,7 +9,7 @@ import { applyUrlResolution } from "./url_resolution.js"
 
 export const readImportmap = ({
   logger,
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   importmapFileRelativeUrl,
 }) => {
   if (typeof importmapFileRelativeUrl === "undefined") {
@@ -22,14 +22,14 @@ export const readImportmap = ({
   }
   const importmapFileUrl = applyUrlResolution(
     importmapFileRelativeUrl,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
   )
-  if (!urlIsInsideOf(importmapFileUrl, projectDirectoryUrl)) {
-    logger.warn(`import map file is outside project.
+  if (!urlIsInsideOf(importmapFileUrl, rootDirectoryUrl)) {
+    logger.warn(`import map file is outside root directory.
 --- import map file ---
 ${urlToFileSystemPath(importmapFileUrl)}
---- project directory ---
-${urlToFileSystemPath(projectDirectoryUrl)}`)
+--- root directory ---
+${urlToFileSystemPath(rootDirectoryUrl)}`)
   }
   let importmapFileBuffer
   try {

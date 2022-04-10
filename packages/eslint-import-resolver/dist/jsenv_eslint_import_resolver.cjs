@@ -2098,7 +2098,7 @@ const applyUrlResolution = (specifier, importer) => {
 
 const readImportmap = ({
   logger,
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   importmapFileRelativeUrl,
 }) => {
   if (typeof importmapFileRelativeUrl === "undefined") {
@@ -2111,14 +2111,14 @@ const readImportmap = ({
   }
   const importmapFileUrl = applyUrlResolution(
     importmapFileRelativeUrl,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
   );
-  if (!urlIsInsideOf(importmapFileUrl, projectDirectoryUrl)) {
-    logger.warn(`import map file is outside project.
+  if (!urlIsInsideOf(importmapFileUrl, rootDirectoryUrl)) {
+    logger.warn(`import map file is outside root directory.
 --- import map file ---
 ${urlToFileSystemPath(importmapFileUrl)}
---- project directory ---
-${urlToFileSystemPath(projectDirectoryUrl)}`);
+--- root directory ---
+${urlToFileSystemPath(rootDirectoryUrl)}`);
   }
   let importmapFileBuffer;
   try {
@@ -2152,7 +2152,7 @@ const applyImportmapResolution = (
   specifier,
   {
     logger,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     importmapFileRelativeUrl,
     importDefaultExtension,
     importer,
@@ -2160,7 +2160,7 @@ const applyImportmapResolution = (
 ) => {
   const importmap = readImportmap({
     logger,
-    projectDirectoryUrl,
+    rootDirectoryUrl,
     importmapFileRelativeUrl,
   });
   try {
@@ -2193,8 +2193,8 @@ const resolve = (
   file,
   {
     logLevel,
-    projectDirectoryUrl,
-    packageConditions = ["browser", "import"],
+    rootDirectoryUrl,
+    packageConditions = ["node", "import"],
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
@@ -2203,16 +2203,16 @@ const resolve = (
     magicExtensions = false,
   },
 ) => {
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
   const logger = createLogger({ logLevel });
   logger.debug(`
-resolve import for project.
+resolve import.
 --- specifier ---
 ${source}
 --- importer ---
 ${file}
---- project directory path ---
-${urlToFileSystemPath(projectDirectoryUrl)}`);
+--- root directory path ---
+${urlToFileSystemPath(rootDirectoryUrl)}`);
   const nodeInPackageConditions = packageConditions.includes("node");
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
     logger.debug(`-> native node module`);
@@ -2228,7 +2228,6 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
       url = ensureWindowsDriveLetter(url, importer);
       return handleFileUrl(url, {
         logger,
-        projectDirectoryUrl,
         caseSensitive,
         magicDirectoryIndex,
         magicExtensions,
@@ -2252,7 +2251,7 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`);
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
         logger,
-        projectDirectoryUrl,
+        rootDirectoryUrl,
         importmapFileRelativeUrl,
         importer,
       });

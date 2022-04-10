@@ -29,8 +29,8 @@ export const resolve = (
   file,
   {
     logLevel,
-    projectDirectoryUrl,
-    packageConditions = ["browser", "import"],
+    rootDirectoryUrl,
+    packageConditions = ["node", "import"],
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
@@ -39,16 +39,16 @@ export const resolve = (
     magicExtensions = false,
   },
 ) => {
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const logger = createLogger({ logLevel })
   logger.debug(`
-resolve import for project.
+resolve import.
 --- specifier ---
 ${source}
 --- importer ---
 ${file}
---- project directory path ---
-${urlToFileSystemPath(projectDirectoryUrl)}`)
+--- root directory path ---
+${urlToFileSystemPath(rootDirectoryUrl)}`)
   const nodeInPackageConditions = packageConditions.includes("node")
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
     logger.debug(`-> native node module`)
@@ -64,7 +64,6 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
       url = ensureWindowsDriveLetter(url, importer)
       return handleFileUrl(url, {
         logger,
-        projectDirectoryUrl,
         caseSensitive,
         magicDirectoryIndex,
         magicExtensions,
@@ -88,7 +87,7 @@ ${urlToFileSystemPath(projectDirectoryUrl)}`)
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
         logger,
-        projectDirectoryUrl,
+        rootDirectoryUrl,
         importmapFileRelativeUrl,
         importer,
       })
