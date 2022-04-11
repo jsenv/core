@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "27.0.0-alpha.3",
+  "version": "27.0.0-alpha.4",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "repository": {
@@ -53,7 +53,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "2.0.1",
     "@jsenv/abort": "4.1.2",
-    "@jsenv/babel-plugins": "1.0.0",
+    "@jsenv/babel-plugins": "1.0.1",
     "@jsenv/filesystem": "3.1.0",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",

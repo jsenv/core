@@ -9,8 +9,8 @@ node_modules/
 /node_modules/
 /old_src/
 /old_test/
-/src/**/babel_helper/client/
 
+**/babel_helpers/client/
 **/client/regenerator_runtime.js
 
 /**/*syntax_error*.js
