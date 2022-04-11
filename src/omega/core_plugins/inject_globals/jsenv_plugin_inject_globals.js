@@ -1,4 +1,4 @@
-import { createMagicSource } from "@jsenv/core/packages/utils/sourcemap/magic_source.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const jsenvPluginInjectGlobals = (globals = {}) => {
   if (Object.keys(globals).length === 0) {
