@@ -32,21 +32,31 @@ export const jsenvPluginImportMetaScenarios = () => {
         }
         if (scenario === "dev") {
           dev.forEach((path) => {
-            replace(path, true)
+            replace(path, "true")
           })
         } else if (scenario === "test") {
+          // test is also considered a dev environment
+          // just like the dev server can be used to debug test files
+          // without this people would have to write
+          // if (import.meta.dev || import.meta.test) or if (!import.meta.build)
+          dev.forEach((path) => {
+            replace(path, "true")
+          })
           test.forEach((path) => {
-            replace(path, true)
+            replace(path, "true")
           })
         } else if (scenario === "build") {
+          // replacing by undefined might not be required
+          // as I suppose rollup would consider them as undefined
+          // but let's make it explicit to ensure code is properly tree-shaked
           dev.forEach((path) => {
-            replace(path, undefined)
+            replace(path, "undefined")
           })
           test.forEach((path) => {
-            replace(path, undefined)
+            replace(path, "undefined")
           })
           build.forEach((path) => {
-            replace(path, true)
+            replace(path, "true")
           })
         }
         const magicSource = createMagicSource(content)
