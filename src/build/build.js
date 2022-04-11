@@ -185,28 +185,38 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     }
     Object.keys(rawGraph.urlInfos).forEach((rawUrl) => {
       const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
-      if (!rawUrlInfo.data.isEntryPoint) {
-        return
-      }
-      addToBundlerIfAny(rawUrlInfo)
-      if (rawUrlInfo.type === "html") {
-        rawUrlInfo.dependencies.forEach((dependencyUrl) => {
-          const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-          if (dependencyUrlInfo.isInline) {
-            if (dependencyUrlInfo.type === "js_module") {
-              // bundle inline script type module deps
-              dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                if (inlineScriptRef.type === "js_import_export") {
-                  addToBundlerIfAny(rawGraph.getUrlInfo(inlineScriptRef.url))
-                }
-              })
+      if (rawUrlInfo.data.isEntryPoint) {
+        addToBundlerIfAny(rawUrlInfo)
+        if (rawUrlInfo.type === "html") {
+          rawUrlInfo.dependencies.forEach((dependencyUrl) => {
+            const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
+            if (dependencyUrlInfo.isInline) {
+              if (dependencyUrlInfo.type === "js_module") {
+                // bundle inline script type module deps
+                dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+                  if (inlineScriptRef.type === "js_import_export") {
+                    addToBundlerIfAny(rawGraph.getUrlInfo(inlineScriptRef.url))
+                  }
+                })
+              }
+              // inline content cannot be bundled
+              return
             }
-            // inline content cannot be bundled
-            return
+            addToBundlerIfAny(dependencyUrlInfo)
+          })
+          return
+        }
+      }
+      // File referenced with new URL('./file.js', import.meta.url)
+      // are entry points that can be bundled
+      // For instance we will bundle service worker/workers detected like this
+      if (rawUrlInfo.type === "js_module") {
+        rawUrlInfo.references.forEach((reference) => {
+          if (reference.type === "js_import_meta_url_pattern") {
+            const urlInfo = rawGraph.getUrlInfo(reference.url)
+            addToBundlerIfAny(urlInfo)
           }
-          addToBundlerIfAny(dependencyUrlInfo)
         })
-        return
       }
     })
     await Object.keys(bundlers).reduce(async (previous, type) => {
