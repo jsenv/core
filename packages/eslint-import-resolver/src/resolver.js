@@ -11,14 +11,13 @@ import {
   getRealFileSystemUrlSync,
 } from "@jsenv/filesystem"
 
-import { createLogger } from "./logger.js"
-import { isSpecifierForNodeBuiltin } from "../../node-esm-resolution/src/node_builtin_specifiers.js"
+import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js"
 import {
   determineModuleSystem,
   applyNodeEsmResolution,
   applyFileSystemMagicResolution,
-} from "../../node-esm-resolution/main.js"
-
+} from "@jsenv/node-esm-resolution/main.js"
+import { createLogger } from "./logger.js"
 import { applyImportmapResolution } from "./importmap_resolution.js"
 import { applyUrlResolution } from "./url_resolution.js"
 
@@ -49,6 +48,8 @@ ${source}
 ${file}
 --- root directory path ---
 ${urlToFileSystemPath(rootDirectoryUrl)}`)
+
+  const browserInPackageConditions = packageConditions.includes("browser")
   const nodeInPackageConditions = packageConditions.includes("node")
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
     logger.debug(`-> native node module`)
@@ -80,6 +81,14 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`)
 
   const specifier = source
   try {
+    if (
+      browserInPackageConditions &&
+      !nodeInPackageConditions &&
+      specifier[0] === "/"
+    ) {
+      return onUrl(new URL(specifier, rootDirectoryUrl).href)
+    }
+
     // data:*, http://*, https://*, file://*
     if (isAbsoluteUrl(specifier)) {
       return onUrl(specifier)

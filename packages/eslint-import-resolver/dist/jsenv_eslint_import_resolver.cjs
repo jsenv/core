@@ -290,85 +290,6 @@ process.platform === "win32";
 
 process.platform === "linux";
 
-const LOG_LEVEL_OFF = "off";
-const LOG_LEVEL_DEBUG = "debug";
-const LOG_LEVEL_INFO = "info";
-const LOG_LEVEL_WARN = "warn";
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      debug,
-      info,
-      warn,
-      error,
-    }
-  }
-
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      debug: debugDisabled,
-      info,
-      warn,
-      error,
-    }
-  }
-
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error,
-    }
-  }
-
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error,
-    }
-  }
-
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled,
-    }
-  }
-
-  throw new Error(`unexpected logLevel.
-  --- logLevel ---
-  ${logLevel}
-  --- allowed log levels ---
-  ${LOG_LEVEL_OFF}
-  ${LOG_LEVEL_ERROR}
-  ${LOG_LEVEL_WARN}
-  ${LOG_LEVEL_INFO}
-  ${LOG_LEVEL_DEBUG}`)
-};
-
-const debug = console.debug;
-
-const debugDisabled = () => {};
-
-const info = console.info;
-
-const infoDisabled = () => {};
-
-const warn = console.warn;
-
-const warnDisabled = () => {};
-
-const error = console.error;
-
-const errorDisabled = () => {};
-
 const isSpecifierForNodeBuiltin = (specifier) => {
   return (
     specifier.startsWith("node:") ||
@@ -1492,6 +1413,85 @@ const applyFileSystemMagicResolution = (
   }
 };
 
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      debug,
+      info,
+      warn,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    }
+  }
+
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    }
+  }
+
+  throw new Error(`unexpected logLevel.
+  --- logLevel ---
+  ${logLevel}
+  --- allowed log levels ---
+  ${LOG_LEVEL_OFF}
+  ${LOG_LEVEL_ERROR}
+  ${LOG_LEVEL_WARN}
+  ${LOG_LEVEL_INFO}
+  ${LOG_LEVEL_DEBUG}`)
+};
+
+const debug = console.debug;
+
+const debugDisabled = () => {};
+
+const info = console.info;
+
+const infoDisabled = () => {};
+
+const warn = console.warn;
+
+const warnDisabled = () => {};
+
+const error = console.error;
+
+const errorDisabled = () => {};
+
 const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
 
@@ -2194,7 +2194,7 @@ const resolve = (
   {
     logLevel,
     rootDirectoryUrl,
-    packageConditions = ["node", "import"],
+    packageConditions = ["browser", "import"],
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
@@ -2213,6 +2213,8 @@ ${source}
 ${file}
 --- root directory path ---
 ${urlToFileSystemPath(rootDirectoryUrl)}`);
+
+  const browserInPackageConditions = packageConditions.includes("browser");
   const nodeInPackageConditions = packageConditions.includes("node");
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
     logger.debug(`-> native node module`);
@@ -2244,6 +2246,14 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`);
 
   const specifier = source;
   try {
+    if (
+      browserInPackageConditions &&
+      !nodeInPackageConditions &&
+      specifier[0] === "/"
+    ) {
+      return onUrl(new URL(specifier, rootDirectoryUrl).href)
+    }
+
     // data:*, http://*, https://*, file://*
     if (isAbsoluteUrl(specifier)) {
       return onUrl(specifier)
