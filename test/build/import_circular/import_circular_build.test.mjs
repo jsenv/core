@@ -32,6 +32,7 @@ const test = async (options) => {
 // without bundling
 {
   await test({ bundling: false })
+  // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./dist/main.js")
   const actual = { ...namespace }
   const expected = {
