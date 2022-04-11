@@ -35,7 +35,7 @@ import {
   getHtmlNodeTextNode,
   removeHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { generateInlineContentUrl } from "@jsenv/core/packages/utils/urls/inline_content_url_generator.js"
+import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginImportmap = () => {
   let finalImportmap = null

@@ -9,7 +9,7 @@ import {
   getHtmlNodeAttributeByName,
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
-import { generateInlineContentUrl } from "@jsenv/core/packages/utils/urls/inline_content_url_generator.js"
+import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginJsAndCssInsideHtml = () => {
   return {
