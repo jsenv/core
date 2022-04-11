@@ -70,6 +70,8 @@ export const build = async ({
   writeOnFileSystem = true,
   buildDirectoryClean = true,
   baseUrl = "/",
+  assetManifest = true,
+  assetManifestFileRelativeUrl = "asset-manifest.json",
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
@@ -689,6 +691,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         )
       }),
     )
+    if (versioning !== "none" && assetManifest) {
+      await writeFile(
+        new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
+        JSON.stringify(buildManifest, null, "  "),
+      )
+    }
   }
   logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }))
   return {
