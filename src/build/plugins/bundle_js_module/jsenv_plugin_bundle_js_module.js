@@ -131,15 +131,6 @@ const rollupPluginJsenv = ({
         const rollupFileInfo = rollupResult[fileName]
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
-          const { facadeModuleId } = rollupFileInfo
-          let url
-          if (facadeModuleId) {
-            url = fileUrlConverter.asFileUrl(facadeModuleId)
-          } else {
-            const { sources } = rollupFileInfo.map
-            const sourcePath = sources[sources.length - 1]
-            url = fileUrlConverter.asFileUrl(sourcePath)
-          }
           const jsModuleBundleUrlInfo = {
             // buildRelativeUrl: rollupFileInfo.fileName,
             data: {
@@ -148,6 +139,12 @@ const rollupPluginJsenv = ({
             contentType: "application/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
+          }
+          let url
+          if (rollupFileInfo.facadeModuleId) {
+            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId)
+          } else {
+            url = new URL(rollupFileInfo.fileName, rootDirectoryUrl).href
           }
           jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo
         }
@@ -171,13 +168,18 @@ const rollupPluginJsenv = ({
         },
         chunkFileNames: (chunkInfo) => {
           // preserves relative path parts:
-          // the goal is to mantain the original relative path (relative to the root directory)
+          // the goal is to maintain the original relative path (relative to the root directory)
           // so that later in the build process, when resolving these urls, we are able to
           // re-resolve the specifier againt the original parent url and find the original url
-          const { facadeModuleId } = chunkInfo
-          const fileUrl = fileUrlConverter.asFileUrl(facadeModuleId)
-          const relativePath = urlToRelativeUrl(fileUrl, rootDirectoryUrl)
-          return relativePath
+          if (chunkInfo.facadeModuleId) {
+            const fileUrl = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId)
+            const relativePath = urlToRelativeUrl(fileUrl, rootDirectoryUrl)
+            return relativePath
+          }
+          // chunk generated dynamically by rollup to share code.
+          // we prefix with "__rollup__/" to avoid potential conflict of filename
+          // between this one and a file with the same name existing in the root directory
+          return `__rollup__/${chunkInfo.name}.js`
         },
         // https://rollupjs.org/guide/en/#outputpaths
         // paths: (id) => {
