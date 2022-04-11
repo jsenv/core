@@ -6,6 +6,12 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}
   const generate = memoizeByUrl((url, urlInfo, parentUrlInfo) => {
     const directoryPath = determineDirectoryPath(urlInfo, parentUrlInfo)
+    let names = cache[directoryPath]
+    if (!names) {
+      names = []
+      cache[directoryPath] = names
+    }
+
     let name = urlToFilename(url)
     const { searchParams } = new URL(url)
     if (
@@ -15,12 +21,7 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
     ) {
       name = `${name}.js`
     }
-    let names = cache[directoryPath]
-    if (!names) {
-      names = []
-      cache[directoryPath] = names
-    }
-
+    const [basename, extension] = splitFileExtension(name)
     let nameCandidate = name
     let integer = 1
     // eslint-disable-next-line no-constant-condition
@@ -30,7 +31,7 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
         break
       }
       integer++
-      nameCandidate = `${name}${integer}`
+      nameCandidate = `${basename}${integer}${extension}`
     }
     return `${buildDirectoryUrl}${directoryPath}${nameCandidate}`
   })
@@ -38,6 +39,14 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   return {
     generate,
   }
+}
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".")
+  if (dotLastIndex === -1) {
+    return [filename, ""]
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }
 
 const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
