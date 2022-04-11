@@ -51,7 +51,7 @@ export const jsenvPluginImportMetaScenarios = () => {
         }
         const magicSource = createMagicSource(content)
         replacements.forEach(({ path, value }) => {
-          magicSource.overwrite({
+          magicSource.replace({
             start: path.node.start,
             end: path.node.end,
             replacement: value,
