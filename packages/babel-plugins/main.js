@@ -8,4 +8,4 @@ export const requireBabelPlugin = (name) => require(name)
 export {
   getBabelHelperFileUrl,
   babelHelperNameFromUrl,
-} from "./babel_helpers/babel_helper_directory.js"
+} from "./src/babel_helper_directory.js"

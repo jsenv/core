@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/babel-plugins",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Set of babel plugins to use with jsenv",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,7 @@
   "main": "./main.js",
   "files": [
     "/src/",
-    "/main.mjs"
+    "/main.js"
   ],
   "scripts": {},
   "dependencies": {

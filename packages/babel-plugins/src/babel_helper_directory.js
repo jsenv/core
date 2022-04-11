@@ -2,7 +2,10 @@
 // the list of possible helpers:
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
 
-const babelHelperClientDirectoryUrl = new URL("./client/", import.meta.url).href
+const babelHelperClientDirectoryUrl = new URL(
+  "./babel_helpers/",
+  import.meta.url,
+).href
 
 // we cannot use "@jsenv/core/src/*" because babel helper might be injected
 // into node_modules not depending on "@jsenv/core"
