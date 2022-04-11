@@ -7,6 +7,9 @@
     "url": "https://github.com/jsenv/jsenv-core",
     "directory": "packages/utils"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "dependencies": {
     "@babel/parser": "7.17.8",
