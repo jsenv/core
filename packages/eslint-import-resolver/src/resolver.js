@@ -30,7 +30,7 @@ export const resolve = (
   {
     logLevel,
     rootDirectoryUrl,
-    packageConditions = ["node", "import"],
+    packageConditions = ["browser", "import"],
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
