@@ -86,7 +86,7 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`)
       !nodeInPackageConditions &&
       specifier[0] === "/"
     ) {
-      return onUrl(new URL(specifier, rootDirectoryUrl).href)
+      return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href)
     }
 
     // data:*, http://*, https://*, file://*
