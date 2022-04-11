@@ -8,4 +8,10 @@ await build({
     "./main.html": "main.html",
   },
   minify: false,
+  runtimeSupport: {
+    chrome: "55",
+    edge: "14",
+    firefox: "52",
+    safari: "11",
+  },
 })
