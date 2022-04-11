@@ -1,28 +1,16 @@
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
-
-import { executeTestPlan, nodeRuntime } from "@jsenv/core"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
-
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativeUrl = urlToRelativeUrl(
-  testDirectoryUrl,
-  jsenvCoreDirectoryUrl,
-)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const testPlan = {
-  [`${testDirectoryRelativeUrl}*.spec.js`]: {
-    node: {
-      runtime: nodeRuntime,
-      captureConsole: true,
-    },
-  },
-}
+import { executeTestPlan, nodeProcess } from "@jsenv/core"
 
 await executeTestPlan({
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  rootDirectoryUrl: new URL("./", import.meta.url),
   logLevel: "info",
-  jsenvDirectoryRelativeUrl,
-  testPlan,
+  testPlan: {
+    "*.spec.js": {
+      node: {
+        runtime: nodeProcess,
+        captureConsole: true,
+      },
+    },
+  },
   completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: false,
   defaultMsAllocatedPerExecution: 3000,

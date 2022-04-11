@@ -43,6 +43,5 @@ await startDevServer({
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
   port: 6789,
-  livereloading: true,
-  jsenvToolbar: false,
+  toolbar: false,
 })

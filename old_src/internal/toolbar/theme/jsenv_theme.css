@@ -1,0 +1,82 @@
+/* icons */
+html[data-theme="jsenv"] .iconToolbar {
+  fill: #de5600;
+}
+html[data-theme="jsenv"] .iconToolbar:hover {
+  fill: #9a5300 !important;
+}
+
+/* loaders */
+html[data-theme="jsenv"] #loader-icon {
+  color: #404040;
+}
+
+/* settings */
+html[data-theme="jsenv"] #settings-box,
+html[data-theme="jsenv"] #settings[data-active] button {
+  background: #f7931e;
+}
+html[data-theme="jsenv"] .settings-box-item {
+  background: #ffa641;
+}
+html[data-theme="jsenv"] #settings-box-header .settings-icon {
+  stroke: #076570;
+}
+html[data-theme="jsenv"] #button-close-settings {
+  fill: #076570;
+}
+html[data-theme="jsenv"] #settings-box h3,
+html[data-theme="jsenv"] #settings-box .category-title {
+  color: #076570;
+}
+html[data-theme="jsenv"] #settings-box .category-title svg {
+  fill: #076570;
+}
+html[data-theme="jsenv"] #settings-box .category-subtitle {
+  color: #076570;
+}
+html[data-theme="jsenv"] label {
+  color: #002e33;
+}
+html[data-theme="jsenv"] input:checked + .slider,
+html[data-theme="jsenv"] .switch input:checked + .slider:before {
+  background-color: #de5600;
+}
+html[data-theme="jsenv"] .switch .slider,
+html[data-theme="jsenv"] .switch .slider:before {
+  background-color: grey;
+}
+
+/* file input */
+html[data-theme="jsenv"] #file[data-active] {
+  background: rgba(222, 86, 0, 0.7);
+}
+
+/* tooltips */
+html[data-theme="jsenv"] .tooltip {
+  background-color: #ffd390;
+  color: #884900;
+}
+html[data-theme="jsenv"] .tooltipAction {
+  border-color: #884900;
+}
+html[data-theme="jsenv"] .tooltipAction a {
+  color: #884900;
+}
+html[data-theme="jsenv"] .tooltipIcon {
+  fill: #884900;
+}
+html[data-theme="jsenv"] .tooltip::after {
+  border-color: #ffd390 transparent transparent transparent;
+}
+
+/*  page file list */
+html[data-theme="jsenv"] h2 {
+  color: orange;
+}
+html[data-theme="jsenv"] #fileIconSvgConfig {
+  fill: orange;
+}
+html[data-theme="jsenv"] #explorables h2 span {
+  color: #24b1b0;
+}

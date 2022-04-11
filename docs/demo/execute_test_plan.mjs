@@ -1,18 +1,14 @@
-import {
-  executeTestPlan,
-  chromiumTabRuntime,
-  firefoxTabRuntime,
-} from "@jsenv/core"
+import { executeTestPlan, chromium, firefox } from "@jsenv/core"
 
 await executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        runtime: chromiumTabRuntime,
+        runtime: chromium,
       },
       firefox: {
-        runtime: firefoxTabRuntime,
+        runtime: firefox,
       },
     },
   },

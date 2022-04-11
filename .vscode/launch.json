@@ -11,7 +11,8 @@
       "runtimeArgs": [
         "--inspect",
         "--experimental-json-modules",
-        "--experimental-import-meta-resolve"
+        "--experimental-import-meta-resolve",
+        "--trace-warnings"
       ],
       "console": "integratedTerminal",
       // "args": ["--coverage"],

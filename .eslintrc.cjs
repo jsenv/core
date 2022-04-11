@@ -34,12 +34,10 @@ const eslintConfig = composeEslintConfig(
     plugins: ["import"],
     settings: {
       "import/resolver": {
-        // Tell ESLint to use the importmap to resolve imports.
-        // Read more in https://github.com/jsenv/importmap-node-module#Configure-vscode-and-eslint-for-importmap
-        "@jsenv/importmap-eslint-resolver": {
-          projectDirectoryUrl: __dirname,
-          importMapFileRelativeUrl: "./node_resolution.importmap",
-          node: true,
+        "@jsenv/eslint-import-resolver": {
+          rootDirectoryUrl: __dirname,
+          // logLevel: "debug",
+          packageConditions: ["node", "import"],
         },
       },
       "import/extensions": [".js", ".mjs"],
@@ -87,12 +85,6 @@ const eslintConfig = composeEslintConfig(
           require: true,
           exports: true,
         },
-        // inside *.cjs files, use commonjs module resolution
-        settings: {
-          "import/resolver": {
-            node: {},
-          },
-        },
       },
     ],
   },
@@ -103,18 +95,23 @@ const eslintConfig = composeEslintConfig(
       {
         files: [
           "**/**/*.html",
-          "**/browser_client/**/*.js",
+          "dev_exploring/**/*.js",
+          "**/client/**/*.js",
           "**/browser_utils/**/*.js",
-          "**/browser_detection/**/*.js",
-          "**/browser_runtime/**/*.js",
-          "**/browser_feature_detection/**/*.js",
-          "**/exploring/**/*.js",
-          "**/redirector/**/*.js",
-          "**/toolbar/**/*.js",
+          "test/dev_server/**/*.js",
         ],
         env: {
           browser: true,
           node: false,
+        },
+        settings: {
+          "import/resolver": {
+            "@jsenv/eslint-import-resolver": {
+              rootDirectoryUrl: __dirname,
+              packageConditions: ["browser", "import"],
+              // logLevel: "debug",
+            },
+          },
         },
       },
     ],

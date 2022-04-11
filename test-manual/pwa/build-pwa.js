@@ -1,13 +1,11 @@
-import { buildProject } from "@jsenv/core"
+import { build } from "@jsenv/core"
 // import { resolveUrl } from "@jsenv/filesystem"
-import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 
-const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const pwaDirectoryRelativeUrl = "./test-manual/pwa/app/"
 const buildDirectoryRelativeUrl = "./test-manual/pwa/app/dist/"
 
-buildProject({
-  projectDirectoryUrl,
+build({
+  rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl,
   babelPluginMap: {},
   entryPoints: {

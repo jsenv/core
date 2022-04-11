@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Import dynamic</title>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <button>Load file</button>
+    <script type="module">
+      import { loadFeature } from "./main.js"
+
+      document.querySelector("button").onclick = () => {
+        loadFeature()
+      }
+    </script>
+  </body>
+</html>

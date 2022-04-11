@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-unresolved
-import { message } from "greet"
+import { message } from "./greet.js"
 
 console.log(message)

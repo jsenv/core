@@ -1,45 +1,19 @@
-import { executeTestPlan, nodeRuntime } from "@jsenv/core"
-
-import { projectDirectoryUrl, runtimeSupport } from "../../jsenv.config.mjs"
+import { executeTestPlan, nodeProcess } from "@jsenv/core"
+import { rootDirectoryUrl, runtimeSupport } from "@jsenv/core/jsenv.config.mjs"
 
 await executeTestPlan({
-  projectDirectoryUrl,
+  rootDirectoryUrl,
   runtimeSupport,
-  logLevel: "debug",
+  logLevel: "info",
   testPlan: {
-    "test/**/*.test.js": {
+    "test/**/*.test.mjs": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         allocatedMs: 30 * 1000,
       },
     },
-    // give more time to some tests
-    "test/coverage/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/dev_server/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/execute/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
-    "test/test_plan/**/*.test.js": {
-      node: {
-        runtime: nodeRuntime,
-        allocatedMs: 60 * 1000,
-      },
-    },
   },
-  completedExecutionLogMerging: true,
+  // completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,
   // completedExecutionLogAbbreviation: false,

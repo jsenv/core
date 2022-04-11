@@ -48,8 +48,6 @@ jobs:
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
-      - name: Generate importmap
-        run: npm run importmap
       - name: Install playwright
         run: npm run playwright-install
       - name: Run ESLint
@@ -62,7 +60,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage.json,./packages/jsenv-integrity/coverage/coverage.json
+          files: ./coverage/coverage.json,./packages/integrity/coverage/coverage.json
           verbose: true
 
   release:
@@ -82,8 +80,6 @@ jobs:
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
-      - name: Generate importmap
-        run: npm run importmap
       - name: publish package
         run: node ./.github/workflows/main/publish_package.mjs
         env:

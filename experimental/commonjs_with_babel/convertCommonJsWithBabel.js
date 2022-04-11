@@ -1,5 +1,5 @@
 import { require } from "@jsenv/core/src/internal/require.js"
-import { transformJs } from "@jsenv/core/src/internal/compile_server/js/js_transformer.js"
+import { transformWithBabel } from "@jsenv/core/src/internal/transform_js/transform_with_babel.js"
 import { babelPluginReplaceExpressions } from "@jsenv/core/src/internal/compile_server/js/babel_plugin_replace_expressions.js"
 import { asCompilationResult } from "@jsenv/core/src/internal/compile_server/jsenv_directory/compilation_result.js"
 
@@ -22,7 +22,7 @@ export const convertCommonJsWithBabel = async ({
   // eslint-disable-next-line import/no-unresolved
   const transformCommonJs = require("babel-plugin-transform-commonjs")
 
-  const transformResult = await transformJs({
+  const transformResult = await transformWithBabel({
     code,
     map,
     url,

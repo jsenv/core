@@ -1,0 +1,114 @@
+/* general */
+html[data-theme="light"] #toolbar {
+  background: #e8eff3;
+}
+
+/* icons */
+html[data-theme="light"] .iconToolbar {
+  fill: #404040;
+}
+html[data-theme="light"] .iconToolbar:hover {
+  fill: #757575 !important;
+}
+
+/* loaders */
+html[data-theme="light"] #loader-icon {
+  color: #404040;
+}
+
+/* settings */
+html[data-theme="light"] #settings-box,
+html[data-theme="light"] #settings[data-active] button {
+  background: #87acd3;
+}
+html[data-theme="light"] .settings-box-item {
+  background: #97b9da;
+}
+html[data-theme="light"] #settings-box-header .settings-icon {
+  stroke: #076570;
+}
+html[data-theme="light"] #button-close-settings {
+  fill: #076570;
+}
+html[data-theme="light"] #settings-box h3,
+html[data-theme="light"] #settings-box .category-title {
+  color: #076570;
+}
+html[data-theme="light"] #settings-box .category-title svg {
+  fill: #076570;
+}
+html[data-theme="light"] #settings-box .category-subtitle {
+  color: #5d5d5d;
+}
+html[data-theme="light"] label {
+  color: #002e33;
+}
+html[data-theme="light"] .switch input + * .slider,
+html[data-theme="light"] .switch input + * .square {
+  background-color: grey;
+}
+html[data-theme="light"] .switch input:checked + * .slider,
+html[data-theme="light"] .switch input:checked + * .square {
+  background-color: #076570;
+}
+
+/* file input */
+html[data-theme="light"] #file[data-active] {
+  background: rgba(129, 177, 214, 0.34);
+}
+html[data-theme="light"] #file-input {
+  color: #076570;
+}
+
+/* tooltips */
+html[data-theme="light"] .tooltip {
+  background-color: rgb(138, 145, 154);
+  color: #fff;
+}
+html[data-theme="light"] .tooltipAction {
+  border-color: #fff;
+}
+html[data-theme="light"] .tooltip::after {
+  border-color: rgb(138, 145, 154) transparent transparent transparent;
+}
+
+/* overflow menu */
+html[data-theme="light"] #overflow-menu-button {
+  background: #e8eff3;
+}
+html[data-theme="light"]
+  #toolbar[data-overflow-menu-visible]
+  #overflow-menu-button {
+  background: #a5a9ad;
+}
+html[data-theme="light"] #overflow-menu {
+  background: #dfe4e7;
+}
+
+/*  page file list */
+html[data-theme="light"] h2,
+html[data-theme="light"] h4 {
+  color: #076570;
+}
+html[data-theme="light"] #fileIconSvgConfig {
+  fill: #076570;
+}
+html[data-theme="light"] #explorables h2 span {
+  color: #ff8d00;
+}
+html[data-theme="light"] article[data-page="file-list"],
+html[data-theme="light"] #file-list-link[data-active] a {
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables fieldset input:checked + * {
+  color: #ff8d00;
+  background: #bbd5ea;
+}
+html[data-theme="light"] #explorables #explorables-header,
+html[data-theme="light"] #explorables fieldset label input + * {
+  background: #ddf0ff;
+}
+html[data-theme="light"] .execution-link {
+  background: #ddf0ff;
+  color: #076570;
+}

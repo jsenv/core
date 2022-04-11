@@ -1,5 +1,5 @@
-export const projectDirectoryUrl = String(new URL("./", import.meta.url))
+export const rootDirectoryUrl = String(new URL("./", import.meta.url))
 
 export const runtimeSupport = {
-  node: "14.7",
+  node: "16.13",
 }

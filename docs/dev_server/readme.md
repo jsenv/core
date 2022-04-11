@@ -50,15 +50,15 @@ For instance you might want to have a tab for source files and one for test file
 
 ![explorableConfig and tabs screenshot](./exploring-tabs.png)
 
-## livereloading
+## autoreload
 
-`livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
+`autoreload` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter enabled by default.
 
-Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger livereloading when saved.
+Any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file load assets such as image or css these asset files will also trigger reload when saved.
 
 ## watchConfig
 
-`watchConfig` parameter is an object configuring which files are watched to trigger livereloading. This is an optional parameter with a default value configured to watch everything except git and node_modules directories. `watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
+`watchConfig` parameter is an object configuring which files are watched to trigger auto reload. This is an optional parameter with a default value configured to watch everything except git and node_modules directories. `watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
 
 _A custom `watchConfig` to watch only index.html and files inside src directory_
 
@@ -148,14 +148,14 @@ This component is an icon representing the html file execution state. The icon c
 
 This component is an icon representing the dev server connection state. The icon can be clicked to get more information and can be in the following states.
 
-| State                          | Screenshot                                                                                  | Description                                                                                                            |
-| ------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| connecting                     | ![connecting screenshot](./server-connecting.png)                                           | Jsenv toolbar is connecting to the dev server                                                                          |
-| disconnected                   | ![disconnected indicator screenshot](./server-disconnected.png)                             | Happens after you click cancel button from above state                                                                 |
-| failed                         | ![connection failed indicator screenshot](./server-failed.png)                              | Jsenv toolbar cannot connect to the server. You should check the terminal where server was started                     |
-| connected with autoreload      | ![connected with livereloading screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to the server and will autoreload on save                                                   |
-| connected without autoreload   | ![connected without livereloading screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to the server but won't autoreload on save. Happens if your disable livereload in settings. |
-| connected without autoreload 2 | ![connected without livereloading second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                   |
+| State                          | Screenshot                                                                               | Description                                                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| connecting                     | ![connecting screenshot](./server-connecting.png)                                        | Jsenv toolbar is connecting to the dev server                                                                          |
+| disconnected                   | ![disconnected indicator screenshot](./server-disconnected.png)                          | Happens after you click cancel button from above state                                                                 |
+| failed                         | ![connection failed indicator screenshot](./server-failed.png)                           | Jsenv toolbar cannot connect to the server. You should check the terminal where server was started                     |
+| connected with autoreload      | ![connected with autoreload screenshot](./server-connected-and-livereloading.png)        | Jsenv toolbar is connected to the server and will autoreload on save                                                   |
+| connected without autoreload   | ![connected without autoreload screenshot](./server-connected-without-livereloading.png) | Jsenv toolbar is connected to the server but won't autoreload on save. Happens if your disable livereload in settings. |
+| connected without autoreload 2 | ![connected without autoreload second screenshot](./server-connected-and-changes.png)    | As previous state + you saved one file while livereload is disabled.                                                   |
 
 ## Settings button
 
@@ -171,13 +171,13 @@ Control if a notification is shown when:
 - file execution is still failing (keeps throwing after browser is reloaded)
 - file execution is fixed (stops throwing after browser is reloaded)
 
-## Livereload switch
+## Autoreload switch
 
-Useful to disable temporarily livereload for any legit reason you may have.
+Useful to disable temporarily autoreload.
 
-If livereload is fully disabled using [livereloading](#livereloading) parameter, this switch cannot be used and looks as below:
+If autoreload is fully disabled using [autoreload](#autoreload) parameter, this switch cannot be used and looks as below:
 
-![settings livereload disabled](./settings_livereload_disabled.png)
+![settings autoreload disabled](./settings_livereload_disabled.png)
 
 ## Animations switch
 

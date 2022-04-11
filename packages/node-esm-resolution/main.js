@@ -1,0 +1,5 @@
+export { applyNodeEsmResolution } from "./src/node_esm_resolution.js"
+export { determineModuleSystem } from "./src/determine_module_system.js"
+export { applyFileSystemMagicResolution } from "./src/filesystem_magic_resolution.js"
+export { lookupPackageScope } from "./src/lookup_package_scope.js"
+export { readPackageJson } from "./src/read_package_json.js"

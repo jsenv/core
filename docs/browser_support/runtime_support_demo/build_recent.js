@@ -1,8 +1,8 @@
-import { buildProject } from "@jsenv/core"
+import { build } from "@jsenv/core"
 
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "dist",
+await build({
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./file.js": "file.js",
   },

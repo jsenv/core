@@ -1,0 +1,15 @@
+- specifier not resolved (resolve will return null, we won't even try to load a file)
+  - import "not_found"
+- export_missing import { missing } from './file.js'
+- file_not_found
+  - import "./not_found.js"
+  - <img src="not_found.jpg">
+  - <style> body { background-image: url('not_found.jpg'); } </style>
+- syntax_error
+ - imported js
+ - inline js module
+ - inline classic js
+ - inline css
+ - css imported by import assertion
+ - css imported by @import
+ - css inside style tag

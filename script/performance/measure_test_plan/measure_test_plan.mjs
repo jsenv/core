@@ -6,40 +6,29 @@ const measures = startMeasures({
   filesystemUsage: true,
 })
 
-const {
-  executeTestPlan,
-  chromiumRuntime,
-  firefoxRuntime,
-  webkitRuntime,
-  nodeRuntime,
-} = await import("@jsenv/core")
+const { executeTestPlan, chromium, firefox, webkit, nodeProcess } =
+  await import("@jsenv/core")
 
-const projectDirectoryUrl = new URL("../../../", import.meta.url)
-const currentDirectoryUrl = new URL("./", import.meta.url)
-const currentDirectoryRelativeUrl = new URL(
-  currentDirectoryUrl,
-  projectDirectoryUrl,
-)
 await executeTestPlan({
-  projectDirectoryUrl,
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    [`${currentDirectoryRelativeUrl}animals.test.html`]: {
+    "./animals.test.html": {
       chromium: {
-        runtime: chromiumRuntime,
+        runtime: chromium,
         captureConsole: false,
       },
       firefox: {
-        runtime: firefoxRuntime,
+        runtime: firefox,
         captureConsole: false,
       },
       webkit: {
-        runtime: webkitRuntime,
+        runtime: webkit,
         captureConsole: false,
       },
     },
-    [`${currentDirectoryRelativeUrl}animals.test.js`]: {
+    "animals.test.js": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeProcess,
         captureConsole: false,
       },
     },
@@ -48,17 +37,11 @@ await executeTestPlan({
   protocol: "http",
   coverage: true,
   coverageConfig: {
-    [`${currentDirectoryRelativeUrl}animals.js`]: true,
+    "./animals.js": true,
   },
   coverageV8ConflictWarning: false,
   coverageHtmlDirectory: false,
   coverageTextLog: false,
-  // here we should also clean jsenv directory to ensure
-  // the compile server cannot reuse cache
-  // to mitigate this compileServerCanReadFromFilesystem and compileServerCanWriteOnFilesystem
-  // are false for now
-  compileServerCanReadFromFilesystem: false,
-  compileServerCanWriteOnFilesystem: false,
 })
 
 const {

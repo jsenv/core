@@ -8,7 +8,11 @@
   </head>
 
   <body>
-    <script id="main-script" type="module" src="./js-with-runtime-error.js"></script>
+    <script
+      id="main-script"
+      type="module"
+      src="./js-with-runtime-error.js"
+    ></script>
     <script async>
       const mainScript = document.querySelector("script#main-script")
       mainScript.onerror = () => {

@@ -1,0 +1,5 @@
+body {
+  background: red;
+  background-image: url("./jsenv.svg");
+  background-size: 100px 100px;
+}
