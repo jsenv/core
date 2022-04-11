@@ -23,11 +23,12 @@ export const startDevServer = async ({
   certificate,
   privateKey,
   keepProcessAlive = true,
-
   rootDirectoryUrl,
-  plugins = [],
 
+  injectedGlobals,
+  plugins = [],
   sourcemaps = "inline",
+
   autoreload = true,
   autoreloadPatterns = {
     "./**": true,
@@ -58,7 +59,9 @@ export const startDevServer = async ({
     urlGraph,
     plugins: [
       ...plugins,
-      ...getCorePlugins(),
+      ...getCorePlugins({
+        injectedGlobals,
+      }),
       ...(autoreload
         ? [
             jsenvPluginAutoreload({

@@ -26,6 +26,7 @@ export const execute = async ({
   runtime,
   runtimeParams,
 
+  injectedGlobals,
   plugins = [],
   scenario = "dev",
   sourcemaps = "inline",
@@ -65,7 +66,12 @@ export const execute = async ({
       logger,
       rootDirectoryUrl,
       urlGraph,
-      plugins: [...plugins, ...getCorePlugins()],
+      plugins: [
+        ...plugins,
+        ...getCorePlugins({
+          injectedGlobals,
+        }),
+      ],
       scenario,
       sourcemaps,
     })

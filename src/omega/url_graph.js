@@ -125,6 +125,7 @@ const createUrlInfo = (url) => {
     sourcemap: null,
     sourcemapReference: null,
     type: "",
+    subtype: "",
     references: [],
     dependencies: new Set(),
     dependents: new Set(),

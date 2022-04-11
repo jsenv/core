@@ -62,9 +62,10 @@ export const executePlan = async (
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    plugins = [],
-    scenario = "test",
-    sourcemaps = "inline",
+    injectedGlobals,
+    plugins,
+    scenario,
+    sourcemaps,
 
     protocol,
     privateKey,
@@ -151,6 +152,7 @@ export const executePlan = async (
                 return {}
               },
             },
+            injectedGlobals,
           }),
         ],
         scenario,

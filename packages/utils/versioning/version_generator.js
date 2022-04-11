@@ -4,7 +4,7 @@ import { ContentType } from "@jsenv/utils/src/content_type.js"
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
 // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
-export const createUrlVersionGenerator = () => {
+export const createVersionGenerator = () => {
   const hash = createHash("sha256")
 
   const augmentWithContent = ({

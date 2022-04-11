@@ -22,7 +22,7 @@ import {
   injectQueryParams,
   setUrlFilename,
 } from "@jsenv/utils/urls/url_utils.js"
-import { createUrlVersionGenerator } from "@jsenv/utils/urls/url_version_generator.js"
+import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 import {
   parseHtmlString,
@@ -38,11 +38,12 @@ import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
 
-import { createBuilUrlsGenerator } from "./build_urls_generator.js"
-import { injectVersionMappings } from "./inject_version_mappings.js"
 import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
 import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
 import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
+import { createBuilUrlsGenerator } from "./build_urls_generator.js"
+import { injectVersionMappings } from "./inject_version_mappings.js"
+import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
 
 export const build = async ({
   signal = new AbortController().signal,
@@ -59,6 +60,7 @@ export const build = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   babel,
+  injectedGlobals,
   runtimeSupport = defaultRuntimeSupport,
   sourcemaps = isPreview ? "file" : false,
 
@@ -114,6 +116,7 @@ build ${entryPointKeys.length} entry points`)
         nodeEsmResolution,
         fileSystemMagicResolution,
         babel,
+        injectedGlobals,
       }),
       jsenvPluginBundleJsModule(),
       ...(minify ? [jsenvPluginMinifyJs(), jsenvPluginMinifyHtml()] : []),
@@ -183,8 +186,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         return
       }
     }
-    Object.keys(rawGraph.urlInfos).forEach((rawUrl) => {
-      const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+    GRAPH.forEach(rawGraph, (rawUrlInfo) => {
       if (rawUrlInfo.data.isEntryPoint) {
         addToBundlerIfAny(rawUrlInfo)
         if (rawUrlInfo.type === "html") {
@@ -251,6 +253,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const rawUrlInfo = rawGraph.getUrlInfo(url)
           bundleUrlInfos[url] = {
             type,
+            subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
             ...bundleUrlInfo,
             data: {
               ...(rawUrlInfo ? rawUrlInfo.data : {}),
@@ -357,8 +360,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             return buildUrl
           }
           if (reference.isInline) {
-            const rawUrl = Object.keys(rawGraph.urlInfos).find((url) => {
-              const rawUrlInfo = rawGraph.urlInfos[url]
+            const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
               if (!rawUrlInfo.isInline) {
                 return false
               }
@@ -367,10 +369,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               }
               return false
             })
-            if (!rawUrl) {
+            if (!rawUrlInfo) {
               throw new Error(`cannot find raw url`)
             }
-            const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             const buildUrl = buildUrlsGenerator.generate(
               reference.url,
@@ -378,7 +379,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               parentUrlInfo,
             )
             rawUrls[buildUrl] = reference.url
-            reference.data.rawUrl = rawUrl
+            reference.data.rawUrl = rawUrlInfo.url
             return buildUrl
           }
           if (reference.type === "sourcemap_comment") {
@@ -415,6 +416,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const rawUrl = finalUrlInfo.data.rawUrl
           const bundleUrlInfo = bundleUrlInfos[rawUrl]
           const urlInfo = bundleUrlInfo || rawGraph.getUrlInfo(rawUrl)
+          finalUrlInfo.subtype = urlInfo.subtype
           return {
             data: bundleUrlInfo ? bundleUrlInfo.data : undefined,
             originalContent: urlInfo.originalContent,
@@ -503,8 +505,8 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         if (urlInfo.isInline) {
           return
         }
-        const urlVersionGenerator = createUrlVersionGenerator()
-        urlVersionGenerator.augmentWithContent({
+        const versionGenerator = createVersionGenerator()
+        versionGenerator.augmentWithContent({
           content: urlInfo.content,
           contentType: urlInfo.contentType,
           lineBreakNormalization,
@@ -516,7 +518,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             return
           }
           if (dependencyUrlInfo.data.version) {
-            urlVersionGenerator.augmentWithDependencyVersion(
+            versionGenerator.augmentWithDependencyVersion(
               dependencyUrlInfo.data.version,
             )
           } else {
@@ -524,14 +526,14 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             // it means there is a circular dependency between this file
             // and it's dependency
             // in that case we'll use the dependency content
-            urlVersionGenerator.augmentWithContent({
+            versionGenerator.augmentWithContent({
               content: dependencyUrlInfo.content,
               contentType: dependencyUrlInfo.contentType,
               lineBreakNormalization,
             })
           }
         })
-        urlInfo.data.version = urlVersionGenerator.generate()
+        urlInfo.data.version = versionGenerator.generate()
         urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
           buildUrl: urlInfo.url,
           version: urlInfo.data.version,
@@ -578,7 +580,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               // specifier comes from "normalize" hook done a bit earlier in this file
               // we want to get back their build url to access their infos
               const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
-              if (referencedUrlInfo.data.isEntryPoint) {
+              if (
+                referencedUrlInfo.data.isEntryPoint ||
+                referencedUrlInfo.subtype === "service_worker" ||
+                referencedUrlInfo.type === "webmanifest"
+              ) {
                 return reference.specifier
               }
               // data:* urls and so on
@@ -616,13 +622,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               }
               return versionedSpecifier
             },
-            load: ({ url }) => {
-              const urlInfo = finalGraph.getUrlInfo(url)
+            load: (finalUrlInfo) => {
               return {
-                originalContent: urlInfo.originalContent,
-                contentType: urlInfo.contentType,
-                content: urlInfo.content,
-                sourcemap: urlInfo.sourcemap,
+                originalContent: finalUrlInfo.originalContent,
+                contentType: finalUrlInfo.contentType,
+                content: finalUrlInfo.content,
+                sourcemap: finalUrlInfo.sourcemap,
               }
             },
           },
@@ -631,9 +636,8 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         sourcemaps,
       })
       // arrange state before reloading all files
-      Object.keys(finalGraph.urlInfos).forEach((url) => {
-        const urlInfo = finalGraph.urlInfos[url]
-        urlInfo.data.promise = null
+      GRAPH.forEach(finalGraph, (finalUrlInfo) => {
+        finalUrlInfo.data.promise = null
       })
       await loadUrlGraph({
         urlGraph: finalGraph,
@@ -655,12 +659,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           versionMappingsNeeded[specifier] = versionMappings[specifier]
         })
         await Promise.all(
-          Object.keys(finalGraph.urlInfos).map(async (buildUrl) => {
-            const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
-            if (!buildUrlInfo.data.isEntryPoint) {
+          GRAPH.map(finalGraph, async (urlInfo) => {
+            if (!urlInfo.data.isEntryPoint) {
               return
             }
-            await injectVersionMappings(buildUrlInfo, {
+            await injectVersionMappings({
+              urlInfo,
               kitchen: finalGraphKitchen,
               versionMappings: versionMappingsNeeded,
             })
@@ -674,34 +678,98 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     versioningTask.done()
   }
 
-  const buildFileContents = {}
-  const buildInlineFileContents = {}
-  const buildManifest = {}
-  Object.keys(finalGraph.urlInfos).forEach((url) => {
-    if (!url.startsWith("file:")) {
+  GRAPH.forEach(finalGraph, (urlInfo) => {
+    if (!urlInfo.url.startsWith("file:")) {
       return
     }
-    const buildUrlInfo = finalGraph.getUrlInfo(url)
-    const versionedUrl = buildUrlInfo.data.versionedUrl
-    const useVersionedUrl = versionedUrl && !buildUrlInfo.data.isEntryPoint
-    const buildUrl = useVersionedUrl ? versionedUrl : buildUrlInfo.url
+    const version = urlInfo.data.version
+    const useVersionedUrl =
+      !urlInfo.data.isEntryPoint &&
+      urlInfo.subtype !== "service_worker" &&
+      urlInfo.type !== "webmanifest" &&
+      version
+    const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url
     if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
       throw new Error(`build url outside build directory`)
     }
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
-    if (buildUrlInfo.isInline) {
-      buildInlineFileContents[buildRelativeUrl] = buildUrlInfo.content
+    urlInfo.data.buildUrl = buildUrl
+    urlInfo.data.buildUrlIsVersioned = useVersionedUrl
+    urlInfo.data.buildRelativeUrl = buildRelativeUrl
+  })
+
+  const hasServiceWorker = Boolean(
+    GRAPH.find(
+      finalGraph,
+      (finalUrlInfo) => finalUrlInfo.subtype === "service_worker",
+    ),
+  )
+  if (hasServiceWorker) {
+    const serviceWorkerUrls = {}
+    GRAPH.forEach(finalGraph, (urlInfo) => {
+      if (!urlInfo.url.startsWith("file:")) {
+        return
+      }
+      if (urlInfo.isInline) {
+        return
+      }
+      if (urlInfo.data.buildUrlIsVersioned) {
+        serviceWorkerUrls[urlInfo.data.buildRelativeUrl] = {
+          versioned: true,
+        }
+        return
+      }
+      if (!urlInfo.data.version) {
+        // when url is not versioned we compute a "version" for that url anyway
+        // so that service worker source still changes and navigator
+        // detect there is a change
+        const versionGenerator = createVersionGenerator()
+        versionGenerator.augmentWithContent({
+          content: urlInfo.content,
+          contentType: urlInfo.contentType,
+          lineBreakNormalization,
+        })
+        const version = versionGenerator.generate()
+        urlInfo.data.version = version
+      }
+      serviceWorkerUrls[urlInfo.data.buildRelativeUrl] = {
+        versioned: false,
+        version: urlInfo.data.version,
+      }
+    })
+    await Promise.all(
+      GRAPH.map(finalGraph, async (urlInfo) => {
+        if (urlInfo.subtype !== "service_worker") {
+          return
+        }
+        await injectServiceWorkerUrls({
+          urlInfo,
+          kitchen: finalGraphKitchen,
+          serviceWorkerUrls,
+        })
+      }),
+    )
+  }
+
+  const buildManifest = {}
+  const buildFileContents = {}
+  const buildInlineFileContents = {}
+  GRAPH.forEach(finalGraph, (urlInfo) => {
+    const { buildUrlIsVersioned, buildRelativeUrl } = urlInfo.data
+    if (urlInfo.isInline) {
+      buildInlineFileContents[buildRelativeUrl] = urlInfo.content
     } else {
-      buildFileContents[buildRelativeUrl] = buildUrlInfo.content
+      buildFileContents[buildRelativeUrl] = urlInfo.content
     }
-    if (useVersionedUrl) {
+    if (buildUrlIsVersioned) {
       const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
-        buildUrlInfo.url,
+        urlInfo.url,
         buildDirectoryUrl,
       )
       buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
     }
   })
+
   logger.debug(
     `graph urls post-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
@@ -737,6 +805,27 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     buildInlineFileContents,
     buildManifest,
   }
+}
+
+const GRAPH = {
+  map: (graph, callback) => {
+    return Object.keys(graph.urlInfos).map((url) => {
+      return callback(graph.urlInfos[url])
+    })
+  },
+
+  forEach: (graph, callback) => {
+    Object.keys(graph.urlInfos).forEach((url) => {
+      callback(graph.urlInfos[url], url)
+    })
+  },
+
+  find: (graph, callback) => {
+    const urlFound = Object.keys(graph.urlInfos).find((url) => {
+      return callback(graph.urlInfos[url])
+    })
+    return graph.urlInfos[urlFound]
+  },
 }
 
 const injectVersionIntoBuildUrl = ({ buildUrl, version, versioning }) => {

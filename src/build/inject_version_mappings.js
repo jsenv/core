@@ -8,10 +8,11 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-export const injectVersionMappings = async (
+export const injectVersionMappings = async ({
   urlInfo,
-  { kitchen, versionMappings },
-) => {
+  kitchen,
+  versionMappings,
+}) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = injector(urlInfo, { versionMappings })

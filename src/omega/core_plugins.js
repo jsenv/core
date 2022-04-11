@@ -10,6 +10,7 @@ import { jsenvPluginHtmlSupervisor } from "./core_plugins/html_supervisor/jsenv_
 import { jsenvPluginCommonJsGlobals } from "./core_plugins/commonjs_globals/jsenv_plugin_commonjs_globals.js"
 import { jsenvPluginImportAssertions } from "./core_plugins/import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginImportMetaScenarios } from "./core_plugins/import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
+import { jsenvPluginInjectGlobals } from "./core_plugins/inject_globals/jsenv_plugin_inject_globals.js"
 import { jsenvPluginBabel } from "./core_plugins/babel/jsenv_plugin_babel.js"
 
 export const getCorePlugins = ({
@@ -17,6 +18,7 @@ export const getCorePlugins = ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   babel,
+  injectedGlobals,
 } = {}) => {
   const asFewAsPossible = false // useful during dev
   return [
@@ -27,6 +29,7 @@ export const getCorePlugins = ({
     jsenvPluginFileUrls(),
     jsenvPluginLeadingSlash(),
     jsenvPluginNodeEsmResolution(nodeEsmResolution), // before url resolution to handle "js_import_export" resolution
+    jsenvPluginInjectGlobals(injectedGlobals),
     jsenvPluginUrlResolution(),
     ...(asFewAsPossible
       ? []
