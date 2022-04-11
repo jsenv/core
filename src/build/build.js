@@ -86,7 +86,7 @@ export const build = async ({
   const entryPointKeys = Object.keys(entryPoints)
   if (entryPointKeys.length === 1) {
     logger.info(`
-build ${entryPointKeys[0]}`)
+build "${entryPointKeys[0]}"`)
   } else {
     logger.info(`
 build ${entryPointKeys.length} entry points`)
@@ -121,22 +121,23 @@ build ${entryPointKeys.length} entry points`)
     scenario: "build",
     sourcemaps,
   })
-  const loadEntryFiles = (cookEntryFile) => {
-    Object.keys(entryPoints).forEach((key) => {
-      cookEntryFile({
-        trace: `"${key}" in entryPoints parameter`,
-        type: "entry_point",
-        specifier: key,
-      })
-    })
-  }
+  const entryUrls = []
   try {
     await loadUrlGraph({
       urlGraph: rawGraph,
       kitchen: rawGraphKitchen,
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
       runtimeSupport,
-      startLoading: loadEntryFiles,
+      startLoading: (cookEntryFile) => {
+        Object.keys(entryPoints).forEach((key) => {
+          const [, entryUrlInfo] = cookEntryFile({
+            trace: `"${key}" in entryPoints parameter`,
+            type: "entry_point",
+            specifier: key,
+          })
+          entryUrls.push(entryUrlInfo.url)
+        })
+      },
     })
   } catch (e) {
     prebuildTask.fail()
@@ -449,13 +450,23 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     sourcemaps,
   })
   const buildTask = createTaskLog(logger, "build")
+  const postBuildEntryUrls = []
   try {
     await loadUrlGraph({
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
       runtimeSupport,
-      startLoading: loadEntryFiles,
+      startLoading: (cookEntryFile) => {
+        entryUrls.forEach((entryUrl) => {
+          const [, postBuildEntryUrlInfo] = cookEntryFile({
+            trace: `entryPoint`,
+            type: "entry_point",
+            specifier: entryUrl,
+          })
+          postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
+        })
+      },
     })
   } catch (e) {
     buildTask.fail()
@@ -542,12 +553,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           {
             name: "jsenv:versioning",
             appliesDuring: { build: true },
-            resolve: ({ parentUrl, specifier }) => {
-              const buildUrl = buildUrls[specifier]
+            resolve: (reference) => {
+              const buildUrl = buildUrls[reference.specifier]
               if (buildUrl) {
                 return buildUrl
               }
-              const url = new URL(specifier, parentUrl).href
+              const url = new URL(reference.specifier, reference.parentUrl).href
               return url
             },
             formatReferencedUrl: (reference) => {
@@ -618,7 +629,15 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         urlGraph: finalGraph,
         kitchen: versioningKitchen,
         runtimeSupport,
-        startLoading: loadEntryFiles,
+        startLoading: (cookEntryFile) => {
+          postBuildEntryUrls.forEach((postBuildEntryUrl) => {
+            cookEntryFile({
+              trace: `entryPoint`,
+              type: "entry_point",
+              specifier: postBuildEntryUrl,
+            })
+          })
+        },
       })
       if (usedVersionMappings.length) {
         const versionMappingsNeeded = {}
@@ -691,7 +710,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         )
       }),
     )
-    if (versioning !== "none" && assetManifest) {
+    if (
+      versioning !== "none" &&
+      assetManifest &&
+      Object.keys(buildManifest).length
+    ) {
       await writeFile(
         new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
         JSON.stringify(buildManifest, null, "  "),

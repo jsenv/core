@@ -52,6 +52,7 @@ export const loadUrlGraph = async ({
         reference: entryReference,
         urlInfo: entryUrlInfo,
       })
+      return [entryReference, entryUrlInfo]
     },
   )
 
