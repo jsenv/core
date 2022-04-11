@@ -8,10 +8,10 @@ import {
 } from "@jsenv/filesystem"
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
+import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
 import { RUNTIME_SUPPORT } from "./runtime_support/runtime_support.js"
-import { fileUrlConverter } from "./file_url_converter.js"
 import { parseUrlMentions } from "./url_mentions/parse_url_mentions.js"
 import {
   createResolveError,
@@ -444,6 +444,7 @@ export const createKitchen = ({
           type: urlMention.type,
           subtype: urlMention.subtype,
           specifier: urlMention.specifier,
+          data: urlMention.data,
         })
         urlMention.reference = reference
       }
@@ -649,8 +650,16 @@ const determineFileUrlForOutDirectory = ({
   if (!urlIsInsideOf(url, rootDirectoryUrl)) {
     url = `${rootDirectoryUrl}@fs/${url.slice(fileSystemRootUrl.length)}`
   }
+  const { searchParams } = new URL(url)
+  if (
+    searchParams.has("json_module") ||
+    searchParams.has("css_module") ||
+    searchParams.has("text_module")
+  ) {
+    url = setUrlExtension(url, ".js")
+  }
   return moveUrl({
-    url: fileUrlConverter.asUrlWithoutSpecialParams(url),
+    url,
     from: rootDirectoryUrl,
     to: outDirectoryUrl,
     preferAbsolute: true,
