@@ -10,10 +10,7 @@ export const getBaseBabelPluginStructure = ({
   isJsModule,
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
-    return !isSupportedOnRuntime(
-      babelPluginName,
-      babelPluginCompatMap[babelPluginName],
-    )
+    return !isSupportedOnRuntime(babelPluginCompatMap[babelPluginName])
   }
 
   const babelPluginStructure = {}

@@ -1,5 +1,6 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 
+import { RUNTIME_SUPPORT } from "@jsenv/core/src/omega/runtime_support/runtime_support.js"
 import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./helpers/babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
@@ -12,16 +13,29 @@ export const jsenvPluginBabel = ({
 } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module"
-    const isWorker =
-      urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker"
-    const { isSupportedOnRuntime, referenceUtils } = context
+    const isWorker = urlInfo.subtype === "worker"
+    const isServiceWorker = urlInfo.subtype === "service_worker"
+    const isWorkerContext = isWorker || isServiceWorker
+    let { runtimeSupport } = context
+    if (isServiceWorker) {
+      // when code is executed by a service worker we can assume
+      // the execution context supports more than the default one
+      // for instance arrow function are supported
+      runtimeSupport = RUNTIME_SUPPORT.add(runtimeSupport, "service_worker")
+    }
+    if (isWorker) {
+      runtimeSupport = RUNTIME_SUPPORT.add(runtimeSupport, "worker")
+    }
+    const { referenceUtils } = context
+    const isSupportedOnRuntime = (feature) =>
+      RUNTIME_SUPPORT.isSupported(runtimeSupport, feature)
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupportedOnRuntime,
       topLevelAwait,
       usesTopLevelAwait: urlInfo.data.usesTopLevelAwait,
       isJsModule,
-      isWorker,
+      isWorkerContext,
     })
     if (getCustomBabelPlugins) {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context))

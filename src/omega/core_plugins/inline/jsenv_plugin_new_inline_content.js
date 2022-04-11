@@ -52,10 +52,7 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
             columnEnd: inlineContentCall.columnEnd,
           })
           let { quote } = inlineContentCall
-          if (
-            quote === "`" &&
-            !isSupportedOnRuntime("transform-template-literals")
-          ) {
+          if (quote === "`" && !isSupportedOnRuntime("template_literals")) {
             // if quote is "`" and template literals are not supported
             // we'll use a regular string (single or double quote)
             // when rendering the string

@@ -8,6 +8,4 @@ await build({
     "./src/main.html": "main.html",
   },
   minify: false,
-  // bundling: false,
-  // versioning: "none",
 })

@@ -1,4 +1,4 @@
-export const featuresCompatMap = {
+export const featureCompats = {
   script_type_module: {
     edge: "16",
     firefox: "60",
@@ -52,6 +52,7 @@ export const featuresCompatMap = {
     chrome: "93",
     edge: "93",
   },
+  import_type_text: {},
   // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
   new_stylesheet: {
     chrome: "73",
@@ -59,6 +60,33 @@ export const featuresCompatMap = {
     opera: "53",
     android: "73",
   },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios: "5",
+    android: "4.4",
+  },
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios: "11.3",
+    android: "12.12",
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
   worker_type_module: {
     chrome: "80",
     edge: "80",
@@ -87,5 +115,16 @@ export const featuresCompatMap = {
     ios: "12",
     samsung: "8",
     electron: "3",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios: "9",
+    android: "4",
+    node: "4",
   },
 }

@@ -10,8 +10,7 @@ import {
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
-import { featuresCompatMap } from "./runtime_support/features_compatibility.js"
-import { isFeatureSupportedOnRuntimes } from "./runtime_support/runtime_support.js"
+import { RUNTIME_SUPPORT } from "./runtime_support/runtime_support.js"
 import { fileUrlConverter } from "./file_url_converter.js"
 import { parseUrlMentions } from "./url_mentions/parse_url_mentions.js"
 import {
@@ -185,14 +184,6 @@ export const createKitchen = ({
     },
   })
 
-  const isSupported = ({
-    runtimeSupport,
-    featureName,
-    featureCompat = featuresCompatMap[featureName],
-  }) => {
-    return isFeatureSupportedOnRuntimes(runtimeSupport, featureCompat)
-  }
-
   const load = async ({ reference, urlInfo, context }) => {
     try {
       const loadReturnValue = urlInfo.isInline
@@ -274,8 +265,8 @@ export const createKitchen = ({
       reference,
       outDirectoryUrl,
       runtimeSupport,
-      isSupportedOnRuntime: (featureName, featureCompat) => {
-        return isSupported({ runtimeSupport, featureName, featureCompat })
+      isSupportedOnRuntime: (feature) => {
+        return RUNTIME_SUPPORT.isSupported(runtimeSupport, feature)
       },
       cook: (params) => {
         return cookDuringCook({
@@ -585,7 +576,6 @@ export const createKitchen = ({
     urlInfoTransformer,
     rootDirectoryUrl,
     jsenvDirectoryUrl,
-    isSupported,
     createReference,
     resolveReference,
     cook,
