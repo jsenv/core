@@ -297,6 +297,22 @@ export const createKitchen = ({
       return [reference, resolveReference(reference)]
     }
     const referenceUtils = {
+      found: ({ line, column, type, subtype, specifier, data }) => {
+        return addReference({
+          trace: stringifyUrlSite(
+            adjustUrlSite(urlInfo, {
+              urlGraph,
+              url: urlInfo.url,
+              line,
+              column,
+            }),
+          ),
+          type,
+          subtype,
+          specifier,
+          data,
+        })
+      },
       inject: ({ trace, ...rest }) => {
         if (trace === undefined) {
           const { prepareStackTrace } = Error
@@ -432,15 +448,7 @@ export const createKitchen = ({
       Object.assign(urlInfo.data, parseResult.data)
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
-        const [reference] = addReference({
-          trace: stringifyUrlSite(
-            adjustUrlSite(urlInfo, {
-              urlGraph,
-              url: urlInfo.url,
-              line: urlMention.line,
-              column: urlMention.column,
-            }),
-          ),
+        const [reference] = referenceUtils.found({
           type: urlMention.type,
           subtype: urlMention.subtype,
           specifier: urlMention.specifier,

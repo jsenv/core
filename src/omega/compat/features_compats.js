@@ -71,6 +71,14 @@ export const featureCompats = {
     ios: "5",
     android: "4.4",
   },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
   service_worker: {
     edge: "17",
     firefox: "44",
@@ -86,14 +94,6 @@ export const featureCompats = {
     opera: "67",
     android: "80",
   },
-  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
-  worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67",
-    android: "80",
-  },
-  worker_importmap: {},
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
   global_this: {
     edge: "79",

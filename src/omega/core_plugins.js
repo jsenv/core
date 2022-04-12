@@ -11,6 +11,7 @@ import { jsenvPluginCommonJsGlobals } from "./core_plugins/commonjs_globals/jsen
 import { jsenvPluginImportAssertions } from "./core_plugins/import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginImportMetaScenarios } from "./core_plugins/import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginInjectGlobals } from "./core_plugins/inject_globals/jsenv_plugin_inject_globals.js"
+import { jsenvPluginWorkers } from "./core_plugins/workers/jsenv_plugin_workers.js"
 import { jsenvPluginBabel } from "./core_plugins/babel/jsenv_plugin_babel.js"
 
 export const getCorePlugins = ({
@@ -37,6 +38,7 @@ export const getCorePlugins = ({
     jsenvPluginUrlVersion(),
     ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
     ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
+    jsenvPluginWorkers(),
     jsenvPluginBabel(babel),
   ]
 }
