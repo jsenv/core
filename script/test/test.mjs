@@ -1,9 +1,9 @@
 import { executeTestPlan, nodeProcess } from "@jsenv/core"
-import { rootDirectoryUrl, runtimeSupport } from "@jsenv/core/jsenv.config.mjs"
+import { rootDirectoryUrl, runtimeCompat } from "@jsenv/core/jsenv.config.mjs"
 
 await executeTestPlan({
   rootDirectoryUrl,
-  runtimeSupport,
+  runtimeCompat,
   logLevel: "info",
   testPlan: {
     "test/**/*.test.mjs": {

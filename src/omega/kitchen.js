@@ -11,7 +11,7 @@ import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
-import { RUNTIME_SUPPORT } from "./runtime_support/runtime_support.js"
+import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
 import { parseUrlMentions } from "./url_mentions/parse_url_mentions.js"
 import {
   createResolveError,
@@ -257,21 +257,21 @@ export const createKitchen = ({
     reference,
     urlInfo,
     outDirectoryUrl,
-    runtimeSupport,
+    runtimeCompat,
     cookDuringCook = cook,
   }) => {
     const context = {
       ...baseContext,
       reference,
       outDirectoryUrl,
-      runtimeSupport,
+      runtimeCompat,
       isSupportedOnRuntime: (feature) => {
-        return RUNTIME_SUPPORT.isSupported(runtimeSupport, feature)
+        return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
       },
       cook: (params) => {
         return cookDuringCook({
           outDirectoryUrl,
-          runtimeSupport,
+          runtimeCompat,
           ...params,
         })
       },

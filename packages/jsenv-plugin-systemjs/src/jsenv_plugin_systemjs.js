@@ -19,10 +19,10 @@ export const jsenvPluginSystemJs = () => {
       },
       js_module: async (
         { url, generatedUrl, content },
-        { isSupportedOnRuntime, runtimeSupport },
+        { isSupportedOnRuntime, runtimeCompat },
       ) => {
         const shouldBeCompatibleWithNode =
-          Object.keys(runtimeSupport).includes("node")
+          Object.keys(runtimeCompat).includes("node")
         const requiredFeatureNames = [
           "import_dynamic",
           "top_level_await",

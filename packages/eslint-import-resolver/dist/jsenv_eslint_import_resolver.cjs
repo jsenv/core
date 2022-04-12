@@ -2195,6 +2195,7 @@ const resolve = (
     logLevel,
     rootDirectoryUrl,
     packageConditions = ["browser", "import"],
+    ambiguousExtensions = [".js", ".html", ".jsx", ".ts", ".tsx"],
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
@@ -2270,7 +2271,7 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`);
       }
     }
     const moduleSystem = determineModuleSystem(importer, {
-      ambiguousExtensions: [".js", ".html"],
+      ambiguousExtensions,
     });
     if (moduleSystem === "commonjs") {
       return onUrl(node_module.createRequire(importer).resolve(specifier))

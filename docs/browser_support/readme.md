@@ -32,7 +32,7 @@ Jsenv relies on web features [listed in the main documentation](../../readme.md#
 
 During build jsenv applies all babel plugins and other transformations by default. It is also recommended to use systemjs as explained in [SystemJS format](../building/readme.md#SystemJS-format).
 
-If you have a well known list of browsers that you want to support you can tell that to jsenv using "runtimeSupport". "runtimeSupport" will be used to know what needs to be done to make code compatible with these runtimes. For instance it is used to enable or disable some babel plugins.
+If you have a well known list of browsers that you want to support you can tell that to jsenv using "runtimeCompat". "runtimeCompat" will be used to know what needs to be done to make code compatible with these runtimes. For instance it is used to enable or disable some babel plugins.
 
 ```diff
 import { buildProject } from "@jsenv/core"
@@ -44,7 +44,7 @@ await buildProject({
     "./file.js": "file.js",
   },
   format: "systemjs",
-+  runtimeSupport: {
++  runtimeCompat: {
 +    chrome: "55",
 +    edge: "15",
 +    firefox: "52",
@@ -76,7 +76,7 @@ System.register([], function () {
 ```
 
 <details>
-    <summary>See dist/file.js when "runtimeSupport" is undefined</summary>
+    <summary>See dist/file.js when "runtimeCompat" is undefined</summary>
 
 ```js
 function _await(value, then, direct) {

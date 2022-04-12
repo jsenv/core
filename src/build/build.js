@@ -29,7 +29,7 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
-import { defaultRuntimeSupport } from "../omega/runtime_support/default_runtime_support.js"
+import { defaultRuntimeCompat } from "../omega/compat/default_runtime_compat.js"
 import { jsenvPluginInline } from "../omega/core_plugins/inline/jsenv_plugin_inline.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../omega/core_plugins.js"
@@ -61,7 +61,7 @@ export const build = async ({
   fileSystemMagicResolution,
   babel,
   injectedGlobals,
-  runtimeSupport = defaultRuntimeSupport,
+  runtimeCompat = defaultRuntimeCompat,
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
@@ -130,7 +130,7 @@ build ${entryPointKeys.length} entry points`)
       urlGraph: rawGraph,
       kitchen: rawGraphKitchen,
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
-      runtimeSupport,
+      runtimeCompat,
       startLoading: (cookEntryFile) => {
         Object.keys(entryPoints).forEach((key) => {
           const [, entryUrlInfo] = cookEntryFile({
@@ -244,7 +244,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               rootDirectoryUrl,
               buildDirectoryUrl,
               urlGraph: rawGraph,
-              runtimeSupport,
+              runtimeCompat,
               sourcemaps,
             },
           )
@@ -468,7 +468,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
-      runtimeSupport,
+      runtimeCompat,
       startLoading: (cookEntryFile) => {
         entryUrls.forEach((entryUrl) => {
           const [, postBuildEntryUrlInfo] = cookEntryFile({
@@ -642,7 +642,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       await loadUrlGraph({
         urlGraph: finalGraph,
         kitchen: versioningKitchen,
-        runtimeSupport,
+        runtimeCompat,
         startLoading: (cookEntryFile) => {
           postBuildEntryUrls.forEach((postBuildEntryUrl) => {
             cookEntryFile({

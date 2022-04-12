@@ -8,7 +8,7 @@ await build({
     "./main.html": "main.html",
   },
   minify: false,
-  runtimeSupport: {
+  runtimeCompat: {
     chrome: "55",
     edge: "14",
     firefox: "52",

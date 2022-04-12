@@ -1,5 +1,5 @@
 // correspond to dynamic import
-export const defaultRuntimeSupport = {
+export const defaultRuntimeCompat = {
   // android: "8",
   chrome: "63",
   edge: "79",

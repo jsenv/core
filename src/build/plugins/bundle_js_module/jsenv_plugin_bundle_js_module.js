@@ -19,7 +19,7 @@ export const jsenvPluginBundleJsModule = () => {
           rootDirectoryUrl,
           buildDirectoryUrl,
           urlGraph,
-          runtimeSupport,
+          runtimeCompat,
           sourcemaps,
         },
       ) => {
@@ -31,7 +31,7 @@ export const jsenvPluginBundleJsModule = () => {
           urlGraph,
           jsModuleUrlInfos,
 
-          runtimeSupport,
+          runtimeCompat,
           sourcemaps,
         })
         return jsModuleBundleUrlInfos
@@ -48,7 +48,7 @@ export const buildWithRollup = async ({
   urlGraph,
   jsModuleUrlInfos,
 
-  runtimeSupport,
+  runtimeCompat,
   sourcemaps,
 }) => {
   const resultRef = { current: null }
@@ -62,7 +62,7 @@ export const buildWithRollup = async ({
         urlGraph,
         jsModuleUrlInfos,
 
-        runtimeSupport,
+        runtimeCompat,
         sourcemaps,
         resultRef,
       }),

@@ -7,7 +7,7 @@ await build({
     "./file.js": "file.js",
   },
   format: "systemjs",
-  runtimeSupport: {
+  runtimeCompat: {
     chrome: "55",
     edge: "15",
     firefox: "52",

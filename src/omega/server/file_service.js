@@ -42,7 +42,7 @@ export const createFileService = ({
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
     )
-    const runtimeSupport = {
+    const runtimeCompat = {
       [runtimeName]: runtimeVersion,
     }
     const reference = kitchen.createReference({
@@ -60,7 +60,7 @@ export const createFileService = ({
         reference: referenceFromGraph || reference,
         urlInfo: requestedUrlInfo,
         outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
-        runtimeSupport,
+        runtimeCompat,
       })
       const { response, contentType, content } = requestedUrlInfo
       if (response) {
