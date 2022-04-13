@@ -314,8 +314,9 @@ export const createKitchen = ({
       return [reference, resolveReference(reference)]
     }
     const referenceUtils = {
-      found: ({ line, column, type, subtype, specifier, data }) => {
+      found: ({ line, column, type, subtype, specifier, data, baseUrl }) => {
         return addReference({
+          baseUrl,
           trace: stringifyUrlSite(
             adjustUrlSite(urlInfo, {
               urlGraph,
@@ -472,6 +473,11 @@ export const createKitchen = ({
           subtype: urlMention.subtype,
           specifier: urlMention.specifier,
           data: urlMention.data,
+          baseUrl: {
+            "StringLiteral": urlMention.baseUrl,
+            "window.origin": rootDirectoryUrl,
+            "import.meta.url": urlInfo.url,
+          }[urlMention.baseUrlType],
         })
         urlMention.reference = reference
       }

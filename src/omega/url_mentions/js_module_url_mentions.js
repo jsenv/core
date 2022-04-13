@@ -51,31 +51,22 @@ const babelPluginMetadataUrlMentions = () => {
     visitor: {
       Program(programPath, state) {
         const urlMentions = []
-        const onSpecifier = ({ type, subtype, specifierPath, path }) => {
-          const specifierNode = specifierPath.node
-          if (specifierNode.type === "StringLiteral") {
-            urlMentions.push({
-              type,
-              subtype,
-              path,
-              specifier: specifierNode.value,
-              ...getNodePosition(specifierNode),
-            })
-          }
+        const onSpecifier = ({ type, subtype, specifierNode, path }) => {
+          urlMentions.push({
+            type,
+            subtype,
+            path,
+            specifier: specifierNode.value,
+            ...getNodePosition(specifierNode),
+          })
         }
         programPath.traverse({
           NewExpression: (path) => {
-            const newUrlCall = parseAsNewUrlCall(path)
-            if (newUrlCall) {
-              // we must check if it's part of new Worker arguments
-              // in order to put expectedType on js_new_url
-              // and consider this url as as worker
-              onSpecifier({
-                type: "js_url_specifier",
-                subtype: "new_url_first_arg",
-                specifierPath: path.get("arguments")[0],
-                path,
-              })
+            const node = path.node
+            if (isNewUrlCall(node)) {
+              visitNewUrlArguments(node, onSpecifier)
+            } else if (isNewWorkerCall(node)) {
+              visitNewWorkerArguments(node, onSpecifier)
             }
           },
           CallExpression: (path) => {
@@ -83,7 +74,8 @@ const babelPluginMetadataUrlMentions = () => {
               // Some other function call, not import();
               return
             }
-            if (path.node.arguments[0].type !== "StringLiteral") {
+            const specifierNode = path.node.arguments[0]
+            if (specifierNode.type !== "StringLiteral") {
               // Non-string argument, probably a variable or expression, e.g.
               // import(moduleId)
               // import('./' + moduleName)
@@ -92,20 +84,22 @@ const babelPluginMetadataUrlMentions = () => {
             onSpecifier({
               type: "js_import_export",
               subtype: "import_dynamic",
-              specifierPath: path.get("arguments")[0],
+              specifierNode,
               path,
             })
           },
           ExportAllDeclaration: (path) => {
+            const specifierNode = path.node.source
             onSpecifier({
               type: "js_import_export",
               subtype: "export_all",
-              specifierPath: path.get("source"),
+              specifierNode,
               path,
             })
           },
           ExportNamedDeclaration: (path) => {
-            if (!path.node.source) {
+            const specifierNode = path.node.source
+            if (!specifierNode) {
               // This export has no "source", so it's probably
               // a local variable or function, e.g.
               // export { varName }
@@ -116,15 +110,16 @@ const babelPluginMetadataUrlMentions = () => {
             onSpecifier({
               type: "js_import_export",
               subtype: "export_named",
-              specifierPath: path.get("source"),
+              specifierNode,
               path,
             })
           },
           ImportDeclaration: (path) => {
+            const specifierNode = path.node.source
             onSpecifier({
               type: "js_import_export",
               subtype: "import_static",
-              specifierPath: path.get("source"),
+              specifierNode,
               path,
             })
           },
@@ -134,13 +129,81 @@ const babelPluginMetadataUrlMentions = () => {
     },
   }
 }
-const parseAsNewUrlCall = (path) => {
+const isNewUrlCall = (node) => {
+  return node.callee.type === "Identifier" && node.callee.name === "URL"
+}
+const visitNewUrlArguments = (node, onSpecifier) => {
+  if (node.arguments.length === 1) {
+    const firstArgNode = node.arguments[0]
+    const urlType = analyzeUrlNodeType(firstArgNode)
+    if (urlType === "StringLiteral") {
+      onSpecifier({
+        type: "js_url_specifier",
+        subtype: "new_url_first_arg",
+        specifierNode: firstArgNode,
+      })
+    }
+  }
+  if (node.arguments.length === 2) {
+    const firstArgNode = node.arguments[0]
+    const secondArgNode = node.arguments[1]
+    const baseUrlType = analyzeUrlNodeType(secondArgNode)
+    if (baseUrlType) {
+      // we can understand the second argument
+      const urlType = analyzeUrlNodeType(firstArgNode)
+      if (urlType === "StringLiteral") {
+        // we can understand the first argument
+        onSpecifier({
+          type: "js_url_specifier",
+          subtype: "new_url_first_arg",
+          specifierNode: firstArgNode,
+          baseUrlType,
+          baseUrl:
+            baseUrlType === "StringLiteral" ? secondArgNode.value : undefined,
+        })
+      }
+      if (baseUrlType === "StringLiteral") {
+        onSpecifier({
+          type: "js_url_specifier",
+          subtype: "new_url_second_arg",
+          specifierNode: secondArgNode,
+        })
+      }
+    }
+  }
+}
+const analyzeUrlNodeType = (secondArgNode) => {
+  if (secondArgNode.type === "StringLiteral") {
+    return "StringLiteral"
+  }
+  if (
+    secondArgNode.type === "MemberExpression" &&
+    secondArgNode.object.type === "MetaProperty" &&
+    secondArgNode.property.type === "Identifier" &&
+    secondArgNode.property.name === "url"
+  ) {
+    return "import.meta.url"
+  }
+  if (
+    secondArgNode.type === "MemberExpression" &&
+    secondArgNode.object.type === "Identifier" &&
+    secondArgNode.object.name === "window" &&
+    secondArgNode.property.type === "Identifier" &&
+    secondArgNode.property.name === "origin"
+  ) {
+    return "window.origin"
+  }
+  return null
+}
+
+const isNewWorkerCall = () => false
+const visitNewWorkerArguments = (path) => {
   const node = path.node
   const { callee } = node
   if (callee.type !== "Identifier") {
     return null
   }
-  if (callee.name !== "URL") {
+  if (callee.name !== "Worker") {
     return null
   }
   const [firstArgument, secondArgument] = node.arguments

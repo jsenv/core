@@ -5,7 +5,7 @@ import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const { buildManifest } = await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./main.html": "main.html",
@@ -25,7 +25,9 @@ const { serverOrigin, returnValue } = await executeInChromium({
 })
 const actual = returnValue
 const expected = {
+  absoluteBaseUrl: `http://jsenv.dev/assets/file-64ec88ca.txt`,
   absoluteUrl: `http://example.com/file.txt`,
   textFileUrl: `${serverOrigin}/assets/file-64ec88ca.txt`,
+  windowOriginRelativeUrl: `${serverOrigin}/assets/file-64ec88ca.txt`,
 }
 assert({ actual, expected })
