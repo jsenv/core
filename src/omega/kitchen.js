@@ -12,12 +12,11 @@ import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
+import { jsenvPluginUrlReferences } from "./core_plugins/url_references/jsenv_plugin_url_references.js"
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
-import { parseUrlMentions } from "./url_mentions/parse_url_mentions.js"
 import {
   createResolveError,
   createLoadError,
-  createParseError,
   createTransformError,
 } from "./errors.js"
 import { createPluginController } from "./plugin_controller.js"
@@ -48,7 +47,7 @@ export const createKitchen = ({
   writeOnFileSystem = true,
 }) => {
   const pluginController = createPluginController({
-    plugins,
+    plugins: [jsenvPluginUrlReferences(), ...plugins],
     scenario,
   })
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
@@ -314,6 +313,22 @@ export const createKitchen = ({
       return [reference, resolveReference(reference)]
     }
     const referenceUtils = {
+      readGeneratedSpecifier: async (reference) => {
+        // "formatReferencedUrl" can be async BUT this is an exception
+        // for most cases it will be sync. We want to favor the sync signature to keep things simpler
+        // The only case where it needs to be async is when
+        // the specifier is a `data:*` url
+        // in this case we'll wait for the promise returned by
+        // "formatReferencedUrl"
+        if (reference.generatedSpecifier.then) {
+          return reference.generatedSpecifier.then((value) => {
+            reference.generatedSpecifier = value
+            return value
+          })
+        }
+        return reference.generatedSpecifier
+      },
+
       found: ({ line, column, type, subtype, specifier, data, baseUrl }) => {
         return addReference({
           baseUrl,
@@ -445,71 +460,6 @@ export const createKitchen = ({
         inlineUrlInfo.content = content
         return reference
       },
-    }
-
-    let parseResult
-    try {
-      parseResult = await parseUrlMentions({
-        type: urlInfo.type,
-        url: urlInfo.data.sourceUrl || urlInfo.url,
-        generatedUrl: urlInfo.generatedUrl,
-        content: urlInfo.content,
-      })
-    } catch (error) {
-      throw createParseError({
-        reference,
-        urlInfo,
-        error,
-      })
-    }
-    if (parseResult) {
-      Object.assign(urlInfo.data, parseResult.data)
-      const { urlMentions, replaceUrls } = parseResult
-      for (const urlMention of urlMentions) {
-        const [reference, referencedUrlInfo] = referenceUtils.found({
-          line: urlMention.line,
-          column: urlMention.column,
-          type: urlMention.type,
-          subtype: urlMention.subtype,
-          specifier: urlMention.specifier,
-          data: urlMention.data,
-          baseUrl: {
-            "StringLiteral": urlMention.baseUrl,
-            "window.origin": rootDirectoryUrl,
-            "import.meta.url": urlInfo.url,
-          }[urlMention.baseUrlType],
-        })
-        urlMention.reference = reference
-        if (urlMention.expectedType) {
-          referencedUrlInfo.type = urlMention.expectedType
-        }
-        if (urlMention.expectedSubtype) {
-          referencedUrlInfo.subtype = urlMention.expectedSubtype
-        }
-      }
-      if (references.length) {
-        // "formatReferencedUrl" can be async BUT this is an exception
-        // for most cases it will be sync. We want to favor the sync signature to keep things simpler
-        // The only case where it needs to be async is when
-        // the specifier is a `data:*` url
-        // in this case we'll wait for the promise returned by
-        // "formatReferencedUrl"
-        await Promise.all(
-          references.map(async (reference) => {
-            if (reference.generatedSpecifier.then) {
-              const value = await reference.generatedSpecifier
-              reference.generatedSpecifier = value
-            }
-          }),
-        )
-        const replaceReturnValue = await replaceUrls((urlMention) => {
-          return urlMention.reference.generatedSpecifier
-        })
-        await urlInfoTransformer.applyIntermediateTransformations(
-          urlInfo,
-          replaceReturnValue,
-        )
-      }
     }
 
     // "transform" hook

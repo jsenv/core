@@ -696,7 +696,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       version
     const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url
     if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
-      throw new Error(`build url outside build directory`)
+      throw new Error(`found url outside build directory: "${buildUrl}"`)
     }
     const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
     urlInfo.data.buildUrl = buildUrl

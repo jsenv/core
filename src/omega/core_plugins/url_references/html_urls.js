@@ -7,31 +7,47 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
 
-export const parseHtmlUrlMentions = ({ url, content, scenario }) => {
+export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
+  const url = urlInfo.data.sourceUrl || urlInfo.url
+  const content = urlInfo.content
+  const { scenario, referenceUtils } = context
   const htmlAst = parseHtmlString(content, {
     storeOriginalPositions: scenario !== "build",
   })
-  const htmlUrlMentions = collectHtmlUrlMentions({ url, htmlAst })
-  return {
-    urlMentions: htmlUrlMentions,
-    replaceUrls: (getReplacement) => {
-      htmlUrlMentions.forEach((urlMention) => {
-        const replacement = getReplacement(urlMention)
-        if (replacement) {
-          urlMention.attribute.value = replacement
-        }
+  const actions = []
+  visitHtmlUrls({
+    url,
+    htmlAst,
+    onUrl: ({
+      type,
+      line,
+      column,
+      originalLine,
+      originalColumn,
+      specifier,
+      attribute,
+    }) => {
+      const [reference] = referenceUtils.found({
+        type,
+        line,
+        column,
+        originalLine,
+        originalColumn,
+        specifier,
       })
-      return {
-        content: stringifyHtmlAst(htmlAst),
-      }
+      actions.push(async () => {
+        attribute.value = await referenceUtils.readGeneratedSpecifier(reference)
+      })
     },
+  })
+  await Promise.all(actions.map((action) => action()))
+  return {
+    content: stringifyHtmlAst(htmlAst),
   }
 }
 
-const collectHtmlUrlMentions = ({ url, htmlAst }) => {
-  const htmlUrlMentions = []
+const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
   const addDependency = ({ type, node, attribute, specifier }) => {
-    const injected = Boolean(getHtmlNodeAttributeByName(node, "injected-by"))
     const srcGeneratedFromInlineContent = Boolean(
       getHtmlNodeAttributeByName(node, "src-generated-from-inline-content"),
     )
@@ -43,18 +59,20 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     } else {
       position = htmlNodePosition.readAttributePosition(node, attribute.name)
     }
-    const { line, column, originalLine, originalColumn } = position
-    htmlUrlMentions.push({
-      type,
-      htmlNode: node,
-      attribute,
-      injected,
-      srcGeneratedFromInlineContent,
-      specifier,
+    const {
       line,
       column,
-      originalLine,
-      originalColumn,
+      // originalLine, originalColumn
+    } = position
+    onUrl({
+      type,
+      line,
+      column,
+      // originalLine, originalColumn
+      specifier,
+      attribute,
+      // injected:Boolean(getHtmlNodeAttributeByName(node, "injected-by"))
+      // srcGeneratedFromInlineContent
     })
   }
   const onNode = (node) => {
@@ -181,5 +199,4 @@ const collectHtmlUrlMentions = ({ url, htmlAst }) => {
     }
   }
   visitHtmlAst(htmlAst, onNode)
-  return htmlUrlMentions
 }

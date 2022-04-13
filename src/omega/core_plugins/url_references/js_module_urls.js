@@ -2,42 +2,53 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { getTypePropertyNode } from "@jsenv/core/packages/utils/js_ast/js_ast.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-export const parseJsModuleUrlMentions = async ({
-  url,
-  generatedUrl,
-  content,
-}) => {
+export const parseAndTransformJsModuleUrls = async (urlInfo, context) => {
+  const { rootDirectoryUrl, referenceUtils } = context
+
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [
       babelPluginMetadataUrlMentions,
       babelPluginMetadataUsesTopLevelAwait,
     ],
-    url,
-    generatedUrl,
-    content,
+    url: urlInfo.data.sourceUrl || urlInfo.url,
+    generatedUrl: urlInfo.generatedUrl,
+    content: urlInfo.content,
   })
   const { urlMentions, usesTopLevelAwait } = metadata
-  return {
-    urlMentions,
-    replaceUrls: async (getReplacement) => {
-      const magicSource = createMagicSource(content)
-      urlMentions.forEach((urlMention) => {
-        const replacement = getReplacement(urlMention)
-        if (replacement) {
-          const { start, end } = urlMention
-          magicSource.replace({
-            start,
-            end,
-            replacement,
-          })
-        }
+  urlInfo.data.usesTopLevelAwait = usesTopLevelAwait
+
+  const actions = []
+  const magicSource = createMagicSource(urlInfo.content)
+  urlMentions.forEach((urlMention) => {
+    const [reference, referencedUrlInfo] = referenceUtils.found({
+      type: urlMention.type,
+      subtype: urlMention.subtype,
+      line: urlMention.line,
+      column: urlMention.column,
+      specifier: urlMention.specifier,
+      data: urlMention.data,
+      baseUrl: {
+        "StringLiteral": urlMention.baseUrl,
+        "window.origin": rootDirectoryUrl,
+        "import.meta.url": urlInfo.url,
+      }[urlMention.baseUrlType],
+    })
+    if (urlMention.expectedType) {
+      referencedUrlInfo.type = urlMention.expectedType
+    }
+    if (urlMention.expectedSubtype) {
+      referencedUrlInfo.subtype = urlMention.expectedSubtype
+    }
+    actions.push(async () => {
+      magicSource.replace({
+        start: urlMention.start,
+        end: urlMention.end,
+        replacement: await referenceUtils.readGeneratedSpecifier(reference),
       })
-      return magicSource.toContentAndSourcemap()
-    },
-    data: {
-      usesTopLevelAwait,
-    },
-  }
+    })
+  })
+  await Promise.all(actions.map((action) => action()))
+  return magicSource.toContentAndSourcemap()
 }
 
 /*

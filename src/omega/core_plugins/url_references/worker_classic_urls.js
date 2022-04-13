@@ -1,5 +1,10 @@
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
+export const parseAndTransformWorkerClassicUrls = () => {
+  // use babel_plugin_inline_worker_imports.js
+  return {}
+}
+
 export const jsenvPluginImportScriptsBundler = () => {
   return {
     name: "jsenv:import_scripts_bundler",
@@ -29,9 +34,4 @@ export const jsenvPluginImportScriptsBundler = () => {
       },
     },
   }
-}
-
-export const parseWorkerClassicUrlMentions = () => {
-  // use babel_plugin_inline_worker_imports.js
-  return {}
 }
