@@ -4,6 +4,7 @@ import { jsenvPluginUrlResolution } from "./core_plugins/url_resolution/jsenv_pl
 import { jsenvPluginNodeEsmResolution } from "./core_plugins/node_esm_resolution/jsenv_plugin_node_esm_resolution.js"
 import { jsenvPluginUrlVersion } from "./core_plugins/url_version/jsenv_plugin_url_version.js"
 import { jsenvPluginFileUrls } from "./core_plugins/file_urls/jsenv_plugin_file_urls.js"
+import { jsenvPluginHttpUrls } from "./core_plugins/http_urls/jsenv_plugin_http_urls.js"
 import { jsenvPluginFileSystemMagic } from "./core_plugins/filesystem_magic/jsenv_plugin_filesystem_magic.js"
 import { jsenvPluginInline } from "./core_plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginHtmlSupervisor } from "./core_plugins/html_supervisor/jsenv_plugin_html_supervisor.js"
@@ -28,6 +29,7 @@ export const getCorePlugins = ({
     ...(asFewAsPossible ? [] : [jsenvPluginInline()]), // before "file urls" to resolve and load inline urls
     jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
     jsenvPluginFileUrls(),
+    jsenvPluginHttpUrls(),
     jsenvPluginLeadingSlash(),
     jsenvPluginNodeEsmResolution(nodeEsmResolution), // before url resolution to handle "js_import_export" resolution
     jsenvPluginInjectGlobals(injectedGlobals),
