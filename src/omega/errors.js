@@ -57,12 +57,6 @@ export const createLoadError = ({
     return loadError
   }
 
-  if (error.message === "NO_LOAD") {
-    return createFailedToLoadError({
-      code: "NOT_FOUND",
-      reason: `no plugin has handled the url during "load" hook`,
-    })
-  }
   if (error.code === "EPERM") {
     return createFailedToLoadError({
       code: "NOT_ALLOWED",

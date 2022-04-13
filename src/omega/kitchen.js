@@ -6,6 +6,7 @@ import {
   moveUrl,
   fileSystemRootUrl,
 } from "@jsenv/filesystem"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
@@ -190,9 +191,22 @@ export const createKitchen = ({
         ? loadInlineUrlInfos(urlInfo)
         : await pluginController.callAsyncHooksUntil("load", urlInfo, context)
       if (!loadReturnValue) {
-        throw new Error("NO_LOAD")
+        logger.warn(
+          createDetailedMessage(
+            `no plugin has handled the url during "load" hook -> consider url as external (ignore it)`,
+            {
+              "url": urlInfo.url,
+              "url reference trace": reference.trace,
+            },
+          ),
+        )
+        urlInfo.external = true
+        return
       }
-
+      if (loadReturnValue.external) {
+        urlInfo.external = true
+        return
+      }
       const {
         contentType = "application/octet-stream",
         content, // can be a buffer (used for binary files) or a string
@@ -285,6 +299,9 @@ export const createKitchen = ({
 
     // "load" hook
     await load({ reference, urlInfo, context })
+    if (urlInfo.external) {
+      return
+    }
 
     // parsing
     const references = []
@@ -449,6 +466,8 @@ export const createKitchen = ({
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
         const [reference] = referenceUtils.found({
+          line: urlMention.line,
+          column: urlMention.column,
           type: urlMention.type,
           subtype: urlMention.subtype,
           specifier: urlMention.specifier,
@@ -706,7 +725,7 @@ const specifierFormat = {
 }
 const formatters = {
   js_import_export: { encode: JSON.stringify, decode: JSON.parse },
-  js_import_meta_url_pattern: { encode: JSON.stringify, decode: JSON.parse },
+  js_url_specifier: { encode: JSON.stringify, decode: JSON.parse },
   // https://github.com/webpack-contrib/css-loader/pull/627/files
   css_url: {
     encode: (url) => {

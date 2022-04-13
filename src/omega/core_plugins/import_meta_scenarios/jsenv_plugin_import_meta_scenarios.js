@@ -12,8 +12,6 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-import { collectProgramImportMetas } from "@jsenv/utils/js_ast/program_import_metas.js"
-
 export const jsenvPluginImportMetaScenarios = () => {
   return {
     name: "jsenv:import_meta_scenario",
@@ -78,7 +76,28 @@ const babelPluginMetadataImportMetaScenarios = () => {
     name: "metadata-import-meta-scenarios",
     visitor: {
       Program(programPath, state) {
-        const importMetas = collectProgramImportMetas(programPath)
+        const importMetas = {}
+        programPath.traverse({
+          MemberExpression(path) {
+            const { node } = path
+            const { object } = node
+            if (object.type !== "MetaProperty") {
+              return
+            }
+            const { property: objectProperty } = object
+            if (objectProperty.name !== "meta") {
+              return
+            }
+            const { property } = node
+            const { name } = property
+            const importMetaPaths = importMetas[name]
+            if (importMetaPaths) {
+              importMetaPaths.push(path)
+            } else {
+              importMetas[name] = [path]
+            }
+          },
+        })
         state.file.metadata.importMetaScenarios = {
           dev: importMetas.dev,
           test: importMetas.test,

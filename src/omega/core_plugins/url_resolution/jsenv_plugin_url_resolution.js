@@ -21,9 +21,7 @@ export const jsenvPluginUrlResolution = () => {
       "css_url": urlResolver,
       "sourcemap_comment": urlResolver,
       "js_import_export": urlResolver,
-      "js_new_url_first_arg": urlResolver,
-      "js_new_worker_first_arg": urlResolver,
-      "js_service_worker_register_first_arg": urlResolver,
+      "js_url_specifier": urlResolver,
       "js_inline_content": urlResolver,
     },
   }

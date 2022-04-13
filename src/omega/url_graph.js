@@ -119,6 +119,7 @@ const createUrlInfo = (url) => {
     generatedUrl: null,
     isInline: false,
     inlineUrlSite: null,
+    external: false,
     contentType: "",
     originalContent: "",
     content: "",

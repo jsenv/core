@@ -214,7 +214,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       // For instance we will bundle service worker/workers detected like this
       if (rawUrlInfo.type === "js_module") {
         rawUrlInfo.references.forEach((reference) => {
-          if (reference.type === "js_import_meta_url_pattern") {
+          if (reference.type === "js_url_specifier") {
             const urlInfo = rawGraph.getUrlInfo(reference.url)
             addToBundlerIfAny(urlInfo)
           }
@@ -413,6 +413,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           return specifier
         },
         load: (finalUrlInfo) => {
+          if (!finalUrlInfo.url.startsWith("file:")) {
+            return { external: true }
+          }
           const rawUrl = finalUrlInfo.data.rawUrl
           const bundleUrlInfo = bundleUrlInfos[rawUrl]
           const urlInfo = bundleUrlInfo || rawGraph.getUrlInfo(rawUrl)
@@ -614,7 +617,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                   )})+${parentUrlInfo.jsQuote}`
               }
               if (
-                reference.type === "js_import_meta_url_pattern" ||
+                reference.type === "js_url_specifier" ||
                 reference.subtype === "import_dynamic"
               ) {
                 usedVersionMappings.push(reference.specifier)
@@ -623,6 +626,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               return versionedSpecifier
             },
             load: (finalUrlInfo) => {
+              if (!finalUrlInfo.url.startsWith("file:")) {
+                return { external: true }
+              }
               return {
                 originalContent: finalUrlInfo.originalContent,
                 contentType: finalUrlInfo.contentType,
@@ -739,14 +745,13 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     })
     await Promise.all(
       GRAPH.map(finalGraph, async (urlInfo) => {
-        if (urlInfo.subtype !== "service_worker") {
-          return
+        if (urlInfo.subtype === "service_worker") {
+          await injectServiceWorkerUrls({
+            urlInfo,
+            kitchen: finalGraphKitchen,
+            serviceWorkerUrls,
+          })
         }
-        await injectServiceWorkerUrls({
-          urlInfo,
-          kitchen: finalGraphKitchen,
-          serviceWorkerUrls,
-        })
       }),
     )
   }
@@ -755,6 +760,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   const buildFileContents = {}
   const buildInlineFileContents = {}
   GRAPH.forEach(finalGraph, (urlInfo) => {
+    if (urlInfo.external) {
+      return
+    }
     const { buildUrlIsVersioned, buildRelativeUrl } = urlInfo.data
     if (urlInfo.isInline) {
       buildInlineFileContents[buildRelativeUrl] = urlInfo.content

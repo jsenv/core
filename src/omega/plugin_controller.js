@@ -224,7 +224,10 @@ const returnValueAssertions = [
         return { content: valueReturned }
       }
       if (typeof valueReturned === "object") {
-        const { content } = valueReturned
+        const { external, content } = valueReturned
+        if (external) {
+          return undefined
+        }
         if (typeof content !== "string" && !Buffer.isBuffer(content)) {
           throw new Error(
             `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
