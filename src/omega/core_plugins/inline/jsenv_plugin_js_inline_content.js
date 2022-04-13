@@ -1,24 +1,11 @@
-/*
- * Needs to be updated so that it sill works in the following cases:
- * - templates literals transformed to regular stuff by babel
- * - tagged name renamed by rollup
- * - the template named is minified by terser
- * In the cases above I must remain capable to recoginize the template literal
- * to be able to update the urls inside (and even version the urls)
- * because url versioning happens after minification it can be challenging
- *
- * TODO: use "keep_classnames" https://github.com/terser/terser#compress-options
- * so that new InlineContent can be recognized after minification
- */
-
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
-export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
+export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   return {
-    name: "jsenv:new_inline_content",
+    name: "jsenv:js_inline_content",
     appliesDuring: "*",
     transform: {
       js_module: async (
@@ -60,6 +47,7 @@ export const jsenvPluginNewInlineContent = ({ allowEscapeForVersioning }) => {
           }
           const [inlineReference, inlineUrlInfo] = referenceUtils.foundInline({
             type: "js_inline_content",
+            subtype: inlineContentCall.type, // "new_blob", or "new_inline_content"
             isOriginal: content === originalContent,
             line: inlineContentCall.line,
             column: inlineContentCall.column,
@@ -97,9 +85,10 @@ const babelPluginMetadataInlineContentCalls = () => {
         const inlineContentCalls = []
         programPath.traverse({
           NewExpression: (path) => {
-            const newInlineContentCall = parseAsNewInlineContentCall(path)
-            if (newInlineContentCall) {
-              inlineContentCalls.push(newInlineContentCall)
+            const inlineContentCall = parseAsInlineContentCall(path)
+            if (inlineContentCall) {
+              inlineContentCalls.push(inlineContentCall)
+              return
             }
           },
         })
@@ -109,24 +98,12 @@ const babelPluginMetadataInlineContentCalls = () => {
   }
 }
 
-const parseAsNewInlineContentCall = (path) => {
-  const node = path.node
-  if (node.callee.type === "Identifier") {
-    // terser rename import to use a shorter name
-    const name = getOriginalName(path, node.callee.name)
-    if (name !== "InlineContent") {
-      return null
-    }
-  } else if (node.callee.id) {
-    // terser might combine new InlineContent('') declaration and usage
-    if (node.callee.id.type !== "Identifier") {
-      return null
-    }
-    const name = getOriginalName(path, node.callee.id.name)
-    if (name !== "InlineContent") {
-      return null
-    }
+const parseAsInlineContentCall = (path) => {
+  const identifier = parseNewIdentifier(path)
+  if (!identifier) {
+    return null
   }
+  const node = path.node
   if (node.arguments.length !== 2) {
     return null
   }
@@ -145,30 +122,82 @@ const parseAsNewInlineContentCall = (path) => {
   if (!typePropertyNode) {
     return null
   }
-  const type = typePropertyNode.value.value
-  if (firstArg.type === "StringLiteral") {
-    const position = getNodePosition(firstArg)
+  const type = identifier.type
+  const contentType = typePropertyNode.value.value
+  let nodeHoldingInlineContent
+  if (type === "js_new_inline_content") {
+    nodeHoldingInlineContent = firstArg
+  } else if (type === "js_new_blob") {
+    if (firstArg.type !== "ArrayExpression") {
+      return null
+    }
+    if (firstArg.elements.length !== 1) {
+      return null
+    }
+    nodeHoldingInlineContent = firstArg.elements[0]
+  }
+  const inlineContentInfo = extractInlineContentInfo(nodeHoldingInlineContent)
+  if (!inlineContentInfo) {
+    return null
+  }
+  return {
+    type,
+    contentType,
+    ...inlineContentInfo,
+    ...getNodePosition(nodeHoldingInlineContent),
+  }
+}
+
+const extractInlineContentInfo = (node) => {
+  if (node.type === "StringLiteral") {
     return {
       nodeType: "StringLiteral",
-      quote: firstArg.extra.raw[0],
-      contentType: type,
-      content: firstArg.value,
-      ...position,
+      quote: node.extra.raw[0],
+      content: node.value,
     }
   }
-  if (firstArg.type === "TemplateLiteral") {
-    const quasis = firstArg.quasis
+  if (node.type === "TemplateLiteral") {
+    const quasis = node.quasis
     if (quasis.length !== 1) {
       return null
     }
     const templateElementNode = quasis[0]
-    const position = getNodePosition(firstArg)
     return {
       nodeType: "TemplateLiteral",
       quote: "`",
-      contentType: type,
       content: templateElementNode.value.cooked,
-      ...position,
+    }
+  }
+  return null
+}
+
+const parseNewIdentifier = (path) => {
+  const node = path.node
+  if (node.callee.type === "Identifier") {
+    // terser rename import to use a shorter name
+    const name = getOriginalName(path, node.callee.name)
+    if (name === "InlineContent") {
+      return {
+        type: "js_new_inline_content",
+      }
+    }
+    if (name === "Blob") {
+      return {
+        type: "js_new_blob",
+      }
+    }
+    return null
+  }
+  if (node.callee.id) {
+    // terser might combine new InlineContent('') declaration and usage
+    if (node.callee.id.type !== "Identifier") {
+      return null
+    }
+    const name = getOriginalName(path, node.callee.id.name)
+    if (name === "InlineContent") {
+      return {
+        type: "js_new_inline_content",
+      }
     }
   }
   return null

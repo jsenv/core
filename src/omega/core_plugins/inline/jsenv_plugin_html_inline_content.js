@@ -11,9 +11,9 @@ import {
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
-export const jsenvPluginJsAndCssInsideHtml = () => {
+export const jsenvPluginHtmlInlineContent = () => {
   return {
-    name: "jsenv:js_and_css_inside_html",
+    name: "jsenv:html_inline_content",
     appliesDuring: "*",
     transform: {
       html: async ({ url, content }, { cook, referenceUtils }) => {
