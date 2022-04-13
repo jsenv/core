@@ -6,19 +6,29 @@ import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const { buildManifest } = await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./main.html": "main.html",
   },
 })
-const { returnValue } = await executeInChromium({
+const { returnValue, serverOrigin } = await executeInChromium({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
   htmlFileRelativeUrl: "./main.html",
   /* eslint-disable no-undef */
   pageFunction: async (jsRelativeUrl) => {
     const namespace = await import(jsRelativeUrl)
-    return namespace
+
+    // let 500ms for the background image to load
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500)
+    })
+    const bodyBackgroundImage = getComputedStyle(document.body).backgroundImage
+
+    return {
+      ...namespace,
+      bodyBackgroundImage,
+    }
   },
   /* eslint-enable no-undef */
   pageArguments: [`./${buildManifest["js/main.js"]}`],
@@ -50,5 +60,6 @@ body {
   singleQuoteEscaped: `'`,
   whenInlined: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
   whenRenamed: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
+  bodyBackgroundImage: `url("${serverOrigin}/assets/jsenv-25e95a00.png")`,
 }
 assert({ actual, expected })

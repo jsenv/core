@@ -1,3 +1,5 @@
+// TODO: test with new Blob call
+
 // rename import to mimic what tersed does
 import { InlineContent as InlineContentRenamed } from "@jsenv/core/inline_content.js"
 
@@ -71,3 +73,12 @@ export const whenRenamed = new A(
   `body { background-image: url(./jsenv.png); }`,
   { type: "text/css" },
 ).text
+
+const blob = new Blob([`body { background-image: url(./jsenv.png); }`], {
+  type: "text/css",
+})
+const blobUrl = URL.createObjectURL(blob)
+const link = document.createElement("link")
+link.rel = "stylesheet"
+link.href = blobUrl
+document.head.appendChild(link)
