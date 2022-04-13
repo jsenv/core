@@ -466,7 +466,7 @@ export const createKitchen = ({
       Object.assign(urlInfo.data, parseResult.data)
       const { urlMentions, replaceUrls } = parseResult
       for (const urlMention of urlMentions) {
-        const [reference] = referenceUtils.found({
+        const [reference, referencedUrlInfo] = referenceUtils.found({
           line: urlMention.line,
           column: urlMention.column,
           type: urlMention.type,
@@ -480,6 +480,12 @@ export const createKitchen = ({
           }[urlMention.baseUrlType],
         })
         urlMention.reference = reference
+        if (urlMention.expectedType) {
+          referencedUrlInfo.type = urlMention.expectedType
+        }
+        if (urlMention.expectedSubtype) {
+          referencedUrlInfo.subtype = urlMention.expectedSubtype
+        }
       }
       if (references.length) {
         // "formatReferencedUrl" can be async BUT this is an exception

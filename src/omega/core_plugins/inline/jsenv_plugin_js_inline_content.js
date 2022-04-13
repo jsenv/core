@@ -1,6 +1,7 @@
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { getTypePropertyNode } from "@jsenv/utils/js_ast/js_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
@@ -108,22 +109,12 @@ const parseAsInlineContentCall = (path) => {
     return null
   }
   const [firstArg, secondArg] = node.arguments
-  if (secondArg.type !== "ObjectExpression") {
+  const typePropertyNode = getTypePropertyNode(secondArg)
+  if (!typePropertyNode || typePropertyNode.value.type !== "StringLiteral") {
     return null
   }
-  const typePropertyNode = secondArg.properties.find((property) => {
-    return (
-      property.key.type === "Identifier" &&
-      property.key.name === "type" &&
-      property.type === "ObjectProperty" &&
-      property.value.type === "StringLiteral"
-    )
-  })
-  if (!typePropertyNode) {
-    return null
-  }
-  const type = identifier.type
   const contentType = typePropertyNode.value.value
+  const type = identifier.type
   let nodeHoldingInlineContent
   if (type === "js_new_inline_content") {
     nodeHoldingInlineContent = firstArg

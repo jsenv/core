@@ -1,4 +1,5 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { getTypePropertyNode } from "@jsenv/core/packages/utils/js_ast/js_ast.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const parseJsModuleUrlMentions = async ({
@@ -51,12 +52,19 @@ const babelPluginMetadataUrlMentions = () => {
     visitor: {
       Program(programPath, state) {
         const urlMentions = []
-        const onSpecifier = ({ type, subtype, specifierNode, path }) => {
+        const onSpecifier = ({
+          type,
+          subtype,
+          specifierNode,
+          expectedType,
+          expectedSubtype,
+        }) => {
           urlMentions.push({
             type,
             subtype,
-            path,
             specifier: specifierNode.value,
+            expectedType,
+            expectedSubtype,
             ...getNodePosition(specifierNode),
           })
         }
@@ -64,6 +72,15 @@ const babelPluginMetadataUrlMentions = () => {
           NewExpression: (path) => {
             const node = path.node
             if (isNewUrlCall(node)) {
+              const parentPath = path.parentPath
+              const parentNode = parentPath.node
+              if (
+                parentNode.type === "NewExpression" &&
+                isNewWorkerCall(parentNode)
+              ) {
+                // already found while parsing worker arguments
+                return
+              }
               visitNewUrlArguments(node, onSpecifier)
             } else if (isNewWorkerCall(node)) {
               visitNewWorkerArguments(node, onSpecifier)
@@ -196,36 +213,43 @@ const analyzeUrlNodeType = (secondArgNode) => {
   return null
 }
 
-const isNewWorkerCall = () => false
-const visitNewWorkerArguments = (path) => {
-  const node = path.node
-  const { callee } = node
-  if (callee.type !== "Identifier") {
-    return null
-  }
-  if (callee.name !== "Worker") {
-    return null
-  }
-  const [firstArgument, secondArgument] = node.arguments
-  if (firstArgument.type !== "StringLiteral") {
-    return null
-  }
-  if (node.arguments.length === 1) {
-    return {
-      baseUrl: "document",
+const isNewWorkerCall = (node) => {
+  return node.callee.type === "Identifier" && node.callee.name === "Worker"
+}
+const visitNewWorkerArguments = (node, onSpecifier) => {
+  let expectedType
+  const secondArgNode = node.arguments[1]
+  if (secondArgNode) {
+    const typePropertyNode = getTypePropertyNode(secondArgNode)
+    if (typePropertyNode && typePropertyNode.value.type === "StringLiteral") {
+      const typeArgValue = typePropertyNode.value.value
+      expectedType =
+        typeArgValue === "classic"
+          ? "js_classic"
+          : typeArgValue === "module"
+          ? "js_module"
+          : undefined
     }
   }
-  if (secondArgument.object.type !== "MetaProperty") {
-    return null
+
+  const firstArgNode = node.arguments[0]
+  if (firstArgNode.type === "StringLiteral") {
+    onSpecifier({
+      type: "js_url_specifier",
+      subtype: "new_worker_first_arg",
+      specifierNode: firstArgNode,
+      expectedType,
+      expectedSubtype: "worker",
+    })
   }
-  if (secondArgument.property.type !== "Identifier") {
-    return null
-  }
-  if (secondArgument.property.name !== "url") {
-    return null
-  }
-  return {
-    baseUrl: "parent",
+  if (firstArgNode.type === "NewExpression" && isNewUrlCall(firstArgNode)) {
+    visitNewUrlArguments(firstArgNode, (params) => {
+      onSpecifier({
+        ...params,
+        expectedType,
+        expectedSubtype: "worker",
+      })
+    })
   }
 }
 const getNodePosition = (node) => {
