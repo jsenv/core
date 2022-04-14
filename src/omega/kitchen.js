@@ -71,7 +71,9 @@ export const createKitchen = ({
     parentUrl,
     type,
     subtype,
+    expectedType,
     specifier,
+    baseUrl,
     isInline = false,
     content,
     contentType,
@@ -82,7 +84,9 @@ export const createKitchen = ({
       parentUrl,
       type,
       subtype,
+      expectedType,
       specifier,
+      baseUrl,
       isInline,
       // for inline ressources the reference contains the content
       content,
@@ -336,9 +340,17 @@ export const createKitchen = ({
         return reference.generatedSpecifier
       },
 
-      found: ({ line, column, type, subtype, specifier, data, baseUrl }) => {
+      found: ({
+        type,
+        subtype,
+        expectedType,
+        line,
+        column,
+        specifier,
+        baseUrl,
+        data,
+      }) => {
         return addReference({
-          baseUrl,
           trace: stringifyUrlSite(
             adjustUrlSite(urlInfo, {
               urlGraph,
@@ -349,7 +361,9 @@ export const createKitchen = ({
           ),
           type,
           subtype,
+          expectedType,
           specifier,
+          baseUrl,
           data,
         })
       },

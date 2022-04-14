@@ -2,7 +2,7 @@ import { getTypePropertyNode } from "@jsenv/utils/js_ast/js_ast.js"
 
 export const analyzeNewWorkerCall = (path) => {
   const node = path.node
-  if (!isNewWorkeCall(node)) {
+  if (!isNewWorkerCall(node)) {
     return null
   }
   const referenceInfos = []
@@ -33,7 +33,9 @@ export const analyzeNewWorkerCall = (path) => {
     })
     return referenceInfos
   }
-  const newUrlReferenceInfos = analyzeNewUrlCall(path.get("arguments")[0])
+  const newUrlReferenceInfos = analyzeNewUrlCall(path.get("arguments")[0], {
+    allowInsideWorker: true,
+  })
   if (!newUrlReferenceInfos) {
     return null
   }
@@ -46,7 +48,7 @@ export const analyzeNewWorkerCall = (path) => {
   })
   return newUrlReferenceInfos
 }
-const isNewWorkeCall = (node) => {
+const isNewWorkerCall = (node) => {
   return (
     node.type === "NewExpression" &&
     node.callee.type === "Identifier" &&
@@ -54,16 +56,18 @@ const isNewWorkeCall = (node) => {
   )
 }
 
-export const analyzeNewUrlCall = (path) => {
+export const analyzeNewUrlCall = (path, { allowInsideWorker = false } = {}) => {
   const node = path.node
   if (!isNewUrlCall(node)) {
     return null
   }
-  const parentPath = path.parentPath
-  const parentNode = parentPath.node
-  if (isNewWorkeCall(parentNode)) {
-    // already found while parsing worker arguments
-    return null
+  if (!allowInsideWorker) {
+    const parentPath = path.parentPath
+    const parentNode = parentPath.node
+    if (isNewWorkerCall(parentNode)) {
+      // already found while parsing worker arguments
+      return null
+    }
   }
 
   const referenceInfos = []

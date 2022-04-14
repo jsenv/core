@@ -51,6 +51,7 @@ export const parseAndTransformJsModuleUrls = async (urlInfo, context) => {
     const [reference, referencedUrlInfo] = referenceUtils.found({
       type: urlMention.type,
       subtype: urlMention.subtype,
+      expectedType: urlMention.expectedType,
       line: urlMention.line,
       column: urlMention.column,
       specifier: urlMention.specifier,
@@ -111,14 +112,14 @@ const babelPluginMetadataUrlMentions = () => {
         }
         programPath.traverse({
           NewExpression: (path) => {
-            const newUrlReferenceInfos = analyzeNewUrlCall(path)
-            if (newUrlReferenceInfos) {
-              newUrlReferenceInfos.forEach(onSpecifier)
-              return
-            }
             const newWorkerReferenceInfos = analyzeNewWorkerCall(path)
             if (newWorkerReferenceInfos) {
               newWorkerReferenceInfos.forEach(onSpecifier)
+              return
+            }
+            const newUrlReferenceInfos = analyzeNewUrlCall(path)
+            if (newUrlReferenceInfos) {
+              newUrlReferenceInfos.forEach(onSpecifier)
               return
             }
           },
