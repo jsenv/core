@@ -3,24 +3,18 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 
 const require = createRequire(import.meta.url)
 
-export const jsenvPluginSystemJs = () => {
+export const jsenvPluginAsJsClassic = () => {
   return {
-    name: "jsenv:systemjs",
-    appliesDuring: {
-      dev: true,
-      test: true,
-    },
-    transform: {
+    name: "jsenv:as_js_classic",
+    appliesDuring: "*",
+    finalize: {
       html: async () => {
         // TODO
         // inject systemjs as early as possible (if needed)
         // replace type="module" with regular tag using System.import
         return null
       },
-      js_module: async (
-        { url, generatedUrl, content },
-        { isSupportedOnRuntime, runtimeCompat },
-      ) => {
+      js_module: async (urlInfo, context) => {
         const shouldBeCompatibleWithNode =
           Object.keys(runtimeCompat).includes("node")
         const requiredFeatureNames = [
