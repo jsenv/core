@@ -1,6 +1,15 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "private": true,
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-plugin-as-js-classic"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "dependencies": {
     "@babel/plugin-transform-modules-systemjs": "7.17.8",

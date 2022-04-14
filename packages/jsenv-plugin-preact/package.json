@@ -5,7 +5,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
-    "directory": "packages/plugin-preact"
+    "directory": "packages/jsenv-plugin-preact"
   },
   "publishConfig": {
     "access": "public"
