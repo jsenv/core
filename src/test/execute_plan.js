@@ -137,8 +137,11 @@ export const executePlan = async (
           ...plugins,
           ...getCorePlugins({
             babel: {
-              getCustomBabelPlugins: ({ runtimeCompat }) => {
-                if (coverage && Object.keys(runtimeCompat)[0] !== "chrome") {
+              getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
+                if (
+                  coverage &&
+                  Object.keys(clientRuntimeCompat)[0] !== "chrome"
+                ) {
                   return {
                     "transform-instrument": [
                       babelPluginInstrument,

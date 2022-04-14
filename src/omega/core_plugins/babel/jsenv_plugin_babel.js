@@ -16,22 +16,26 @@ export const jsenvPluginBabel = ({
     const isWorker = urlInfo.subtype === "worker"
     const isServiceWorker = urlInfo.subtype === "service_worker"
     const isWorkerContext = isWorker || isServiceWorker
-    let { runtimeCompat } = context
+
+    let { clientRuntimeCompat } = context
     if (isServiceWorker) {
       // when code is executed by a service worker we can assume
       // the execution context supports more than the default one
       // for instance arrow function are supported
-      runtimeCompat = RUNTIME_COMPAT.add(runtimeCompat, "service_worker")
+      clientRuntimeCompat = RUNTIME_COMPAT.add(
+        clientRuntimeCompat,
+        "service_worker",
+      )
     }
     if (isWorker) {
-      runtimeCompat = RUNTIME_COMPAT.add(runtimeCompat, "worker")
+      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker")
     }
     const { referenceUtils } = context
-    const isSupportedOnRuntime = (feature) =>
-      RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
+    const isSupported = (feature) =>
+      RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
-      isSupportedOnRuntime,
+      isSupported,
       topLevelAwait,
       usesTopLevelAwait: urlInfo.data.usesTopLevelAwait,
       isJsModule,
@@ -49,7 +53,7 @@ export const jsenvPluginBabel = ({
         })
         return JSON.parse(reference.generatedSpecifier)
       }
-      if (!isSupportedOnRuntime("global_this")) {
+      if (!isSupported("global_this")) {
         babelPluginStructure["global-this-as-jsenv-import"] = [
           babelPluginGlobalThisAsJsenvImport,
           {
@@ -57,7 +61,7 @@ export const jsenvPluginBabel = ({
           },
         ]
       }
-      if (!isSupportedOnRuntime("async_generator_function")) {
+      if (!isSupported("async_generator_function")) {
         babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [
           babelPluginRegeneratorRuntimeAsJsenvImport,
           {
@@ -65,7 +69,7 @@ export const jsenvPluginBabel = ({
           },
         ]
       }
-      if (!isSupportedOnRuntime("new_stylesheet")) {
+      if (!isSupported("new_stylesheet")) {
         babelPluginStructure["new-stylesheet-as-jsenv-import"] = [
           babelPluginNewStylesheetAsJsenvImport,
           {

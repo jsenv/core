@@ -29,7 +29,6 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
-import { defaultRuntimeCompat } from "../omega/compat/default_runtime_compat.js"
 import { jsenvPluginInline } from "../omega/core_plugins/inline/jsenv_plugin_inline.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../omega/core_plugins.js"
@@ -61,7 +60,7 @@ export const build = async ({
   fileSystemMagicResolution,
   babel,
   injectedGlobals,
-  runtimeCompat = defaultRuntimeCompat,
+  runtimeCompat,
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
@@ -123,6 +122,7 @@ build ${entryPointKeys.length} entry points`)
     ],
     scenario: "build",
     sourcemaps,
+    runtimeCompat,
   })
   const entryUrls = []
   try {
@@ -130,7 +130,6 @@ build ${entryPointKeys.length} entry points`)
       urlGraph: rawGraph,
       kitchen: rawGraphKitchen,
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
-      runtimeCompat,
       startLoading: (cookEntryFile) => {
         Object.keys(entryPoints).forEach((key) => {
           const [, entryUrlInfo] = cookEntryFile({
@@ -463,6 +462,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     ],
     scenario: "build",
     sourcemaps,
+    runtimeCompat,
   })
   const buildTask = createTaskLog(logger, "build")
   const postBuildEntryUrls = []
@@ -471,7 +471,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
-      runtimeCompat,
       startLoading: (cookEntryFile) => {
         entryUrls.forEach((entryUrl) => {
           const [, postBuildEntryUrlInfo] = cookEntryFile({
@@ -640,6 +639,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         ],
         scenario: "build",
         sourcemaps,
+        runtimeCompat,
       })
       // arrange state before reloading all files
       GRAPH.forEach(finalGraph, (finalUrlInfo) => {
@@ -648,7 +648,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       await loadUrlGraph({
         urlGraph: finalGraph,
         kitchen: versioningKitchen,
-        runtimeCompat,
         startLoading: (cookEntryFile) => {
           postBuildEntryUrls.forEach((postBuildEntryUrl) => {
             cookEntryFile({

@@ -15,8 +15,9 @@ export const jsenvPluginAsJsClassic = () => {
         return null
       },
       js_module: async (urlInfo, context) => {
+        const { clientRuntimeCompat, isSupportedOnCurrentClient } = context
         const shouldBeCompatibleWithNode =
-          Object.keys(runtimeCompat).includes("node")
+          Object.keys(clientRuntimeCompat).includes("node")
         const requiredFeatureNames = [
           "import_dynamic",
           "top_level_await",
@@ -34,16 +35,16 @@ export const jsenvPluginAsJsClassic = () => {
         ]
         const needsSystemJs = featuresRelatedToSystemJs.some((featureName) => {
           const isRequired = requiredFeatureNames.includes(featureName)
-          return isRequired && !isSupportedOnRuntime(featureName)
+          return isRequired && !isSupportedOnCurrentClient(featureName)
         })
         if (!needsSystemJs) {
           return null
         }
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [require("@babel/plugin-transform-modules-systemjs")],
-          url,
-          generatedUrl,
-          content,
+          url: urlInfo.data.sourceUrl || urlInfo.url,
+          generatedUrl: urlInfo.generatedUrl,
+          content: urlInfo.content,
         })
         return {
           content: code,

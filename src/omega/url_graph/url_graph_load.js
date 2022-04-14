@@ -5,7 +5,7 @@ export const loadUrlGraph = async ({
   kitchen,
   startLoading,
   outDirectoryUrl,
-  runtimeCompat,
+  clientRuntimeCompat,
 }) => {
   if (outDirectoryUrl) {
     await ensureEmptyDirectory(outDirectoryUrl)
@@ -17,7 +17,7 @@ export const loadUrlGraph = async ({
     const promise = _cook({
       urlInfo,
       outDirectoryUrl,
-      runtimeCompat,
+      clientRuntimeCompat,
       ...rest,
     })
     promises.push(promise)

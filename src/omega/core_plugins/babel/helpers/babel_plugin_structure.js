@@ -3,14 +3,14 @@ import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 export const getBaseBabelPluginStructure = ({
   url,
-  isSupportedOnRuntime,
+  isSupported,
   usesTopLevelAwait,
-  //   // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
+  // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
   topLevelAwait = "simple",
   isJsModule,
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
-    return !isSupportedOnRuntime(babelPluginCompatMap[babelPluginName])
+    return !isSupported(babelPluginCompatMap[babelPluginName])
   }
 
   const babelPluginStructure = {}
@@ -37,11 +37,7 @@ export const getBaseBabelPluginStructure = ({
     babelPluginStructure["proposal-unicode-property-regex"] =
       requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex")
   }
-  if (
-    isJsModule &&
-    usesTopLevelAwait &&
-    !isSupportedOnRuntime("top_level_await")
-  ) {
+  if (isJsModule && usesTopLevelAwait && !isSupported("top_level_await")) {
     babelPluginStructure["transform-async-to-promises"] = [
       requireBabelPlugin("babel-plugin-transform-async-to-promises"),
       {

@@ -16,11 +16,11 @@ export const jsenvPluginImportAssertions = () => {
       transform: {
         js_module: async (
           { url, generatedUrl, content },
-          { scenario, isSupportedOnRuntime, referenceUtils },
+          { scenario, isSupportedOnCurrentClient, referenceUtils },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
             scenario,
-            isSupportedOnRuntime,
+            isSupportedOnCurrentClient,
           })
           if (importTypesToHandle.length === 0) {
             return null
@@ -188,7 +188,7 @@ export default stylesheet`,
   }
 }
 
-const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
+const getImportTypesToHandle = ({ scenario, isSupportedOnCurrentClient }) => {
   // during build always replace import assertions with the js:
   // - means rollup can bundle more js file together
   // - means url versioning can work for css inlined in js
@@ -198,13 +198,13 @@ const getImportTypesToHandle = ({ scenario, isSupportedOnRuntime }) => {
     return ["json", "css", "text"]
   }
   const importTypes = []
-  if (!isSupportedOnRuntime("import_type_json")) {
+  if (!isSupportedOnCurrentClient("import_type_json")) {
     importTypes.push("json")
   }
-  if (!isSupportedOnRuntime("import_type_css")) {
+  if (!isSupportedOnCurrentClient("import_type_css")) {
     importTypes.push("css")
   }
-  if (!isSupportedOnRuntime("import_type_text")) {
+  if (!isSupportedOnCurrentClient("import_type_text")) {
     importTypes.push("text")
   }
   return importTypes

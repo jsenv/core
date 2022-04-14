@@ -14,6 +14,7 @@ import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
 import { jsenvPluginUrlReferences } from "./core_plugins/url_references/jsenv_plugin_url_references.js"
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
+import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
 import {
   createResolveError,
   createLoadError,
@@ -26,9 +27,9 @@ export const createKitchen = ({
   logger,
   rootDirectoryUrl,
   urlGraph,
+
   plugins,
   scenario,
-
   sourcemaps = {
     dev: "inline", // "programmatic" and "file" also allowed
     test: "inline",
@@ -37,13 +38,14 @@ export const createKitchen = ({
   // we don't need sources in sourcemap as long as the url in the
   // sourcemap uses file:/// (chrome will understand and read from filesystem)
   sourcemapsSources = false,
+  runtimeCompat = defaultRuntimeCompat,
+
   loadInlineUrlInfos = (urlInfo) => {
     return {
       contentType: urlInfo.contentType,
       content: urlInfo.content,
     }
   },
-
   writeOnFileSystem = true,
 }) => {
   const pluginController = createPluginController({
@@ -58,6 +60,10 @@ export const createKitchen = ({
     sourcemaps,
     urlGraph,
     scenario,
+    runtimeCompat,
+    isSupportedOnFutureClients: (feature) => {
+      return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
+    },
   }
   const createReference = ({
     data = {},
@@ -270,21 +276,23 @@ export const createKitchen = ({
     reference,
     urlInfo,
     outDirectoryUrl,
-    runtimeCompat,
+    // during dev/test clientRuntimeCompat is a single runtime
+    // during build clientRuntimeCompat is runtimeCompat
+    clientRuntimeCompat = runtimeCompat,
     cookDuringCook = cook,
   }) => {
     const context = {
       ...baseContext,
       reference,
       outDirectoryUrl,
-      runtimeCompat,
-      isSupportedOnRuntime: (feature) => {
-        return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
+      clientRuntimeCompat,
+      isSupportedOnCurrentClient: (feature) => {
+        return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
       },
       cook: (params) => {
         return cookDuringCook({
           outDirectoryUrl,
-          runtimeCompat,
+          clientRuntimeCompat,
           ...params,
         })
       },
