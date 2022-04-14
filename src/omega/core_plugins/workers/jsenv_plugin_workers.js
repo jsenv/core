@@ -3,9 +3,9 @@ export const jsenvPluginWorkers = () => {
     name: "jsenv:workers",
     appliesDuring: "*",
     transform: {
-      js_module: async (urlInfo, { referenceUtils }) => {},
+      js_module: async () => {},
     },
-    normalize: (reference, { urlGraph, runtimeSupport }) => {
+    normalize: (reference, { urlGraph }) => {
       const parentUrlInfo = urlGraph.getUrlInfo(reference.parentUrl)
       if (parentUrlInfo && parentUrlInfo.subtype === "worker") {
         // si le parent est un worker

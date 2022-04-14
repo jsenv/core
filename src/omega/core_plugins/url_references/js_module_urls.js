@@ -1,6 +1,31 @@
+/*
+ * TODO:
+ * - si worker_type_module est pas supporté
+ * et quon trouve type: 'module'
+ * -> en faire un type: 'classic'
+ * -> faire un truc dingue:
+ *    - indiquer que la ressource est de type module (type: 'js_module')
+ *    - indiquer que la ressource doit etre convertie en systemjs
+ *    (a priori en injectant ?systemjs dans le specifier)
+ * ça va poser souci pendant le build ça (on pourra plus versionner les urls)
+ * donc on devrait ptet commencer par faire ça que pendant le build
+ * et le faire post versioning (sauf que alors on auras pas le minify...)
+ * donc plutot en amont puisque dans les workers on aura pas d'url?
+ * ou si on a des urls on pourra encore les versioné puisqu'elle
+ * seront dans des new URL() je dirais
+ * par contre on aura pas les import nommé
+ * donc je pense il faut viser simple:
+ * la ressource sous-jacente on en fait un IIFE avec rollup et basta
+ *
+ * - parse navigator.serviceWorker.register and make it behave like new Worker()
+ * - test code shared between worker and main with runtime not supporting type module
+ * (code must be duplicated)
+ */
+
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { getTypePropertyNode } from "@jsenv/core/packages/utils/js_ast/js_ast.js"
+import { getTypePropertyNode } from "@jsenv/utils/js_ast/js_ast.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 
 export const parseAndTransformJsModuleUrls = async (urlInfo, context) => {
   const { rootDirectoryUrl, referenceUtils } = context
@@ -20,6 +45,20 @@ export const parseAndTransformJsModuleUrls = async (urlInfo, context) => {
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
   urlMentions.forEach((urlMention) => {
+    if (
+      urlMention.type === "js_new_url" &&
+      urlMention.subtype === "new_worker_first_arg" &&
+      urlMention.expectedType === "module" &&
+      !context.isSupportedOnCurrentClient("worker_type_module")
+    ) {
+      urlMention.specifier = injectQueryParamsIntoSpecifier(
+        urlMention.specifier,
+        {
+          as_js_classic: "",
+        },
+      )
+    }
+
     const [reference, referencedUrlInfo] = referenceUtils.found({
       type: urlMention.type,
       subtype: urlMention.subtype,
@@ -69,6 +108,7 @@ const babelPluginMetadataUrlMentions = () => {
           specifierNode,
           expectedType,
           expectedSubtype,
+          typeArgNode,
         }) => {
           urlMentions.push({
             type,
@@ -76,6 +116,7 @@ const babelPluginMetadataUrlMentions = () => {
             specifier: specifierNode.value,
             expectedType,
             expectedSubtype,
+            typeArgNode,
             ...getNodePosition(specifierNode),
           })
         }
@@ -229,11 +270,12 @@ const isNewWorkerCall = (node) => {
 }
 const visitNewWorkerArguments = (node, onSpecifier) => {
   let expectedType
+  let typeArgNode
   const secondArgNode = node.arguments[1]
   if (secondArgNode) {
-    const typePropertyNode = getTypePropertyNode(secondArgNode)
-    if (typePropertyNode && typePropertyNode.value.type === "StringLiteral") {
-      const typeArgValue = typePropertyNode.value.value
+    typeArgNode = getTypePropertyNode(secondArgNode)
+    if (typeArgNode && typeArgNode.value.type === "StringLiteral") {
+      const typeArgValue = typeArgNode.value.value
       expectedType =
         typeArgValue === "classic"
           ? "js_classic"
@@ -249,6 +291,7 @@ const visitNewWorkerArguments = (node, onSpecifier) => {
       type: "js_url_specifier",
       subtype: "new_worker_first_arg",
       specifierNode: firstArgNode,
+      typeArgNode,
       expectedType,
       expectedSubtype: "worker",
     })
@@ -257,6 +300,7 @@ const visitNewWorkerArguments = (node, onSpecifier) => {
     visitNewUrlArguments(firstArgNode, (params) => {
       onSpecifier({
         ...params,
+        typeArgNode,
         expectedType,
         expectedSubtype: "worker",
       })

@@ -1,5 +1,8 @@
 import { createRequire } from "node:module"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { urlToBasename } from "@jsenv/filesystem"
+
+import { esToIIFE } from "./es_to_iife.js"
 
 const require = createRequire(import.meta.url)
 
@@ -9,59 +12,35 @@ export const jsenvPluginAsJsClassic = () => {
     appliesDuring: "*",
     finalize: {
       html: async () => {
-        // TODO
-        // inject systemjs as early as possible (if needed)
-        // replace type="module" with regular tag using System.import
+        // something to do? (like injecting systemjs when script_type_module are not supported)
+        // and html uses some script type module?
         return null
       },
-      js_module: async (urlInfo, context) => {
-        const { clientRuntimeCompat, isSupportedOnCurrentClient } = context
-        const shouldBeCompatibleWithNode =
-          Object.keys(clientRuntimeCompat).includes("node")
-        const requiredFeatureNames = [
-          "import_dynamic",
-          "top_level_await",
-          "global_this",
-          // when using node we assume the code won't use browser specific feature
-          ...(shouldBeCompatibleWithNode
-            ? []
-            : [
-                "script_type_module",
-                "worker_type_module",
-                "import_type_json",
-                "import_type_css",
-              ]),
-          // "importmap",
-        ]
-        const needsSystemJs = featuresRelatedToSystemJs.some((featureName) => {
-          const isRequired = requiredFeatureNames.includes(featureName)
-          return isRequired && !isSupportedOnCurrentClient(featureName)
-        })
-        if (!needsSystemJs) {
+      js_module: async (urlInfo) => {
+        if (!new URL(urlInfo.url).searchParams.has("as_js_classic")) {
           return null
         }
-        const { code, map } = await applyBabelPlugins({
-          babelPlugins: [require("@babel/plugin-transform-modules-systemjs")],
-          url: urlInfo.data.sourceUrl || urlInfo.url,
-          generatedUrl: urlInfo.generatedUrl,
+        const usesImportExport = urlInfo.references.some(
+          (ref) => ref.type === "js_import_export",
+        )
+        if (usesImportExport) {
+          const { code, map } = await applyBabelPlugins({
+            babelPlugins: [require("@babel/plugin-transform-modules-systemjs")],
+            url: urlInfo.data.sourceUrl || urlInfo.url,
+            generatedUrl: urlInfo.generatedUrl,
+            content: urlInfo.content,
+          })
+          return {
+            content: code,
+            sourcemap: map,
+          }
+        }
+        return esToIIFE({
+          name: urlToBasename(urlInfo.url),
+          url: urlInfo.url,
           content: urlInfo.content,
         })
-        return {
-          content: code,
-          soourcemap: map,
-        }
       },
     },
   }
 }
-
-const featuresRelatedToSystemJs = [
-  "script_type_module",
-  "worker_type_module",
-  "import_dynamic",
-  "import_type_json",
-  "import_type_css",
-  "top_level_await",
-  // "importmap",
-  // "worker_importmap",
-]
