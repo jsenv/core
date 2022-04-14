@@ -19,6 +19,7 @@ import {
   createResolveError,
   createLoadError,
   createTransformError,
+  createFinalizeError,
 } from "./errors.js"
 import { createPluginController } from "./plugin_controller.js"
 
@@ -514,15 +515,24 @@ export const createKitchen = ({
     urlGraph.updateReferences(urlInfo, references)
 
     // "finalize" hook
-    const finalizeReturnValue = await pluginController.callHooksUntil(
-      "finalize",
-      urlInfo,
-      context,
-    )
-    await urlInfoTransformer.applyFinalTransformations(
-      urlInfo,
-      finalizeReturnValue,
-    )
+    try {
+      const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
+        "finalize",
+        urlInfo,
+        context,
+      )
+      await urlInfoTransformer.applyFinalTransformations(
+        urlInfo,
+        finalizeReturnValue,
+      )
+    } catch (error) {
+      throw createFinalizeError({
+        pluginController,
+        reference,
+        urlInfo,
+        error,
+      })
+    }
 
     // "cooked" hook
     pluginController.callHooks(

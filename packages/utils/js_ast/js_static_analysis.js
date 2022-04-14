@@ -1,4 +1,4 @@
-import { getTypePropertyNode } from "@jsenv/utils/js_ast/js_ast.js"
+import { getTypePropertyNode } from "./js_ast.js"
 
 export const analyzeNewWorkerCall = (path) => {
   const node = path.node

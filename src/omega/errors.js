@@ -112,6 +112,26 @@ export const createTransformError = ({
   })
 }
 
+export const createFinalizeError = ({
+  pluginController,
+  reference,
+  urlInfo,
+  error,
+}) => {
+  const finalizeError = new Error(
+    createDetailedMessage(`Failed to finalize ${urlInfo.type}`, {
+      "reason": `An error occured during "finalize"`,
+      ...detailsFromValueThrown(error),
+      "url": urlInfo.url,
+      "url reference trace": reference.trace,
+      ...detailsFromPluginController(pluginController),
+    }),
+  )
+  finalizeError.name = "FINALIZE_ERROR"
+  finalizeError.reason = `An error occured during "finalize"`
+  return finalizeError
+}
+
 const detailsFromPluginController = (pluginController) => {
   const currentPlugin = pluginController.getCurrentPlugin()
   if (!currentPlugin) {

@@ -23,12 +23,11 @@
  */
 
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-
 import {
   analyzeNewUrlCall,
   analyzeNewWorkerCall,
-} from "./js_static_analysis.js"
+} from "@jsenv/utils/js_ast/js_static_analysis.js"
+import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const parseAndTransformJsModuleUrls = async (urlInfo, context) => {
   const { rootDirectoryUrl, referenceUtils } = context

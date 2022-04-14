@@ -18,7 +18,7 @@ export const esToIIFE = ({ name, url, ast, content }) => {
     code: content,
   })
   return {
-    sourcemap: result.map,
     content: result.code,
+    sourcemap: result.map,
   }
 }

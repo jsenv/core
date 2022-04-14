@@ -11,6 +11,12 @@
     "access": "public"
   },
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js"
+    },
+    "./*": "./*"
+  },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
     "@jsenv/utils": "1.0.1",

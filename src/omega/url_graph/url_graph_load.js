@@ -32,9 +32,15 @@ export const loadUrlGraph = async ({
     })
     const { references } = urlInfo
     references.forEach((reference) => {
+      // we use reference.generatedUrl to mimic what a browser would do:
+      // do a fetch to the specifier as it found it in the file
+      if (reference.url !== reference.generatedUrl) {
+        debugger
+      }
+      const referencedUrlInfo = urlGraph.getUrlInfo(reference.generatedUrl)
       cook({
         reference,
-        urlInfo: urlGraph.getUrlInfo(reference.url),
+        urlInfo: referencedUrlInfo,
       })
     })
   }

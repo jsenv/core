@@ -203,7 +203,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
 const returnValueAssertions = [
   {
     name: "url_assertion",
-    appliesTo: ["resolve", "redirect"],
+    appliesTo: ["resolve", "normalize"],
     assertion: (valueReturned) => {
       if (valueReturned instanceof URL) {
         return valueReturned.href
