@@ -52,6 +52,7 @@ export const parseAndTransformJsModuleUrls = async (urlInfo, context) => {
       type: urlMention.type,
       subtype: urlMention.subtype,
       expectedType: urlMention.expectedType,
+      expectedSubtype: urlMention.expectedSubtype,
       line: urlMention.line,
       column: urlMention.column,
       specifier: urlMention.specifier,

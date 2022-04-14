@@ -40,13 +40,12 @@ export const loadUrlGraph = async ({
   }
   startLoading(
     ({ trace, parentUrl = kitchen.rootDirectoryUrl, type, specifier }) => {
-      const entryReference = kitchen.createReference({
+      const [entryReference, entryUrlInfo] = kitchen.prepareEntryPoint({
         trace,
         parentUrl,
         type,
         specifier,
       })
-      const entryUrlInfo = kitchen.resolveReference(entryReference)
       entryUrlInfo.data.isEntryPoint = true
       cook({
         reference: entryReference,

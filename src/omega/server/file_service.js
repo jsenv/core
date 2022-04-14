@@ -42,12 +42,11 @@ export const createFileService = ({
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
     )
-    const reference = kitchen.createReference({
+    const [reference, urlInfo] = kitchen.prepareEntryPoint({
       parentUrl: inferParentFromRequest(request, rootDirectoryUrl),
       type: "entry_point",
       specifier: request.ressource,
     })
-    const requestedUrlInfo = kitchen.resolveReference(reference)
     const referenceFromGraph = urlGraph.inferReference(
       reference.url,
       reference.parentUrl,
@@ -55,13 +54,13 @@ export const createFileService = ({
     try {
       await kitchen.cook({
         reference: referenceFromGraph || reference,
-        urlInfo: requestedUrlInfo,
+        urlInfo,
         outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
         clientRuntimeCompat: {
           [runtimeName]: runtimeVersion,
         },
       })
-      const { response, contentType, content } = requestedUrlInfo
+      const { response, contentType, content } = urlInfo
       if (response) {
         return response
       }
@@ -85,11 +84,11 @@ export const createFileService = ({
           statusText: e.reason,
           statusMessage: e.message,
           headers: {
-            "content-type": requestedUrlInfo.contentType,
-            "content-length": Buffer.byteLength(requestedUrlInfo.content),
+            "content-type": urlInfo.contentType,
+            "content-length": Buffer.byteLength(urlInfo.content),
             "cache-control": "no-store",
           },
-          body: requestedUrlInfo.content,
+          body: urlInfo.content,
         }
       }
       if (code === "EISDIR") {

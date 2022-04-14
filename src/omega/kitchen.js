@@ -72,6 +72,7 @@ export const createKitchen = ({
     type,
     subtype,
     expectedType,
+    expectedSubtype,
     specifier,
     baseUrl,
     isInline = false,
@@ -85,6 +86,7 @@ export const createKitchen = ({
       type,
       subtype,
       expectedType,
+      expectedSubtype,
       specifier,
       baseUrl,
       isInline,
@@ -339,11 +341,11 @@ export const createKitchen = ({
         }
         return reference.generatedSpecifier
       },
-
       found: ({
         type,
         subtype,
         expectedType,
+        expectedSubtype,
         line,
         column,
         specifier,
@@ -362,6 +364,7 @@ export const createKitchen = ({
           type,
           subtype,
           expectedType,
+          expectedSubtype,
           specifier,
           baseUrl,
           data,
@@ -582,14 +585,19 @@ export const createKitchen = ({
 
   baseContext.cook = cook
 
+  const prepareEntryPoint = (params) => {
+    const entryReference = createReference(params)
+    const entryUrlInfo = resolveReference(entryReference)
+    return [entryReference, entryUrlInfo]
+  }
+
   return {
     pluginController,
     urlInfoTransformer,
     rootDirectoryUrl,
     jsenvDirectoryUrl,
-    createReference,
-    resolveReference,
     cook,
+    prepareEntryPoint,
   }
 }
 
