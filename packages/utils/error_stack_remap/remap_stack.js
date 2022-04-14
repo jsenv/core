@@ -54,7 +54,7 @@ export const remapStack = async ({
         }
 
         const jsSourcemapComment = SOURCEMAP.readComment({
-          contentType: "application/javascript",
+          contentType: "text/javascript",
           content: text,
         })
         if (!jsSourcemapComment) {

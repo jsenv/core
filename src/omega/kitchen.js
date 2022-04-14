@@ -161,8 +161,7 @@ export const createKitchen = ({
       const sourcemapReference = createReference({
         trace: `sourcemap comment placeholder for ${urlInfo.url}`,
         type: "sourcemap_comment",
-        subtype:
-          urlInfo.contentType === "application/javascript" ? "js" : "css",
+        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
         parentUrl: urlInfo.url,
         specifier,
       })
@@ -621,7 +620,7 @@ const inferUrlInfoType = ({ contentType }) => {
   if (contentType === "text/css") {
     return "css"
   }
-  if (contentType === "application/javascript") {
+  if (contentType === "text/javascript") {
     return "js"
   }
   if (contentType === "application/json") {

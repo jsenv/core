@@ -136,7 +136,7 @@ const rollupPluginJsenv = ({
             data: {
               generatedBy: "rollup",
             },
-            contentType: "application/javascript",
+            contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
           }

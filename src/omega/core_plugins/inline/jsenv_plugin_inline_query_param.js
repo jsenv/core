@@ -15,7 +15,7 @@ export const jsenvPluginInlineQueryParam = () => {
       // but maybe we should rather use ?object_url
       // or people could do this:
       // import workerText from './worker.js?text'
-      // const blob = new Blob(workerText, { type: 'application/javascript' })
+      // const blob = new Blob(workerText, { type: 'text/javascript' })
       // window.URL.createObjectURL(blob)
       // in any case the recommended way is to use an url
       // to benefit from shared worker and reuse worker between tabs

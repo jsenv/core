@@ -1,11 +1,11 @@
 export const SOURCEMAP = {
   enabledOnContentType: (contentType) => {
-    return ["application/javascript", "text/css"].includes(contentType)
+    return ["text/javascript", "text/css"].includes(contentType)
   },
 
   readComment: ({ contentType, content }) => {
     const read = {
-      "application/javascript": parseJavaScriptSourcemapComment,
+      "text/javascript": parseJavaScriptSourcemapComment,
       "text/css": parseCssSourcemapComment,
     }[contentType]
     return read ? read(content) : null
@@ -13,7 +13,7 @@ export const SOURCEMAP = {
 
   writeComment: ({ contentType, content, specifier }) => {
     const write = {
-      "application/javascript": setJavaScriptSourceMappingUrl,
+      "text/javascript": setJavaScriptSourceMappingUrl,
       "text/css": setCssSourceMappingUrl,
     }[contentType]
     return write ? write(content, specifier) : content

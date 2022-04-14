@@ -75,7 +75,7 @@ export const jsenvPluginHtmlSupervisor = ({
             column,
             isOriginal,
             specifier: inlineScriptUrl,
-            contentType: "application/javascript",
+            contentType: "text/javascript",
             content: textNode.value,
           })
           assignHtmlNodeAttributes(node, {

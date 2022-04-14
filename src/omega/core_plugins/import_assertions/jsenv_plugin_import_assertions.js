@@ -176,7 +176,7 @@ const jsenvPluginImportTypeCss = () => {
       })
       return {
         type: "js_module",
-        contentType: "application/javascript",
+        contentType: "text/javascript",
         content: `import { InlineContent } from ${reference.generatedSpecifier}
 
 const css = new InlineContent(${cssText}, { type: "text/css" })
