@@ -13,6 +13,7 @@ export {
   webkitIsolatedTab,
 } from "./src/execute/runtimes/browsers/webkit.js"
 export { nodeProcess } from "./src/execute/runtimes/node/node_process.js"
+export { preview } from "./src/preview/preview.js"
 export { build } from "./src/build/build.js"
 
 // advanced
