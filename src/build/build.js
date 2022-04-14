@@ -114,6 +114,7 @@ build ${entryPointKeys.length} entry points`)
     logger,
     rootDirectoryUrl,
     urlGraph: rawGraph,
+    jsModuleAsJsClassic: false,
     plugins: [
       ...plugins,
       {
@@ -296,6 +297,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     logger,
     rootDirectoryUrl,
     urlGraph: finalGraph,
+    jsModuleAsJsClassic: true,
     // Inline content, such as <script> inside html, is transformed during the previous phase.
     // If we read the inline content it would be considered as the original content.
     // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
