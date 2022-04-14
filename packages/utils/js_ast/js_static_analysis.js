@@ -254,11 +254,30 @@ export const analyzeSystemRegisterCall = (path) => {
     return null
   }
   const firstArgNode = node.arguments[0]
-  if (firstArgNode.type !== "ArrayExpression") {
-    return null
+  if (firstArgNode.type === "ArrayExpression") {
+    return analyzeSystemRegisterDeps(firstArgNode)
   }
+  if (firstArgNode.type === "StringLiteral") {
+    const secondArgNode = node.arguments[1]
+    if (secondArgNode.type === "ArrayExpression") {
+      return analyzeSystemRegisterDeps(secondArgNode)
+    }
+  }
+  return null
+}
+const isSystemRegisterCall = (node) => {
+  const callee = node.callee
+  return (
+    callee.type === "MemberExpression" &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === "System" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "register"
+  )
+}
+const analyzeSystemRegisterDeps = (node) => {
   const mentions = []
-  const elements = firstArgNode.elements
+  const elements = node.elements
   elements.forEach((element) => {
     if (element.type === "StringLiteral") {
       mentions.push({
@@ -270,16 +289,6 @@ export const analyzeSystemRegisterCall = (path) => {
     }
   })
   return mentions
-}
-const isSystemRegisterCall = (node) => {
-  const callee = node.callee
-  return (
-    callee.type === "MemberExpression" &&
-    callee.object.type === "Identifier" &&
-    callee.object.name === "System" &&
-    callee.property.type === "Identifier" &&
-    callee.property.name === "register"
-  )
 }
 
 const getNodePosition = (node) => {

@@ -38,6 +38,7 @@ import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
 
 import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
+import { jsenvPluginBundleJsClassic } from "./plugins/bundle_js_classic/jsenv_plugin_js_classic.js"
 import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
 import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
@@ -131,6 +132,7 @@ build ${entryPointKeys.length} entry points`)
         injectedGlobals,
       }),
       jsenvPluginBundleJsModule(),
+      jsenvPluginBundleJsClassic(),
       ...(minification.js ? [jsenvPluginMinifyJs()] : []),
       ...(minification.html ? [jsenvPluginMinifyHtml()] : []),
     ],

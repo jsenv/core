@@ -14,9 +14,9 @@ const test = async (params) => {
     babel: {
       topLevelAwait: "ignore",
     },
-    versioning: "none",
-    minification: false,
-    bundling: false,
+    // versioning: "none",
+    // minification: false,
+    // bundling: false,
     ...params,
   })
 

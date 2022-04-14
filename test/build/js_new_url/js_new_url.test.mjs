@@ -25,7 +25,7 @@ const { serverOrigin, returnValue } = await executeInChromium({
 })
 const actual = returnValue
 const expected = {
-  absoluteBaseUrl: `http://jsenv.dev/assets/file-64ec88ca.txt`,
+  absoluteBaseUrl: `http://jsenv.dev/file.txt`,
   absoluteUrl: `http://example.com/file.txt`,
   textFileUrl: `${serverOrigin}/assets/file-64ec88ca.txt`,
   windowOriginRelativeUrl: `${serverOrigin}/assets/file-64ec88ca.txt`,
