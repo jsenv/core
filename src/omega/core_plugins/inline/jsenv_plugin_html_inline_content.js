@@ -10,6 +10,7 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
+import { ContentType } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginHtmlInlineContent = () => {
   return {
@@ -83,9 +84,18 @@ export const jsenvPluginHtmlInlineContent = () => {
               htmlNodePosition.readNodePosition(node, {
                 preferOriginal: true,
               })
+            const isJs =
+              scriptCategory === "classic" || scriptCategory === "module"
+            const isImportmap = scriptCategory === "importmap"
+            const contentType = isJs
+              ? "text/javascript"
+              : isImportmap
+              ? "application/importmap+json"
+              : scriptCategory
+
             let inlineScriptUrl = generateInlineContentUrl({
               url,
-              extension: scriptCategory === "importmap" ? ".importmap" : ".js",
+              extension: ContentType.asFileExtension(contentType),
               line,
               column,
               lineEnd,
@@ -107,10 +117,7 @@ export const jsenvPluginHtmlInlineContent = () => {
                 column,
                 isOriginal,
                 specifier: inlineScriptUrl,
-                contentType:
-                  scriptCategory === "importmap"
-                    ? "application/importmap+json"
-                    : "application/javascript",
+                contentType,
                 content: textNode.value,
               })
             await cook({

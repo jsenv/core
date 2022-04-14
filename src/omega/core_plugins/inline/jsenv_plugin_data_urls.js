@@ -1,5 +1,5 @@
 import { DataUrl } from "@jsenv/utils/urls/data_url.js"
-import { ContentType } from "@jsenv/utils/src/content_type.js"
+import { ContentType } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginDataUrls = () => {
   return {

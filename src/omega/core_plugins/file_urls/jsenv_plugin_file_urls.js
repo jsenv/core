@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs"
-import { urlToContentType } from "@jsenv/server"
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
   fileSystemRootUrl,
 } from "@jsenv/filesystem"
-import { ContentType } from "@jsenv/utils/src/content_type.js"
+
+import { ContentType } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginFileUrls = () => {
   return [jsenvPluginResolveAbsoluteFileUrls(), jsenvPluginLoadFileUrls()]
@@ -51,7 +51,7 @@ const jsenvPluginLoadFileUrls = () => {
       }
       const urlObject = new URL(url)
       const fileBuffer = readFileSync(urlObject)
-      const contentType = urlToContentType(url)
+      const contentType = ContentType.fromUrl(url)
       if (ContentType.isTextual(contentType)) {
         return {
           contentType,

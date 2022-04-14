@@ -20,6 +20,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     htmlAst,
     onUrl: ({
       type,
+      expectedType,
       line,
       column,
       originalLine,
@@ -29,6 +30,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     }) => {
       const [reference] = referenceUtils.found({
         type,
+        expectedType,
         line,
         column,
         originalLine,
@@ -47,7 +49,13 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
 }
 
 const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
-  const addDependency = ({ type, node, attribute, specifier }) => {
+  const addDependency = ({
+    type,
+    expectedType,
+    node,
+    attribute,
+    specifier,
+  }) => {
     const srcGeneratedFromInlineContent = Boolean(
       getHtmlNodeAttributeByName(node, "src-generated-from-inline-content"),
     )
@@ -66,6 +74,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     } = position
     onUrl({
       type,
+      expectedType,
       line,
       column,
       // originalLine, originalColumn
@@ -89,8 +98,15 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     //   return
     // }
     if (node.nodeName === "script") {
+      const typeAttributeNode = getHtmlNodeAttributeByName(node, "type")
       visitAttributeAsUrlSpecifier({
         type: "script_src",
+        expectedType: {
+          "text/javascript": "js_classic",
+          "undefined": "js_classic",
+          "module": "js_module",
+          "importmap": "importmap",
+        }[typeAttributeNode ? typeAttributeNode.value : undefined],
         node,
         attributeName: "src",
       })
@@ -152,7 +168,12 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       return
     }
   }
-  const visitAttributeAsUrlSpecifier = ({ type, node, attributeName }) => {
+  const visitAttributeAsUrlSpecifier = ({
+    type,
+    expectedType,
+    node,
+    attributeName,
+  }) => {
     const attribute = getHtmlNodeAttributeByName(node, attributeName)
     const value = attribute ? attribute.value : undefined
     if (value) {
@@ -164,6 +185,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       }
       addDependency({
         type,
+        expectedType,
         node,
         attribute,
         specifier:
@@ -172,12 +194,14 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     } else if (attributeName === "src") {
       visitAttributeAsUrlSpecifier({
         type,
+        expectedType,
         node,
         attributeName: "content-src",
       })
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({
         type,
+        expectedType,
         node,
         attributeName: "content-href",
       })
