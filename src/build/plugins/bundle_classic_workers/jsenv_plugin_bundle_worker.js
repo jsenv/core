@@ -1,8 +1,12 @@
+/*
+ * NOT READY TO USE
+ */
+
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-export const jsenvPluginImportScriptsBundler = () => {
+export const jsenvPluginBundleClassicWorkers = () => {
   return {
-    name: "jsenv:import_scripts_bundler",
+    name: "jsenv:budle_classic_workers",
     bundle: {
       js_classic: async (workerUrlInfos, { urlGraph }) => {
         const bundleResult = {}

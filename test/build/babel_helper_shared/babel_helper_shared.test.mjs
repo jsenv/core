@@ -7,7 +7,7 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  minify: false,
+  minification: false,
   runtimeCompat: {
     chrome: "55",
     edge: "14",

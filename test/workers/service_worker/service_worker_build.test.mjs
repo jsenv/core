@@ -10,7 +10,7 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  minify: false,
+  minification: false,
   versioning: "filename",
 })
 const { returnValue, serverOrigin } = await executeInChromium({

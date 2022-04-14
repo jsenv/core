@@ -64,18 +64,18 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
         }
 
         const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataNewWorkerCalls],
+          babelPlugins: [babelPluginMetadataNewWorkerMentions],
           url: urlInfo.url,
           generatedUrl: urlInfo.generatedUrl,
           content: urlInfo.content,
         })
-        const { newWorkerCalls } = metadata
+        const { newWorkerMentions } = metadata
         const magicSource = createMagicSource(urlInfo.content)
-        newWorkerCalls.forEach((newWorkerCall) => {
-          if (newWorkerCall.expectedType !== "js_module") {
+        newWorkerMentions.forEach((newWorkerMention) => {
+          if (newWorkerMention.expectedType !== "js_module") {
             return
           }
-          const specifier = newWorkerCall.specifierNode.value
+          const specifier = newWorkerMention.specifier
           const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
             as_js_classic: "",
           })
@@ -84,13 +84,13 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
             newSpecifier,
           )
           magicSource.replace({
-            start: newWorkerCall.specifierNode.start,
-            end: newWorkerCall.specifierNode.end,
+            start: newWorkerMention.start,
+            end: newWorkerMention.end,
             replacement: newReference.generatedSpecifier,
           })
           magicSource.replace({
-            start: newWorkerCall.typeArgNode.value.start,
-            end: newWorkerCall.typeArgNode.value.end,
+            start: newWorkerMention.typeArgNode.value.start,
+            end: newWorkerMention.typeArgNode.value.end,
             replacement: JSON.stringify("classic"),
           })
         })
@@ -100,23 +100,21 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
   }
 }
 
-const babelPluginMetadataNewWorkerCalls = () => {
+const babelPluginMetadataNewWorkerMentions = () => {
   return {
-    name: "metadata-new-worker-calls",
+    name: "metadata-new-worker-mentions",
     visitor: {
       Program(programPath, state) {
-        const newWorkerCalls = []
+        const newWorkerMentions = []
         programPath.traverse({
           NewExpression: (path) => {
-            const newWorkerReferenceInfos = analyzeNewWorkerCall(path)
-            if (newWorkerReferenceInfos) {
-              const [newWorkerCall] = newWorkerReferenceInfos
-              newWorkerCalls.push(newWorkerCall)
-              return
+            const mentions = analyzeNewWorkerCall(path)
+            if (mentions) {
+              newWorkerMentions.push(...mentions)
             }
           },
         })
-        state.file.metadata.newWorkerCalls = newWorkerCalls
+        state.file.metadata.newWorkerMentions = newWorkerMentions
       },
     },
   }

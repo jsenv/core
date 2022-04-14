@@ -64,7 +64,7 @@ export const build = async ({
   sourcemaps = isPreview ? "file" : false,
 
   bundling = true,
-  minify = true,
+  minification = true,
   versioning = "filename", //  "filename", "search_param", "none"
   lineBreakNormalization = process.platform === "win32",
 
@@ -81,6 +81,19 @@ export const build = async ({
   if (!["filename", "search_param", "none"].includes(versioning)) {
     throw new Error(
       `Unexpected "versioning": must be "filename", "search_param" or "none"; got ${versioning}`,
+    )
+  }
+  if (typeof minification === "boolean") {
+    minification = {
+      js: minification,
+      html: minification,
+      css: minification,
+      svg: minification,
+      json: minification,
+    }
+  } else if (typeof minification !== "object") {
+    throw new Error(
+      `minification must be a boolean or an object, got ${minification}`,
     )
   }
 
@@ -118,7 +131,8 @@ build ${entryPointKeys.length} entry points`)
         injectedGlobals,
       }),
       jsenvPluginBundleJsModule(),
-      ...(minify ? [jsenvPluginMinifyJs(), jsenvPluginMinifyHtml()] : []),
+      ...(minification.js ? [jsenvPluginMinifyJs()] : []),
+      ...(minification.html ? [jsenvPluginMinifyHtml()] : []),
     ],
     scenario: "build",
     sourcemaps,

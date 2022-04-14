@@ -151,7 +151,7 @@ const babelPluginMetadataJsUrlMentions = (
           ...(searchSystemJs ? [analyzeSystemRegisterCall] : []),
         ]
         visitors.CallExpression = (path) => {
-          if (isJsModule && !usesImport && isImportCall(path)) {
+          if (isJsModule && !usesImport && isImportCall(path.node)) {
             usesImport = true
           }
           callStaticAnalyzers(path, callExpressionStaticAnalysers)

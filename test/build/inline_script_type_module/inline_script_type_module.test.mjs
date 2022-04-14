@@ -13,7 +13,7 @@ await build({
   sourcemaps: "file",
   bundling: false,
   versioning: "filename",
-  minify: false,
+  minification: false,
 })
 const { returnValue } = await executeInChromium({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),

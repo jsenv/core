@@ -99,6 +99,7 @@ export const analyzeNewWorkerCall = (path) => {
       expectedSubtype: "worker",
       specifier: firstArgNode.value,
       ...getNodePosition(firstArgNode),
+      typeArgNode,
     })
     return mentions
   }
@@ -110,9 +111,9 @@ export const analyzeNewWorkerCall = (path) => {
   }
   newUrlMentions.forEach((mention) => {
     Object.assign(mention, {
-      typeArgNode,
       expectedType,
       expectedSubtype: "worker",
+      typeArgNode,
     })
   })
   return newUrlMentions
@@ -224,7 +225,7 @@ export const analyzeImportScriptCalls = (path) => {
   node.arguments.forEach((arg) => {
     if (arg.type === "StringLiteral") {
       mentions.push({
-        type: "js_url",
+        type: "js_url_specifier",
         subtype: "self_import_scripts_arg",
         specifier: arg.value,
         ...getNodePosition(arg),
@@ -261,7 +262,7 @@ export const analyzeSystemRegisterCall = (path) => {
   elements.forEach((element) => {
     if (element.type === "StringLiteral") {
       mentions.push({
-        type: "js_url",
+        type: "js_url_specifier",
         subtype: "system_register_arg",
         specifier: element.value,
         ...getNodePosition(element),

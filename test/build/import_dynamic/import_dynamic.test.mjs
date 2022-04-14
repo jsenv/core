@@ -7,5 +7,5 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  minify: false,
+  minification: false,
 })

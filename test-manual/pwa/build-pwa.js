@@ -13,5 +13,5 @@ build({
   },
   serviceWorkers: [`${pwaDirectoryRelativeUrl}sw.js`],
   buildDirectoryClean: true,
-  minify: false,
+  minification: false,
 })
