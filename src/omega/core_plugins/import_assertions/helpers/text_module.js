@@ -1,6 +1,6 @@
 export const convertTextToJavascriptModule = ({ content }) => {
   return {
-    contentType: "application/javascript",
+    contentType: "text/javascript",
     content: `export default ${JSON.stringify(content)}`,
   }
 }

@@ -420,7 +420,11 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const urlInfo = bundleUrlInfo || rawGraph.getUrlInfo(rawUrl)
           finalUrlInfo.subtype = urlInfo.subtype
           return {
-            data: bundleUrlInfo ? bundleUrlInfo.data : undefined,
+            data: bundleUrlInfo
+              ? bundleUrlInfo.data
+              : {
+                  originalData: urlInfo.data,
+                },
             originalContent: urlInfo.originalContent,
             contentType: urlInfo.contentType,
             content: urlInfo.content,

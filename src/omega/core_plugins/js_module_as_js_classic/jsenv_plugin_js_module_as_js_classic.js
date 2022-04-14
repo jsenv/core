@@ -1,4 +1,4 @@
-import { urlToBasename } from "@jsenv/filesystem"
+import { createRequire } from "node:module"
 
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
@@ -8,35 +8,28 @@ import {
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { analyzeNewWorkerCall } from "@jsenv/utils/js_ast/js_static_analysis.js"
 
-import { esToIIFE } from "./helpers/es_to_iife.js"
-import { esToSystem } from "./helpers/es_to_system.js"
+const require = createRequire(import.meta.url)
 
 export const jsenvPluginJsModuleAsJsClassic = () => {
   const convertJsModuleToJsClassic = async (urlInfo) => {
-    const usesImportExport = urlInfo.references.some(
-      (ref) => ref.type === "js_import_export",
-    )
-    if (usesImportExport) {
-      const { sourcemap, content } = await esToSystem({
-        url: urlInfo.data.sourceUrl || urlInfo.url,
-        generatedUrl: urlInfo.generatedUrl,
-        content: urlInfo.content,
-      })
-      urlInfo.type = "js_classic"
-      return {
-        sourcemap,
-        content,
-      }
-    }
-    const { sourcemap, content } = esToIIFE({
-      name: urlToBasename(urlInfo.url),
-      url: urlInfo.url,
+    const outFormat =
+      urlInfo.data.usesImport || urlInfo.data.usesExport ? "systemjs" : "umd"
+    const { code, map } = await applyBabelPlugins({
+      babelPlugins: [
+        outFormat === "systemjs"
+          ? require("@babel/plugin-transform-modules-systemjs")
+          : require("@babel/plugin-transform-modules-umd"),
+      ],
+      url: urlInfo.data.rawUrl || urlInfo.url,
+      generatedUrl: urlInfo.generatedUrl,
       content: urlInfo.content,
     })
     urlInfo.type = "js_classic"
+    // il faudrait transformer la référence pour y ajouter ?js_classic
+    urlInfo.data.asJsClassic = true
     return {
-      sourcemap,
-      content,
+      content: code,
+      sourcemap: map,
     }
   }
 
@@ -45,8 +38,8 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
     transformReferencedUrl: (reference) => {
-      const parentUrl = reference.parentUrl
-      if (!new URL(parentUrl).searchParams.has("as_js_classic")) {
+      const parentUrlObject = new URL(reference.parentUrl)
+      if (!new URL(parentUrlObject).searchParams.has("as_js_classic")) {
         return null
       }
       return injectQueryParams(reference.url, {
@@ -55,9 +48,6 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
     },
     transform: {
       js_module: async (urlInfo, context) => {
-        if (urlInfo.url.includes("ping.js")) {
-          debugger
-        }
         if (new URL(urlInfo.url).searchParams.has("as_js_classic")) {
           return convertJsModuleToJsClassic(urlInfo)
         }

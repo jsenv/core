@@ -7,7 +7,7 @@ import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url
 import { replaceCssUrls } from "@jsenv/utils/css_ast/replace_css_urls.js"
 
 export const parseAndTransformCssUrls = async (urlInfo, context) => {
-  const url = urlInfo.data.sourceUrl || urlInfo.url
+  const url = urlInfo.data.rawUrl || urlInfo.url
   const content = urlInfo.content
   const { referenceUtils } = context
   const referencePerUrls = {}

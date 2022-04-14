@@ -6,7 +6,7 @@ export const convertJsonTextToJavascriptModule = ({ content }) => {
   // for js engine to parse JSON than JS
 
   return {
-    contentType: "application/javascript",
+    contentType: "text/javascript",
     content: `export default JSON.parse(${JSON.stringify(content.trim())})`,
   }
 }
