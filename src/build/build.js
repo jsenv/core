@@ -762,19 +762,17 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     if (urlInfo.external) {
       return
     }
-    const { buildUrlIsVersioned, buildRelativeUrl } = urlInfo.data
+    const { buildRelativeUrl } = urlInfo.data
     if (urlInfo.isInline) {
       buildInlineFileContents[buildRelativeUrl] = urlInfo.content
     } else {
       buildFileContents[buildRelativeUrl] = urlInfo.content
     }
-    if (buildUrlIsVersioned) {
-      const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
-        urlInfo.url,
-        buildDirectoryUrl,
-      )
-      buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
-    }
+    const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+      urlInfo.url,
+      buildDirectoryUrl,
+    )
+    buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
   })
 
   logger.debug(
