@@ -35,7 +35,12 @@ export const jsenvPluginJsModuleAsJsClassic = ({
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
         ...(outFormat === "system"
-          ? [require("@babel/plugin-transform-modules-systemjs")]
+          ? [
+              // propposal-dynamic-import required with systemjs for babel8:
+              // https://github.com/babel/babel/issues/10746
+              require("@babel/plugin-proposal-dynamic-import"),
+              require("@babel/plugin-transform-modules-systemjs"),
+            ]
           : [
               require("@babel/plugin-transform-modules-umd"),
               babelPluginTransformImportMetaUrl,

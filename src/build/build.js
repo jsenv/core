@@ -845,6 +845,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     if (urlInfo.external) {
       return
     }
+    if (urlInfo.url.startsWith("data:")) {
+      return
+    }
     const { buildRelativeUrl } = urlInfo.data
     if (urlInfo.isInline) {
       buildInlineFileContents[buildRelativeUrl] = urlInfo.content
