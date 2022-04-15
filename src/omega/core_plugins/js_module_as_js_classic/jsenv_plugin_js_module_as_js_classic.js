@@ -58,7 +58,7 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
         )
         if (
           !usesWorkerTypeModule ||
-          context.isSupportedOnCurrentClient("worker_type_module")
+          context.isSupportedOnCurrentClients("worker_type_module")
         ) {
           return null
         }

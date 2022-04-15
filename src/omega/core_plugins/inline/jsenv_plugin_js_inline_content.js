@@ -11,7 +11,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
     transform: {
       js_module: async (
         { url, generatedUrl, content, originalContent },
-        { referenceUtils, cook, isSupportedOnCurrentClient },
+        { referenceUtils, cook, isSupportedOnCurrentClients },
       ) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataInlineContentCalls],
@@ -42,7 +42,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
           let { quote } = inlineContentCall
           if (
             quote === "`" &&
-            !isSupportedOnCurrentClient("template_literals")
+            !isSupportedOnCurrentClients("template_literals")
           ) {
             // if quote is "`" and template literals are not supported
             // we'll use a regular string (single or double quote)

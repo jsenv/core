@@ -298,7 +298,7 @@ export const createKitchen = ({
       reference,
       outDirectoryUrl,
       clientRuntimeCompat,
-      isSupportedOnCurrentClient: (feature) => {
+      isSupportedOnCurrentClients: (feature) => {
         return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
       },
       cook: (params) => {
