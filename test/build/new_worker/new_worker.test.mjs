@@ -1,3 +1,10 @@
+/* TOFIX:
+ *  - main.js inside dist do not use systemjs
+ *  - main.js contains ?as_js_classic in the html
+ *  - systemjs not injected into the page
+ *  - worker.js is generated despites not being used in the end
+ */
+
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -34,26 +41,26 @@ const test = async (params) => {
 }
 
 // default (no support for worker_type_module)
-{
-  const actual = await test()
-  const expected = {
-    worker2Response: "pong",
-    workerResponse: "pong",
-  }
-  assert({ actual, expected })
-}
-
-// without bundling
 // {
-//   const actual = await test({
-//     bundling: false,
-//   })
+//   const actual = await test()
 //   const expected = {
 //     worker2Response: "pong",
 //     workerResponse: "pong",
 //   }
 //   assert({ actual, expected })
 // }
+
+// without bundling
+{
+  const actual = await test({
+    bundling: false,
+  })
+  const expected = {
+    worker2Response: "pong",
+    workerResponse: "pong",
+  }
+  assert({ actual, expected })
+}
 
 // with support for worker_type_module
 // {

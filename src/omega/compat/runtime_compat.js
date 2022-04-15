@@ -22,18 +22,16 @@ export const RUNTIME_COMPAT = {
   isSupported: (runtimeCompat, feature) => {
     const featureCompat = getFeatureCompat(feature)
     const runtimeNames = Object.keys(runtimeCompat)
-    return runtimeNames.every((runtimeName) => {
+    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
       const runtimeVersion = runtimeCompat[runtimeName]
       const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity"
       const highestVersion = findHighestVersion(
         runtimeVersion,
         runtimeVersionCompatible,
       )
-      if (highestVersion !== runtimeVersion) {
-        return false
-      }
-      return true
+      return highestVersion !== runtimeVersion
     })
+    return !runtimeWithoutCompat
   },
 }
 

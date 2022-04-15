@@ -10,6 +10,8 @@ import {
   visitHtmlAst,
   htmlNodePosition,
   setHtmlNodeText,
+  injectScriptAsEarlyAsPossible,
+  createHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
@@ -24,6 +26,8 @@ import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_compositi
 const require = createRequire(import.meta.url)
 
 export const jsenvPluginJsModuleAsJsClassic = () => {
+  const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
+
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
@@ -36,14 +40,15 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
       content: urlInfo.content,
     })
     urlInfo.type = "js_classic"
-    if (outFormat === "systemjs" && urlInfo.data.isEntryPoint) {
+    if (
+      outFormat === "systemjs" &&
+      (urlInfo.data.isEntryPoint ||
+        urlInfo.subtype === "worker" ||
+        urlInfo.subtype === "service_worker")
+    ) {
       const magicSource = createMagicSource(code)
-      // TODO: get systemjs
-      const systemjsCode = readFileSync(
-        new URL("../runtime_client/s.js", import.meta.url),
-        { as: "string" },
-      )
-      magicSource.prepend(systemjsCode)
+      const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
+      magicSource.prepend(`${systemjsCode}\n\n`)
       const { content, sourcemap } = magicSource.toContentAndSourcemap()
       return {
         content,
@@ -150,7 +155,20 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
           return null
         }
         await Promise.all(actions.map((action) => action()))
-        // TODO: inject systemjs script into HTML
+        const [systemJsClientFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          specifier: injectQueryParams(systemJsClientFileUrl, {
+            js_classic: "",
+          }),
+        })
+        injectScriptAsEarlyAsPossible(
+          htmlAst,
+          createHtmlNode({
+            "tagName": "script",
+            "src": systemJsClientFileReference.generatedSpecifier,
+            "injected-by": "jsenv:js_module_as_js_classic",
+          }),
+        )
         return stringifyHtmlAst(htmlAst)
       },
       js_module: async (urlInfo, context) => {
