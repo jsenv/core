@@ -16,7 +16,6 @@ const test = async (params) => {
     },
     versioning: "none",
     minification: false,
-    // bundling: false,
     ...params,
   })
 
@@ -44,5 +43,30 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
+// without bundling
+// {
+//   const actual = await test({
+//     bundling: false,
+//   })
+//   const expected = {
+//     worker2Response: "pong",
+//     workerResponse: "pong",
+//   }
+//   assert({ actual, expected })
+// }
+
 // with support for worker_type_module
-// TODO
+// {
+//   const actual = await test({
+//     runtimeCompat: {
+//       chrome: "81",
+//     },
+//   })
+//   const expected = {
+//     worker2Response: "pong",
+//     workerResponse: "pong",
+//   }
+//   assert({ actual, expected })
+// }
+
+// with support + bundling

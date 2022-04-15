@@ -329,7 +329,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         appliesDuring: { build: true },
         resolve: (reference) => {
           if (reference.specifier[0] === "/") {
-            const url = new URL(reference.specifier.slice(1), rootDirectoryUrl)
+            const url = new URL(reference.specifier.slice(1), buildDirectoryUrl)
               .href
             return url
           }
@@ -362,6 +362,32 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               bundleUrlInfo,
             )
             reference.data.rawUrl = reference.url
+            rawUrls[buildUrl] = reference.url
+            return buildUrl
+          }
+          const referenceUrlObject = new URL(reference.url)
+          const { searchParams } = referenceUrlObject
+          // reference updated by "js_module_as_js_classic" to inject "?as_js_classic"
+          if (searchParams.has("as_js_classic")) {
+            // the url info corresponding to the "js_classic" version of this specifier
+            // do not exists yet (it will be created after this "normalize" hook)
+            // And the content will be generated when url with ?as_js_classic is cooked by url graph loader.
+            // Here we just want to reserve an url for that file and we know it's going to be
+            // type: "js_classic" and subtype: ""|"worker"|"service_worker"
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              data: {},
+              type: "js_classic",
+              subtype: reference.expectedSubtype,
+            })
+            searchParams.delete("as_js_classic")
+            const withoutAsJsClassicParam = referenceUrlObject.href
+            const rawUrl =
+              rawUrls[withoutAsJsClassicParam] || withoutAsJsClassicParam
+            reference.data.rawUrl = rawUrl
+            // ?as_js_classic is removed from the url specifier
+            // we put this information into data.asJsClassic so that
+            // "js_module_as_js_classic" can still perform the conversion
+            reference.data.asJsClassic = true
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
@@ -421,7 +447,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             )
           }
           // if a file is in the same directory we could prefer the relative notation
-          // but to keep things simple let's keep the notation relative to baseUrl for now
+          // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
           const specifier = `${baseUrl}${urlToRelativeUrl(
             reference.url,
             buildDirectoryUrl,
@@ -465,7 +491,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       {
         name: "jsenv:optimize",
         appliesDuring: { build: true },
-        transform: async (urlInfo, context) => {
+        finalize: async (urlInfo, context) => {
           if (optimizeHooks.length) {
             await rawGraphKitchen.pluginController.callAsyncHooks(
               "optimize",

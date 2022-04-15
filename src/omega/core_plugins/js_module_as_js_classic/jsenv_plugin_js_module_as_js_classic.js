@@ -25,8 +25,6 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
       content: urlInfo.content,
     })
     urlInfo.type = "js_classic"
-    // il faudrait transformer la référence pour y ajouter ?js_classic
-    urlInfo.data.asJsClassic = true
     return {
       content: code,
       sourcemap: map,
@@ -37,18 +35,25 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
     name: "jsenv:js_module_as_js_classic",
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
-    transformReferencedUrl: (reference) => {
-      const parentUrlObject = new URL(reference.parentUrl)
-      if (!new URL(parentUrlObject).searchParams.has("as_js_classic")) {
+    normalize: (reference, context) => {
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      if (!parentUrlInfo || !parentUrlInfo.data.asJsClassic) {
         return null
       }
-      return injectQueryParams(reference.url, {
+      const urlTransformed = injectQueryParams(reference.url, {
         as_js_classic: "",
       })
+      return urlTransformed
     },
     transform: {
       js_module: async (urlInfo, context) => {
-        if (new URL(urlInfo.url).searchParams.has("as_js_classic")) {
+        if (
+          // during build the info must be read from "data.asJsClassic"
+          // because the specifier becomes "worker.es5.js" without query param
+          urlInfo.data.asJsClassic ||
+          new URL(urlInfo.url).searchParams.has("as_js_classic")
+        ) {
+          urlInfo.data.asJsClassic = true
           return convertJsModuleToJsClassic(urlInfo)
         }
         const usesWorkerTypeModule = urlInfo.references.some(
@@ -76,13 +81,17 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
             return
           }
           const specifier = newWorkerMention.specifier
+          // during dev/test, browser will do the fetch
+          // during build it's a bit different
           const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
             as_js_classic: "",
           })
-          const [newReference] = context.referenceUtils.updateSpecifier(
-            JSON.stringify(specifier),
-            newSpecifier,
-          )
+          const [newReference, newUrlInfo] =
+            context.referenceUtils.updateSpecifier(
+              JSON.stringify(specifier),
+              newSpecifier,
+            )
+          newUrlInfo.data.asJsClassic = true
           magicSource.replace({
             start: newWorkerMention.start,
             end: newWorkerMention.end,

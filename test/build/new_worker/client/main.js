@@ -12,8 +12,8 @@ const testWorker = async (worker) => {
   })
 }
 
-// const worker = new Worker("/worker.js", { type: "module" })
-// export const workerResponse = await testWorker(worker)
+const worker = new Worker("/worker.js", { type: "module" })
+export const workerResponse = await testWorker(worker)
 
 const worker2 = new Worker(new URL("./worker.js", import.meta.url), {
   type: "module",

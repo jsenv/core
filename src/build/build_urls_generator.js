@@ -20,6 +20,9 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
       searchParams.has("text_module")
     ) {
       name = `${name}.js`
+    } else if (searchParams.has("as_js_classic")) {
+      const [basename, extension] = splitFileExtension(name)
+      name = `${basename}.es5${extension}`
     }
     const [basename, extension] = splitFileExtension(name)
     let nameCandidate = name

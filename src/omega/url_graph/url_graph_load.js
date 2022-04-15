@@ -33,7 +33,7 @@ export const loadUrlGraph = async ({
     const { references } = urlInfo
     references.forEach((reference) => {
       // we use reference.generatedUrl to mimic what a browser would do:
-      // do a fetch to the specifier as it found it in the file
+      // do a fetch to the specifier as found in the file
       const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(
         reference.generatedUrl,
       )

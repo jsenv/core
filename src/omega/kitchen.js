@@ -691,6 +691,8 @@ const determineFileUrlForOutDirectory = ({
     searchParams.has("text_module")
   ) {
     url = setUrlExtension(url, ".js")
+  } else if (searchParams.has("as_js_classic")) {
+    url = setUrlExtension(url, ".es5.js")
   }
   return moveUrl({
     url,
