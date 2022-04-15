@@ -12,7 +12,7 @@ import { jsenvPluginCommonJsGlobals } from "./core_plugins/commonjs_globals/jsen
 import { jsenvPluginImportAssertions } from "./core_plugins/import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginImportMetaScenarios } from "./core_plugins/import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginInjectGlobals } from "./core_plugins/inject_globals/jsenv_plugin_inject_globals.js"
-// import { jsenvPluginWorkers } from "./core_plugins/workers/jsenv_plugin_workers.js"
+import { jsenvPluginJsModuleAsJsClassic } from "./core_plugins/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { jsenvPluginBabel } from "./core_plugins/babel/jsenv_plugin_babel.js"
 
 export const getCorePlugins = ({
@@ -21,12 +21,15 @@ export const getCorePlugins = ({
   fileSystemMagicResolution,
   babel,
   injectedGlobals,
+  jsModuleAsJsClassic = {},
 } = {}) => {
-  const asFewAsPossible = false // useful during dev
   return [
-    ...(asFewAsPossible ? [] : [jsenvPluginImportAssertions()]),
-    ...(asFewAsPossible ? [] : [jsenvPluginHtmlSupervisor(htmlSupervisor)]), // before inline as it turns inline <script> into <script src>
-    ...(asFewAsPossible ? [] : [jsenvPluginInline()]), // before "file urls" to resolve and load inline urls
+    ...(jsModuleAsJsClassic
+      ? [jsenvPluginJsModuleAsJsClassic(jsModuleAsJsClassic)]
+      : []),
+    jsenvPluginImportAssertions(),
+    jsenvPluginHtmlSupervisor(htmlSupervisor), // before inline as it turns inline <script> into <script src>
+    jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
     jsenvPluginFileUrls(),
     jsenvPluginHttpUrls(),
@@ -34,12 +37,10 @@ export const getCorePlugins = ({
     jsenvPluginNodeEsmResolution(nodeEsmResolution), // before url resolution to handle "js_import_export" resolution
     jsenvPluginInjectGlobals(injectedGlobals),
     jsenvPluginUrlResolution(),
-    ...(asFewAsPossible
-      ? []
-      : [jsenvPluginFileSystemMagic(fileSystemMagicResolution)]),
+    jsenvPluginFileSystemMagic(fileSystemMagicResolution),
     jsenvPluginUrlVersion(),
-    ...(asFewAsPossible ? [] : [jsenvPluginCommonJsGlobals()]),
-    ...(asFewAsPossible ? [] : [jsenvPluginImportMetaScenarios()]),
+    jsenvPluginCommonJsGlobals(),
+    jsenvPluginImportMetaScenarios(),
     // jsenvPluginWorkers(),
     jsenvPluginBabel(babel),
   ]

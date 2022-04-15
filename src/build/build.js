@@ -30,6 +30,7 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { jsenvPluginInline } from "../omega/core_plugins/inline/jsenv_plugin_inline.js"
+import { jsenvPluginJsModuleAsJsClassic } from "../omega/core_plugins/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../omega/core_plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
@@ -114,7 +115,6 @@ build ${entryPointKeys.length} entry points`)
     logger,
     rootDirectoryUrl,
     urlGraph: rawGraph,
-    jsModuleAsJsClassic: false,
     plugins: [
       ...plugins,
       {
@@ -131,6 +131,7 @@ build ${entryPointKeys.length} entry points`)
         fileSystemMagicResolution,
         babel,
         injectedGlobals,
+        jsModuleAsJsClassic: false,
       }),
       jsenvPluginBundleJsModule(),
       jsenvPluginBundleJsClassic(),
@@ -297,7 +298,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     logger,
     rootDirectoryUrl,
     urlGraph: finalGraph,
-    jsModuleAsJsClassic: true,
     // Inline content, such as <script> inside html, is transformed during the previous phase.
     // If we read the inline content it would be considered as the original content.
     // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
@@ -323,6 +323,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       }
     },
     plugins: [
+      jsenvPluginJsModuleAsJsClassic(),
       jsenvPluginInline(),
       {
         name: "jsenv:postbuild",
@@ -365,9 +366,12 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
+
+          // from "js_module_as_js_classic":
+          //   - injecting "?as_js_classic" for the first time
+          //   - injecting "?as_js_classic" because the parentUrl has it
           const referenceUrlObject = new URL(reference.url)
           const { searchParams } = referenceUrlObject
-          // reference updated by "js_module_as_js_classic" to inject "?as_js_classic"
           if (searchParams.has("as_js_classic")) {
             // the url info corresponding to the "js_classic" version of this specifier
             // do not exists yet (it will be created after this "normalize" hook)
@@ -391,6 +395,17 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
+          // from "js_module_as_js_classic":
+          //   - to inject "s.js"
+          if (reference.injected) {
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              data: {},
+              type: "js_classic",
+            })
+            rawUrls[buildUrl] = reference.url
+            return buildUrl
+          }
+
           const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
           // files from root directory but not given to rollup nor postcss
           if (rawUrlInfo) {
@@ -413,7 +428,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               return false
             })
             if (!rawUrlInfo) {
-              throw new Error(`cannot find raw url`)
+              throw new Error(`cannot find raw url for "${reference.url}"`)
             }
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             const buildUrl = buildUrlsGenerator.generate(
@@ -429,7 +444,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             // inherit parent build url
             return generateSourcemapUrl(reference.parentUrl)
           }
-          // files generated during the final graph (sourcemaps)
+          // files generated during the final graph:
+          // - sourcemaps
           // const finalUrlInfo = finalGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(reference.url, {
             data: {},
@@ -455,9 +471,23 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           buildUrls[specifier] = reference.url
           return specifier
         },
-        load: (finalUrlInfo) => {
+        load: async (finalUrlInfo, context) => {
           if (!finalUrlInfo.url.startsWith("file:")) {
             return { external: true }
+          }
+          // injected by "js_module_as_js_classic"
+          if (context.reference.injected) {
+            const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
+              type: context.reference.type,
+              parentUrl: rawUrls[context.reference.parentUrl],
+              specifier: context.reference.specifier,
+              injected: true,
+            })
+            await rawGraphKitchen.cook({
+              reference: ref,
+              urlInfo: rawUrlInfo,
+            })
+            return rawUrlInfo
           }
           const rawUrl = finalUrlInfo.data.rawUrl
           const bundleUrlInfo = bundleUrlInfos[rawUrl]

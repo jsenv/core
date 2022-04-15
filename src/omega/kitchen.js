@@ -13,7 +13,6 @@ import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
 import { jsenvPluginUrlReferences } from "./core_plugins/url_references/jsenv_plugin_url_references.js"
-import { jsenvPluginJsModuleAsJsClassic } from "./core_plugins/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
 import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
 import {
@@ -41,7 +40,6 @@ export const createKitchen = ({
   // sourcemap uses file:/// (chrome will understand and read from filesystem)
   sourcemapsSources = false,
   runtimeCompat = defaultRuntimeCompat,
-  jsModuleAsJsClassic = true,
 
   loadInlineUrlInfos = (urlInfo) => {
     return {
@@ -52,11 +50,7 @@ export const createKitchen = ({
   writeOnFileSystem = true,
 }) => {
   const pluginController = createPluginController({
-    plugins: [
-      jsenvPluginUrlReferences(),
-      ...(jsModuleAsJsClassic ? [jsenvPluginJsModuleAsJsClassic()] : []),
-      ...plugins,
-    ],
+    plugins: [jsenvPluginUrlReferences(), ...plugins],
     scenario,
   })
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
@@ -83,6 +77,7 @@ export const createKitchen = ({
     specifier,
     baseUrl,
     isInline = false,
+    injected = false,
     content,
     contentType,
   }) => {
@@ -97,6 +92,7 @@ export const createKitchen = ({
       specifier,
       baseUrl,
       isInline,
+      injected,
       // for inline ressources the reference contains the content
       content,
       contentType,
@@ -134,6 +130,7 @@ export const createKitchen = ({
       }
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
       Object.assign(urlInfo.data, reference.data)
+      if (reference.injected) urlInfo.data.injected = true
 
       // create a copy because .url will be mutated
       const referencedCopy = {
@@ -330,7 +327,8 @@ export const createKitchen = ({
         ...props,
       })
       references.push(reference)
-      return [reference, resolveReference(reference)]
+      const referencedUrlInfo = resolveReference(reference)
+      return [reference, referencedUrlInfo]
     }
     const referenceUtils = {
       readGeneratedSpecifier: async (reference) => {
@@ -398,6 +396,7 @@ export const createKitchen = ({
         }
         return addReference({
           trace,
+          injected: true,
           ...rest,
         })
       },
@@ -607,6 +606,12 @@ export const createKitchen = ({
     return [entryReference, entryUrlInfo]
   }
 
+  const injectReference = (params) => {
+    const ref = createReference(params)
+    const urlInfo = resolveReference(ref)
+    return [ref, urlInfo]
+  }
+
   return {
     pluginController,
     urlInfoTransformer,
@@ -614,6 +619,7 @@ export const createKitchen = ({
     jsenvDirectoryUrl,
     cook,
     prepareEntryPoint,
+    injectReference,
   }
 }
 

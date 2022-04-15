@@ -1,10 +1,3 @@
-/* TOFIX:
- *  - main.js inside dist do not use systemjs
- *  - main.js contains ?as_js_classic in the html
- *  - systemjs not injected into the page
- *  - worker.js is generated despites not being used in the end
- */
-
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"

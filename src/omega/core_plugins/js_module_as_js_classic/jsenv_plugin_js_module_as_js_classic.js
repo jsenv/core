@@ -25,7 +25,9 @@ import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_compositi
 
 const require = createRequire(import.meta.url)
 
-export const jsenvPluginJsModuleAsJsClassic = () => {
+export const jsenvPluginJsModuleAsJsClassic = ({
+  systemJsInjection = true,
+} = {}) => {
   const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
@@ -41,6 +43,7 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
     })
     urlInfo.type = "js_classic"
     if (
+      systemJsInjection &&
       outFormat === "systemjs" &&
       (urlInfo.data.isEntryPoint ||
         urlInfo.subtype === "worker" ||
@@ -103,13 +106,15 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
           const srcAttribute = getHtmlNodeAttributeByName(node, "src")
           if (srcAttribute) {
             actions.push(() => {
+              const specifier = srcAttribute.value
+              const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
+                as_js_classic: "",
+              })
+              const [newReference, newUrlInfo] =
+                context.referenceUtils.updateSpecifier(specifier, newSpecifier)
+              newUrlInfo.data.asJsClassic = true
               removeHtmlNodeAttribute(node, typeAttribute)
-              srcAttribute.value = injectQueryParamsIntoSpecifier(
-                srcAttribute.value,
-                {
-                  as_js_classic: "",
-                },
-              )
+              srcAttribute.value = newReference.generatedSpecifier
             })
             return
           }
@@ -145,6 +150,7 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
               reference: inlineScriptReference,
               urlInfo: inlineScriptUrlInfo,
             })
+            removeHtmlNodeAttribute(node, typeAttribute)
             setHtmlNodeText(node, inlineScriptUrlInfo.content)
           })
         }
@@ -155,20 +161,22 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
           return null
         }
         await Promise.all(actions.map((action) => action()))
-        const [systemJsClientFileReference] = context.referenceUtils.inject({
-          type: "script_src",
-          specifier: injectQueryParams(systemJsClientFileUrl, {
-            js_classic: "",
-          }),
-        })
-        injectScriptAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            "tagName": "script",
-            "src": systemJsClientFileReference.generatedSpecifier,
-            "injected-by": "jsenv:js_module_as_js_classic",
-          }),
-        )
+        if (systemJsInjection) {
+          const [systemJsReference] = context.referenceUtils.inject({
+            type: "script_src",
+            specifier: injectQueryParams(systemJsClientFileUrl, {
+              js_classic: "",
+            }),
+          })
+          injectScriptAsEarlyAsPossible(
+            htmlAst,
+            createHtmlNode({
+              "tagName": "script",
+              "src": systemJsReference.generatedSpecifier,
+              "injected-by": "jsenv:js_module_as_js_classic",
+            }),
+          )
+        }
         return stringifyHtmlAst(htmlAst)
       },
       js_module: async (urlInfo, context) => {

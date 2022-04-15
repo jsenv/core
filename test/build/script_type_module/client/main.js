@@ -1,3 +1,5 @@
+import { answer } from "./file.js"
+
 window.resolveNamespacePromise({
-  answer: 42,
+  answer,
 })

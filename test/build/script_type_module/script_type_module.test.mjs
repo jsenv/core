@@ -1,3 +1,8 @@
+/*
+ * TOFIX:
+ * - main.js is generated despites not being used in the end (main.es5.js will be instead)
+ */
+
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -33,7 +38,9 @@ const test = async (params) => {
 
 // default
 {
-  const actual = await test()
+  const actual = await test({
+    bundling: false,
+  })
   const expected = {
     answer: 42,
   }
