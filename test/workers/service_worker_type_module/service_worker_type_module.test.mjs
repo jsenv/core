@@ -5,7 +5,7 @@ import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./main.html": "main.html",
