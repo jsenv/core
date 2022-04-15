@@ -27,13 +27,16 @@ export const featureCompats = {
     ios: "12",
     android: "9",
   },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {
+    android: "8",
+    chrome: "63",
     edge: "79",
     firefox: "67",
-    chrome: "63",
-    safari: "11.3",
+    ios: "11.3",
     opera: "50",
-    android: "8",
+    safari: "11.3",
+    samsung: "8.0",
     node: "13.2",
   },
   top_level_await: {

@@ -11,9 +11,14 @@ const testWorker = async (worker) => {
 }
 
 const worker = new Worker("/worker.js", { type: "module" })
-export const workerResponse = await testWorker(worker)
+const workerResponse = await testWorker(worker)
 
 const worker2 = new Worker(new URL("./worker.js", import.meta.url), {
   type: "module",
 })
-export const worker2Response = await testWorker(worker2)
+const worker2Response = await testWorker(worker2)
+
+window.resolveNamespacePromise({
+  workerResponse,
+  worker2Response,
+})

@@ -44,7 +44,7 @@ export const ContentType = {
   asFileExtension: (value) => {
     const mediaType = ContentType.asMediaType(value)
     const mediaTypeInfo = mediaTypeInfos[mediaType]
-    return mediaTypeInfo ? mediaTypeInfo.extensions[0] : ""
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : ""
   },
 
   fromUrl: (url) => {

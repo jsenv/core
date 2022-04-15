@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const test = async (params) => {
-  const { buildManifest } = await build({
+  await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -12,9 +12,9 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     babel: {
-      topLevelAwait: "ignore",
+      // topLevelAwait: "ignore",
     },
-    versioning: "none",
+    versioning: false,
     minification: false,
     ...params,
   })
@@ -23,25 +23,23 @@ const test = async (params) => {
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
     htmlFileRelativeUrl: "./main.html",
     /* eslint-disable no-undef */
-    pageFunction: async (jsRelativeUrl) => {
-      const namespace = await import(jsRelativeUrl)
-      return namespace
+    pageFunction: async () => {
+      return window.namespacePromise
     },
     /* eslint-enable no-undef */
-    pageArguments: [`./${buildManifest["js/main.js"]}`],
   })
   return returnValue
 }
 
 // default (no support for worker_type_module)
-// {
-//   const actual = await test()
-//   const expected = {
-//     worker2Response: "pong",
-//     workerResponse: "pong",
-//   }
-//   assert({ actual, expected })
-// }
+{
+  const actual = await test()
+  const expected = {
+    workerResponse: "pong",
+    worker2Response: "pong",
+  }
+  assert({ actual, expected })
+}
 
 // without bundling
 {
@@ -49,24 +47,24 @@ const test = async (params) => {
     bundling: false,
   })
   const expected = {
-    worker2Response: "pong",
     workerResponse: "pong",
+    worker2Response: "pong",
   }
   assert({ actual, expected })
 }
 
 // with support for worker_type_module
-// {
-//   const actual = await test({
-//     runtimeCompat: {
-//       chrome: "81",
-//     },
-//   })
-//   const expected = {
-//     worker2Response: "pong",
-//     workerResponse: "pong",
-//   }
-//   assert({ actual, expected })
-// }
+{
+  const actual = await test({
+    runtimeCompat: {
+      chrome: "81",
+    },
+  })
+  const expected = {
+    workerResponse: "pong",
+    worker2Response: "pong",
+  }
+  assert({ actual, expected })
+}
 
 // with support + bundling

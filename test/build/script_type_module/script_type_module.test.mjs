@@ -11,9 +11,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    babel: {
-      topLevelAwait: "ignore",
-    },
     versioning: false,
     minification: false,
     ...params,
@@ -37,7 +34,7 @@ const test = async (params) => {
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.es5.js`,
+    url: `${serverOrigin}/js/main.js`,
   }
   assert({ actual, expected })
 }
@@ -50,7 +47,7 @@ const test = async (params) => {
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.es5.js`,
+    url: `${serverOrigin}/js/main.js`,
   }
   assert({ actual, expected })
 }

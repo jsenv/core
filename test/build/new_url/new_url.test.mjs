@@ -27,7 +27,7 @@ const actual = returnValue
 const expected = {
   absoluteBaseUrl: `http://jsenv.dev/file.txt`,
   absoluteUrl: `http://example.com/file.txt`,
-  textFileUrl: `${serverOrigin}/assets/file-64ec88ca.txt`,
-  windowOriginRelativeUrl: `${serverOrigin}/assets/file-64ec88ca.txt`,
+  textFileUrl: `${serverOrigin}/assets/file.txt?v=64ec88ca`,
+  windowOriginRelativeUrl: `${serverOrigin}/assets/file.txt?v=64ec88ca`,
 }
 assert({ actual, expected })

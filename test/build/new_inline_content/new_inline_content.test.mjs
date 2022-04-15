@@ -39,13 +39,13 @@ const expected = {
   complexInsideSingleQuotes: `\n"😀"\n`,
   cssAndTemplate: `
 body {
-  background-image: url(/assets/jsenv-25e95a00.png);
-  background-image: url(/assets/jsenv-25e95a00.png);
-  background-image: url(/assets/jsenv-25e95a00.png);
+  background-image: url(/assets/jsenv.png?v=25e95a00);
+  background-image: url(/assets/jsenv.png?v=25e95a00);
+  background-image: url(/assets/jsenv.png?v=25e95a00);
 }
 `,
-  cssTextWithUrl: `\nbody { background-image: url(/assets/jsenv-25e95a00.png); }\n`,
-  cssTextWithUrl2: `\nbody { background-image: url(/assets/jsenv-25e95a00.png); }\n`,
+  cssTextWithUrl: `\nbody { background-image: url(/assets/jsenv.png?v=25e95a00); }\n`,
+  cssTextWithUrl2: `\nbody { background-image: url(/assets/jsenv.png?v=25e95a00); }\n`,
   doubleQuote: `"`,
   doubleQuoteEscaped: `"`,
   fromTemplate: `"`,
@@ -58,8 +58,8 @@ body {
   lineEnding2: `\n`,
   singleQuote: `'`,
   singleQuoteEscaped: `'`,
-  whenInlined: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
-  whenRenamed: `body { background-image: url(/assets/jsenv-25e95a00.png); }`,
-  bodyBackgroundImage: `url("${serverOrigin}/assets/jsenv-25e95a00.png")`,
+  whenInlined: `body { background-image: url(/assets/jsenv.png?v=25e95a00); }`,
+  whenRenamed: `body { background-image: url(/assets/jsenv.png?v=25e95a00); }`,
+  bodyBackgroundImage: `url("${serverOrigin}/assets/jsenv.png?v=25e95a00")`,
 }
 assert({ actual, expected })

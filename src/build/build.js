@@ -312,6 +312,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       const bundleUrlInfo = bundleUrlInfos[rawUrl]
       const urlInfo = bundleUrlInfo || finalUrlInfo
       const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+      if (rawUrlInfo) {
+        finalUrlInfo.type = rawUrlInfo.type
+        finalUrlInfo.subtype = rawUrlInfo.subtype
+      }
       return {
         originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
         sourcemap: bundleUrlInfo

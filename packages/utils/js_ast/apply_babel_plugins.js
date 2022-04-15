@@ -42,6 +42,7 @@ export const applyBabelPlugins = async ({
       plugins: [
         // "importMeta",
         // "topLevelAwait",
+        "dynamicImport",
         "importAssertions",
         "jsx",
         "classProperties",

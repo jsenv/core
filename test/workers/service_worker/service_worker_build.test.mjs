@@ -33,7 +33,7 @@ if (process.platform !== "win32") {
             versioned: false,
             version: "3dd88b43",
           },
-          "css/style-5e0188f9.css": {
+          "css/style.css?v=5e0188f9": {
             versioned: true,
           },
         },
