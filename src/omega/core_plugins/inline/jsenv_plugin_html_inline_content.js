@@ -84,6 +84,12 @@ export const jsenvPluginHtmlInlineContent = () => {
               htmlNodePosition.readNodePosition(node, {
                 preferOriginal: true,
               })
+            // from MDN about [type] attribute:
+            // "Any other value: The embedded content is treated as a data block
+            // which won't be processed by the browser. Developers must use a valid MIME type
+            // that is not a JavaScript MIME type to denote data blocks.
+            // The src attribute will be ignored."
+            // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
             const isJs =
               scriptCategory === "classic" || scriptCategory === "module"
             const isImportmap = scriptCategory === "importmap"

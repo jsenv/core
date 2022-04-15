@@ -1,5 +1,17 @@
 import { createRequire } from "node:module"
+import { readFileSync } from "@jsenv/filesystem"
 
+import {
+  getHtmlNodeAttributeByName,
+  getHtmlNodeTextNode,
+  parseHtmlString,
+  removeHtmlNodeAttribute,
+  stringifyHtmlAst,
+  visitHtmlAst,
+  htmlNodePosition,
+  setHtmlNodeText,
+} from "@jsenv/utils/html_ast/html_ast.js"
+import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
   injectQueryParams,
@@ -7,13 +19,12 @@ import {
 } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { analyzeNewWorkerCall } from "@jsenv/utils/js_ast/js_static_analysis.js"
+import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 
 const require = createRequire(import.meta.url)
 
 export const jsenvPluginJsModuleAsJsClassic = () => {
-  const convertJsModuleToJsClassic = async (urlInfo) => {
-    const outFormat =
-      urlInfo.data.usesImport || urlInfo.data.usesExport ? "systemjs" : "umd"
+  const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
         outFormat === "systemjs"
@@ -25,6 +36,20 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
       content: urlInfo.content,
     })
     urlInfo.type = "js_classic"
+    if (outFormat === "systemjs" && urlInfo.data.isEntryPoint) {
+      const magicSource = createMagicSource(code)
+      // TODO: get systemjs
+      const systemjsCode = readFileSync(
+        new URL("../runtime_client/s.js", import.meta.url),
+        { as: "string" },
+      )
+      magicSource.prepend(systemjsCode)
+      const { content, sourcemap } = magicSource.toContentAndSourcemap()
+      return {
+        content,
+        sourcemap: await composeTwoSourcemaps(map, sourcemap),
+      }
+    }
     return {
       content: code,
       sourcemap: map,
@@ -46,6 +71,88 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
       return urlTransformed
     },
     transform: {
+      html: async (urlInfo, context) => {
+        if (
+          context.isSupportedOnCurrentClients("script_type_module") &&
+          context.isSupportedOnCurrentClients("import_dynamic")
+        ) {
+          return null
+        }
+        const usesScriptTypeModule = urlInfo.references.some(
+          (ref) =>
+            ref.type === "script_src" && ref.expectedType === "js_module",
+        )
+        if (!usesScriptTypeModule) {
+          return null
+        }
+        const htmlAst = parseHtmlString(urlInfo.content)
+        const actions = []
+        const visitScriptTypeModule = (node) => {
+          if (node.nodeName !== "script") {
+            return
+          }
+          const typeAttribute = getHtmlNodeAttributeByName(node, "type")
+          if (!typeAttribute || typeAttribute.value !== "module") {
+            return
+          }
+          const srcAttribute = getHtmlNodeAttributeByName(node, "src")
+          if (srcAttribute) {
+            actions.push(() => {
+              removeHtmlNodeAttribute(node, typeAttribute)
+              srcAttribute.value = injectQueryParamsIntoSpecifier(
+                srcAttribute.value,
+                {
+                  as_js_classic: "",
+                },
+              )
+            })
+            return
+          }
+          const textNode = getHtmlNodeTextNode(node)
+          actions.push(async () => {
+            const { line, column, lineEnd, columnEnd, isOriginal } =
+              htmlNodePosition.readNodePosition(node, {
+                preferOriginal: true,
+              })
+            let inlineScriptUrl = generateInlineContentUrl({
+              url: urlInfo.url,
+              extension: ".js",
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+            })
+            const [inlineScriptReference, inlineScriptUrlInfo] =
+              context.referenceUtils.foundInline({
+                node,
+                type: "script_src",
+                // we remove 1 to the line because imagine the following html:
+                // <script>console.log('ok')</script>
+                // -> content starts same line as <script>
+                line: line - 1,
+                column,
+                isOriginal,
+                specifier: inlineScriptUrl,
+                contentType: "application/javascript",
+                content: textNode.value,
+              })
+            await context.cook({
+              reference: inlineScriptReference,
+              urlInfo: inlineScriptUrlInfo,
+            })
+            setHtmlNodeText(node, inlineScriptUrlInfo.content)
+          })
+        }
+        visitHtmlAst(htmlAst, (node) => {
+          visitScriptTypeModule(node)
+        })
+        if (actions.length === 0) {
+          return null
+        }
+        await Promise.all(actions.map((action) => action()))
+        // TODO: inject systemjs script into HTML
+        return stringifyHtmlAst(htmlAst)
+      },
       js_module: async (urlInfo, context) => {
         if (
           // during build the info must be read from "data.asJsClassic"
@@ -54,7 +161,15 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
           new URL(urlInfo.url).searchParams.has("as_js_classic")
         ) {
           urlInfo.data.asJsClassic = true
-          return convertJsModuleToJsClassic(urlInfo)
+          const outFormat =
+            urlInfo.data.usesImport || urlInfo.data.usesExport
+              ? "systemjs"
+              : "umd"
+          const classicConversionResult = await convertJsModuleToJsClassic(
+            urlInfo,
+            outFormat,
+          )
+          return classicConversionResult
         }
         const usesWorkerTypeModule = urlInfo.references.some(
           (ref) =>
@@ -67,7 +182,6 @@ export const jsenvPluginJsModuleAsJsClassic = () => {
         ) {
           return null
         }
-
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataNewWorkerMentions],
           url: urlInfo.url,

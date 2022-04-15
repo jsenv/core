@@ -784,25 +784,6 @@
 (function () {
   // worker or service worker
   if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
-    var importMapFromParentPromise = new Promise((resolve) => {
-      var importmapMessageCallback = function (e) {
-        if (e.data === "__importmap_init__") {
-          self.removeEventListener("message", importmapMessageCallback)
-          e.ports[0].onmessage = (message) => {
-            resolve(message.data)
-          }
-          e.ports[0].postMessage('__importmap_request__')         
-        }
-      };
-      self.addEventListener("message", importmapMessageCallback)
-    })
-    // var prepareImport = System.prepareImport
-    System.prepareImport = function () {
-      return importMapFromParentPromise.then(function (importmap) {
-        System.extendImportMap(System.importMap, JSON.stringify(importmap), System.baseUrl)
-      })
-    }
-
     // auto import first register
     var messageEvents = []
     var messageCallback = (event) => {
@@ -821,44 +802,6 @@
         messageEvents = null
         return result
       })
-    }
-  }
-  else if (typeof window === 'object') {
-    var WorkerConstructor = window.Worker;
-    if (typeof WorkerConstructor === 'function') {
-      window.Worker = function (url, options) {
-        var worker = new WorkerConstructor(url, options);
-        var importmapChannel = new MessageChannel();
-        importmapChannel.port1.onmessage = function (message) {
-          System.prepareImport().then(function (importmap) {
-            message.target.postMessage(importmap);
-          });
-        }
-        worker.postMessage('__importmap_init__', [importmapChannel.port2]);
-        return worker
-      }
-    }
-
-    var serviceWorker = navigator.serviceWorker;
-    if (serviceWorker) {
-      var register =  serviceWorker.register;
-      serviceWorker.register = function(url, options) {
-        var registrationPromise = register.call(this, url, options);
-        registrationPromise.then(function(registration) {
-          var installing = registration.installing;
-          var waiting = registration.waiting;
-          var active = registration.active;
-          var worker = installing || waiting || active;
-          var importmapChannel = new MessageChannel();
-          importmapChannel.port1.onmessage = function (message) {
-            System.prepareImport().then(function (importmap) {
-              message.target.postMessage(importmap)
-            });
-          }
-          worker.postMessage('__importmap_init__', [importmapChannel.port2]);
-        })
-        return registrationPromise
-      }
     }
   }
 }());
