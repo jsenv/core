@@ -460,10 +460,12 @@ export const createKitchen = ({
 
         const newUrlInfo = resolveReference(newReference)
         const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
-        if (currentUrlInfo && currentUrlInfo !== newUrlInfo) {
-          if (currentUrlInfo.dependents.size === 0) {
-            delete context.urlGraph.urlInfos[currentReference.url]
-          }
+        if (
+          currentUrlInfo &&
+          currentUrlInfo !== newUrlInfo &&
+          currentUrlInfo.dependents.size === 0
+        ) {
+          delete context.urlGraph.urlInfos[currentReference.url]
         }
         return [newReference, newUrlInfo]
       },

@@ -91,6 +91,7 @@ export const jsenvPluginImportAssertions = () => {
     },
   ]
 
+  // TODO: use same approach as import_type_css
   const importTypeJson = {
     name: "jsenv:import_type_json",
     appliesDuring: "*",
@@ -146,13 +147,21 @@ const jsenvPluginImportTypeCss = () => {
     name: "jsenv:import_type_css",
     appliesDuring: "*",
     // load the original css url
-    load: ({ data }, { urlGraph, load }) => {
-      if (data.importType !== "css_module") {
+    load: (urlInfo, context) => {
+      if (urlInfo.data.importType !== "css_module") {
         return null
       }
-      return load({
-        reference: data.originalReference,
-        urlInfo: urlGraph.getUrlInfo(data.originalReference.url),
+      const { originalReference } = urlInfo.data
+      // we must call "reuseOrCreateUrlInfo" and not "getUrlInfo"
+      // because kitchen.js delete urls without dependents after "updateSpecifier"
+      // so that build realizes the urls is not used
+      // an other approach could be to filter out non-reference url at the end of the build
+      const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+        originalReference.url,
+      )
+      return context.load({
+        reference: originalReference,
+        urlInfo: originalUrlInfo,
       })
     },
     transform: ({ url, data, contentType, content }, { referenceUtils }) => {

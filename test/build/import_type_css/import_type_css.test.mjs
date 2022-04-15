@@ -14,6 +14,7 @@ const test = async (options) => {
     babel: {
       topLevelAwait: "ignore",
     },
+    minification: false,
     ...options,
   })
   const { serverOrigin, returnValue } = await executeInChromium({
