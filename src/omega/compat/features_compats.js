@@ -9,6 +9,15 @@ export const featureCompats = {
     android: "61",
     samsung: "8.2",
   },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4",
+  },
   import_meta: {
     chrome: "64",
     edge: "79",

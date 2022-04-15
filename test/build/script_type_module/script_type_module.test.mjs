@@ -19,7 +19,7 @@ const test = async (params) => {
     ...params,
   })
 
-  const { returnValue } = await executeInChromium({
+  const { returnValue, serverOrigin } = await executeInChromium({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
     htmlFileRelativeUrl: "./main.html",
     /* eslint-disable no-undef */
@@ -28,25 +28,29 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return returnValue
+  return { returnValue, serverOrigin }
 }
 
 // default
 {
-  const actual = await test()
+  const { returnValue, serverOrigin } = await test()
+  const actual = returnValue
   const expected = {
     answer: 42,
+    url: `${serverOrigin}/js/main.es5.js?v=d2157176`,
   }
   assert({ actual, expected })
 }
 
 // without bundling
 {
-  const actual = await test({
+  const { returnValue, serverOrigin } = await test({
     bundling: false,
   })
+  const actual = returnValue
   const expected = {
     answer: 42,
+    url: `${serverOrigin}/js/main.es5.js?v=d2157176`,
   }
   assert({ actual, expected })
 }

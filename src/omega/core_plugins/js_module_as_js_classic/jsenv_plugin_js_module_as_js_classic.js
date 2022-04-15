@@ -22,6 +22,7 @@ import {
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { analyzeNewWorkerCall } from "@jsenv/utils/js_ast/js_static_analysis.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
+import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 
 const require = createRequire(import.meta.url)
 
@@ -33,6 +34,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
+        babelPluginTransformImportMetaUrl,
         outFormat === "system"
           ? require("@babel/plugin-transform-modules-systemjs")
           : require("@babel/plugin-transform-modules-umd"),
@@ -96,6 +98,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
         }
         const htmlAst = parseHtmlString(urlInfo.content)
         const actions = []
+        const jsModulesToWait = []
         const visitScriptTypeModule = (node) => {
           if (node.nodeName !== "script") {
             return
@@ -116,6 +119,10 @@ export const jsenvPluginJsModuleAsJsClassic = ({
               newUrlInfo.data.asJsClassic = true
               removeHtmlNodeAttribute(node, typeAttribute)
               srcAttribute.value = newReference.generatedSpecifier
+              jsModulesToWait.push({
+                reference: newReference,
+                urlInfo: newUrlInfo,
+              })
             })
             return
           }
@@ -153,6 +160,10 @@ export const jsenvPluginJsModuleAsJsClassic = ({
             })
             removeHtmlNodeAttribute(node, typeAttribute)
             setHtmlNodeText(node, inlineScriptUrlInfo.content)
+            jsModulesToWait.push({
+              reference: inlineScriptReference,
+              urlInfo: inlineScriptUrlInfo,
+            })
           })
         }
         visitHtmlAst(htmlAst, (node) => {
@@ -163,20 +174,33 @@ export const jsenvPluginJsModuleAsJsClassic = ({
         }
         await Promise.all(actions.map((action) => action()))
         if (systemJsInjection) {
-          const [systemJsReference] = context.referenceUtils.inject({
-            type: "script_src",
-            specifier: injectQueryParams(systemJsClientFileUrl, {
-              js_classic: "",
-            }),
-          })
-          injectScriptAsEarlyAsPossible(
-            htmlAst,
-            createHtmlNode({
-              "tagName": "script",
-              "src": systemJsReference.generatedSpecifier,
-              "injected-by": "jsenv:js_module_as_js_classic",
+          await Promise.all(
+            jsModulesToWait.map(async (jsModuleToWait) => {
+              await context.cook({
+                reference: jsModuleToWait.reference,
+                urlInfo: jsModuleToWait.urlInfo,
+              })
             }),
           )
+          const needsSystemJs = jsModulesToWait.some(
+            (jsModuleToWait) => jsModuleToWait.urlInfo.data.format === "system",
+          )
+          if (needsSystemJs) {
+            const [systemJsReference] = context.referenceUtils.inject({
+              type: "script_src",
+              specifier: injectQueryParams(systemJsClientFileUrl, {
+                js_classic: "",
+              }),
+            })
+            injectScriptAsEarlyAsPossible(
+              htmlAst,
+              createHtmlNode({
+                "tagName": "script",
+                "src": systemJsReference.generatedSpecifier,
+                "injected-by": "jsenv:js_module_as_js_classic",
+              }),
+            )
+          }
         }
         return stringifyHtmlAst(htmlAst)
       },

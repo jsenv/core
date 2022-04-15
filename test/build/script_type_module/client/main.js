@@ -1,5 +1,9 @@
 import { answer } from "./file.js"
 
-window.resolveNamespacePromise({
-  answer,
-})
+setTimeout(() => {
+  const url = import.meta.url
+  window.resolveNamespacePromise({
+    answer,
+    url,
+  })
+}, 100)
