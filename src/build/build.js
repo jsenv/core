@@ -67,7 +67,8 @@ export const build = async ({
 
   bundling = true,
   minification = true,
-  versioning = "filename", //  "filename", "search_param", "none"
+  versioning = true,
+  versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
 
   writeOnFileSystem = true,
@@ -80,9 +81,9 @@ export const build = async ({
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
   assertEntryPoints({ entryPoints })
-  if (!["filename", "search_param", "none"].includes(versioning)) {
+  if (!["filename", "search_param"].includes(versioningMethod)) {
     throw new Error(
-      `Unexpected "versioning": must be "filename", "search_param" or "none"; got ${versioning}`,
+      `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
     )
   }
   if (typeof minification === "boolean") {
@@ -378,16 +379,16 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             // And the content will be generated when url with ?as_js_classic is cooked by url graph loader.
             // Here we just want to reserve an url for that file and we know it's going to be
             // type: "js_classic" and subtype: ""|"worker"|"service_worker"
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              data: {},
-              type: "js_classic",
-              subtype: reference.expectedSubtype,
-            })
             searchParams.delete("as_js_classic")
             const withoutAsJsClassicParam = referenceUrlObject.href
             const rawUrl =
               rawUrls[withoutAsJsClassicParam] || withoutAsJsClassicParam
             reference.data.rawUrl = rawUrl
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              data: {},
+              type: "js_classic",
+              subtype: reference.expectedSubtype,
+            })
             // ?as_js_classic is removed from the url specifier
             // we put this information into data.asJsClassic so that
             // "js_module_as_js_classic" can still perform the conversion
@@ -570,7 +571,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     `graph urls pre-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   )
-  if (versioning !== "none") {
+  if (versioning) {
     const versioningTask = createTaskLog(logger, "inject version in urls")
     try {
       const urlsSorted = sortUrlGraphByDependencies(finalGraph)
@@ -617,7 +618,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
           buildUrl: urlInfo.url,
           version: urlInfo.data.version,
-          versioning,
+          versioningMethod,
         })
       })
       const versionMappings = {}
@@ -871,11 +872,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         )
       }),
     )
-    if (
-      versioning !== "none" &&
-      assetManifest &&
-      Object.keys(buildManifest).length
-    ) {
+    if (versioning && assetManifest && Object.keys(buildManifest).length) {
       await writeFile(
         new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
         JSON.stringify(buildManifest, null, "  "),
@@ -911,8 +908,8 @@ const GRAPH = {
   },
 }
 
-const injectVersionIntoBuildUrl = ({ buildUrl, version, versioning }) => {
-  if (versioning === "search_param") {
+const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
+  if (versioningMethod === "search_param") {
     return injectQueryParams(buildUrl, {
       v: version,
     })

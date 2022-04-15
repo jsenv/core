@@ -33,7 +33,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
-        outFormat === "systemjs"
+        outFormat === "system"
           ? require("@babel/plugin-transform-modules-systemjs")
           : require("@babel/plugin-transform-modules-umd"),
       ],
@@ -42,9 +42,10 @@ export const jsenvPluginJsModuleAsJsClassic = ({
       content: urlInfo.content,
     })
     urlInfo.type = "js_classic"
+    urlInfo.data.format = outFormat
     if (
       systemJsInjection &&
-      outFormat === "systemjs" &&
+      outFormat === "system" &&
       (urlInfo.data.isEntryPoint ||
         urlInfo.subtype === "worker" ||
         urlInfo.subtype === "service_worker")
@@ -189,7 +190,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
           urlInfo.data.asJsClassic = true
           const outFormat =
             urlInfo.data.usesImport || urlInfo.data.usesExport
-              ? "systemjs"
+              ? "system"
               : "umd"
           const classicConversionResult = await convertJsModuleToJsClassic(
             urlInfo,

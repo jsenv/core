@@ -12,7 +12,6 @@ await build({
   },
   sourcemaps: "file",
   bundling: false,
-  versioning: "filename",
   minification: false,
 })
 const { returnValue } = await executeInChromium({

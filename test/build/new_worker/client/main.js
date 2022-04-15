@@ -1,9 +1,7 @@
 const testWorker = async (worker) => {
   return new Promise((resolve, reject) => {
     worker.onmessage = (e) => {
-      if (e.data !== "__importmap_request__") {
-        resolve(e.data)
-      }
+      resolve(e.data)
     }
     worker.onerror = (e) => {
       reject(e.message)

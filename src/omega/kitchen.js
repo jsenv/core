@@ -446,18 +446,25 @@ export const createKitchen = ({
             `Cannot find a reference for the following generatedSpecifier "${generatedSpecifier}"`,
           )
         }
-        const referenceFound = references[index]
+        const currentReference = references[index]
         const newReference = createReference({
-          ...referenceFound,
+          ...currentReference,
           specifier: newSpecifier,
           data: {
-            ...referenceFound.data,
+            ...currentReference.data,
             ...data,
           },
         })
         references[index] = newReference
-        newReference.data.originalReference = referenceFound
+        newReference.data.originalReference = currentReference
+
         const newUrlInfo = resolveReference(newReference)
+        const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
+        if (currentUrlInfo !== newUrlInfo) {
+          if (currentUrlInfo.dependents.size === 0) {
+            delete context.urlGraph.urlInfos[currentReference.url]
+          }
+        }
         return [newReference, newUrlInfo]
       },
       becomesInline: (
