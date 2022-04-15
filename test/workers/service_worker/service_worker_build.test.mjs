@@ -11,7 +11,6 @@ await build({
     "./main.html": "main.html",
   },
   minification: false,
-  versioning: "filename",
 })
 const { returnValue, serverOrigin } = await executeInChromium({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),

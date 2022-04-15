@@ -14,7 +14,7 @@ const test = async (params) => {
     babel: {
       topLevelAwait: "ignore",
     },
-    // versioning: false,
+    versioning: false,
     minification: false,
     ...params,
   })
@@ -37,7 +37,7 @@ const test = async (params) => {
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.es5.js?v=d2157176`,
+    url: `${serverOrigin}/js/main.es5.js`,
   }
   assert({ actual, expected })
 }
@@ -50,7 +50,7 @@ const test = async (params) => {
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.es5.js?v=d2157176`,
+    url: `${serverOrigin}/js/main.es5.js`,
   }
   assert({ actual, expected })
 }

@@ -34,10 +34,12 @@ export const jsenvPluginJsModuleAsJsClassic = ({
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
-        babelPluginTransformImportMetaUrl,
-        outFormat === "system"
-          ? require("@babel/plugin-transform-modules-systemjs")
-          : require("@babel/plugin-transform-modules-umd"),
+        ...(outFormat === "system"
+          ? [require("@babel/plugin-transform-modules-systemjs")]
+          : [
+              require("@babel/plugin-transform-modules-umd"),
+              babelPluginTransformImportMetaUrl,
+            ]),
       ],
       url: urlInfo.data.rawUrl || urlInfo.url,
       generatedUrl: urlInfo.generatedUrl,
