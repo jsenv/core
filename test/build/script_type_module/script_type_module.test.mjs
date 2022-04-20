@@ -39,15 +39,33 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// without bundling
+// no support for <script type="module">
 {
   const { returnValue, serverOrigin } = await test({
+    runtimeCompat: {
+      chrome: "60",
+    },
+  })
+  const actual = returnValue
+  const expected = {
+    answer: 42,
+    url: `${serverOrigin}/js/main.es5.js`,
+  }
+  assert({ actual, expected })
+}
+
+// no support + without bundling
+{
+  const { returnValue, serverOrigin } = await test({
+    runtimeCompat: {
+      chrome: "60",
+    },
     bundling: false,
   })
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.js`,
+    url: `${serverOrigin}/js/main.es5.js`,
   }
   assert({ actual, expected })
 }
