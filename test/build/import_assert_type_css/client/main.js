@@ -2,11 +2,6 @@ import sheet from "./src/main.css" assert { type: "css" }
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 
-let resolveNamespace
-window.namespace = new Promise((resolve) => {
-  resolveNamespace = resolve
-})
-
 // on firefox + webkit we have to wait a bit,
 // it seems the styles are applied on next js event loop
 await new Promise((resolve) => {
@@ -26,9 +21,7 @@ const bodyBackgroundImage = getComputedStyle(document.body).backgroundImage
 
 console.log({ bodyBackgroundImage })
 
-resolveNamespace({
+window.resolveNamespace({
   bodyBackgroundColor,
   bodyBackgroundImage,
 })
-
-export { bodyBackgroundColor, bodyBackgroundImage }

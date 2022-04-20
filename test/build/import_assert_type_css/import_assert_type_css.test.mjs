@@ -21,12 +21,10 @@ const test = async (options) => {
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
     htmlFileRelativeUrl: "./main.html",
     /* eslint-disable no-undef */
-    pageFunction: async (jsRelativeUrl) => {
-      const namespace = await import(jsRelativeUrl)
-      return namespace
+    pageFunction: async () => {
+      return window.namespacePromise
     },
     /* eslint-enable no-undef */
-    pageArguments: [`./${buildManifest["js/main.js"]}`],
   })
   return { serverOrigin, buildManifest, returnValue }
 }

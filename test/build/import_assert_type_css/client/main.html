@@ -6,6 +6,11 @@
   </head>
 
   <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespace = resolve
+      })
+    </script>
     <script type="module" src="./main.js"></script>
   </body>
 </html>
