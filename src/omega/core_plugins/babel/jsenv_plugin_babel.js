@@ -19,7 +19,9 @@ export const jsenvPluginBabel = ({
     const isWorkerContext = isWorker || isServiceWorker || isSharedWorker
 
     let { clientRuntimeCompat } = context
-    if (isServiceWorker) {
+    if (isWorker) {
+      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker")
+    } else if (isServiceWorker) {
       // when code is executed by a service worker we can assume
       // the execution context supports more than the default one
       // for instance arrow function are supported
@@ -27,10 +29,13 @@ export const jsenvPluginBabel = ({
         clientRuntimeCompat,
         "service_worker",
       )
+    } else if (isSharedWorker) {
+      clientRuntimeCompat = RUNTIME_COMPAT.add(
+        clientRuntimeCompat,
+        "shared_worker",
+      )
     }
-    if (isWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker")
-    }
+
     const { referenceUtils } = context
     const isSupported = (feature) =>
       RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)

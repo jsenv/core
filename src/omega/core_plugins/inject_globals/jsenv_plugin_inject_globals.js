@@ -7,7 +7,9 @@ export const jsenvPluginInjectGlobals = (globals = {}) => {
   const injectGlobals = (urlInfo) => {
     const magicSource = createMagicSource(urlInfo.content)
     const globalName =
-      urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker"
+      urlInfo.subtype === "worker" ||
+      urlInfo.subtype === "service_worker" ||
+      urlInfo.subtype === "shared_worker"
         ? "self"
         : "window"
     magicSource.prepend(
@@ -20,8 +22,8 @@ export const jsenvPluginInjectGlobals = (globals = {}) => {
     name: "jsenv:inject_globals",
     appliesDuring: "*",
     transform: {
-      js_module: injectGlobals,
       js_classic: injectGlobals,
+      js_module: injectGlobals,
     },
   }
 }
