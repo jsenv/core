@@ -1,5 +1,5 @@
 import { DataUrl } from "@jsenv/utils/urls/data_url.js"
-import { ContentType } from "@jsenv/utils/content_type/content_type.js"
+import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginDataUrls = () => {
   return {
@@ -52,7 +52,7 @@ export const jsenvPluginDataUrls = () => {
 }
 
 const contentFromUrlData = ({ contentType, base64Flag, urlData }) => {
-  if (ContentType.isTextual(contentType)) {
+  if (CONTENT_TYPE.isTextual(contentType)) {
     if (base64Flag) {
       return base64ToString(urlData)
     }

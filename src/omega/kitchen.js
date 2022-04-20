@@ -10,6 +10,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
+import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
 import { jsenvPluginUrlReferences } from "./core_plugins/url_references/jsenv_plugin_url_references.js"
@@ -22,6 +23,7 @@ import {
   createFinalizeError,
 } from "./errors.js"
 import { createPluginController } from "./plugin_controller.js"
+import { assertLoadedContentCompliance } from "./loaded_content_compliance.js"
 
 export const createKitchen = ({
   signal,
@@ -251,10 +253,13 @@ export const createKitchen = ({
         originalContent === undefined ? content : originalContent
       urlInfo.content = content
       urlInfo.sourcemap = sourcemap
-
       if (data) {
         Object.assign(urlInfo.data, data)
       }
+      assertLoadedContentCompliance({
+        reference,
+        urlInfo,
+      })
     } catch (error) {
       throw createLoadError({
         pluginController,
@@ -670,11 +675,14 @@ const inferUrlInfoType = ({ url, contentType }) => {
     }
     return "js_module"
   }
-  if (contentType === "application/json") {
-    return "json"
-  }
   if (contentType === "application/importmap+json") {
     return "importmap"
+  }
+  if (CONTENT_TYPE.isJson(contentType)) {
+    return "json"
+  }
+  if (CONTENT_TYPE.isTextual(contentType)) {
+    return "text"
   }
   return "other"
 }

@@ -2,7 +2,7 @@ import { extname } from "node:path"
 
 import { mediaTypeInfos } from "./media_type_infos.js"
 
-export const ContentType = {
+export const CONTENT_TYPE = {
   parse: (string) => {
     const [mediaType, charset] = string.split(";")
     return { mediaType: normalizeMediaType(mediaType), charset }
@@ -17,7 +17,7 @@ export const ContentType = {
 
   asMediaType: (value) => {
     if (typeof value === "string") {
-      return ContentType.parse(value).mediaType
+      return CONTENT_TYPE.parse(value).mediaType
     }
     if (typeof value === "object") {
       return value.mediaType
@@ -25,8 +25,16 @@ export const ContentType = {
     return null
   },
 
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value)
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    )
+  },
+
   isTextual: (value) => {
-    const mediaType = ContentType.asMediaType(value)
+    const mediaType = CONTENT_TYPE.asMediaType(value)
     if (mediaType.startsWith("text/")) {
       return true
     }
@@ -41,13 +49,15 @@ export const ContentType = {
     return false
   },
 
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
   asFileExtension: (value) => {
-    const mediaType = ContentType.asMediaType(value)
+    const mediaType = CONTENT_TYPE.asMediaType(value)
     const mediaTypeInfo = mediaTypeInfos[mediaType]
     return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : ""
   },
 
-  fromUrl: (url) => {
+  fromUrlExtension: (url) => {
     const { pathname } = new URL(url)
     const extensionWithDot = extname(pathname)
     if (!extensionWithDot || extensionWithDot === ".") {

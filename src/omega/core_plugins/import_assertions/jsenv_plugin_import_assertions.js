@@ -1,14 +1,16 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { ContentType } from "@jsenv/utils/content_type/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
-import { convertJsonTextToJavascriptModule } from "./helpers/json_module.js"
-import { convertTextToJavascriptModule } from "./helpers/text_module.js"
 
 export const jsenvPluginImportAssertions = () => {
+  const inlineContentClientFileUrl = new URL(
+    "../inline/client/inline_content.js",
+    import.meta.url,
+  ).href
+
   const importAssertions = [
     {
       name: "jsenv:import_assertions",
@@ -49,6 +51,7 @@ export const jsenvPluginImportAssertions = () => {
                 JSON.stringify(specifier),
                 newSpecifier,
               )
+              newReference.expectedType = importType
               newUrlInfo.data.importType = importType
               magicSource.replace({
                 start: importSpecifierPath.node.start,
@@ -71,6 +74,7 @@ export const jsenvPluginImportAssertions = () => {
               JSON.stringify(specifier),
               newSpecifier,
             )
+            newReference.expectedType = importType
             newUrlInfo.data.importType = importType
             magicSource.replace({
               start: importSpecifierPath.node.start,
@@ -89,111 +93,89 @@ export const jsenvPluginImportAssertions = () => {
     },
   ]
 
-  // TODO: use same approach as import_type_css
-  const importTypeJson = {
-    name: "jsenv:import_type_json",
-    appliesDuring: "*",
-    finalize: ({ url, contentType, content }) => {
-      if (!new URL(url).searchParams.has("json_module")) {
-        return null
-      }
-      if (contentType !== "application/json") {
-        throw new Error(
-          `Unexpected content type on ${url}, should be "application/json" but got ${contentType}`,
+  const createImportTypePlugin = ({ type, convertToJsModule }) => {
+    return {
+      name: `jsenv:import_type_${type}`,
+      appliesDuring: "*",
+      load: (urlInfo, context) => {
+        if (urlInfo.data.importType !== `${type}_module`) {
+          return null
+        }
+        const { originalReference } = urlInfo.data
+        // we must call "reuseOrCreateUrlInfo" and not "getUrlInfo"
+        // because kitchen.js delete urls without dependents after "updateSpecifier"
+        // so that build realizes the urls is not used
+        // an other approach could be to filter out non-reference url at the end of the build
+        const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+          originalReference.url,
         )
-      }
-      return convertJsonTextToJavascriptModule({
-        content,
-      })
-    },
+        return context.load({
+          reference: originalReference,
+          urlInfo: originalUrlInfo,
+        })
+      },
+      transform: (urlInfo, context) => {
+        if (urlInfo.data.importType !== `${type}_module`) {
+          return null
+        }
+        return {
+          type: "js_module",
+          contentType: "text/javascript",
+          content: convertToJsModule(urlInfo, context),
+        }
+      },
+    }
   }
 
-  // not standard but I expect this to happen one day?
-  const importTypeText = {
-    name: "jsenv:import_type_text",
-    appliesDuring: "*",
-    finalize: ({ url, contentType, content }) => {
-      if (!new URL(url).searchParams.has("text_module")) {
-        return null
-      }
-      if (ContentType.isTextual(contentType)) {
-        throw new Error(
-          `Unexpected content type on ${url}, should be "text/*" but got ${contentType}`,
-        )
-      }
-      return convertTextToJavascriptModule({
-        content,
-      })
+  const importTypeJson = createImportTypePlugin({
+    type: "json",
+    convertToJsModule: (urlInfo) => {
+      // here we could `export default ${jsonText}`:
+      // but js engine are optimized to recognize JSON.parse
+      // and use a faster parsing strategy
+      return `export default JSON.parse(${JSON.stringify(
+        urlInfo.content.trim(),
+      )})`
     },
-  }
+  })
 
-  return [
-    importAssertions,
-    importTypeJson,
-    jsenvPluginImportTypeCss(),
-    importTypeText,
-  ]
-}
-
-const jsenvPluginImportTypeCss = () => {
-  const inlineContentClientFileUrl = new URL(
-    "../inline/client/inline_content.js",
-    import.meta.url,
-  ).href
-
-  return {
-    name: "jsenv:import_type_css",
-    appliesDuring: "*",
-    // load the original css url
-    load: (urlInfo, context) => {
-      if (urlInfo.data.importType !== "css_module") {
-        return null
-      }
-      const { originalReference } = urlInfo.data
-      // we must call "reuseOrCreateUrlInfo" and not "getUrlInfo"
-      // because kitchen.js delete urls without dependents after "updateSpecifier"
-      // so that build realizes the urls is not used
-      // an other approach could be to filter out non-reference url at the end of the build
-      const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-        originalReference.url,
-      )
-      return context.load({
-        reference: originalReference,
-        urlInfo: originalUrlInfo,
-      })
-    },
-    transform: ({ url, data, contentType, content }, { referenceUtils }) => {
-      if (data.importType !== "css_module") {
-        return null
-      }
-      if (contentType !== "text/css") {
-        throw new Error(
-          `Unexpected content type on ${url}, should be "text/css" but got ${contentType}`,
-        )
-      }
-      const [reference] = referenceUtils.inject({
-        type: "js_import_export",
-        expectedType: "js_module",
-        specifier: inlineContentClientFileUrl,
-      })
-      const cssText = JS_QUOTES.escapeSpecialChars(content, {
+  const importTypeCss = createImportTypePlugin({
+    type: "css",
+    convertToJsModule: (urlInfo, context) => {
+      const cssText = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
         // and convert template strings into raw strings
         canUseTemplateString: true,
       })
-      return {
-        type: "js_module",
-        contentType: "text/javascript",
-        content: `import { InlineContent } from ${reference.generatedSpecifier}
+      const [reference] = context.referenceUtils.inject({
+        type: "js_import_export",
+        expectedType: "js_module",
+        specifier: inlineContentClientFileUrl,
+      })
+      return `import { InlineContent } from ${reference.generatedSpecifier}
 
 const css = new InlineContent(${cssText}, { type: "text/css" })
 const stylesheet = new CSSStyleSheet()
 stylesheet.replaceSync(css.text)
-export default stylesheet`,
-      }
+export default stylesheet`
     },
-  }
+  })
+
+  const importTypeText = createImportTypePlugin({
+    type: "text",
+    convertToJsModule: (urlInfo) => {
+      const text = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true,
+      })
+      return `export default ${text}`
+    },
+  })
+
+  return [importAssertions, importTypeJson, importTypeCss, importTypeText]
 }
 
 const getImportTypesToHandle = ({ scenario, isSupportedOnCurrentClients }) => {

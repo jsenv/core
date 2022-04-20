@@ -9,7 +9,7 @@ import {
   getHtmlNodeAttributeByName,
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
-import { ContentType } from "@jsenv/utils/content_type/content_type.js"
+import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginHtmlInlineContent = () => {
   return {
@@ -101,7 +101,7 @@ export const jsenvPluginHtmlInlineContent = () => {
 
             let inlineScriptUrl = generateInlineContentUrl({
               url,
-              extension: ContentType.asFileExtension(contentType),
+              extension: CONTENT_TYPE.asFileExtension(contentType),
               line,
               column,
               lineEnd,
