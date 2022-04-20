@@ -484,6 +484,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           if (context.reference.injected) {
             const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
               type: context.reference.type,
+              expectedType: context.reference.expectedType,
+              expectedSubtype: context.reference.expectedSubtype,
               parentUrl: rawUrls[context.reference.parentUrl],
               specifier: context.reference.specifier,
               injected: true,
@@ -496,19 +498,11 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
           const rawUrl = finalUrlInfo.data.rawUrl
           const bundleUrlInfo = bundleUrlInfos[rawUrl]
-          const urlInfo = bundleUrlInfo || rawGraph.getUrlInfo(rawUrl)
-          finalUrlInfo.subtype = urlInfo.subtype
-          return {
-            data: bundleUrlInfo
-              ? bundleUrlInfo.data
-              : {
-                  originalData: urlInfo.data,
-                },
-            originalContent: urlInfo.originalContent,
-            contentType: urlInfo.contentType,
-            content: urlInfo.content,
-            sourcemap: urlInfo.sourcemap,
+          if (bundleUrlInfo) {
+            return bundleUrlInfo
           }
+          const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+          return rawUrlInfo
         },
         transform: {
           html: (urlInfo) => {
@@ -587,7 +581,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         if (urlInfo.type === "sourcemap") {
           return
         }
-        if (urlInfo.isInline) {
+        // ignore:
+        // - inline files: they are already taken into account in the file where they appear
+        // - external files: we don't know their content
+        if (urlInfo.isInline || urlInfo.external) {
           return
         }
         const versionGenerator = createVersionGenerator()
@@ -598,8 +595,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         })
         urlInfo.dependencies.forEach((dependencyUrl) => {
           const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
-          if (dependencyUrlInfo.isInline) {
+          if (
             // this content is part of the file, no need to take into account twice
+            dependencyUrlInfo.isInline ||
+            // this dependency content is not known
+            dependencyUrlInfo.external
+          ) {
             return
           }
           if (dependencyUrlInfo.data.version) {
@@ -711,12 +712,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               if (!finalUrlInfo.url.startsWith("file:")) {
                 return { external: true }
               }
-              return {
-                originalContent: finalUrlInfo.originalContent,
-                contentType: finalUrlInfo.contentType,
-                content: finalUrlInfo.content,
-                sourcemap: finalUrlInfo.sourcemap,
-              }
+              return finalUrlInfo
             },
           },
         ],
@@ -795,10 +791,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   if (hasServiceWorker) {
     const serviceWorkerUrls = {}
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (!urlInfo.url.startsWith("file:")) {
+      if (urlInfo.isInline || urlInfo.external) {
         return
       }
-      if (urlInfo.isInline) {
+      if (!urlInfo.url.startsWith("file:")) {
         return
       }
       if (urlInfo.data.buildUrlIsVersioned) {

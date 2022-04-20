@@ -12,13 +12,19 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const jsenvPluginCommonJsGlobals = () => {
   const transformCommonJsGlobals = async (urlInfo, { scenario }) => {
+    const isJsModule = urlInfo.type === "js_module"
+
     const replaceMap = {
       "process.env.NODE_ENV": `("${
         scenario === "dev" || scenario === "test" ? "dev" : "prod"
       }")`,
       "global": "globalThis",
-      "__filename": `import.meta.url.slice('file:///'.length)`,
-      "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
+      "__filename": isJsModule
+        ? `import.meta.url.slice('file:///'.length)`
+        : `document.currentScript.src`,
+      "__dirname": isJsModule
+        ? `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`
+        : `new URL('./', document.currentScript.src).href`,
     }
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [

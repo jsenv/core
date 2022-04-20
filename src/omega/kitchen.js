@@ -222,31 +222,39 @@ export const createKitchen = ({
         return
       }
       const {
-        contentType = "application/octet-stream",
-        content, // can be a buffer (used for binary files) or a string
-        sourcemap,
-        // during build urls info are reused and load returns originalContent
-        // that we want to keep
-        originalContent = content,
         data,
-      } = loadReturnValue
-      Object.assign(urlInfo, {
+        type,
+        subtype,
         contentType,
         originalContent,
         content,
         sourcemap,
-      })
+      } = loadReturnValue
+      urlInfo.type =
+        type ||
+        reference.expectedType ||
+        inferUrlInfoType({
+          url: urlInfo.url,
+          contentType,
+        })
+      urlInfo.subtype =
+        subtype ||
+        reference.expectedSubtype ||
+        inferUrlInfoSubtype({
+          url: urlInfo.url,
+          type: urlInfo.type,
+          subtype: urlInfo.subtype,
+        })
+      urlInfo.contentType = contentType
+      // during build urls info are reused and load returns originalContent
+      urlInfo.originalContent =
+        originalContent === undefined ? content : originalContent
+      urlInfo.content = content
+      urlInfo.sourcemap = sourcemap
+
       if (data) {
         Object.assign(urlInfo.data, data)
       }
-      urlInfo.type =
-        urlInfo.type ||
-        reference.expectedType ||
-        inferUrlInfoType(urlInfo, reference)
-      urlInfo.subtype =
-        urlInfo.subtype ||
-        reference.expectedSubtype ||
-        inferUrlInfoSubtype(urlInfo)
     } catch (error) {
       throw createLoadError({
         pluginController,
@@ -671,9 +679,9 @@ const inferUrlInfoType = ({ url, contentType }) => {
   return "other"
 }
 
-const inferUrlInfoSubtype = (urlInfo) => {
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    const urlObject = new URL(urlInfo.url)
+const inferUrlInfoSubtype = ({ type, subtype, url }) => {
+  if (type === "js_classic" || type === "js_module") {
+    const urlObject = new URL(url)
     if (urlObject.searchParams.has("worker")) {
       return "worker"
     }
@@ -684,7 +692,7 @@ const inferUrlInfoSubtype = (urlInfo) => {
       return "shared_worker"
     }
     // if we are currently inside a worker, all deps are consider inside worker too
-    return urlInfo.subtype
+    return subtype
   }
   return ""
 }

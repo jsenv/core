@@ -150,6 +150,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
               context.referenceUtils.foundInline({
                 node,
                 type: "script_src",
+                expectedType: "js_module",
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
                 // -> content starts same line as <script>

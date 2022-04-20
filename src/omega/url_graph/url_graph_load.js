@@ -11,8 +11,9 @@ export const loadUrlGraph = async ({
     await ensureEmptyDirectory(outDirectoryUrl)
   }
   const promises = []
+  const promiseMap = new Map()
   const cook = ({ urlInfo, ...rest }) => {
-    const promiseFromData = urlInfo.data.promise
+    const promiseFromData = promiseMap.get(urlInfo)
     if (promiseFromData) return promiseFromData
     const promise = _cook({
       urlInfo,
@@ -21,7 +22,7 @@ export const loadUrlGraph = async ({
       ...rest,
     })
     promises.push(promise)
-    urlInfo.data.promise = promise
+    promiseMap.set(urlInfo, promise)
     return promise
   }
   const _cook = async ({ urlInfo, ...rest }) => {
@@ -70,4 +71,5 @@ export const loadUrlGraph = async ({
     await waitAll()
   }
   await waitAll()
+  promiseMap.clear()
 }

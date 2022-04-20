@@ -118,16 +118,16 @@ const createUrlInfo = (url) => {
     references: [],
     dependencies: new Set(),
     dependents: new Set(),
-    type: "", // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
-    subtype: "", // "worker", "service_worker", "shared_worker" for js, otherwise ""
-    contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
+    type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
+    subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
+    contentType: "application/octet-stream", // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
     generatedUrl: null,
     isInline: false,
     inlineUrlSite: null,
     external: false,
-    originalContent: "",
-    content: "",
+    originalContent: undefined,
+    content: undefined,
     sourcemap: null,
     sourcemapReference: null,
   }
