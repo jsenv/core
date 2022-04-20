@@ -56,6 +56,7 @@ export const jsenvPluginPreact = ({
         const htmlAst = parseHtmlString(content)
         const [preactDevtoolsReference] = referenceUtils.inject({
           type: "js_import_export",
+          expectedType: "js_module",
           specifier:
             scenario === "dev" || scenario === "test"
               ? "preact/debug"
@@ -75,10 +76,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
         const htmlModified = stringifyHtmlAst(htmlAst)
         return { content: htmlModified }
       },
-      js_module: async (
-        { url, generatedUrl, content },
-        { scenario, referenceUtils },
-      ) => {
+      js_module: async (urlInfo, { scenario, referenceUtils }) => {
         //   case "Fragment":
         //   return `${source}/${development ? "jsx-dev-runtime" : "jsx-runtime"}`;
         // case "jsxDEV":
@@ -89,7 +87,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
         // case "createElement":
         //   return source;
         const prefreshEnabled =
-          scenario === "dev" ? shouldEnablePrefresh(url) : false
+          scenario === "dev" ? shouldEnablePrefresh(urlInfo.url) : false
         const hookNamesEnabled = scenario === "dev"
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
@@ -105,9 +103,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
             ...(prefreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
-          url,
-          generatedUrl,
-          content,
+          urlInfo,
         })
         const magicSource = createMagicSource(code)
         // When a plugin wants to inject import, it must use "generatedSpecifier" returned by "addReference":
@@ -138,6 +134,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
               end: index + importSpecifier.length,
               replacement: referenceUtils.inject({
                 type: "js_import_export",
+                expectedType: "js_module",
                 specifier: importSpecifier.slice(1, -1),
               }).generatedSpecifier,
             })
@@ -149,12 +146,13 @@ import ${preactDevtoolsReference.generatedSpecifier}
           if (hasReg || hasSig) {
             const prefreshClientFileReference = referenceUtils.inject({
               type: "js_import_export",
+              expectedType: "js_module",
               specifier: "@jsenv/plugin-preact/src/client/prefresh.js",
             })
             magicSource.prepend(`import { installPrefresh } from ${
               prefreshClientFileReference.generatedSpecifier
             }
-            const __prefresh__ = installPrefresh(${JSON.stringify(url)})
+            const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
             `)
             if (hasReg) {
               magicSource.append(`

@@ -11,50 +11,51 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const jsenvPluginCommonJsGlobals = () => {
+  const transformCommonJsGlobals = async (urlInfo, { scenario }) => {
+    const replaceMap = {
+      "process.env.NODE_ENV": `("${
+        scenario === "dev" || scenario === "test" ? "dev" : "prod"
+      }")`,
+      "global": "globalThis",
+      "__filename": `import.meta.url.slice('file:///'.length)`,
+      "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
+    }
+    const { metadata } = await applyBabelPlugins({
+      babelPlugins: [
+        [
+          babelPluginMetadataExpressionPaths,
+          {
+            replaceMap,
+            allowConflictingReplacements: true,
+          },
+        ],
+      ],
+      urlInfo,
+    })
+    const { expressionPaths } = metadata
+    const keys = Object.keys(expressionPaths)
+    if (keys.length === 0) {
+      return null
+    }
+    const magicSource = createMagicSource(urlInfo.content)
+    keys.forEach((key) => {
+      expressionPaths[key].forEach((path) => {
+        magicSource.replace({
+          start: path.node.start,
+          end: path.node.end,
+          replacement: replaceMap[key],
+        })
+      })
+    })
+    return magicSource.toContentAndSourcemap()
+  }
+
   return {
     name: "jsenv:commonjs_globals",
     appliesDuring: "*",
     transform: {
-      js_module: async ({ url, generatedUrl, content }, { scenario }) => {
-        const replaceMap = {
-          "process.env.NODE_ENV": `("${
-            scenario === "dev" || scenario === "test" ? "dev" : "prod"
-          }")`,
-          "global": "globalThis",
-          "__filename": `import.meta.url.slice('file:///'.length)`,
-          "__dirname": `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`,
-        }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [
-            [
-              babelPluginMetadataExpressionPaths,
-              {
-                replaceMap,
-                allowConflictingReplacements: true,
-              },
-            ],
-          ],
-          url,
-          generatedUrl,
-          content,
-        })
-        const { expressionPaths } = metadata
-        const keys = Object.keys(expressionPaths)
-        if (keys.length === 0) {
-          return null
-        }
-        const magicSource = createMagicSource(content)
-        keys.forEach((key) => {
-          expressionPaths[key].forEach((path) => {
-            magicSource.replace({
-              start: path.node.start,
-              end: path.node.end,
-              replacement: replaceMap[key],
-            })
-          })
-        })
-        return magicSource.toContentAndSourcemap()
-      },
+      js_classic: transformCommonJsGlobals,
+      js_module: transformCommonJsGlobals,
     },
   }
 }

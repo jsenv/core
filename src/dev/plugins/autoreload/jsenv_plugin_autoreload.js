@@ -88,6 +88,7 @@ const jsenvPluginHot = () => {
         )
         const [eventSourceClientReference] = referenceUtils.inject({
           type: "script_src",
+          expectedType: "js_module",
           specifier: eventSourceClientFileUrl,
         })
         injectScriptAsEarlyAsPossible(
@@ -109,15 +110,10 @@ const jsenvPluginHot = () => {
         data.hotAcceptSelf = false
         data.hotAcceptDependencies = []
       },
-      js_module: async (
-        { url, generatedUrl, data, content },
-        { referenceUtils },
-      ) => {
+      js_module: async (urlInfo, { referenceUtils }) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
-          url,
-          generatedUrl,
-          content,
+          urlInfo,
         })
         const {
           importMetaHotDetected,
@@ -125,9 +121,9 @@ const jsenvPluginHot = () => {
           hotAcceptSelf,
           hotAcceptDependencies,
         } = metadata
-        data.hotDecline = hotDecline
-        data.hotAcceptSelf = hotAcceptSelf
-        data.hotAcceptDependencies = hotAcceptDependencies
+        urlInfo.data.hotDecline = hotDecline
+        urlInfo.data.hotAcceptSelf = hotAcceptSelf
+        urlInfo.data.hotAcceptDependencies = hotAcceptDependencies
         if (!importMetaHotDetected) {
           return null
         }
@@ -136,11 +132,12 @@ const jsenvPluginHot = () => {
         // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
         // which is likely not well supported by babel
         const [importMetaHotClientFileReference] = referenceUtils.inject({
-          parentUrl: url,
+          parentUrl: urlInfo.url,
           type: "js_import_export",
+          expectedType: "js_module",
           specifier: importMetaHotClientFileUrl,
         })
-        const magicSource = createMagicSource(content)
+        const magicSource = createMagicSource(urlInfo.content)
         magicSource.prepend(
           `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier}
 import.meta.hot = createImportMetaHot(import.meta.url)

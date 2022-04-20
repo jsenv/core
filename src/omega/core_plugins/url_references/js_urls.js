@@ -1,22 +1,4 @@
 /*
- * TODO:
- * - si worker_type_module est pas supporté
- * et quon trouve type: 'module'
- * -> en faire un type: 'classic'
- * -> faire un truc dingue:
- *    - indiquer que la ressource est de type module (type: 'js_module')
- *    - indiquer que la ressource doit etre convertie en systemjs
- *    (a priori en injectant ?systemjs dans le specifier)
- * ça va poser souci pendant le build ça (on pourra plus versionner les urls)
- * donc on devrait ptet commencer par faire ça que pendant le build
- * et le faire post versioning (sauf que alors on auras pas le minify...)
- * donc plutot en amont puisque dans les workers on aura pas d'url?
- * ou si on a des urls on pourra encore les versioné puisqu'elle
- * seront dans des new URL() je dirais
- * par contre on aura pas les import nommé
- * donc je pense il faut viser simple:
- * la ressource sous-jacente on en fait un IIFE avec rollup et basta
- *
  * - test code shared between worker and main with runtime not supporting type module
  * (code must be duplicated)
  */
@@ -39,16 +21,13 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
     urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker"
 
   const { metadata } = await applyBabelPlugins({
-    type: isJsModule ? "js_module" : "script",
     babelPlugins: [
       [
         babelPluginMetadataJsUrlMentions,
         { isJsModule, isWebWorker, searchSystemJs: !isJsModule },
       ],
     ],
-    url: urlInfo.data.rawUrl || urlInfo.url,
-    generatedUrl: urlInfo.generatedUrl,
-    content: urlInfo.content,
+    urlInfo,
   })
   const { jsMentions, usesTopLevelAwait, usesImport, usesExport } = metadata
   urlInfo.data.usesImport = usesImport
@@ -59,11 +38,10 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
   jsMentions.forEach((jsMention) => {
-    const [reference, referencedUrlInfo] = referenceUtils.found({
+    const [reference] = referenceUtils.found({
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
-      expectedSubtype: jsMention.expectedSubtype,
       line: jsMention.line,
       column: jsMention.column,
       specifier: jsMention.specifier,
@@ -74,12 +52,6 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
         "import.meta.url": urlInfo.url,
       }[jsMention.baseUrlType],
     })
-    if (jsMention.expectedType) {
-      referencedUrlInfo.type = jsMention.expectedType
-    }
-    if (jsMention.expectedSubtype) {
-      referencedUrlInfo.subtype = jsMention.expectedSubtype
-    }
     actions.push(async () => {
       magicSource.replace({
         start: jsMention.start,

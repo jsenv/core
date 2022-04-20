@@ -106,6 +106,17 @@ export const featureCompats = {
     opera: "67",
     android: "80",
   },
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6",
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+  },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
   global_this: {
     edge: "79",

@@ -102,8 +102,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       visitAttributeAsUrlSpecifier({
         type: "script_src",
         expectedType: {
-          "text/javascript": "js_classic",
           "undefined": "js_classic",
+          "text/javascript": "js_classic",
           "module": "js_module",
           "importmap": "importmap",
         }[typeAttributeNode ? typeAttributeNode.value : undefined],

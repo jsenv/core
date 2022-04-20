@@ -7,13 +7,15 @@ import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 
 export const applyBabelPlugins = async ({
   babelPlugins,
-  url,
-  generatedUrl,
-  type = "js_module",
+  urlInfo,
   ast,
-  content,
   options = {},
 }) => {
+  const sourceType = urlInfo.type === "js_module" ? "module" : "script"
+  const url = (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url
+  const generatedUrl = urlInfo.generatedUrl
+  const content = urlInfo.content
+
   if (babelPlugins.length === 0) {
     return { code: content }
   }
@@ -37,7 +39,7 @@ export const applyBabelPlugins = async ({
     // consider using startColumn and startLine for inline scripts?
     // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
     parserOpts: {
-      sourceType: type === "js_module" ? "module" : "script",
+      sourceType,
       // allowAwaitOutsideFunction: true,
       plugins: [
         // "importMeta",

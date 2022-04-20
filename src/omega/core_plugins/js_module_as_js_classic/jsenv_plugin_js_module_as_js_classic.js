@@ -46,9 +46,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
               babelPluginTransformImportMetaUrl,
             ]),
       ],
-      url: urlInfo.data.rawUrl || urlInfo.url,
-      generatedUrl: urlInfo.generatedUrl,
-      content: urlInfo.content,
+      urlInfo,
     })
     urlInfo.type = "js_classic"
     urlInfo.data.format = outFormat
@@ -57,7 +55,8 @@ export const jsenvPluginJsModuleAsJsClassic = ({
       outFormat === "system" &&
       (urlInfo.data.isEntryPoint ||
         urlInfo.subtype === "worker" ||
-        urlInfo.subtype === "service_worker")
+        urlInfo.subtype === "service_worker" ||
+        urlInfo.subtype === "shared_worker")
     ) {
       const magicSource = createMagicSource(code)
       const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
@@ -195,9 +194,8 @@ export const jsenvPluginJsModuleAsJsClassic = ({
           if (needsSystemJs) {
             const [systemJsReference] = context.referenceUtils.inject({
               type: "script_src",
-              specifier: injectQueryParams(systemJsClientFileUrl, {
-                js_classic: "",
-              }),
+              expectedType: "js_classic",
+              specifier: systemJsClientFileUrl,
             })
             injectScriptAsEarlyAsPossible(
               htmlAst,
@@ -231,8 +229,8 @@ export const jsenvPluginJsModuleAsJsClassic = ({
         }
         const usesWorkerTypeModule = urlInfo.references.some(
           (ref) =>
-            ref.expectedSubtype === "worker" &&
-            ref.expectedType === "js_module",
+            ref.expectedType === "js_module" &&
+            ref.expectedSubtype === "worker",
         )
         if (
           !usesWorkerTypeModule ||
@@ -242,9 +240,7 @@ export const jsenvPluginJsModuleAsJsClassic = ({
         }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataNewWorkerMentions],
-          url: urlInfo.url,
-          generatedUrl: urlInfo.generatedUrl,
-          content: urlInfo.content,
+          urlInfo,
         })
         const { newWorkerMentions } = metadata
         const magicSource = createMagicSource(urlInfo.content)

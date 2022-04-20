@@ -23,6 +23,12 @@ export const injectVersionMappings = async ({
   }
 }
 
+const jsInjector = (urlInfo, { versionMappings }) => {
+  const magicSource = createMagicSource(urlInfo.content)
+  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings))
+  return magicSource.toContentAndSourcemap()
+}
+
 const injectors = {
   html: (urlInfo, { versionMappings }) => {
     // ideally we would inject an importmap but browser support is too low
@@ -45,11 +51,8 @@ const injectors = {
       }),
     }
   },
-  js_module: (urlInfo, { versionMappings }) => {
-    const magicSource = createMagicSource(urlInfo.content)
-    magicSource.prepend(generateClientCodeForVersionMappings(versionMappings))
-    return magicSource.toContentAndSourcemap()
-  },
+  js_classic: jsInjector,
+  js_module: jsInjector,
 }
 
 const generateClientCodeForVersionMappings = (versionMappings) => {

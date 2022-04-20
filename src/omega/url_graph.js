@@ -115,20 +115,20 @@ export const createUrlGraph = () => {
 const createUrlInfo = (url) => {
   return {
     data: {}, // plugins can put whatever they want here
+    references: [],
+    dependencies: new Set(),
+    dependents: new Set(),
+    type: "", // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
+    subtype: "", // "worker", "service_worker", "shared_worker" for js, otherwise ""
+    contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
     generatedUrl: null,
     isInline: false,
     inlineUrlSite: null,
     external: false,
-    contentType: "",
     originalContent: "",
     content: "",
     sourcemap: null,
     sourcemapReference: null,
-    type: "",
-    subtype: "",
-    references: [],
-    dependencies: new Set(),
-    dependents: new Set(),
   }
 }

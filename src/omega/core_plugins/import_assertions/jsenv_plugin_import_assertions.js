@@ -15,7 +15,7 @@ export const jsenvPluginImportAssertions = () => {
       appliesDuring: "*",
       transform: {
         js_module: async (
-          { url, generatedUrl, content },
+          urlInfo,
           { scenario, isSupportedOnCurrentClients, referenceUtils },
         ) => {
           const importTypesToHandle = getImportTypesToHandle({
@@ -27,12 +27,10 @@ export const jsenvPluginImportAssertions = () => {
           }
           const { metadata } = await applyBabelPlugins({
             babelPlugins: [babelPluginMetadataImportAssertions],
-            url,
-            generatedUrl,
-            content,
+            urlInfo,
           })
           const { importAssertions } = metadata
-          const magicSource = createMagicSource(content)
+          const magicSource = createMagicSource(urlInfo.content)
           importAssertions.forEach((importAssertion) => {
             const assertType = importAssertion.assert.type
             if (!importTypesToHandle.includes(assertType)) {
@@ -175,6 +173,7 @@ const jsenvPluginImportTypeCss = () => {
       }
       const [reference] = referenceUtils.inject({
         type: "js_import_export",
+        expectedType: "js_module",
         specifier: inlineContentClientFileUrl,
       })
       const cssText = JS_QUOTES.escapeSpecialChars(content, {

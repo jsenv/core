@@ -1,4 +1,5 @@
 // TODO: add navigator.serviceWorker.register
+// and new SharedWorker
 
 import { getTypePropertyNode } from "./js_ast.js"
 
@@ -75,19 +76,16 @@ export const analyzeNewWorkerCall = (path) => {
     return null
   }
   const mentions = []
-  let expectedType
+  let expectedType = "js_classic"
   let typeArgNode
   const secondArgNode = node.arguments[1]
   if (secondArgNode) {
     typeArgNode = getTypePropertyNode(secondArgNode)
     if (typeArgNode && typeArgNode.value.type === "StringLiteral") {
       const typeArgValue = typeArgNode.value.value
-      expectedType =
-        typeArgValue === "classic"
-          ? "js_classic"
-          : typeArgValue === "module"
-          ? "js_module"
-          : undefined
+      if (typeArgValue === "module") {
+        expectedType = "js_module"
+      }
     }
   }
   const firstArgNode = node.arguments[0]
@@ -227,6 +225,7 @@ export const analyzeImportScriptCalls = (path) => {
       mentions.push({
         type: "js_url_specifier",
         subtype: "self_import_scripts_arg",
+        expectedType: "js_classic",
         specifier: arg.value,
         ...getNodePosition(arg),
       })
@@ -283,6 +282,7 @@ const analyzeSystemRegisterDeps = (node) => {
       mentions.push({
         type: "js_url_specifier",
         subtype: "system_register_arg",
+        expectedType: "js_classic",
         specifier: element.value,
         ...getNodePosition(element),
       })

@@ -15,7 +15,8 @@ export const jsenvPluginBabel = ({
     const isJsModule = urlInfo.type === "js_module"
     const isWorker = urlInfo.subtype === "worker"
     const isServiceWorker = urlInfo.subtype === "service_worker"
-    const isWorkerContext = isWorker || isServiceWorker
+    const isSharedWorker = urlInfo.subtype === "shared_worker"
+    const isWorkerContext = isWorker || isServiceWorker || isSharedWorker
 
     let { clientRuntimeCompat } = context
     if (isServiceWorker) {
@@ -49,6 +50,7 @@ export const jsenvPluginBabel = ({
       const getImportSpecifier = (clientFileUrl) => {
         const [reference] = referenceUtils.inject({
           type: "js_import_export",
+          expectedType: "js_module",
           specifier: clientFileUrl,
         })
         return JSON.parse(reference.generatedSpecifier)
@@ -94,9 +96,7 @@ export const jsenvPluginBabel = ({
     )
     const { code, map } = await applyBabelPlugins({
       babelPlugins,
-      url: urlInfo.url,
-      generatedUrl: urlInfo.generatedUrl,
-      content: urlInfo.content,
+      urlInfo,
     })
     return {
       content: code,

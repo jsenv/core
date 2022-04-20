@@ -8,7 +8,6 @@ import {
   setHtmlNodeText,
   getHtmlNodeAttributeByName,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 import { ContentType } from "@jsenv/utils/content_type/content_type.js"
 
@@ -44,6 +43,7 @@ export const jsenvPluginHtmlInlineContent = () => {
             const [inlineStyleReference, inlineStyleUrlInfo] =
               referenceUtils.foundInline({
                 type: "link_href",
+                expectedType: "css",
                 // we remove 1 to the line because imagine the following html:
                 // <style>body { color: red; }</style>
                 // -> content starts same line as <style>
@@ -107,15 +107,16 @@ export const jsenvPluginHtmlInlineContent = () => {
               lineEnd,
               columnEnd,
             })
-            if (scriptCategory === "classic") {
-              inlineScriptUrl = injectQueryParams(inlineScriptUrl, {
-                js_classic: "",
-              })
-            }
             const [inlineScriptReference, inlineScriptUrlInfo] =
               referenceUtils.foundInline({
                 node,
                 type: "script_src",
+                expectedType: {
+                  classic: "js_classic",
+                  module: "js_module",
+                  importmap: "importmap",
+                  [scriptCategory]: undefined,
+                }[scriptCategory],
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
                 // -> content starts same line as <script>

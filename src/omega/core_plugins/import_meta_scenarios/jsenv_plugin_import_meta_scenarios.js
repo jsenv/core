@@ -17,11 +17,10 @@ export const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transform: {
-      js_module: async ({ url, content }, { scenario }) => {
+      js_module: async (urlInfo, { scenario }) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          url,
-          content,
+          urlInfo,
         })
         const { dev = [], test = [], build = [] } = metadata.importMetaScenarios
         const replacements = []
@@ -57,7 +56,7 @@ export const jsenvPluginImportMetaScenarios = () => {
             replace(path, "true")
           })
         }
-        const magicSource = createMagicSource(content)
+        const magicSource = createMagicSource(urlInfo.content)
         replacements.forEach(({ path, value }) => {
           magicSource.replace({
             start: path.node.start,

@@ -2,13 +2,8 @@
  * Things happening here
  * - html supervisor module injection
  * - scripts are wrapped to be supervised
- *
- * TODO:
- *  - if ressource is referenced by ressource hint we should do sthing?
- *   I think so when we inject ?js_classic
  */
 
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -64,13 +59,9 @@ export const jsenvPluginHtmlSupervisor = ({
             lineEnd,
             columnEnd,
           })
-          if (scriptCategory === "classic") {
-            inlineScriptUrl = injectQueryParams(inlineScriptUrl, {
-              js_classic: "",
-            })
-          }
           const [inlineScriptReference] = referenceUtils.foundInline({
             type: "script_src",
+            expectedType: "js_classic",
             line: line - 1,
             column,
             isOriginal,
@@ -151,6 +142,7 @@ export const jsenvPluginHtmlSupervisor = ({
         }
         const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
           type: "js_import_export",
+          expectedType: "js_module",
           specifier: htmlSupervisorInstallerFileUrl,
         })
         injectScriptAsEarlyAsPossible(
@@ -175,9 +167,8 @@ installHtmlSupervisor(${JSON.stringify(
         )
         const [htmlSupervisorSetupFileReference] = referenceUtils.inject({
           type: "script_src",
-          specifier: injectQueryParams(htmlSupervisorSetupFileUrl, {
-            js_classic: "",
-          }),
+          expectedType: "js_classic",
+          specifier: htmlSupervisorSetupFileUrl,
         })
         injectScriptAsEarlyAsPossible(
           htmlAst,

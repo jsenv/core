@@ -239,32 +239,14 @@ export const createKitchen = ({
       if (data) {
         Object.assign(urlInfo.data, data)
       }
-      if (!urlInfo.type) {
-        const type = inferUrlInfoType(urlInfo)
-        if (type === "js") {
-          const urlObject = new URL(urlInfo.url)
-          if (urlObject.searchParams.has("worker_type_classic")) {
-            urlInfo.type = "js_classic"
-            urlInfo.subtype = "worker"
-          } else if (
-            urlObject.searchParams.has("service_worker_type_classic")
-          ) {
-            urlInfo.type = "js_classic"
-            urlInfo.subtype = "service_worker"
-          } else if (urlObject.searchParams.has("js_classic")) {
-            urlInfo.type = "js_classic"
-          } else {
-            urlInfo.type = "js_module"
-          }
-          if (urlObject.searchParams.has("worker")) {
-            urlInfo.subtype = "worker"
-          } else if (urlObject.searchParams.has("service_worker")) {
-            urlInfo.subtype = "service_worker"
-          }
-        } else {
-          urlInfo.type = type
-        }
-      }
+      urlInfo.type =
+        urlInfo.type ||
+        reference.expectedType ||
+        inferUrlInfoType(urlInfo, reference)
+      urlInfo.subtype =
+        urlInfo.subtype ||
+        reference.expectedSubtype ||
+        inferUrlInfoSubtype(urlInfo)
     } catch (error) {
       throw createLoadError({
         pluginController,
@@ -666,7 +648,7 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
   )
 }
 
-const inferUrlInfoType = ({ contentType }) => {
+const inferUrlInfoType = ({ url, contentType }) => {
   if (contentType === "text/html") {
     return "html"
   }
@@ -674,7 +656,11 @@ const inferUrlInfoType = ({ contentType }) => {
     return "css"
   }
   if (contentType === "text/javascript") {
-    return "js"
+    const urlObject = new URL(url)
+    if (urlObject.searchParams.has("js_classic")) {
+      return "js_classic"
+    }
+    return "js_module"
   }
   if (contentType === "application/json") {
     return "json"
@@ -683,6 +669,24 @@ const inferUrlInfoType = ({ contentType }) => {
     return "importmap"
   }
   return "other"
+}
+
+const inferUrlInfoSubtype = (urlInfo) => {
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    const urlObject = new URL(urlInfo.url)
+    if (urlObject.searchParams.has("worker")) {
+      return "worker"
+    }
+    if (urlObject.searchParams.has("service_worker")) {
+      return "service_worker"
+    }
+    if (urlObject.searchParams.has("shared_worker")) {
+      return "shared_worker"
+    }
+    // if we are currently inside a worker, all deps are consider inside worker too
+    return urlInfo.subtype
+  }
+  return ""
 }
 
 const determineFileUrlForOutDirectory = ({
