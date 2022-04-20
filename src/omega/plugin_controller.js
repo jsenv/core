@@ -218,7 +218,7 @@ const returnValueAssertions = [
   },
   {
     name: "content_assertion",
-    appliesTo: ["load", "transform", "finalize"],
+    appliesTo: ["load", "transform", "finalize", "optimize"],
     assertion: (valueReturned) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned }

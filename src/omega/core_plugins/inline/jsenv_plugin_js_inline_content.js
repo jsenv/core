@@ -1,3 +1,4 @@
+import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
@@ -22,12 +23,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
       await previous
       const inlineUrl = generateInlineContentUrl({
         url: urlInfo.url,
-        extension: {
-          "application/json": ".json",
-          "text/css": ".css",
-          "text/plain": ".txt",
-          "application/octet-stream": "",
-        }[inlineContentCall.contentType],
+        extension: CONTENT_TYPE.asFileExtension(inlineContentCall.contentType),
         line: inlineContentCall.line,
         column: inlineContentCall.column,
         lineEnd: inlineContentCall.lineEnd,
@@ -42,7 +38,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
       }
       const [inlineReference, inlineUrlInfo] = referenceUtils.foundInline({
         type: "js_inline_content",
-        subtype: inlineContentCall.type, // "new_blob", or "new_inline_content"
+        subtype: inlineContentCall.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
         isOriginal: urlInfo.content === urlInfo.originalContent,
         line: inlineContentCall.line,
         column: inlineContentCall.column,
@@ -87,9 +83,16 @@ const babelPluginMetadataInlineContentCalls = () => {
         const inlineContentCalls = []
         programPath.traverse({
           NewExpression: (path) => {
-            const inlineContentCall = parseAsInlineContentCall(path)
+            const inlineContentCall = analyzeNewInlineContentCall(path)
             if (inlineContentCall) {
               inlineContentCalls.push(inlineContentCall)
+              return
+            }
+          },
+          CallExpression: (path) => {
+            const jsonParseCall = analyzeJsonParseCall(path)
+            if (jsonParseCall) {
+              inlineContentCalls.push(jsonParseCall)
               return
             }
           },
@@ -100,7 +103,7 @@ const babelPluginMetadataInlineContentCalls = () => {
   }
 }
 
-const parseAsInlineContentCall = (path) => {
+const analyzeNewInlineContentCall = (path) => {
   const identifier = parseNewIdentifier(path)
   if (!identifier) {
     return null
@@ -117,9 +120,9 @@ const parseAsInlineContentCall = (path) => {
   const contentType = typePropertyNode.value.value
   const type = identifier.type
   let nodeHoldingInlineContent
-  if (type === "js_new_inline_content") {
+  if (type === "new_inline_content") {
     nodeHoldingInlineContent = firstArg
-  } else if (type === "js_new_blob") {
+  } else if (type === "new_blob") {
     if (firstArg.type !== "ArrayExpression") {
       return null
     }
@@ -133,7 +136,10 @@ const parseAsInlineContentCall = (path) => {
     return null
   }
   return {
-    type,
+    type:
+      type === "new_inline_content"
+        ? "new_inline_content_first_arg"
+        : "new_blob_first_arg",
     contentType,
     ...inlineContentInfo,
     ...getNodePosition(nodeHoldingInlineContent),
@@ -170,12 +176,12 @@ const parseNewIdentifier = (path) => {
     const name = getOriginalName(path, node.callee.name)
     if (name === "InlineContent") {
       return {
-        type: "js_new_inline_content",
+        type: "new_inline_content",
       }
     }
     if (name === "Blob") {
       return {
-        type: "js_new_blob",
+        type: "new_blob",
       }
     }
     return null
@@ -188,11 +194,39 @@ const parseNewIdentifier = (path) => {
     const name = getOriginalName(path, node.callee.id.name)
     if (name === "InlineContent") {
       return {
-        type: "js_new_inline_content",
+        type: "new_inline_content",
       }
     }
   }
   return null
+}
+
+const analyzeJsonParseCall = (path) => {
+  const node = path.node
+  if (!isJSONParseCall(node)) {
+    return null
+  }
+  const inlineContentInfo = extractInlineContentInfo(node.arguments[0])
+  if (!inlineContentInfo) {
+    return null
+  }
+  return {
+    type: "json_parse_first_arg",
+    contentType: "application/json",
+    ...inlineContentInfo,
+    ...getNodePosition(node.arguments[0]),
+  }
+}
+
+const isJSONParseCall = (node) => {
+  const callee = node.callee
+  return (
+    callee.type === "MemberExpression" &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === "JSON" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "parse"
+  )
 }
 
 const getNodePosition = (node) => {

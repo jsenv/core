@@ -40,8 +40,9 @@ import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js
 
 import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
 import { jsenvPluginBundleJsClassic } from "./plugins/bundle_js_classic/jsenv_plugin_js_classic.js"
-import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
 import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
+import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
+import { jsenvPluginMinifyJson } from "./plugins/minify_json/jsenv_plugin_minify_json.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
 import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
@@ -88,11 +89,11 @@ export const build = async ({
   }
   if (typeof minification === "boolean") {
     minification = {
-      js: minification,
       html: minification,
       css: minification,
-      svg: minification,
+      js: minification,
       json: minification,
+      svg: minification,
     }
   } else if (typeof minification !== "object") {
     throw new Error(
@@ -136,8 +137,9 @@ build ${entryPointKeys.length} entry points`)
       }),
       jsenvPluginBundleJsModule(),
       jsenvPluginBundleJsClassic(),
-      ...(minification.js ? [jsenvPluginMinifyJs()] : []),
       ...(minification.html ? [jsenvPluginMinifyHtml()] : []),
+      ...(minification.js ? [jsenvPluginMinifyJs()] : []),
+      ...(minification.json ? [jsenvPluginMinifyJson()] : []),
     ],
     scenario: "build",
     sourcemaps,
