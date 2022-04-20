@@ -155,23 +155,31 @@ export const jsenvPluginImportAssertions = () => {
       })
       return `import { InlineContent } from ${reference.generatedSpecifier}
 
-const css = new InlineContent(${cssText}, { type: "text/css" })
+const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
 const stylesheet = new CSSStyleSheet()
-stylesheet.replaceSync(css.text)
+stylesheet.replaceSync(inlineContent.text)
 export default stylesheet`
     },
   })
 
   const importTypeText = createImportTypePlugin({
     type: "text",
-    convertToJsModule: (urlInfo) => {
-      const text = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+    convertToJsModule: (urlInfo, context) => {
+      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
         // and convert template strings into raw strings
         canUseTemplateString: true,
       })
-      return `export default ${text}`
+      const [reference] = context.referenceUtils.inject({
+        type: "js_import_export",
+        expectedType: "js_module",
+        specifier: inlineContentClientFileUrl,
+      })
+      return `import { InlineContent } from ${reference.generatedSpecifier}
+
+const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
+export default inlineContent.text`
     },
   })
 
