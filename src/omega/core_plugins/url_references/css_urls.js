@@ -7,16 +7,13 @@ import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url
 import { replaceCssUrls } from "@jsenv/utils/css_ast/replace_css_urls.js"
 
 export const parseAndTransformCssUrls = async (urlInfo, context) => {
-  const url = urlInfo.data.rawUrl || urlInfo.url
-  const content = urlInfo.content
-  const { referenceUtils } = context
   const referencePerUrls = {}
   await applyPostCss({
     sourcemaps: false,
     plugins: [
       postCssPluginUrlVisitor({
         urlVisitor: ({ url, type, specifier, urlNode }) => {
-          const [reference] = referenceUtils.found({
+          const [reference] = context.referenceUtils.found({
             type: `css_${type}`,
             start: urlNode.sourceIndex,
             end: urlNode.sourceEndIndex,
@@ -26,8 +23,8 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
         },
       }),
     ],
-    url,
-    content,
+    url: urlInfo.data.rawUrl || urlInfo.url,
+    content: urlInfo.content,
   })
 
   // we can't use magic source because urlMention.start/end do not match the url specifier
@@ -43,12 +40,12 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
 
   await Promise.all(
     urlInfo.references.map(async (reference) => {
-      await referenceUtils.readGeneratedSpecifier(reference)
+      await context.referenceUtils.readGeneratedSpecifier(reference)
     }),
   )
   const result = await replaceCssUrls({
-    url,
-    content,
+    url: urlInfo.data.rawUrl || urlInfo.url,
+    content: urlInfo.content,
     urlVisitor: ({ url, replace }) => {
       const reference = referencePerUrls[url]
       if (reference) {

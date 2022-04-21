@@ -41,6 +41,7 @@ import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js
 import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
 import { jsenvPluginBundleJsClassic } from "./plugins/bundle_js_classic/jsenv_plugin_js_classic.js"
 import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
+import { jsenvPluginMinifyCss } from "./plugins/minify_css/jsenv_plugin_minify_css.js"
 import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
 import { jsenvPluginMinifyJson } from "./plugins/minify_json/jsenv_plugin_minify_json.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
@@ -100,6 +101,9 @@ export const build = async ({
       `minification must be a boolean or an object, got ${minification}`,
     )
   }
+  Object.keys(minification).forEach((key) => {
+    if (minification[key] === true) minification[key] = {}
+  })
 
   const entryPointKeys = Object.keys(entryPoints)
   if (entryPointKeys.length === 1) {
@@ -137,9 +141,10 @@ build ${entryPointKeys.length} entry points`)
       }),
       jsenvPluginBundleJsModule(),
       jsenvPluginBundleJsClassic(),
-      ...(minification.html ? [jsenvPluginMinifyHtml()] : []),
-      ...(minification.js ? [jsenvPluginMinifyJs()] : []),
-      ...(minification.json ? [jsenvPluginMinifyJson()] : []),
+      ...(minification.html ? [jsenvPluginMinifyHtml(minification.html)] : []),
+      ...(minification.css ? [jsenvPluginMinifyCss(minification.css)] : []),
+      ...(minification.js ? [jsenvPluginMinifyJs(minification.js)] : []),
+      ...(minification.json ? [jsenvPluginMinifyJson(minification.json)] : []),
     ],
     scenario: "build",
     sourcemaps,
@@ -838,7 +843,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
 
   const buildManifest = {}
   const buildFileContents = {}
-  const buildInlineFileContents = {}
+  const buildInlineContents = {}
   GRAPH.forEach(finalGraph, (urlInfo) => {
     if (urlInfo.external) {
       return
@@ -848,7 +853,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     }
     const { buildRelativeUrl } = urlInfo.data
     if (urlInfo.isInline) {
-      buildInlineFileContents[buildRelativeUrl] = urlInfo.content
+      // nothing is used that url anymore (happens when versioning updates inline contents)
+      if (urlInfo.dependents.size === 0) {
+        return
+      }
+      buildInlineContents[buildRelativeUrl] = urlInfo.content
     } else {
       buildFileContents[buildRelativeUrl] = urlInfo.content
     }
@@ -887,7 +896,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }))
   return {
     buildFileContents,
-    buildInlineFileContents,
+    buildInlineContents,
     buildManifest,
   }
 }

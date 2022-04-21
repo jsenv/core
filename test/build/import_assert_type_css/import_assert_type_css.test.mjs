@@ -52,3 +52,28 @@ const test = async (options) => {
   }
   assert({ actual, expected })
 }
+
+// minification
+{
+  const { buildInlineContents } = await build({
+    logLevel: "warn",
+    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    entryPoints: {
+      "./main.html": "main.html",
+    },
+    babel: {
+      topLevelAwait: "ignore",
+    },
+    minification: {
+      js: false,
+      css: true,
+    },
+  })
+  const cssKey = Object.keys(buildInlineContents).find((key) =>
+    key.endsWith(".css"),
+  )
+  const actual = buildInlineContents[cssKey]
+  const expected = `body{background-color:red;background-image:url('+__v__("/assets/jsenv.png")+')}`
+  assert({ actual, expected })
+}

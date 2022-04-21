@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
-const { buildManifest, buildInlineFileContents } = await build({
+const { buildManifest, buildInlineContents } = await build({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -30,13 +30,13 @@ const { returnValue } = await executeInChromium({
 {
   const actual = {
     returnValue,
-    buildInlineFileContents,
+    buildInlineContents,
   }
   const expected = {
     returnValue: {
       data: { answer: 42 },
     },
-    buildInlineFileContents: {
+    buildInlineContents: {
       // this is to assert JSON string does not contain whitespaces
       "js/main.js@L1C31-L1C53.json": '{"answer":42}',
     },
