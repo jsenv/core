@@ -60,6 +60,9 @@ const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
   if (urlInfo.data.isEntryPoint) {
     return ""
   }
+  if (urlInfo.type === "importmap") {
+    return ""
+  }
   if (urlInfo.type === "html") {
     return "html/"
   }
@@ -72,5 +75,8 @@ const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
     }
     return "js/"
   }
-  return "assets/"
+  if (urlInfo.type === "json") {
+    return "json/"
+  }
+  return "other/"
 }

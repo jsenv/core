@@ -11,6 +11,7 @@ const { buildManifest } = await build({
   entryPoints: {
     "./main.html": "main.html",
   },
+  minification: false,
 })
 const { returnValue, serverOrigin } = await executeInChromium({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -39,13 +40,13 @@ const expected = {
   complexInsideSingleQuotes: `\n"😀"\n`,
   cssAndTemplate: `
 body {
-  background-image: url(/assets/jsenv.png?v=25e95a00);
-  background-image: url(/assets/jsenv.png?v=25e95a00);
-  background-image: url(/assets/jsenv.png?v=25e95a00);
+  background-image: url(/other/jsenv.png?v=25e95a00);
+  background-image: url(/other/jsenv.png?v=25e95a00);
+  background-image: url(/other/jsenv.png?v=25e95a00);
 }
 `,
-  cssTextWithUrl: `\nbody { background-image: url(/assets/jsenv.png?v=25e95a00); }\n`,
-  cssTextWithUrl2: `\nbody { background-image: url(/assets/jsenv.png?v=25e95a00); }\n`,
+  cssTextWithUrl: `\nbody { background-image: url(/other/jsenv.png?v=25e95a00); }\n`,
+  cssTextWithUrl2: `\nbody { background-image: url(/other/jsenv.png?v=25e95a00); }\n`,
   doubleQuote: `"`,
   doubleQuoteEscaped: `"`,
   fromTemplate: `"`,
@@ -58,8 +59,8 @@ body {
   lineEnding2: `\n`,
   singleQuote: `'`,
   singleQuoteEscaped: `'`,
-  whenInlined: `body { background-image: url(/assets/jsenv.png?v=25e95a00); }`,
-  whenRenamed: `body { background-image: url(/assets/jsenv.png?v=25e95a00); }`,
-  bodyBackgroundImage: `url("${serverOrigin}/assets/jsenv.png?v=25e95a00")`,
+  whenInlined: `body { background-image: url(/other/jsenv.png?v=25e95a00); }`,
+  whenRenamed: `body { background-image: url(/other/jsenv.png?v=25e95a00); }`,
+  bodyBackgroundImage: `url("${serverOrigin}/other/jsenv.png?v=25e95a00")`,
 }
 assert({ actual, expected })

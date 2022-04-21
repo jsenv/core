@@ -35,7 +35,7 @@ const test = async (options) => {
   const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["assets/jsenv.png"]}")`,
+    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["other/jsenv.png"]}")`,
   }
   assert({ actual, expected })
 }
@@ -48,7 +48,7 @@ const test = async (options) => {
   const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["assets/jsenv.png"]}")`,
+    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["other/jsenv.png"]}")`,
   }
   assert({ actual, expected })
 }
@@ -74,6 +74,6 @@ const test = async (options) => {
     key.endsWith(".css"),
   )
   const actual = buildInlineContents[cssKey]
-  const expected = `body{background-color:red;background-image:url('+__v__("/assets/jsenv.png")+')}`
+  const expected = `body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}`
   assert({ actual, expected })
 }
