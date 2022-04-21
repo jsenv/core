@@ -33,7 +33,7 @@
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./script/build/build.mjs",
-    "test": "node --experimental-import-meta-resolve ./script/test/test.mjs",
+    "test": "node ./script/test/test.mjs",
     "test-with-coverage": "npm run test -- --coverage",
     "dev": "node ./script/dev/dev.mjs",
     "start_file_server": "node ./script/dev/start_file_server.mjs",

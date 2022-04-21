@@ -60,7 +60,7 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage.json,./packages/integrity/coverage/coverage.json
+          files: ./.coverage/coverage.json,./packages/integrity/.coverage/coverage.json
           verbose: true
 
   release:
