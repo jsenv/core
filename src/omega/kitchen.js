@@ -74,8 +74,11 @@ export const createKitchen = ({
     parentUrl,
     type,
     subtype,
+    expectedContentType,
     expectedType,
     expectedSubtype,
+    integrity,
+    crossorigin,
     specifier,
     baseUrl,
     isInline = false,
@@ -89,8 +92,11 @@ export const createKitchen = ({
       parentUrl,
       type,
       subtype,
+      expectedContentType,
       expectedType,
       expectedSubtype,
+      integrity,
+      crossorigin,
       specifier,
       baseUrl,
       isInline,
@@ -341,17 +347,7 @@ export const createKitchen = ({
         }
         return reference.generatedSpecifier
       },
-      found: ({
-        type,
-        subtype,
-        expectedType,
-        expectedSubtype,
-        line,
-        column,
-        specifier,
-        baseUrl,
-        data,
-      }) => {
+      found: ({ line, column, ...rest }) => {
         return addReference({
           trace: stringifyUrlSite(
             adjustUrlSite(urlInfo, {
@@ -361,13 +357,7 @@ export const createKitchen = ({
               column,
             }),
           ),
-          type,
-          subtype,
-          expectedType,
-          expectedSubtype,
-          specifier,
-          baseUrl,
-          data,
+          ...rest,
         })
       },
       inject: ({ trace, ...rest }) => {
@@ -677,6 +667,9 @@ const inferUrlInfoType = ({ url, contentType }) => {
   }
   if (contentType === "application/importmap+json") {
     return "importmap"
+  }
+  if (contentType === "application/manifest+json") {
+    return "webmanifest"
   }
   if (CONTENT_TYPE.isJson(contentType)) {
     return "json"

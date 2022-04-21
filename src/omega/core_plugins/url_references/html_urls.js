@@ -82,14 +82,26 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       attribute,
       // injected:Boolean(getHtmlNodeAttributeByName(node, "injected-by"))
       // srcGeneratedFromInlineContent
+      ...readFetchMetas(node),
     })
   }
   const onNode = (node) => {
     if (node.nodeName === "link") {
+      const relAttribute = getHtmlNodeAttributeByName(node, "rel")
+      const rel = relAttribute ? relAttribute.value : undefined
+      const typeAttribute = getHtmlNodeAttributeByName(node, "type")
+      const type = typeAttribute ? typeAttribute.value : undefined
       visitAttributeAsUrlSpecifier({
         type: "link_href",
         node,
         attributeName: "href",
+        expectedContentType: type,
+        expectedType: {
+          manifest: "manifest",
+          modulepreload: "js_module",
+          stylesheet: "css",
+          [rel]: undefined,
+        }[rel],
       })
       return
     }
@@ -223,4 +235,21 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     }
   }
   visitHtmlAst(htmlAst, onNode)
+}
+
+const crossOriginCompatibleTagNames = ["script", "link", "img", "source"]
+const integrityCompatibleTagNames = ["script", "link", "img", "source"]
+const readFetchMetas = (node) => {
+  const meta = {}
+  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
+    const crossoriginAttribute = getHtmlNodeAttributeByName(node, "crossorigin")
+    meta.crossorigin = crossoriginAttribute
+      ? crossoriginAttribute.value
+      : undefined
+  }
+  if (integrityCompatibleTagNames.includes(node.nodeName)) {
+    const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
+    meta.integrity = integrityAttribute ? integrityAttribute.value : undefined
+  }
+  return meta
 }
