@@ -12,6 +12,7 @@ export const visitNodeV8Directory = async ({
   signal,
   NODE_V8_COVERAGE,
   onV8Coverage,
+  maxMsWaitingForNodeToWriteCoverageFile = 2000,
 }) => {
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
@@ -51,7 +52,7 @@ export const visitNodeV8Directory = async ({
           const fileAsJson = JSON.parse(fileContent)
           return fileAsJson
         } catch (e) {
-          if (timeSpentTrying < 400) {
+          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
             await new Promise((resolve) => setTimeout(resolve, 200))
             return tryReadJsonFile(timeSpentTrying + 200)
           }

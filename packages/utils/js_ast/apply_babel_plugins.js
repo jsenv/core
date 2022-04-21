@@ -11,7 +11,11 @@ export const applyBabelPlugins = async ({
   ast,
   options = {},
 }) => {
-  const sourceType = urlInfo.type === "js_module" ? "module" : "script"
+  const sourceType = {
+    js_module: "module",
+    js_classic: "classic",
+    [urlInfo.type]: undefined,
+  }[urlInfo.type]
   const url = (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url
   const generatedUrl = urlInfo.generatedUrl
   const content = urlInfo.content
