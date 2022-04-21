@@ -70,6 +70,7 @@ export const createKitchen = ({
   }
   const createReference = ({
     data = {},
+    node,
     trace,
     parentUrl,
     type,
@@ -81,6 +82,7 @@ export const createKitchen = ({
     crossorigin,
     specifier,
     baseUrl,
+    external = false,
     isInline = false,
     injected = false,
     content,
@@ -88,6 +90,7 @@ export const createKitchen = ({
   }) => {
     return {
       data,
+      node,
       trace,
       parentUrl,
       type,
@@ -99,6 +102,7 @@ export const createKitchen = ({
       crossorigin,
       specifier,
       baseUrl,
+      external,
       isInline,
       injected,
       // for inline ressources the reference contains the content
@@ -117,6 +121,11 @@ export const createKitchen = ({
         throw new Error(`NO_RESOLVE`)
       }
       reference.url = resolvedUrl
+      if (reference.external) {
+        reference.generatedUrl = resolvedUrl
+        reference.generatedSpecifier = reference.specifier
+        return urlGraph.reuseOrCreateUrlInfo(reference.url)
+      }
       pluginController.callHooks(
         "normalize",
         reference,
@@ -208,6 +217,10 @@ export const createKitchen = ({
   })
 
   const load = async ({ reference, urlInfo, context }) => {
+    if (reference.external) {
+      urlInfo.external = true
+      return
+    }
     try {
       const loadReturnValue = urlInfo.isInline
         ? loadInlineUrlInfos(urlInfo)
@@ -611,6 +624,7 @@ export const createKitchen = ({
     urlInfoTransformer,
     rootDirectoryUrl,
     jsenvDirectoryUrl,
+    baseContext,
     cook,
     prepareEntryPoint,
     injectReference,

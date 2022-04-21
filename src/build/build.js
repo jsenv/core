@@ -38,8 +38,9 @@ import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
 
-import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
+import { jsenvPluginBundleCss } from "./plugins/bundle_css/jsenv_plugin_bundle_css.js"
 import { jsenvPluginBundleJsClassic } from "./plugins/bundle_js_classic/jsenv_plugin_js_classic.js"
+import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
 import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
 import { jsenvPluginMinifyCss } from "./plugins/minify_css/jsenv_plugin_minify_css.js"
 import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
@@ -83,11 +84,18 @@ export const build = async ({
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
   assertEntryPoints({ entryPoints })
-  if (!["filename", "search_param"].includes(versioningMethod)) {
-    throw new Error(
-      `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
-    )
+  if (typeof bundling === "boolean") {
+    bundling = {
+      js_module: bundling,
+      js_classic: bundling,
+      css: bundling,
+    }
+  } else if (typeof bundling !== "object") {
+    throw new Error(`bundling must be a boolean or an object, got ${bundling}`)
   }
+  Object.keys(bundling).forEach((key) => {
+    if (bundling[key] === true) bundling[key] = {}
+  })
   if (typeof minification === "boolean") {
     minification = {
       html: minification,
@@ -104,6 +112,11 @@ export const build = async ({
   Object.keys(minification).forEach((key) => {
     if (minification[key] === true) minification[key] = {}
   })
+  if (!["filename", "search_param"].includes(versioningMethod)) {
+    throw new Error(
+      `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
+    )
+  }
 
   const entryPointKeys = Object.keys(entryPoints)
   if (entryPointKeys.length === 1) {
@@ -139,8 +152,13 @@ build ${entryPointKeys.length} entry points`)
         injectedGlobals,
         jsModuleAsJsClassic: false,
       }),
-      jsenvPluginBundleJsModule(),
-      jsenvPluginBundleJsClassic(),
+      ...(bundling.css ? [jsenvPluginBundleCss(bundling.css)] : []),
+      ...(bundling.js_classic
+        ? [jsenvPluginBundleJsClassic(bundling.js_classic)]
+        : []),
+      ...(bundling.js_module
+        ? [jsenvPluginBundleJsModule(bundling.js_module)]
+        : []),
       ...(minification.html ? [jsenvPluginMinifyHtml(minification.html)] : []),
       ...(minification.css ? [jsenvPluginMinifyCss(minification.css)] : []),
       ...(minification.js ? [jsenvPluginMinifyJs(minification.js)] : []),
@@ -179,121 +197,118 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   )
 
   const bundleUrlInfos = {}
-  if (bundling) {
-    const bundlers = {}
-    rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
-      const bundle = plugin.bundle
-      if (!bundle) {
+  const bundlers = {}
+  rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
+    const bundle = plugin.bundle
+    if (!bundle) {
+      return
+    }
+    if (typeof bundle !== "object") {
+      throw new Error(
+        `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
+      )
+    }
+    Object.keys(bundle).forEach((type) => {
+      const bundlerForThatType = bundlers[type]
+      if (bundlerForThatType) {
+        // first plugin to define a bundle hook wins
         return
       }
-      if (typeof bundle !== "object") {
-        throw new Error(
-          `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
-        )
+      const bundlingDisabledForThatType = bundling[type] === false
+      if (bundlingDisabledForThatType) {
+        return
       }
-      Object.keys(bundle).forEach((type) => {
-        const bundlerForThatType = bundlers[type]
-        if (bundlerForThatType) {
-          // first plugin to define a bundle hook wins
-          return
-        }
-        bundlers[type] = {
-          plugin,
-          bundleFunction: bundle[type],
-          urlInfos: [],
-        }
-      })
+      bundlers[type] = {
+        plugin,
+        bundleFunction: bundle[type],
+        urlInfos: [],
+      }
     })
-    const addToBundlerIfAny = (rawUrlInfo) => {
-      const bundler = bundlers[rawUrlInfo.type]
-      if (bundler) {
-        bundler.urlInfos.push(rawUrlInfo)
+  })
+  const addToBundlerIfAny = (rawUrlInfo) => {
+    const bundler = bundlers[rawUrlInfo.type]
+    if (bundler) {
+      bundler.urlInfos.push(rawUrlInfo)
+      return
+    }
+  }
+  GRAPH.forEach(rawGraph, (rawUrlInfo) => {
+    if (rawUrlInfo.data.isEntryPoint) {
+      addToBundlerIfAny(rawUrlInfo)
+      if (rawUrlInfo.type === "html") {
+        rawUrlInfo.dependencies.forEach((dependencyUrl) => {
+          const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
+          if (dependencyUrlInfo.isInline) {
+            if (dependencyUrlInfo.type === "js_module") {
+              // bundle inline script type module deps
+              dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+                if (inlineScriptRef.type === "js_import_export") {
+                  addToBundlerIfAny(rawGraph.getUrlInfo(inlineScriptRef.url))
+                }
+              })
+            }
+            // inline content cannot be bundled
+            return
+          }
+          addToBundlerIfAny(dependencyUrlInfo)
+        })
         return
       }
     }
-    GRAPH.forEach(rawGraph, (rawUrlInfo) => {
-      if (rawUrlInfo.data.isEntryPoint) {
-        addToBundlerIfAny(rawUrlInfo)
-        if (rawUrlInfo.type === "html") {
-          rawUrlInfo.dependencies.forEach((dependencyUrl) => {
-            const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-            if (dependencyUrlInfo.isInline) {
-              if (dependencyUrlInfo.type === "js_module") {
-                // bundle inline script type module deps
-                dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                  if (inlineScriptRef.type === "js_import_export") {
-                    addToBundlerIfAny(rawGraph.getUrlInfo(inlineScriptRef.url))
-                  }
-                })
-              }
-              // inline content cannot be bundled
-              return
-            }
-            addToBundlerIfAny(dependencyUrlInfo)
-          })
-          return
+    // File referenced with new URL('./file.js', import.meta.url)
+    // are entry points that can be bundled
+    // For instance we will bundle service worker/workers detected like this
+    if (rawUrlInfo.type === "js_module") {
+      rawUrlInfo.references.forEach((reference) => {
+        if (reference.type === "js_url_specifier") {
+          const urlInfo = rawGraph.getUrlInfo(reference.url)
+          addToBundlerIfAny(urlInfo)
         }
-      }
-      // File referenced with new URL('./file.js', import.meta.url)
-      // are entry points that can be bundled
-      // For instance we will bundle service worker/workers detected like this
-      if (rawUrlInfo.type === "js_module") {
-        rawUrlInfo.references.forEach((reference) => {
-          if (reference.type === "js_url_specifier") {
-            const urlInfo = rawGraph.getUrlInfo(reference.url)
-            addToBundlerIfAny(urlInfo)
-          }
-        })
-      }
-    })
-    await Object.keys(bundlers).reduce(async (previous, type) => {
-      await previous
-      const bundler = bundlers[type]
-      const urlInfosToBundle = bundler.urlInfos
-      if (urlInfosToBundle.length === 0) {
-        return
-      }
-      const bundleTask = createTaskLog(logger, `bundle "${type}"`)
-      try {
-        const bundlerGeneratedUrlInfos =
-          await rawGraphKitchen.pluginController.callAsyncHook(
-            {
-              plugin: bundler.plugin,
-              hookName: "bundle",
-              value: bundler.bundleFunction,
-            },
-            urlInfosToBundle,
-            {
-              signal,
-              logger,
-              rootDirectoryUrl,
-              buildDirectoryUrl,
-              urlGraph: rawGraph,
-              runtimeCompat,
-              sourcemaps,
-            },
-          )
-        Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
-          const bundleUrlInfo = bundlerGeneratedUrlInfos[url]
-          const rawUrlInfo = rawGraph.getUrlInfo(url)
-          bundleUrlInfos[url] = {
-            type,
-            subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-            ...bundleUrlInfo,
-            data: {
-              ...(rawUrlInfo ? rawUrlInfo.data : {}),
-              ...bundleUrlInfo.data,
-              fromBundle: true,
-            },
-          }
-        })
-      } catch (e) {
-        bundleTask.fail()
-        throw e
-      }
-      bundleTask.done()
-    }, Promise.resolve())
-  }
+      })
+    }
+  })
+  await Object.keys(bundlers).reduce(async (previous, type) => {
+    await previous
+    const bundler = bundlers[type]
+    const urlInfosToBundle = bundler.urlInfos
+    if (urlInfosToBundle.length === 0) {
+      return
+    }
+    const bundleTask = createTaskLog(logger, `bundle "${type}"`)
+    try {
+      const bundlerGeneratedUrlInfos =
+        await rawGraphKitchen.pluginController.callAsyncHook(
+          {
+            plugin: bundler.plugin,
+            hookName: "bundle",
+            value: bundler.bundleFunction,
+          },
+          urlInfosToBundle,
+          {
+            ...rawGraphKitchen.baseContext,
+            buildDirectoryUrl,
+          },
+        )
+      Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
+        const bundleUrlInfo = bundlerGeneratedUrlInfos[url]
+        const rawUrlInfo = rawGraph.getUrlInfo(url)
+        bundleUrlInfos[url] = {
+          type,
+          subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+          ...bundleUrlInfo,
+          data: {
+            ...(rawUrlInfo ? rawUrlInfo.data : {}),
+            ...bundleUrlInfo.data,
+            fromBundle: true,
+          },
+        }
+      })
+    } catch (e) {
+      bundleTask.fail()
+      throw e
+    }
+    bundleTask.done()
+  }, Promise.resolve())
 
   const buildUrlsGenerator = createBuilUrlsGenerator({
     buildDirectoryUrl,
@@ -341,6 +356,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         name: "jsenv:postbuild",
         appliesDuring: { build: true },
         resolve: (reference) => {
+          if (reference.specifier[0] === "#") {
+            reference.external = true
+          }
           if (reference.specifier[0] === "/") {
             const url = new URL(reference.specifier.slice(1), buildDirectoryUrl)
               .href
@@ -659,6 +677,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             name: "jsenv:versioning",
             appliesDuring: { build: true },
             resolve: (reference) => {
+              if (reference.specifier[0] === "#") {
+                reference.external = true
+              }
               const buildUrl = buildUrls[reference.specifier]
               if (buildUrl) {
                 return buildUrl
@@ -771,6 +792,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
 
   GRAPH.forEach(finalGraph, (urlInfo) => {
     if (!urlInfo.url.startsWith("file:")) {
+      return
+    }
+    if (urlInfo.external) {
       return
     }
     const version = urlInfo.data.version

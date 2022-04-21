@@ -5,18 +5,22 @@ export const jsenvPluginDataUrls = () => {
   return {
     name: "jsenv:data_urls",
     appliesDuring: "*",
-    resolve: ({ specifier }) => {
-      if (!specifier.startsWith("data:")) {
+    resolve: (reference) => {
+      if (!reference.specifier.startsWith("data:")) {
         return null
       }
-      return specifier
+      return reference.specifier
     },
-    load: ({ url, data }) => {
-      if (!url.startsWith("data:")) {
+    load: (urlInfo) => {
+      if (!urlInfo.url.startsWith("data:")) {
         return null
       }
-      const { contentType, base64Flag, data: urlData } = DataUrl.parse(url)
-      data.base64Flag = base64Flag
+      const {
+        contentType,
+        base64Flag,
+        data: urlData,
+      } = DataUrl.parse(urlInfo.url)
+      urlInfo.data.base64Flag = base64Flag
       return {
         contentType,
         content: contentFromUrlData({ contentType, base64Flag, urlData }),

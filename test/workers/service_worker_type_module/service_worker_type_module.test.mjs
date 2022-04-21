@@ -31,9 +31,9 @@ if (process.platform !== "win32") {
         serviceWorkerUrls: {
           "main.html": {
             versioned: false,
-            version: "3dd88b43",
+            version: "fb41e005",
           },
-          "css/style.css?v=5e0188f9": {
+          "css/style.css?v=0e312da1": {
             versioned: true,
           },
         },

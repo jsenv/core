@@ -1,0 +1,5 @@
+@import "./file.css";
+
+body {
+  filter: url(#better-blur);
+}

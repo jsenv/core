@@ -35,10 +35,10 @@ export const getCorePlugins = ({
     jsenvPluginHttpUrls(),
     jsenvPluginLeadingSlash(),
     jsenvPluginNodeEsmResolution(nodeEsmResolution), // before url resolution to handle "js_import_export" resolution
-    jsenvPluginInjectGlobals(injectedGlobals),
     jsenvPluginUrlResolution(),
     jsenvPluginFileSystemMagic(fileSystemMagicResolution),
     jsenvPluginUrlVersion(),
+    jsenvPluginInjectGlobals(injectedGlobals),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     // jsenvPluginWorkers(),

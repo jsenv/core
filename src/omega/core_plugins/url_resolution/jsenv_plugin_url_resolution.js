@@ -1,6 +1,12 @@
 export const jsenvPluginUrlResolution = () => {
-  const urlResolver = ({ baseUrl, parentUrl, specifier }) => {
-    return new URL(specifier, baseUrl || parentUrl).href
+  const urlResolver = (reference) => {
+    if (reference.specifier[0] === "#") {
+      reference.external = true
+    }
+    return new URL(
+      reference.specifier,
+      reference.baseUrl || reference.parentUrl,
+    ).href
   }
   return {
     name: "jsenv:url_resolution",

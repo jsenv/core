@@ -12,9 +12,10 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
     sourcemaps: false,
     plugins: [
       postCssPluginUrlVisitor({
-        urlVisitor: ({ url, type, specifier, urlNode }) => {
+        urlVisitor: ({ url, type, specifier, urlNode, declarationNode }) => {
           const [reference] = context.referenceUtils.found({
             type: `css_${type}`,
+            node: declarationNode,
             start: urlNode.sourceIndex,
             end: urlNode.sourceEndIndex,
             specifier,
