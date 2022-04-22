@@ -3,12 +3,12 @@ import { createRequire } from "node:module"
 const require = createRequire(import.meta.url)
 
 // https://github.com/kangax/html-minifier#options-quick-reference
-export const jsenvPluginMinifyHtml = ({
+export const jsenvPluginHtmlMinification = ({
   collapseWhitespace = true,
   removeComments = true,
 } = {}) => {
   return {
-    name: "jsenv:minify_html",
+    name: "jsenv:html_minification",
     appliesDuring: {
       build: true,
     },

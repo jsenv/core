@@ -1,6 +1,6 @@
 // https://github.com/terser-js/terser#minify-options
 
-export const jsenvPluginMinifyJson = () => {
+export const jsenvPluginJsonMinification = () => {
   const minifyJson = (urlInfo) => {
     const { content } = urlInfo
     if (content.startsWith("{\n")) {
@@ -11,7 +11,7 @@ export const jsenvPluginMinifyJson = () => {
   }
 
   return {
-    name: "jsenv:minify_json",
+    name: "jsenv:json_minification",
     appliesDuring: {
       build: true,
     },

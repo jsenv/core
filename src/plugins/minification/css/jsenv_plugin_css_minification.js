@@ -1,8 +1,8 @@
 import { transformWithParcel } from "@jsenv/utils/css_ast/parcel_css.js"
 
-export const jsenvPluginMinifyCss = () => {
+export const jsenvPluginCssMinification = () => {
   return {
-    name: "jsenv:minify_css",
+    name: "jsenv:css_minification",
     appliesDuring: {
       build: true,
     },

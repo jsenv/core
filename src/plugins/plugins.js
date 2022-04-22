@@ -18,10 +18,7 @@ import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
 import { jsenvPluginBundleCss } from "./bundle_css/jsenv_plugin_bundle_css.js"
 import { jsenvPluginBundleJsClassic } from "./bundle_js_classic/jsenv_plugin_js_classic.js"
 import { jsenvPluginBundleJsModule } from "./bundle_js_module/jsenv_plugin_bundle_js_module.js"
-import { jsenvPluginMinifyHtml } from "./minify_html/jsenv_plugin_minify_html.js"
-import { jsenvPluginMinifyCss } from "./minify_css/jsenv_plugin_minify_css.js"
-import { jsenvPluginMinifyJs } from "./minify_js/jsenv_plugin_minify_js.js"
-import { jsenvPluginMinifyJson } from "./minify_json/jsenv_plugin_minify_json.js"
+import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
 
 export const getCorePlugins = ({
   htmlSupervisor,
@@ -44,22 +41,6 @@ export const getCorePlugins = ({
   }
   Object.keys(bundling).forEach((key) => {
     if (bundling[key] === true) bundling[key] = {}
-  })
-  if (typeof minification === "boolean") {
-    minification = {
-      html: minification,
-      css: minification,
-      js: minification,
-      json: minification,
-      svg: minification,
-    }
-  } else if (typeof minification !== "object") {
-    throw new Error(
-      `minification must be a boolean or an object, got ${minification}`,
-    )
-  }
-  Object.keys(minification).forEach((key) => {
-    if (minification[key] === true) minification[key] = {}
   })
 
   return [
@@ -90,9 +71,6 @@ export const getCorePlugins = ({
     ...(bundling.js_module
       ? [jsenvPluginBundleJsModule(bundling.js_module)]
       : []),
-    ...(minification.html ? [jsenvPluginMinifyHtml(minification.html)] : []),
-    ...(minification.css ? [jsenvPluginMinifyCss(minification.css)] : []),
-    ...(minification.js ? [jsenvPluginMinifyJs(minification.js)] : []),
-    ...(minification.json ? [jsenvPluginMinifyJson(minification.json)] : []),
+    jsenvPluginMinification(minification),
   ]
 }
