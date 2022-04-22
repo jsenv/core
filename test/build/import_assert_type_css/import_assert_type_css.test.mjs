@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
+import { startFileServer } from "@jsenv/core/test/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const test = async (options) => {
@@ -17,38 +18,40 @@ const test = async (options) => {
     minification: false,
     ...options,
   })
-  const { serverOrigin, returnValue } = await executeInChromium({
+  const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
-    htmlFileRelativeUrl: "./main.html",
+  })
+  const { returnValue } = await executeInChromium({
+    url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
       return window.namespacePromise
     },
     /* eslint-enable no-undef */
   })
-  return { serverOrigin, buildManifest, returnValue }
+  return { server, buildManifest, returnValue }
 }
 
 // with bundling (default)
 {
-  const { serverOrigin, buildManifest, returnValue } = await test()
+  const { server, buildManifest, returnValue } = await test()
   const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["other/jsenv.png"]}")`,
+    bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
   }
   assert({ actual, expected })
 }
 
 // without bundling
 {
-  const { serverOrigin, buildManifest, returnValue } = await test({
+  const { server, buildManifest, returnValue } = await test({
     bundling: false,
   })
   const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${serverOrigin}/${buildManifest["other/jsenv.png"]}")`,
+    bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
   }
   assert({ actual, expected })
 }

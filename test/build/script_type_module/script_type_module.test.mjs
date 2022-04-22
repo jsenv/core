@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
+import { startFileServer } from "@jsenv/core/test/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const test = async (params) => {
@@ -16,32 +17,34 @@ const test = async (params) => {
     ...params,
   })
 
-  const { returnValue, serverOrigin } = await executeInChromium({
+  const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
-    htmlFileRelativeUrl: "./main.html",
+  })
+  const { returnValue } = await executeInChromium({
+    url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
       return window.namespacePromise
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue, serverOrigin }
+  return { returnValue, server }
 }
 
 // default
 {
-  const { returnValue, serverOrigin } = await test()
+  const { returnValue, server } = await test()
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.js`,
+    url: `${server.origin}/js/main.js`,
   }
   assert({ actual, expected })
 }
 
 // no support for <script type="module">
 {
-  const { returnValue, serverOrigin } = await test({
+  const { returnValue, server } = await test({
     runtimeCompat: {
       chrome: "60",
     },
@@ -49,14 +52,14 @@ const test = async (params) => {
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.es5.js`,
+    url: `${server.origin}/js/main.es5.js`,
   }
   assert({ actual, expected })
 }
 
 // no support + without bundling
 {
-  const { returnValue, serverOrigin } = await test({
+  const { returnValue, server } = await test({
     runtimeCompat: {
       chrome: "60",
     },
@@ -65,7 +68,7 @@ const test = async (params) => {
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${serverOrigin}/js/main.es5.js`,
+    url: `${server.origin}/js/main.es5.js`,
   }
   assert({ actual, expected })
 }

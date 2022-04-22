@@ -1,24 +1,35 @@
 import { chromium } from "playwright"
-import { startServer, composeServices, fetchFileSystem } from "@jsenv/server"
 
 export const executeInChromium = async ({
-  rootDirectoryUrl,
-  htmlFileRelativeUrl,
+  url,
   headScriptUrl,
   pageFunction,
   pageArguments = [],
+  collectConsole = true,
+  collectErrors = true,
   debug = false,
   headless = !debug,
   autoStop = !debug,
 }) => {
-  const [server, browser] = await Promise.all([
-    startFileServer({ rootDirectoryUrl }),
-    chromium.launch({
-      headless,
-    }),
-  ])
+  const browser = await chromium.launch({
+    headless,
+  })
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
-  await page.goto(new URL(htmlFileRelativeUrl, `${server.origin}/`).href)
+
+  const pageLogs = []
+  if (collectConsole) {
+    page.on("console", (message) => {
+      pageLogs.push({ type: message.type(), text: message.text() })
+    })
+  }
+  const pageErrors = []
+  if (collectErrors) {
+    page.on("pageerror", (error) => {
+      pageErrors.push(error)
+    })
+  }
+
+  await page.goto(url)
   if (headScriptUrl) {
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
     await page.addScriptTag({
@@ -29,25 +40,12 @@ export const executeInChromium = async ({
     const returnValue = await page.evaluate(pageFunction, ...pageArguments)
     return {
       returnValue,
-      serverOrigin: server.origin,
+      pageErrors,
+      pageLogs,
     }
   } finally {
     if (autoStop) {
       browser.close()
-      server.stop()
     }
   }
-}
-
-const startFileServer = ({ rootDirectoryUrl }) => {
-  return startServer({
-    logLevel: "error",
-    protocol: "http",
-    requestToResponse: composeServices({
-      static: (request) =>
-        fetchFileSystem(new URL(request.ressource.slice(1), rootDirectoryUrl), {
-          headers: request.headers,
-        }),
-    }),
-  })
 }
