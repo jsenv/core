@@ -1,7 +1,7 @@
-import { parseAndTransformHtmlUrls } from "./html_urls.js"
-import { parseAndTransformCssUrls } from "./css_urls.js"
-import { parseAndTransformJsUrls } from "./js_urls.js"
-import { parseAndTransformWebmanifestUrls } from "./webmanifest_urls.js"
+import { parseAndTransformHtmlUrls } from "./html/html_urls.js"
+import { parseAndTransformCssUrls } from "./css/css_urls.js"
+import { parseAndTransformJsUrls } from "./js/js_urls.js"
+import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js"
 
 export const jsenvPluginUrlReferences = () => {
   return {
