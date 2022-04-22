@@ -3,7 +3,19 @@ import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 const require = createRequire(import.meta.url)
 
-export const transformWithParcel = (urlInfo, context) => {
+export const transpileWithParcel = (urlInfo, context) => {
+  const css = require("@parcel/css")
+  const targets = runtimeCompatToTargets(context.runtimeCompat)
+  const { code, map } = css.transform({
+    filename: urlToFileSystemPath(urlInfo.data.rawUrl || urlInfo.url),
+    code: Buffer.from(urlInfo.content),
+    targets,
+    minify: false,
+  })
+  return { code, map }
+}
+
+export const minifyWithParcel = (urlInfo, context) => {
   const css = require("@parcel/css")
   const targets = runtimeCompatToTargets(context.runtimeCompat)
   const { code, map } = css.transform({

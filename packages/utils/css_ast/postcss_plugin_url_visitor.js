@@ -92,14 +92,25 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               return
             }
 
+            const atRuleStart = atImportNode.source.start.offset
+            const atRuleEnd = atImportNode.source.end.offset
+            const atRuleRaw = atImportNode.source.input.css.slice(
+              atRuleStart,
+              atRuleEnd,
+            )
+            const specifierIndex = atRuleRaw.indexOf(atImportNode.params)
+            const specifierStart = atRuleStart + specifierIndex
+            const specifierEnd = specifierStart + atImportNode.params.length
+            const line = atImportNode.source.start.line
+            const column = atImportNode.source.start.column + specifierIndex
             urlVisitor({
+              declarationNode: atImportNode,
               type: "@import",
               specifier,
-              url,
-              declarationNode: atImportNode,
-              line: atImportNode.source.start.line,
-              column: atImportNode.source.start.column,
-              urlNode,
+              line,
+              column,
+              start: specifierStart,
+              end: specifierEnd,
               replace: (newUrlSpecifier) => {
                 if (newUrlSpecifier === urlNode.value) {
                   return
@@ -117,8 +128,6 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
           },
         },
         Declaration: (declarationNode) => {
-          const line = declarationNode.source.start.line
-          const column = declarationNode.source.start.column
           const parsed = parseCssValue(declarationNode.value)
           const urlMutations = []
           walkUrls(parsed, {
@@ -138,14 +147,37 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               }
               const specifier = url
               url = resolveUrl(specifier, fileSystemPathToUrl(from))
+
+              const declarationNodeStart = declarationNode.source.start.offset
+              const afterDeclarationNode =
+                declarationNode.source.input.css.slice(declarationNodeStart)
+              const valueIndex = afterDeclarationNode.indexOf(
+                declarationNode.value,
+              )
+              const valueStart = declarationNodeStart + valueIndex
+              const specifierStart = valueStart + urlNode.sourceIndex
+              const specifierEnd =
+                specifierStart +
+                (urlNode.type === "word"
+                  ? urlNode.value.length
+                  : urlNode.value.length + 2) // the quotes
+              // value raw
+              // declarationNode.source.input.css.slice(valueStart)
+              // specifier raw
+              // declarationNode.source.input.css.slice(specifierStart, specifierEnd)
+              const line = declarationNode.source.start.line
+              const column =
+                declarationNode.source.start.column +
+                (specifierStart - declarationNodeStart)
+
               urlVisitor({
+                declarationNode,
                 type: "url",
                 specifier,
-                url,
-                declarationNode,
-                urlNode,
                 line,
                 column,
+                start: specifierStart,
+                end: specifierEnd,
                 replace: (newUrlSpecifier) => {
                   urlMutations.push(() => {
                     // the specifier desires to be inside double quotes

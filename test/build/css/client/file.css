@@ -1,3 +1,5 @@
 body {
   background-image: url("./jsenv.png");
+  background: url(jsenv.png) right bottom no-repeat,
+    url(./jsenv.png) left top repeat;
 }

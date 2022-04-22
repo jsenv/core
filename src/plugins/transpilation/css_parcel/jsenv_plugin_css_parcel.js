@@ -1,4 +1,4 @@
-import { transformWithParcel } from "@jsenv/utils/css_ast/parcel_css.js"
+import { transpileWithParcel } from "@jsenv/utils/css_ast/parcel_css.js"
 
 // https://github.com/parcel-bundler/parcel-css
 export const jsenvPluginCssParcel = () => {
@@ -7,9 +7,9 @@ export const jsenvPluginCssParcel = () => {
     appliesDuring: "*",
     transform: {
       css: (urlInfo, context) => {
-        const { code, map } = transformWithParcel(urlInfo, context)
+        const { code, map } = transpileWithParcel(urlInfo, context)
         return {
-          content: code,
+          content: String(code),
           sourcemap: map,
         }
       },

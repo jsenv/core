@@ -9,7 +9,7 @@ export const bundleCss = ({ cssUrlInfos, context }) => {
         generatedBy: "parcel",
       },
       contentType: "text/css",
-      content: code,
+      content: String(code),
       sourcemap: map,
     }
   })

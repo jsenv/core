@@ -13,6 +13,7 @@ import { jsenvPluginJsModuleAsJsClassic } from "./js_module_as_js_classic/jsenv_
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
 
 export const jsenvPluginTranspilation = ({
+  css = true,
   jsModuleAsJsClassic = true,
   systemJsInjection = true,
   topLevelAwait = true,
@@ -30,6 +31,6 @@ export const jsenvPluginTranspilation = ({
     ...(jsModuleAsJsClassic
       ? [jsenvPluginJsModuleAsJsClassic({ systemJsInjection })]
       : []),
-    jsenvPluginCssParcel(),
+    ...(css ? [jsenvPluginCssParcel()] : []),
   ]
 }

@@ -361,15 +361,17 @@ export const createKitchen = ({
         return reference.generatedSpecifier
       },
       found: ({ line, column, ...rest }) => {
+        const trace = stringifyUrlSite(
+          adjustUrlSite(urlInfo, {
+            urlGraph,
+            url: urlInfo.url,
+            line,
+            column,
+          }),
+        )
+        // console.log(trace)
         return addReference({
-          trace: stringifyUrlSite(
-            adjustUrlSite(urlInfo, {
-              urlGraph,
-              url: urlInfo.url,
-              line,
-              column,
-            }),
-          ),
+          trace,
           ...rest,
         })
       },
@@ -775,10 +777,11 @@ const specifierFormat = {
   },
 }
 const formatters = {
-  js_import_export: { encode: JSON.stringify, decode: JSON.parse },
-  js_url_specifier: { encode: JSON.stringify, decode: JSON.parse },
+  "js_import_export": { encode: JSON.stringify, decode: JSON.parse },
+  "js_url_specifier": { encode: JSON.stringify, decode: JSON.parse },
+  "css_@import": { encode: JSON.stringify, code: JSON.stringify },
   // https://github.com/webpack-contrib/css-loader/pull/627/files
-  css_url: {
+  "css_url": {
     encode: (url) => {
       // If url is already wrapped in quotes, remove them
       url = formatters.css_url.decode(url)

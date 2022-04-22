@@ -10,11 +10,12 @@ const { buildFileContents } = await build({
     "./main.css": "main.css",
   },
   bundling: true,
+  minification: true,
 })
 const actual = {
   mainCssFileContent: buildFileContents["main.css"],
 }
 const expected = {
-  mainCssFileContent: `body{filter:url(#better-blur);background-image:url(/other/jsenv.png?v=25e95a00)}`,
+  mainCssFileContent: `body{filter:url(#better-blur);background:url(/other/jsenv.png?v=25e95a00) 100% 100% no-repeat,url(/other/jsenv.png?v=25e95a00)}`,
 }
 assert({ actual, expected })

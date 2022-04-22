@@ -12,6 +12,9 @@ const { buildManifest } = await build({
     "./main.html": "main.html",
   },
   minification: false,
+  transpilation: {
+    css: false,
+  },
 })
 const { returnValue, serverOrigin } = await executeInChromium({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
