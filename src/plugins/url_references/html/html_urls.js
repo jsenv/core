@@ -20,6 +20,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     htmlAst,
     onUrl: ({
       type,
+      subtype,
       expectedType,
       line,
       column,
@@ -28,6 +29,13 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       specifier,
       attribute,
     }) => {
+      const isRessourceHint = [
+        "preconnect",
+        "dns-prefetch",
+        "prefetch",
+        "preload",
+        "modulepreload",
+      ].includes(subtype)
       const [reference] = referenceUtils.found({
         type,
         expectedType,
@@ -36,6 +44,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         originalLine,
         originalColumn,
         specifier,
+        isRessourceHint,
       })
       actions.push(async () => {
         attribute.value = await referenceUtils.readGeneratedSpecifier(reference)
@@ -51,6 +60,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
 const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
   const addDependency = ({
     type,
+    subtype,
     expectedType,
     node,
     attribute,
@@ -74,6 +84,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     } = position
     onUrl({
       type,
+      subtype,
       expectedType,
       line,
       column,
@@ -93,6 +104,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       const type = typeAttribute ? typeAttribute.value : undefined
       visitAttributeAsUrlSpecifier({
         type: "link_href",
+        subtype: rel,
         node,
         attributeName: "href",
         expectedContentType: type,
@@ -182,6 +194,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
   }
   const visitAttributeAsUrlSpecifier = ({
     type,
+    subtype,
     expectedType,
     node,
     attributeName,
@@ -197,6 +210,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       }
       addDependency({
         type,
+        subtype,
         expectedType,
         node,
         attribute,
@@ -206,6 +220,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     } else if (attributeName === "src") {
       visitAttributeAsUrlSpecifier({
         type,
+        subtype,
         expectedType,
         node,
         attributeName: "content-src",
@@ -213,6 +228,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({
         type,
+        subtype,
         expectedType,
         node,
         attributeName: "content-href",

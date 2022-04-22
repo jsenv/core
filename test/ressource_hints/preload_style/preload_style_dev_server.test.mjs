@@ -4,11 +4,10 @@ import { startDevServer } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const devServer = await startDevServer({
-  logLevel: "debug",
+  logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
 })
-
 const { pageLogs, pageErrors } = await executeInChromium({
   url: `${devServer.origin}/main.html`,
   /* eslint-disable no-undef */

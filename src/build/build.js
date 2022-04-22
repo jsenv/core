@@ -38,9 +38,11 @@ import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
 
+import { GRAPH } from "./graph_utils.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
 import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
+import { resyncRessourceHints } from "./resync_ressource_hints.js"
 
 export const build = async ({
   signal = new AbortController().signal,
@@ -571,9 +573,22 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           return
         }
         // ignore:
-        // - inline files: they are already taken into account in the file where they appear
-        // - external files: we don't know their content
-        if (urlInfo.isInline || urlInfo.external) {
+        // - inline files:
+        //   they are already taken into account in the file where they appear
+        // - external files
+        //   we don't know their content
+        // - unused files without reference
+        //   File updated such as style.css -> style.css.js or file.js->file.es5.js
+        //   Are used at some point just to be discarded later because they need to be converted
+        //   There is no need to version them and we could not because the file have been ignored
+        //   so their content is unknown
+        if (urlInfo.isInline) {
+          return
+        }
+        if (urlInfo.external) {
+          return
+        }
+        if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
           return
         }
         const versionGenerator = createVersionGenerator()
@@ -712,10 +727,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         sourcemaps,
         runtimeCompat,
       })
-      // arrange state before reloading all files
-      GRAPH.forEach(finalGraph, (finalUrlInfo) => {
-        finalUrlInfo.data.promise = null
-      })
       await loadUrlGraph({
         urlGraph: finalGraph,
         kitchen: versioningKitchen,
@@ -777,57 +788,34 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     urlInfo.data.buildRelativeUrl = buildRelativeUrl
   })
 
-  const hasServiceWorker = Boolean(
-    GRAPH.find(
-      finalGraph,
-      (finalUrlInfo) => finalUrlInfo.subtype === "service_worker",
-    ),
+  await resyncRessourceHints({
+    finalGraphKitchen,
+    finalGraph,
+    rawUrls,
+    baseUrl,
+  })
+  await injectServiceWorkerUrls({
+    finalGraphKitchen,
+    finalGraph,
+    lineBreakNormalization,
+  })
+  const cleanupActions = []
+  GRAPH.forEach(finalGraph, (urlInfo) => {
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion of js_classic conversion
+    if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
+      cleanupActions.push(() => {
+        delete finalGraph.urlInfos[urlInfo.url]
+      })
+    }
+  })
+  cleanupActions.forEach((cleanupAction) => cleanupAction())
+
+  logger.debug(
+    `graph urls post-versioning:
+${Object.keys(finalGraph.urlInfos).join("\n")}`,
   )
-  if (hasServiceWorker) {
-    const serviceWorkerUrls = {}
-    GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (urlInfo.isInline || urlInfo.external) {
-        return
-      }
-      if (!urlInfo.url.startsWith("file:")) {
-        return
-      }
-      if (urlInfo.data.buildUrlIsVersioned) {
-        serviceWorkerUrls[urlInfo.data.buildRelativeUrl] = {
-          versioned: true,
-        }
-        return
-      }
-      if (!urlInfo.data.version) {
-        // when url is not versioned we compute a "version" for that url anyway
-        // so that service worker source still changes and navigator
-        // detect there is a change
-        const versionGenerator = createVersionGenerator()
-        versionGenerator.augmentWithContent({
-          content: urlInfo.content,
-          contentType: urlInfo.contentType,
-          lineBreakNormalization,
-        })
-        const version = versionGenerator.generate()
-        urlInfo.data.version = version
-      }
-      serviceWorkerUrls[urlInfo.data.buildRelativeUrl] = {
-        versioned: false,
-        version: urlInfo.data.version,
-      }
-    })
-    await Promise.all(
-      GRAPH.map(finalGraph, async (urlInfo) => {
-        if (urlInfo.subtype === "service_worker") {
-          await injectServiceWorkerUrls({
-            urlInfo,
-            kitchen: finalGraphKitchen,
-            serviceWorkerUrls,
-          })
-        }
-      }),
-    )
-  }
 
   const buildManifest = {}
   const buildFileContents = {}
@@ -841,10 +829,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     }
     const { buildRelativeUrl } = urlInfo.data
     if (urlInfo.isInline) {
-      // nothing is used that url anymore (happens when versioning updates inline contents)
-      if (urlInfo.dependents.size === 0) {
-        return
-      }
       buildInlineContents[buildRelativeUrl] = urlInfo.content
     } else {
       buildFileContents[buildRelativeUrl] = urlInfo.content
@@ -855,12 +839,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     )
     buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
   })
-
-  logger.debug(
-    `graph urls post-versioning:
-${Object.keys(finalGraph.urlInfos).join("\n")}`,
-  )
-
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {
       await ensureEmptyDirectory(buildDirectoryUrl)
@@ -887,27 +865,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     buildInlineContents,
     buildManifest,
   }
-}
-
-const GRAPH = {
-  map: (graph, callback) => {
-    return Object.keys(graph.urlInfos).map((url) => {
-      return callback(graph.urlInfos[url])
-    })
-  },
-
-  forEach: (graph, callback) => {
-    Object.keys(graph.urlInfos).forEach((url) => {
-      callback(graph.urlInfos[url], url)
-    })
-  },
-
-  find: (graph, callback) => {
-    const urlFound = Object.keys(graph.urlInfos).find((url) => {
-      return callback(graph.urlInfos[url])
-    })
-    return graph.urlInfos[urlFound]
-  },
 }
 
 const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {

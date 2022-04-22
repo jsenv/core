@@ -44,9 +44,19 @@ export const createUrlGraph = () => {
   const updateReferences = (urlInfo, references) => {
     const dependencyUrls = []
     references.forEach((reference) => {
-      if (!dependencyUrls.includes(reference.url)) {
-        dependencyUrls.push(reference.url)
+      if (reference.isRessourceHint) {
+        // ressource hint are a special kind of reference.
+        // They are a sort of weak reference to an url.
+        // We ignore them so that url referenced only by ressource hints
+        // have url.dependents.size === 0 and can be considered as not used
+        // It means html won't consider url referenced solely
+        // by <link> as dependency and it's fine
+        return
       }
+      if (dependencyUrls.includes(reference.url)) {
+        return
+      }
+      dependencyUrls.push(reference.url)
     })
     pruneDependencies(
       urlInfo,

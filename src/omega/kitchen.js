@@ -85,6 +85,7 @@ export const createKitchen = ({
     external = false,
     isInline = false,
     injected = false,
+    isRessourceHint = false,
     content,
     contentType,
   }) => {
@@ -105,6 +106,7 @@ export const createKitchen = ({
       external,
       isInline,
       injected,
+      isRessourceHint,
       // for inline ressources the reference contains the content
       content,
       contentType,
@@ -465,7 +467,8 @@ export const createKitchen = ({
           currentUrlInfo !== newUrlInfo &&
           currentUrlInfo.dependents.size === 0
         ) {
-          delete context.urlGraph.urlInfos[currentReference.url]
+          currentUrlInfo.data.updatedTo = newUrlInfo
+          // delete context.urlGraph.urlInfos[currentReference.url]
         }
         return [newReference, newUrlInfo]
       },
