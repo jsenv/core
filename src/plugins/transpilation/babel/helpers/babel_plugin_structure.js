@@ -6,7 +6,7 @@ export const getBaseBabelPluginStructure = ({
   isSupported,
   usesTopLevelAwait,
   // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
-  topLevelAwait = "simple",
+  topLevelAwait,
   isJsModule,
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
@@ -41,7 +41,7 @@ export const getBaseBabelPluginStructure = ({
     babelPluginStructure["transform-async-to-promises"] = [
       requireBabelPlugin("babel-plugin-transform-async-to-promises"),
       {
-        topLevelAwait,
+        topLevelAwait: topLevelAwait ? "simple" : "ignore",
       },
     ]
   } else if (isBabelPluginNeeded("transform-async-to-promises")) {

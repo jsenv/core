@@ -7,7 +7,7 @@ import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_meta
 
 export const jsenvPluginImportAssertions = () => {
   const inlineContentClientFileUrl = new URL(
-    "../inline/client/inline_content.js",
+    "../../inline/client/inline_content.js",
     import.meta.url,
   ).href
 

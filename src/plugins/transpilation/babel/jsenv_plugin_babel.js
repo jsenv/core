@@ -8,8 +8,8 @@ import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_g
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 
 export const jsenvPluginBabel = ({
-  getCustomBabelPlugins,
   topLevelAwait,
+  getCustomBabelPlugins,
 } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module"
@@ -108,11 +108,10 @@ export const jsenvPluginBabel = ({
       sourcemap: map,
     }
   }
-
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
-    transform: {
+    finalize: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel,
     },

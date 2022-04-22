@@ -11,8 +11,8 @@ const test = async (options) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    babel: {
-      topLevelAwait: "ignore",
+    transpilation: {
+      topLevelAwait: false,
     },
     minification: false,
     ...options,
@@ -62,8 +62,8 @@ const test = async (options) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    babel: {
-      topLevelAwait: "ignore",
+    transpilation: {
+      topLevelAwait: false,
     },
     minification: {
       js: false,

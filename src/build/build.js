@@ -30,7 +30,7 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
-import { jsenvPluginJsModuleAsJsClassic } from "../plugins/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
+import { jsenvPluginJsModuleAsJsClassic } from "../plugins/transpilation/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
@@ -52,17 +52,17 @@ export const build = async ({
   // that will just pass different options to build project
   // and this function will be agnostic about "preview" concept
   isPreview = false,
+
   plugins = [],
-  htmlSupervisor,
+  sourcemaps = isPreview ? "file" : false,
   nodeEsmResolution,
   fileSystemMagicResolution,
-  babel,
   injectedGlobals,
   runtimeCompat,
-  sourcemaps = isPreview ? "file" : false,
-
+  transpilation = {},
   bundling = true,
   minification = true,
+
   versioning = true,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
@@ -110,12 +110,13 @@ build ${entryPointKeys.length} entry points`)
         },
       },
       ...getCorePlugins({
-        htmlSupervisor,
         nodeEsmResolution,
         fileSystemMagicResolution,
-        babel,
         injectedGlobals,
-        jsModuleAsJsClassic: false,
+        transpilation: {
+          ...transpilation,
+          jsModuleAsJsClassic: false,
+        },
         minification,
         bundling,
       }),
@@ -165,6 +166,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       )
     }
     Object.keys(bundle).forEach((type) => {
+      const bundleFunction = bundle[type]
+      if (!bundleFunction) {
+        return
+      }
       const bundlerForThatType = bundlers[type]
       if (bundlerForThatType) {
         // first plugin to define a bundle hook wins
@@ -302,7 +307,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       }
     },
     plugins: [
-      jsenvPluginJsModuleAsJsClassic(),
+      jsenvPluginJsModuleAsJsClassic({
+        systemJsInjection: true,
+      }),
       jsenvPluginInline(),
       {
         name: "jsenv:postbuild",
@@ -348,7 +355,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
-
           // from "js_module_as_js_classic":
           //   - injecting "?as_js_classic" for the first time
           //   - injecting "?as_js_classic" because the parentUrl has it
@@ -387,7 +393,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
-
           const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
           // files from root directory but not given to rollup nor postcss
           if (rawUrlInfo) {
@@ -407,12 +412,19 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               if (rawUrlInfo.content === reference.content) {
                 return true
               }
+              if (rawUrlInfo.originalContent === reference.content) {
+                return true
+              }
               return false
             })
-            if (!rawUrlInfo) {
-              throw new Error(`cannot find raw url for "${reference.url}"`)
-            }
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+            if (!rawUrlInfo) {
+              // generated during final graph
+              // (happens for JSON.parse injected for import assertions for instance)
+              // throw new Error(`cannot find raw url for "${reference.url}"`)
+              return reference.url
+            }
+
             const buildUrl = buildUrlsGenerator.generate(
               reference.url,
               rawUrlInfo,

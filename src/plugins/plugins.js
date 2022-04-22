@@ -9,12 +9,9 @@ import { jsenvPluginFileSystemMagic } from "./filesystem_magic/jsenv_plugin_file
 import { jsenvPluginInline } from "./inline/jsenv_plugin_inline.js"
 import { jsenvPluginHtmlSupervisor } from "./html_supervisor/jsenv_plugin_html_supervisor.js"
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js"
-import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginInjectGlobals } from "./inject_globals/jsenv_plugin_inject_globals.js"
-import { jsenvPluginJsModuleAsJsClassic } from "./js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
-import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
-
+import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js"
 import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
 import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
 
@@ -22,17 +19,13 @@ export const getCorePlugins = ({
   htmlSupervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
-  babel,
   injectedGlobals,
-  jsModuleAsJsClassic = {},
+  transpilation = true,
   minification = false,
   bundling = false,
 } = {}) => {
   return [
-    ...(jsModuleAsJsClassic
-      ? [jsenvPluginJsModuleAsJsClassic(jsModuleAsJsClassic)]
-      : []),
-    jsenvPluginImportAssertions(),
+    jsenvPluginTranspilation(transpilation),
     jsenvPluginHtmlSupervisor(htmlSupervisor), // before inline as it turns inline <script> into <script src>
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
@@ -47,7 +40,6 @@ export const getCorePlugins = ({
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     // jsenvPluginWorkers(),
-    jsenvPluginBabel(babel),
 
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),

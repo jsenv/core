@@ -6,10 +6,7 @@ import { getTypePropertyNode } from "@jsenv/utils/js_ast/js_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
-  const parseAndTransformInlineContentCalls = async (
-    urlInfo,
-    { referenceUtils, cook, isSupportedOnCurrentClients },
-  ) => {
+  const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [babelPluginMetadataInlineContentCalls],
       urlInfo,
@@ -30,26 +27,30 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
         columnEnd: inlineContentCall.columnEnd,
       })
       let { quote } = inlineContentCall
-      if (quote === "`" && !isSupportedOnCurrentClients("template_literals")) {
+      if (
+        quote === "`" &&
+        !context.isSupportedOnCurrentClients("template_literals")
+      ) {
         // if quote is "`" and template literals are not supported
         // we'll use a regular string (single or double quote)
         // when rendering the string
         quote = JS_QUOTES.pickBest(inlineContentCall.content)
       }
-      const [inlineReference, inlineUrlInfo] = referenceUtils.foundInline({
-        type: "js_inline_content",
-        subtype: inlineContentCall.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
-        isOriginal: urlInfo.content === urlInfo.originalContent,
-        line: inlineContentCall.line,
-        column: inlineContentCall.column,
-        specifier: inlineUrl,
-        contentType: inlineContentCall.contentType,
-        content: inlineContentCall.content,
-      })
+      const [inlineReference, inlineUrlInfo] =
+        context.referenceUtils.foundInline({
+          type: "js_inline_content",
+          subtype: inlineContentCall.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
+          isOriginal: urlInfo.content === urlInfo.originalContent,
+          line: inlineContentCall.line,
+          column: inlineContentCall.column,
+          specifier: inlineUrl,
+          contentType: inlineContentCall.contentType,
+          content: inlineContentCall.content,
+        })
       inlineUrlInfo.jsQuote = quote
       inlineReference.escape = (value) =>
         JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote })
-      await cook({
+      await context.cook({
         reference: inlineReference,
         urlInfo: inlineUrlInfo,
       })

@@ -11,7 +11,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    babel: {
+    transpilation: {
       // topLevelAwait: "ignore",
     },
     versioning: false,

@@ -136,7 +136,7 @@ export const executePlan = async (
         plugins: [
           ...plugins,
           ...getCorePlugins({
-            babel: {
+            transpilation: {
               getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
                 if (
                   coverage &&

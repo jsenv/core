@@ -26,9 +26,7 @@ import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transf
 
 const require = createRequire(import.meta.url)
 
-export const jsenvPluginJsModuleAsJsClassic = ({
-  systemJsInjection = true,
-} = {}) => {
+export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
