@@ -7,6 +7,7 @@
  * of this plugin
  */
 
+import { jsenvPluginCssParcel } from "./css_parcel/jsenv_plugin_css_parcel.js"
 import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginJsModuleAsJsClassic } from "./js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
@@ -29,5 +30,6 @@ export const jsenvPluginTranspilation = ({
     ...(jsModuleAsJsClassic
       ? [jsenvPluginJsModuleAsJsClassic({ systemJsInjection })]
       : []),
+    jsenvPluginCssParcel(),
   ]
 }
