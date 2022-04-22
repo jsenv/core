@@ -13,6 +13,7 @@ import { jsenvPluginJsModuleAsJsClassic } from "./js_module_as_js_classic/jsenv_
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
 
 export const jsenvPluginTranspilation = ({
+  importAssertions = true,
   css = true,
   jsModuleAsJsClassic = true,
   systemJsInjection = true,
@@ -21,9 +22,12 @@ export const jsenvPluginTranspilation = ({
 }) => {
   return [
     // import assertions we want it all the time
-    jsenvPluginImportAssertions(),
+    ...(importAssertions ? [jsenvPluginImportAssertions()] : []),
     // babel also so that rollup can bundle babel helpers for instance
-    jsenvPluginBabel({ topLevelAwait, getCustomBabelPlugins }),
+    jsenvPluginBabel({
+      topLevelAwait,
+      getCustomBabelPlugins,
+    }),
     // but the conversion from js_module to js_classic
     // we want to do it after bundling
     // so the build function will disable jsModuleAsJsClassic during build
