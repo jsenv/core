@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link rel="preload" href="./style.css" as="script" crossorigin />
+    <link
+      rel="preload"
+      href="./roboto_v27_latin_regular.woff2"
+      as="font"
+      type="font/woff2"
+      id="font_preload_link"
+      crossorigin
+    />
+  </head>
+
+  <body>
+    <h1>Hello world</h1>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      import style from "./style.css" assert { type: "css" }
+
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, style]
+
+      // Let browser time to log an eventual warning about preload link not used
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      })
+      await document.fonts.ready
+      window.resolveNamespacePromise({
+        fontFamily: getComputedStyle(document.body).fontFamily,
+      })
+    </script>
+  </body>
+</html>

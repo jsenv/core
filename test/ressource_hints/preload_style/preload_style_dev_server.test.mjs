@@ -5,7 +5,7 @@ import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const devServer = await startDevServer({
   logLevel: "debug",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
 })
 

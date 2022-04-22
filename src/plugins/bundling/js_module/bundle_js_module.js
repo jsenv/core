@@ -158,10 +158,13 @@ const rollupPluginJsenv = ({
           // preserves relative path parts:
           // the goal is to maintain the original relative path (relative to the root directory)
           // so that later in the build process, when resolving these urls, we are able to
-          // re-resolve the specifier againt the original parent url and find the original url
+          // re-resolve the specifier against the original parent url and find the original url
           if (chunkInfo.facadeModuleId) {
             const fileUrl = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId)
             const relativePath = urlToRelativeUrl(fileUrl, rootDirectoryUrl)
+            if (relativePath.startsWith("../")) {
+              return `__rollup__/${chunkInfo.name}.js`
+            }
             return relativePath
           }
           // chunk generated dynamically by rollup to share code.
