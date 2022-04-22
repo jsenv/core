@@ -15,9 +15,7 @@ import { jsenvPluginInjectGlobals } from "./inject_globals/jsenv_plugin_inject_g
 import { jsenvPluginJsModuleAsJsClassic } from "./js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
 
-import { jsenvPluginBundleCss } from "./bundle_css/jsenv_plugin_bundle_css.js"
-import { jsenvPluginBundleJsClassic } from "./bundle_js_classic/jsenv_plugin_js_classic.js"
-import { jsenvPluginBundleJsModule } from "./bundle_js_module/jsenv_plugin_bundle_js_module.js"
+import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
 import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
 
 export const getCorePlugins = ({
@@ -30,19 +28,6 @@ export const getCorePlugins = ({
   minification = false,
   bundling = false,
 } = {}) => {
-  if (typeof bundling === "boolean") {
-    bundling = {
-      js_module: bundling,
-      js_classic: bundling,
-      css: bundling,
-    }
-  } else if (typeof bundling !== "object") {
-    throw new Error(`bundling must be a boolean or an object, got ${bundling}`)
-  }
-  Object.keys(bundling).forEach((key) => {
-    if (bundling[key] === true) bundling[key] = {}
-  })
-
   return [
     ...(jsModuleAsJsClassic
       ? [jsenvPluginJsModuleAsJsClassic(jsModuleAsJsClassic)]
@@ -64,13 +49,7 @@ export const getCorePlugins = ({
     // jsenvPluginWorkers(),
     jsenvPluginBabel(babel),
 
-    ...(bundling.css ? [jsenvPluginBundleCss(bundling.css)] : []),
-    ...(bundling.js_classic
-      ? [jsenvPluginBundleJsClassic(bundling.js_classic)]
-      : []),
-    ...(bundling.js_module
-      ? [jsenvPluginBundleJsModule(bundling.js_module)]
-      : []),
+    jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
   ]
 }

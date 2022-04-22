@@ -1,8 +1,8 @@
 import { bundleWithParcel } from "@jsenv/utils/css_ast/parcel_css.js"
 
-export const jsenvPluginBundleCss = () => {
+export const jsenvPluginCssBundling = () => {
   return {
-    name: "jsenv:bundle_css",
+    name: "jsenv:css_bundling",
     appliesDuring: {
       build: true,
     },
@@ -13,7 +13,7 @@ export const jsenvPluginBundleCss = () => {
           const { code, map } = bundleWithParcel(urlInfo, context)
           bundledCssUrlInfos[urlInfo.url] = {
             data: {
-              generatedBy: "postcss",
+              generatedBy: "parcel",
             },
             contentType: "text/css",
             content: code,

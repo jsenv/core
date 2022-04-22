@@ -1,21 +1,16 @@
 /*
- * In theory we can just append js classic together
- * In practice systemjs do not bundle well
- * and for Worker there is importScripts calls
- * so what we want to do is the following:
- *
- * - all subtype can be bundled together using an output format of systemjs
- * (ideally we would avoid dependency to systemjs when the resulting
- * chunk do not have dependency (no dynamic import))
- * - if the file is written with importScript calls skip bundling for now
- * because rollup do not support that (or use an other strategy like the one with babel I had)
+ * TODO:
+ * for each js_classic where subtype is a worker
+ * take the url info and find importScripts calls
+ * and replace them with the corresponding url info file content
+ * we'll ikely need to save the importScripts node location to be able to do that
  */
 
 // import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-export const jsenvPluginBundleJsClassic = () => {
+export const jsenvPluginJsClassicWorkersBundling = () => {
   return {
-    name: "jsenv:bundle_js_classic",
+    name: "jsenv:js_classic_workers_bundling",
     appliesDuring: "*",
     bundle: {
       // js_classic: async (urlInfos, { urlGraph }) => {

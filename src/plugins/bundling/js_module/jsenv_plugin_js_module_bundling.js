@@ -4,9 +4,9 @@ import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 
-export const jsenvPluginBundleJsModule = () => {
+export const jsenvPluginJsModuleBundling = () => {
   return {
-    name: "jsenv:bundle_js_module",
+    name: "jsenv:js_module_bundling",
     appliesDuring: {
       build: true,
     },
