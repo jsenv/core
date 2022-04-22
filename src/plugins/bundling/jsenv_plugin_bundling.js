@@ -1,6 +1,6 @@
-import { jsenvPluginCssBundling } from "./css/jsenv_plugin_css_bundling.js"
-import { jsenvPluginJsClassicWorkersBundling } from "./js_classic_workers/jsenv_plugin_js_classic_workers_bundling.js"
-import { jsenvPluginJsModuleBundling } from "./js_module/jsenv_plugin_js_module_bundling.js"
+import { bundleCss } from "./css/bundle_css.js"
+import { bundleJsClassicWorkers } from "./js_classic_workers/bundle_js_classic_workers.js"
+import { bundleJsModule } from "./js_module/bundle_js_module.js"
 
 export const jsenvPluginBundling = (bundling) => {
   if (typeof bundling === "boolean") {
@@ -16,13 +16,36 @@ export const jsenvPluginBundling = (bundling) => {
     if (bundling[key] === true) bundling[key] = {}
   })
 
-  return [
-    ...(bundling.css ? [jsenvPluginCssBundling(bundling.css)] : []),
-    ...(bundling.js_classic_workers
-      ? [jsenvPluginJsClassicWorkersBundling(bundling.js_classic_workers)]
-      : []),
-    ...(bundling.js_module
-      ? [jsenvPluginJsModuleBundling(bundling.js_module)]
-      : []),
-  ]
+  return {
+    name: "jsenv:bundling",
+    appliesDuring: {
+      build: true,
+    },
+    bundle: {
+      css: bundling.css
+        ? (cssUrlInfos, context) =>
+            bundleCss({
+              cssUrlInfos,
+              context,
+              options: bundling.css,
+            })
+        : undefined,
+      js_classic: bundling.js_classic
+        ? (jsClassicUrlInfos, context) =>
+            bundleJsClassicWorkers({
+              jsClassicUrlInfos,
+              context,
+              options: bundling.js_classic_workers,
+            })
+        : undefined,
+      js_module: bundling.js_module
+        ? (jsModuleUrlInfos, context) =>
+            bundleJsModule({
+              jsModuleUrlInfos,
+              context,
+              options: bundling.js_module,
+            })
+        : undefined,
+    },
+  }
 }
