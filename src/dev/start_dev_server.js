@@ -25,9 +25,9 @@ export const startDevServer = async ({
   keepProcessAlive = true,
   rootDirectoryUrl,
 
-  injectedGlobals,
   plugins = [],
   sourcemaps = "inline",
+  injectedGlobals,
 
   autoreload = true,
   autoreloadPatterns = {
