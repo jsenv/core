@@ -12,8 +12,9 @@ import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
+import { createPluginController } from "../plugins/plugin_controller.js"
+import { jsenvPluginUrlReferences } from "../plugins/url_references/jsenv_plugin_url_references.js"
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
-import { jsenvPluginUrlReferences } from "./core_plugins/url_references/jsenv_plugin_url_references.js"
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
 import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
 import {
@@ -22,7 +23,6 @@ import {
   createTransformError,
   createFinalizeError,
 } from "./errors.js"
-import { createPluginController } from "./plugin_controller.js"
 import { assertLoadedContentCompliance } from "./loaded_content_compliance.js"
 
 export const createKitchen = ({

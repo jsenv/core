@@ -29,22 +29,15 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
-import { jsenvPluginInline } from "../omega/core_plugins/inline/jsenv_plugin_inline.js"
-import { jsenvPluginJsModuleAsJsClassic } from "../omega/core_plugins/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
+import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
+import { jsenvPluginJsModuleAsJsClassic } from "../plugins/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
 import { createUrlGraph } from "../omega/url_graph.js"
-import { getCorePlugins } from "../omega/core_plugins.js"
+import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
 import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
 
-import { jsenvPluginBundleCss } from "./plugins/bundle_css/jsenv_plugin_bundle_css.js"
-import { jsenvPluginBundleJsClassic } from "./plugins/bundle_js_classic/jsenv_plugin_js_classic.js"
-import { jsenvPluginBundleJsModule } from "./plugins/bundle_js_module/jsenv_plugin_bundle_js_module.js"
-import { jsenvPluginMinifyHtml } from "./plugins/minify_html/jsenv_plugin_minify_html.js"
-import { jsenvPluginMinifyCss } from "./plugins/minify_css/jsenv_plugin_minify_css.js"
-import { jsenvPluginMinifyJs } from "./plugins/minify_js/jsenv_plugin_minify_js.js"
-import { jsenvPluginMinifyJson } from "./plugins/minify_json/jsenv_plugin_minify_json.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectVersionMappings } from "./inject_version_mappings.js"
 import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
@@ -84,34 +77,6 @@ export const build = async ({
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
   assertEntryPoints({ entryPoints })
-  if (typeof bundling === "boolean") {
-    bundling = {
-      js_module: bundling,
-      js_classic: bundling,
-      css: bundling,
-    }
-  } else if (typeof bundling !== "object") {
-    throw new Error(`bundling must be a boolean or an object, got ${bundling}`)
-  }
-  Object.keys(bundling).forEach((key) => {
-    if (bundling[key] === true) bundling[key] = {}
-  })
-  if (typeof minification === "boolean") {
-    minification = {
-      html: minification,
-      css: minification,
-      js: minification,
-      json: minification,
-      svg: minification,
-    }
-  } else if (typeof minification !== "object") {
-    throw new Error(
-      `minification must be a boolean or an object, got ${minification}`,
-    )
-  }
-  Object.keys(minification).forEach((key) => {
-    if (minification[key] === true) minification[key] = {}
-  })
   if (!["filename", "search_param"].includes(versioningMethod)) {
     throw new Error(
       `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
@@ -151,18 +116,9 @@ build ${entryPointKeys.length} entry points`)
         babel,
         injectedGlobals,
         jsModuleAsJsClassic: false,
+        minification,
+        bundling,
       }),
-      ...(bundling.css ? [jsenvPluginBundleCss(bundling.css)] : []),
-      ...(bundling.js_classic
-        ? [jsenvPluginBundleJsClassic(bundling.js_classic)]
-        : []),
-      ...(bundling.js_module
-        ? [jsenvPluginBundleJsModule(bundling.js_module)]
-        : []),
-      ...(minification.html ? [jsenvPluginMinifyHtml(minification.html)] : []),
-      ...(minification.css ? [jsenvPluginMinifyCss(minification.css)] : []),
-      ...(minification.js ? [jsenvPluginMinifyJs(minification.js)] : []),
-      ...(minification.json ? [jsenvPluginMinifyJson(minification.json)] : []),
     ],
     scenario: "build",
     sourcemaps,
@@ -212,10 +168,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       const bundlerForThatType = bundlers[type]
       if (bundlerForThatType) {
         // first plugin to define a bundle hook wins
-        return
-      }
-      const bundlingDisabledForThatType = bundling[type] === false
-      if (bundlingDisabledForThatType) {
         return
       }
       bundlers[type] = {

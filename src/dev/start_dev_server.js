@@ -2,8 +2,8 @@ import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
+import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
-import { getCorePlugins } from "@jsenv/core/src/omega/core_plugins.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 

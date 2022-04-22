@@ -1,4 +1,4 @@
-const eslintConfig = require("../../../../../../.eslintrc.cjs")
+const eslintConfig = require("../../../../../.eslintrc.cjs")
 
 // babel helpers are copy pasted from the babel repository
 Object.assign(eslintConfig.rules, {
