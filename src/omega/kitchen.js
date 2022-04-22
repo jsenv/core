@@ -687,6 +687,9 @@ const inferUrlInfoType = ({ url, contentType }) => {
   if (contentType === "application/manifest+json") {
     return "webmanifest"
   }
+  if (contentType === "image/svg+xml") {
+    return "svg"
+  }
   if (CONTENT_TYPE.isJson(contentType)) {
     return "json"
   }

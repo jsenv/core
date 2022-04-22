@@ -20,20 +20,31 @@ export const jsenvPluginMinification = (minification) => {
   Object.keys(minification).forEach((key) => {
     if (minification[key] === true) minification[key] = {}
   })
+  const htmlOptimizer = minification.html
+    ? (urlInfo, context) =>
+        minifyHtml({
+          htmlUrlInfo: urlInfo,
+          context,
+          options: minification.html,
+        })
+    : null
+  const jsonOptimizer = minification.json
+    ? (urlInfo, context) =>
+        minifyJson({
+          jsonUrlInfo: urlInfo,
+          context,
+          options: minification.json,
+        })
+    : null
+
   return {
     name: "jsenv:minification",
     appliesDuring: {
       build: true,
     },
     optimize: {
-      html: minification.html
-        ? (urlInfo, context) =>
-            minifyHtml({
-              htmlUrlInfo: urlInfo,
-              context,
-              options: minification.html,
-            })
-        : null,
+      html: htmlOptimizer,
+      svg: htmlOptimizer,
       css: minification.css
         ? (urlInfo, context) =>
             minifyCss({
@@ -58,14 +69,9 @@ export const jsenvPluginMinification = (minification) => {
               options: minification.js_module,
             })
         : null,
-      json: minification.json
-        ? (urlInfo, context) =>
-            minifyJson({
-              jsonUrlInfo: urlInfo,
-              context,
-              options: minification.json,
-            })
-        : null,
+      json: jsonOptimizer,
+      importmap: jsonOptimizer,
+      webmanifest: jsonOptimizer,
     },
   }
 }
