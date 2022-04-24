@@ -67,3 +67,14 @@ export const setUrlFilename = (url, filename) => {
   const parentPathname = new URL("./", urlObject).pathname
   return `${origin}${parentPathname}${filename}${search}${hash}`
 }
+
+export const asUrlUntilPathname = (url) => {
+  const urlObject = new URL(url)
+  let { origin, pathname } = urlObject
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://"
+  }
+  const urlUntilPathname = `${origin}${pathname}`
+  return urlUntilPathname
+}

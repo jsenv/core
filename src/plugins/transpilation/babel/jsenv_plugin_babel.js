@@ -7,10 +7,7 @@ import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_pl
 import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 
-export const jsenvPluginBabel = ({
-  topLevelAwait,
-  getCustomBabelPlugins,
-} = {}) => {
+export const jsenvPluginBabel = ({ getCustomBabelPlugins } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module"
     const isWorker = urlInfo.subtype === "worker"
@@ -42,9 +39,6 @@ export const jsenvPluginBabel = ({
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupported,
-      topLevelAwait,
-      usesTopLevelAwait: urlInfo.data.usesTopLevelAwait,
-      isJsModule,
       isWorkerContext,
     })
     if (getCustomBabelPlugins) {

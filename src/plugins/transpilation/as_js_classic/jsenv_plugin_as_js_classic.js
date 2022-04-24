@@ -1,6 +1,7 @@
 import { createRequire } from "node:module"
-import { readFileSync } from "@jsenv/filesystem"
+import { readFileSync, urlToFilename } from "@jsenv/filesystem"
 
+import { requireBabelPlugin } from "@jsenv/babel-plugins"
 import {
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
@@ -26,9 +27,18 @@ import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transf
 
 const require = createRequire(import.meta.url)
 
-export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
+export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
+  return [
+    asJsClassic({ systemJsInjection, systemJsClientFileUrl }),
+    scriptTypeModuleAsClassic({ systemJsInjection, systemJsClientFileUrl }),
+    workersTypeModuleAsClassic(),
+    topLevelAwait(),
+  ]
+}
+
+const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
   const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
     const { code, map } = await applyBabelPlugins({
       babelPlugins: [
@@ -37,17 +47,27 @@ export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
               // propposal-dynamic-import required with systemjs for babel8:
               // https://github.com/babel/babel/issues/10746
               require("@babel/plugin-proposal-dynamic-import"),
+              [
+                requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+                {
+                  topLevelAwait: "return",
+                },
+              ],
               require("@babel/plugin-transform-modules-systemjs"),
             ]
           : [
-              require("@babel/plugin-transform-modules-umd"),
+              [
+                requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+                {
+                  topLevelAwait: "simple",
+                },
+              ],
               babelPluginTransformImportMetaUrl,
+              require("@babel/plugin-transform-modules-umd"),
             ]),
       ],
       urlInfo,
     })
-    urlInfo.type = "js_classic"
-    urlInfo.data.format = outFormat
     if (
       systemJsInjection &&
       outFormat === "system" &&
@@ -72,12 +92,14 @@ export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
   }
 
   return {
-    name: "jsenv:js_module_as_js_classic",
-    appliesDuring: "*",
+    name: "jsenv:as_js_classic",
     // forward ?as_js_classic to referenced urls
     normalize: (reference, context) => {
       const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-      if (!parentUrlInfo || !parentUrlInfo.data.asJsClassic) {
+      if (
+        !parentUrlInfo ||
+        !new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
+      ) {
         return null
       }
       const urlTransformed = injectQueryParams(reference.url, {
@@ -85,6 +107,52 @@ export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
       })
       return urlTransformed
     },
+    load: async (urlInfo, context) => {
+      const urlObject = new URL(urlInfo.url)
+      const { searchParams } = urlObject
+      if (!searchParams.has("as_js_classic")) {
+        return null
+      }
+      searchParams.delete("as_js_classic")
+      const originalUrl = urlObject.href
+      const originalReference = {
+        ...context.reference,
+      }
+      originalReference.url = originalUrl
+      const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+        originalReference.url,
+      )
+      await context.load({
+        reference: originalReference,
+        urlInfo: originalUrlInfo,
+      })
+      const jsClassicFormat =
+        originalUrlInfo.data.usesImport || originalUrlInfo.data.usesExport
+          ? "system"
+          : "umd"
+      const { content, sourcemap } = await convertJsModuleToJsClassic(
+        urlInfo,
+        jsClassicFormat,
+      )
+      urlInfo.data.jsClassicFormat = jsClassicFormat
+      return {
+        type: "js_classic",
+        contentType: "text/javascript",
+        content,
+        sourcemap,
+        filename: generateJsClassicFilename(urlInfo.url),
+      }
+    },
+  }
+}
+
+const scriptTypeModuleAsClassic = ({
+  systemJsInjection,
+  systemJsClientFileUrl,
+}) => {
+  return {
+    name: "jsenv:script_type_module_as_classic",
+    appliesDuring: "*",
     transform: {
       html: async (urlInfo, context) => {
         if (
@@ -118,9 +186,9 @@ export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
               const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
                 as_js_classic: "",
               })
-              const [newReference, newUrlInfo] =
+              const [, newReference, newUrlInfo] =
                 context.referenceUtils.updateSpecifier(specifier, newSpecifier)
-              newUrlInfo.data.asJsClassic = true
+              newReference.expectedType = "js_classic"
               removeHtmlNodeAttribute(node, typeAttribute)
               srcAttribute.value = newReference.generatedSpecifier
               jsModulesToWait.push({
@@ -208,70 +276,77 @@ export const jsenvPluginJsModuleAsJsClassic = ({ systemJsInjection }) => {
         }
         return stringifyHtmlAst(htmlAst)
       },
-      js_module: async (urlInfo, context) => {
-        if (
-          // during build the info must be read from "data.asJsClassic"
-          // because the specifier becomes "worker.es5.js" without query param
-          urlInfo.data.asJsClassic ||
-          new URL(urlInfo.url).searchParams.has("as_js_classic")
-        ) {
-          urlInfo.data.asJsClassic = true
-          const outFormat =
-            urlInfo.data.usesImport || urlInfo.data.usesExport
-              ? "system"
-              : "umd"
-          const classicConversionResult = await convertJsModuleToJsClassic(
-            urlInfo,
-            outFormat,
-          )
-          return classicConversionResult
-        }
-        const usesWorkerTypeModule = urlInfo.references.some(
-          (ref) =>
-            ref.expectedType === "js_module" &&
-            ref.expectedSubtype === "worker",
-        )
-        if (
-          !usesWorkerTypeModule ||
-          context.isSupportedOnCurrentClients("worker_type_module")
-        ) {
-          return null
-        }
-        const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataNewWorkerMentions],
-          urlInfo,
-        })
-        const { newWorkerMentions } = metadata
-        const magicSource = createMagicSource(urlInfo.content)
-        newWorkerMentions.forEach((newWorkerMention) => {
-          if (newWorkerMention.expectedType !== "js_module") {
-            return
-          }
-          const specifier = newWorkerMention.specifier
-          // during dev/test, browser will do the fetch
-          // during build it's a bit different
-          const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
-            as_js_classic: "",
-          })
-          const [newReference, newUrlInfo] =
-            context.referenceUtils.updateSpecifier(
-              JSON.stringify(specifier),
-              newSpecifier,
-            )
-          newUrlInfo.data.asJsClassic = true
-          magicSource.replace({
-            start: newWorkerMention.start,
-            end: newWorkerMention.end,
-            replacement: newReference.generatedSpecifier,
-          })
-          magicSource.replace({
-            start: newWorkerMention.typeArgNode.value.start,
-            end: newWorkerMention.typeArgNode.value.end,
-            replacement: JSON.stringify("classic"),
-          })
-        })
-        return magicSource.toContentAndSourcemap()
-      },
+    },
+  }
+}
+
+export const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename(url)
+  const [basename, extension] = splitFileExtension(filename)
+  return `${basename}.es5${extension}`
+}
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".")
+  if (dotLastIndex === -1) {
+    return [filename, ""]
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
+}
+
+// TODO: handle also service worker and shared worker in this plugin
+const workersTypeModuleAsClassic = () => {
+  const transformJsWorkerTypes = async (urlInfo, context) => {
+    const usesWorkerTypeModule = urlInfo.references.some(
+      (ref) =>
+        ref.expectedType === "js_module" && ref.expectedSubtype === "worker",
+    )
+    if (!usesWorkerTypeModule) {
+      return null
+    }
+    if (context.isSupportedOnCurrentClients("worker_type_module")) {
+      return null
+    }
+    const { metadata } = await applyBabelPlugins({
+      babelPlugins: [babelPluginMetadataNewWorkerMentions],
+      urlInfo,
+    })
+    const { newWorkerMentions } = metadata
+    const magicSource = createMagicSource(urlInfo.content)
+    newWorkerMentions.forEach((newWorkerMention) => {
+      if (newWorkerMention.expectedType !== "js_module") {
+        return
+      }
+      const specifier = newWorkerMention.specifier
+      // during dev/test, browser will do the fetch
+      // during build it's a bit different
+      const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
+        as_js_classic: "",
+      })
+      const [newReference] = context.referenceUtils.updateSpecifier(
+        JSON.stringify(specifier),
+        newSpecifier,
+      )
+      magicSource.replace({
+        start: newWorkerMention.start,
+        end: newWorkerMention.end,
+        replacement: newReference.generatedSpecifier,
+      })
+      magicSource.replace({
+        start: newWorkerMention.typeArgNode.value.start,
+        end: newWorkerMention.typeArgNode.value.end,
+        replacement: JSON.stringify("classic"),
+      })
+    })
+    return magicSource.toContentAndSourcemap()
+  }
+
+  return {
+    name: "jsenv:workers_type_module_as_classic",
+    appliesDuring: "*",
+    transform: {
+      js_module: transformJsWorkerTypes,
+      js_classic: transformJsWorkerTypes,
     },
   }
 }
@@ -291,6 +366,40 @@ const babelPluginMetadataNewWorkerMentions = () => {
           },
         })
         state.file.metadata.newWorkerMentions = newWorkerMentions
+      },
+    },
+  }
+}
+
+const topLevelAwait = () => {
+  return {
+    name: "jsenv:top_level_await",
+    appliesDuring: "*",
+    transform: {
+      js_module: async (urlInfo, context) => {
+        if (!urlInfo.data.usesTopLevelAwait) {
+          return null
+        }
+        if (context.isSupportedOnCurrentClients("top_level_await")) {
+          return null
+        }
+        const { code, map } = await applyBabelPlugins({
+          urlInfo,
+          babelPlugins: [
+            [
+              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              {
+                // Maybe we could pass target: "es6" when we support arrow function
+                // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
+                topLevelAwait: "simple",
+              },
+            ],
+          ],
+        })
+        return {
+          content: code,
+          sourcemap: map,
+        }
       },
     },
   }

@@ -21,6 +21,7 @@ import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import {
   injectQueryParams,
   setUrlFilename,
+  asUrlUntilPathname,
 } from "@jsenv/utils/urls/url_utils.js"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
@@ -30,7 +31,10 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
-import { jsenvPluginJsModuleAsJsClassic } from "../plugins/transpilation/js_module_as_js_classic/jsenv_plugin_js_module_as_js_classic.js"
+import {
+  generateJsClassicFilename,
+  jsenvPluginAsJsClassic,
+} from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
@@ -309,7 +313,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       }
     },
     plugins: [
-      jsenvPluginJsModuleAsJsClassic({
+      jsenvPluginAsJsClassic({
         systemJsInjection: true,
       }),
       jsenvPluginInline(),
@@ -377,11 +381,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               data: {},
               type: "js_classic",
               subtype: reference.expectedSubtype,
+              filename: generateJsClassicFilename(reference.url),
             })
-            // ?as_js_classic is removed from the url specifier
-            // we put this information into data.asJsClassic so that
-            // "js_module_as_js_classic" can still perform the conversion
-            reference.data.asJsClassic = true
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
@@ -458,10 +459,12 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               `urls should be inside build directory at this stage, found "${reference.url}"`,
             )
           }
+          // remove eventual search params and hash
+          const urlUntilPathname = asUrlUntilPathname(reference.url)
           // if a file is in the same directory we could prefer the relative notation
           // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
           const specifier = `${baseUrl}${urlToRelativeUrl(
-            reference.url,
+            urlUntilPathname,
             buildDirectoryUrl,
           )}`
           buildUrls[specifier] = reference.url

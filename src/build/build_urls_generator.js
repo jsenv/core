@@ -11,6 +11,8 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
       names = []
       cache[directoryPath] = names
     }
+    const urlObject = new URL(url)
+    let { search, hash } = urlObject
     let name = urlInfo
       ? urlInfo.filename || urlToFilename(url)
       : urlToFilename(url)
@@ -26,7 +28,7 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
       integer++
       nameCandidate = `${basename}${integer}${extension}`
     }
-    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}`
+    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`
   })
 
   return {

@@ -187,7 +187,7 @@ const loadOriginalUrl = async ({
   searchParams.delete(searchParam)
   const originalUrl = urlObject.href
   const originalReference = {
-    ...urlInfo.reference,
+    ...context.reference,
   }
   originalReference.url = originalUrl
   const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
