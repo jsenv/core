@@ -4,7 +4,6 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
-  fileSystemRootUrl,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
@@ -732,7 +731,7 @@ const determineFileUrlForOutDirectory = ({
     return url
   }
   if (!urlIsInsideOf(url, rootDirectoryUrl)) {
-    url = `${rootDirectoryUrl}@fs/${url.slice(fileSystemRootUrl.length)}`
+    url = `${rootDirectoryUrl}@fs/${url.slice("file:///".length)}`
   }
   const { searchParams } = new URL(url)
   if (

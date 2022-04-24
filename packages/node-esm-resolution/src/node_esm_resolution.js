@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs"
 import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js"
 import { lookupPackageScope } from "./lookup_package_scope.js"
 import { readPackageJson } from "./read_package_json.js"
-import { filesystemRootUrl, getParentUrl, isValidUrl } from "./url_utils.js"
+import { getParentUrl, isValidUrl } from "./url_utils.js"
 import {
   createInvalidModuleSpecifierError,
   createModuleNotFoundError,
@@ -238,7 +238,7 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
     return selfResolution
   }
   let currentUrl = parentUrl
-  while (currentUrl !== filesystemRootUrl) {
+  while (currentUrl !== "file:///") {
     const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href
     if (!existsSync(new URL(packageUrl))) {
       currentUrl = getParentUrl(currentUrl)

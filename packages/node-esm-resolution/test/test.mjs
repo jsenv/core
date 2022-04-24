@@ -7,3 +7,5 @@ await import("./scoped/scoped.test.mjs")
 await import("./self_and_package/self_and_package.test.mjs")
 await import("./subpath_exported/subpath_exported.test.mjs")
 await import("./workspace/workspace.test.mjs")
+
+console.log(`all tests completed`)

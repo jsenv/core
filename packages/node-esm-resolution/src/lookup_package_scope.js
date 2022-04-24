@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs"
 
-import { filesystemRootUrl, getParentUrl, asDirectoryUrl } from "./url_utils.js"
+import { getParentUrl, asDirectoryUrl } from "./url_utils.js"
 
 export const lookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url)
-  while (scopeUrl !== filesystemRootUrl) {
+  while (scopeUrl !== 'file:///') {
     if (scopeUrl.endsWith("node_modules/")) {
       return null
     }

@@ -22,5 +22,8 @@
     "/dist/",
     "/src/",
     "/main.js"
-  ]
+  ],
+  "scripts": {
+    "test": "node ./test/test.mjs"
+  }
 }
