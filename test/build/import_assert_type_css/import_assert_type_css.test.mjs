@@ -43,6 +43,24 @@ const test = async (options) => {
   assert({ actual, expected })
 }
 
+// bundling + no support for script_type_module
+// {
+//   const { server, buildManifest, returnValue } = await test({
+//     transpilation: {
+//       topLevelAwait: true,
+//     },
+//     runtimeCompat: {
+//       chrome: "60",
+//     },
+//   })
+//   const actual = returnValue
+//   const expected = {
+//     bodyBackgroundColor: "rgb(255, 0, 0)",
+//     bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
+//   }
+//   assert({ actual, expected })
+// }
+
 // without bundling
 {
   const { server, buildManifest, returnValue } = await test({

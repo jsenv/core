@@ -1,3 +1,5 @@
+import { urlToFilename } from "@jsenv/filesystem"
+
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
@@ -6,184 +8,217 @@ import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
 
 export const jsenvPluginImportAssertions = () => {
-  const inlineContentClientFileUrl = new URL(
-    "../../inline/client/inline_content.js",
-    import.meta.url,
-  ).href
-
-  const importAssertions = [
-    {
-      name: "jsenv:import_assertions",
-      appliesDuring: "*",
-      transform: {
-        js_module: async (
+  const importAssertions = {
+    name: "jsenv:import_assertions",
+    appliesDuring: "*",
+    transform: {
+      js_module: async (
+        urlInfo,
+        { scenario, isSupportedOnCurrentClients, referenceUtils },
+      ) => {
+        const importTypesToHandle = getImportTypesToHandle({
+          scenario,
+          isSupportedOnCurrentClients,
+        })
+        if (importTypesToHandle.length === 0) {
+          return null
+        }
+        const { metadata } = await applyBabelPlugins({
+          babelPlugins: [babelPluginMetadataImportAssertions],
           urlInfo,
-          { scenario, isSupportedOnCurrentClients, referenceUtils },
-        ) => {
-          const importTypesToHandle = getImportTypesToHandle({
-            scenario,
-            isSupportedOnCurrentClients,
-          })
-          if (importTypesToHandle.length === 0) {
-            return null
+        })
+        const { importAssertions } = metadata
+        const magicSource = createMagicSource(urlInfo.content)
+        importAssertions.forEach((importAssertion) => {
+          const assertType = importAssertion.assert.type
+          if (!importTypesToHandle.includes(assertType)) {
+            return
           }
-          const { metadata } = await applyBabelPlugins({
-            babelPlugins: [babelPluginMetadataImportAssertions],
-            urlInfo,
-          })
-          const { importAssertions } = metadata
-          const magicSource = createMagicSource(urlInfo.content)
-          importAssertions.forEach((importAssertion) => {
-            const assertType = importAssertion.assert.type
-            if (!importTypesToHandle.includes(assertType)) {
-              return
-            }
-            const { path } = importAssertion
-            const { node } = path
-            const importType = `${assertType}_module`
-            if (node.type === "CallExpression") {
-              const importSpecifierPath = path.get("arguments")[0]
-              const specifier = importSpecifierPath.node.value
-              const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
-                [importType]: "",
-              })
-              const [newReference, newUrlInfo] = referenceUtils.updateSpecifier(
+          const { searchParam, expectedType } = importAsInfos[assertType]
+          const { path } = importAssertion
+          const { node } = path
+          if (node.type === "CallExpression") {
+            const importSpecifierPath = path.get("arguments")[0]
+            const specifier = importSpecifierPath.node.value
+            const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
+              [searchParam]: "",
+            })
+            const [currentReference, newReference] =
+              referenceUtils.updateSpecifier(
                 JSON.stringify(specifier),
                 newSpecifier,
               )
-              newReference.expectedType = importType
-              newUrlInfo.data.importType = importType
-              magicSource.replace({
-                start: importSpecifierPath.node.start,
-                end: importSpecifierPath.node.end,
-                replacement: newReference.generatedSpecifier,
-              })
-              const secondArgPath = path.get("arguments")[1]
-              magicSource.remove({
-                start: secondArgPath.node.start,
-                end: secondArgPath.node.end,
-              })
-              return
-            }
-            const importSpecifierPath = path.get("source")
-            const specifier = importSpecifierPath.node.value
-            const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
-              [importType]: "",
-            })
-            const [newReference, newUrlInfo] = referenceUtils.updateSpecifier(
-              JSON.stringify(specifier),
-              newSpecifier,
-            )
-            newReference.expectedType = importType
-            newUrlInfo.data.importType = importType
+            currentReference.expectedType = expectedType
             magicSource.replace({
               start: importSpecifierPath.node.start,
               end: importSpecifierPath.node.end,
               replacement: newReference.generatedSpecifier,
             })
-            const assertionsPath = path.get("assertions")[0]
+            const secondArgPath = path.get("arguments")[1]
             magicSource.remove({
-              start: assertionsPath.node.start,
-              end: assertionsPath.node.end,
+              start: secondArgPath.node.start,
+              end: secondArgPath.node.end,
             })
+            return
+          }
+          const importSpecifierPath = path.get("source")
+          const specifier = importSpecifierPath.node.value
+          const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
+            [searchParam]: "",
           })
-          return magicSource.toContentAndSourcemap()
-        },
+          const [currentReference, newReference] =
+            referenceUtils.updateSpecifier(
+              JSON.stringify(specifier),
+              newSpecifier,
+            )
+          currentReference.expectedType = expectedType
+          magicSource.replace({
+            start: importSpecifierPath.node.start,
+            end: importSpecifierPath.node.end,
+            replacement: newReference.generatedSpecifier,
+          })
+          const assertionsPath = path.get("assertions")[0]
+          magicSource.remove({
+            start: assertionsPath.node.start,
+            end: assertionsPath.node.end,
+          })
+        })
+        return magicSource.toContentAndSourcemap()
       },
     },
-  ]
+  }
+  return [importAssertions, ...jsenvPluginAsModules()]
+}
 
-  const createImportTypePlugin = ({ type, convertToJsModule }) => {
-    return {
-      name: `jsenv:import_type_${type}`,
-      appliesDuring: "*",
-      load: (urlInfo, context) => {
-        if (urlInfo.data.importType !== `${type}_module`) {
-          return null
-        }
-        const { originalReference } = urlInfo.data
-        // we must call "reuseOrCreateUrlInfo" and not "getUrlInfo"
-        // because kitchen.js delete urls without dependents after "updateSpecifier"
-        // so that build realizes the urls is not used
-        // an other approach could be to filter out non-reference url at the end of the build
-        const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-          originalReference.url,
-        )
-        return context.load({
-          reference: originalReference,
-          urlInfo: originalUrlInfo,
-        })
-      },
-      transform: (urlInfo, context) => {
-        if (urlInfo.data.importType !== `${type}_module`) {
-          return null
-        }
-        return {
-          type: "js_module",
-          contentType: "text/javascript",
-          content: convertToJsModule(urlInfo, context),
-        }
-      },
-    }
+const jsenvPluginAsModules = () => {
+  const inlineContentClientFileUrl = new URL(
+    "../../inline/client/inline_content.js",
+    import.meta.url,
+  ).href
+
+  const asJsonModule = {
+    name: `jsenv:as_json_module`,
+    appliesDuring: "*",
+    load: (urlInfo, context) => {
+      return loadOriginalUrl({
+        urlInfo,
+        context,
+        searchParam: "as_json_module",
+        convertToJsModule: (urlInfo) => {
+          // here we could `export default ${jsonText}`:
+          // but js engine are optimized to recognize JSON.parse
+          // and use a faster parsing strategy
+          return `export default JSON.parse(${JSON.stringify(
+            urlInfo.content.trim(),
+          )})`
+        },
+      })
+    },
   }
 
-  const importTypeJson = createImportTypePlugin({
-    type: "json",
-    convertToJsModule: (urlInfo) => {
-      // here we could `export default ${jsonText}`:
-      // but js engine are optimized to recognize JSON.parse
-      // and use a faster parsing strategy
-      return `export default JSON.parse(${JSON.stringify(
-        urlInfo.content.trim(),
-      )})`
-    },
-  })
-
-  const importTypeCss = createImportTypePlugin({
-    type: "css",
-    convertToJsModule: (urlInfo, context) => {
-      const cssText = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true,
-      })
-      const [reference] = context.referenceUtils.inject({
-        type: "js_import_export",
-        expectedType: "js_module",
-        specifier: inlineContentClientFileUrl,
-      })
-      return `import { InlineContent } from ${reference.generatedSpecifier}
-
+  const asCssModule = {
+    name: `jsenv:as_css_module`,
+    appliesDuring: "*",
+    load: (urlInfo, context) => {
+      return loadOriginalUrl({
+        urlInfo,
+        context,
+        searchParam: "as_css_module",
+        convertToJsModule: (urlInfo) => {
+          const cssText = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+            // If template string is choosen and runtime do not support template literals
+            // it's ok because "jsenv:new_inline_content" plugin executes after this one
+            // and convert template strings into raw strings
+            canUseTemplateString: true,
+          })
+          return `import { InlineContent } from ${JSON.stringify(
+            inlineContentClientFileUrl,
+          )}
+    
 const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
 const stylesheet = new CSSStyleSheet()
 stylesheet.replaceSync(inlineContent.text)
 export default stylesheet`
+        },
+      })
     },
-  })
+  }
 
-  const importTypeText = createImportTypePlugin({
-    type: "text",
-    convertToJsModule: (urlInfo, context) => {
-      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true,
-      })
-      const [reference] = context.referenceUtils.inject({
-        type: "js_import_export",
-        expectedType: "js_module",
-        specifier: inlineContentClientFileUrl,
-      })
-      return `import { InlineContent } from ${reference.generatedSpecifier}
-
+  const asTextModule = {
+    name: `jsenv:as_text_module`,
+    appliesDuring: "*",
+    load: (urlInfo, context) => {
+      return loadOriginalUrl({
+        urlInfo,
+        context,
+        searchParam: "as_text_module",
+        convertToJsModule: (urlInfo) => {
+          const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+            // If template string is choosen and runtime do not support template literals
+            // it's ok because "jsenv:new_inline_content" plugin executes after this one
+            // and convert template strings into raw strings
+            canUseTemplateString: true,
+          })
+          return `import { InlineContent } from ${JSON.stringify(
+            inlineContentClientFileUrl,
+          )}
+    
 const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
 export default inlineContent.text`
+        },
+      })
     },
-  })
+  }
 
-  return [importAssertions, importTypeJson, importTypeCss, importTypeText]
+  return [asJsonModule, asCssModule, asTextModule]
+}
+
+const loadOriginalUrl = async ({
+  urlInfo,
+  context,
+  searchParam,
+  convertToJsModule,
+}) => {
+  const urlObject = new URL(urlInfo.url)
+  const { searchParams } = urlObject
+  if (!searchParams.has(searchParam)) {
+    return null
+  }
+  searchParams.delete(searchParam)
+  const originalUrl = urlObject.href
+  const originalReference = {
+    ...urlInfo.reference,
+  }
+  originalReference.url = originalUrl
+  const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+    originalReference.url,
+  )
+  await context.load({
+    reference: originalReference,
+    urlInfo: originalUrlInfo,
+  })
+  return {
+    data: originalUrlInfo.data,
+    type: "js_module",
+    contentType: "text/javascript",
+    content: convertToJsModule(originalUrlInfo, context),
+    filename: `${urlToFilename(urlInfo.url)}.js`,
+  }
+}
+
+const importAsInfos = {
+  json: {
+    searchParam: "as_json_module",
+    expectedType: "json",
+  },
+  css: {
+    searchParam: "as_css_module",
+    expectedType: "css",
+  },
+  text: {
+    searchParam: "as_text_module",
+    expectedType: "text",
+  },
 }
 
 const getImportTypesToHandle = ({ scenario, isSupportedOnCurrentClients }) => {

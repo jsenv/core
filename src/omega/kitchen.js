@@ -8,8 +8,8 @@ import {
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
-import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
+import { setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
 import { jsenvPluginUrlReferences } from "../plugins/url_references/jsenv_plugin_url_references.js"
@@ -251,6 +251,7 @@ export const createKitchen = ({
         originalContent,
         content,
         sourcemap,
+        filename,
       } = loadReturnValue
       urlInfo.type =
         type ||
@@ -276,6 +277,7 @@ export const createKitchen = ({
       if (data) {
         Object.assign(urlInfo.data, data)
       }
+      urlInfo.filename = filename
       assertLoadedContentCompliance({
         reference,
         urlInfo,
@@ -289,9 +291,8 @@ export const createKitchen = ({
       })
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
-      rootDirectoryUrl,
-      outDirectoryUrl: context.outDirectoryUrl,
-      url: urlInfo.url,
+      urlInfo,
+      context,
     })
     await urlInfoTransformer.initTransformations(urlInfo, context)
   }
@@ -469,7 +470,7 @@ export const createKitchen = ({
           currentUrlInfo.data.updatedTo = newUrlInfo
           // delete context.urlGraph.urlInfos[currentReference.url]
         }
-        return [newReference, newUrlInfo]
+        return [currentReference, newReference, newUrlInfo]
       },
       becomesInline: (
         reference,
@@ -719,34 +720,24 @@ const inferUrlInfoSubtype = ({ type, subtype, url }) => {
   return ""
 }
 
-const determineFileUrlForOutDirectory = ({
-  rootDirectoryUrl,
-  outDirectoryUrl,
-  url,
-}) => {
-  if (!outDirectoryUrl) {
-    return url
+const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
+  if (!context.outDirectoryUrl) {
+    return urlInfo.url
   }
-  if (!url.startsWith("file:")) {
-    return url
+  if (!urlInfo.url.startsWith("file:")) {
+    return urlInfo.url
   }
-  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
-    url = `${rootDirectoryUrl}@fs/${url.slice("file:///".length)}`
+  let url = urlInfo.url
+  if (!urlIsInsideOf(urlInfo.url, context.rootDirectoryUrl)) {
+    url = `${context.rootDirectoryUrl}@fs/${url.slice("file:///".length)}`
   }
-  const { searchParams } = new URL(url)
-  if (
-    searchParams.has("json_module") ||
-    searchParams.has("css_module") ||
-    searchParams.has("text_module")
-  ) {
-    url = setUrlExtension(url, ".js")
-  } else if (searchParams.has("as_js_classic")) {
-    url = setUrlExtension(url, ".es5.js")
+  if (urlInfo.filename) {
+    url = setUrlFilename(url, urlInfo.filename)
   }
   return moveUrl({
     url,
-    from: rootDirectoryUrl,
-    to: outDirectoryUrl,
+    from: context.rootDirectoryUrl,
+    to: context.outDirectoryUrl,
     preferAbsolute: true,
   })
 }

@@ -51,9 +51,9 @@ const createUrlGraphReport = (urlGraph) => {
     // and only the js module remain (likely bundled)
     const urlObject = new URL(urlInfo.url)
     if (
-      urlObject.searchParams.has("json_module") ||
-      urlObject.searchParams.has("css_module") ||
-      urlObject.searchParams.has("text_module")
+      urlObject.searchParams.has("as_json_module") ||
+      urlObject.searchParams.has("as_css_module") ||
+      urlObject.searchParams.has("as_text_module")
     ) {
       return
     }

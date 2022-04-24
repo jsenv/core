@@ -132,6 +132,7 @@ const createUrlInfo = (url) => {
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     contentType: "application/octet-stream", // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
+    filename: "",
     generatedUrl: null,
     isInline: false,
     inlineUrlSite: null,

@@ -11,19 +11,9 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
       names = []
       cache[directoryPath] = names
     }
-
-    let name = urlToFilename(url)
-    const { searchParams } = new URL(url)
-    if (
-      searchParams.has("css_module") ||
-      searchParams.has("json_module") ||
-      searchParams.has("text_module")
-    ) {
-      name = `${name}.js`
-    } else if (searchParams.has("as_js_classic")) {
-      const [basename, extension] = splitFileExtension(name)
-      name = `${basename}.es5${extension}`
-    }
+    let name = urlInfo
+      ? urlInfo.filename || urlToFilename(url)
+      : urlToFilename(url)
     const [basename, extension] = splitFileExtension(name)
     let nameCandidate = name
     let integer = 1
