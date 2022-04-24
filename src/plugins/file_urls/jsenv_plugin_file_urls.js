@@ -1,9 +1,5 @@
 import { readFileSync } from "node:fs"
-import {
-  urlIsInsideOf,
-  urlToRelativeUrl,
-  fileSystemRootUrl,
-} from "@jsenv/filesystem"
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
@@ -22,21 +18,21 @@ const jsenvPluginResolveAbsoluteFileUrls = () => {
       // during build it's fine to use file:// urls
       build: false,
     },
-    resolve: ({ specifier }, { rootDirectoryUrl }) => {
+    resolve: ({ specifier }) => {
       if (!specifier.startsWith("/@fs/")) {
         return null
       }
-      const url = new URL(specifier.slice("/@fs".length), rootDirectoryUrl).href
-      return url
+      const fsRootRelativeUrl = specifier.slice("/@fs/".length)
+      return `file:///${fsRootRelativeUrl}`
     },
     formatReferencedUrl: ({ url }, { rootDirectoryUrl }) => {
       if (!url.startsWith("file:")) {
         return null
       }
-      const specifier = urlIsInsideOf(url, rootDirectoryUrl)
-        ? `/${urlToRelativeUrl(url, rootDirectoryUrl)}`
-        : `/@fs/${url.slice(fileSystemRootUrl.length)}`
-      return specifier
+      if (urlIsInsideOf(url, rootDirectoryUrl)) {
+        return `/${urlToRelativeUrl(url, rootDirectoryUrl)}`
+      }
+      return `/@fs/${url.slice("file:///".length)}`
     },
   }
 }
