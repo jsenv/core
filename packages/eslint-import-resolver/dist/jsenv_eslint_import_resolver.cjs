@@ -376,7 +376,7 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
 ];
 
 const filesystemRootUrl =
-  process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///";
+  process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///";
 
 const asDirectoryUrl = (url) => {
   const { pathname } = new URL(url);

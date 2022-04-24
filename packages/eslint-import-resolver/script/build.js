@@ -1,5 +1,5 @@
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { writeFile } from "@jsenv/filesystem"
+import { writeFile, isFileSystemPath } from "@jsenv/filesystem"
 
 const esToCjs = async ({ url, map, content }) => {
   const { rollup } = await import("rollup")
@@ -16,6 +16,9 @@ const esToCjs = async ({ url, map, content }) => {
             id === "fs"
           ) {
             return { id, external: true }
+          }
+          if (isFileSystemPath(id)) {
+            id = pathToFileURL(id)
           }
           const url = await import.meta.resolve(id, pathToFileURL(importer))
           const path = fileURLToPath(new URL(url))

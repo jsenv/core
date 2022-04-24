@@ -63,7 +63,7 @@
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "1.5.1",
     "@jsenv/logger": "4.0.1",
-    "@jsenv/node-esm-resolution": "0.0.1",
+    "@jsenv/node-esm-resolution": "0.0.2",
     "@jsenv/server": "12.6.0",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/utils": "1.1.0",

@@ -1,5 +1,5 @@
 export const filesystemRootUrl =
-  process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///"
+  process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///"
 
 export const asDirectoryUrl = (url) => {
   const { pathname } = new URL(url)
