@@ -129,7 +129,7 @@ export const jsenvPluginImportmap = () => {
               type: "script_src",
               line: line - 1,
               column,
-              isOriginal,
+              isOriginalPosition: isOriginal,
               specifier: inlineImportmapUrl,
               contentType: "application/importmap+json",
               content: textNode.value,

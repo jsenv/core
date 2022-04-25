@@ -43,7 +43,7 @@ export const jsenvPluginImportAssertions = () => {
             const reference = referenceUtils.findByGeneratedSpecifier(
               JSON.stringify(specifier),
             )
-            const [newReference] = referenceUtils.updateSpecifier(reference, {
+            const [newReference] = referenceUtils.updateReference(reference, {
               expectedType,
               specifier: injectQueryParamsIntoSpecifier(specifier, {
                 [searchParam]: "",
@@ -67,7 +67,7 @@ export const jsenvPluginImportAssertions = () => {
           const reference = referenceUtils.findByGeneratedSpecifier(
             JSON.stringify(specifier),
           )
-          const [newReference] = referenceUtils.updateSpecifier(reference, {
+          const [newReference] = referenceUtils.updateReference(reference, {
             expectedType,
             specifier: injectQueryParamsIntoSpecifier(specifier, {
               [searchParam]: "",

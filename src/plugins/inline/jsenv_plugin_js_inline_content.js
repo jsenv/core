@@ -40,7 +40,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
         context.referenceUtils.foundInline({
           type: "js_inline_content",
           subtype: inlineContentCall.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
-          isOriginal: urlInfo.content === urlInfo.originalContent,
+          isOriginalPosition: urlInfo.content === urlInfo.originalContent,
           line: inlineContentCall.line,
           column: inlineContentCall.column,
           specifier: inlineUrl,

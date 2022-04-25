@@ -29,13 +29,6 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
         ) {
           return null
         }
-        const usesScriptTypeModule = urlInfo.references.some(
-          (ref) =>
-            ref.type === "script_src" && ref.expectedType === "js_module",
-        )
-        if (!usesScriptTypeModule) {
-          return null
-        }
         const htmlAst = parseHtmlString(urlInfo.content)
         const actions = []
         const jsModuleUrlInfos = []
@@ -54,7 +47,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               const reference =
                 context.referenceUtils.findByGeneratedSpecifier(specifier)
               const [newReference, newUrlInfo] =
-                context.referenceUtils.updateSpecifier(reference, {
+                context.referenceUtils.updateReference(reference, {
                   expectedType: "js_classic",
                   specifier: injectQueryParamsIntoSpecifier(specifier, {
                     as_js_classic: "",
@@ -90,28 +83,35 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               lineEnd,
               columnEnd,
             })
-            const [inlineScriptReference, inlineScriptUrlInfo] =
-              context.referenceUtils.foundInline({
-                node,
-                type: "script_src",
-                expectedType: "js_module",
-                // we remove 1 to the line because imagine the following html:
-                // <script>console.log('ok')</script>
-                // -> content starts same line as <script>
-                line: line - 1,
-                column,
-                isOriginal,
-                specifier: inlineScriptUrl,
-                contentType: "application/javascript",
-                content: textNode.value,
+            const [inlineReference] = context.referenceUtils.foundInline({
+              node,
+              type: "script_src",
+              expectedType: "js_module",
+              // we remove 1 to the line because imagine the following html:
+              // <script>console.log('ok')</script>
+              // -> content starts same line as <script>
+              line: line - 1,
+              column,
+              isOriginalPosition: isOriginal,
+              specifier: inlineScriptUrl,
+              contentType: "application/javascript",
+              content: textNode.value,
+            })
+            const [newReference, newUrlInfo] =
+              context.referenceUtils.updateReference(inlineReference, {
+                expectedType: "js_classic",
+                specifier: injectQueryParamsIntoSpecifier(inlineScriptUrl, {
+                  as_js_classic: "",
+                }),
+                filename: generateJsClassicFilename(inlineReference.url),
               })
             await context.cook({
-              reference: inlineScriptReference,
-              urlInfo: inlineScriptUrlInfo,
+              reference: newReference,
+              urlInfo: newUrlInfo,
             })
             removeHtmlNodeAttribute(node, typeAttribute)
-            setHtmlNodeText(node, inlineScriptUrlInfo.content)
-            jsModuleUrlInfos.push(inlineScriptUrlInfo)
+            setHtmlNodeText(node, newUrlInfo.content)
+            jsModuleUrlInfos.push(newUrlInfo)
           })
         }
         visitHtmlAst(htmlAst, (node) => {

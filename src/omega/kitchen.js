@@ -82,6 +82,9 @@ export const createKitchen = ({
     crossorigin,
     specifier,
     baseUrl,
+    isOriginalPosition,
+    line,
+    column,
     external = false,
     isInline = false,
     injected = false,
@@ -107,6 +110,9 @@ export const createKitchen = ({
       crossorigin,
       specifier,
       baseUrl,
+      isOriginalPosition,
+      line,
+      column,
       external,
       isInline,
       injected,
@@ -162,8 +168,7 @@ export const createKitchen = ({
         reference.url = reference.url.replace(/[=](?=&|$)/g, "")
       }
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-      Object.assign(urlInfo.data, reference.data)
-      if (reference.injected) urlInfo.data.injected = true
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, baseContext)
 
       Object.assign(reference.data, urlInfo.data)
       pluginController.callHooks(
@@ -387,6 +392,8 @@ export const createKitchen = ({
         // console.log(trace)
         return addReference({
           trace,
+          line,
+          column,
           ...rest,
         })
       },
@@ -417,40 +424,35 @@ export const createKitchen = ({
       },
       foundInline: ({
         type,
-        isOriginal,
+        isOriginalPosition,
         line,
         column,
         specifier,
         contentType,
         content,
       }) => {
-        const parentUrl = isOriginal ? urlInfo.url : urlInfo.generatedUrl
-        const parentContent = isOriginal
+        const parentUrl = isOriginalPosition
+          ? urlInfo.url
+          : urlInfo.generatedUrl
+        const parentContent = isOriginalPosition
           ? urlInfo.originalContent
           : urlInfo.content
-        const [inlineReference, inlineUrlInfo] = addReference({
+        return addReference({
           trace: stringifyUrlSite({
             url: parentUrl,
             content: parentContent,
             line,
             column,
           }),
+          isOriginalPosition,
+          line,
+          column,
           type,
           specifier,
           isInline: true,
           contentType,
           content,
         })
-        inlineUrlInfo.isInline = true
-        inlineUrlInfo.inlineUrlSite = {
-          url: urlInfo.url,
-          content: parentContent,
-          line,
-          column,
-        }
-        inlineUrlInfo.contentType = contentType
-        inlineUrlInfo.originalContent = inlineUrlInfo.content = content
-        return [inlineReference, inlineUrlInfo]
       },
       findByGeneratedSpecifier: (generatedSpecifier) => {
         const reference = references.find(
@@ -463,10 +465,7 @@ export const createKitchen = ({
         }
         return reference
       },
-      updateSpecifier: (
-        currentReference,
-        { expectedType, specifier, filename },
-      ) => {
+      updateReference: (currentReference, newReferenceParams) => {
         const index = references.indexOf(currentReference)
         if (index === -1) {
           throw new Error(`reference do not exists`)
@@ -474,14 +473,10 @@ export const createKitchen = ({
         const previousReference = currentReference
         const nextReference = createReference({
           ...previousReference,
-          expectedType,
-          specifier,
-          filename,
+          ...newReferenceParams,
         })
-
         references[index] = nextReference
         mutateReference(previousReference, nextReference)
-
         const newUrlInfo = resolveReference(nextReference)
         const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
         if (
@@ -492,38 +487,31 @@ export const createKitchen = ({
           currentUrlInfo.data.updatedTo = newUrlInfo
           // delete context.urlGraph.urlInfos[currentReference.url]
         }
-        newUrlInfo.filename = filename
         return [nextReference, newUrlInfo]
       },
       becomesInline: (
         reference,
-        { isOriginal, line, column, specifier, contentType, content },
+        { isOriginalPosition, line, column, specifier, contentType, content },
       ) => {
-        const parentUrl = isOriginal ? urlInfo.url : urlInfo.generatedUrl
-        const parentContent = isOriginal
+        const parentUrl = isOriginalPosition
+          ? urlInfo.url
+          : urlInfo.generatedUrl
+        const parentContent = isOriginalPosition
           ? urlInfo.originalContent
           : urlInfo.content
-        reference.trace = stringifyUrlSite({
-          url: parentUrl,
-          content: parentContent,
-          line,
-          column,
+        return referenceUtils.updateReference(reference, {
+          trace: stringifyUrlSite({
+            url: parentUrl,
+            content: parentContent,
+            line,
+            column,
+          }),
+          isOriginalPosition,
+          isInline: true,
+          specifier,
+          contentType,
+          content,
         })
-        reference.isInline = true
-        reference.specifier = specifier
-        reference.contentType = contentType
-        reference.content = content
-        const inlineUrlInfo = resolveReference(reference)
-        inlineUrlInfo.isInline = true
-        inlineUrlInfo.inlineUrlSite = {
-          url: urlInfo.url,
-          content: parentContent,
-          line,
-          column,
-        }
-        inlineUrlInfo.contentType = contentType
-        inlineUrlInfo.content = content
-        return reference
       },
     }
 
@@ -656,6 +644,34 @@ export const createKitchen = ({
     cook,
     prepareEntryPoint,
     injectReference,
+  }
+}
+
+const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
+  Object.assign(urlInfo.data, reference.data)
+  if (reference.injected) {
+    urlInfo.data.injected = true
+  }
+  if (reference.filename) {
+    urlInfo.filename = reference.filename
+  }
+  if (reference.isInline) {
+    urlInfo.isInline = true
+    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+    urlInfo.inlineUrlSite = {
+      url: parentUrlInfo.url,
+      content: reference.isOriginalPosition
+        ? parentUrlInfo.originalContent
+        : parentUrlInfo.content,
+      line: reference.line,
+      column: reference.column,
+    }
+    urlInfo.contentType = reference.contentType
+    urlInfo.originalContent =
+      urlInfo.originalContent === undefined
+        ? reference.content
+        : urlInfo.originalContent
+    urlInfo.content = reference.content
   }
 }
 

@@ -49,7 +49,7 @@ export const jsenvPluginHtmlInlineContent = () => {
                 // -> content starts same line as <style>
                 line: line - 1,
                 column,
-                isOriginal,
+                isOriginalPosition: isOriginal,
                 specifier: inlineStyleUrl,
                 contentType: "text/css",
                 content: textNode.value,
@@ -122,7 +122,7 @@ export const jsenvPluginHtmlInlineContent = () => {
                 // -> content starts same line as <script>
                 line: line - 1,
                 column,
-                isOriginal,
+                isOriginalPosition: isOriginal,
                 specifier: inlineScriptUrl,
                 contentType,
                 content: textNode.value,
