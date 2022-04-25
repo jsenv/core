@@ -1,10 +1,3 @@
-/*
- * as_js_classic during build is a bit special:
- * - it will be applied after bundling
- * For this reason there is still a few things to fix to make it work properly
- * I'm sure there is just a few things here and there
- */
-
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -39,30 +32,30 @@ const test = async (params) => {
 }
 
 // default
-// {
-//   const { returnValue, server } = await test()
-//   const actual = returnValue
-//   const expected = {
-//     answer: 42,
-//     url: `${server.origin}/js/main.js`,
-//   }
-//   assert({ actual, expected })
-// }
+{
+  const { returnValue, server } = await test()
+  const actual = returnValue
+  const expected = {
+    answer: 42,
+    url: `${server.origin}/js/main.js`,
+  }
+  assert({ actual, expected })
+}
 
 // no support for <script type="module">
-// {
-//   const { returnValue, server } = await test({
-//     runtimeCompat: {
-//       chrome: "60",
-//     },
-//   })
-//   const actual = returnValue
-//   const expected = {
-//     answer: 42,
-//     url: `${server.origin}/js/main.es5.js`,
-//   }
-//   assert({ actual, expected })
-// }
+{
+  const { returnValue, server } = await test({
+    runtimeCompat: {
+      chrome: "60",
+    },
+  })
+  const actual = returnValue
+  const expected = {
+    answer: 42,
+    url: `${server.origin}/js/main.es5.js`,
+  }
+  assert({ actual, expected })
+}
 
 // no support + without bundling
 {
