@@ -1,5 +1,5 @@
 import { createRequire } from "node:module"
-import { readFileSync } from "@jsenv/filesystem"
+import { readFileSync, urlToFilename } from "@jsenv/filesystem"
 
 import { requireBabelPlugin } from "@jsenv/babel-plugins"
 
@@ -22,6 +22,7 @@ export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
     jsenvPluginScriptTypeModuleAsClassic({
       systemJsInjection,
       systemJsClientFileUrl,
+      generateJsClassicFilename,
     }),
     jsenvPluginWorkersTypeModuleAsClassic(),
     jsenvPluginTopLevelAwait(),
@@ -44,6 +45,7 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       const urlTransformed = injectQueryParams(reference.url, {
         as_js_classic: "",
       })
+      reference.filename = generateJsClassicFilename(reference.url)
       return urlTransformed
     },
     load: async (urlInfo, context) => {
@@ -88,6 +90,20 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       }
     },
   }
+}
+
+const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename(url)
+  const [basename, extension] = splitFileExtension(filename)
+  return `${basename}.es5${extension}`
+}
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".")
+  if (dotLastIndex === -1) {
+    return [filename, ""]
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }
 
 const convertJsModuleToJsClassic = async ({

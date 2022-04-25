@@ -262,6 +262,7 @@ export const createKitchen = ({
         originalContent,
         content,
         sourcemap,
+        filename,
       } = loadReturnValue
       urlInfo.type =
         type ||
@@ -286,6 +287,9 @@ export const createKitchen = ({
       urlInfo.sourcemap = sourcemap
       if (data) {
         Object.assign(urlInfo.data, data)
+      }
+      if (filename) {
+        urlInfo.filename = filename
       }
       assertLoadedContentCompliance({
         reference,

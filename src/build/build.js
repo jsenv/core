@@ -311,9 +311,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     },
     plugins: [
       jsenvPluginAsJsClassic({
-        // we'll wait to know if systemjs is absolutely required
-        // and inject it later
-        systemJsInjection: false,
+        systemJsInjection: true,
       }),
       jsenvPluginInline(),
       {
@@ -467,11 +465,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
             return rawUrlInfo
           }
-          // reference updated during "postbuild":
-          // - happens for "as_js_classic"
-          if (context.reference.original) {
-            return loadFromBundleOrRawGraph(context.reference.original.url)
-          }
           // reference injected during "postbuild":
           // - happens for "as_js_classic" injecting "s.js"
           if (context.reference.injected) {
@@ -488,6 +481,11 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               urlInfo: rawUrlInfo,
             })
             return rawUrlInfo
+          }
+          // reference updated during "postbuild":
+          // - happens for "as_js_classic"
+          if (context.reference.original) {
+            return loadFromBundleOrRawGraph(context.reference.original.url)
           }
           return loadFromBundleOrRawGraph(rawUrls[finalUrlInfo.url])
         },
@@ -551,9 +549,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     throw e
   }
   buildTask.done()
-
-  // here inject systemjs into every html entry point
-  // having a js module with the format of systemjs
 
   logger.debug(
     `graph urls pre-versioning:

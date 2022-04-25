@@ -1,5 +1,3 @@
-import { urlToFilename } from "@jsenv/filesystem"
-
 import {
   getHtmlNodeAttributeByName,
   getHtmlNodeTextNode,
@@ -18,6 +16,7 @@ import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 export const jsenvPluginScriptTypeModuleAsClassic = ({
   systemJsInjection,
   systemJsClientFileUrl,
+  generateJsClassicFilename,
 }) => {
   return {
     name: "jsenv:script_type_module_as_classic",
@@ -39,7 +38,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
         }
         const htmlAst = parseHtmlString(urlInfo.content)
         const actions = []
-        const jsModulesToWait = []
+        const jsModuleUrlInfos = []
         const visitScriptTypeModule = (node) => {
           if (node.nodeName !== "script") {
             return
@@ -50,22 +49,30 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           }
           const srcAttribute = getHtmlNodeAttributeByName(node, "src")
           if (srcAttribute) {
-            actions.push(() => {
+            actions.push(async () => {
               const specifier = srcAttribute.value
               const reference =
                 context.referenceUtils.findByGeneratedSpecifier(specifier)
-              const [newReference] = context.referenceUtils.updateSpecifier(
-                reference,
-                {
+              const [newReference, newUrlInfo] =
+                context.referenceUtils.updateSpecifier(reference, {
                   expectedType: "js_classic",
                   specifier: injectQueryParamsIntoSpecifier(specifier, {
                     as_js_classic: "",
                   }),
                   filename: generateJsClassicFilename(reference.url),
-                },
-              )
+                })
               removeHtmlNodeAttribute(node, typeAttribute)
               srcAttribute.value = newReference.generatedSpecifier
+              // during dev it means js modules will be cooked before server sends the HTML
+              // it's ok because:
+              // - during dev script_type_module are supported (dev use a recent browser)
+              // - even if browser is not supported it still works it's jus a bit slower
+              //   because it needs to decide if systemjs will be injected or not
+              await context.cook({
+                reference: newReference,
+                urlInfo: newUrlInfo,
+              })
+              jsModuleUrlInfos.push(newUrlInfo)
             })
             return
           }
@@ -104,10 +111,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
             })
             removeHtmlNodeAttribute(node, typeAttribute)
             setHtmlNodeText(node, inlineScriptUrlInfo.content)
-            jsModulesToWait.push({
-              reference: inlineScriptReference,
-              urlInfo: inlineScriptUrlInfo,
-            })
+            jsModuleUrlInfos.push(inlineScriptUrlInfo)
           })
         }
         visitHtmlAst(htmlAst, (node) => {
@@ -118,42 +122,28 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
         }
         await Promise.all(actions.map((action) => action()))
         if (systemJsInjection) {
-          const [systemJsReference] = context.referenceUtils.inject({
-            type: "script_src",
-            expectedType: "js_classic",
-            specifier: systemJsClientFileUrl,
-          })
-          injectScriptAsEarlyAsPossible(
-            htmlAst,
-            createHtmlNode({
-              "tagName": "script",
-              "src": systemJsReference.generatedSpecifier,
-              "injected-by": "jsenv:script_type_module_as_classic",
-            }),
+          const needsSystemJs = jsModuleUrlInfos.some(
+            (jsModuleUrlInfo) =>
+              jsModuleUrlInfo.data.jsClassicFormat === "system",
           )
+          if (needsSystemJs) {
+            const [systemJsReference] = context.referenceUtils.inject({
+              type: "script_src",
+              expectedType: "js_classic",
+              specifier: systemJsClientFileUrl,
+            })
+            injectScriptAsEarlyAsPossible(
+              htmlAst,
+              createHtmlNode({
+                "tagName": "script",
+                "src": systemJsReference.generatedSpecifier,
+                "injected-by": "jsenv:script_type_module_as_classic",
+              }),
+            )
+          }
         }
         return stringifyHtmlAst(htmlAst)
       },
     },
   }
-
-  // const needsSystemJs = jsModulesToWait.some(
-  //   (jsModuleToWait) => jsModuleToWait.urlInfo.data.format === "system",
-  // )
-  // if (needsSystemJs) {
-  // }
-}
-
-const generateJsClassicFilename = (url) => {
-  const filename = urlToFilename(url)
-  const [basename, extension] = splitFileExtension(filename)
-  return `${basename}.es5${extension}`
-}
-
-const splitFileExtension = (filename) => {
-  const dotLastIndex = filename.lastIndexOf(".")
-  if (dotLastIndex === -1) {
-    return [filename, ""]
-  }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }
