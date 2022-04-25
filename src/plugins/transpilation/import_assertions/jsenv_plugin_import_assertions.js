@@ -40,15 +40,16 @@ export const jsenvPluginImportAssertions = () => {
           if (node.type === "CallExpression") {
             const importSpecifierPath = path.get("arguments")[0]
             const specifier = importSpecifierPath.node.value
-            const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
-              [searchParam]: "",
+            const reference = referenceUtils.findByGeneratedSpecifier(
+              JSON.stringify(specifier),
+            )
+            const [newReference] = referenceUtils.updateSpecifier(reference, {
+              expectedType,
+              specifier: injectQueryParamsIntoSpecifier(specifier, {
+                [searchParam]: "",
+              }),
+              filename: `${urlToFilename(reference.url)}.js`,
             })
-            const [currentReference, newReference] =
-              referenceUtils.updateSpecifier(
-                JSON.stringify(specifier),
-                newSpecifier,
-              )
-            currentReference.expectedType = expectedType
             magicSource.replace({
               start: importSpecifierPath.node.start,
               end: importSpecifierPath.node.end,
@@ -63,15 +64,16 @@ export const jsenvPluginImportAssertions = () => {
           }
           const importSpecifierPath = path.get("source")
           const specifier = importSpecifierPath.node.value
-          const newSpecifier = injectQueryParamsIntoSpecifier(specifier, {
-            [searchParam]: "",
+          const reference = referenceUtils.findByGeneratedSpecifier(
+            JSON.stringify(specifier),
+          )
+          const [newReference] = referenceUtils.updateSpecifier(reference, {
+            expectedType,
+            specifier: injectQueryParamsIntoSpecifier(specifier, {
+              [searchParam]: "",
+            }),
+            filename: `${urlToFilename(reference.url)}.js`,
           })
-          const [currentReference, newReference] =
-            referenceUtils.updateSpecifier(
-              JSON.stringify(specifier),
-              newSpecifier,
-            )
-          currentReference.expectedType = expectedType
           magicSource.replace({
             start: importSpecifierPath.node.start,
             end: importSpecifierPath.node.end,
@@ -202,7 +204,6 @@ const loadOriginalUrl = async ({
     type: "js_module",
     contentType: "text/javascript",
     content: convertToJsModule(originalUrlInfo, context),
-    filename: `${urlToFilename(urlInfo.url)}.js`,
   }
 }
 

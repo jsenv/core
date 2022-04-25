@@ -77,6 +77,7 @@ export const createKitchen = ({
     expectedContentType,
     expectedType,
     expectedSubtype,
+    filename,
     integrity,
     crossorigin,
     specifier,
@@ -98,6 +99,7 @@ export const createKitchen = ({
       expectedContentType,
       expectedType,
       expectedSubtype,
+      filename,
       integrity,
       crossorigin,
       specifier,
@@ -251,7 +253,6 @@ export const createKitchen = ({
         originalContent,
         content,
         sourcemap,
-        filename,
       } = loadReturnValue
       urlInfo.type =
         type ||
@@ -277,7 +278,6 @@ export const createKitchen = ({
       if (data) {
         Object.assign(urlInfo.data, data)
       }
-      urlInfo.filename = filename
       assertLoadedContentCompliance({
         reference,
         urlInfo,
@@ -439,23 +439,30 @@ export const createKitchen = ({
         inlineUrlInfo.originalContent = inlineUrlInfo.content = content
         return [inlineReference, inlineUrlInfo]
       },
-      updateSpecifier: (generatedSpecifier, newSpecifier, data) => {
-        const index = references.findIndex(
+      findByGeneratedSpecifier: (generatedSpecifier) => {
+        const reference = references.find(
           (ref) => ref.generatedSpecifier === generatedSpecifier,
         )
-        if (index === -1) {
+        if (!reference) {
           throw new Error(
-            `Cannot find a reference for the following generatedSpecifier "${generatedSpecifier}"`,
+            `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
           )
         }
-        const currentReference = references[index]
+        return reference
+      },
+      updateSpecifier: (
+        currentReference,
+        { expectedType, specifier, filename },
+      ) => {
+        const index = references.indexOf(currentReference)
+        if (index === -1) {
+          throw new Error(`reference do not exists`)
+        }
         const newReference = createReference({
           ...currentReference,
-          specifier: newSpecifier,
-          data: {
-            ...currentReference.data,
-            ...data,
-          },
+          expectedType,
+          specifier,
+          filename,
         })
         references[index] = newReference
         newReference.data.originalReference = currentReference
@@ -470,6 +477,7 @@ export const createKitchen = ({
           currentUrlInfo.data.updatedTo = newUrlInfo
           // delete context.urlGraph.urlInfos[currentReference.url]
         }
+        newUrlInfo.filename = filename
         return [currentReference, newReference, newUrlInfo]
       },
       becomesInline: (

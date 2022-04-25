@@ -31,10 +31,7 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
-import {
-  generateJsClassicFilename,
-  jsenvPluginAsJsClassic,
-} from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
+import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
@@ -364,24 +361,19 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           // from "js_module_as_js_classic":
           //   - injecting "?as_js_classic" for the first time
           //   - injecting "?as_js_classic" because the parentUrl has it
-          const referenceUrlObject = new URL(reference.url)
-          const { searchParams } = referenceUrlObject
-          if (searchParams.has("as_js_classic")) {
-            // the url info corresponding to the "js_classic" version of this specifier
-            // do not exists yet (it will be created after this "normalize" hook)
-            // And the content will be generated when url with ?as_js_classic is cooked by url graph loader.
-            // Here we just want to reserve an url for that file and we know it's going to be
-            // type: "js_classic" and subtype: ""|"worker"|"service_worker"
-            searchParams.delete("as_js_classic")
-            const withoutAsJsClassicParam = referenceUrlObject.href
+          const { originalReference } = reference.data
+          if (originalReference) {
+            // the url info do not exists yet (it will be created after this "normalize" hook)
+            // And the content will be generated when url is cooked by url graph loader.
+            // Here we just want to reserve an url for that file
             const rawUrl =
-              rawUrls[withoutAsJsClassicParam] || withoutAsJsClassicParam
+              rawUrls[originalReference.url] || originalReference.url
             reference.data.rawUrl = rawUrl
             const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              data: {},
-              type: "js_classic",
+              data: reference.data,
+              type: reference.expectedType,
               subtype: reference.expectedSubtype,
-              filename: generateJsClassicFilename(reference.url),
+              filename: reference.filename,
             })
             rawUrls[buildUrl] = reference.url
             return buildUrl
