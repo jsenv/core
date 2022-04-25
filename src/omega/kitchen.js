@@ -90,6 +90,9 @@ export const createKitchen = ({
     contentType,
   }) => {
     return {
+      original: null,
+      prev: null,
+      next: null,
       data,
       node,
       trace,
@@ -113,6 +116,11 @@ export const createKitchen = ({
       contentType,
     }
   }
+  const mutateReference = (reference, newReference) => {
+    reference.next = newReference
+    newReference.prev = reference
+    newReference.original = reference.original || reference
+  }
   const resolveReference = (reference) => {
     try {
       const resolvedUrl = pluginController.callHooksUntil(
@@ -134,10 +142,15 @@ export const createKitchen = ({
         reference,
         baseContext,
         (returnValue) => {
+          if (returnValue === reference.url) {
+            return
+          }
+          const previousReference = { ...reference }
           reference.url = returnValue
+          mutateReference(previousReference, reference)
         },
       )
-      // force a last normalization regarding on url search params
+      // force a last normalization on url search params
       // some plugin use URLSearchParams to alter the url search params
       // which can result into "file:///file.css?css_module"
       // becoming "file:///file.css?css_module="
@@ -152,23 +165,19 @@ export const createKitchen = ({
       Object.assign(urlInfo.data, reference.data)
       if (reference.injected) urlInfo.data.injected = true
 
-      // create a copy because .url will be mutated
-      const referencedCopy = {
-        ...reference,
-        data: urlInfo.data,
-      }
+      Object.assign(reference.data, urlInfo.data)
       pluginController.callHooks(
         "transformReferencedUrl",
-        referencedCopy,
+        reference,
         baseContext,
         (returnValue) => {
-          referencedCopy.url = returnValue
+          reference.url = returnValue
         },
       )
-      reference.generatedUrl = referencedCopy.url
+      reference.generatedUrl = reference.url
       const returnValue = pluginController.callHooksUntil(
         "formatReferencedUrl",
-        referencedCopy,
+        reference,
         baseContext,
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
@@ -245,9 +254,6 @@ export const createKitchen = ({
         urlInfo.external = true
         return
       }
-      // if (urlInfo.url.includes("main.es5.js")) {
-      //   debugger
-      // }
       const {
         data,
         type,
@@ -461,16 +467,18 @@ export const createKitchen = ({
         if (index === -1) {
           throw new Error(`reference do not exists`)
         }
-        const newReference = createReference({
-          ...currentReference,
+        const previousReference = currentReference
+        const nextReference = createReference({
+          ...previousReference,
           expectedType,
           specifier,
           filename,
         })
-        references[index] = newReference
-        newReference.data.originalReference = currentReference
 
-        const newUrlInfo = resolveReference(newReference)
+        references[index] = nextReference
+        mutateReference(previousReference, nextReference)
+
+        const newUrlInfo = resolveReference(nextReference)
         const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
         if (
           currentUrlInfo &&
@@ -481,7 +489,7 @@ export const createKitchen = ({
           // delete context.urlGraph.urlInfos[currentReference.url]
         }
         newUrlInfo.filename = filename
-        return [newReference, newUrlInfo]
+        return [nextReference, newUrlInfo]
       },
       becomesInline: (
         reference,

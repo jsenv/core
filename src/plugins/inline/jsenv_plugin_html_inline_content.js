@@ -141,11 +141,7 @@ export const jsenvPluginHtmlInlineContent = () => {
         if (actions.length === 0) {
           return null
         }
-        await Promise.all(
-          actions.map(async (action) => {
-            await action()
-          }),
-        )
+        await Promise.all(actions.map((action) => action()))
         const htmlModified = stringifyHtmlAst(htmlAst)
         return {
           content: htmlModified,

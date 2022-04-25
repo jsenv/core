@@ -54,20 +54,18 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               const specifier = srcAttribute.value
               const reference =
                 context.referenceUtils.findByGeneratedSpecifier(specifier)
-              const [newReference, newUrlInfo] =
-                context.referenceUtils.updateSpecifier(reference, {
+              const [newReference] = context.referenceUtils.updateSpecifier(
+                reference,
+                {
                   expectedType: "js_classic",
                   specifier: injectQueryParamsIntoSpecifier(specifier, {
                     as_js_classic: "",
                   }),
                   filename: generateJsClassicFilename(reference.url),
-                })
+                },
+              )
               removeHtmlNodeAttribute(node, typeAttribute)
               srcAttribute.value = newReference.generatedSpecifier
-              jsModulesToWait.push({
-                reference: newReference,
-                urlInfo: newUrlInfo,
-              })
             })
             return
           }
@@ -120,37 +118,30 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
         }
         await Promise.all(actions.map((action) => action()))
         if (systemJsInjection) {
-          await Promise.all(
-            jsModulesToWait.map(async (jsModuleToWait) => {
-              await context.cook({
-                reference: jsModuleToWait.reference,
-                urlInfo: jsModuleToWait.urlInfo,
-              })
+          const [systemJsReference] = context.referenceUtils.inject({
+            type: "script_src",
+            expectedType: "js_classic",
+            specifier: systemJsClientFileUrl,
+          })
+          injectScriptAsEarlyAsPossible(
+            htmlAst,
+            createHtmlNode({
+              "tagName": "script",
+              "src": systemJsReference.generatedSpecifier,
+              "injected-by": "jsenv:script_type_module_as_classic",
             }),
           )
-          const needsSystemJs = jsModulesToWait.some(
-            (jsModuleToWait) => jsModuleToWait.urlInfo.data.format === "system",
-          )
-          if (needsSystemJs) {
-            const [systemJsReference] = context.referenceUtils.inject({
-              type: "script_src",
-              expectedType: "js_classic",
-              specifier: systemJsClientFileUrl,
-            })
-            injectScriptAsEarlyAsPossible(
-              htmlAst,
-              createHtmlNode({
-                "tagName": "script",
-                "src": systemJsReference.generatedSpecifier,
-                "injected-by": "jsenv:js_module_as_js_classic",
-              }),
-            )
-          }
         }
         return stringifyHtmlAst(htmlAst)
       },
     },
   }
+
+  // const needsSystemJs = jsModulesToWait.some(
+  //   (jsModuleToWait) => jsModuleToWait.urlInfo.data.format === "system",
+  // )
+  // if (needsSystemJs) {
+  // }
 }
 
 const generateJsClassicFilename = (url) => {

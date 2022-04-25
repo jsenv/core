@@ -55,7 +55,11 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       searchParams.delete("as_js_classic")
       const originalUrl = urlObject.href
       const originalReference = {
-        ...context.reference,
+        ...(context.reference.original || context.reference),
+        // override the expectedType to "js_module"
+        // because when there is ?as_js_classic it means the underlying ressource
+        // is a js_module
+        expectedType: "js_module",
       }
       originalReference.url = originalUrl
       const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
