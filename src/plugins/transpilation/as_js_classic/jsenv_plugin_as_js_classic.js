@@ -29,58 +29,6 @@ export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
 }
 
 const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
-  const convertJsModuleToJsClassic = async (urlInfo, outFormat) => {
-    const { code, map } = await applyBabelPlugins({
-      babelPlugins: [
-        ...(outFormat === "system"
-          ? [
-              // propposal-dynamic-import required with systemjs for babel8:
-              // https://github.com/babel/babel/issues/10746
-              require("@babel/plugin-proposal-dynamic-import"),
-              [
-                requireBabelPlugin("babel-plugin-transform-async-to-promises"),
-                {
-                  topLevelAwait: "return",
-                },
-              ],
-              require("@babel/plugin-transform-modules-systemjs"),
-            ]
-          : [
-              [
-                requireBabelPlugin("babel-plugin-transform-async-to-promises"),
-                {
-                  topLevelAwait: "simple",
-                },
-              ],
-              babelPluginTransformImportMetaUrl,
-              require("@babel/plugin-transform-modules-umd"),
-            ]),
-      ],
-      urlInfo,
-    })
-    if (
-      systemJsInjection &&
-      outFormat === "system" &&
-      (urlInfo.data.isEntryPoint ||
-        urlInfo.subtype === "worker" ||
-        urlInfo.subtype === "service_worker" ||
-        urlInfo.subtype === "shared_worker")
-    ) {
-      const magicSource = createMagicSource(code)
-      const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
-      magicSource.prepend(`${systemjsCode}\n\n`)
-      const { content, sourcemap } = magicSource.toContentAndSourcemap()
-      return {
-        content,
-        sourcemap: await composeTwoSourcemaps(map, sourcemap),
-      }
-    }
-    return {
-      content: code,
-      sourcemap: map,
-    }
-  }
-
   return {
     name: "jsenv:as_js_classic",
     appliesDuring: "*",
@@ -121,10 +69,12 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
         originalUrlInfo.data.usesImport || originalUrlInfo.data.usesExport
           ? "system"
           : "umd"
-      const { content, sourcemap } = await convertJsModuleToJsClassic(
-        urlInfo,
+      const { content, sourcemap } = await convertJsModuleToJsClassic({
+        systemJsInjection,
+        systemJsClientFileUrl,
+        urlInfo: originalUrlInfo,
         jsClassicFormat,
-      )
+      })
       urlInfo.data.jsClassicFormat = jsClassicFormat
       return {
         type: "js_classic",
@@ -133,5 +83,62 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
         sourcemap,
       }
     },
+  }
+}
+
+const convertJsModuleToJsClassic = async ({
+  systemJsInjection,
+  systemJsClientFileUrl,
+  urlInfo,
+  jsClassicFormat,
+}) => {
+  const { code, map } = await applyBabelPlugins({
+    babelPlugins: [
+      ...(jsClassicFormat === "system"
+        ? [
+            // propposal-dynamic-import required with systemjs for babel8:
+            // https://github.com/babel/babel/issues/10746
+            require("@babel/plugin-proposal-dynamic-import"),
+            [
+              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              {
+                topLevelAwait: "return",
+              },
+            ],
+            require("@babel/plugin-transform-modules-systemjs"),
+          ]
+        : [
+            [
+              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              {
+                topLevelAwait: "simple",
+              },
+            ],
+            babelPluginTransformImportMetaUrl,
+            require("@babel/plugin-transform-modules-umd"),
+          ]),
+    ],
+    urlInfo,
+  })
+  if (
+    systemJsInjection &&
+    jsClassicFormat === "system" &&
+    (urlInfo.data.isEntryPoint ||
+      urlInfo.subtype === "worker" ||
+      urlInfo.subtype === "service_worker" ||
+      urlInfo.subtype === "shared_worker")
+  ) {
+    const magicSource = createMagicSource(code)
+    const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
+    magicSource.prepend(`${systemjsCode}\n\n`)
+    const { content, sourcemap } = magicSource.toContentAndSourcemap()
+    return {
+      content,
+      sourcemap: await composeTwoSourcemaps(map, sourcemap),
+    }
+  }
+  return {
+    content: code,
+    sourcemap: map,
   }
 }

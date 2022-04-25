@@ -245,6 +245,9 @@ export const createKitchen = ({
         urlInfo.external = true
         return
       }
+      // if (urlInfo.url.includes("main.es5.js")) {
+      //   debugger
+      // }
       const {
         data,
         type,
@@ -478,7 +481,7 @@ export const createKitchen = ({
           // delete context.urlGraph.urlInfos[currentReference.url]
         }
         newUrlInfo.filename = filename
-        return [currentReference, newReference, newUrlInfo]
+        return [newReference, newUrlInfo]
       },
       becomesInline: (
         reference,

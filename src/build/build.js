@@ -466,7 +466,24 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           if (!finalUrlInfo.url.startsWith("file:")) {
             return { external: true }
           }
-          // injected by "js_module_as_js_classic"
+          const loadFromBundleOrRawGraph = (rawUrl) => {
+            const bundleUrlInfo = bundleUrlInfos[rawUrl]
+            if (bundleUrlInfo) {
+              return bundleUrlInfo
+            }
+            const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+            return rawUrlInfo
+          }
+
+          const { originalReference } = context.reference.data
+          // reference updated during "postbuild":
+          // - happens for "as_js_classic"
+          if (originalReference) {
+            const rawUrl = originalReference.data.rawUrl
+            return loadFromBundleOrRawGraph(rawUrl)
+          }
+          // reference injected during "postbuild":
+          // - happens for "as_js_classic" injecting "s.js"
           if (context.reference.injected) {
             const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
               type: context.reference.type,
@@ -482,13 +499,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             })
             return rawUrlInfo
           }
-          const rawUrl = finalUrlInfo.data.rawUrl
-          const bundleUrlInfo = bundleUrlInfos[rawUrl]
-          if (bundleUrlInfo) {
-            return bundleUrlInfo
-          }
-          const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
-          return rawUrlInfo
+          return loadFromBundleOrRawGraph(finalUrlInfo.data.rawUrl)
         },
         transform: {
           html: (urlInfo) => {
