@@ -10,7 +10,7 @@ import {
   visitHtmlAst,
   getHtmlNodeAttributeByName,
   removeHtmlNodeAttributeByName,
-  setHtmlNodeText,
+  setHtmlNodeGeneratedText,
   assignHtmlNodeAttributes,
   parseScriptNode,
   injectScriptAsEarlyAsPossible,
@@ -181,12 +181,8 @@ installHtmlSupervisor(${JSON.stringify(
         scriptsToSupervise.forEach(
           ({ node, type, src, integrity, crossorigin }) => {
             removeHtmlNodeAttributeByName(node, "src")
-            assignHtmlNodeAttributes(node, {
-              "content-src": src,
-            })
-            setHtmlNodeText(
-              node,
-              generateCodeToSuperviseScript({
+            setHtmlNodeGeneratedText(node, {
+              generatedText: generateCodeToSuperviseScript({
                 type,
                 src,
                 integrity,
@@ -194,7 +190,9 @@ installHtmlSupervisor(${JSON.stringify(
                 htmlSupervisorInstallerSpecifier:
                   htmlSupervisorInstallerFileReference.generatedSpecifier,
               }),
-            )
+              generatedBy: "jsenv:html_supervisor",
+              generatedFromSrc: src,
+            })
           },
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

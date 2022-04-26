@@ -53,7 +53,7 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
       })
       visitUrlSpecifierAttribute({
         node,
-        attributeName: "content-href",
+        attributeName: "generated-from-href",
         hotAccepted,
       })
     }
@@ -65,7 +65,7 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
       })
       visitUrlSpecifierAttribute({
         node,
-        attributeName: "content-src",
+        attributeName: "generated-from-src",
         hotAccepted,
       })
     }

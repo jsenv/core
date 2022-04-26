@@ -6,7 +6,7 @@ import {
   stringifyHtmlAst,
   visitHtmlAst,
   htmlNodePosition,
-  setHtmlNodeText,
+  setHtmlNodeGeneratedText,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
@@ -114,7 +114,10 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               urlInfo: newUrlInfo,
             })
             removeHtmlNodeAttribute(node, typeAttribute)
-            setHtmlNodeText(node, newUrlInfo.content)
+            setHtmlNodeGeneratedText(node, {
+              generatedText: newUrlInfo.content,
+              generatedBy: "jsenv:script_type_module_as_classic",
+            })
             jsModuleUrlInfos.push(newUrlInfo)
           })
         }

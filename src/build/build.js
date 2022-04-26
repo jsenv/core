@@ -281,39 +281,13 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     logger,
     rootDirectoryUrl,
     urlGraph: finalGraph,
-    // Inline content, such as <script> inside html, is transformed during the previous phase.
-    // If we read the inline content it would be considered as the original content.
-    // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-    //   as the original content.
-    //   - But it would not work when sourcemap are not generated
-    //   - would be a bit slower
-    // - So instead of reading the inline content directly, we search into raw graph
-    //   to get "originalContent" and "sourcemap"
-    loadInlineUrlInfos: (finalUrlInfo) => {
-      const rawUrl = rawUrls[finalUrlInfo.url]
-      const bundleUrlInfo = bundleUrlInfos[rawUrl]
-      const urlInfo = bundleUrlInfo || finalUrlInfo
-      const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
-      if (rawUrlInfo) {
-        finalUrlInfo.type = rawUrlInfo.type
-        finalUrlInfo.subtype = rawUrlInfo.subtype
-      }
-      return {
-        originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-        sourcemap: bundleUrlInfo
-          ? bundleUrlInfo.sourcemap
-          : rawUrlInfo
-          ? rawUrlInfo.sourcemap
-          : undefined,
-        contentType: urlInfo.contentType,
-        content: urlInfo.content,
-      }
-    },
     plugins: [
       jsenvPluginAsJsClassic({
         systemJsInjection: true,
       }),
-      jsenvPluginInline(),
+      jsenvPluginInline({
+        loadInlineUrls: false,
+      }),
       {
         name: "jsenv:postbuild",
         appliesDuring: { build: true },
@@ -356,6 +330,34 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }
+          if (reference.isInline) {
+            const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
+              if (!rawUrlInfo.isInline) {
+                return false
+              }
+              if (rawUrlInfo.content === reference.content) {
+                return true
+              }
+              if (rawUrlInfo.originalContent === reference.content) {
+                return true
+              }
+              return false
+            })
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+            if (!rawUrlInfo) {
+              // generated during final graph
+              // (happens for JSON.parse injected for import assertions for instance)
+              // throw new Error(`cannot find raw url for "${reference.url}"`)
+              return reference.url
+            }
+            const buildUrl = buildUrlsGenerator.generate(
+              reference.url,
+              rawUrlInfo,
+              parentUrlInfo,
+            )
+            rawUrls[buildUrl] = rawUrlInfo.url
+            return buildUrl
+          }
           // from "js_module_as_js_classic":
           //   - injecting "?as_js_classic" for the first time
           //   - injecting "?as_js_classic" because the parentUrl has it
@@ -389,35 +391,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               reference.url,
               rawUrlInfo,
             )
-            rawUrls[buildUrl] = reference.url
-            return buildUrl
-          }
-          if (reference.isInline) {
-            const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
-              if (!rawUrlInfo.isInline) {
-                return false
-              }
-              if (rawUrlInfo.content === reference.content) {
-                return true
-              }
-              if (rawUrlInfo.originalContent === reference.content) {
-                return true
-              }
-              return false
-            })
-            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
-            if (!rawUrlInfo) {
-              // generated during final graph
-              // (happens for JSON.parse injected for import assertions for instance)
-              // throw new Error(`cannot find raw url for "${reference.url}"`)
-              return reference.url
-            }
-            const buildUrl = buildUrlsGenerator.generate(
-              reference.url,
-              rawUrlInfo,
-              parentUrlInfo,
-            )
-            rawUrls[buildUrl] = reference.url
+            rawUrls[buildUrl] = rawUrlInfo.url
             return buildUrl
           }
           if (reference.type === "sourcemap_comment") {
@@ -457,12 +431,31 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           if (!finalUrlInfo.url.startsWith("file:")) {
             return { external: true }
           }
-          const loadFromBundleOrRawGraph = (rawUrl) => {
+          const loadFromBundleOrRawGraph = (url) => {
+            const rawUrl = rawUrls[url] || url
             const bundleUrlInfo = bundleUrlInfos[rawUrl]
             if (bundleUrlInfo) {
               return bundleUrlInfo
             }
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+            if (!rawUrlInfo) {
+              // not supposed to happen
+              // will log a warning
+              return null
+            }
+            if (rawUrlInfo.isInline) {
+              // Inline content, such as <script> inside html, is transformed during the previous phase.
+              // If we read the inline content it would be considered as the original content.
+              // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+              //   as the original content.
+              //   - But it would not work when sourcemap are not generated
+              //   - would be a bit slower
+              // - So instead of reading the inline content directly, we search into raw graph
+              //   to get "originalContent" and "sourcemap"
+              finalUrlInfo.type = rawUrlInfo.type
+              finalUrlInfo.subtype = rawUrlInfo.subtype
+              return rawUrlInfo
+            }
             return rawUrlInfo
           }
           // reference injected during "postbuild":
@@ -487,7 +480,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           if (context.reference.original) {
             return loadFromBundleOrRawGraph(context.reference.original.url)
           }
-          return loadFromBundleOrRawGraph(rawUrls[finalUrlInfo.url])
+          return loadFromBundleOrRawGraph(finalUrlInfo.url)
         },
         transform: {
           html: (urlInfo) => {
@@ -630,20 +623,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         logger,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
-        loadInlineUrlInfos: (versionedUrlInfo) => {
-          const rawUrlInfo = rawGraph.getUrlInfo(rawUrls[versionedUrlInfo.url])
-          const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
-          return {
-            originalContent: rawUrlInfo
-              ? rawUrlInfo.originalContent
-              : undefined,
-            sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
-            contentType: versionedUrlInfo.contentType,
-            content: versionedUrlInfo.content,
-          }
-        },
         plugins: [
           jsenvPluginInline({
+            loadInlineUrls: false,
             allowEscapeForVersioning: true,
           }),
           {
@@ -709,11 +691,25 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               }
               return versionedSpecifier
             },
-            load: (finalUrlInfo) => {
-              if (!finalUrlInfo.url.startsWith("file:")) {
+            load: (versionedUrlInfo) => {
+              if (!versionedUrlInfo.url.startsWith("file:")) {
                 return { external: true }
               }
-              return finalUrlInfo
+              if (versionedUrlInfo.isInline) {
+                const rawUrlInfo = rawGraph.getUrlInfo(
+                  rawUrls[versionedUrlInfo.url],
+                )
+                const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
+                return {
+                  originalContent: rawUrlInfo
+                    ? rawUrlInfo.originalContent
+                    : undefined,
+                  sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
+                  contentType: versionedUrlInfo.contentType,
+                  content: versionedUrlInfo.content,
+                }
+              }
+              return versionedUrlInfo
             },
           },
         ],

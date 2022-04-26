@@ -137,9 +137,9 @@ export const htmlNodePosition = {
       }
     }
     const originalPositionAttributeName =
-      attributeName === "content-src"
+      attributeName === "generated-from-src"
         ? "original-src-position"
-        : attributeName === "content-href"
+        : attributeName === "generated-from-href"
         ? "original-href-position"
         : `original-${attributeName}-position`
     const originalPositionAttribute = getHtmlNodeAttributeByName(
@@ -178,6 +178,9 @@ export const stringifyHtmlAst = (
         removeHtmlNodeAttributeByName(node, "original-position")
         removeHtmlNodeAttributeByName(node, "original-src-position")
         removeHtmlNodeAttributeByName(node, "original-href-position")
+        removeHtmlNode(node, "generated-by")
+        removeHtmlNode(node, "generated-from-src")
+        removeHtmlNode(node, "generated-from-href")
       })
     }
   }
@@ -279,6 +282,18 @@ export const assignHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
 export const getHtmlNodeTextNode = (htmlNode) => {
   const firstChild = htmlNode.childNodes[0]
   return firstChild && firstChild.nodeName === "#text" ? firstChild : null
+}
+
+export const setHtmlNodeGeneratedText = (
+  node,
+  { generatedText, generatedBy, generatedFromSrc, generatedFromHref } = {},
+) => {
+  setHtmlNodeText(node, generatedText)
+  assignHtmlNodeAttributes(node, {
+    "generated-by": generatedBy,
+    ...(generatedFromSrc ? { "generated-from-src": generatedFromSrc } : {}),
+    ...(generatedFromHref ? { "generated-from-href": generatedFromHref } : {}),
+  })
 }
 
 export const setHtmlNodeText = (htmlNode, textContent) => {

@@ -30,8 +30,7 @@ import {
   getHtmlNodeAttributeByName,
   htmlNodePosition,
   removeHtmlNodeAttributeByName,
-  setHtmlNodeText,
-  assignHtmlNodeAttributes,
+  setHtmlNodeGeneratedText,
   getHtmlNodeTextNode,
   removeHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
@@ -138,7 +137,10 @@ export const jsenvPluginImportmap = () => {
             reference: inlineImportmapReference,
             urlInfo: inlineImportmapUrlInfo,
           })
-          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content)
+          setHtmlNodeGeneratedText(importmap, {
+            generatedText: inlineImportmapUrlInfo.content,
+            generatedBy: "jsenv:importmap",
+          })
           onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), url)
         }
         const handleImportmapWithSrc = async (importmap, src) => {
@@ -157,11 +159,11 @@ export const jsenvPluginImportmap = () => {
           })
           onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), url)
           removeHtmlNodeAttributeByName(importmap, "src")
-          assignHtmlNodeAttributes(importmap, {
-            "content-src": src,
-            "inlined-by": "jsenv:importmap",
+          setHtmlNodeGeneratedText(importmap, {
+            generatedText: importmapUrlInfo.content,
+            generatedBy: "jsenv:importmap",
+            generatedFromSrc: src,
           })
-          setHtmlNodeText(importmap, importmapUrlInfo.content)
 
           const { line, column, lineEnd, columnEnd, isOriginal } =
             htmlNodePosition.readNodePosition(importmap, {

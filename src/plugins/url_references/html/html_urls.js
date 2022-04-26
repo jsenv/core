@@ -72,7 +72,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     let position
     if (srcGeneratedFromInlineContent) {
       // when generated from inline content,
-      // line, column is not "src" nor "content-src" but "original-position"
+      // line, column is not "src" nor "generated-from-src" but "original-position"
       position = htmlNodePosition.readNodePosition(node)
     } else {
       position = htmlNodePosition.readAttributePosition(node, attribute.name)
@@ -202,8 +202,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     const attribute = getHtmlNodeAttributeByName(node, attributeName)
     const value = attribute ? attribute.value : undefined
     if (value) {
-      const inlinedBy = getHtmlNodeAttributeByName(node, "inlined-by")
-      if (inlinedBy) {
+      const generatedBy = getHtmlNodeAttributeByName(node, "generated-by")
+      if (generatedBy) {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return
@@ -215,7 +215,10 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         node,
         attribute,
         specifier:
-          attributeName === "content-src" ? new URL(value, url).href : value,
+          attributeName === "generated-from-src" ||
+          attributeName === "generated-from-href"
+            ? new URL(value, url).href
+            : value,
       })
     } else if (attributeName === "src") {
       visitAttributeAsUrlSpecifier({
@@ -223,7 +226,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         subtype,
         expectedType,
         node,
-        attributeName: "content-src",
+        attributeName: "generated-from-src",
       })
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({
@@ -231,7 +234,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         subtype,
         expectedType,
         node,
-        attributeName: "content-href",
+        attributeName: "generated-from-href",
       })
     }
   }

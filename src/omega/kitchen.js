@@ -41,13 +41,6 @@ export const createKitchen = ({
   // sourcemap uses file:/// (chrome will understand and read from filesystem)
   sourcemapsSources = false,
   runtimeCompat = defaultRuntimeCompat,
-
-  loadInlineUrlInfos = (urlInfo) => {
-    return {
-      contentType: urlInfo.contentType,
-      content: urlInfo.content,
-    }
-  },
   writeOnFileSystem = true,
 }) => {
   const pluginController = createPluginController({
@@ -239,9 +232,11 @@ export const createKitchen = ({
       return
     }
     try {
-      const loadReturnValue = urlInfo.isInline
-        ? loadInlineUrlInfos(urlInfo)
-        : await pluginController.callAsyncHooksUntil("load", urlInfo, context)
+      const loadReturnValue = await pluginController.callAsyncHooksUntil(
+        "load",
+        urlInfo,
+        context,
+      )
       if (!loadReturnValue) {
         logger.warn(
           createDetailedMessage(
@@ -263,7 +258,7 @@ export const createKitchen = ({
         data,
         type,
         subtype,
-        contentType,
+        contentType = "application/octet-stream",
         originalContent,
         content,
         sourcemap,
