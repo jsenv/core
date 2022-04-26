@@ -30,7 +30,7 @@ export const jsenvPluginWorkersTypeModuleAsClassic = () => {
       const reference = context.referenceUtils.findByGeneratedSpecifier(
         JSON.stringify(specifier),
       )
-      const [newReference] = context.referenceUtils.updateReference(reference, {
+      const [newReference] = context.referenceUtils.update(reference, {
         specifier: injectQueryParamsIntoSpecifier(specifier, {
           as_js_classic: "",
         }),

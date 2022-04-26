@@ -46,14 +46,16 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               const specifier = srcAttribute.value
               const reference =
                 context.referenceUtils.findByGeneratedSpecifier(specifier)
-              const [newReference, newUrlInfo] =
-                context.referenceUtils.updateReference(reference, {
+              const [newReference, newUrlInfo] = context.referenceUtils.update(
+                reference,
+                {
                   expectedType: "js_classic",
                   specifier: injectQueryParamsIntoSpecifier(specifier, {
                     as_js_classic: "",
                   }),
                   filename: generateJsClassicFilename(reference.url),
-                })
+                },
+              )
               removeHtmlNodeAttribute(node, typeAttribute)
               srcAttribute.value = newReference.generatedSpecifier
               // during dev it means js modules will be cooked before server sends the HTML
@@ -97,14 +99,16 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               contentType: "application/javascript",
               content: textNode.value,
             })
-            const [newReference, newUrlInfo] =
-              context.referenceUtils.updateReference(inlineReference, {
+            const [newReference, newUrlInfo] = context.referenceUtils.update(
+              inlineReference,
+              {
                 expectedType: "js_classic",
                 specifier: injectQueryParamsIntoSpecifier(inlineScriptUrl, {
                   as_js_classic: "",
                 }),
                 filename: generateJsClassicFilename(inlineReference.url),
-              })
+              },
+            )
             await context.cook({
               reference: newReference,
               urlInfo: newUrlInfo,

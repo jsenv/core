@@ -397,31 +397,6 @@ export const createKitchen = ({
           ...rest,
         })
       },
-      inject: ({ trace, ...rest }) => {
-        if (trace === undefined) {
-          const { prepareStackTrace } = Error
-          Error.prepareStackTrace = (error, stack) => {
-            Error.prepareStackTrace = prepareStackTrace
-            return stack
-          }
-          const { stack } = new Error()
-          const callerCallsite = stack[1]
-          const fileName = callerCallsite.getFileName()
-          trace = stringifyUrlSite({
-            url:
-              fileName && isFileSystemPath(fileName)
-                ? fileSystemPathToUrl(fileName)
-                : fileName,
-            line: callerCallsite.getLineNumber(),
-            column: callerCallsite.getColumnNumber(),
-          })
-        }
-        return addReference({
-          trace,
-          injected: true,
-          ...rest,
-        })
-      },
       foundInline: ({
         type,
         isOriginalPosition,
@@ -454,18 +429,7 @@ export const createKitchen = ({
           content,
         })
       },
-      findByGeneratedSpecifier: (generatedSpecifier) => {
-        const reference = references.find(
-          (ref) => ref.generatedSpecifier === generatedSpecifier,
-        )
-        if (!reference) {
-          throw new Error(
-            `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
-          )
-        }
-        return reference
-      },
-      updateReference: (currentReference, newReferenceParams) => {
+      update: (currentReference, newReferenceParams) => {
         const index = references.indexOf(currentReference)
         if (index === -1) {
           throw new Error(`reference do not exists`)
@@ -499,7 +463,7 @@ export const createKitchen = ({
         const parentContent = isOriginalPosition
           ? urlInfo.originalContent
           : urlInfo.content
-        return referenceUtils.updateReference(reference, {
+        return referenceUtils.update(reference, {
           trace: stringifyUrlSite({
             url: parentUrl,
             content: parentContent,
@@ -512,6 +476,42 @@ export const createKitchen = ({
           contentType,
           content,
         })
+      },
+      inject: ({ trace, ...rest }) => {
+        if (trace === undefined) {
+          const { prepareStackTrace } = Error
+          Error.prepareStackTrace = (error, stack) => {
+            Error.prepareStackTrace = prepareStackTrace
+            return stack
+          }
+          const { stack } = new Error()
+          const callerCallsite = stack[1]
+          const fileName = callerCallsite.getFileName()
+          trace = stringifyUrlSite({
+            url:
+              fileName && isFileSystemPath(fileName)
+                ? fileSystemPathToUrl(fileName)
+                : fileName,
+            line: callerCallsite.getLineNumber(),
+            column: callerCallsite.getColumnNumber(),
+          })
+        }
+        return addReference({
+          trace,
+          injected: true,
+          ...rest,
+        })
+      },
+      findByGeneratedSpecifier: (generatedSpecifier) => {
+        const reference = references.find(
+          (ref) => ref.generatedSpecifier === generatedSpecifier,
+        )
+        if (!reference) {
+          throw new Error(
+            `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
+          )
+        }
+        return reference
       },
     }
 
