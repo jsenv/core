@@ -32,23 +32,8 @@ const test = async (params) => {
 }
 
 // default
-// {
-//   const { returnValue, server } = await test()
-//   const actual = returnValue
-//   const expected = {
-//     answer: 42,
-//     url: `${server.origin}/main.html`,
-//   }
-//   assert({ actual, expected })
-// }
-
-// no support for <script type="module">
 {
-  const { returnValue, server } = await test({
-    runtimeCompat: {
-      chrome: "60",
-    },
-  })
+  const { returnValue, server } = await test()
   const actual = returnValue
   const expected = {
     answer: 42,
@@ -56,6 +41,21 @@ const test = async (params) => {
   }
   assert({ actual, expected })
 }
+
+// // no support for <script type="module">
+// {
+//   const { returnValue, server } = await test({
+//     runtimeCompat: {
+//       chrome: "60",
+//     },
+//   })
+//   const actual = returnValue
+//   const expected = {
+//     answer: 42,
+//     url: `${server.origin}/main.html__inline_script__1`,
+//   }
+//   assert({ actual, expected })
+// }
 
 // // no support + without bundling
 // {
@@ -68,7 +68,7 @@ const test = async (params) => {
 //   const actual = returnValue
 //   const expected = {
 //     answer: 42,
-//     url: `${server.origin}/js/main.es5.js`,
+//     url: `${server.origin}/main.html__inline_script__1`,
 //   }
 //   assert({ actual, expected })
 // }

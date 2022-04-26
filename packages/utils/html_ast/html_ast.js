@@ -178,9 +178,9 @@ export const stringifyHtmlAst = (
         removeHtmlNodeAttributeByName(node, "original-position")
         removeHtmlNodeAttributeByName(node, "original-src-position")
         removeHtmlNodeAttributeByName(node, "original-href-position")
-        removeHtmlNode(node, "generated-by")
-        removeHtmlNode(node, "generated-from-src")
-        removeHtmlNode(node, "generated-from-href")
+        removeHtmlNodeAttributeByName(node, "generated-by")
+        removeHtmlNodeAttributeByName(node, "generated-from-src")
+        removeHtmlNodeAttributeByName(node, "generated-from-href")
       })
     }
   }

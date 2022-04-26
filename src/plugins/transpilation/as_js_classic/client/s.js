@@ -606,14 +606,7 @@
   var inlineScriptCount = 0;
   systemJSPrototype.register = function (deps, declare, autoUrl) {
     if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
-      var scripts = document.querySelectorAll('script[src]');
-      var lastScript = scripts[scripts.length - 1];
-      var lastAutoImportUrl
-      lastAutoImportDeps = deps;
-      if (lastScript && lastScript.src) {
-        lastAutoImportUrl = lastScript.src;
-      }
-      else if (autoUrl) {
+      if (autoUrl) {
         lastAutoImportUrl = autoUrl
       }
       else {
