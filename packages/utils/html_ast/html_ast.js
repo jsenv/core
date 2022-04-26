@@ -178,6 +178,7 @@ export const stringifyHtmlAst = (
         removeHtmlNodeAttributeByName(node, "original-position")
         removeHtmlNodeAttributeByName(node, "original-src-position")
         removeHtmlNodeAttributeByName(node, "original-href-position")
+        removeHtmlNodeAttributeByName(node, "injected-by")
         removeHtmlNodeAttributeByName(node, "generated-by")
         removeHtmlNodeAttributeByName(node, "generated-from-src")
         removeHtmlNodeAttributeByName(node, "generated-from-href")

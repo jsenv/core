@@ -482,18 +482,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
           return loadFromBundleOrRawGraph(finalUrlInfo.url)
         },
-        transform: {
-          html: (urlInfo) => {
-            const htmlAst = parseHtmlString(urlInfo.content, {
-              storeOriginalPositions: false,
-            })
-            return {
-              content: stringifyHtmlAst(htmlAst, {
-                removeOriginalPositionAttributes: true,
-              }),
-            }
-          },
-        },
       },
       {
         name: "jsenv:optimize",
@@ -626,6 +614,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         plugins: [
           jsenvPluginInline({
             loadInlineUrls: false,
+            analyzeConvertedScripts: true, // to be able to version their urls
             allowEscapeForVersioning: true,
           }),
           {
@@ -711,6 +700,18 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               }
               return versionedUrlInfo
             },
+            transform: {
+              html: (urlInfo) => {
+                const htmlAst = parseHtmlString(urlInfo.content, {
+                  storeOriginalPositions: false,
+                })
+                return {
+                  content: stringifyHtmlAst(htmlAst, {
+                    removeOriginalPositionAttributes: true,
+                  }),
+                }
+              },
+            },
           },
         ],
         scenario: "build",
@@ -753,6 +754,8 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       throw e
     }
     versioningTask.done()
+  } else {
+    // TODO: remove html attributes such as original-src-position
   }
 
   GRAPH.forEach(finalGraph, (urlInfo) => {

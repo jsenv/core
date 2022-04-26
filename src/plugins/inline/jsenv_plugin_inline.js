@@ -5,11 +5,12 @@ import { jsenvPluginInlineQueryParam } from "./jsenv_plugin_inline_query_param.j
 
 export const jsenvPluginInline = ({
   loadInlineUrls = true,
-  allowEscapeForVersioning,
+  analyzeConvertedScripts = false,
+  allowEscapeForVersioning = false,
 } = {}) => {
   return [
     ...(loadInlineUrls ? [jsenvPluginInlineUrls()] : []),
-    jsenvPluginHtmlInlineContent(),
+    jsenvPluginHtmlInlineContent({ analyzeConvertedScripts }),
     jsenvPluginJsInlineContent({ allowEscapeForVersioning }),
     jsenvPluginDataUrls(),
     jsenvPluginInlineQueryParam(),

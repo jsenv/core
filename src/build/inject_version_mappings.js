@@ -46,9 +46,7 @@ const injectors = {
       }),
     )
     return {
-      content: stringifyHtmlAst(htmlAst, {
-        removeOriginalPositionAttributes: true,
-      }),
+      content: stringifyHtmlAst(htmlAst),
     }
   },
   js_classic: jsInjector,
