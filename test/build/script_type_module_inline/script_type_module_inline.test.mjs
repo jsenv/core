@@ -31,7 +31,7 @@ const test = async (params) => {
   return { returnValue, server }
 }
 
-// default
+// support + bundling
 {
   const { returnValue, server } = await test()
   const actual = returnValue
@@ -42,33 +42,47 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// // no support for <script type="module">
-// {
-//   const { returnValue, server } = await test({
-//     runtimeCompat: {
-//       chrome: "60",
-//     },
-//   })
-//   const actual = returnValue
-//   const expected = {
-//     answer: 42,
-//     url: `${server.origin}/main.html__inline_script__1`,
-//   }
-//   assert({ actual, expected })
-// }
+// no support + no bundling
+{
+  const { returnValue, server } = await test({
+    bundling: false,
+  })
+  const actual = returnValue
+  const expected = {
+    answer: 42,
+    url: `${server.origin}/main.html`,
+  }
+  assert({ actual, expected })
+}
 
-// // no support + without bundling
-// {
-//   const { returnValue, server } = await test({
-//     runtimeCompat: {
-//       chrome: "60",
-//     },
-//     bundling: false,
-//   })
-//   const actual = returnValue
-//   const expected = {
-//     answer: 42,
-//     url: `${server.origin}/main.html__inline_script__1`,
-//   }
-//   assert({ actual, expected })
-// }
+// no support + bundling
+{
+  const { returnValue, server } = await test({
+    runtimeCompat: {
+      chrome: "60",
+    },
+  })
+  const actual = returnValue
+  const expected = {
+    answer: 42,
+    url: `${server.origin}/main.html__inline_script__1`,
+  }
+  assert({ actual, expected })
+}
+
+// no support + no bundling + versioning
+{
+  const { returnValue, server } = await test({
+    runtimeCompat: {
+      chrome: "60",
+    },
+    bundling: false,
+    versioning: true,
+  })
+  const actual = returnValue
+  const expected = {
+    answer: 42,
+    url: `${server.origin}/main.html__inline_script__1`,
+  }
+  assert({ actual, expected })
+}

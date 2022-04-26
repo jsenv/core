@@ -392,15 +392,7 @@ export const createKitchen = ({
           ...rest,
         })
       },
-      foundInline: ({
-        type,
-        isOriginalPosition,
-        line,
-        column,
-        specifier,
-        contentType,
-        content,
-      }) => {
+      foundInline: ({ isOriginalPosition, line, column, ...rest }) => {
         const parentUrl = isOriginalPosition
           ? urlInfo.url
           : urlInfo.generatedUrl
@@ -417,11 +409,8 @@ export const createKitchen = ({
           isOriginalPosition,
           line,
           column,
-          type,
-          specifier,
           isInline: true,
-          contentType,
-          content,
+          ...rest,
         })
       },
       update: (currentReference, newReferenceParams) => {

@@ -16,8 +16,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
     name: "jsenv:html_inline_content",
     appliesDuring: "*",
     transform: {
-      html: async ({ url, content }, { cook, referenceUtils }) => {
-        const htmlAst = parseHtmlString(content)
+      html: async (urlInfo, context) => {
+        const htmlAst = parseHtmlString(urlInfo.content)
         const actions = []
         const handleInlineStyle = (node) => {
           if (node.nodeName !== "style") {
@@ -33,7 +33,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 preferOriginal: true,
               })
             const inlineStyleUrl = generateInlineContentUrl({
-              url,
+              url: urlInfo.url,
               extension: ".css",
               line,
               column,
@@ -41,7 +41,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               columnEnd,
             })
             const [inlineStyleReference, inlineStyleUrlInfo] =
-              referenceUtils.foundInline({
+              context.referenceUtils.foundInline({
                 type: "link_href",
                 expectedType: "css",
                 // we remove 1 to the line because imagine the following html:
@@ -54,7 +54,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 contentType: "text/css",
                 content: textNode.value,
               })
-            await cook({
+            await context.cook({
               reference: inlineStyleReference,
               urlInfo: inlineStyleUrlInfo,
             })
@@ -105,7 +105,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               : scriptCategory
 
             let inlineScriptUrl = generateInlineContentUrl({
-              url,
+              url: urlInfo.url,
               extension: CONTENT_TYPE.asFileExtension(contentType),
               line,
               column,
@@ -113,14 +113,13 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               columnEnd,
             })
             const [inlineScriptReference, inlineScriptUrlInfo] =
-              referenceUtils.foundInline({
+              context.referenceUtils.foundInline({
                 node,
                 type: "script_src",
                 expectedType: {
                   classic: "js_classic",
                   module: "js_module",
                   importmap: "importmap",
-                  [scriptCategory]: undefined,
                 }[scriptCategory],
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
@@ -132,7 +131,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 contentType,
                 content: textNode.value,
               })
-            await cook({
+
+            await context.cook({
               reference: inlineScriptReference,
               urlInfo: inlineScriptUrlInfo,
             })

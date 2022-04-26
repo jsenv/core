@@ -112,7 +112,6 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
           manifest: "manifest",
           modulepreload: "js_module",
           stylesheet: "css",
-          [rel]: undefined,
         }[rel],
       })
       return
