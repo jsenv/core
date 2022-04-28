@@ -12,14 +12,8 @@ export const jsenvPluginImportAssertions = () => {
     name: "jsenv:import_assertions",
     appliesDuring: "*",
     transform: {
-      js_module: async (
-        urlInfo,
-        { scenario, isSupportedOnCurrentClients, referenceUtils },
-      ) => {
-        const importTypesToHandle = getImportTypesToHandle({
-          scenario,
-          isSupportedOnCurrentClients,
-        })
+      js_module: async (urlInfo, context) => {
+        const importTypesToHandle = getImportTypesToHandle(context)
         if (importTypesToHandle.length === 0) {
           return null
         }
@@ -34,17 +28,17 @@ export const jsenvPluginImportAssertions = () => {
           if (!importTypesToHandle.includes(assertType)) {
             return
           }
-          const { searchParam, expectedType } = importAsInfos[assertType]
+          const { searchParam } = importAsInfos[assertType]
           const { path } = importAssertion
           const { node } = path
           if (node.type === "CallExpression") {
             const importSpecifierPath = path.get("arguments")[0]
             const specifier = importSpecifierPath.node.value
-            const reference = referenceUtils.findByGeneratedSpecifier(
+            const reference = context.referenceUtils.findByGeneratedSpecifier(
               JSON.stringify(specifier),
             )
-            const [newReference] = referenceUtils.update(reference, {
-              expectedType,
+            const [newReference] = context.referenceUtils.update(reference, {
+              expectedType: "js_module",
               specifier: injectQueryParamsIntoSpecifier(specifier, {
                 [searchParam]: "",
               }),
@@ -64,11 +58,11 @@ export const jsenvPluginImportAssertions = () => {
           }
           const importSpecifierPath = path.get("source")
           const specifier = importSpecifierPath.node.value
-          const reference = referenceUtils.findByGeneratedSpecifier(
+          const reference = context.referenceUtils.findByGeneratedSpecifier(
             JSON.stringify(specifier),
           )
-          const [newReference] = referenceUtils.update(reference, {
-            expectedType,
+          const [newReference] = context.referenceUtils.update(reference, {
+            expectedType: "js_module",
             specifier: injectQueryParamsIntoSpecifier(specifier, {
               [searchParam]: "",
             }),
@@ -179,6 +173,7 @@ const loadOriginalUrl = async ({
   urlInfo,
   context,
   searchParam,
+  expectedType,
   convertToJsModule,
 }) => {
   const urlObject = new URL(urlInfo.url)
@@ -190,6 +185,7 @@ const loadOriginalUrl = async ({
   const originalUrl = urlObject.href
   const originalReference = {
     ...(context.reference.original || context.reference),
+    expectedType,
   }
   originalReference.url = originalUrl
   const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
@@ -200,7 +196,6 @@ const loadOriginalUrl = async ({
     urlInfo: originalUrlInfo,
   })
   return {
-    data: originalUrlInfo.data,
     type: "js_module",
     contentType: "text/javascript",
     content: convertToJsModule(originalUrlInfo, context),
