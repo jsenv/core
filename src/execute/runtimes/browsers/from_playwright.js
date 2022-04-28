@@ -184,14 +184,20 @@ export const createRuntimeFromPlaywright = ({
       })
     }
     const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href
-    await page.goto(fileClientUrl, { timeout: 0 })
-    let result = await getResult({
-      page,
-      rootDirectoryUrl,
-      server,
-      transformErrorHook,
-    })
-    result = await resultTransformer(result)
+    let result
+    try {
+      await page.goto(fileClientUrl, { timeout: 0 })
+      result = await getResult({
+        page,
+        rootDirectoryUrl,
+        server,
+        transformErrorHook,
+      })
+      result = await resultTransformer(result)
+    } catch (e) {
+      await cleanup("execution error")
+      throw e
+    }
     onResult(result)
     if (keepRunning) {
       stopSignal.notify = cleanup

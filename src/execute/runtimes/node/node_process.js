@@ -67,6 +67,7 @@ nodeProcess.run = async ({
     onError,
     onConsole,
   })
+  let result
   try {
     const namespace = await requestActionOnChildProcess({
       signal,
@@ -78,16 +79,17 @@ nodeProcess.run = async ({
         collectCoverage,
       },
     })
-    onResult({
+    result = {
       status: "completed",
       namespace,
-    })
+    }
   } catch (e) {
     await stop({
       gracefulStopAllocatedMs,
     })
     throw e
   }
+  onResult(result)
   if (keepRunning) {
     stopSignal.notify = stop
     return
