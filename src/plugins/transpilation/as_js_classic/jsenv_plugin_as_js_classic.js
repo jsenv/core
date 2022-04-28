@@ -35,6 +35,17 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
     normalize: (reference, context) => {
+      if (reference.isInline) {
+        if (reference.contentType !== "text/javascript") {
+          // We want to propagate transformation of js module to js classic
+          // so we don't want to propagate when the reference is not js:
+          // - ignore "string" in `JSON.parse(string)` for instance
+          return null
+        }
+      }
+      if (reference.expectedType === "js_classic") {
+        return null
+      }
       const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
       if (
         !parentUrlInfo ||

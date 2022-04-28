@@ -29,7 +29,7 @@ const test = async (options) => {
   return { returnValue }
 }
 
-// with bundling (default)
+// bundling
 {
   const { returnValue } = await test()
   const actual = returnValue
@@ -41,7 +41,24 @@ const test = async (options) => {
   assert({ actual, expected })
 }
 
-// without bundling
+// bundling + no support for script_type_module
+{
+  const { returnValue } = await test({
+    runtimeCompat: {
+      chrome: "60",
+    },
+    versioning: false,
+  })
+  const actual = returnValue
+  const expected = {
+    data: {
+      answer: 42,
+    },
+  }
+  assert({ actual, expected })
+}
+
+// no bundling
 {
   const { returnValue } = await test({
     bundling: false,
