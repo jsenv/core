@@ -24,7 +24,9 @@ export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
       systemJsClientFileUrl,
       generateJsClassicFilename,
     }),
-    jsenvPluginWorkersTypeModuleAsClassic(),
+    jsenvPluginWorkersTypeModuleAsClassic({
+      generateJsClassicFilename,
+    }),
     jsenvPluginTopLevelAwait(),
   ]
 }

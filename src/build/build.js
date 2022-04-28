@@ -255,6 +255,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         bundleUrlInfos[url] = {
           type,
           subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+          filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
           ...bundleUrlInfo,
           data: {
             ...(rawUrlInfo ? rawUrlInfo.data : {}),
@@ -775,7 +776,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
       throw new Error(`found url outside build directory: "${buildUrl}"`)
     }
-    const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
+    const buildRelativeUrl = urlToRelativeUrl(
+      asUrlUntilPathname(buildUrl),
+      buildDirectoryUrl,
+    )
     urlInfo.data.buildUrl = buildUrl
     urlInfo.data.buildUrlIsVersioned = useVersionedUrl
     urlInfo.data.buildRelativeUrl = buildRelativeUrl

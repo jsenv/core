@@ -13,9 +13,6 @@ await build({
   },
   versioning: false,
   minification: false,
-  transpilation: {
-    topLevelAwait: false,
-  },
 })
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -36,6 +33,6 @@ const expected = {
   returnValue: {
     fontFamily: "Roboto",
   },
-  pageLogs: []
+  pageLogs: [],
 }
 assert({ actual, expected })
