@@ -43,9 +43,6 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
           return null
         }
       }
-      if (reference.expectedType === "js_classic") {
-        return null
-      }
       const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
       if (
         !parentUrlInfo ||
