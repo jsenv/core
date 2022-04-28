@@ -131,7 +131,7 @@ export const run = async ({
           runned: async (cb) => {
             try {
               await runtime.run({
-                signal,
+                signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
                 keepRunning,

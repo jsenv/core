@@ -189,9 +189,9 @@ export const createControlledProcess = async ({
     const actionOperation = Abort.startOperation()
     actionOperation.addAbortSignal(signal)
     try {
-      const result = await new Promise(async (resolve, reject) => {
-        actionOperation.throwIfAborted()
-        await childProcessReadyPromise
+      actionOperation.throwIfAborted()
+      await childProcessReadyPromise
+      const childReadyPromise = new Promise((resolve, reject) => {
         onceProcessMessage(
           childProcess,
           "action-result",
@@ -203,31 +203,32 @@ export const createControlledProcess = async ({
             }
           },
         )
-        logger.debug(
-          createDetailedMessage(`ask child process to perform an action`, {
-            actionType,
-            actionParams: JSON.stringify(actionParams, null, "  "),
-          }),
-        )
-        try {
-          actionOperation.throwIfAborted()
-          await sendToProcess(childProcess, "action", {
-            actionType,
-            actionParams,
-          })
-        } catch (e) {
-          if (Abort.isAbortError(e) && actionOperation.signal.aborted) {
-            throw e
-          }
-          logger.error(
-            createDetailedMessage(`error while sending message to child`, {
-              ["error stack"]: e.stack,
-            }),
-          )
+      })
+      logger.debug(
+        createDetailedMessage(`ask child process to perform an action`, {
+          actionType,
+          actionParams: JSON.stringify(actionParams, null, "  "),
+        }),
+      )
+      try {
+        actionOperation.throwIfAborted()
+        await sendToProcess(childProcess, "action", {
+          actionType,
+          actionParams,
+        })
+        const result = await childReadyPromise
+        return result
+      } catch (e) {
+        if (Abort.isAbortError(e) && actionOperation.signal.aborted) {
           throw e
         }
-      })
-      return result
+        logger.error(
+          createDetailedMessage(`error while sending message to child`, {
+            ["error stack"]: e.stack,
+          }),
+        )
+        throw e
+      }
     } finally {
       await actionOperation.end()
     }

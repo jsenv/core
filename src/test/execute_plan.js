@@ -9,7 +9,7 @@ import {
   ensureEmptyDirectory,
   normalizeStructuredMetaMap,
   urlToMeta,
-  writeFile,
+  writeFileSync,
 } from "@jsenv/filesystem"
 import {
   createLogger,
@@ -438,7 +438,7 @@ export const executePlan = async (
     }
     if (summary.counters.total !== summary.counters.completed) {
       const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href
-      writeFile(logFileUrl, rawOutput)
+      writeFileSync(logFileUrl, rawOutput)
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
     }
     const result = await transformReturnValue({

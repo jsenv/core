@@ -63,25 +63,31 @@ nodeProcess.run = async ({
     stderr,
     logProcessCommand,
 
-    stopSignal,
     onStop,
     onError,
     onConsole,
   })
-  const namespace = await requestActionOnChildProcess({
-    signal,
-    actionType: "execute-using-dynamic-import",
-    actionParams: {
-      fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-      measurePerformance,
-      collectPerformance,
-      collectCoverage,
-    },
-  })
-  onResult({
-    status: "completed",
-    namespace,
-  })
+  try {
+    const namespace = await requestActionOnChildProcess({
+      signal,
+      actionType: "execute-using-dynamic-import",
+      actionParams: {
+        fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+        measurePerformance,
+        collectPerformance,
+        collectCoverage,
+      },
+    })
+    onResult({
+      status: "completed",
+      namespace,
+    })
+  } catch (e) {
+    await stop({
+      gracefulStopAllocatedMs,
+    })
+    throw e
+  }
   if (keepRunning) {
     stopSignal.notify = stop
     return
