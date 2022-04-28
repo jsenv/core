@@ -1,7 +1,6 @@
 import cuid from "cuid"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { resolveUrl, writeFile } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
 
 export const run = async ({
   signal = new AbortController().signal,
@@ -18,9 +17,7 @@ export const run = async ({
   runtime,
   runtimeParams,
 }) => {
-  const onErrorRef = { current: () => {} }
   const onConsoleRef = { current: () => {} }
-  const onStopRef = { current: () => {} }
   const stopSignal = { notify: () => {} }
 
   let resultTransformer = (result) => result
@@ -105,7 +102,7 @@ export const run = async ({
   try {
     logger.debug(`run() ${runtimeLabel}`)
     runOperation.throwIfAborted()
-    const winnerPromise = new Promise((resolve, reject) => {
+    const winnerPromise = new Promise((resolve) => {
       raceCallbacks(
         {
           aborted: (cb) => {
@@ -114,35 +111,22 @@ export const run = async ({
               runOperation.signal.removeEventListener("abort", cb)
             }
           },
-          errored: (cb) => {
-            onErrorRef.current = (error) => {
-              logger.debug(
-                createDetailedMessage(`error during execution`, {
-                  ["error stack"]: error.stack,
-                  ["runtime"]: runtimeLabel,
-                }),
-              )
-              cb(error)
-            }
-          },
-          stopped: (cb) => {
-            onStopRef.current = cb
-          },
           runned: async (cb) => {
             try {
-              await runtime.run({
+              const result = await runtime.run({
                 signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
                 keepRunning,
                 stopSignal,
-                onStop: (stopInfo) => onStopRef.current(stopInfo),
-                onError: (error) => onErrorRef.current(error),
                 onConsole: (log) => onConsoleRef.current(log),
-                onResult: cb,
               })
+              cb(result)
             } catch (e) {
-              reject(e)
+              cb({
+                status: "errored",
+                error: e,
+              })
             }
           },
         },
@@ -153,31 +137,16 @@ export const run = async ({
     if (winner.name === "aborted") {
       runOperation.throwIfAborted()
     }
-    if (winner.name === "errored") {
-      return await resultTransformer(
-        createErroredExecutionResult({
-          error: winner.data,
-        }),
-      )
+    let result = winner.data
+    result = await resultTransformer(result)
+    return result
+  } catch (e) {
+    let result = {
+      status: "errored",
+      error: e,
     }
-    if (winner.name === "stopped") {
-      return await resultTransformer(
-        createErroredExecutionResult({
-          error: new Error(`runtime stopped during execution`),
-        }),
-      )
-    }
-    onErrorRef.current = (error) => {
-      throw error
-    }
-    const result = winner.data
-    return await resultTransformer(result)
-  } catch (error) {
-    return await resultTransformer(
-      createErroredExecutionResult({
-        error,
-      }),
-    )
+    result = await resultTransformer(result)
+    return result
   } finally {
     await runOperation.end()
   }
@@ -198,11 +167,5 @@ const createAbortedResult = () => {
 const createTimedoutResult = () => {
   return {
     status: "timedout",
-  }
-}
-const createErroredExecutionResult = ({ error }) => {
-  return {
-    status: "errored",
-    error,
   }
 }

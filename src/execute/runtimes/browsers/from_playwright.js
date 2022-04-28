@@ -4,6 +4,7 @@ import {
   Abort,
   createCallbackListNotifiedOnce,
   raceProcessTeardownEvents,
+  raceCallbacks,
 } from "@jsenv/abort"
 import { moveUrl } from "@jsenv/filesystem"
 
@@ -42,10 +43,7 @@ export const createRuntimeFromPlaywright = ({
     stopAfterAllSignal,
     stopSignal,
     keepRunning,
-    onStop,
-    onError,
     onConsole,
-    onResult,
 
     executablePath,
     headful = false,
@@ -74,11 +72,27 @@ export const createRuntimeFromPlaywright = ({
     }
     const { browser, browserContext } = await browserAndContextPromise
     const closeBrowser = async () => {
+      const disconnected = browser.isConnected()
+        ? new Promise((resolve) => {
+            const disconnectedCallback = () => {
+              browser.removeListener("disconnected", disconnectedCallback)
+              resolve()
+            }
+            browser.on("disconnected", disconnectedCallback)
+          })
+        : Promise.resolve()
+      // for some reason without this 100ms timeout
+      // browser.close() never resolves (playwright does not like something)
+      await new Promise((resolve) => setTimeout(resolve, 100))
       try {
-        await stopBrowser(browser)
+        await browser.close()
       } catch (e) {
-        onError(e)
+        if (isTargetClosedError(e)) {
+          return
+        }
+        throw e
       }
+      await disconnected
     }
     const page = await browserContext.newPage()
     const closePage = async () => {
@@ -88,44 +102,9 @@ export const createRuntimeFromPlaywright = ({
         if (isTargetClosedError(e)) {
           return
         }
-        onError(e)
+        throw e
       }
     }
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-    if (isBrowserDedicatedToExecution) {
-      browser.on("disconnected", async () => {
-        await cleanup("browser disconnected")
-        onStop({ reason: "browser disconnected" })
-      })
-      cleanupCallbackList.add(closePage)
-      cleanupCallbackList.add(closeBrowser)
-    } else {
-      const disconnectedCallback = async () => {
-        await cleanup("browser disconnected")
-        onError(new Error("browser disconnected during execution"))
-      }
-      browser.on("disconnected", disconnectedCallback)
-      page.on("close", () => {
-        onStop({ reason: "page closed" })
-      })
-      cleanupCallbackList.add(closePage)
-      const notifyPrevious = stopAfterAllSignal.notify
-      stopAfterAllSignal.notify = async () => {
-        await notifyPrevious()
-        browser.removeListener("disconnected", disconnectedCallback)
-        await closeBrowser()
-      }
-    }
-    const stopTrackingToNotify = trackPageToNotify(page, {
-      onError: (error) => {
-        error = transformErrorHook(error)
-        if (!ignoreErrorHook(error)) {
-          onError(error)
-        }
-      },
-      onConsole,
-    })
-    cleanupCallbackList.add(stopTrackingToNotify)
 
     let resultTransformer = (result) => result
     if (collectCoverage) {
@@ -184,21 +163,140 @@ export const createRuntimeFromPlaywright = ({
       })
     }
     const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href
+
+    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
+    const removeConsoleListener = registerEvent({
+      object: page,
+      eventType: "console",
+      // https://github.com/microsoft/playwright/blob/master/docs/api.md#event-console
+      callback: async (consoleMessage) => {
+        onConsole({
+          type: consoleMessage.type(),
+          text: `${extractTextFromConsoleMessage(consoleMessage)}
+    `,
+        })
+      },
+    })
+    cleanupCallbackList.add(removeConsoleListener)
+    const winnerPromise = new Promise((resolve) => {
+      raceCallbacks(
+        {
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+          error: (cb) => {
+            return registerEvent({
+              object: page,
+              eventType: "error",
+              callback: (error) => {
+                if (ignoreErrorHook(error)) {
+                  return
+                }
+                cb(transformErrorHook(error))
+              },
+            })
+          },
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+          pageerror: (cb) => {
+            return registerEvent({
+              object: page,
+              eventType: "pageerror",
+              callback: (error) => {
+                if (ignoreErrorHook(error)) {
+                  return
+                }
+                cb(transformErrorHook(error))
+              },
+            })
+          },
+          closed: (cb) => {
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+            if (isBrowserDedicatedToExecution) {
+              browser.on("disconnected", async () => {
+                cb({ reason: "browser disconnected" })
+              })
+              cleanupCallbackList.add(closePage)
+              cleanupCallbackList.add(closeBrowser)
+            } else {
+              const disconnectedCallback = async () => {
+                throw new Error("browser disconnected during execution")
+              }
+              browser.on("disconnected", disconnectedCallback)
+              page.on("close", () => {
+                cb({ reason: "page closed" })
+              })
+              cleanupCallbackList.add(closePage)
+              const notifyPrevious = stopAfterAllSignal.notify
+              stopAfterAllSignal.notify = async () => {
+                await notifyPrevious()
+                browser.removeListener("disconnected", disconnectedCallback)
+                await closeBrowser()
+              }
+            }
+          },
+          response: async (cb) => {
+            await page.goto(fileClientUrl, { timeout: 0 })
+            const result = await page.evaluate(
+              /* eslint-disable no-undef */
+              /* istanbul ignore next */
+              () => {
+                return window.__html_supervisor__.getScriptExecutionResults()
+              },
+              /* eslint-enable no-undef */
+            )
+            const { status, scriptExecutionResults } = result
+            if (status === "errored") {
+              const { exceptionSource } = result
+              const error = evalException(exceptionSource, {
+                rootDirectoryUrl,
+                server,
+                transformErrorHook,
+              })
+              cb({
+                status: "errored",
+                error,
+                namespace: scriptExecutionResults,
+              })
+            } else {
+              cb({
+                status: "completed",
+                namespace: scriptExecutionResults,
+              })
+            }
+          },
+        },
+        resolve,
+      )
+    })
+
+    const getResult = async () => {
+      const winner = await winnerPromise
+      if (winner.name === "error" || winner.name === "pageerror") {
+        const error = winner.data
+        return {
+          status: "errored",
+          error,
+        }
+      }
+      if (winner.name === "closed") {
+        return {
+          status: "errored",
+          error: isBrowserDedicatedToExecution
+            ? new Error(`browser disconnected during execution`)
+            : new Error(`page closed during execution`),
+        }
+      }
+      return winner.data
+    }
     let result
+
     try {
-      await page.goto(fileClientUrl, { timeout: 0 })
-      result = await getResult({
-        page,
-        rootDirectoryUrl,
-        server,
-        transformErrorHook,
-      })
+      result = await getResult()
       result = await resultTransformer(result)
     } catch (e) {
-      await cleanup("execution error")
-      throw e
+      result = {
+        status: "errored",
+        error: e,
+      }
     }
-    onResult(result)
     if (keepRunning) {
       stopSignal.notify = cleanup
     } else {
@@ -220,40 +318,6 @@ export const createRuntimeFromPlaywright = ({
   return runtime
 }
 
-const getResult = async ({
-  page,
-  rootDirectoryUrl,
-  server,
-  transformErrorHook,
-}) => {
-  const result = await page.evaluate(
-    /* eslint-disable no-undef */
-    /* istanbul ignore next */
-    () => {
-      return window.__html_supervisor__.getScriptExecutionResults()
-    },
-    /* eslint-enable no-undef */
-  )
-  const { status, scriptExecutionResults } = result
-  if (status === "errored") {
-    const { exceptionSource } = result
-    const error = evalException(exceptionSource, {
-      rootDirectoryUrl,
-      server,
-      transformErrorHook,
-    })
-    return {
-      status: "errored",
-      error,
-      namespace: scriptExecutionResults,
-    }
-  }
-  return {
-    status: "completed",
-    namespace: scriptExecutionResults,
-  }
-}
-
 const generateCoverageForPage = (scriptExecutionResults) => {
   let istanbulCoverageComposed = null
   Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
@@ -266,31 +330,6 @@ const generateCoverageForPage = (scriptExecutionResults) => {
       : istanbulCoverage
   })
   return istanbulCoverageComposed
-}
-
-const stopBrowser = async (browser) => {
-  const disconnected = browser.isConnected()
-    ? new Promise((resolve) => {
-        const disconnectedCallback = () => {
-          browser.removeListener("disconnected", disconnectedCallback)
-          resolve()
-        }
-        browser.on("disconnected", disconnectedCallback)
-      })
-    : Promise.resolve()
-
-  // for some reason without this 100ms timeout
-  // browser.close() never resolves (playwright does not like something)
-  await new Promise((resolve) => setTimeout(resolve, 100))
-  try {
-    await browser.close()
-  } catch (e) {
-    if (isTargetClosedError(e)) {
-      return
-    }
-    throw e
-  }
-  await disconnected
 }
 
 const launchBrowserUsingPlaywright = async ({
@@ -370,39 +409,6 @@ const isTargetClosedError = (error) => {
     return true
   }
   return false
-}
-
-const trackPageToNotify = (page, { onError, onConsole }) => {
-  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-  const removeErrorListener = registerEvent({
-    object: page,
-    eventType: "error",
-    callback: onError,
-  })
-  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-  const removePageErrorListener = registerEvent({
-    object: page,
-    eventType: "pageerror",
-    callback: onError,
-  })
-  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
-  const removeConsoleListener = registerEvent({
-    object: page,
-    eventType: "console",
-    // https://github.com/microsoft/playwright/blob/master/docs/api.md#event-console
-    callback: async (consoleMessage) => {
-      onConsole({
-        type: consoleMessage.type(),
-        text: `${extractTextFromConsoleMessage(consoleMessage)}
-`,
-      })
-    },
-  })
-  return () => {
-    removeErrorListener()
-    removePageErrorListener()
-    removeConsoleListener()
-  }
 }
 
 const composeTransformer = (previousTransformer, transformer) => {

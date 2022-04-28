@@ -38,7 +38,8 @@ export const formatExecutionResult = (
   { completedExecutionLogAbbreviation, counters, memoryHeap },
 ) => {
   const { status } = executionResult
-  const description = descriptionFormatters[status]({
+  const descriptionFormatter = descriptionFormatters[status]
+  const description = descriptionFormatter({
     index: executionIndex,
     total: counters.total,
     executionParams,
@@ -52,7 +53,7 @@ export const formatExecutionResult = (
     return `${description} ${summary}`
   }
   const { consoleCalls = [], error, duration } = executionResult
-  const console = formatConsoleCalls(consoleCalls)
+  const consoleOutput = formatConsoleCalls(consoleCalls)
   return formatExecution({
     label: `${description} ${summary}`,
     details: {
@@ -61,7 +62,7 @@ export const formatExecutionResult = (
       duration: msAsDuration(duration),
       ...(error ? { error: error.stack } : {}),
     },
-    console,
+    consoleOutput,
   })
 }
 
@@ -203,21 +204,21 @@ const formatConsoleCalls = (consoleCalls) => {
   if (consoleOutputTrimmed === "") {
     return ""
   }
-  return `${ANSI.color(`-------- console --------`, ANSI.GREY)}
+  return `${ANSI.color(`-------- console output --------`, ANSI.GREY)}
 ${consoleOutputTrimmed}
 ${ANSI.color(`-------------------------`, ANSI.GREY)}`
 }
 
-const formatExecution = ({ label, details = {}, console }) => {
+const formatExecution = ({ label, details = {}, consoleOutput }) => {
   let message = ``
   message += label
   Object.keys(details).forEach((key) => {
     message += `
 ${key}: ${details[key]}`
   })
-  if (console) {
+  if (consoleOutput) {
     message += `
-${console}`
+${consoleOutput}`
   }
   return message
 }
