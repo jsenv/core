@@ -91,11 +91,8 @@ export const jsenvPluginImportmap = () => {
       },
     },
     transform: {
-      html: async (
-        { url, content, references },
-        { scenario, cook, urlGraph, referenceUtils },
-      ) => {
-        const htmlAst = parseHtmlString(content)
+      html: async (htmlUrlInfo, context) => {
+        const htmlAst = parseHtmlString(htmlUrlInfo.content)
         const importmap = findNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
             return false
@@ -107,7 +104,7 @@ export const jsenvPluginImportmap = () => {
           return true
         })
         if (!importmap) {
-          onHtmlImportmapParsed(null, url)
+          onHtmlImportmapParsed(null, htmlUrlInfo.url)
           return null
         }
         const handleInlineImportmap = async (importmap, textNode) => {
@@ -116,7 +113,7 @@ export const jsenvPluginImportmap = () => {
               preferOriginal: true,
             })
           const inlineImportmapUrl = generateInlineContentUrl({
-            url,
+            url: htmlUrlInfo.url,
             extension: ".importmap",
             line,
             column,
@@ -124,7 +121,7 @@ export const jsenvPluginImportmap = () => {
             columnEnd,
           })
           const [inlineImportmapReference, inlineImportmapUrlInfo] =
-            referenceUtils.foundInline({
+            context.referenceUtils.foundInline({
               type: "script_src",
               line: line - 1,
               column,
@@ -133,7 +130,7 @@ export const jsenvPluginImportmap = () => {
               contentType: "application/importmap+json",
               content: textNode.value,
             })
-          await cook({
+          await context.cook({
             reference: inlineImportmapReference,
             urlInfo: inlineImportmapUrlInfo,
           })
@@ -141,7 +138,10 @@ export const jsenvPluginImportmap = () => {
             generatedText: inlineImportmapUrlInfo.content,
             generatedBy: "jsenv:importmap",
           })
-          onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), url)
+          onHtmlImportmapParsed(
+            JSON.parse(inlineImportmapUrlInfo.content),
+            htmlUrlInfo.url,
+          )
         }
         const handleImportmapWithSrc = async (importmap, src) => {
           // Browser would throw on remote importmap
@@ -149,15 +149,19 @@ export const jsenvPluginImportmap = () => {
           // We must precook the importmap to know its content and inline it into the HTML
           // In this situation the ref to the importmap was already discovered
           // when parsing the HTML
-          const importmapReference = references.find(
-            (reference) => reference.url === src,
+          const importmapReference =
+            context.referenceUtils.findByGeneratedSpecifier(src)
+          const importmapUrlInfo = context.urlGraph.getUrlInfo(
+            importmapReference.url,
           )
-          const importmapUrlInfo = urlGraph.getUrlInfo(importmapReference.url)
-          await cook({
+          await context.cook({
             reference: importmapReference,
             urlInfo: importmapUrlInfo,
           })
-          onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), url)
+          onHtmlImportmapParsed(
+            JSON.parse(importmapUrlInfo.content),
+            htmlUrlInfo.url,
+          )
           removeHtmlNodeAttributeByName(importmap, "src")
           setHtmlNodeGeneratedText(importmap, {
             generatedText: importmapUrlInfo.content,
@@ -170,14 +174,14 @@ export const jsenvPluginImportmap = () => {
               preferOriginal: true,
             })
           const inlineImportmapUrl = generateInlineContentUrl({
-            url,
+            url: htmlUrlInfo.url,
             extension: ".importmap",
             line,
             column,
             lineEnd,
             columnEnd,
           })
-          referenceUtils.becomesInline(importmapReference, {
+          context.referenceUtils.becomesInline(importmapReference, {
             line: line - 1,
             column,
             isOriginal,
@@ -202,7 +206,7 @@ export const jsenvPluginImportmap = () => {
         // by "formatReferencedUrl" making the importmap presence useless.
         // In dev/test we keep importmap into the HTML to see it even if useless
         // Duing build we get rid of it
-        if (scenario === "build") {
+        if (context.scenario === "build") {
           removeHtmlNode(importmap)
         }
         return {
