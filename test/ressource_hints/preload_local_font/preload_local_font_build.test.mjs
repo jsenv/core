@@ -11,7 +11,6 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  versioning: false,
   minification: false,
 })
 const server = await startFileServer({

@@ -275,7 +275,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     buildDirectoryUrl,
   })
   const rawUrls = {}
-  const buildUrls = {}
+  let buildUrls = {}
   const finalGraph = createUrlGraph()
   const optimizeHooks = rawGraphKitchen.pluginController.addHook("optimize")
   const finalGraphKitchen = createKitchen({
@@ -606,6 +606,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           versioningMethod,
         })
       })
+      const buildUrlsPostVersioning = {}
       const versionMappings = {}
       const usedVersionMappings = []
       const versioningKitchen = createKitchen({
@@ -663,6 +664,8 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 buildDirectoryUrl,
               )}`
               versionMappings[reference.specifier] = versionedSpecifier
+              buildUrlsPostVersioning[versionedSpecifier] =
+                buildUrls[reference.specifier]
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (parentUrlInfo.jsQuote) {
                 // the url is inline inside js quotes
@@ -750,6 +753,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           }),
         )
       }
+      buildUrls = buildUrlsPostVersioning
     } catch (e) {
       versioningTask.fail()
       throw e
@@ -776,10 +780,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
       throw new Error(`found url outside build directory: "${buildUrl}"`)
     }
-    const buildRelativeUrl = urlToRelativeUrl(
-      asUrlUntilPathname(buildUrl),
-      buildDirectoryUrl,
-    )
+    const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl)
     urlInfo.data.buildUrl = buildUrl
     urlInfo.data.buildUrlIsVersioned = useVersionedUrl
     urlInfo.data.buildRelativeUrl = buildRelativeUrl
@@ -789,7 +790,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     finalGraphKitchen,
     finalGraph,
     rawUrls,
-    baseUrl,
+    buildUrls,
   })
   await injectServiceWorkerUrls({
     finalGraphKitchen,

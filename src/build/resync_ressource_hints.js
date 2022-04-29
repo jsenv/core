@@ -13,7 +13,7 @@ export const resyncRessourceHints = async ({
   finalGraphKitchen,
   finalGraph,
   rawUrls,
-  baseUrl,
+  buildUrls,
 }) => {
   const ressourceHintActions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
@@ -38,10 +38,10 @@ export const resyncRessourceHints = async ({
           if (!buildUrl) {
             return
           }
-          const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
-          replacements[
-            reference.generatedSpecifier
-          ] = `${baseUrl}${buildUrlInfo.data.buildRelativeUrl}`
+          const buildRelativeUrl = Object.keys(buildUrls).find(
+            (key) => buildUrls[key] === buildUrl,
+          )
+          replacements[reference.generatedSpecifier] = buildRelativeUrl
         }
       }
     })
