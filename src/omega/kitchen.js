@@ -17,10 +17,10 @@ import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.j
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
 import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
 import {
-  createResolveError,
+  createResolveUrlError,
   createFetchUrlContentError,
-  createTransformError,
-  createFinalizeError,
+  createTransformUrlContentError,
+  createFinalizeUrlContentError,
 } from "./errors.js"
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js"
 
@@ -196,7 +196,7 @@ export const createKitchen = ({
       reference.generatedSpecifier = urlSpecifierFormat.encode(reference)
       return urlInfo
     } catch (error) {
-      throw createResolveError({
+      throw createResolveUrlError({
         pluginController,
         reference,
         error,
@@ -529,7 +529,7 @@ export const createKitchen = ({
         },
       )
     } catch (error) {
-      throw createTransformError({
+      throw createTransformUrlContentError({
         pluginController,
         reference,
         urlInfo,
@@ -552,7 +552,7 @@ export const createKitchen = ({
         finalizeReturnValue,
       )
     } catch (error) {
-      throw createFinalizeError({
+      throw createFinalizeUrlContentError({
         pluginController,
         reference,
         urlInfo,

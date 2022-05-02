@@ -2,13 +2,13 @@ export const createPluginController = ({
   plugins,
   scenario,
   hooks = [
-    "resolve",
-    "normalize",
-    "load",
-    "transform",
-    "transformReferencedUrlSearchParams",
-    "formatReferencedUrl",
-    "finalize",
+    "resolveUrl",
+    "normalizeUrl",
+    "fetchUrlContent",
+    "transformUrlContent",
+    "transformUrlSearchParams",
+    "formatUrl",
+    "finalizeUrlContent",
     "cooked",
     "destroy",
   ],
@@ -203,7 +203,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
 const returnValueAssertions = [
   {
     name: "url_assertion",
-    appliesTo: ["resolve", "normalize"],
+    appliesTo: ["resolveUrl", "normalizeUrl"],
     assertion: (valueReturned) => {
       if (valueReturned instanceof URL) {
         return valueReturned.href
@@ -218,7 +218,12 @@ const returnValueAssertions = [
   },
   {
     name: "content_assertion",
-    appliesTo: ["load", "transform", "finalize", "optimize"],
+    appliesTo: [
+      "fetchUrlContent",
+      "transformUrlContent",
+      "finalizeUrlContent",
+      "optimizeUrlContent",
+    ],
     assertion: (valueReturned) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned }

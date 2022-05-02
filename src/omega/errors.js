@@ -1,13 +1,17 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-export const createResolveError = ({ pluginController, reference, error }) => {
-  const createFailedToResolveError = ({
-    code = error.code || "RESOLVE_ERROR",
+export const createResolveUrlError = ({
+  pluginController,
+  reference,
+  error,
+}) => {
+  const createFailedToResolveUrlError = ({
+    code = error.code || "RESOLVE_URL_ERROR",
     reason,
     ...details
   }) => {
     const resolveError = new Error(
-      createDetailedMessage(`Failed to resolve specifier`, {
+      createDetailedMessage(`Failed to resolve url reference`, {
         reason,
         ...details,
         "specifier": `"${reference.specifier}"`,
@@ -15,17 +19,17 @@ export const createResolveError = ({ pluginController, reference, error }) => {
         ...detailsFromPluginController(pluginController),
       }),
     )
-    resolveError.name = "RESOLVE_ERROR"
+    resolveError.name = "RESOLVE_URL_ERROR"
     resolveError.code = code
     resolveError.reason = reason
     return resolveError
   }
   if (error.message === "NO_RESOLVE") {
-    return createFailedToResolveError({
-      reason: `no plugin has handled the specifier during "resolve" hook`,
+    return createFailedToResolveUrlError({
+      reason: `no plugin has handled the specifier during "resolveUrl" hook`,
     })
   }
-  return createFailedToResolveError({
+  return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
     ...detailsFromValueThrown(error),
   })
@@ -81,19 +85,19 @@ export const createFetchUrlContentError = ({
   })
 }
 
-export const createTransformError = ({
+export const createTransformUrlContentError = ({
   pluginController,
   reference,
   urlInfo,
   error,
 }) => {
   const createFailedToTransformError = ({
-    code = error.code || "TRANSFORM_ERROR",
+    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
     reason,
     ...details
   }) => {
     const transformError = new Error(
-      createDetailedMessage(`Failed to transform ${urlInfo.type}`, {
+      createDetailedMessage(`Failed to transform ${urlInfo.type} url content`, {
         reason,
         ...details,
         "url": urlInfo.url,
@@ -101,34 +105,34 @@ export const createTransformError = ({
         ...detailsFromPluginController(pluginController),
       }),
     )
-    transformError.name = "TRANSFORM_ERROR"
+    transformError.name = "TRANSFORM_URL_CONTENT_ERROR"
     transformError.code = code
     transformError.reason = reason
     return transformError
   }
   return createFailedToTransformError({
-    reason: `An error occured during "transform"`,
+    reason: `An error occured during "transformUrlContent"`,
     ...detailsFromValueThrown(error),
   })
 }
 
-export const createFinalizeError = ({
+export const createFinalizeUrlContentError = ({
   pluginController,
   reference,
   urlInfo,
   error,
 }) => {
   const finalizeError = new Error(
-    createDetailedMessage(`Failed to finalize ${urlInfo.type}`, {
-      "reason": `An error occured during "finalize"`,
+    createDetailedMessage(`Failed to finalize ${urlInfo.type} url content`, {
+      "reason": `An error occured during "finalizeUrlContent"`,
       ...detailsFromValueThrown(error),
       "url": urlInfo.url,
       "url reference trace": reference.trace,
       ...detailsFromPluginController(pluginController),
     }),
   )
-  finalizeError.name = "FINALIZE_ERROR"
-  finalizeError.reason = `An error occured during "finalize"`
+  finalizeError.name = "FINALIZE_URL_CONTENT_ERROR"
+  finalizeError.reason = `An error occured during "finalizeUrlContent"`
   return finalizeError
 }
 
