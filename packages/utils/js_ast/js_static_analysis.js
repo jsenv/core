@@ -291,6 +291,35 @@ const analyzeSystemRegisterDeps = (node) => {
   return mentions
 }
 
+export const analyzeSystemImportCall = (path) => {
+  const node = path.node
+  if (!isSystemImportCall(node)) {
+    return null
+  }
+  const mentions = []
+  const firstArgNode = node.arguments[0]
+  if (firstArgNode.type === "StringLiteral") {
+    mentions.push({
+      type: "js_url_specifier",
+      subtype: "system_import_arg",
+      expectedType: "js_classic",
+      specifier: firstArgNode.value,
+      ...getNodePosition(firstArgNode),
+    })
+  }
+  return mentions
+}
+const isSystemImportCall = (node) => {
+  const callee = node.callee
+  return (
+    callee.type === "MemberExpression" &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === "_context" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "import"
+  )
+}
+
 const getNodePosition = (node) => {
   return {
     start: node.start,

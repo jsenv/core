@@ -12,6 +12,7 @@ import {
   analyzeNewWorkerCall,
   analyzeImportScriptCalls,
   analyzeSystemRegisterCall,
+  analyzeSystemImportCall,
 } from "@jsenv/utils/js_ast/js_static_analysis.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
@@ -120,7 +121,9 @@ const babelPluginMetadataJsUrlMentions = (
         const callExpressionStaticAnalysers = [
           ...(isJsModule ? [analyzeImportCall] : []),
           ...(isWebWorker ? [analyzeImportScriptCalls] : []),
-          ...(searchSystemJs ? [analyzeSystemRegisterCall] : []),
+          ...(searchSystemJs
+            ? [analyzeSystemRegisterCall, analyzeSystemImportCall]
+            : []),
         ]
         visitors.CallExpression = (path) => {
           if (isJsModule && !usesImport && isImportCall(path.node)) {
