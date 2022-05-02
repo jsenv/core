@@ -20,7 +20,7 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
     appliesDuring: {
       dev: true,
     },
-    transform: {
+    transformUrlContent: {
       html: ({ url, content }, { referenceUtils }) => {
         if (url === toolbarHtmlClientFileUrl) {
           return null

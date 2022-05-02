@@ -105,7 +105,7 @@ export const jsenvPluginBabel = ({ getCustomBabelPlugins } = {}) => {
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
-    finalize: {
+    finalizeUrlContent: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel,
     },

@@ -7,7 +7,7 @@ export const jsenvPluginUrlReferences = () => {
   return {
     name: "jsenv:url_references",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       html: parseAndTransformHtmlUrls,
       css: parseAndTransformCssUrls,
       js_classic: parseAndTransformJsUrls,

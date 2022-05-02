@@ -6,7 +6,7 @@ export const jsenvPluginTopLevelAwait = () => {
   return {
     name: "jsenv:top_level_await",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       js_module: async (urlInfo, context) => {
         if (!urlInfo.data.usesTopLevelAwait) {
           return null

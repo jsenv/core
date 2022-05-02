@@ -13,12 +13,12 @@ export const jsenvPluginFileSystemMagic = ({
   return {
     name: "jsenv:filesystem_magic",
     appliesDuring: "*",
-    normalize: ({ parentUrl, url }) => {
+    normalizeUrl: (reference) => {
       // http, https, data, about, etc
-      if (!url.startsWith("file:")) {
+      if (!reference.url.startsWith("file:")) {
         return null
       }
-      const urlObject = new URL(url)
+      const urlObject = new URL(reference.url)
       const { search, hash } = urlObject
       urlObject.search = ""
       urlObject.hash = ""
@@ -26,7 +26,10 @@ export const jsenvPluginFileSystemMagic = ({
         urlObject.href,
         {
           magicDirectoryIndex,
-          magicExtensions: getExtensionsToTry(magicExtensions, parentUrl),
+          magicExtensions: getExtensionsToTry(
+            magicExtensions,
+            reference.parentUrl,
+          ),
         },
       )
       if (!filesystemResolution.found) {

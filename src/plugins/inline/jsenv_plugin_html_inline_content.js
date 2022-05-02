@@ -15,7 +15,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
   return {
     name: "jsenv:html_inline_content",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       html: async (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content)
         const actions = []

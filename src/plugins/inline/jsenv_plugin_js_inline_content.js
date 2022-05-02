@@ -69,7 +69,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   return {
     name: "jsenv:js_inline_content",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       js_classic: parseAndTransformInlineContentCalls,
       js_module: parseAndTransformInlineContentCalls,
     },

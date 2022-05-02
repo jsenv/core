@@ -34,7 +34,7 @@ const jsenvPluginHmr = () => {
   return {
     name: "jsenv:hmr",
     appliesDuring: { dev: true },
-    normalize: (reference) => {
+    normalizeUrl: (reference) => {
       const urlObject = new URL(reference.url)
       if (!urlObject.searchParams.has("hmr")) {
         reference.data.hmr = false
@@ -49,7 +49,7 @@ const jsenvPluginHmr = () => {
       urlObject.searchParams.delete("v")
       return urlObject.href
     },
-    transformReferencedUrlSearchParams: (reference, context) => {
+    transformUrlSearchParams: (reference, context) => {
       const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
       if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
         return null
@@ -78,7 +78,7 @@ const jsenvPluginHot = () => {
   return {
     name: "jsenv:hot",
     appliesDuring: { dev: true },
-    transform: {
+    transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
         const { hotReferences } = collectHotDataFromHtmlAst(htmlAst)

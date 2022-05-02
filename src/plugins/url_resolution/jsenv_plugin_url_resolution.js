@@ -11,7 +11,7 @@ export const jsenvPluginUrlResolution = () => {
   return {
     name: "jsenv:url_resolution",
     appliesDuring: "*",
-    resolve: {
+    resolveUrl: {
       "entry_point": urlResolver,
       "link_href": urlResolver,
       "script_src": urlResolver,

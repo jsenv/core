@@ -21,7 +21,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
   return {
     name: "jsenv:script_type_module_as_classic",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       html: async (urlInfo, context) => {
         if (
           context.isSupportedOnCurrentClients("script_type_module") &&

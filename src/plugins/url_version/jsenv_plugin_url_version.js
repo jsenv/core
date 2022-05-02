@@ -4,7 +4,7 @@ export const jsenvPluginUrlVersion = ({
   return {
     name: "jsenv:url_version",
     appliesDuring: "*", // maybe only during dev?
-    normalize: (reference) => {
+    normalizeUrl: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
       // it is also used by hmr to bypass browser cache
@@ -15,7 +15,7 @@ export const jsenvPluginUrlVersion = ({
       urlObject.searchParams.delete("v")
       return urlObject.href
     },
-    transformReferencedUrlSearchParams: (reference) => {
+    transformUrl: (reference) => {
       if (!reference.data.version) {
         return null
       }

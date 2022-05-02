@@ -59,7 +59,7 @@ export const jsenvPluginCommonJsGlobals = () => {
   return {
     name: "jsenv:commonjs_globals",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       js_classic: transformCommonJsGlobals,
       js_module: transformCommonJsGlobals,
     },

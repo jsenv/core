@@ -36,7 +36,7 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
     name: "jsenv:as_js_classic",
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
-    normalize: (reference, context) => {
+    normalizeUrl: (reference, context) => {
       if (reference.isInline) {
         if (reference.contentType !== "text/javascript") {
           // We want to propagate transformation of js module to js classic

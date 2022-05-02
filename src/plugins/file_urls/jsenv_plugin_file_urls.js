@@ -18,21 +18,21 @@ const jsenvPluginResolveAbsoluteFileUrls = () => {
       // during build it's fine to use file:// urls
       build: false,
     },
-    resolve: ({ specifier }) => {
-      if (!specifier.startsWith("/@fs/")) {
+    resolveUrl: (reference) => {
+      if (!reference.specifier.startsWith("/@fs/")) {
         return null
       }
-      const fsRootRelativeUrl = specifier.slice("/@fs/".length)
+      const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length)
       return `file:///${fsRootRelativeUrl}`
     },
-    formatReferencedUrl: ({ url }, { rootDirectoryUrl }) => {
-      if (!url.startsWith("file:")) {
+    formatUrl: (reference, context) => {
+      if (!reference.url.startsWith("file:")) {
         return null
       }
-      if (urlIsInsideOf(url, rootDirectoryUrl)) {
-        return `/${urlToRelativeUrl(url, rootDirectoryUrl)}`
+      if (urlIsInsideOf(reference.url, context.rootDirectoryUrl)) {
+        return `/${urlToRelativeUrl(reference.url, context.rootDirectoryUrl)}`
       }
-      return `/@fs/${url.slice("file:///".length)}`
+      return `/@fs/${reference.url.slice("file:///".length)}`
     },
   }
 }
@@ -47,7 +47,7 @@ const jsenvPluginFetchFileUrls = () => {
       }
       const urlObject = new URL(urlInfo.url)
       const fileBuffer = readFileSync(urlObject)
-      const contentType = CONTENT_TYPE.fromUrlExtension(url)
+      const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
       if (CONTENT_TYPE.isTextual(contentType)) {
         return {
           contentType,

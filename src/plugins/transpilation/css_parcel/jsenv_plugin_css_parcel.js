@@ -5,7 +5,7 @@ export const jsenvPluginCssParcel = () => {
   return {
     name: "jsenv:css_parcel",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       css: (urlInfo, context) => {
         const { code, map } = transpileWithParcel(urlInfo, context)
         return {

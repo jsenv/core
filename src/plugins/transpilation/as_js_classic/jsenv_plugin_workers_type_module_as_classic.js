@@ -52,7 +52,7 @@ export const jsenvPluginWorkersTypeModuleAsClassic = () => {
   return {
     name: "jsenv:workers_type_module_as_classic",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       js_module: transformJsWorkerTypes,
       js_classic: transformJsWorkerTypes,
     },

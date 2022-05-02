@@ -5,7 +5,7 @@ export const jsenvPluginDataUrls = () => {
   return {
     name: "jsenv:data_urls",
     appliesDuring: "*",
-    resolve: (reference) => {
+    resolveUrl: (reference) => {
       if (!reference.specifier.startsWith("data:")) {
         return null
       }
@@ -26,7 +26,7 @@ export const jsenvPluginDataUrls = () => {
         content: contentFromUrlData({ contentType, base64Flag, urlData }),
       }
     },
-    formatReferencedUrl: (reference, context) => {
+    formatUrl: (reference, context) => {
       if (!reference.url.startsWith("data:")) {
         return null
       }

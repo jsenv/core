@@ -4,7 +4,7 @@ export const jsenvPluginInlineQueryParam = () => {
   return {
     name: "jsenv:inline_query_param",
     appliesDuring: "*",
-    formatReferencedUrl: {
+    formatUrl: {
       // <link> and <script> can be inlined in the html
       // this should be done during dev and postbuild but not build
       // so that the bundled file gets inlined and not the entry point

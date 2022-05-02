@@ -123,7 +123,7 @@ export const createKitchen = ({
   const resolveReference = (reference) => {
     try {
       const resolvedUrl = pluginController.callHooksUntil(
-        "resolve",
+        "resolveUrl",
         reference,
         baseContext,
       )
@@ -137,7 +137,7 @@ export const createKitchen = ({
         return urlGraph.reuseOrCreateUrlInfo(reference.url)
       }
       pluginController.callHooks(
-        "normalize",
+        "normalizeUrl",
         reference,
         baseContext,
         (returnValue) => {
@@ -174,7 +174,7 @@ export const createKitchen = ({
       // But do not represent an other ressource, it is considered as
       // the same ressource under the hood
       pluginController.callHooks(
-        "transformReferencedUrlSearchParams",
+        "transformUrlSearchParams",
         reference,
         baseContext,
         (returnValue) => {
@@ -188,7 +188,7 @@ export const createKitchen = ({
         },
       )
       const returnValue = pluginController.callHooksUntil(
-        "formatReferencedUrl",
+        "formatUrl",
         reference,
         baseContext,
       )
@@ -518,7 +518,7 @@ export const createKitchen = ({
     context.referenceUtils = referenceUtils
     try {
       await pluginController.callAsyncHooks(
-        "transform",
+        "transformUrlContent",
         urlInfo,
         context,
         async (transformReturnValue) => {
@@ -543,7 +543,7 @@ export const createKitchen = ({
     // "finalize" hook
     try {
       const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
-        "finalize",
+        "finalizeUrlContent",
         urlInfo,
         context,
       )

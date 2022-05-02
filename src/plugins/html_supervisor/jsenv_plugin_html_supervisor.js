@@ -39,7 +39,7 @@ export const jsenvPluginHtmlSupervisor = ({
       dev: true,
       test: true,
     },
-    transform: {
+    transformUrlContent: {
       html: ({ url, content }, { referenceUtils }) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []

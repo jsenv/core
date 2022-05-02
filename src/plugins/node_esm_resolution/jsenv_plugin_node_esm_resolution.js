@@ -20,7 +20,7 @@ export const jsenvPluginNodeEsmResolution = ({
   const nodeEsmResolution = {
     name: "jsenv:node_esm_resolve",
     appliesDuring: "*",
-    resolve: {
+    resolveUrl: {
       js_import_export: (reference) => {
         const { url } = applyNodeEsmResolution({
           conditions: packageConditions,
@@ -46,7 +46,7 @@ export const jsenvPluginNodeEsmResolution = ({
       dev: true,
       test: true,
     },
-    transformReferencedUrlSearchParams: (reference, context) => {
+    transformUrlSearchParams: (reference, context) => {
       if (!reference.url.startsWith("file:")) {
         return null
       }

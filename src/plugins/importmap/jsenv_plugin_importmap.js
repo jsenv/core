@@ -58,16 +58,16 @@ export const jsenvPluginImportmap = () => {
   return {
     name: "jsenv:importmap",
     appliesDuring: "*",
-    resolve: {
-      js_import_export: ({ parentUrl, specifier }) => {
+    resolveUrl: {
+      js_import_export: (reference) => {
         if (!finalImportmap) {
           return null
         }
         try {
           let fromMapping = false
           const result = resolveImport({
-            specifier,
-            importer: parentUrl,
+            specifier: reference.specifier,
+            importer: reference.parentUrl,
             importMap: finalImportmap,
             onImportMapping: () => {
               fromMapping = true
@@ -90,7 +90,7 @@ export const jsenvPluginImportmap = () => {
         }
       },
     },
-    transform: {
+    transformUrlContent: {
       html: async (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
         const importmap = findNode(htmlAst, (node) => {

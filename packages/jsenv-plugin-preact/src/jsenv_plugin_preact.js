@@ -36,19 +36,19 @@ export const jsenvPluginPreact = ({
   return {
     name: "jsenv:preact",
     appliesDuring: "*",
-    resolve: {
-      js_import_export: (reference, { resolveReference }) => {
+    resolveUrl: {
+      js_import_export: (reference, context) => {
         if (
           reference.specifier === "react" ||
           reference.specifier === "react-dom"
         ) {
           reference.specifier = "preact/compat"
-          return resolveReference(reference).url
+          return context.resolveReference(reference).url
         }
         return null
       },
     },
-    transform: {
+    transformUrlContent: {
       html: ({ content }, { scenario, referenceUtils }) => {
         if (!preactDevtoolsDuringBuild && scenario === "build") {
           return null

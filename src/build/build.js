@@ -292,7 +292,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       {
         name: "jsenv:postbuild",
         appliesDuring: { build: true },
-        resolve: (reference) => {
+        resolveUrl: (reference) => {
           if (reference.specifier[0] === "#") {
             reference.external = true
           }
@@ -312,7 +312,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
           return new URL(reference.specifier, reference.parentUrl).href
         },
-        normalize: (reference) => {
+        normalizeUrl: (reference) => {
           if (!reference.url.startsWith("file:")) {
             return null
           }
@@ -408,7 +408,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           })
           return buildUrl
         },
-        formatReferencedUrl: (reference) => {
+        formatUrl: (reference) => {
           if (!reference.url.startsWith("file:")) {
             return null
           }
@@ -487,10 +487,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       {
         name: "jsenv:optimize",
         appliesDuring: { build: true },
-        finalize: async (urlInfo, context) => {
+        finalizeUrlContent: async (urlInfo, context) => {
           if (optimizeHooks.length) {
             await rawGraphKitchen.pluginController.callAsyncHooks(
-              "optimize",
+              "optimizeUrlContent",
               urlInfo,
               context,
               async (optimizeReturnValue) => {
@@ -622,7 +622,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           {
             name: "jsenv:versioning",
             appliesDuring: { build: true },
-            resolve: (reference) => {
+            resolveUrl: (reference) => {
               if (reference.specifier[0] === "#") {
                 reference.external = true
               }
@@ -633,7 +633,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               const url = new URL(reference.specifier, reference.parentUrl).href
               return url
             },
-            formatReferencedUrl: (reference) => {
+            formatUrl: (reference) => {
               if (reference.isInline) {
                 return null
               }
@@ -704,7 +704,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               }
               return versionedUrlInfo
             },
-            transform: {
+            transformUrlContent: {
               html: (urlInfo) => {
                 const htmlAst = parseHtmlString(urlInfo.content, {
                   storeOriginalPositions: false,

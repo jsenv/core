@@ -21,7 +21,7 @@ export const jsenvPluginInjectGlobals = (globals = {}) => {
   return {
     name: "jsenv:inject_globals",
     appliesDuring: "*",
-    transform: {
+    transformUrlContent: {
       js_classic: injectGlobals,
       js_module: injectGlobals,
     },
