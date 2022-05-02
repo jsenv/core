@@ -1,4 +1,6 @@
+// dev
 export { startDevServer } from "./src/dev/start_dev_server.js"
+// test
 export { executeTestPlan } from "./src/test/execute_test_plan.js"
 export {
   chromium,
@@ -13,6 +15,7 @@ export {
   webkitIsolatedTab,
 } from "./src/execute/runtimes/browsers/webkit.js"
 export { nodeProcess } from "./src/execute/runtimes/node/node_process.js"
+// build
 export { preview } from "./src/preview/preview.js"
 export { build } from "./src/build/build.js"
 
