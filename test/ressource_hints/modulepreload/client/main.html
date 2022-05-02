@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="modulepreload" href="./main.js" />
+  </head>
+
+  <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      import("./main.js")
+    </script>
+  </body>
+</html>
