@@ -95,8 +95,8 @@ const jsenvPluginAsModules = () => {
   const asJsonModule = {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
-    load: (urlInfo, context) => {
-      return loadOriginalUrl({
+    fetchUrlContent: (urlInfo, context) => {
+      return fetchOriginalUrl({
         urlInfo,
         context,
         searchParam: "as_json_module",
@@ -115,8 +115,8 @@ const jsenvPluginAsModules = () => {
   const asCssModule = {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
-    load: (urlInfo, context) => {
-      return loadOriginalUrl({
+    fetchUrlContent: (urlInfo, context) => {
+      return fetchOriginalUrl({
         urlInfo,
         context,
         searchParam: "as_css_module",
@@ -143,8 +143,8 @@ export default stylesheet`
   const asTextModule = {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
-    load: (urlInfo, context) => {
-      return loadOriginalUrl({
+    fetchUrlContent: (urlInfo, context) => {
+      return fetchOriginalUrl({
         urlInfo,
         context,
         searchParam: "as_text_module",
@@ -169,7 +169,7 @@ export default inlineContent.text`
   return [asJsonModule, asCssModule, asTextModule]
 }
 
-const loadOriginalUrl = async ({
+const fetchOriginalUrl = async ({
   urlInfo,
   context,
   searchParam,
@@ -191,7 +191,7 @@ const loadOriginalUrl = async ({
   const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
     originalReference.url,
   )
-  await context.load({
+  await context.fetchUrlContent({
     reference: originalReference,
     urlInfo: originalUrlInfo,
   })

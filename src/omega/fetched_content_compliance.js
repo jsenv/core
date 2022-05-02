@@ -1,6 +1,6 @@
 import { validateResponseIntegrity } from "@jsenv/integrity"
 
-export const assertLoadedContentCompliance = ({ reference, urlInfo }) => {
+export const assertFetchedContentCompliance = ({ reference, urlInfo }) => {
   const { expectedContentType } = reference
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
     throw new Error(

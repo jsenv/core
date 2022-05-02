@@ -21,17 +21,17 @@ export const jsenvPluginNodeEsmResolution = ({
     name: "jsenv:node_esm_resolve",
     appliesDuring: "*",
     resolve: {
-      js_import_export: ({ parentUrl, specifier }) => {
+      js_import_export: (reference) => {
         const { url } = applyNodeEsmResolution({
           conditions: packageConditions,
-          parentUrl,
-          specifier,
+          parentUrl: reference.parentUrl,
+          specifier: reference.specifier,
         })
         return url
       },
     },
-    load: ({ url }) => {
-      if (url.startsWith("file:///@ignore/")) {
+    fetchUrlContent: (urlInfo) => {
+      if (urlInfo.url.startsWith("file:///@ignore/")) {
         return {
           content: "export default {}",
         }

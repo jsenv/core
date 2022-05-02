@@ -4,7 +4,7 @@ import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginFileUrls = () => {
-  return [jsenvPluginResolveAbsoluteFileUrls(), jsenvPluginLoadFileUrls()]
+  return [jsenvPluginResolveAbsoluteFileUrls(), jsenvPluginFetchFileUrls()]
 }
 
 const jsenvPluginResolveAbsoluteFileUrls = () => {
@@ -37,15 +37,15 @@ const jsenvPluginResolveAbsoluteFileUrls = () => {
   }
 }
 
-const jsenvPluginLoadFileUrls = () => {
+const jsenvPluginFetchFileUrls = () => {
   return {
-    name: "jsenv:load_file_urls",
+    name: "jsenv:fetch_file_urls",
     appliesDuring: "*",
-    load: ({ url }) => {
-      if (!url.startsWith("file:")) {
+    fetchUrlContent: (urlInfo) => {
+      if (!urlInfo.url.startsWith("file:")) {
         return null
       }
-      const urlObject = new URL(url)
+      const urlObject = new URL(urlInfo.url)
       const fileBuffer = readFileSync(urlObject)
       const contentType = CONTENT_TYPE.fromUrlExtension(url)
       if (CONTENT_TYPE.isTextual(contentType)) {

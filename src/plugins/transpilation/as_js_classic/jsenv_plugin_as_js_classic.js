@@ -58,7 +58,7 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       reference.filename = generateJsClassicFilename(reference.url)
       return urlTransformed
     },
-    load: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo, context) => {
       const urlObject = new URL(urlInfo.url)
       const { searchParams } = urlObject
       if (!searchParams.has("as_js_classic")) {
@@ -77,7 +77,7 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
         originalReference.url,
       )
-      await context.load({
+      await context.fetchUrlContent({
         reference: originalReference,
         urlInfo: originalUrlInfo,
       })

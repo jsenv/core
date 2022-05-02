@@ -18,11 +18,11 @@ import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
 import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
 import {
   createResolveError,
-  createLoadError,
+  createFetchUrlContentError,
   createTransformError,
   createFinalizeError,
 } from "./errors.js"
-import { assertLoadedContentCompliance } from "./loaded_content_compliance.js"
+import { assertFetchedContentCompliance } from "./fetched_content_compliance.js"
 
 export const createKitchen = ({
   signal,
@@ -240,21 +240,21 @@ export const createKitchen = ({
     },
   })
 
-  const load = async ({ reference, urlInfo, context }) => {
+  const fetchUrlContent = async ({ reference, urlInfo, context }) => {
     if (reference.external) {
       urlInfo.external = true
       return
     }
     try {
-      const loadReturnValue = await pluginController.callAsyncHooksUntil(
-        "load",
+      const returnValue = await pluginController.callAsyncHooksUntil(
+        "fetchUrlContent",
         urlInfo,
         context,
       )
-      if (!loadReturnValue) {
+      if (!returnValue) {
         logger.warn(
           createDetailedMessage(
-            `no plugin has handled the url during "load" hook -> consider url as external (ignore it)`,
+            `no plugin has handled the url during "fetchUrlContent" hook -> consider url as external (ignore it)`,
             {
               "url": urlInfo.url,
               "url reference trace": reference.trace,
@@ -264,7 +264,7 @@ export const createKitchen = ({
         urlInfo.external = true
         return
       }
-      if (loadReturnValue.external) {
+      if (returnValue.external) {
         urlInfo.external = true
         return
       }
@@ -277,7 +277,7 @@ export const createKitchen = ({
         content,
         sourcemap,
         filename,
-      } = loadReturnValue
+      } = returnValue
       urlInfo.type =
         type ||
         reference.expectedType ||
@@ -305,12 +305,12 @@ export const createKitchen = ({
       if (filename) {
         urlInfo.filename = filename
       }
-      assertLoadedContentCompliance({
+      assertFetchedContentCompliance({
         reference,
         urlInfo,
       })
     } catch (error) {
-      throw createLoadError({
+      throw createFetchUrlContentError({
         pluginController,
         urlInfo,
         reference,
@@ -348,16 +348,16 @@ export const createKitchen = ({
           ...params,
         })
       },
-      load: (params) => {
-        return load({
+      fetchUrlContent: (params) => {
+        return fetchUrlContent({
           context,
           ...params,
         })
       },
     }
 
-    // "load" hook
-    await load({ reference, urlInfo, context })
+    // "fetchUrlContent" hook
+    await fetchUrlContent({ reference, urlInfo, context })
     if (urlInfo.external) {
       return
     }

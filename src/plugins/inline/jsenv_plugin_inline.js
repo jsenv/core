@@ -4,12 +4,12 @@ import { jsenvPluginDataUrls } from "./jsenv_plugin_data_urls.js"
 import { jsenvPluginInlineQueryParam } from "./jsenv_plugin_inline_query_param.js"
 
 export const jsenvPluginInline = ({
-  loadInlineUrls = true,
+  fetchInlineUrls = true,
   analyzeConvertedScripts = false,
   allowEscapeForVersioning = false,
 } = {}) => {
   return [
-    ...(loadInlineUrls ? [jsenvPluginInlineUrls()] : []),
+    ...(fetchInlineUrls ? [jsenvPluginInlineUrls()] : []),
     jsenvPluginHtmlInlineContent({ analyzeConvertedScripts }),
     jsenvPluginJsInlineContent({ allowEscapeForVersioning }),
     jsenvPluginDataUrls(),
@@ -21,7 +21,7 @@ const jsenvPluginInlineUrls = () => {
   return {
     name: "jsenv:inline_urls",
     appliesDuring: "*",
-    load: (urlInfo) => {
+    fetchUrlContent: (urlInfo) => {
       if (!urlInfo.isInline) {
         return null
       }

@@ -31,19 +31,19 @@ export const createResolveError = ({ pluginController, reference, error }) => {
   })
 }
 
-export const createLoadError = ({
+export const createFetchUrlContentError = ({
   pluginController,
   reference,
   urlInfo,
   error,
 }) => {
-  const createFailedToLoadError = ({
-    code = error.code || "LOAD_ERROR",
+  const createFailedToFetchUrlContentError = ({
+    code = error.code || "FETCH_URL_CONTENT_ERROR",
     reason,
     ...details
   }) => {
-    const loadError = new Error(
-      createDetailedMessage(`Failed to load url`, {
+    const fetchContentError = new Error(
+      createDetailedMessage(`Failed to fetch url content`, {
         reason,
         ...details,
         "url": urlInfo.url,
@@ -51,32 +51,32 @@ export const createLoadError = ({
         ...detailsFromPluginController(pluginController),
       }),
     )
-    loadError.name = "LOAD_ERROR"
-    loadError.code = code
-    loadError.reason = reason
-    return loadError
+    fetchContentError.name = "FETCH_URL_CONTENT_ERROR"
+    fetchContentError.code = code
+    fetchContentError.reason = reason
+    return fetchContentError
   }
 
   if (error.code === "EPERM") {
-    return createFailedToLoadError({
+    return createFailedToFetchUrlContentError({
       code: "NOT_ALLOWED",
       reason: `not allowed to read entry on filesystem`,
     })
   }
   if (error.code === "EISDIR") {
-    return createFailedToLoadError({
+    return createFailedToFetchUrlContentError({
       code: "EISDIR",
       reason: `found a directory on filesystem`,
     })
   }
   if (error.code === "ENOENT") {
-    return createFailedToLoadError({
+    return createFailedToFetchUrlContentError({
       code: "NOT_FOUND",
       reason: "no entry on filesystem",
     })
   }
-  return createFailedToLoadError({
-    reason: `An error occured during "load"`,
+  return createFailedToFetchUrlContentError({
+    reason: `An error occured during "fetchUrlContent"`,
     ...detailsFromValueThrown(error),
   })
 }

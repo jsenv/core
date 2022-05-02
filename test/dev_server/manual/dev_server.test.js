@@ -29,7 +29,7 @@ await startDevServer({
           throw new Error("here")
         }
       },
-      load: ({ url }) => {
+      fetchUrlContent: ({ url }) => {
         if (url.includes("plugin_error_load/main.js")) {
           throw new Error("here")
         }

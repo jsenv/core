@@ -287,7 +287,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         systemJsInjection: true,
       }),
       jsenvPluginInline({
-        loadInlineUrls: false,
+        fetchInlineUrls: false,
       }),
       {
         name: "jsenv:postbuild",
@@ -428,11 +428,11 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           buildUrls[specifier] = reference.url
           return specifier
         },
-        load: async (finalUrlInfo, context) => {
+        fetchUrlContent: async (finalUrlInfo, context) => {
           if (!finalUrlInfo.url.startsWith("file:")) {
             return { external: true }
           }
-          const loadFromBundleOrRawGraph = (url) => {
+          const fromBundleOrRawGraph = (url) => {
             const rawUrl = rawUrls[url] || url
             const bundleUrlInfo = bundleUrlInfos[rawUrl]
             if (bundleUrlInfo) {
@@ -479,9 +479,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           // reference updated during "postbuild":
           // - happens for "as_js_classic"
           if (context.reference.original) {
-            return loadFromBundleOrRawGraph(context.reference.original.url)
+            return fromBundleOrRawGraph(context.reference.original.url)
           }
-          return loadFromBundleOrRawGraph(finalUrlInfo.url)
+          return fromBundleOrRawGraph(finalUrlInfo.url)
         },
       },
       {
@@ -615,7 +615,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         urlGraph: finalGraph,
         plugins: [
           jsenvPluginInline({
-            loadInlineUrls: false,
+            fetchInlineUrls: false,
             analyzeConvertedScripts: true, // to be able to version their urls
             allowEscapeForVersioning: true,
           }),
@@ -684,7 +684,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               }
               return versionedSpecifier
             },
-            load: (versionedUrlInfo) => {
+            fetchUrlContent: (versionedUrlInfo) => {
               if (!versionedUrlInfo.url.startsWith("file:")) {
                 return { external: true }
               }

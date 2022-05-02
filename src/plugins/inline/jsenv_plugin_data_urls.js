@@ -11,7 +11,7 @@ export const jsenvPluginDataUrls = () => {
       }
       return reference.specifier
     },
-    load: (urlInfo) => {
+    fetchUrlContent: (urlInfo) => {
       if (!urlInfo.url.startsWith("data:")) {
         return null
       }
@@ -26,7 +26,7 @@ export const jsenvPluginDataUrls = () => {
         content: contentFromUrlData({ contentType, base64Flag, urlData }),
       }
     },
-    formatReferencedUrl: (reference, { urlGraph, cook }) => {
+    formatReferencedUrl: (reference, context) => {
       if (!reference.url.startsWith("data:")) {
         return null
       }
@@ -34,8 +34,8 @@ export const jsenvPluginDataUrls = () => {
         return null
       }
       return (async () => {
-        const urlInfo = urlGraph.getUrlInfo(reference.url)
-        await cook({
+        const urlInfo = context.urlGraph.getUrlInfo(reference.url)
+        await context.cook({
           reference,
           urlInfo,
         })
