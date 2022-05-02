@@ -277,7 +277,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   const rawUrls = {}
   let buildUrls = {}
   const finalGraph = createUrlGraph()
-  const optimizeHooks = rawGraphKitchen.pluginController.addHook("optimize")
+  const optimizeUrlContentHooks =
+    rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
   const finalGraphKitchen = createKitchen({
     logger,
     rootDirectoryUrl,
@@ -488,7 +489,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         name: "jsenv:optimize",
         appliesDuring: { build: true },
         finalizeUrlContent: async (urlInfo, context) => {
-          if (optimizeHooks.length) {
+          if (optimizeUrlContentHooks.length) {
             await rawGraphKitchen.pluginController.callAsyncHooks(
               "optimizeUrlContent",
               urlInfo,
