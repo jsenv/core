@@ -21,7 +21,7 @@ await startDevServer({
     {
       name: "plugin_throwing",
       appliesDuring: "*",
-      resolve: ({ parentUrl, specifier }) => {
+      resolveUrl: ({ parentUrl, specifier }) => {
         if (
           parentUrl.includes("plugin_error_resolve/main.js") &&
           specifier === "./file.js"
