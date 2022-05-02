@@ -19,13 +19,13 @@ export const jsenvPluginInlineQueryParam = () => {
       // window.URL.createObjectURL(blob)
       // in any case the recommended way is to use an url
       // to benefit from shared worker and reuse worker between tabs
-      "*": (reference, { urlGraph, cook }) => {
-        if (!new URL(reference.url).searchParams.has("inline")) {
+      "*": (reference, context) => {
+        if (!reference.searchParams.has("inline")) {
           return null
         }
         return (async () => {
-          const urlInfo = urlGraph.getUrlInfo(reference.url)
-          await cook({
+          const urlInfo = context.urlGraph.getUrlInfo(reference.url)
+          await context.cook({
             reference,
             urlInfo,
           })

@@ -26,13 +26,16 @@ const jsenvPluginResolveAbsoluteFileUrls = () => {
       return `file:///${fsRootRelativeUrl}`
     },
     formatUrl: (reference, context) => {
-      if (!reference.url.startsWith("file:")) {
+      if (!reference.generatedUrl.startsWith("file:")) {
         return null
       }
-      if (urlIsInsideOf(reference.url, context.rootDirectoryUrl)) {
-        return `/${urlToRelativeUrl(reference.url, context.rootDirectoryUrl)}`
+      if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
+        return `/${urlToRelativeUrl(
+          reference.generatedUrl,
+          context.rootDirectoryUrl,
+        )}`
       }
-      return `/@fs/${reference.url.slice("file:///".length)}`
+      return `/@fs/${reference.generatedUrl.slice("file:///".length)}`
     },
   }
 }

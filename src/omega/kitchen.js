@@ -161,7 +161,6 @@ export const createKitchen = ({
         reference.url = reference.url.replace(/[=](?=&|$)/g, "")
       }
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-      Object.assign(reference.data, urlInfo.data)
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, baseContext)
 
       const referenceUrlObject = new URL(reference.url)

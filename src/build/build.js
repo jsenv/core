@@ -409,23 +409,23 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           return buildUrl
         },
         formatUrl: (reference) => {
-          if (!reference.url.startsWith("file:")) {
+          if (!reference.generatedUrl.startsWith("file:")) {
             return null
           }
-          if (!urlIsInsideOf(reference.url, buildDirectoryUrl)) {
+          if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
             throw new Error(
               `urls should be inside build directory at this stage, found "${reference.url}"`,
             )
           }
           // remove eventual search params and hash
-          const urlUntilPathname = asUrlUntilPathname(reference.url)
+          const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
           // if a file is in the same directory we could prefer the relative notation
           // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
           const specifier = `${baseUrl}${urlToRelativeUrl(
             urlUntilPathname,
             buildDirectoryUrl,
           )}`
-          buildUrls[specifier] = reference.url
+          buildUrls[specifier] = reference.generatedUrl
           return specifier
         },
         fetchUrlContent: async (finalUrlInfo, context) => {

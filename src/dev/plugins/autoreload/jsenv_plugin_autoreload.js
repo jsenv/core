@@ -54,12 +54,13 @@ const jsenvPluginHmr = () => {
       if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
         return null
       }
-      if (!reference.data.hmrTimestamp) {
+      const urlInfo = context.urlGraph.getUrlInfo(reference.url)
+      if (!urlInfo.data.hmrTimestamp) {
         return null
       }
       return {
         hmr: "",
-        v: reference.data.hmrTimestamp,
+        v: urlInfo.data.hmrTimestamp,
       }
     },
   }

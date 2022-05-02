@@ -27,7 +27,7 @@ export const jsenvPluginDataUrls = () => {
       }
     },
     formatUrl: (reference, context) => {
-      if (!reference.url.startsWith("data:")) {
+      if (!reference.generatedUrl.startsWith("data:")) {
         return null
       }
       if (reference.type === "sourcemap_comment") {
@@ -40,7 +40,7 @@ export const jsenvPluginDataUrls = () => {
           urlInfo,
         })
         if (urlInfo.originalContent === urlInfo.content) {
-          return reference.url
+          return reference.generatedUrl
         }
         const specifier = DataUrl.stringify({
           contentType: urlInfo.contentType,
