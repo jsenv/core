@@ -66,14 +66,14 @@ export const execute = async ({
       logger,
       rootDirectoryUrl,
       urlGraph,
+      scenario,
+      sourcemaps,
       plugins: [
         ...plugins,
         ...getCorePlugins({
           injectedGlobals,
         }),
       ],
-      scenario,
-      sourcemaps,
     })
     const serverLogger = createLogger({ logLevel: "warn" })
     const server = await startOmegaServer({

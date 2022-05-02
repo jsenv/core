@@ -25,10 +25,10 @@ export const startDevServer = async ({
   keepProcessAlive = true,
   rootDirectoryUrl,
 
-  plugins = [],
   sourcemaps = "inline",
+  plugins = [],
+  htmlSupervisor = true,
   injectedGlobals,
-  htmlSupervisor,
 
   autoreload = true,
   autoreloadPatterns = {
@@ -58,11 +58,13 @@ export const startDevServer = async ({
     logger,
     rootDirectoryUrl,
     urlGraph,
+    scenario: "dev",
+    sourcemaps,
     plugins: [
       ...plugins,
       ...getCorePlugins({
-        injectedGlobals,
         htmlSupervisor,
+        injectedGlobals,
       }),
       ...(autoreload
         ? [
@@ -78,8 +80,6 @@ export const startDevServer = async ({
       }),
       ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
     ],
-    scenario: "dev",
-    sourcemaps,
   })
   const server = await startOmegaServer({
     logger,

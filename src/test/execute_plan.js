@@ -62,10 +62,11 @@ export const executePlan = async (
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    injectedGlobals,
-    plugins,
     scenario,
     sourcemaps,
+    plugins,
+    transpilation,
+    injectedGlobals,
 
     protocol,
     privateKey,
@@ -133,10 +134,16 @@ export const executePlan = async (
         logger,
         rootDirectoryUrl,
         urlGraph,
+        scenario,
+        sourcemaps,
+        writeOnFileSystem: false,
         plugins: [
           ...plugins,
           ...getCorePlugins({
+            htmlSupervisor: true,
+            injectedGlobals,
             transpilation: {
+              ...transpilation,
               getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
                 if (
                   coverage &&
@@ -155,11 +162,8 @@ export const executePlan = async (
                 return {}
               },
             },
-            injectedGlobals,
           }),
         ],
-        scenario,
-        sourcemaps,
       })
       const serverLogger = createLogger({ logLevel: "warn" })
       const server = await startOmegaServer({

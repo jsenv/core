@@ -24,6 +24,9 @@ export const getCorePlugins = ({
   minification = false,
   bundling = false,
 } = {}) => {
+  if (htmlSupervisor === true) {
+    htmlSupervisor = {}
+  }
   return [
     jsenvPluginTranspilation(transpilation),
     ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>

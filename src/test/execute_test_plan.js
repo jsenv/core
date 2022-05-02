@@ -80,10 +80,9 @@ export const executeTestPlan = async ({
   // skip full means file with 100% coverage won't appear in coverage reports (log and html)
   coverageSkipFull = false,
 
-  injectedGlobals,
-  plugins = [],
-  scenario = "test",
   sourcemaps = "inline",
+  plugins = [],
+  injectedGlobals,
 
   protocol,
   privateKey,
@@ -164,10 +163,10 @@ export const executeTestPlan = async ({
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    injectedGlobals,
-    plugins,
-    scenario,
+    scenario: "test",
     sourcemaps,
+    plugins,
+    injectedGlobals,
 
     protocol,
     privateKey,

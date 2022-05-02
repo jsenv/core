@@ -102,6 +102,9 @@ build ${entryPointKeys.length} entry points`)
     logger,
     rootDirectoryUrl,
     urlGraph: rawGraph,
+    scenario: "build",
+    sourcemaps,
+    runtimeCompat,
     plugins: [
       ...plugins,
       {
@@ -124,9 +127,6 @@ build ${entryPointKeys.length} entry points`)
         bundling,
       }),
     ],
-    scenario: "build",
-    sourcemaps,
-    runtimeCompat,
   })
   const entryUrls = []
   try {
@@ -283,6 +283,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     logger,
     rootDirectoryUrl,
     urlGraph: finalGraph,
+    scenario: "build",
+    sourcemaps,
+    runtimeCompat,
     plugins: [
       jsenvPluginAsJsClassic({
         systemJsInjection: true,
@@ -505,9 +508,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         },
       },
     ],
-    scenario: "build",
-    sourcemaps,
-    runtimeCompat,
   })
   const buildTask = createTaskLog(logger, "build")
   const postBuildEntryUrls = []
@@ -614,6 +614,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         logger,
         rootDirectoryUrl: buildDirectoryUrl,
         urlGraph: finalGraph,
+        scenario: "build",
+        sourcemaps,
+        runtimeCompat,
         plugins: [
           jsenvPluginInline({
             fetchInlineUrls: false,
@@ -719,9 +722,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
             },
           },
         ],
-        scenario: "build",
-        sourcemaps,
-        runtimeCompat,
       })
       await loadUrlGraph({
         urlGraph: finalGraph,
