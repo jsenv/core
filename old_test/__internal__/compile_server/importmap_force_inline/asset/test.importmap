@@ -1,5 +1,0 @@
-{
-  "imports": {
-    "./file.js": "./file-mapped.js"
-  }
-}

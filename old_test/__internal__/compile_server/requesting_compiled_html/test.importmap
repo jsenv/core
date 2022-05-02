@@ -1,5 +1,0 @@
-{
-  "imports": {
-    "./file": "./file.js"
-  }
-}
