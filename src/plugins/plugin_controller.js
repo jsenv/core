@@ -6,7 +6,7 @@ export const createPluginController = ({
     "normalize",
     "load",
     "transform",
-    "transformReferencedUrl",
+    "transformReferencedUrlSearchParams",
     "formatReferencedUrl",
     "finalize",
     "cooked",

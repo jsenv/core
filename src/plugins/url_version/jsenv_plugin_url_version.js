@@ -4,27 +4,27 @@ export const jsenvPluginUrlVersion = ({
   return {
     name: "jsenv:url_version",
     appliesDuring: "*", // maybe only during dev?
-    normalize: ({ url }) => {
+    normalize: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
       // it is also used by hmr to bypass browser cache
       // this goal is achieved when we reach this part of the code
       // We get rid of this params so that urlGraph and other parts of the code
       // recognize the url (it is not considered as a different url)
-      const urlObject = new URL(url)
+      const urlObject = new URL(reference.url)
       urlObject.searchParams.delete("v")
       return urlObject.href
     },
-    transformReferencedUrl: ({ url, data }) => {
-      if (!data.version) {
+    transformReferencedUrlSearchParams: (reference) => {
+      if (!reference.data.version) {
         return null
       }
-      const urlObject = new URL(url)
-      if (urlObject.searchParams.has("v")) {
+      if (reference.searchParams.has("v")) {
         return null
       }
-      urlObject.searchParams.set("v", data.version)
-      return urlObject.href
+      return {
+        v: reference.data.version,
+      }
     },
     augmentResponse: ({ url }) => {
       if (!longTermCache) {

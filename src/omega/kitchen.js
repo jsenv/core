@@ -161,25 +161,39 @@ export const createKitchen = ({
         reference.url = reference.url.replace(/[=](?=&|$)/g, "")
       }
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
+      Object.assign(reference.data, urlInfo.data)
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, baseContext)
 
-      Object.assign(reference.data, urlInfo.data)
+      const referenceUrlObject = new URL(reference.url)
+      reference.searchParams = referenceUrlObject.searchParams
+      reference.generatedUrl = reference.url
+      // This hook must touch reference.generatedUrl, NOT reference.url
+      // And this is because this hook inject query params used to:
+      // - bypass browser cache (?v)
+      // - convey information (?hmr)
+      // But do not represent an other ressource, it is considered as
+      // the same ressource under the hood
       pluginController.callHooks(
-        "transformReferencedUrl",
+        "transformReferencedUrlSearchParams",
         reference,
         baseContext,
         (returnValue) => {
-          reference.url = returnValue
+          Object.keys(returnValue).forEach((key) => {
+            referenceUrlObject.searchParams.set(key, returnValue[key])
+          })
+          reference.generatedUrl = referenceUrlObject.href.replace(
+            /[=](?=&|$)/g,
+            "",
+          )
         },
       )
-      reference.generatedUrl = reference.url
       const returnValue = pluginController.callHooksUntil(
         "formatReferencedUrl",
         reference,
         baseContext,
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
-      reference.generatedSpecifier = specifierFormat.encode(reference)
+      reference.generatedSpecifier = urlSpecifierFormat.encode(reference)
       return urlInfo
     } catch (error) {
       throw createResolveError({
@@ -765,13 +779,13 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
   })
 }
 
-const specifierFormat = {
+const urlSpecifierFormat = {
   encode: (reference) => {
     const { generatedSpecifier } = reference
     if (generatedSpecifier.then) {
       return generatedSpecifier.then((value) => {
         reference.generatedSpecifier = value
-        return specifierFormat.encode(reference)
+        return urlSpecifierFormat.encode(reference)
       })
     }
     // allow plugin to return a function to bypas default formatting

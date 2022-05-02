@@ -1,7 +1,6 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { createCallbackList } from "@jsenv/abort"
 
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import {
   parseHtmlString,
@@ -21,6 +20,7 @@ export const jsenvPluginAutoreload = ({
   autoreloadPatterns,
 }) => {
   return [
+    jsenvPluginHmr(),
     jsenvPluginHot(),
     jsenvPluginHotSSE({
       rootDirectoryUrl,
@@ -28,6 +28,41 @@ export const jsenvPluginAutoreload = ({
       autoreloadPatterns,
     }),
   ]
+}
+
+const jsenvPluginHmr = () => {
+  return {
+    name: "jsenv:hmr",
+    appliesDuring: { dev: true },
+    normalize: (reference) => {
+      const urlObject = new URL(reference.url)
+      if (!urlObject.searchParams.has("hmr")) {
+        reference.data.hmr = false
+        return null
+      }
+      reference.data.hmr = true
+      // "hmr" search param goal is to mark url as enabling hmr:
+      // this goal is achieved when we reach this part of the code
+      // We get rid of this params so that urlGraph and other parts of the code
+      // recognize the url (it is not considered as a different url)
+      urlObject.searchParams.delete("hmr")
+      urlObject.searchParams.delete("v")
+      return urlObject.href
+    },
+    transformReferencedUrlSearchParams: (reference, context) => {
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
+        return null
+      }
+      if (!reference.data.hmrTimestamp) {
+        return null
+      }
+      return {
+        hmr: "",
+        v: reference.data.hmrTimestamp,
+      }
+    },
+  }
 }
 
 const jsenvPluginHot = () => {
@@ -43,50 +78,22 @@ const jsenvPluginHot = () => {
   return {
     name: "jsenv:hot",
     appliesDuring: { dev: true },
-    normalize: ({ url, data }) => {
-      const urlObject = new URL(url)
-      if (!urlObject.searchParams.has("hmr")) {
-        data.hmr = false
-        return null
-      }
-      data.hmr = true
-      // "hmr" search param goal is to mark url as enabling hmr:
-      // this goal is achieved when we reach this part of the code
-      // We get rid of this params so that urlGraph and other parts of the code
-      // recognize the url (it is not considered as a different url)
-      urlObject.searchParams.delete("hmr")
-      urlObject.searchParams.delete("v")
-      return urlObject.href
-    },
-    transformReferencedUrl: ({ parentUrl, url, data }, { urlGraph }) => {
-      const parentUrlInfo = urlGraph.getUrlInfo(parentUrl)
-      if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
-        return null
-      }
-      if (!data.hmrTimestamp) {
-        return null
-      }
-      return injectQueryParams(url, {
-        hmr: "",
-        v: data.hmrTimestamp,
-      })
-    },
     transform: {
-      html: ({ data, content }, { referenceUtils }) => {
-        const htmlAst = parseHtmlString(content)
+      html: (htmlUrlInfo, context) => {
+        const htmlAst = parseHtmlString(htmlUrlInfo.content)
         const { hotReferences } = collectHotDataFromHtmlAst(htmlAst)
-        data.hotDecline = false
-        data.hotAcceptSelf = false
-        data.hotAcceptDependencies = hotReferences.map(
+        htmlUrlInfo.data.hotDecline = false
+        htmlUrlInfo.data.hotAcceptSelf = false
+        htmlUrlInfo.data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
-            const [reference] = referenceUtils.inject({
+            const [reference] = context.referenceUtils.found({
               type,
               specifier,
             })
             return reference.url
           },
         )
-        const [eventSourceClientReference] = referenceUtils.inject({
+        const [eventSourceClientReference] = context.referenceUtils.inject({
           type: "script_src",
           expectedType: "js_module",
           specifier: eventSourceClientFileUrl,
@@ -105,12 +112,12 @@ const jsenvPluginHot = () => {
           content: htmlModified,
         }
       },
-      css: ({ data }) => {
-        data.hotDecline = false
-        data.hotAcceptSelf = false
-        data.hotAcceptDependencies = []
+      css: (cssUrlInfo) => {
+        cssUrlInfo.data.hotDecline = false
+        cssUrlInfo.data.hotAcceptSelf = false
+        cssUrlInfo.data.hotAcceptDependencies = []
       },
-      js_module: async (urlInfo, { referenceUtils }) => {
+      js_module: async (urlInfo, context) => {
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
           urlInfo,
@@ -131,12 +138,13 @@ const jsenvPluginHot = () => {
         // better sourcemap than doing the equivalent with babel
         // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
         // which is likely not well supported by babel
-        const [importMetaHotClientFileReference] = referenceUtils.inject({
-          parentUrl: urlInfo.url,
-          type: "js_import_export",
-          expectedType: "js_module",
-          specifier: importMetaHotClientFileUrl,
-        })
+        const [importMetaHotClientFileReference] =
+          context.referenceUtils.inject({
+            parentUrl: urlInfo.url,
+            type: "js_import_export",
+            expectedType: "js_module",
+            specifier: importMetaHotClientFileUrl,
+          })
         const magicSource = createMagicSource(urlInfo.content)
         magicSource.prepend(
           `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier}

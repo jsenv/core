@@ -46,30 +46,30 @@ export const jsenvPluginNodeEsmResolution = ({
       dev: true,
       test: true,
     },
-    transformReferencedUrl: ({ url }, { rootDirectoryUrl }) => {
-      if (!url.startsWith("file:")) {
+    transformReferencedUrlSearchParams: (reference, context) => {
+      if (!reference.url.startsWith("file:")) {
         return null
       }
       // without this check a file inside a project without package.json
       // could be considered as a node module if there is a ancestor package.json
       // but we want to version only node modules
-      if (!url.includes("/node_modules/")) {
+      if (!reference.url.includes("/node_modules/")) {
         return null
       }
-      const urlObject = new URL(url)
-      if (urlObject.searchParams.has("v")) {
+      if (reference.searchParams.has("v")) {
         return null
       }
-      const packageUrl = lookupPackageScope(url)
+      const packageUrl = lookupPackageScope(reference.url)
       if (!packageUrl) {
         return null
       }
-      if (packageUrl === rootDirectoryUrl) {
+      if (packageUrl === context.rootDirectoryUrl) {
         return null
       }
       const packageVersion = readPackageJson(packageUrl).version
-      urlObject.searchParams.set("v", packageVersion)
-      return urlObject.href
+      return {
+        v: packageVersion,
+      }
     },
   }
 
