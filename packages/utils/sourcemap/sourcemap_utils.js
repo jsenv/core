@@ -75,7 +75,8 @@ const setJavaScriptSourceMappingUrl = (
 
   return sourceMappingFileUrl
     ? `${javaScriptSource}
-${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}`
+${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}
+`
     : javaScriptSource
 }
 
@@ -119,7 +120,8 @@ const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
   }
   return sourceMappingFileUrl
     ? `${cssSource}
-${writeCssSourceMappingUrl(sourceMappingFileUrl)}`
+${writeCssSourceMappingUrl(sourceMappingFileUrl)}
+`
     : cssSource
 }
 

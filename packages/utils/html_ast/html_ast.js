@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto"
-
 import { require } from "@jsenv/utils/require.js"
 
 // https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
@@ -500,36 +498,49 @@ export const injectScriptAsEarlyAsPossible = (htmlAst, scriptNode) => {
 
 const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
   const { childNodes = [] } = futureParentNode
-  if (futureNextSibling) {
-    const nextSiblingIndex = childNodes.indexOf(futureNextSibling)
-    futureParentNode.childNodes = [
-      ...childNodes.slice(0, nextSiblingIndex),
-      { ...nodeToInsert, parentNode: futureParentNode },
-      ...childNodes.slice(nextSiblingIndex),
-    ]
-  } else {
-    futureParentNode.childNodes = [
-      ...childNodes,
-      { ...nodeToInsert, parentNode: futureParentNode },
-    ]
-  }
+  const futureIndex = futureNextSibling
+    ? childNodes.indexOf(futureNextSibling)
+    : 0
+  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
 }
 
 const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
   const { childNodes = [] } = futureParentNode
-  if (futurePrevSibling) {
-    const nextSiblingIndex = childNodes.indexOf(futurePrevSibling)
-    futureParentNode.childNodes = [
-      ...childNodes.slice(0, nextSiblingIndex + 1),
-      { ...nodeToInsert, parentNode: futureParentNode },
-      ...childNodes.slice(nextSiblingIndex + 1),
-    ]
-  } else {
-    futureParentNode.childNodes = [
-      ...childNodes,
-      { ...nodeToInsert, parentNode: futureParentNode },
-    ]
+  const futureIndex = futurePrevSibling
+    ? childNodes.indexOf(futurePrevSibling) + 1
+    : childNodes.length
+  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
+}
+
+const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
+  const { childNodes = [] } = futureParentNode
+  const previousSiblings = childNodes.slice(0, futureIndex)
+  const nextSiblings = childNodes.slice(futureIndex)
+  const futureChildNodes = []
+  const previousSibling = previousSiblings[0]
+  if (previousSibling) {
+    futureChildNodes.push(...previousSiblings)
   }
+  if (!previousSibling || previousSibling.nodeName !== "#text") {
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: "\n    ",
+      parentNode: futureParentNode,
+    })
+  }
+  futureChildNodes.push(nodeToInsert)
+  const nextSibling = nextSiblings[0]
+  if (!nextSibling || nextSibling.nodeName !== "#text") {
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: "\n    ",
+      parentNode: futureParentNode,
+    })
+  }
+  if (nextSibling) {
+    futureChildNodes.push(...nextSiblings)
+  }
+  futureParentNode.childNodes = futureChildNodes
 }
 
 const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
@@ -545,12 +556,6 @@ const valueToHtmlAttributeValue = (value) => {
     return JSON.stringify(value)
   }
   return `"${JSON.stringify(value)}"`
-}
-
-export const createInlineScriptHash = (script) => {
-  const hash = createHash("sha256")
-  hash.update(getHtmlNodeTextNode(script).value)
-  return hash.digest("hex").slice(0, 8)
 }
 
 export const visitHtmlAst = (htmlAst, callback) => {
