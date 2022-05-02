@@ -285,13 +285,22 @@ export const getHtmlNodeTextNode = (htmlNode) => {
 
 export const setHtmlNodeGeneratedText = (
   node,
-  { generatedText, generatedBy, generatedFromSrc, generatedFromHref } = {},
+  {
+    generatedText,
+    generatedBy,
+    generatedFromSrc,
+    generatedFromHref,
+    generatedFromInlineContent,
+  } = {},
 ) => {
   setHtmlNodeText(node, generatedText)
   assignHtmlNodeAttributes(node, {
     "generated-by": generatedBy,
     ...(generatedFromSrc ? { "generated-from-src": generatedFromSrc } : {}),
     ...(generatedFromHref ? { "generated-from-href": generatedFromHref } : {}),
+    ...(generatedFromInlineContent
+      ? { "generated-from-inline-content": "" }
+      : {}),
   })
 }
 

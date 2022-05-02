@@ -66,11 +66,11 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     attribute,
     specifier,
   }) => {
-    const srcGeneratedFromInlineContent = Boolean(
-      getHtmlNodeAttributeByName(node, "src-generated-from-inline-content"),
+    const generatedFromInlineContent = Boolean(
+      getHtmlNodeAttributeByName(node, "generated-from-inline-content"),
     )
     let position
-    if (srcGeneratedFromInlineContent) {
+    if (generatedFromInlineContent) {
       // when generated from inline content,
       // line, column is not "src" nor "generated-from-src" but "original-position"
       position = htmlNodePosition.readNodePosition(node)

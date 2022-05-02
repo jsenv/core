@@ -19,6 +19,9 @@ await startDevServer({
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,
   port: 3456,
+  htmlSupervisor: {
+    logs: true,
+  },
   explorerGroups: {
     main: {
       "./dev_exploring/main/**/*.html": true,

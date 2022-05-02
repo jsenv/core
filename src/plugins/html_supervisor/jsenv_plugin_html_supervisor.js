@@ -10,14 +10,13 @@ import {
   visitHtmlAst,
   getHtmlNodeAttributeByName,
   removeHtmlNodeAttributeByName,
-  setHtmlNodeGeneratedText,
-  assignHtmlNodeAttributes,
   parseScriptNode,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   htmlNodePosition,
-  removeHtmlNodeText,
   getHtmlNodeTextNode,
+  removeHtmlNodeText,
+  setHtmlNodeGeneratedText,
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
@@ -61,7 +60,9 @@ export const jsenvPluginHtmlSupervisor = ({
           })
           const [inlineScriptReference] = referenceUtils.foundInline({
             type: "script_src",
-            expectedType: "js_classic",
+            expectedType: { classic: "js_classic", module: "js_module" }[
+              scriptCategory
+            ],
             line: line - 1,
             column,
             isOriginalPosition: isOriginal,
@@ -69,13 +70,10 @@ export const jsenvPluginHtmlSupervisor = ({
             contentType: "text/javascript",
             content: textNode.value,
           })
-          assignHtmlNodeAttributes(node, {
-            "src": inlineScriptReference.generatedSpecifier,
-            "src-generated-from-inline-content": "",
-          })
           removeHtmlNodeText(node)
           scriptsToSupervise.push({
             node,
+            isInline: true,
             type: scriptCategory,
             src: inlineScriptReference.generatedSpecifier,
           })
@@ -96,6 +94,7 @@ export const jsenvPluginHtmlSupervisor = ({
           const crossorigin = crossoriginAttribute
             ? crossoriginAttribute.value
             : undefined
+          removeHtmlNodeAttributeByName(node, "src")
           scriptsToSupervise.push({
             node,
             type: scriptCategory,
@@ -151,17 +150,17 @@ export const jsenvPluginHtmlSupervisor = ({
             "tagName": "script",
             "type": "module",
             "textContent": `
-import { installHtmlSupervisor } from ${
-              htmlSupervisorInstallerFileReference.generatedSpecifier
-            }
-installHtmlSupervisor(${JSON.stringify(
-              {
-                logs,
-                measurePerf,
-              },
-              null,
-              "  ",
-            )})`,
+      import { installHtmlSupervisor } from ${
+        htmlSupervisorInstallerFileReference.generatedSpecifier
+      }
+      installHtmlSupervisor(${JSON.stringify(
+        {
+          logs,
+          measurePerf,
+        },
+        null,
+        "        ",
+      )})`,
             "injected-by": "jsenv:html_supervisor",
           }),
         )
@@ -179,8 +178,7 @@ installHtmlSupervisor(${JSON.stringify(
           }),
         )
         scriptsToSupervise.forEach(
-          ({ node, type, src, integrity, crossorigin }) => {
-            removeHtmlNodeAttributeByName(node, "src")
+          ({ node, isInline, type, src, integrity, crossorigin }) => {
             setHtmlNodeGeneratedText(node, {
               generatedText: generateCodeToSuperviseScript({
                 type,
@@ -192,6 +190,7 @@ installHtmlSupervisor(${JSON.stringify(
               }),
               generatedBy: "jsenv:html_supervisor",
               generatedFromSrc: src,
+              generatedFromInlineContent: isInline,
             })
           },
         )
@@ -215,8 +214,12 @@ const generateCodeToSuperviseScript = ({
 }) => {
   const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
   if (type === "module") {
-    return `import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}
-superviseScriptTypeModule(${paramsAsJson})`
+    return `
+      import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}
+      superviseScriptTypeModule(${paramsAsJson})
+`
   }
-  return `window.__html_supervisor__.superviseScript(${paramsAsJson})`
+  return `
+      window.__html_supervisor__.superviseScript(${paramsAsJson})
+`
 }

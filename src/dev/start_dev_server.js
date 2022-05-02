@@ -28,6 +28,7 @@ export const startDevServer = async ({
   plugins = [],
   sourcemaps = "inline",
   injectedGlobals,
+  htmlSupervisor,
 
   autoreload = true,
   autoreloadPatterns = {
@@ -61,6 +62,7 @@ export const startDevServer = async ({
       ...plugins,
       ...getCorePlugins({
         injectedGlobals,
+        htmlSupervisor,
       }),
       ...(autoreload
         ? [
