@@ -4,6 +4,7 @@ import {
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   assignHtmlNodeAttributes,
+  removeHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { GRAPH } from "./graph_utils.js"
@@ -30,12 +31,20 @@ export const resyncRessourceHints = async ({
         if (!href || href.startsWith("data:")) {
           return
         }
-        const buildUrl = buildUrls[hrefAttribute.value]
+        const buildUrl = buildUrls[href]
+        const urlInfo = finalGraph.getUrlInfo(buildUrl)
+        if (!urlInfo) {
+          return
+        }
+        if (urlInfo.dependents.size === 0) {
+          removeHtmlNode(linkNode)
+          return
+        }
         const buildUrlRedirected = buildUrlRedirections[buildUrl]
         if (buildUrlRedirected) {
           const urlInfoRedirected = finalGraph.getUrlInfo(buildUrlRedirected)
           hrefAttribute.value = urlInfoRedirected.data.buildUrlSpecifier
-          const urlInfo = finalGraph.getUrlInfo(buildUrl)
+
           if (
             urlInfo.type === "js_module" &&
             urlInfoRedirected.type === "js_classic"
