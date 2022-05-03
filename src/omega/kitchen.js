@@ -445,8 +445,7 @@ export const createKitchen = ({
           currentUrlInfo !== newUrlInfo &&
           currentUrlInfo.dependents.size === 0
         ) {
-          currentUrlInfo.data.updatedTo = newUrlInfo
-          // delete context.urlGraph.urlInfos[currentReference.url]
+          delete context.urlGraph.urlInfos[currentReference.url]
         }
         return [nextReference, newUrlInfo]
       },
