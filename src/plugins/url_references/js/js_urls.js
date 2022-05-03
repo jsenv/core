@@ -134,15 +134,19 @@ const babelPluginMetadataJsUrlMentions = (
 
         if (isJsModule) {
           Object.assign(visitors, {
+            ExportNamedDeclaration: (path) => {
+              if (!usesImport && path.node.source) {
+                usesImport = true
+              }
+              usesExport = true
+              callStaticAnalyzers(path, [analyzeImportExportDeclaration])
+            },
             ExportAllDeclaration: (path) => {
               usesImport = true
               usesExport = true
               callStaticAnalyzers(path, [analyzeImportExportDeclaration])
             },
-            ExportNamedDeclaration: (path) => {
-              if (!usesImport && path.node.source) {
-                usesImport = true
-              }
+            ExportDefaultDeclaration: (path) => {
               usesExport = true
               callStaticAnalyzers(path, [analyzeImportExportDeclaration])
             },
