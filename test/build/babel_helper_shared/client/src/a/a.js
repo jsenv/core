@@ -6,3 +6,5 @@ const [answer] = getResponse()
 console.log({
   ...{ answer },
 })
+
+export const a = "a"

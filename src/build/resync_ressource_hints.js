@@ -3,6 +3,7 @@ import {
   visitHtmlAst,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
+  assignHtmlNodeAttributes,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { GRAPH } from "./graph_utils.js"
@@ -12,46 +13,46 @@ import { GRAPH } from "./graph_utils.js"
 export const resyncRessourceHints = async ({
   finalGraphKitchen,
   finalGraph,
-  rawUrls,
   buildUrls,
+  buildUrlRedirections,
 }) => {
   const ressourceHintActions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
     if (urlInfo.type !== "html") {
       return
     }
-    const replacements = {}
-    urlInfo.references.forEach((reference) => {
-      if (!reference.isRessourceHint) {
-        return
-      }
-      const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
-      const updatedTo = referencedUrlInfo.data.updatedTo
-
-      if (referencedUrlInfo.dependents.size === 0) {
-        // when url is referenced solely by a <link />, if it was updated
-        // then update the [href]
-        if (updatedTo) {
-          const buildUrl = Object.keys(rawUrls).find((buildUrl) => {
-            return rawUrls[buildUrl] === updatedTo.url
-          })
-          if (!buildUrl) {
-            return
-          }
-          const buildRelativeUrl = Object.keys(buildUrls).find(
-            (key) => buildUrls[key] === buildUrl,
-          )
-          replacements[reference.generatedSpecifier] = buildRelativeUrl
-        }
-      }
-    })
-    if (Object.keys(replacements).length === 0) {
-      return
-    }
     ressourceHintActions.push(async () => {
       const htmlAst = parseHtmlString(urlInfo.content, {
         storeOriginalPositions: false,
       })
+      const visitLinkWithHref = (linkNode, hrefAttribute) => {
+        const href = hrefAttribute.value
+        if (!href || href.startsWith("data:")) {
+          return
+        }
+        const buildUrl = buildUrls[hrefAttribute.value]
+        const realBuildUrl = buildUrlRedirections[buildUrl]
+        if (realBuildUrl) {
+          const buildRelativeUrl = Object.keys(buildUrls).find(
+            (key) => buildUrls[key] === realBuildUrl,
+          )
+          hrefAttribute.value = buildRelativeUrl
+          const urlInfo = finalGraph.getUrlInfo(buildUrl)
+          const realUrlInfo = finalGraph.getUrlInfo(realBuildUrl)
+          if (
+            urlInfo.type === "js_module" &&
+            realUrlInfo.type === "js_classic"
+          ) {
+            const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel")
+            if (relAttribute && relAttribute.value === "modulepreload") {
+              assignHtmlNodeAttributes(linkNode, {
+                rel: "preload",
+                as: "script",
+              })
+            }
+          }
+        }
+      }
       visitHtmlAst(htmlAst, (node) => {
         if (node.nodeName !== "link") {
           return
@@ -60,11 +61,7 @@ export const resyncRessourceHints = async ({
         if (!hrefAttribute) {
           return
         }
-        const replacement = replacements[hrefAttribute.value]
-        if (!replacement) {
-          return
-        }
-        hrefAttribute.value = replacement
+        visitLinkWithHref(node, hrefAttribute)
       })
       await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
         urlInfo,

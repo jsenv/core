@@ -82,7 +82,9 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
         urlInfo: originalUrlInfo,
       })
       const jsClassicFormat =
-        originalUrlInfo.data.usesImport || originalUrlInfo.data.usesExport
+        originalUrlInfo.data.fromBundle ||
+        originalUrlInfo.data.usesImport ||
+        originalUrlInfo.data.usesExport
           ? "system"
           : "umd"
       const { content, sourcemap } = await convertJsModuleToJsClassic({

@@ -1,4 +1,4 @@
-import { isFileSystemPath, urlToRelativeUrl } from "@jsenv/filesystem"
+import { isFileSystemPath } from "@jsenv/filesystem"
 
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
@@ -132,7 +132,7 @@ const rollupPluginJsenv = ({
           if (rollupFileInfo.facadeModuleId) {
             url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId)
           } else {
-            url = new URL(rollupFileInfo.fileName, rootDirectoryUrl).href
+            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href
           }
           jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo
         }
@@ -155,21 +155,6 @@ const rollupPluginJsenv = ({
           return `[name].js`
         },
         chunkFileNames: (chunkInfo) => {
-          // preserves relative path parts:
-          // the goal is to maintain the original relative path (relative to the root directory)
-          // so that later in the build process, when resolving these urls, we are able to
-          // re-resolve the specifier against the original parent url and find the original url
-          if (chunkInfo.facadeModuleId) {
-            const fileUrl = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId)
-            const relativePath = urlToRelativeUrl(fileUrl, rootDirectoryUrl)
-            if (relativePath.startsWith("../")) {
-              return `__rollup__/${chunkInfo.name}.js`
-            }
-            return relativePath
-          }
-          // chunk generated dynamically by rollup to share code.
-          // we prefix with "__rollup__/" to avoid potential conflict of filename
-          // between this one and a file with the same name existing in the root directory
           return `__rollup__/${chunkInfo.name}.js`
         },
         // https://rollupjs.org/guide/en/#outputpaths
