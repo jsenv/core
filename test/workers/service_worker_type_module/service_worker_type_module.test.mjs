@@ -32,11 +32,11 @@ if (process.platform !== "win32") {
       inspectResponse: {
         order: [],
         serviceWorkerUrls: {
-          "main.html": {
+          "/main.html": {
             versioned: false,
             version: "6eb0b37f",
           },
-          "css/style.css?v=0e312da1": {
+          "/css/style.css?v=0e312da1": {
             versioned: true,
           },
         },

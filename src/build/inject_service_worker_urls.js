@@ -24,7 +24,7 @@ export const injectServiceWorkerUrls = async ({
       return
     }
     if (urlInfo.data.buildUrlIsVersioned) {
-      serviceWorkerUrls[urlInfo.data.buildRelativeUrl] = {
+      serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
         versioned: true,
       }
       return
@@ -42,7 +42,7 @@ export const injectServiceWorkerUrls = async ({
       const version = versionGenerator.generate()
       urlInfo.data.version = version
     }
-    serviceWorkerUrls[urlInfo.data.buildRelativeUrl] = {
+    serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
       versioned: false,
       version: urlInfo.data.version,
     }
@@ -53,7 +53,7 @@ export const injectServiceWorkerUrls = async ({
       const urlsWithoutSelf = {
         ...serviceWorkerUrls,
       }
-      delete urlsWithoutSelf[serviceWorkerUrlInfo.data.buildRelativeUrl]
+      delete urlsWithoutSelf[serviceWorkerUrlInfo.data.buildUrlSpecifier]
       magicSource.prepend(generateClientCode(urlsWithoutSelf))
       const { content, sourcemap } = magicSource.toContentAndSourcemap()
       await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
