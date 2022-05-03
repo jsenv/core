@@ -609,9 +609,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           version: urlInfo.data.version,
           versioningMethod,
         })
-        // create a copy of this url info for the versioned url
-        // - used later by resync_ressource_hints.js to get info about the eventually versioned url
-        finalGraph.urlInfos[urlInfo.data.versionedUrl] = urlInfo
       })
       const versionMappings = {}
       const usedVersionMappings = []
@@ -673,15 +670,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
                 buildDirectoryUrl,
               )}`
               versionMappings[reference.specifier] = versionedSpecifier
-
               buildUrls[versionedSpecifier] = versionedUrl
-              // delete buildUrls[reference.specifier]
-              const originalBuildUrl = Object.keys(buildUrlRedirections).find(
-                (key) => buildUrlRedirections[key] === reference.url,
-              )
-              if (originalBuildUrl) {
-                buildUrlRedirections[originalBuildUrl] = versionedUrl
-              }
 
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (parentUrlInfo.jsQuote) {

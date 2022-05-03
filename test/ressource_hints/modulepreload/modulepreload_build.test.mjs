@@ -22,19 +22,10 @@ const test = async (params) => {
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.namespacePromise
+      return window.resultPromise
     },
     /* eslint-enable no-undef */
   })
-  return {
-    returnValue,
-    pageLogs,
-  }
-}
-
-// support for <script type="module">
-{
-  const { returnValue, pageLogs } = await test()
   const actual = {
     returnValue,
     pageLogs,
@@ -47,24 +38,14 @@ const test = async (params) => {
   }
   assert({ actual, expected })
 }
+
+// default (support for <script type="module">)
+await test()
 
 // no support for <script type="module">
-{
-  const { returnValue, pageLogs } = await test({
-    runtimeCompat: {
-      chrome: "60",
-    },
-    versioningMethod: "filename",
-  })
-  const actual = {
-    returnValue,
-    pageLogs,
-  }
-  const expected = {
-    returnValue: {
-      answer: 42,
-    },
-    pageLogs: [],
-  }
-  assert({ actual, expected })
-}
+await test({
+  runtimeCompat: {
+    chrome: "60",
+  },
+  versioningMethod: "filename",
+})

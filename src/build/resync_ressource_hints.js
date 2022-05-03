@@ -31,17 +31,14 @@ export const resyncRessourceHints = async ({
           return
         }
         const buildUrl = buildUrls[hrefAttribute.value]
-        const realBuildUrl = buildUrlRedirections[buildUrl]
-        if (realBuildUrl) {
-          const buildRelativeUrl = Object.keys(buildUrls).find(
-            (key) => buildUrls[key] === realBuildUrl,
-          )
-          hrefAttribute.value = buildRelativeUrl
+        const buildUrlRedirected = buildUrlRedirections[buildUrl]
+        if (buildUrlRedirected) {
+          const urlInfoRedirected = finalGraph.getUrlInfo(buildUrlRedirected)
+          hrefAttribute.value = urlInfoRedirected.data.buildUrlSpecifier
           const urlInfo = finalGraph.getUrlInfo(buildUrl)
-          const realUrlInfo = finalGraph.getUrlInfo(realBuildUrl)
           if (
             urlInfo.type === "js_module" &&
-            realUrlInfo.type === "js_classic"
+            urlInfoRedirected.type === "js_classic"
           ) {
             const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel")
             if (relAttribute && relAttribute.value === "modulepreload") {
