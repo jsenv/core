@@ -1,6 +1,6 @@
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-export const startFileServer = ({ rootDirectoryUrl }) => {
+export const startFileServer = ({ rootDirectoryUrl, ...rest }) => {
   return startServer({
     logLevel: "error",
     protocol: "http",
@@ -9,5 +9,6 @@ export const startFileServer = ({ rootDirectoryUrl }) => {
       fetchFileSystem(new URL(request.ressource.slice(1), rootDirectoryUrl), {
         headers: request.headers,
       }),
+    ...rest,
   })
 }

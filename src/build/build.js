@@ -210,7 +210,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               // bundle inline script type module deps
               dependencyUrlInfo.references.forEach((inlineScriptRef) => {
                 if (inlineScriptRef.type === "js_import_export") {
-                  addToBundlerIfAny(rawGraph.getUrlInfo(inlineScriptRef.url))
+                  const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url)
+                  addToBundlerIfAny(inlineUrlInfo)
                 }
               })
             }

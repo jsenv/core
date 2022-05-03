@@ -7,12 +7,18 @@
   </head>
   <body>
     <button>Load file</button>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
     <script type="module">
       import { loadFeature } from "./main.js"
 
       document.querySelector("button").onclick = () => {
         loadFeature()
       }
+      document.querySelector("button").click()
     </script>
   </body>
 </html>
