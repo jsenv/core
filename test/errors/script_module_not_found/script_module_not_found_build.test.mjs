@@ -1,7 +1,7 @@
+import { urlToFileSystemPath } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
 
 try {
   await build({

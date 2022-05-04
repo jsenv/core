@@ -20,15 +20,13 @@ try {
 --- reason ---
 no entry on filesystem
 --- url ---
-${new URL("./client/foo.js", import.meta.url).href}
+${new URL("./client/img.png", import.meta.url).href}
 --- url reference trace ---
-${urlToFileSystemPath(
-  new URL("./client/intermediate.js", import.meta.url).href,
-)}:2:7
-  1 | // eslint-disable-next-line import/no-unresolved
-> 2 | import "./foo.js"
-            ^
-  3 |${" "}
+${urlToFileSystemPath(new URL("./client/main.html", import.meta.url).href)}:9:10
+  8  |   <body>
+> 9  |     <img src="./img.png" />
+                ^
+  10 |   </body>
 --- plugin name ---
 "jsenv:fetch_file_urls"`
   assert({ actual, expected })
