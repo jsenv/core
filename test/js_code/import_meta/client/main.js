@@ -8,11 +8,6 @@ if (import.meta.hot) {
   import.meta.hot.accept(() => {})
   import.meta.hot.accept("file.js", () => {})
   import.meta.hot.accept(["a.js", "b.js"], () => {})
-  import.meta.hot.accept({
-    "a.js": () => {},
-    "b.js": () => {},
-  })
-  import.meta.hot.accept(10, () => {})
 }
 
 window.resolveResultPromise({
@@ -22,5 +17,4 @@ window.resolveResultPromise({
   importMetaDev: import.meta.dev,
   importMetaTest: import.meta.test,
   importMetaBuild: import.meta.build,
-  importMetaHot: import.meta.hot,
 })

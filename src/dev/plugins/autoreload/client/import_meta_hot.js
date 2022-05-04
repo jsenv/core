@@ -40,7 +40,9 @@ export const createImportMetaHot = (importMetaUrl) => {
         })
         return
       }
-      throw new Error(`invalid call to hot.accept()`)
+      throw new Error(
+        `invalid call to import.meta.hot.accept(), received ${firstArg}`,
+      )
     },
     dispose: (callback) => {
       addUrlMeta(url, {

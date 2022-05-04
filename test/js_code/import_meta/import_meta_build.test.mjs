@@ -46,7 +46,6 @@ const test = async (params) => {
       importMetaDev: undefined,
       importMetaTest: undefined,
       importMetaBuild: true,
-      importMetaHot: undefined,
     },
   }
   assert({ actual, expected })
@@ -74,7 +73,6 @@ const test = async (params) => {
       importMetaDev: undefined,
       importMetaTest: undefined,
       importMetaBuild: true,
-      importMetaHot: undefined,
     },
   }
   assert({ actual, expected })

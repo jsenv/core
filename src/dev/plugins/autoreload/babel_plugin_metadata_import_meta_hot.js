@@ -64,7 +64,7 @@ const collectImportMetaProperties = (programPath) => {
               )
             }
             return {
-              specifierPath: firstArgPath.get(index),
+              specifierPath: firstArgPath.get(String(index)),
             }
           })
           return
