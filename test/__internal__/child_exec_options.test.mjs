@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert"
 
-import { createChildProcessOptions } from "@jsenv/core/src/internal/node_launcher/child_process_options.js"
-import { execArgvFromProcessOptions } from "@jsenv/core/src/internal/node_launcher/process_options.js"
+import { createChildExecOptions } from "@jsenv/core/src/execute/runtimes/node/child_exec_options.js"
+import { ExecOptions } from "@jsenv/core/src/execute/runtimes/node/exec_options.js"
 
 const test = async (params) => {
-  const options = await createChildProcessOptions(params)
-  return execArgvFromProcessOptions(options)
+  const options = await createChildExecOptions(params)
+  return ExecOptions.toExecArgv(options)
 }
 
 // debug mode inherited from nothing
