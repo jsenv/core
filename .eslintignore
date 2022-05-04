@@ -14,13 +14,7 @@ node_modules/
 **/client/regenerator_runtime.js
 **/client/s.js
 
-/**/*syntax_error*.js
-/**/*syntax_error/main.js
-/**/*syntax_error/main.html
-/**/*syntax_error*.html
-!/**/*syntax_error*.test.js
-/**/*error_syntax*.js
-!/**/*error_syntax*.test.js
+/test/**/js_syntax_error.js
 
 /test-manual/**/
 /**/*.es5.js

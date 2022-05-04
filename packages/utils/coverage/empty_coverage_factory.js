@@ -35,7 +35,7 @@ export const relativeUrlToEmptyCoverage = async (
     })
     return coverage
   } catch (e) {
-    if (e && e.code === "BABEL_PARSE_ERROR") {
+    if (e && e.code === "PARSE_ERROR") {
       // return an empty coverage for that file when
       // it contains a syntax error
       return createEmptyCoverage(relativeUrl)
