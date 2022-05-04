@@ -4,7 +4,7 @@ import { getParentUrl, asDirectoryUrl } from "./url_utils.js"
 
 export const lookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url)
-  while (scopeUrl !== 'file:///') {
+  while (scopeUrl !== "file:///") {
     if (scopeUrl.endsWith("node_modules/")) {
       return null
     }

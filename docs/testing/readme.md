@@ -2,7 +2,7 @@
 
 This is an in-depth documentation about jsenv test runner. For a quick overview go to [test runner overview](../../readme.md#Test-runner-overview).
 
-This documentation contains: 
+This documentation contains:
 
 - [Key features](#key-features)
 - [Definition of a test for jsenv](#Definition-of-a-test-for-jsenv)
@@ -31,7 +31,7 @@ Jsenv provides an api to execute your test files inside one or many environments
 Each test file will be executed in his own browser or Node.js process. No more side effect between tests: A test file may create an infinite loop, write a global variable, the other tests won't be affected.
 
 jsenv provides the following test execution environments, called _runtime_.
-You can use one, some or all of them depending what you want to achieve. 
+You can use one, some or all of them depending what you want to achieve.
 
 ```js
 import {
@@ -44,7 +44,7 @@ import {
 
 You can also use the "tab runtime" versions for browser runtimes.
 They are executing tests in a browser tab instead of a whole browser instance;
-which is enough for most tests. 
+which is enough for most tests.
 
 ```js
 import {
