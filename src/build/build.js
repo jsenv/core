@@ -68,7 +68,7 @@ export const build = async ({
 
   versioning = true,
   versioningMethod = "search_param", // "filename", "search_param"
-  lineBreakNormalization = process.platform === "win32",
+  lineBreakNormalization = true, // process.platform === "win32",
 
   writeOnFileSystem = true,
   buildDirectoryClean = true,

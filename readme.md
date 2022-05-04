@@ -175,7 +175,6 @@ Only the content of html files is shown below because the content of non-html fi
     <meta charset="utf-8" />
     <link rel="modulepreload" href="./main.js" />
     <link rel="icon" href="./favicon.ico" />
-    <script type="importmap" src="./project.importmap"></script>
     <link rel="stylesheet" type="text/css" href="./main.css" />
   </head>
 
@@ -233,20 +232,13 @@ build duration: 0.14 seconds
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
-    <link rel="modulepreload" href="main_c588dd03.js" />
-    <link rel="icon" href="assets/favicon_25e95a00.ico" />
-    <script type="importmap">
-      {
-        "imports": {
-          "./main.js": "./main_c588dd03.js"
-        }
-      }
-    </script>
-    <link rel="stylesheet" type="text/css" href="assets/main_cd3a5025.css" />
+    <link rel="modulepreload" href="/js/main.js?v=c588dd03" />
+    <link rel="icon" href="/other/favicon.ico?v=25e95a00" />
+    <link rel="stylesheet" type="text/css" href="/css/main.css?vcd3a5025" />
   </head>
 
   <body>
-    <script type="module" src="./main_c588dd03.js"></script>
+    <script type="module" src="/js/main?v=c588dd03.js"></script>
   </body>
 </html>
 ```
