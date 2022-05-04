@@ -11,6 +11,9 @@
     "access": "public"
   },
   "type": "module",
+  "scripts": {
+    "test": "node ./test.mjs"
+  },
   "dependencies": {
     "@babel/parser": "7.17.8",
     "@jsenv/abort": "4.1.2",

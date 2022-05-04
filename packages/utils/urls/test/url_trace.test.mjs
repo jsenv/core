@@ -19,11 +19,11 @@ Which is way more readable
 
 import { assert } from "@jsenv/assert"
 
-import { showSourceLocation } from "@jsenv/core/src/internal/building/url_trace.js"
+import { showSourceLocation } from "@jsenv/utils/urls/url_trace.js"
 
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true;
 const c = true;
 const d = true;
@@ -42,7 +42,7 @@ const e = false;
 
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true;
 const c = true;
 const d = true;
@@ -64,7 +64,7 @@ const e = false;`,
 // empty last line is shown
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true;
 const c = true;
 const d = true;
@@ -88,7 +88,7 @@ const e = false;
 // no column given
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true;
 const c = true;
 const d = true;
@@ -106,7 +106,7 @@ const e = false;
 // line number goes from 1 digit to 2 digits
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = false;
 const c = false;
 const d = false;
@@ -130,7 +130,7 @@ const l = true;`,
 // line is too long and column is undefined
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true;
 const thisVariableNameisQuiteLong = true;
 const d = true;
@@ -149,7 +149,7 @@ const e = false;
 // line is too long and column is near beginning
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true;
 const thisVariableNameisQuiteLong = true;
 const d = true;
@@ -170,7 +170,7 @@ const e = false;
 // line is too long and column is near middle
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 const b = true
 const thisVariableNameisQuiteLong = true;
 const d = tru
@@ -191,7 +191,7 @@ const e = false;
 // line is too long and column is near end
 {
   const actual = showSourceLocation({
-    source: `const a = false;
+    content: `const a = false;
 
 const thisVariableNameisQuiteLong = true;
 const d = tru
@@ -212,7 +212,7 @@ const e = false;
 // line and column being 0
 {
   const actual = showSourceLocation({
-    source: `const a = false;`,
+    content: `const a = false;`,
     line: 0,
     column: 0,
   })
