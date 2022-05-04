@@ -788,11 +788,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     buildUrls,
     buildUrlRedirections,
   })
-  await injectServiceWorkerUrls({
-    finalGraphKitchen,
-    finalGraph,
-    lineBreakNormalization,
-  })
   const cleanupActions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
     // nothing uses this url anymore
@@ -805,6 +800,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     }
   })
   cleanupActions.forEach((cleanupAction) => cleanupAction())
+  await injectServiceWorkerUrls({
+    finalGraphKitchen,
+    finalGraph,
+    lineBreakNormalization,
+  })
 
   logger.debug(
     `graph urls post-versioning:

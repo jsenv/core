@@ -1,5 +1,3 @@
-// TODO: add navigator.serviceWorker.register
-
 import { getTypePropertyNode } from "./js_ast.js"
 
 export const analyzeImportCall = (path) => {
@@ -74,6 +72,21 @@ export const analyzeNewWorkerOrNewSharedWorker = (path) => {
   if (!isNewWorkerOrNewSharedWorker(node)) {
     return null
   }
+  return analyzeWorkerCallArguments(
+    path,
+    node.callee.name === "Worker" ? "worker" : "shared_worker",
+  )
+}
+const isNewWorkerOrNewSharedWorker = (node) => {
+  return (
+    node.type === "NewExpression" &&
+    node.callee.type === "Identifier" &&
+    (node.callee.name === "Worker" || node.callee.name === "SharedWorker")
+  )
+}
+
+const analyzeWorkerCallArguments = (path, workerType) => {
+  const node = path.node
   const mentions = []
   let expectedType = "js_classic"
   let typeArgNode
@@ -89,15 +102,19 @@ export const analyzeNewWorkerOrNewSharedWorker = (path) => {
   }
 
   const { referenceSubtype, expectedSubtype } = {
-    Worker: {
+    worker: {
       referenceSubtype: "new_worker_first_arg",
       expectedSubtype: "worker",
     },
-    SharedWorker: {
+    shared_worker: {
       referenceSubtype: "new_shared_worker_first_arg",
       expectedSubtype: "shared_worker",
     },
-  }[node.callee.name]
+    service_worker: {
+      referenceSubtype: "service_worker_register_first_arg",
+      expectedSubtype: "service_worker",
+    },
+  }[workerType]
 
   const firstArgNode = node.arguments[0]
   if (firstArgNode.type === "StringLiteral") {
@@ -113,7 +130,7 @@ export const analyzeNewWorkerOrNewSharedWorker = (path) => {
     return mentions
   }
   const newUrlMentions = analyzeNewUrlCall(path.get("arguments")[0], {
-    ignoreInsideNewWorker: false,
+    ignoreInsideWorker: false,
   })
   if (!newUrlMentions) {
     return null
@@ -127,26 +144,72 @@ export const analyzeNewWorkerOrNewSharedWorker = (path) => {
   })
   return newUrlMentions
 }
-const isNewWorkerOrNewSharedWorker = (node) => {
-  return (
-    node.type === "NewExpression" &&
-    node.callee.type === "Identifier" &&
-    (node.callee.name === "Worker" || node.callee.name === "SharedWorker")
-  )
+
+export const analyzeServiceWorkerRegisterCall = (path) => {
+  const node = path.node
+  if (!isServiceWorkerRegisterCall(node)) {
+    return null
+  }
+  return analyzeWorkerCallArguments(path, "service_worker")
+}
+const isServiceWorkerRegisterCall = (node) => {
+  if (node.type !== "CallExpression") {
+    return false
+  }
+  const callee = node.callee
+  if (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "register"
+  ) {
+    const parentObject = callee.object
+    if (parentObject.type === "MemberExpression") {
+      const parentProperty = parentObject.property
+      if (
+        parentProperty.type === "Identifier" &&
+        parentProperty.name === "serviceWorker"
+      ) {
+        const grandParentObject = parentObject.object
+        if (grandParentObject.type === "MemberExpression") {
+          // window.navigator.serviceWorker.register
+          const grandParentProperty = grandParentObject.property
+          if (
+            grandParentProperty.type === "Identifier" &&
+            grandParentProperty.name === "navigator"
+          ) {
+            const ancestorObject = grandParentObject.object
+            if (
+              ancestorObject.type === "Identifier" &&
+              ancestorObject.name === "window"
+            ) {
+              return true
+            }
+          }
+        }
+        if (grandParentObject.type === "Identifier") {
+          // navigator.serviceWorker.register
+          if (grandParentObject.name === "navigator") {
+            return true
+          }
+        }
+      }
+    }
+  }
+  return false
 }
 
-export const analyzeNewUrlCall = (
-  path,
-  { ignoreInsideNewWorker = true } = {},
-) => {
+export const analyzeNewUrlCall = (path, { ignoreInsideWorker = true } = {}) => {
   const node = path.node
   if (!isNewUrlCall(node)) {
     return null
   }
-  if (ignoreInsideNewWorker) {
+  if (ignoreInsideWorker) {
     const parentPath = path.parentPath
     const parentNode = parentPath.node
-    if (isNewWorkerOrNewSharedWorker(parentNode)) {
+    if (
+      isNewWorkerOrNewSharedWorker(parentNode) ||
+      isServiceWorkerRegisterCall(parentNode)
+    ) {
       // already found while parsing new Worker|SharedWorker arguments
       return null
     }

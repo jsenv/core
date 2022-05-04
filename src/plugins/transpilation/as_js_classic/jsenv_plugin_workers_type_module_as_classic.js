@@ -1,7 +1,10 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-import { analyzeNewWorkerOrNewSharedWorker } from "@jsenv/utils/js_ast/js_static_analysis.js"
+import {
+  analyzeNewWorkerOrNewSharedWorker,
+  analyzeServiceWorkerRegisterCall,
+} from "@jsenv/utils/js_ast/js_static_analysis.js"
 
 // TODO: handle also service worker and shared worker in this plugin
 export const jsenvPluginWorkersTypeModuleAsClassic = ({
@@ -19,7 +22,7 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [
         [
-          babelPluginMetadataWorkersMentions,
+          babelPluginMetadataWorkerMentions,
           {
             workersToTranspile,
           },
@@ -27,13 +30,13 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
       ],
       urlInfo,
     })
-    const { newWorkerMentions } = metadata
+    const { workerMentions } = metadata
     const magicSource = createMagicSource(urlInfo.content)
-    newWorkerMentions.forEach((newWorkerMention) => {
-      if (newWorkerMention.expectedType !== "js_module") {
+    workerMentions.forEach((workerMention) => {
+      if (workerMention.expectedType !== "js_module") {
         return
       }
-      const specifier = newWorkerMention.specifier
+      const specifier = workerMention.specifier
       const reference = context.referenceUtils.findByGeneratedSpecifier(
         JSON.stringify(specifier),
       )
@@ -45,13 +48,13 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
         filename: generateJsClassicFilename(reference.url),
       })
       magicSource.replace({
-        start: newWorkerMention.start,
-        end: newWorkerMention.end,
+        start: workerMention.start,
+        end: workerMention.end,
         replacement: newReference.generatedSpecifier,
       })
       magicSource.replace({
-        start: newWorkerMention.typeArgNode.value.start,
-        end: newWorkerMention.typeArgNode.value.end,
+        start: workerMention.typeArgNode.value.start,
+        end: workerMention.typeArgNode.value.end,
         replacement: JSON.stringify("classic"),
       })
     })
@@ -73,46 +76,57 @@ const getWorkersToTranspile = (urlInfo, context) => {
   let serviceWorker = false
   let sharedWorker = false
   for (const reference of urlInfo.references) {
-    if (reference.expectedType === "js_module") {
-      if (reference.expectedSubtype === "worker") {
-        if (!context.isSupportedOnCurrentClients("worker_type_module")) {
-          worker = true
-        }
-      }
-      if (reference.expectedSubtype === "service_worker") {
-        if (
-          !context.isSupportedOnCurrentClients("service_worker_type_module")
-        ) {
-          serviceWorker = true
-        }
-      }
-      if (reference.expectedSubtype === "shared_worker") {
-        if (!context.isSupportedOnCurrentClients("shared_worker_type_module")) {
-          sharedWorker = true
-        }
-      }
+    if (reference.expectedType !== "js_module") {
+      continue
+    }
+    if (
+      reference.expectedSubtype === "worker" &&
+      !context.isSupportedOnCurrentClients("worker_type_module")
+    ) {
+      worker = true
+    }
+    if (
+      reference.expectedSubtype === "service_worker" &&
+      !context.isSupportedOnCurrentClients("service_worker_type_module")
+    ) {
+      serviceWorker = true
+    }
+    if (
+      reference.expectedSubtype === "shared_worker" &&
+      !context.isSupportedOnCurrentClients("shared_worker_type_module")
+    ) {
+      sharedWorker = true
     }
   }
   return { worker, serviceWorker, sharedWorker }
 }
 
-const babelPluginMetadataWorkersMentions = (_, { workersToTranspile }) => {
+const babelPluginMetadataWorkerMentions = (_, { workersToTranspile }) => {
   return {
-    name: "metadata-new-worker-mentions",
+    name: "metadata-worker-mentions",
     visitor: {
       Program(programPath, state) {
-        const newWorkerMentions = []
-        programPath.traverse({
+        const workerMentions = []
+        const visitors = {
           NewExpression: (path) => {
             if (workersToTranspile.worker || workersToTranspile.sharedWorker) {
               const mentions = analyzeNewWorkerOrNewSharedWorker(path)
               if (mentions) {
-                newWorkerMentions.push(...mentions)
+                workerMentions.push(...mentions)
               }
             }
           },
-        })
-        state.file.metadata.newWorkerMentions = newWorkerMentions
+        }
+        if (workersToTranspile.serviceWorker) {
+          visitors.CallExpression = (path) => {
+            const mentions = analyzeServiceWorkerRegisterCall(path)
+            if (mentions) {
+              workerMentions.push(...mentions)
+            }
+          }
+        }
+        programPath.traverse(visitors)
+        state.file.metadata.workerMentions = workerMentions
       },
     },
   }

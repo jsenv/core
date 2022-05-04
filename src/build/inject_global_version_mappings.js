@@ -75,15 +75,11 @@ const injectors = {
 }
 
 const generateClientCodeForVersionMappings = (versionMappings) => {
-  return `var __versionMappings__ = ${JSON.stringify(
-    versionMappings,
-    null,
-    "  ",
-  )};
+  return `
+var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
 var __envGlobal__ = typeof self === 'undefined' ? global : self;
 __envGlobal__.__v__ = function (specifier) {
   return __versionMappings__[specifier] || specifier
 };
-
 `
 }

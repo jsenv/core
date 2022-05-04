@@ -9,12 +9,11 @@
 
   <body>
     <script>
-      window.namespacePromise = new Promise((resolve) => {
-        window.resolveNamespacePromise = resolve
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
       })
     </script>
     <script type="module">
-      const namespace = {}
       const testServiceWorker = async (serviceWorker) => {
         const inspectResponse = await new Promise((resolve) => {
           const { port1, port2 } = new MessageChannel()
@@ -25,21 +24,15 @@
         })
         return inspectResponse
       }
-      const serviceWorkerUrl = new URL(
-        "./sw.js?service_worker",
-        import.meta.url,
-      )
       const serviceWorker = await window.navigator.serviceWorker
-        .register(serviceWorkerUrl, { type: "module" })
+        .register(new URL("./sw.js", import.meta.url), { type: "module" })
         .then((registration) => {
           const { installing, waiting, active } = registration
           return installing || waiting || active
         })
-      namespace.serviceWorker = {
-        url: String(serviceWorkerUrl),
+      window.resolveResultPromise({
         inspectResponse: await testServiceWorker(serviceWorker),
-      }
-      window.resolveNamespacePromise(namespace)
+      })
     </script>
   </body>
 </html>
