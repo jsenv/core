@@ -1,15 +1,10 @@
-/*
- * - test code shared between worker and main with runtime not supporting type module
- * (code must be duplicated)
- */
-
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
   analyzeImportCall,
   isImportCall,
   analyzeImportExportDeclaration,
   analyzeNewUrlCall,
-  analyzeNewWorkerCall,
+  analyzeNewWorkerOrNewSharedWorker,
   analyzeImportScriptCalls,
   analyzeSystemRegisterCall,
   analyzeSystemImportCall,
@@ -19,7 +14,9 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const isJsModule = urlInfo.type === "js_module"
   const isWebWorker =
-    urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker"
+    urlInfo.subtype === "worker" ||
+    urlInfo.subtype === "service_worker" ||
+    urlInfo.subtype === "shared_worker"
 
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [
@@ -43,6 +40,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
+      expectedSubtype: jsMention.expectedSubtype,
       line: jsMention.line,
       column: jsMention.column,
       specifier: jsMention.specifier,
@@ -115,7 +113,10 @@ const babelPluginMetadataJsUrlMentions = (
             }
           },
           NewExpression: (path) => {
-            callStaticAnalyzers(path, [analyzeNewWorkerCall, analyzeNewUrlCall])
+            callStaticAnalyzers(path, [
+              analyzeNewWorkerOrNewSharedWorker,
+              analyzeNewUrlCall,
+            ])
           },
         }
         const callExpressionStaticAnalysers = [

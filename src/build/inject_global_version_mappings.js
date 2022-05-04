@@ -8,11 +8,32 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
-export const injectVersionMappings = async ({
-  urlInfo,
-  kitchen,
+import { GRAPH } from "./graph_utils.js"
+
+export const injectGlobalVersionMapping = async ({
+  finalGraphKitchen,
+  finalGraph,
   versionMappings,
 }) => {
+  await Promise.all(
+    GRAPH.map(finalGraph, async (urlInfo) => {
+      if (
+        urlInfo.data.isEntryPoint ||
+        urlInfo.subtype === "worker" ||
+        urlInfo.subtype === "service_worker" ||
+        urlInfo.subtype === "shared_worker"
+      ) {
+        await injectVersionMappings({
+          urlInfo,
+          kitchen: finalGraphKitchen,
+          versionMappings,
+        })
+      }
+    }),
+  )
+}
+
+const injectVersionMappings = async ({ urlInfo, kitchen, versionMappings }) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = injector(urlInfo, { versionMappings })
@@ -54,11 +75,15 @@ const injectors = {
 }
 
 const generateClientCodeForVersionMappings = (versionMappings) => {
-  return `
-var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")}
-var __envGlobal__ = typeof self === 'undefined' ? global : self
+  return `var __versionMappings__ = ${JSON.stringify(
+    versionMappings,
+    null,
+    "  ",
+  )};
+var __envGlobal__ = typeof self === 'undefined' ? global : self;
 __envGlobal__.__v__ = function (specifier) {
   return __versionMappings__[specifier] || specifier
-}
+};
+
 `
 }

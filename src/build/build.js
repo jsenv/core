@@ -41,7 +41,7 @@ import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
-import { injectVersionMappings } from "./inject_version_mappings.js"
+import { injectGlobalVersionMapping } from "./inject_global_version_mappings.js"
 import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
 import { resyncRessourceHints } from "./resync_ressource_hints.js"
 
@@ -744,18 +744,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         usedVersionMappings.forEach((specifier) => {
           versionMappingsNeeded[specifier] = versionMappings[specifier]
         })
-        await Promise.all(
-          GRAPH.map(finalGraph, async (urlInfo) => {
-            if (!urlInfo.data.isEntryPoint) {
-              return
-            }
-            await injectVersionMappings({
-              urlInfo,
-              kitchen: finalGraphKitchen,
-              versionMappings: versionMappingsNeeded,
-            })
-          }),
-        )
+        await injectGlobalVersionMapping({
+          finalGraphKitchen,
+          finalGraph,
+          versionMappings: versionMappingsNeeded,
+        })
       }
     } catch (e) {
       versioningTask.fail()

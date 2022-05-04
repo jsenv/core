@@ -13,8 +13,8 @@ export const jsenvPluginImportAssertions = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
-        const importTypesToHandle = getImportTypesToHandle(context)
-        if (importTypesToHandle.length === 0) {
+        const importTypesToTranspile = getImportTypesToTranspile(context)
+        if (importTypesToTranspile.length === 0) {
           return null
         }
         const { metadata } = await applyBabelPlugins({
@@ -25,7 +25,7 @@ export const jsenvPluginImportAssertions = () => {
         const magicSource = createMagicSource(urlInfo.content)
         importAssertions.forEach((importAssertion) => {
           const assertType = importAssertion.assert.type
-          if (!importTypesToHandle.includes(assertType)) {
+          if (!importTypesToTranspile.includes(assertType)) {
             return
           }
           const { searchParam } = importAsInfos[assertType]
@@ -217,7 +217,10 @@ const importAsInfos = {
   },
 }
 
-const getImportTypesToHandle = ({ scenario, isSupportedOnCurrentClients }) => {
+const getImportTypesToTranspile = ({
+  scenario,
+  isSupportedOnCurrentClients,
+}) => {
   // during build always replace import assertions with the js:
   // - means rollup can bundle more js file together
   // - means url versioning can work for css inlined in js

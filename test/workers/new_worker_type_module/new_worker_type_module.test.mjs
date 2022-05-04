@@ -15,7 +15,6 @@ const test = async (params) => {
     transpilation: {
       // topLevelAwait: "ignore",
     },
-    versioning: false,
     minification: false,
     ...params,
   })
@@ -30,12 +29,7 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return returnValue
-}
-
-// default (no support for worker_type_module)
-{
-  const actual = await test()
+  const actual = returnValue
   const expected = {
     workerResponse: "pong",
     worker2Response: "pong",
@@ -43,30 +37,32 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// without bundling
-{
-  const actual = await test({
-    bundling: false,
-  })
-  const expected = {
-    workerResponse: "pong",
-    worker2Response: "pong",
-  }
-  assert({ actual, expected })
-}
+// no support
+await test({
+  runtimeCompat: {
+    chrome: "79",
+  },
+})
 
-// with support for worker_type_module
-{
-  const actual = await test({
-    runtimeCompat: {
-      chrome: "81",
-    },
-  })
-  const expected = {
-    workerResponse: "pong",
-    worker2Response: "pong",
-  }
-  assert({ actual, expected })
-}
+// no support + no bundling
+await test({
+  runtimeCompat: {
+    chrome: "79",
+  },
+  bundling: false,
+})
 
-// with support + bundling
+// support
+await test({
+  runtimeCompat: {
+    chrome: "81",
+  },
+})
+
+// support + no bundling
+await test({
+  runtimeCompat: {
+    chrome: "81",
+  },
+  bundling: false,
+})

@@ -1,5 +1,4 @@
 // TODO: add navigator.serviceWorker.register
-// and new SharedWorker
 
 import { getTypePropertyNode } from "./js_ast.js"
 
@@ -70,9 +69,9 @@ export const analyzeImportExportDeclaration = (path) => {
   return handler ? handler(path) : null
 }
 
-export const analyzeNewWorkerCall = (path) => {
+export const analyzeNewWorkerOrNewSharedWorker = (path) => {
   const node = path.node
-  if (!isNewWorkerCall(node)) {
+  if (!isNewWorkerOrNewSharedWorker(node)) {
     return null
   }
   const mentions = []
@@ -88,13 +87,25 @@ export const analyzeNewWorkerCall = (path) => {
       }
     }
   }
+
+  const { referenceSubtype, expectedSubtype } = {
+    Worker: {
+      referenceSubtype: "new_worker_first_arg",
+      expectedSubtype: "worker",
+    },
+    SharedWorker: {
+      referenceSubtype: "new_shared_worker_first_arg",
+      expectedSubtype: "shared_worker",
+    },
+  }[node.callee.name]
+
   const firstArgNode = node.arguments[0]
   if (firstArgNode.type === "StringLiteral") {
     mentions.push({
       type: "js_url_specifier",
-      subtype: "new_worker_first_arg",
+      subtype: referenceSubtype,
       expectedType,
-      expectedSubtype: "worker",
+      expectedSubtype,
       specifier: firstArgNode.value,
       ...getNodePosition(firstArgNode),
       typeArgNode,
@@ -102,7 +113,7 @@ export const analyzeNewWorkerCall = (path) => {
     return mentions
   }
   const newUrlMentions = analyzeNewUrlCall(path.get("arguments")[0], {
-    allowInsideWorker: true,
+    ignoreInsideNewWorker: false,
   })
   if (!newUrlMentions) {
     return null
@@ -110,30 +121,33 @@ export const analyzeNewWorkerCall = (path) => {
   newUrlMentions.forEach((mention) => {
     Object.assign(mention, {
       expectedType,
-      expectedSubtype: "worker",
+      expectedSubtype,
       typeArgNode,
     })
   })
   return newUrlMentions
 }
-const isNewWorkerCall = (node) => {
+const isNewWorkerOrNewSharedWorker = (node) => {
   return (
     node.type === "NewExpression" &&
     node.callee.type === "Identifier" &&
-    node.callee.name === "Worker"
+    (node.callee.name === "Worker" || node.callee.name === "SharedWorker")
   )
 }
 
-export const analyzeNewUrlCall = (path, { allowInsideWorker = false } = {}) => {
+export const analyzeNewUrlCall = (
+  path,
+  { ignoreInsideNewWorker = true } = {},
+) => {
   const node = path.node
   if (!isNewUrlCall(node)) {
     return null
   }
-  if (!allowInsideWorker) {
+  if (ignoreInsideNewWorker) {
     const parentPath = path.parentPath
     const parentNode = parentPath.node
-    if (isNewWorkerCall(parentNode)) {
-      // already found while parsing worker arguments
+    if (isNewWorkerOrNewSharedWorker(parentNode)) {
+      // already found while parsing new Worker|SharedWorker arguments
       return null
     }
   }
