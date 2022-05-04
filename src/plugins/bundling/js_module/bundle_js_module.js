@@ -1,4 +1,5 @@
 import { isFileSystemPath } from "@jsenv/filesystem"
+import { createDetailedMessage } from "@jsenv/logger"
 
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
@@ -40,32 +41,42 @@ export const buildWithRollup = async ({
   sourcemaps,
 }) => {
   const resultRef = { current: null }
-  await applyRollupPlugins({
-    rollupPlugins: [
-      rollupPluginJsenv({
-        signal,
-        logger,
-        rootDirectoryUrl,
-        buildDirectoryUrl,
-        urlGraph,
-        jsModuleUrlInfos,
+  try {
+    await applyRollupPlugins({
+      rollupPlugins: [
+        rollupPluginJsenv({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          urlGraph,
+          jsModuleUrlInfos,
 
-        runtimeCompat,
-        sourcemaps,
-        resultRef,
-      }),
-    ],
-    inputOptions: {
-      input: [],
-      onwarn: (warning) => {
-        if (warning.code === "CIRCULAR_DEPENDENCY") {
-          return
-        }
-        logger.warn(String(warning))
+          runtimeCompat,
+          sourcemaps,
+          resultRef,
+        }),
+      ],
+      inputOptions: {
+        input: [],
+        onwarn: (warning) => {
+          if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return
+          }
+          logger.warn(String(warning))
+        },
       },
-    },
-  })
-  return resultRef.current
+    })
+    return resultRef.current
+  } catch (e) {
+    if (e.code === "MISSING_EXPORT") {
+      const detailedMessage = createDetailedMessage(e.message, {
+        frame: e.frame,
+      })
+      throw new Error(detailedMessage, { cause: e })
+    }
+    throw e
+  }
 }
 
 const rollupPluginJsenv = ({
