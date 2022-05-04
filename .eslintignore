@@ -15,6 +15,7 @@ node_modules/
 **/client/s.js
 
 /test/**/js_syntax_error.js
+/test/**/inline_js_module_syntax_error/main.html
 
 /test-manual/**/
 /**/*.es5.js

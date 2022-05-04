@@ -13,7 +13,7 @@ node_modules/
 **/client/regenerator_runtime.js
 **/client/s.js
 
-js_syntax_error.js
+/test/**/js_syntax_error.js
 /**/dist/**
 
 /**/*.es5.js
