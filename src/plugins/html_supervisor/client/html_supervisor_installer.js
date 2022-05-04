@@ -89,7 +89,6 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
         onExecutionSettled(src, executionResult)
         if (logs) {
           console.log(`${type} load ended`)
-
           console.groupEnd()
         }
       },
@@ -120,7 +119,9 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
             console.error(error)
           }
         }
-        console.groupEnd()
+        if (logs) {
+          console.groupEnd()
+        }
       },
     )
   }
