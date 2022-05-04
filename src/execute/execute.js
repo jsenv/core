@@ -54,6 +54,7 @@ export const execute = async ({
     })
   }
 
+  let resultTransformer = (result) => result
   runtimeParams = {
     rootDirectoryUrl,
     fileRelativeUrl,
@@ -97,9 +98,13 @@ export const execute = async ({
       ...runtimeParams,
       server,
     }
+    resultTransformer = (result) => {
+      result.server = server
+      return result
+    }
   }
 
-  const result = await run({
+  let result = await run({
     signal: executeOperation.signal,
     logger,
     allocatedMs,
@@ -111,6 +116,7 @@ export const execute = async ({
     runtime,
     runtimeParams,
   })
+  result = resultTransformer(result)
 
   try {
     if (result.status === "errored") {

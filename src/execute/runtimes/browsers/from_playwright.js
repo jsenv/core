@@ -148,17 +148,22 @@ export const createRuntimeFromPlaywright = ({
         resultTransformer = composeTransformer(
           resultTransformer,
           async (result) => {
-            result.coverage = generateCoverageForPage(result.namespace)
+            const scriptExecutionResults = result.namespace
+            if (scriptExecutionResults) {
+              result.coverage = generateCoverageForPage(scriptExecutionResults)
+            }
             return result
           },
         )
       }
     } else {
       resultTransformer = composeTransformer(resultTransformer, (result) => {
-        const { namespace: fileExecutionResultMap } = result
-        Object.keys(fileExecutionResultMap).forEach((fileRelativeUrl) => {
-          delete fileExecutionResultMap[fileRelativeUrl].coverage
-        })
+        const scriptExecutionResults = result.namespace
+        if (scriptExecutionResults) {
+          Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
+            delete scriptExecutionResults[fileRelativeUrl].coverage
+          })
+        }
         return result
       })
     }
@@ -178,7 +183,7 @@ export const createRuntimeFromPlaywright = ({
       },
     })
     cleanupCallbackList.add(removeConsoleListener)
-    const winnerPromise = new Promise((resolve) => {
+    const winnerPromise = new Promise((resolve, reject) => {
       raceCallbacks(
         {
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
@@ -233,33 +238,37 @@ export const createRuntimeFromPlaywright = ({
             }
           },
           response: async (cb) => {
-            await page.goto(fileClientUrl, { timeout: 0 })
-            const result = await page.evaluate(
-              /* eslint-disable no-undef */
-              /* istanbul ignore next */
-              () => {
-                return window.__html_supervisor__.getScriptExecutionResults()
-              },
-              /* eslint-enable no-undef */
-            )
-            const { status, scriptExecutionResults } = result
-            if (status === "errored") {
-              const { exceptionSource } = result
-              const error = evalException(exceptionSource, {
-                rootDirectoryUrl,
-                server,
-                transformErrorHook,
-              })
-              cb({
-                status: "errored",
-                error,
-                namespace: scriptExecutionResults,
-              })
-            } else {
-              cb({
-                status: "completed",
-                namespace: scriptExecutionResults,
-              })
+            try {
+              await page.goto(fileClientUrl, { timeout: 0 })
+              const result = await page.evaluate(
+                /* eslint-disable no-undef */
+                /* istanbul ignore next */
+                () => {
+                  return window.__html_supervisor__.getScriptExecutionResults()
+                },
+                /* eslint-enable no-undef */
+              )
+              const { status, scriptExecutionResults } = result
+              if (status === "errored") {
+                const { exceptionSource } = result
+                const error = evalException(exceptionSource, {
+                  rootDirectoryUrl,
+                  server,
+                  transformErrorHook,
+                })
+                cb({
+                  status: "errored",
+                  error,
+                  namespace: scriptExecutionResults,
+                })
+              } else {
+                cb({
+                  status: "completed",
+                  namespace: scriptExecutionResults,
+                })
+              }
+            } catch (e) {
+              reject(e)
             }
           },
         },
