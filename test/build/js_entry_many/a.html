@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module">
+      // eslint-disable-next-line import/no-unresolved
+      import { value } from "./dist/a.js"
+
+      window.resolveResultPromise(value)
+    </script>
+  </body>
+</html>

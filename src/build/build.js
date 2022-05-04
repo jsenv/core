@@ -450,7 +450,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               if (originalBuildUrl) {
                 return fromBundleOrRawGraph(originalBuildUrl)
               }
-              return null
+              throw new Error(`Cannot find url`)
             }
             if (rawUrlInfo.isInline) {
               // Inline content, such as <script> inside html, is transformed during the previous phase.
