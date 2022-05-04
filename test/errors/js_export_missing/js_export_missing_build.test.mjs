@@ -12,6 +12,7 @@ try {
     },
     minification: false,
   })
+  throw new Error("should throw")
 } catch (e) {
   const actual = e.message
   const expected = `'answer' is not exported by test/errors/js_export_missing/client/file.js, imported by test/errors/js_export_missing/client/main.js
