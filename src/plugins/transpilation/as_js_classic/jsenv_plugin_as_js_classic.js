@@ -81,16 +81,28 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
         reference: originalReference,
         urlInfo: originalUrlInfo,
       })
+      const isJsEntryPoint =
+        // in general html files are entry points
+        // but during build js can be sepcified as an entry point
+        // (meaning there is no html file where we can inject systemjs)
+        // in that case we need to inject systemjs in the js file
+        originalUrlInfo.data.isEntryPoint ||
+        // the following apis are creating js entry points:
+        // - new Worker()
+        // - new SharedWorker()
+        // - navigator.serviceWorker.register()
+        // In thoose case we need to inject systemjs the worker js file
+        isWebWorkerEntryPointReference(originalReference)
+      // if it's an entry point without dependency (it does not use import)
+      // then we can use UMD, otherwise we have to use systemjs
+      // because it is imported by systemjs
       const jsClassicFormat =
-        originalUrlInfo.data.fromBundle ||
-        originalUrlInfo.data.usesImport ||
-        originalUrlInfo.data.usesExport
-          ? "system"
-          : "umd"
+        isJsEntryPoint && !originalUrlInfo.data.usesImport ? "umd" : "system"
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo: originalUrlInfo,
+        isJsEntryPoint,
         jsClassicFormat,
       })
       urlInfo.data.jsClassicFormat = jsClassicFormat
@@ -118,10 +130,24 @@ const splitFileExtension = (filename) => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }
 
+const isWebWorkerEntryPointReference = (reference) => {
+  if (reference.subtype === "new_url_first_arg") {
+    return ["worker", "service_worker", "shared_worker"].includes(
+      reference.expectedSubtype,
+    )
+  }
+  return [
+    "new_worker_first_arg",
+    "new_shared_worker_first_arg",
+    "service_worker_register_first_arg",
+  ].includes(reference.subtype)
+}
+
 const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
+  isJsEntryPoint,
   jsClassicFormat,
 }) => {
   const { code, map } = await applyBabelPlugins({
@@ -152,14 +178,7 @@ const convertJsModuleToJsClassic = async ({
     ],
     urlInfo,
   })
-  if (
-    systemJsInjection &&
-    jsClassicFormat === "system" &&
-    (urlInfo.data.isEntryPoint ||
-      urlInfo.subtype === "worker" ||
-      urlInfo.subtype === "service_worker" ||
-      urlInfo.subtype === "shared_worker")
-  ) {
+  if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
     const magicSource = createMagicSource(code)
     const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
     magicSource.prepend(`${systemjsCode}\n\n`)
