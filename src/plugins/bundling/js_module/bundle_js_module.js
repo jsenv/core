@@ -135,6 +135,10 @@ const rollupPluginJsenv = ({
             // buildRelativeUrl: rollupFileInfo.fileName,
             data: {
               generatedBy: "rollup",
+              usesImport:
+                rollupFileInfo.imports.length > 0 ||
+                rollupFileInfo.dynamicImports.length > 0,
+              usesExport: rollupFileInfo.exports.length > 0,
             },
             contentType: "text/javascript",
             content: rollupFileInfo.code,
@@ -190,7 +194,7 @@ const rollupPluginJsenv = ({
         urlImporters[url] = importer
       }
       if (!url.startsWith("file:")) {
-        return { url, external: true }
+        return { id: url, external: true }
       }
       const filePath = fileUrlConverter.asFilePath(url)
       return filePath

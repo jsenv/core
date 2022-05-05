@@ -150,6 +150,9 @@ const babelPluginMetadataJsUrlMentions = (
               callStaticAnalyzers(path, [analyzeImportExportDeclaration])
             },
             ExportDefaultDeclaration: (path) => {
+              if (!usesImport && path.node.source) {
+                usesImport = true
+              }
               usesExport = true
               callStaticAnalyzers(path, [analyzeImportExportDeclaration])
             },
