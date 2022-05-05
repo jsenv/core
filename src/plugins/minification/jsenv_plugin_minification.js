@@ -8,7 +8,8 @@ export const jsenvPluginMinification = (minification) => {
     minification = {
       html: minification,
       css: minification,
-      js: minification,
+      js_classic: minification,
+      js_module: minification,
       json: minification,
       svg: minification,
     }
