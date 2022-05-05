@@ -375,9 +375,6 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "global",
 ];
 
-const filesystemRootUrl =
-  process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///";
-
 const asDirectoryUrl = (url) => {
   const { pathname } = new URL(url);
   if (pathname.endsWith("/")) {
@@ -415,7 +412,7 @@ const urlToFilename = (url) => {
 
 const lookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url);
-  while (scopeUrl !== filesystemRootUrl) {
+  while (scopeUrl !== "file:///") {
     if (scopeUrl.endsWith("node_modules/")) {
       return null
     }
@@ -749,7 +746,7 @@ const applyPackageResolve = ({ conditions, parentUrl, packageSpecifier }) => {
     return selfResolution
   }
   let currentUrl = parentUrl;
-  while (currentUrl !== filesystemRootUrl) {
+  while (currentUrl !== "file:///") {
     const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
     if (!node_fs.existsSync(new URL(packageUrl))) {
       currentUrl = getParentUrl(currentUrl);
