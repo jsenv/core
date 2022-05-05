@@ -629,7 +629,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           }
         })
         urlInfo.data.version = versionGenerator.generate()
-        if (urlInfo.data.version === "a58e6960") {
+        if (urlInfo.data.version === "9194f4c2") {
           console.log(urlContent)
         }
         urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
