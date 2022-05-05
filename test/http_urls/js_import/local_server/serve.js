@@ -2,7 +2,7 @@ import { startServer, fetchFileSystem, pluginCORS } from "@jsenv/server"
 
 const serverDirectoryUrl = new URL("./client/", import.meta.url)
 
-export const server = await startServer({
+export const localServer = await startServer({
   logLevel: "warn",
   port: 9999,
   requestToResponse: async (request) => {
@@ -12,6 +12,7 @@ export const server = await startServer({
     })
     return response
   },
+  keepProcessAlive: false,
   plugins: {
     ...pluginCORS({
       accessControlAllowRequestOrigin: true,
