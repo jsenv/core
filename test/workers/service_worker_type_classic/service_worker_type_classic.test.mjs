@@ -12,7 +12,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({
@@ -34,19 +33,10 @@ if (process.platform === "darwin") {
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     serviceWorkerUrls: {
-      "/main.html": {
-        versioned: false,
-        version: "6d62f00a",
-      },
-      "/css/style.css?v=0e312da1": {
-        versioned: true,
-      },
-      "/js/a.js?v=fa03702c": {
-        versioned: true,
-      },
-      "/js/b.js?v=f4808298": {
-        versioned: true,
-      },
+      "/main.html": { versioned: false, version: "e854f452" },
+      "/css/style.css?v=65c914e7": { versioned: true },
+      "/js/a.js?v=fa03702c": { versioned: true },
+      "/js/b.js?v=f4808298": { versioned: true },
     },
   }
   assert({ actual, expected })

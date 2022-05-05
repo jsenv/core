@@ -12,7 +12,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({
@@ -42,9 +41,9 @@ if (process.platform === "darwin") {
       serviceWorkerUrls: {
         "/main.html": {
           versioned: false,
-          version: "bf7e5d8b",
+          version: "174b1064",
         },
-        "/css/style.css?v=0e312da1": {
+        "/css/style.css?v=65c914e7": {
           versioned: true,
         },
       },
@@ -63,8 +62,8 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "bf7e5d8b" },
-        "/css/style.css?v=0e312da1": { versioned: true },
+        "/main.html": { versioned: false, version: "174b1064" },
+        "/css/style.css?v=65c914e7": { versioned: true },
         "/js/slicedToArray.es5.js?as_js_classic&v=ecc85f1b": {
           versioned: true,
         },
@@ -100,13 +99,8 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": {
-          versioned: false,
-          version: "8229433b",
-        },
-        "/css/style.css?v=0e312da1": {
-          versioned: true,
-        },
+        "/main.html": { versioned: false, version: "e8b33586" },
+        "/css/style.css?v=65c914e7": { versioned: true },
       },
     }
     assert({ actual, expected })
@@ -123,8 +117,8 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "8229433b" },
-        "/css/style.css?v=0e312da1": { versioned: true },
+        "/main.html": { versioned: false, version: "e8b33586" },
+        "/css/style.css?v=65c914e7": { versioned: true },
         "/js/slicedToArray.js?v=615f0b28": { versioned: true },
         "/js/a.js?v=ad0057dc": { versioned: true },
         "/js/arrayWithHoles.js?v=f4a3cd3b": { versioned: true },
