@@ -87,12 +87,8 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
         // (meaning there is no html file where we can inject systemjs)
         // in that case we need to inject systemjs in the js file
         originalUrlInfo.data.isEntryPoint ||
-        // the following apis are creating js entry points:
-        // - new Worker()
-        // - new SharedWorker()
-        // - navigator.serviceWorker.register()
         // In thoose case we need to inject systemjs the worker js file
-        isWebWorkerEntryPointReference(originalReference)
+        originalUrlInfo.data.isWebWorkerEntryPoint
       // if it's an entry point without dependency (it does not use import)
       // then we can use UMD, otherwise we have to use systemjs
       // because it is imported by systemjs
@@ -128,19 +124,6 @@ const splitFileExtension = (filename) => {
     return [filename, ""]
   }
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
-}
-
-const isWebWorkerEntryPointReference = (reference) => {
-  if (reference.subtype === "new_url_first_arg") {
-    return ["worker", "service_worker", "shared_worker"].includes(
-      reference.expectedSubtype,
-    )
-  }
-  return [
-    "new_worker_first_arg",
-    "new_shared_worker_first_arg",
-    "service_worker_register_first_arg",
-  ].includes(reference.subtype)
 }
 
 const convertJsModuleToJsClassic = async ({

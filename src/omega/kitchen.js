@@ -23,6 +23,7 @@ import {
   createFinalizeUrlContentError,
 } from "./errors.js"
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js"
+import { isWebWorkerEntryPointReference } from "./web_workers.js"
 
 export const createKitchen = ({
   signal,
@@ -668,6 +669,9 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
         ? reference.content
         : urlInfo.originalContent
     urlInfo.content = reference.content
+  }
+  if (isWebWorkerEntryPointReference(reference)) {
+    urlInfo.data.isWebWorkerEntryPoint = true
   }
 }
 

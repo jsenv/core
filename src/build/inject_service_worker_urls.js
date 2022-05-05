@@ -8,11 +8,16 @@ export const injectServiceWorkerUrls = async ({
   finalGraphKitchen,
   lineBreakNormalization,
 }) => {
-  const serviceWorkerUrlInfos = GRAPH.filter(
+  const serviceWorkerEntryUrlInfos = GRAPH.filter(
     finalGraph,
-    (finalUrlInfo) => finalUrlInfo.subtype === "service_worker",
+    (finalUrlInfo) => {
+      return (
+        finalUrlInfo.subtype === "service_worker" &&
+        finalUrlInfo.data.isWebWorkerEntryPoint
+      )
+    },
   )
-  if (serviceWorkerUrlInfos.length === 0) {
+  if (serviceWorkerEntryUrlInfos.length === 0) {
     return
   }
   const serviceWorkerUrls = {}
@@ -48,16 +53,16 @@ export const injectServiceWorkerUrls = async ({
     }
   })
   await Promise.all(
-    serviceWorkerUrlInfos.map(async (serviceWorkerUrlInfo) => {
-      const magicSource = createMagicSource(serviceWorkerUrlInfo.content)
+    serviceWorkerEntryUrlInfos.map(async (serviceWorkerEntryUrlInfo) => {
+      const magicSource = createMagicSource(serviceWorkerEntryUrlInfo.content)
       const urlsWithoutSelf = {
         ...serviceWorkerUrls,
       }
-      delete urlsWithoutSelf[serviceWorkerUrlInfo.data.buildUrlSpecifier]
+      delete urlsWithoutSelf[serviceWorkerEntryUrlInfo.data.buildUrlSpecifier]
       magicSource.prepend(generateClientCode(urlsWithoutSelf))
       const { content, sourcemap } = magicSource.toContentAndSourcemap()
       await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
-        serviceWorkerUrlInfo,
+        serviceWorkerEntryUrlInfo,
         {
           content,
           sourcemap,

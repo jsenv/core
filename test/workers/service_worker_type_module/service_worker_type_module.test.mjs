@@ -63,19 +63,12 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": {
-          versioned: false,
-          version: "39280516",
-        },
-        "/css/style.css?v=0e312da1": {
-          versioned: true,
-        },
+        "/main.html": { versioned: false, version: "39280516" },
+        "/css/style.css?v=0e312da1": { versioned: true },
         "/js/slicedToArray.es5.js?as_js_classic&v=ecc85f1b": {
           versioned: true,
         },
-        "/js/a.es5.js?as_js_classic&v=5c7a9128": {
-          versioned: true,
-        },
+        "/js/a.es5.js?as_js_classic&v=5c7a9128": { versioned: true },
         "/js/arrayWithHoles.es5.js?as_js_classic&v=0a290ff6": {
           versioned: true,
         },
@@ -88,9 +81,7 @@ if (process.platform === "darwin") {
         "/js/nonIterableRest.es5.js?as_js_classic&v=ad6c6282": {
           versioned: true,
         },
-        "/js/b.es5.js?as_js_classic&v=8f3fa8a4": {
-          versioned: true,
-        },
+        "/js/b.es5.js?as_js_classic&v=8f3fa8a4": { versioned: true },
         "/js/arrayLikeToArray.es5.js?as_js_classic&v=fbb6cf02": {
           versioned: true,
         },
@@ -135,7 +126,7 @@ if (process.platform === "darwin") {
         "/main.html": { versioned: false, version: "0667abfe" },
         "/css/style.css?v=0e312da1": { versioned: true },
         "/js/slicedToArray.js?v=615f0b28": { versioned: true },
-        "/js/a.js?v=e9a31140": { versioned: true },
+        "/js/a.js?v=ad0057dc": { versioned: true },
         "/js/arrayWithHoles.js?v=f4a3cd3b": { versioned: true },
         "/js/iterableToArrayLimit.js?v=2b6b9d86": { versioned: true },
         "/js/unsupportedIterableToArray.js?v=e025c8eb": { versioned: true },

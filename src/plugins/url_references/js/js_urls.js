@@ -11,14 +11,11 @@ import {
   analyzeServiceWorkerRegisterCall,
 } from "@jsenv/utils/js_ast/js_static_analysis.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const isJsModule = urlInfo.type === "js_module"
-  const isWebWorker =
-    urlInfo.subtype === "worker" ||
-    urlInfo.subtype === "service_worker" ||
-    urlInfo.subtype === "shared_worker"
-
+  const isWebWorker = isWebWorkerUrlInfo(urlInfo)
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [
       [
@@ -41,7 +38,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
-      expectedSubtype: jsMention.expectedSubtype,
+      expectedSubtype: jsMention.expectedSubtype || urlInfo.subtype,
       line: jsMention.line,
       column: jsMention.column,
       specifier: jsMention.specifier,

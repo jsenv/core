@@ -4,8 +4,11 @@ import { memoizeByUrl } from "@jsenv/utils/memoize/memoize_by_url.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}
-  const generate = memoizeByUrl((url, urlInfo, parentUrlInfo) => {
-    const directoryPath = determineDirectoryPath(urlInfo, parentUrlInfo)
+  const generate = memoizeByUrl((url, { urlInfo, parentUrlInfo }) => {
+    const directoryPath = determineDirectoryPath({
+      urlInfo,
+      parentUrlInfo,
+    })
     let names = cache[directoryPath]
     if (!names) {
       names = []
@@ -44,12 +47,14 @@ const splitFileExtension = (filename) => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }
 
-const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
+const determineDirectoryPath = ({ urlInfo, parentUrlInfo }) => {
   if (urlInfo.isInline) {
-    const parentDirectoryPath = determineDirectoryPath(parentUrlInfo)
+    const parentDirectoryPath = determineDirectoryPath({
+      urlInfo: parentUrlInfo,
+    })
     return parentDirectoryPath
   }
-  if (urlInfo.data.isEntryPoint) {
+  if (urlInfo.data.isEntryPoint || urlInfo.data.isWebWorkerEntryPoint) {
     return ""
   }
   if (urlInfo.type === "importmap") {
@@ -62,9 +67,6 @@ const determineDirectoryPath = (urlInfo, parentUrlInfo) => {
     return "css/"
   }
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    if (urlInfo.subtype === "service_worker") {
-      return ""
-    }
     return "js/"
   }
   if (urlInfo.type === "json") {

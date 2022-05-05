@@ -38,6 +38,7 @@ import { createKitchen } from "../omega/kitchen.js"
 import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
+import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
@@ -162,7 +163,6 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
   const rawUrls = {}
   const buildUrls = {}
   const rawUrlRedirections = {}
-
   const bundleUrlInfos = {}
   const bundlers = {}
   rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
@@ -271,7 +271,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             fromBundle: true,
           },
         }
-        const buildUrl = buildUrlsGenerator.generate(url, bundleUrlInfo)
+        const buildUrl = buildUrlsGenerator.generate(url, {
+          urlInfo: bundleUrlInfo,
+        })
         rawUrlRedirections[url] = buildUrl
         rawUrls[buildUrl] = url
         bundleUrlInfos[buildUrl] = bundleUrlInfo
@@ -337,10 +339,16 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             // And the content will be generated when url is cooked by url graph loader.
             // Here we just want to reserve an url for that file
             const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              data: reference.data,
-              type: reference.expectedType,
-              subtype: reference.expectedSubtype,
-              filename: reference.filename,
+              urlInfo: {
+                data: {
+                  ...reference.data,
+                  isWebWorkerEntryPoint:
+                    isWebWorkerEntryPointReference(reference),
+                },
+                type: reference.expectedType,
+                subtype: reference.expectedSubtype,
+                filename: reference.filename,
+              },
             })
             const originalUrl = reference.original.url
             const originalBuildUrl = urlIsInsideOf(
@@ -373,11 +381,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
               // throw new Error(`cannot find raw url for "${reference.url}"`)
               return reference.url
             }
-            const buildUrl = buildUrlsGenerator.generate(
-              reference.url,
-              rawUrlInfo,
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              urlInfo: rawUrlInfo,
               parentUrlInfo,
-            )
+            })
             rawUrls[buildUrl] = rawUrlInfo.url
             return buildUrl
           }
@@ -385,8 +392,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           //   - to inject "s.js"
           if (reference.injected) {
             const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              data: {},
-              type: "js_classic",
+              urlInfo: {
+                data: {},
+                type: "js_classic",
+              },
             })
             rawUrls[buildUrl] = reference.url
             return buildUrl
@@ -394,10 +403,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
           // files from root directory but not given to rollup nor postcss
           if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(
-              reference.url,
-              rawUrlInfo,
-            )
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              urlInfo: rawUrlInfo,
+            })
             rawUrls[buildUrl] = rawUrlInfo.url
             return buildUrl
           }
@@ -409,8 +417,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           // - sourcemaps
           // const finalUrlInfo = finalGraph.getUrlInfo(url)
           const buildUrl = buildUrlsGenerator.generate(reference.url, {
-            data: {},
-            type: "asset",
+            urlInfo: {
+              data: {},
+              type: "asset",
+            },
           })
           return buildUrl
         },
@@ -647,11 +657,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               // specifier comes from "normalize" hook done a bit earlier in this file
               // we want to get back their build url to access their infos
               const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
-              if (
-                referencedUrlInfo.data.isEntryPoint ||
-                referencedUrlInfo.subtype === "service_worker" ||
-                referencedUrlInfo.type === "webmanifest"
-              ) {
+              if (!canUseVersionedUrl(referencedUrlInfo)) {
                 return reference.specifier
               }
               // data:* urls and so on
@@ -767,11 +773,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       return
     }
     const version = urlInfo.data.version
-    const useVersionedUrl =
-      !urlInfo.data.isEntryPoint &&
-      urlInfo.subtype !== "service_worker" &&
-      urlInfo.type !== "webmanifest" &&
-      version
+    const useVersionedUrl = version && canUseVersionedUrl(urlInfo, finalGraph)
     const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url
     const buildUrlSpecifier = Object.keys(buildUrls).find(
       (key) => buildUrls[key] === buildUrl,
@@ -900,4 +902,17 @@ const assertEntryPoints = ({ entryPoints }) => {
       )
     }
   })
+}
+
+const canUseVersionedUrl = (urlInfo) => {
+  if (urlInfo.data.isEntryPoint) {
+    return false
+  }
+  if (urlInfo.type === "webmanifest") {
+    return false
+  }
+  if (urlInfo.subtype === "service_worker") {
+    return !urlInfo.data.isWebWorkerEntryPoint
+  }
+  return true
 }
