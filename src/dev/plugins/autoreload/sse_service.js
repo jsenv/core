@@ -10,6 +10,7 @@ export const createSSEService = ({
   autoreloadPatterns,
   onFileChange,
   hotUpdateCallbackList,
+  cooldownBetweenFileEvents = 0,
 }) => {
   const destroyCallbackList = createCallbackListNotifiedOnce()
   const projectFileModified = createCallbackList()
@@ -111,9 +112,11 @@ export const createSSEService = ({
             }
           },
         )
-        const stopWatching = watchProjectFiles(({ relativeUrl, event }) => {
-          onFileChange({ relativeUrl, event })
-        })
+        const stopWatching = watchProjectFiles(
+          cooldownBetweenFileEvents
+            ? guardTooFastSecondCall(onFileChange, cooldownBetweenFileEvents)
+            : onFileChange,
+        )
         return () => {
           removeHotUpdateCallback()
           stopWatching()
@@ -145,5 +148,22 @@ export const createSSEService = ({
     destroy: () => {
       destroyCallbackList.notify()
     },
+  }
+}
+
+const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
+  const previousCallMsMap = new Map()
+  return ({ relativeUrl, event }) => {
+    const previousCallMs = previousCallMsMap.get(relativeUrl)
+    const nowMs = Date.now()
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMsMap.delete(relativeUrl)
+        return
+      }
+    }
+    previousCallMsMap.set(relativeUrl, nowMs)
+    callback({ relativeUrl, event })
   }
 }

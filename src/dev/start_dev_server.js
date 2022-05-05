@@ -37,6 +37,8 @@ export const startDevServer = async ({
     "./dist/": false,
     "./**/node_modules/": false,
   },
+  cooldownBetweenFileEvents = 0,
+
   explorerGroups = {
     source: {
       "./*.html": true,
@@ -72,6 +74,7 @@ export const startDevServer = async ({
               rootDirectoryUrl,
               urlGraph,
               autoreloadPatterns,
+              cooldownBetweenFileEvents,
             }),
           ]
         : []),

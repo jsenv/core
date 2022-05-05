@@ -18,6 +18,7 @@ export const jsenvPluginAutoreload = ({
   rootDirectoryUrl,
   urlGraph,
   autoreloadPatterns,
+  cooldownBetweenFileEvents,
 }) => {
   return [
     jsenvPluginHmr(),
@@ -26,6 +27,7 @@ export const jsenvPluginAutoreload = ({
       rootDirectoryUrl,
       urlGraph,
       autoreloadPatterns,
+      cooldownBetweenFileEvents,
     }),
   ]
 }
@@ -162,6 +164,7 @@ const jsenvPluginHotSSE = ({
   rootDirectoryUrl,
   urlGraph,
   autoreloadPatterns,
+  cooldownBetweenFileEvents,
 }) => {
   const hotUpdateCallbackList = createCallbackList()
   const notifyDeclined = ({ cause, reason, declinedBy }) => {
@@ -280,6 +283,8 @@ const jsenvPluginHotSSE = ({
   const sseService = createSSEService({
     rootDirectoryUrl,
     autoreloadPatterns,
+    hotUpdateCallbackList,
+    cooldownBetweenFileEvents,
     onFileChange: ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
       const urlInfo = urlGraph.urlInfos[url]
@@ -303,7 +308,6 @@ const jsenvPluginHotSSE = ({
         })
       }
     },
-    hotUpdateCallbackList,
   })
   urlGraph.prunedCallbackList.add(({ prunedUrlInfos, firstUrlInfo }) => {
     prunedUrlInfos.forEach((prunedUrlInfo) => {

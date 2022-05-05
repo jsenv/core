@@ -21,6 +21,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
+  cooldownBetweenFileEvents: 50,
 })
 const browser = await chromium.launch({
   headless: true,
