@@ -42,7 +42,7 @@ if (process.platform === "darwin") {
       serviceWorkerUrls: {
         "/main.html": {
           versioned: false,
-          version: "39280516",
+          version: "bf7e5d8b",
         },
         "/css/style.css?v=0e312da1": {
           versioned: true,
@@ -63,7 +63,7 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "39280516" },
+        "/main.html": { versioned: false, version: "bf7e5d8b" },
         "/css/style.css?v=0e312da1": { versioned: true },
         "/js/slicedToArray.es5.js?as_js_classic&v=ecc85f1b": {
           versioned: true,
@@ -102,7 +102,7 @@ if (process.platform === "darwin") {
       serviceWorkerUrls: {
         "/main.html": {
           versioned: false,
-          version: "0667abfe",
+          version: "8229433b",
         },
         "/css/style.css?v=0e312da1": {
           versioned: true,
@@ -123,7 +123,7 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "0667abfe" },
+        "/main.html": { versioned: false, version: "8229433b" },
         "/css/style.css?v=0e312da1": { versioned: true },
         "/js/slicedToArray.js?v=615f0b28": { versioned: true },
         "/js/a.js?v=ad0057dc": { versioned: true },

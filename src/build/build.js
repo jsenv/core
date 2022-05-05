@@ -582,9 +582,19 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
           return
         }
+
+        const urlContent =
+          urlInfo.type === "html"
+            ? stringifyHtmlAst(
+                parseHtmlString(urlInfo.content, {
+                  storeOriginalPositions: false,
+                }),
+                { removeOriginalPositionAttributes: true },
+              )
+            : urlInfo.content
         const versionGenerator = createVersionGenerator()
         versionGenerator.augmentWithContent({
-          content: urlInfo.content,
+          content: urlContent,
           contentType: urlInfo.contentType,
           lineBreakNormalization,
         })
@@ -619,6 +629,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           }
         })
         urlInfo.data.version = versionGenerator.generate()
+        if (urlInfo.data.version === "a58e6960") {
+          console.log(urlContent)
+        }
         urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
           buildUrl: urlInfo.url,
           version: urlInfo.data.version,
@@ -721,18 +734,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
               }
               return versionedUrlInfo
             },
-            transformUrlContent: {
-              html: (urlInfo) => {
-                const htmlAst = parseHtmlString(urlInfo.content, {
-                  storeOriginalPositions: false,
-                })
-                return {
-                  content: stringifyHtmlAst(htmlAst, {
-                    removeOriginalPositionAttributes: true,
-                  }),
-                }
-              },
-            },
           },
         ],
       })
@@ -765,8 +766,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       throw e
     }
     versioningTask.done()
-  } else {
-    // TODO: remove html attributes such as original-src-position
   }
 
   GRAPH.forEach(finalGraph, (urlInfo) => {
@@ -775,6 +774,14 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     }
     if (urlInfo.external) {
       return
+    }
+    if (urlInfo.type === "html") {
+      const htmlAst = parseHtmlString(urlInfo.content, {
+        storeOriginalPositions: false,
+      })
+      urlInfo.content = stringifyHtmlAst(htmlAst, {
+        removeOriginalPositionAttributes: true,
+      })
     }
     const version = urlInfo.data.version
     const useVersionedUrl = version && canUseVersionedUrl(urlInfo, finalGraph)

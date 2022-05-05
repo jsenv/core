@@ -36,7 +36,7 @@ if (process.platform === "darwin") {
     serviceWorkerUrls: {
       "/main.html": {
         versioned: false,
-        version: "fb20c9a3",
+        version: "6d62f00a",
       },
       "/css/style.css?v=0e312da1": {
         versioned: true,
