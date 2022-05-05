@@ -9,7 +9,7 @@ self.addEventListener("message", async (messageEvent) => {
   if (messageEvent.data === "inspect") {
     messageEvent.ports[0].postMessage({
       order: self.order,
-      generatedUrlsConfig: self.generatedUrlsConfig,
+      serviceWorkerUrls: self.serviceWorkerUrls,
     })
   }
 })
