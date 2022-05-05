@@ -99,6 +99,51 @@ if (process.platform === "darwin") {
     assert({ actual, expected })
   }
 
-  // TODO: support
-  // TODO: support + no bundling
+  // support
+  {
+    const actual = await test({
+      runtimeCompat: {
+        chrome: "80",
+      },
+    })
+    const expected = {
+      order: [],
+      serviceWorkerUrls: {
+        "/main.html": {
+          versioned: false,
+          version: "0667abfe",
+        },
+        "/css/style.css?v=0e312da1": {
+          versioned: true,
+        },
+      },
+    }
+    assert({ actual, expected })
+  }
+
+  // support + no bundling
+  {
+    const actual = await test({
+      runtimeCompat: {
+        chrome: "80",
+      },
+      bundling: false,
+    })
+    const expected = {
+      order: [],
+      serviceWorkerUrls: {
+        "/main.html": { versioned: false, version: "0667abfe" },
+        "/css/style.css?v=0e312da1": { versioned: true },
+        "/js/slicedToArray.js?v=615f0b28": { versioned: true },
+        "/js/a.js?v=e9a31140": { versioned: true },
+        "/js/arrayWithHoles.js?v=f4a3cd3b": { versioned: true },
+        "/js/iterableToArrayLimit.js?v=2b6b9d86": { versioned: true },
+        "/js/unsupportedIterableToArray.js?v=e025c8eb": { versioned: true },
+        "/js/nonIterableRest.js?v=de8e7134": { versioned: true },
+        "/js/b.js?v=e3b0c442": { versioned: true },
+        "/js/arrayLikeToArray.js?v=016e8c90": { versioned: true },
+      },
+    }
+    assert({ actual, expected })
+  }
 }
