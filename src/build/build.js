@@ -589,14 +589,16 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
           lineBreakNormalization,
         })
         urlInfo.dependencies.forEach((dependencyUrl) => {
+          // this dependency is inline (data:) or remote (http://, https://)
+          if (!dependencyUrl.startsWith("file:")) {
+            return
+          }
           const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
           if (
             // this content is part of the file, no need to take into account twice
             dependencyUrlInfo.isInline ||
             // this dependency content is not known
-            dependencyUrlInfo.external ||
-            // this dependency is inline (data:) or remote (http://, https://)
-            !dependencyUrl.url.startsWith("file:")
+            dependencyUrlInfo.external
           ) {
             return
           }
