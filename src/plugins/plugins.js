@@ -20,6 +20,7 @@ import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 export const getCorePlugins = ({
   rootDirectoryUrl,
   urlGraph,
+  scenario,
 
   htmlSupervisor,
   nodeEsmResolution,
@@ -71,6 +72,7 @@ export const getCorePlugins = ({
           jsenvPluginAutoreload({
             rootDirectoryUrl,
             urlGraph,
+            scenario,
             ...autoreload,
           }),
         ]

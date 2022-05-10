@@ -28,6 +28,8 @@ export const startDevServer = async ({
   plugins = [],
   htmlSupervisor = true,
   injectedGlobals,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
   autoreload = true,
   explorerGroups = {
     source: {
@@ -57,9 +59,12 @@ export const startDevServer = async ({
       ...getCorePlugins({
         rootDirectoryUrl,
         urlGraph,
+        scenario: "dev",
 
         htmlSupervisor,
         injectedGlobals,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
         autoreload,
       }),
       jsenvPluginExplorer({

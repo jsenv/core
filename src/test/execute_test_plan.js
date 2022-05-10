@@ -83,6 +83,8 @@ export const executeTestPlan = async ({
   sourcemaps = "inline",
   plugins = [],
   injectedGlobals,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
 
   protocol,
   privateKey,
@@ -167,6 +169,8 @@ export const executeTestPlan = async ({
     sourcemaps,
     plugins,
     injectedGlobals,
+    nodeEsmResolution,
+    fileSystemMagicResolution,
 
     protocol,
     privateKey,

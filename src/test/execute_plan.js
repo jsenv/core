@@ -65,8 +65,10 @@ export const executePlan = async (
     scenario,
     sourcemaps,
     plugins,
-    transpilation,
     injectedGlobals,
+    nodeEsmResolution,
+    fileSystemMagicResolution,
+    transpilation,
 
     protocol,
     privateKey,
@@ -140,7 +142,10 @@ export const executePlan = async (
         plugins: [
           ...plugins,
           ...getCorePlugins({
+            scenario,
             htmlSupervisor: true,
+            nodeEsmResolution,
+            fileSystemMagicResolution,
             injectedGlobals,
             transpilation: {
               ...transpilation,

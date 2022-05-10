@@ -26,10 +26,13 @@ export const execute = async ({
   runtime,
   runtimeParams,
 
-  injectedGlobals,
-  plugins = [],
   scenario = "dev",
   sourcemaps = "inline",
+  plugins = [],
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  injectedGlobals,
+  transpilation,
 
   port,
   protocol,
@@ -72,7 +75,11 @@ export const execute = async ({
       plugins: [
         ...plugins,
         ...getCorePlugins({
+          scenario,
+          nodeEsmResolution,
+          fileSystemMagicResolution,
           injectedGlobals,
+          transpilation,
         }),
       ],
     })
