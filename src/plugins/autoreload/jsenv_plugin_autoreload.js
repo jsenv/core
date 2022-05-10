@@ -1,6 +1,6 @@
 import { jsenvPluginHmr } from "./jsenv_plugin_hmr.js"
-import { jsenvPluginSSEClient } from "./sse_client/jsenv_plugin_sse_client.js"
-import { jsenvPluginSSEServer } from "./sse_server/jsenv_plugin_sse_server.js"
+import { jsenvPluginDevSSEClient } from "./dev_sse/jsenv_plugin_dev_sse_client.js"
+import { jsenvPluginDevSSEServer } from "./dev_sse/jsenv_plugin_dev_sse_server.js"
 
 export const jsenvPluginAutoreload = ({
   rootDirectoryUrl,
@@ -10,8 +10,8 @@ export const jsenvPluginAutoreload = ({
 }) => {
   return [
     jsenvPluginHmr(),
-    jsenvPluginSSEClient(),
-    jsenvPluginSSEServer({
+    jsenvPluginDevSSEClient(),
+    jsenvPluginDevSSEServer({
       rootDirectoryUrl,
       urlGraph,
       watchedFilePatterns,

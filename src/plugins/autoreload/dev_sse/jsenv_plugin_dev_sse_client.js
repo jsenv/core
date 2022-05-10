@@ -5,14 +5,14 @@ import {
   createHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
-export const jsenvPluginSSEClient = () => {
+export const jsenvPluginDevSSEClient = () => {
   const eventSourceClientFileUrl = new URL(
     "./client/event_source_client.js",
     import.meta.url,
   ).href
 
   return {
-    name: "jsenv:sse_client",
+    name: "jsenv:dev_sse_client",
     appliesDuring: { dev: true },
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
@@ -28,7 +28,7 @@ export const jsenvPluginSSEClient = () => {
             "tagName": "script",
             "type": "module",
             "src": eventSourceClientReference.generatedSpecifier,
-            "injected-by": "jsenv:hot",
+            "injected-by": "jsenv:dev_sse_client",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

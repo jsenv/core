@@ -1,5 +1,12 @@
 /*
  * TODO: inject an event source client to autoreload
+ * when a file changes
+ * It won't be the same event source client than the one during dev
+ * (it's a simpler one)
+ * For the naming
+ * - the one during dev: jsenv_plugin_dev_sse
+ * - the one during build: jsenv_plugin_build_sse
+ *
  */
 
 import {
@@ -14,7 +21,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
-import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
+// import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
 import { build } from "../build/build.js"
 
 export const startBuildServer = async ({
@@ -159,23 +166,25 @@ export const startBuildServer = async ({
   })
   logger.info(``)
 
-  const unregisterDirectoryLifecyle = watchFiles({
-    rootDirectoryUrl,
-    patterns: {
-      ...autoreloadPatterns,
-      ".jsenv/": false,
-    },
-    cooldownBetweenFileEvents,
-    fileChangeCallback: () => {
-      abortController.abort()
-      runBuild()
-      // this is where we would like to tell browser to reload
-    },
-  })
-  operation.addAbortCallback(() => {
-    unregisterDirectoryLifecyle()
-  })
+  // const unregisterDirectoryLifecyle = watchFiles({
+  //   rootDirectoryUrl,
+  //   patterns: {
+  //     ...autoreloadPatterns,
+  //     ".jsenv/": false,
+  //   },
+  //   cooldownBetweenFileEvents,
+  //   fileChangeCallback: () => {
+  //     abortController.abort()
+  //     runBuild()
+  //     // this is where we would like to tell browser to reload
+  //   },
+  // })
+  // operation.addAbortCallback(() => {
+  //   unregisterDirectoryLifecyle()
+  // })
   runBuild()
+
+  return server
 }
 
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30

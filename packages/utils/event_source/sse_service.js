@@ -7,7 +7,7 @@ export const createSSEService = ({
   rootDirectoryUrl,
   watchedFilePatterns,
   onFileChange,
-  hotUpdateCallbackList,
+  serverEventCallbackList,
   cooldownBetweenFileEvents = 0,
 }) => {
   const destroyCallbackList = createCallbackListNotifiedOnce()
@@ -46,37 +46,11 @@ export const createSSEService = ({
       historyLength: 100,
       welcomeEventEnabled: true,
       effect: () => {
-        const removeHotUpdateCallback = hotUpdateCallbackList.add(
-          (hotUpdate) => {
-            if (hotUpdate.declined) {
-              sseRoom.sendEvent({
-                type: "reload",
-                data: JSON.stringify({
-                  cause: hotUpdate.cause,
-                  type: "full",
-                  typeReason: hotUpdate.reason,
-                  declinedBy: hotUpdate.declinedBy,
-                }),
-              })
-            } else {
-              sseRoom.sendEvent({
-                type: "reload",
-                data: JSON.stringify({
-                  cause: hotUpdate.cause,
-                  type: "hot",
-                  typeReason: hotUpdate.reason,
-                  hotInstructions: hotUpdate.instructions,
-                }),
-              })
-            }
-          },
-        )
-        return () => {
-          removeHotUpdateCallback()
-        }
+        return serverEventCallbackList.add((event) => {
+          sseRoom.sendEvent(event)
+        })
       },
     })
-
     const removeSSECleanupCallback = destroyCallbackList.add(() => {
       removeSSECleanupCallback()
       sseRoom.close()

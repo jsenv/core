@@ -1,29 +1,35 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { createCallbackList } from "@jsenv/abort"
 
-import { createSSEService } from "./sse_service.js"
+import { createSSEService } from "@jsenv/utils/event_source/sse_service.js"
 
-export const jsenvPluginSSEServer = ({
+export const jsenvPluginDevSSEServer = ({
   rootDirectoryUrl,
   urlGraph,
   watchedFilePatterns,
   cooldownBetweenFileEvents,
 }) => {
-  const hotUpdateCallbackList = createCallbackList()
+  const serverEventCallbackList = createCallbackList()
   const notifyDeclined = ({ cause, reason, declinedBy }) => {
-    hotUpdateCallbackList.notify({
-      declined: true,
-      cause,
-      reason,
-      declinedBy,
+    serverEventCallbackList.notify({
+      type: "reload",
+      data: JSON.stringify({
+        cause,
+        type: "full",
+        typeReason: reason,
+        declinedBy,
+      }),
     })
   }
   const notifyAccepted = ({ cause, reason, instructions }) => {
-    hotUpdateCallbackList.notify({
-      accepted: true,
-      cause,
-      reason,
-      instructions,
+    serverEventCallbackList.notify({
+      type: "reload",
+      data: JSON.stringify({
+        cause,
+        type: "hot",
+        typeReason: reason,
+        hotInstructions: instructions,
+      }),
     })
   }
   const updateHmrTimestamp = (urlInfo, hmrTimestamp) => {
@@ -126,7 +132,6 @@ export const jsenvPluginSSEServer = ({
   const sseService = createSSEService({
     rootDirectoryUrl,
     watchedFilePatterns,
-    hotUpdateCallbackList,
     cooldownBetweenFileEvents,
     onFileChange: ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href

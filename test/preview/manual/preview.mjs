@@ -19,4 +19,5 @@ await startBuildServer({
     "./main.html": "main.html",
   },
   // minification: false,
+  // versioning: false,
 })
