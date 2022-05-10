@@ -7,10 +7,10 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 
-import { collectHotDataFromHtmlAst } from "./helpers/html_hot_dependencies.js"
-import { babelPluginMetadataImportMetaHot } from "./helpers/babel_plugin_metadata_import_meta_hot.js"
+import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"
+import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-export const jsenvPluginHot = () => {
+export const jsenvPluginHotSSEClient = () => {
   const eventSourceClientFileUrl = new URL(
     "./client/event_source_client.js",
     import.meta.url,
@@ -21,7 +21,7 @@ export const jsenvPluginHot = () => {
   ).href
 
   return {
-    name: "jsenv:hot",
+    name: "jsenv:hot_sse_client",
     appliesDuring: { dev: true },
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {

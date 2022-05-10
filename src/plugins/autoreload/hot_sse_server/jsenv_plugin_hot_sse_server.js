@@ -1,9 +1,9 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { createCallbackList } from "@jsenv/abort"
 
-import { createSSEService } from "./helpers/sse_service.js"
+import { createSSEService } from "./sse_service.js"
 
-export const jsenvPluginHotSSE = ({
+export const jsenvPluginHotSSEServer = ({
   rootDirectoryUrl,
   urlGraph,
   watchedFilePatterns,
@@ -199,7 +199,7 @@ export const jsenvPluginHotSSE = ({
   })
 
   return {
-    name: "jsenv:hot_sse",
+    name: "jsenv:hot_sse_server",
     appliesDuring: { dev: true },
     serve: (request, { urlGraph, rootDirectoryUrl }) => {
       if (request.ressource === "/__graph__") {
