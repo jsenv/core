@@ -805,7 +805,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     // - file converted for import assertion of js_classic conversion
     if (
       !urlInfo.data.isEntryPoint &&
-      !urlInfo.type === "sourcemap" &&
+      urlInfo.type !== "sourcemap" &&
       urlInfo.dependents.size === 0
     ) {
       cleanupActions.push(() => {
