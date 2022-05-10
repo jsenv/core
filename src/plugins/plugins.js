@@ -14,6 +14,7 @@ import { jsenvPluginInjectGlobals } from "./inject_globals/jsenv_plugin_inject_g
 import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js"
 import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
 import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
+import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js"
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 
 export const getCorePlugins = ({
@@ -64,6 +65,7 @@ export const getCorePlugins = ({
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
 
+    jsenvPluginImportMetaHot(),
     ...(autoreload
       ? [
           jsenvPluginAutoreload({

@@ -3,7 +3,7 @@ import { createCallbackList } from "@jsenv/abort"
 
 import { createSSEService } from "./sse_service.js"
 
-export const jsenvPluginHotSSEServer = ({
+export const jsenvPluginSSEServer = ({
   rootDirectoryUrl,
   urlGraph,
   watchedFilePatterns,
@@ -199,7 +199,7 @@ export const jsenvPluginHotSSEServer = ({
   })
 
   return {
-    name: "jsenv:hot_sse_server",
+    name: "jsenv:sse_server",
     appliesDuring: { dev: true },
     serve: (request, { urlGraph, rootDirectoryUrl }) => {
       if (request.ressource === "/__graph__") {
