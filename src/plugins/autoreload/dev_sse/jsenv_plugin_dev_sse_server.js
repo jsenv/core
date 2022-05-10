@@ -133,6 +133,7 @@ export const jsenvPluginDevSSEServer = ({
     rootDirectoryUrl,
     watchedFilePatterns,
     cooldownBetweenFileEvents,
+    serverEventCallbackList,
     onFileChange: ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
       const urlInfo = urlGraph.urlInfos[url]
