@@ -18,5 +18,5 @@ await startBuildServer({
   entryPoints: {
     "./main.html": "main.html",
   },
-  minification: false,
+  // minification: false,
 })

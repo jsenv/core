@@ -14,8 +14,12 @@ import { jsenvPluginInjectGlobals } from "./inject_globals/jsenv_plugin_inject_g
 import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js"
 import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
 import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
+import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 
 export const getCorePlugins = ({
+  rootDirectoryUrl,
+  urlGraph,
+
   htmlSupervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
@@ -23,9 +27,22 @@ export const getCorePlugins = ({
   transpilation = true,
   minification = false,
   bundling = false,
+
+  autoreload = false,
 } = {}) => {
   if (htmlSupervisor === true) {
     htmlSupervisor = {}
+  }
+  if (autoreload === true) {
+    autoreload = {
+      watchedFilePatterns: {
+        "./**": true,
+        "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
+        "./dist/": false,
+        "./**/node_modules/": false,
+      },
+      cooldownBetweenFileEvents: 0,
+    }
   }
   return [
     jsenvPluginTranspilation(transpilation),
@@ -46,5 +63,15 @@ export const getCorePlugins = ({
 
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
+
+    ...(autoreload
+      ? [
+          jsenvPluginAutoreload({
+            rootDirectoryUrl,
+            urlGraph,
+            ...autoreload,
+          }),
+        ]
+      : []),
   ]
 }

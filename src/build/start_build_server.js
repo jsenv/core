@@ -1,3 +1,7 @@
+/*
+ * TODO: inject an event source client to autoreload
+ */
+
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -41,13 +45,7 @@ export const startBuildServer = async ({
   versioning,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization,
-  autoreloadPatterns = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
-    "./dist/": false,
-    "./**/node_modules/": false,
-  },
-  cooldownBetweenFileEvents,
+  autoreload = true,
 
   baseUrl,
 }) => {
@@ -89,6 +87,7 @@ export const startBuildServer = async ({
       versioning,
       versioningMethod,
       lineBreakNormalization,
+      autoreload,
 
       writeOnFileSystem: true,
       buildDirectoryClean: true,
@@ -170,6 +169,7 @@ export const startBuildServer = async ({
     fileChangeCallback: () => {
       abortController.abort()
       runBuild()
+      // this is where we would like to tell browser to reload
     },
   })
   operation.addAbortCallback(() => {
