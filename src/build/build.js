@@ -66,7 +66,6 @@ export const build = async ({
   transpilation = {},
   bundling = true,
   minification = true,
-
   versioning = true,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
@@ -804,7 +803,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     // nothing uses this url anymore
     // - versioning update inline content
     // - file converted for import assertion of js_classic conversion
-    if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
+    if (
+      !urlInfo.data.isEntryPoint &&
+      !urlInfo.type === "sourcemap" &&
+      urlInfo.dependents.size === 0
+    ) {
       cleanupActions.push(() => {
         delete finalGraph.urlInfos[urlInfo.url]
       })

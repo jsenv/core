@@ -1,9 +1,7 @@
 import { createSSERoom } from "@jsenv/server"
-import { registerDirectoryLifecycle } from "@jsenv/filesystem"
-import {
-  createCallbackList,
-  createCallbackListNotifiedOnce,
-} from "@jsenv/abort"
+import { createCallbackListNotifiedOnce } from "@jsenv/abort"
+
+import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
 
 export const createSSEService = ({
   rootDirectoryUrl,
@@ -13,58 +11,19 @@ export const createSSEService = ({
   cooldownBetweenFileEvents = 0,
 }) => {
   const destroyCallbackList = createCallbackListNotifiedOnce()
-  const projectFileModified = createCallbackList()
-  const projectFileRemoved = createCallbackList()
-  const projectFileAdded = createCallbackList()
-  const watchProjectFiles = (callback) => {
-    const removeModifiedCallback = projectFileModified.add((relativeUrl) => {
-      callback({
-        event: "modified",
-        relativeUrl,
-      })
-    })
-    const removeRemovedCallback = projectFileRemoved.add((relativeUrl) => {
-      callback({
-        event: "removed",
-        relativeUrl,
-      })
-    })
-    const removeAddedCallback = projectFileRemoved.add((relativeUrl) => {
-      callback({
-        event: "added",
-        relativeUrl,
-      })
-    })
-    return () => {
-      removeModifiedCallback()
-      removeRemovedCallback()
-      removeAddedCallback()
-    }
-  }
   // wait 100ms to actually start watching
   // otherwise server starting is delayed by the filesystem scan done in
   // registerDirectoryLifecycle
   const timeout = setTimeout(() => {
-    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+    const unregisterDirectoryLifecyle = watchFiles({
       rootDirectoryUrl,
-      {
-        watchDescription: {
-          ...autoreloadPatterns,
-          ".jsenv/": false,
-        },
-        updated: ({ relativeUrl }) => {
-          projectFileModified.notify(relativeUrl)
-        },
-        removed: ({ relativeUrl }) => {
-          projectFileRemoved.notify(relativeUrl)
-        },
-        added: ({ relativeUrl }) => {
-          projectFileAdded.notify(relativeUrl)
-        },
-        keepProcessAlive: false,
-        recursive: true,
+      patterns: {
+        ...autoreloadPatterns,
+        ".jsenv/": false,
       },
-    )
+      cooldownBetweenFileEvents,
+      fileChangeCallback: onFileChange,
+    })
     destroyCallbackList.add(unregisterDirectoryLifecyle)
   }, 100)
   destroyCallbackList.add(() => {
@@ -112,14 +71,8 @@ export const createSSEService = ({
             }
           },
         )
-        const stopWatching = watchProjectFiles(
-          cooldownBetweenFileEvents
-            ? guardTooFastSecondCall(onFileChange, cooldownBetweenFileEvents)
-            : onFileChange,
-        )
         return () => {
           removeHotUpdateCallback()
-          stopWatching()
         }
       },
     })
@@ -148,22 +101,5 @@ export const createSSEService = ({
     destroy: () => {
       destroyCallbackList.notify()
     },
-  }
-}
-
-const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
-  const previousCallMsMap = new Map()
-  return ({ relativeUrl, event }) => {
-    const previousCallMs = previousCallMsMap.get(relativeUrl)
-    const nowMs = Date.now()
-    if (previousCallMs) {
-      const msEllapsed = nowMs - previousCallMs
-      if (msEllapsed < cooldownBetweenFileEvents) {
-        previousCallMsMap.delete(relativeUrl)
-        return
-      }
-    }
-    previousCallMsMap.set(relativeUrl, nowMs)
-    callback({ relativeUrl, event })
   }
 }
