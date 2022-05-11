@@ -19,4 +19,8 @@ await startBuildServer({
   buildCommandLogLevel: "warn",
   // minification: false,
   // versioning: false,
+  autorestart: {
+    logLevel: "info",
+    urlToFork: import.meta.url,
+  },
 })

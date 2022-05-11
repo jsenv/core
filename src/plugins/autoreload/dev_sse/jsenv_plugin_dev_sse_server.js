@@ -134,8 +134,8 @@ export const jsenvPluginDevSSEServer = ({
     watchedFilePatterns,
     cooldownBetweenFileEvents,
     serverEventCallbackList,
-    onFileChange: ({ relativeUrl, event }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href
+    onFileChange: ({ url, event }) => {
+      const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
       const urlInfo = urlGraph.urlInfos[url]
       // file not part of dependency graph
       if (!urlInfo) {

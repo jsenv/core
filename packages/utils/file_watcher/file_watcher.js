@@ -1,5 +1,7 @@
 import { registerDirectoryLifecycle } from "@jsenv/filesystem"
 
+import { guardTooFastSecondCall } from "./guard_second_call.js"
+
 export const watchFiles = ({
   rootDirectoryUrl,
   watchedFilePatterns = {
@@ -22,13 +24,22 @@ export const watchFiles = ({
     {
       watchDescription: watchedFilePatterns,
       updated: ({ relativeUrl }) => {
-        fileChangeCallback({ relativeUrl, event: "modified" })
+        fileChangeCallback({
+          url: new URL(relativeUrl, rootDirectoryUrl).href,
+          event: "modified",
+        })
       },
       removed: ({ relativeUrl }) => {
-        fileChangeCallback({ relativeUrl, event: "removed" })
+        fileChangeCallback({
+          url: new URL(relativeUrl, rootDirectoryUrl).href,
+          event: "removed",
+        })
       },
       added: ({ relativeUrl }) => {
-        fileChangeCallback({ relativeUrl, event: "added" })
+        fileChangeCallback({
+          url: new URL(relativeUrl, rootDirectoryUrl).href,
+          event: "added",
+        })
       },
       keepProcessAlive: false,
       recursive: true,
@@ -36,21 +47,4 @@ export const watchFiles = ({
   )
 
   return unregisterDirectoryLifecyle
-}
-
-const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
-  const previousCallMsMap = new Map()
-  return ({ relativeUrl, event }) => {
-    const previousCallMs = previousCallMsMap.get(relativeUrl)
-    const nowMs = Date.now()
-    if (previousCallMs) {
-      const msEllapsed = nowMs - previousCallMs
-      if (msEllapsed < cooldownBetweenFileEvents) {
-        previousCallMsMap.delete(relativeUrl)
-        return
-      }
-    }
-    previousCallMsMap.set(relativeUrl, nowMs)
-    callback({ relativeUrl, event })
-  }
 }
