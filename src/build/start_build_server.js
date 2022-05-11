@@ -26,12 +26,13 @@ import { createLogger } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
-import { build } from "../build/build.js"
+import { executeCommand } from "@jsenv/utils/command/command.js"
 
 export const startBuildServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel,
+  buildCommandLogLevel = "warn",
   protocol,
   http2,
   certificate,
@@ -42,24 +43,9 @@ export const startBuildServer = async ({
 
   rootDirectoryUrl,
   buildDirectoryUrl,
-  entryPoints,
-
-  plugins,
-  sourcemaps,
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  injectedGlobals,
-  runtimeCompat,
-  transpilation,
-  bundling,
-  minification,
-  versioning,
-  versioningMethod = "search_param", // "filename", "search_param"
-  lineBreakNormalization,
+  buildCommand,
   watchedFilePatterns,
   cooldownBetweenFileEvents,
-
-  baseUrl,
 }) => {
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
@@ -73,42 +59,34 @@ export const startBuildServer = async ({
       )
     })
   }
+  const logger = createLogger({ logLevel })
 
   let buildPromise
   let abortController
-  const runBuild = () => {
+  const runBuild = async () => {
+    const buildTask = createTaskLog(logger, `execute build command`)
     abortController = new AbortController()
     operation.addAbortCallback(() => {
       abortController.abort()
     })
-    buildPromise = build({
+    buildPromise = executeCommand(buildCommand, {
+      cwd: rootDirectoryUrl,
+      logLevel: buildCommandLogLevel,
       signal: abortController.signal,
-      logLevel: "warn",
-      rootDirectoryUrl,
-      buildDirectoryUrl,
-      entryPoints,
-
-      plugins,
-      sourcemaps,
-      nodeEsmResolution,
-      fileSystemMagicResolution,
-      injectedGlobals,
-      runtimeCompat,
-      transpilation,
-      bundling,
-      minification,
-      versioning,
-      versioningMethod,
-      lineBreakNormalization,
-
-      writeOnFileSystem: true,
-      buildDirectoryClean: true,
-      baseUrl,
-      assetManifest: false,
     })
+    try {
+      await buildPromise
+      buildTask.done()
+    } catch (e) {
+      if (e.code === "ABORT_ERR") {
+        buildTask.fail(`execute build command aborted`)
+      } else {
+        buildTask.fail()
+        throw e
+      }
+    }
   }
 
-  const logger = createLogger({ logLevel })
   const startServerTask = createTaskLog(logger, "start build server")
   const server = await startServer({
     signal,
@@ -145,11 +123,10 @@ export const startBuildServer = async ({
     sendErrorDetails: true,
     requestToResponse: async (request) => {
       await buildPromise
-      const urlIsVersioned =
-        versioningMethod === "search_param"
-          ? new URL(request.ressource, request.origin).searchParams.has("v")
-          : // we could use a regex, but there can be false-positive
-            false
+      const urlIsVersioned = new URL(
+        request.ressource,
+        request.origin,
+      ).searchParams.has("v")
 
       return fetchFileSystem(
         new URL(request.ressource.slice(1), buildDirectoryUrl),
@@ -177,9 +154,15 @@ export const startBuildServer = async ({
     rootDirectoryUrl,
     watchedFilePatterns,
     cooldownBetweenFileEvents,
-    fileChangeCallback: () => {
+    fileChangeCallback: ({ relativeUrl, event }) => {
       abortController.abort()
-      runBuild()
+      // setTimeout is to ensure the abortController.abort() above
+      // is properly taken into account so that logs about abort comes first
+      // then logs about re-running the build happens
+      setTimeout(() => {
+        logger.info(`${relativeUrl} ${event} -> rebuild`)
+        runBuild()
+      })
     },
   })
   operation.addAbortCallback(() => {

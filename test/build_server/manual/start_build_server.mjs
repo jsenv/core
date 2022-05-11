@@ -13,11 +13,10 @@ await startBuildServer({
   protocol: "https",
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  entryPoints: {
-    "./main.html": "main.html",
-  },
+  buildCommand: "node ./build.mjs",
+  buildCommandLogLevel: "warn",
   // minification: false,
   // versioning: false,
 })

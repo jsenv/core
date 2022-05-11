@@ -3,7 +3,11 @@ import { loggerToLevels } from "@jsenv/logger"
 
 import { msAsDuration } from "@jsenv/utils/logs/duration_log.js"
 
-export const createTaskLog = (logger, label) => {
+export const createTaskLog = (
+  logger,
+  label,
+  { stopOnWriteFromOutside } = {},
+) => {
   if (!loggerToLevels(logger).info) {
     return {
       setRightText: () => {},
@@ -15,6 +19,7 @@ export const createTaskLog = (logger, label) => {
   const taskSpinner = startSpinner({
     log: createLog(),
     text: label,
+    stopOnWriteFromOutside,
   })
   return {
     setRightText: (value) => {
@@ -26,8 +31,8 @@ export const createTaskLog = (logger, label) => {
         `${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`,
       )
     },
-    fail: () => {
-      taskSpinner.stop(`${UNICODE.FAILURE} failed to ${label}`)
+    fail: (message = `failed to ${label}`) => {
+      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`)
     },
   }
 }
