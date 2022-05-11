@@ -309,10 +309,25 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           if (reference.specifier[0] === "#") {
             reference.external = true
           }
-          const url =
+          let url =
             reference.specifier[0] === "/"
               ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
               : new URL(reference.specifier, reference.parentUrl).href
+          const parentIsFromBundle = Boolean(
+            bundleUrlInfos[reference.parentUrl],
+          )
+          // urls inside css bundled by parcel
+          // contains url relative to the bundle file (which is considered inside build directory)
+          // if the file is not itself a bundle file it must be resolved against
+          // the original css url
+          if (
+            parentIsFromBundle &&
+            !bundleUrlInfos[url] &&
+            urlIsInsideOf(url, buildDirectoryUrl)
+          ) {
+            const parentRawUrl = rawUrls[reference.parentUrl]
+            url = new URL(reference.specifier, parentRawUrl).href
+          }
           const urlRedirected = rawUrlRedirections[url]
           return urlRedirected || url
         },
