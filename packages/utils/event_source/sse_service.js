@@ -6,9 +6,9 @@ import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
 export const createSSEService = ({
   rootDirectoryUrl,
   watchedFilePatterns,
+  cooldownBetweenFileEvents,
   onFileChange,
   serverEventCallbackList,
-  cooldownBetweenFileEvents = 0,
 }) => {
   const destroyCallbackList = createCallbackListNotifiedOnce()
   // wait 100ms to actually start watching
@@ -17,10 +17,7 @@ export const createSSEService = ({
   const timeout = setTimeout(() => {
     const unregisterDirectoryLifecyle = watchFiles({
       rootDirectoryUrl,
-      patterns: {
-        ...watchedFilePatterns,
-        ".jsenv/": false,
-      },
+      watchedFilePatterns,
       cooldownBetweenFileEvents,
       fileChangeCallback: onFileChange,
     })

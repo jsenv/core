@@ -1,7 +1,16 @@
 /*
- * TODO: inject an event source client to autoreload
- * when a file changes
+ * startBuildServer is mean to interact with the build files;
+ * files that will be deployed to production server(s).
+ * We want to be as close as possible from the production in order to:
+ * - run lighthouse
+ * - run an automated test tool such as cypress, playwright
+ * - see exactly how build file behaves (debug, measure perf, etc)
+ * For these reasons "startBuildServer" must be as close as possible from a static file server.
+ * It is not meant to provide a nice developper experience: this is the role "startDevServer".
  *
+ * Conclusion:
+ * "startBuildServer" must be as close as possible from a static file server because
+ * we want to be in the user shoes and we should not alter build files.
  */
 
 import {
@@ -16,7 +25,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
-// import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
+import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
 import { build } from "../build/build.js"
 
 export const startBuildServer = async ({
@@ -36,7 +45,7 @@ export const startBuildServer = async ({
   entryPoints,
 
   plugins,
-  sourcemaps = "file",
+  sourcemaps,
   nodeEsmResolution,
   fileSystemMagicResolution,
   injectedGlobals,
@@ -47,7 +56,8 @@ export const startBuildServer = async ({
   versioning,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization,
-  autoreload = true,
+  watchedFilePatterns,
+  cooldownBetweenFileEvents,
 
   baseUrl,
 }) => {
@@ -64,13 +74,14 @@ export const startBuildServer = async ({
     })
   }
 
+  let buildPromise
   let abortController
-  const runBuild = async () => {
+  const runBuild = () => {
     abortController = new AbortController()
     operation.addAbortCallback(() => {
       abortController.abort()
     })
-    await build({
+    buildPromise = build({
       signal: abortController.signal,
       logLevel: "warn",
       rootDirectoryUrl,
@@ -89,7 +100,6 @@ export const startBuildServer = async ({
       versioning,
       versioningMethod,
       lineBreakNormalization,
-      autoreload,
 
       writeOnFileSystem: true,
       buildDirectoryClean: true,
@@ -133,11 +143,13 @@ export const startBuildServer = async ({
       }),
     },
     sendErrorDetails: true,
-    requestToResponse: (request) => {
-      const urlIsVersioned = new URL(
-        request.ressource,
-        request.origin,
-      ).searchParams.has("v")
+    requestToResponse: async (request) => {
+      await buildPromise
+      const urlIsVersioned =
+        versioningMethod === "search_param"
+          ? new URL(request.ressource, request.origin).searchParams.has("v")
+          : // we could use a regex, but there can be false-positive
+            false
 
       return fetchFileSystem(
         new URL(request.ressource.slice(1), buildDirectoryUrl),
@@ -161,22 +173,18 @@ export const startBuildServer = async ({
   })
   logger.info(``)
 
-  // const unregisterDirectoryLifecyle = watchFiles({
-  //   rootDirectoryUrl,
-  //   patterns: {
-  //     ...autoreloadPatterns,
-  //     ".jsenv/": false,
-  //   },
-  //   cooldownBetweenFileEvents,
-  //   fileChangeCallback: () => {
-  //     abortController.abort()
-  //     runBuild()
-  //     // this is where we would like to tell browser to reload
-  //   },
-  // })
-  // operation.addAbortCallback(() => {
-  //   unregisterDirectoryLifecyle()
-  // })
+  const unregisterDirectoryLifecyle = watchFiles({
+    rootDirectoryUrl,
+    watchedFilePatterns,
+    cooldownBetweenFileEvents,
+    fileChangeCallback: () => {
+      abortController.abort()
+      runBuild()
+    },
+  })
+  operation.addAbortCallback(() => {
+    unregisterDirectoryLifecyle()
+  })
   runBuild()
 
   return server

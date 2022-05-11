@@ -6,16 +6,10 @@ export const jsenvPluginAutoreload = ({
   rootDirectoryUrl,
   urlGraph,
   scenario,
-  watchedFilePatterns = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
-    "./dist/": false,
-    "./**/node_modules/": false,
-  },
-  cooldownBetweenFileEvents = 0,
+  watchedFilePatterns,
+  cooldownBetweenFileEvents,
 }) => {
   if (scenario === "build") {
-    // TODO
     return []
   }
   return [

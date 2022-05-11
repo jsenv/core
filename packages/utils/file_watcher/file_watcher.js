@@ -2,9 +2,14 @@ import { registerDirectoryLifecycle } from "@jsenv/filesystem"
 
 export const watchFiles = ({
   rootDirectoryUrl,
-  patterns,
+  watchedFilePatterns = {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./dist/": false,
+    "./**/node_modules/": false,
+  },
+  cooldownBetweenFileEvents = 0,
   fileChangeCallback,
-  cooldownBetweenFileEvents,
 }) => {
   if (cooldownBetweenFileEvents) {
     fileChangeCallback = guardTooFastSecondCall(
@@ -15,7 +20,7 @@ export const watchFiles = ({
   const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
     rootDirectoryUrl,
     {
-      watchDescription: patterns,
+      watchDescription: watchedFilePatterns,
       updated: ({ relativeUrl }) => {
         fileChangeCallback({ relativeUrl, event: "modified" })
       },
