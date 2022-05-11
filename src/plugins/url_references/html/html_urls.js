@@ -109,7 +109,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         attributeName: "href",
         expectedContentType: type,
         expectedType: {
-          manifest: "manifest",
+          manifest: "webmanifest",
           modulepreload: "js_module",
           stylesheet: "css",
         }[rel],
