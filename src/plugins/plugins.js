@@ -36,15 +36,7 @@ export const getCorePlugins = ({
     htmlSupervisor = {}
   }
   if (autoreload === true) {
-    autoreload = {
-      watchedFilePatterns: {
-        "./**": true,
-        "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
-        "./dist/": false,
-        "./**/node_modules/": false,
-      },
-      cooldownBetweenFileEvents: 0,
-    }
+    autoreload = {}
   }
   return [
     jsenvPluginTranspilation(transpilation),

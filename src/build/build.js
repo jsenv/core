@@ -69,6 +69,7 @@ export const build = async ({
   versioning = true,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
+  autoreload = false,
 
   writeOnFileSystem = true,
   buildDirectoryClean = true,
@@ -125,6 +126,7 @@ build ${entryPointKeys.length} entry points`)
         },
         minification,
         bundling,
+        autoreload,
       }),
     ],
   })

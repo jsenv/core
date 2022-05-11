@@ -17,13 +17,13 @@ export const watchFiles = ({
     {
       watchDescription: patterns,
       updated: ({ relativeUrl }) => {
-        fileChangeCallback({ event: "modified", relativeUrl })
+        fileChangeCallback({ relativeUrl, event: "modified" })
       },
       removed: ({ relativeUrl }) => {
-        fileChangeCallback({ event: "removed", relativeUrl })
+        fileChangeCallback({ relativeUrl, event: "removed" })
       },
       added: ({ relativeUrl }) => {
-        fileChangeCallback({ event: "added", relativeUrl })
+        fileChangeCallback({ relativeUrl, event: "added" })
       },
       keepProcessAlive: false,
       recursive: true,

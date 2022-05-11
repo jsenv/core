@@ -1,11 +1,6 @@
 /*
  * TODO: inject an event source client to autoreload
  * when a file changes
- * It won't be the same event source client than the one during dev
- * (it's a simpler one)
- * For the naming
- * - the one during dev: jsenv_plugin_dev_sse
- * - the one during build: jsenv_plugin_build_sse
  *
  */
 

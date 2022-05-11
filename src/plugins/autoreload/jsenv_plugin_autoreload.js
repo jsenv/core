@@ -5,9 +5,19 @@ import { jsenvPluginDevSSEServer } from "./dev_sse/jsenv_plugin_dev_sse_server.j
 export const jsenvPluginAutoreload = ({
   rootDirectoryUrl,
   urlGraph,
-  watchedFilePatterns,
-  cooldownBetweenFileEvents,
+  scenario,
+  watchedFilePatterns = {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
+    "./dist/": false,
+    "./**/node_modules/": false,
+  },
+  cooldownBetweenFileEvents = 0,
 }) => {
+  if (scenario === "build") {
+    // TODO
+    return []
+  }
   return [
     jsenvPluginHmr(),
     jsenvPluginDevSSEClient(),
