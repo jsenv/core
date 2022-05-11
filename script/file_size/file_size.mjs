@@ -26,7 +26,7 @@ const dist = {
 
 export const fileSizeReport = await generateFileSizeReport({
   log: process.argv.includes("--log"),
-  projectDirectoryUrl: rootDirectoryUrl,
+  rootDirectoryUrl,
   transformations: { raw, gzip },
   trackingConfig: { dist },
   manifestConfig: {
