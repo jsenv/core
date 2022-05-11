@@ -1,5 +1,5 @@
 import { exec } from "node:child_process"
-import { createLogger } from "@jsenv/logger"
+import { createDetailedMessage, createLogger } from "@jsenv/logger"
 import { UNICODE } from "@jsenv/log"
 
 export const executeCommand = (
@@ -20,7 +20,10 @@ export const executeCommand = (
     logger.debug(`${UNICODE.COMMAND} ${command}`)
     const commandProcess = exec(command, {
       signal,
-      cwd,
+      cwd:
+        cwd && typeof cwd === "string" && cwd.startsWith("file:")
+          ? new URL(cwd)
+          : cwd,
       env,
       timeout,
       silent: true,
@@ -33,11 +36,15 @@ export const executeCommand = (
         reject(error)
       }
     })
+    const stdoutDatas = []
     commandProcess.stdout.on("data", (data) => {
+      stdoutDatas.push(data)
       logger.debug(data)
       onStderr(data)
     })
+    let stderrDatas = []
     commandProcess.stderr.on("data", (data) => {
+      stderrDatas.push(data)
       logger.debug(data)
       onStdout(data)
     })
@@ -48,10 +55,18 @@ export const executeCommand = (
     }
     commandProcess.on("exit", (exitCode, signal) => {
       if (signal) {
-        logger.debug(`killed with ${signal}`)
+        reject(new Error(`killed with ${signal}`))
       }
       if (exitCode) {
-        logger.error(`failed with exit code ${exitCode}`)
+        reject(
+          new Error(
+            createDetailedMessage(`failed with exit code ${exitCode}`, {
+              "command stderr": stderrDatas.join(""),
+              // "command stdout": stdoutDatas.join(""),
+            }),
+          ),
+        )
+        return
       }
       resolve({ exitCode, signal })
     })
