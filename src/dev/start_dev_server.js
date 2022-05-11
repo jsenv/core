@@ -7,7 +7,6 @@ import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 
-import { jsenvPluginAutoreload } from "./plugins/autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js"
 import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
 
@@ -29,16 +28,9 @@ export const startDevServer = async ({
   plugins = [],
   htmlSupervisor = true,
   injectedGlobals,
-
+  nodeEsmResolution,
+  fileSystemMagicResolution,
   autoreload = true,
-  autoreloadPatterns = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git for instance)
-    "./dist/": false,
-    "./**/node_modules/": false,
-  },
-  cooldownBetweenFileEvents = 0,
-
   explorerGroups = {
     source: {
       "./*.html": true,
@@ -65,19 +57,16 @@ export const startDevServer = async ({
     plugins: [
       ...plugins,
       ...getCorePlugins({
+        rootDirectoryUrl,
+        urlGraph,
+        scenario: "dev",
+
         htmlSupervisor,
         injectedGlobals,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        autoreload,
       }),
-      ...(autoreload
-        ? [
-            jsenvPluginAutoreload({
-              rootDirectoryUrl,
-              urlGraph,
-              autoreloadPatterns,
-              cooldownBetweenFileEvents,
-            }),
-          ]
-        : []),
       jsenvPluginExplorer({
         groups: explorerGroups,
       }),

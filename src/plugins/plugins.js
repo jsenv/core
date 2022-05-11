@@ -14,8 +14,14 @@ import { jsenvPluginInjectGlobals } from "./inject_globals/jsenv_plugin_inject_g
 import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js"
 import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
 import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
+import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js"
+import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 
 export const getCorePlugins = ({
+  rootDirectoryUrl,
+  urlGraph,
+  scenario,
+
   htmlSupervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
@@ -23,9 +29,14 @@ export const getCorePlugins = ({
   transpilation = true,
   minification = false,
   bundling = false,
+
+  autoreload = false,
 } = {}) => {
   if (htmlSupervisor === true) {
     htmlSupervisor = {}
+  }
+  if (autoreload === true) {
+    autoreload = {}
   }
   return [
     jsenvPluginTranspilation(transpilation),
@@ -46,5 +57,17 @@ export const getCorePlugins = ({
 
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
+
+    jsenvPluginImportMetaHot(),
+    ...(autoreload
+      ? [
+          jsenvPluginAutoreload({
+            rootDirectoryUrl,
+            urlGraph,
+            scenario,
+            ...autoreload,
+          }),
+        ]
+      : []),
   ]
 }

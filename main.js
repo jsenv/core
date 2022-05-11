@@ -16,8 +16,8 @@ export {
 } from "./src/execute/runtimes/browsers/webkit.js"
 export { nodeProcess } from "./src/execute/runtimes/node/node_process.js"
 // build
-export { preview } from "./src/preview/preview.js"
 export { build } from "./src/build/build.js"
+export { startBuildServer } from "./src/build/start_build_server.js"
 
 // advanced
 export { execute } from "./src/execute/execute.js"

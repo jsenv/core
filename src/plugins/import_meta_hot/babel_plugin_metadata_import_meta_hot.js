@@ -16,13 +16,12 @@ export const babelPluginMetadataImportMetaHot = () => {
   }
 }
 const collectImportMetaProperties = (programPath) => {
-  let importMetaHotDetected = false
+  const importMetaHotPaths = []
   let hotDecline = false
   let hotAcceptSelf = false
   let hotAcceptDependencies = []
   programPath.traverse({
     MemberExpression(path) {
-      if (importMetaHotDetected) return
       const { node } = path
       const { object } = node
       if (object.type !== "MetaProperty") {
@@ -35,7 +34,7 @@ const collectImportMetaProperties = (programPath) => {
       const { property } = node
       const { name } = property
       if (name === "hot") {
-        importMetaHotDetected = true
+        importMetaHotPaths.push(path)
       }
     },
     CallExpression(path) {
@@ -79,7 +78,7 @@ const collectImportMetaProperties = (programPath) => {
     },
   })
   return {
-    importMetaHotDetected,
+    importMetaHotPaths,
     hotDecline,
     hotAcceptSelf,
     hotAcceptDependencies,

@@ -38,9 +38,13 @@ export const createKitchen = ({
     test: "inline",
     build: "none",
   }[scenario],
-  // we don't need sources in sourcemap as long as the url in the
-  // sourcemap uses file:/// (chrome will understand and read from filesystem)
-  sourcemapsSources = false,
+  sourcemapsSources = {
+    // during dev/test, chrome is able to find the sourcemap sources
+    // as long as they use file:// protocol in the sourcemap files
+    dev: false,
+    test: false,
+    build: true,
+  }[scenario],
   runtimeCompat = defaultRuntimeCompat,
   writeOnFileSystem = true,
 }) => {

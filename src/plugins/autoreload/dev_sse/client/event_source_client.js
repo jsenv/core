@@ -1,4 +1,5 @@
-import { createEventSourceConnection } from "./event_source_connection.js"
+import { createEventSourceConnection } from "@jsenv/utils/event_source/event_source.js"
+import { urlHotMetas } from "../../../import_meta_hot/client/import_meta_hot.js"
 import {
   isAutoreloadEnabled,
   setAutoreloadPreference,
@@ -9,7 +10,6 @@ import {
   reloadDOMNodesUsingUrl,
   reloadJsImport,
 } from "./reload.js"
-import { urlHotMetas } from "./import_meta_hot.js"
 
 const reloadMessages = []
 const reloadMessagesSignal = { onchange: () => {} }
