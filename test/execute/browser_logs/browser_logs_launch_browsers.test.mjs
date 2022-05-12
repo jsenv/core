@@ -12,7 +12,7 @@ import { execute, chromium, firefox, webkit } from "@jsenv/core"
   await previous
   const { status, namespace, consoleCalls } = await execute({
     // logLevel: "debug",
-    rootDirectoryUrl: new URL("./", import.meta.url),
+    rootDirectoryUrl: new URL("./client/", import.meta.url),
     fileRelativeUrl: `./main.html`,
     runtime,
     // runtimeParams: {

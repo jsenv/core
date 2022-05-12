@@ -32,6 +32,7 @@ export const startDevServer = async ({
   injectedGlobals,
   nodeEsmResolution,
   fileSystemMagicResolution,
+  transpilation,
   autoreload = true,
   explorerGroups = {
     source: {
@@ -95,6 +96,7 @@ export const startDevServer = async ({
         injectedGlobals,
         nodeEsmResolution,
         fileSystemMagicResolution,
+        transpilation,
         autoreload,
       }),
       jsenvPluginExplorer({

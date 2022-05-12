@@ -35,7 +35,7 @@ export const createRuntimeFromPlaywright = ({
     server,
 
     // measurePerformance,
-    // collectPerformance,
+    collectPerformance,
     collectCoverage = false,
     coverageForceIstanbul,
     urlShouldBeCovered,
@@ -167,6 +167,39 @@ export const createRuntimeFromPlaywright = ({
         return result
       })
     }
+
+    if (collectPerformance) {
+      resultTransformer = composeTransformer(
+        resultTransformer,
+        async (result) => {
+          const performance = await page.evaluate(
+            /* eslint-disable no-undef */
+            /* istanbul ignore next */
+            () => {
+              const { performance } = window
+              if (!performance) {
+                return null
+              }
+              const measures = {}
+              const measurePerfEntries = performance.getEntriesByType("measure")
+              measurePerfEntries.forEach((measurePerfEntry) => {
+                measures[measurePerfEntry.name] = measurePerfEntry.duration
+              })
+              return {
+                timeOrigin: performance.timeOrigin,
+                timing: performance.timing.toJSON(),
+                navigation: performance.navigation.toJSON(),
+                measures,
+              }
+              /* eslint-enable no-undef */
+            },
+          )
+          result.performance = performance
+          return result
+        },
+      )
+    }
+
     const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href
 
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
