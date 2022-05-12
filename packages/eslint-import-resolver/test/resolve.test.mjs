@@ -15,6 +15,25 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 {
   await ensureEmptyDirectory(tempDirectoryUrl)
   const importerFileUrl = resolveUrl("dir/foo.js", tempDirectoryUrl)
+  const resolvedFileUrl = `${tempDirectoryUrl}file.js`
+  const actual = resolver.resolve(
+    "/file.js",
+    urlToFileSystemPath(importerFileUrl),
+    {
+      rootDirectoryUrl: tempDirectoryUrl,
+    },
+  )
+  const expected = {
+    found: false,
+    path: urlToFileSystemPath(resolvedFileUrl),
+  }
+  assert({ actual, expected })
+}
+
+// import starting with / (node style)
+{
+  await ensureEmptyDirectory(tempDirectoryUrl)
+  const importerFileUrl = resolveUrl("dir/foo.js", tempDirectoryUrl)
   const resolvedFileUrl = ensureWindowsDriveLetter(
     resolveUrl("/file.js", tempDirectoryUrl),
     tempDirectoryUrl,
@@ -23,7 +42,8 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "/file.js",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl: tempDirectoryUrl,
+      rootDirectoryUrl: tempDirectoryUrl,
+      packageConditions: ["node", "import"],
     },
   )
   const expected = {
@@ -43,7 +63,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "./file.js?foo=bar",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl: tempDirectoryUrl,
+      rootDirectoryUrl: tempDirectoryUrl,
     },
   )
   const expected = {
@@ -56,14 +76,16 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 // import 'fs' outside node
 {
   const importerFileUrl = resolveUrl("file", tempDirectoryUrl)
+  const importerPath = urlToFileSystemPath(importerFileUrl)
+  const fileUrl = resolveUrl("./fs", tempDirectoryUrl)
 
-  const actual = resolver.resolve("fs", urlToFileSystemPath(importerFileUrl), {
-    projectDirectoryUrl: tempDirectoryUrl,
+  const actual = resolver.resolve("fs", importerPath, {
+    rootDirectoryUrl: tempDirectoryUrl,
     logLevel: "off",
   })
   const expected = {
     found: false,
-    path: null,
+    path: urlToFileSystemPath(fileUrl),
   }
   assert({ actual, expected })
 }
@@ -71,9 +93,10 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 // import 'fs' inside node
 {
   const importerFileUrl = resolveUrl("file", tempDirectoryUrl)
+  const importerPath = urlToFileSystemPath(importerFileUrl)
 
-  const actual = resolver.resolve("fs", urlToFileSystemPath(importerFileUrl), {
-    projectDirectoryUrl: tempDirectoryUrl,
+  const actual = resolver.resolve("fs", importerPath, {
+    rootDirectoryUrl: tempDirectoryUrl,
     packageConditions: ["node", "import"],
   })
   const expected = {
@@ -86,14 +109,16 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 // bare specifier not mapped
 {
   const importerFileUrl = resolveUrl("file", tempDirectoryUrl)
+  const importerPath = urlToFileSystemPath(importerFileUrl)
+  const fileUrl = resolveUrl("./foo", tempDirectoryUrl)
 
-  const actual = resolver.resolve("foo", urlToFileSystemPath(importerFileUrl), {
-    projectDirectoryUrl: tempDirectoryUrl,
+  const actual = resolver.resolve("foo", importerPath, {
+    rootDirectoryUrl: tempDirectoryUrl,
     logLevel: "off",
   })
   const expected = {
     found: false,
-    path: null,
+    path: urlToFileSystemPath(fileUrl),
   }
   assert({ actual, expected })
 }
@@ -120,7 +145,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "@babel/plugin-proposal-object-rest-spread",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl: tempDirectoryUrl,
+      rootDirectoryUrl: tempDirectoryUrl,
       importmapFileRelativeUrl: "import-map.importmap",
     },
   )
@@ -155,7 +180,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
   )
 
   const actual = resolver.resolve("foo", urlToFileSystemPath(importerFileUrl), {
-    projectDirectoryUrl: tempDirectoryUrl,
+    rootDirectoryUrl: tempDirectoryUrl,
     importmapFileRelativeUrl: "import-map.importmap",
   })
   const expected = {
@@ -173,7 +198,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "http://domain.com/file.js",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl: tempDirectoryUrl,
+      rootDirectoryUrl: tempDirectoryUrl,
     },
   )
   const expected = {
@@ -192,17 +217,14 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
   await ensureEmptyDirectory(tempDirectoryUrl)
   const importerFileUrl = resolveUrl("project/importer", tempDirectoryUrl)
   const resolvedFileUrl = resolveUrl("project/file", tempDirectoryUrl)
-  const projectDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
   await writeFile(importerFileUrl)
   await writeFile(resolvedFileUrl)
+  const importerPath = urlToFileSystemPath(importerFileUrl)
 
-  const actual = resolver.resolve(
-    "./file",
-    urlToFileSystemPath(importerFileUrl),
-    {
-      projectDirectoryUrl,
-    },
-  )
+  const actual = resolver.resolve("./file", importerPath, {
+    rootDirectoryUrl,
+  })
   const expected = {
     found: true,
     path: urlToFileSystemPath(resolvedFileUrl),
@@ -215,7 +237,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
   await ensureEmptyDirectory(tempDirectoryUrl)
   const importerFileUrl = resolveUrl("project/dir/importer", tempDirectoryUrl)
   const resolvedFileUrl = resolveUrl("project/file", tempDirectoryUrl)
-  const projectDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
   await writeFile(importerFileUrl)
   await writeFile(resolvedFileUrl)
 
@@ -223,7 +245,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "../file",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl,
+      rootDirectoryUrl,
     },
   )
   const expected = {
@@ -238,7 +260,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
   await ensureEmptyDirectory(tempDirectoryUrl)
   const importerFileUrl = resolveUrl("project/importer", tempDirectoryUrl)
   const resolvedFileUrl = resolveUrl("file", tempDirectoryUrl)
-  const projectDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
   await writeFile(importerFileUrl)
   await writeFile(resolvedFileUrl)
 
@@ -246,7 +268,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "../file",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl,
+      rootDirectoryUrl,
     },
   )
   const expected = {
@@ -281,7 +303,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     urlToFileSystemPath(importerFileUrl),
     {
       logLevel: "error",
-      projectDirectoryUrl: tempDirectoryUrl,
+      rootDirectoryUrl: tempDirectoryUrl,
       importmapFileRelativeUrl,
     },
   )

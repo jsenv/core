@@ -12,7 +12,8 @@
         "--inspect",
         "--experimental-json-modules",
         "--experimental-import-meta-resolve",
-        "--trace-warnings"
+        "--trace-warnings",
+        "--preserve-symlinks"
       ],
       "console": "integratedTerminal",
       // "args": ["--coverage"],

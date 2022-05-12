@@ -111,9 +111,6 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`)
     if (moduleSystem === "commonjs") {
       return onUrl(createRequire(importer).resolve(specifier))
     }
-    if (moduleSystem === "json") {
-      return onUrl(applyUrlResolution(specifier, importer))
-    }
     if (moduleSystem === "module") {
       const nodeResolution = applyNodeEsmResolution({
         conditions: packageConditions,
@@ -123,6 +120,9 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`)
       if (nodeResolution) {
         return onUrl(nodeResolution.url)
       }
+    }
+    if (moduleSystem === "url") {
+      return onUrl(applyUrlResolution(specifier, importer))
     }
     throw new Error("not found")
   } catch (e) {

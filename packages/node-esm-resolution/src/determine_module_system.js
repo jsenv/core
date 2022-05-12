@@ -26,7 +26,7 @@ export const determineModuleSystem = (
     return "commonjs"
   }
   if (extension === ".json") {
-    return "json"
+    return "url"
   }
   if (ambiguousExtensions.includes(extension)) {
     const packageUrl = lookupPackageScope(url)
@@ -39,7 +39,8 @@ export const determineModuleSystem = (
     }
     return "commonjs"
   }
-  throw new Error("unsupported file extension")
+  return "url"
+  // throw new Error(`unsupported file extension (${extension})`)
 }
 
 const extensionFromUrl = (url) => {
