@@ -4,6 +4,7 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   moveUrl,
+  ensureWindowsDriveLetter,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
@@ -772,7 +773,8 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
   }
   let url = urlInfo.url
   if (!urlIsInsideOf(urlInfo.url, context.rootDirectoryUrl)) {
-    url = `${context.rootDirectoryUrl}@fs/${url.slice("file:///".length)}`
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url)
+    url = `${context.rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
   }
   if (urlInfo.filename) {
     url = setUrlFilename(url, urlInfo.filename)
