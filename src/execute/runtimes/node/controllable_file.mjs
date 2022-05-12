@@ -1,17 +1,33 @@
 import v8 from "node:v8"
 import { uneval } from "@jsenv/uneval"
+import { startObservingPerformances } from "./node_execution_performance.js"
 
 const ACTIONS_AVAILABLE = {
-  "execute-using-dynamic-import": async ({ fileUrl }) => {
-    const namespace = await import(fileUrl)
-    const namespaceResolved = {}
-    await Promise.all([
-      ...Object.keys(namespace).map(async (key) => {
-        const value = await namespace[key]
-        namespaceResolved[key] = value
-      }),
-    ])
-    return namespaceResolved
+  "execute-using-dynamic-import": async ({ fileUrl, collectPerformance }) => {
+    const getNamespace = async () => {
+      const namespace = await import(fileUrl)
+      const namespaceResolved = {}
+      await Promise.all([
+        ...Object.keys(namespace).map(async (key) => {
+          const value = await namespace[key]
+          namespaceResolved[key] = value
+        }),
+      ])
+      return namespaceResolved
+    }
+    if (collectPerformance) {
+      const getPerformance = startObservingPerformances()
+      const namespace = await getNamespace()
+      const performance = await getPerformance()
+      return {
+        namespace,
+        performance,
+      }
+    }
+    const namespace = await getNamespace()
+    return {
+      namespace,
+    }
   },
   "execute-using-require": async ({ fileUrl }) => {
     const { createRequire } = await import("module")

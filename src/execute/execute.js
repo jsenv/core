@@ -23,6 +23,7 @@ export const execute = async ({
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
+  collectPerformance = false,
   runtime,
   runtimeParams,
 
@@ -33,6 +34,7 @@ export const execute = async ({
   fileSystemMagicResolution,
   injectedGlobals,
   transpilation,
+  htmlSupervisor = true,
 
   port,
   protocol,
@@ -75,10 +77,14 @@ export const execute = async ({
       plugins: [
         ...plugins,
         ...getCorePlugins({
+          rootDirectoryUrl,
+          urlGraph,
           scenario,
+
+          htmlSupervisor,
+          injectedGlobals,
           nodeEsmResolution,
           fileSystemMagicResolution,
-          injectedGlobals,
           transpilation,
         }),
       ],
@@ -120,6 +126,7 @@ export const execute = async ({
     collectConsole,
     collectCoverage,
     coverageTempDirectoryUrl,
+    collectPerformance,
     runtime,
     runtimeParams,
   })

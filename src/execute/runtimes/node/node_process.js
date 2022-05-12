@@ -35,10 +35,9 @@ nodeProcess.run = async ({
   stopSignal,
   onConsole,
 
-  measurePerformance,
-  collectPerformance,
   collectCoverage = false,
   coverageForceIstanbul,
+  collectPerformance,
 
   debugPort,
   debugMode,
@@ -191,9 +190,7 @@ nodeProcess.run = async ({
       actionType: "execute-using-dynamic-import",
       actionParams: {
         fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-        measurePerformance,
         collectPerformance,
-        collectCoverage,
       },
     })
     const winner = await winnerPromise
@@ -246,7 +243,7 @@ nodeProcess.run = async ({
     }
     return {
       status: "completed",
-      namespace: value,
+      ...value,
     }
   }
 

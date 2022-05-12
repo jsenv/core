@@ -11,8 +11,7 @@ export const run = async ({
   collectConsole = false,
   collectCoverage = false,
   coverageTempDirectoryUrl,
-  // measurePerformance,
-  // collectPerformance = false,
+  collectPerformance = false,
 
   runtime,
   runtimeParams,
@@ -117,6 +116,7 @@ export const run = async ({
                 signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
+                collectPerformance,
                 keepRunning,
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
