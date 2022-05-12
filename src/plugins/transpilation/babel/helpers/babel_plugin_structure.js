@@ -31,9 +31,12 @@ export const getBaseBabelPluginStructure = ({ url, isSupported }) => {
       requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex")
   }
   if (isBabelPluginNeeded("transform-async-to-promises")) {
-    babelPluginStructure["transform-async-to-promises"] = requireBabelPlugin(
-      "babel-plugin-transform-async-to-promises",
-    )
+    babelPluginStructure["transform-async-to-promises"] = [
+      requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+      {
+        topLevelAwait: "ignore", // will be handled by "jsenv:top_level_await" plugin
+      },
+    ]
   }
   if (isBabelPluginNeeded("transform-arrow-functions")) {
     babelPluginStructure["transform-arrow-functions"] = requireBabelPlugin(

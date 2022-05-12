@@ -23,7 +23,6 @@ import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_compositi
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginScriptTypeModuleAsClassic } from "./jsenv_plugin_script_type_module_as_classic.js"
 import { jsenvPluginWorkersTypeModuleAsClassic } from "./jsenv_plugin_workers_type_module_as_classic.js"
-import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js"
 
 const require = createRequire(import.meta.url)
 
@@ -40,7 +39,6 @@ export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
     jsenvPluginWorkersTypeModuleAsClassic({
       generateJsClassicFilename,
     }),
-    jsenvPluginTopLevelAwait(),
   ]
 }
 
