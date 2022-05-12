@@ -670,9 +670,11 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     }
     urlInfo.contentType = reference.contentType
     urlInfo.originalContent =
-      urlInfo.originalContent === undefined
-        ? reference.content
-        : urlInfo.originalContent
+      context === "build"
+        ? urlInfo.originalContent === undefined
+          ? reference.content
+          : urlInfo.originalContent
+        : reference.content
     urlInfo.content = reference.content
   }
   if (isWebWorkerEntryPointReference(reference)) {
