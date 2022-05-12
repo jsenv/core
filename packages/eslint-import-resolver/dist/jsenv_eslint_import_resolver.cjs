@@ -384,6 +384,28 @@ const asDirectoryUrl = (url) => {
 };
 
 const getParentUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const ressource = url.slice("file://".length);
+    const slashLastIndex = ressource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url
+    }
+    const lastCharIndex = ressource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = ressource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url
+      }
+      return `file://${ressource.slice(0, slashBeforeLastIndex + 1)}`
+    }
+
+    return `file://${ressource.slice(0, slashLastIndex + 1)}`
+  }
   return new URL(url.endsWith("/") ? "../" : "./", url).href
 };
 
@@ -1314,7 +1336,7 @@ const determineModuleSystem = (
     return "commonjs"
   }
   if (extension === ".json") {
-    return "json"
+    return "url"
   }
   if (ambiguousExtensions.includes(extension)) {
     const packageUrl = lookupPackageScope(url);
@@ -1327,8 +1349,8 @@ const determineModuleSystem = (
     }
     return "commonjs"
   }
-  return 'url'
-  // throw new Error("unsupported file extension")
+  return "url"
+  // throw new Error(`unsupported file extension (${extension})`)
 };
 
 const extensionFromUrl = (url) => {
