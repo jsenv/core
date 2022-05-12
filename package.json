@@ -31,7 +31,7 @@
     "./packages/*"
   ],
   "scripts": {
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "eslint": "npx eslint ./test/dev_server/manual/main/importmap_inline/ --ext=.js,.mjs,.cjs,.html",
     "build": "node ./script/build/build.mjs",
     "test": "node ./script/test/test.mjs",
     "test-with-coverage": "npm run test -- --coverage",
