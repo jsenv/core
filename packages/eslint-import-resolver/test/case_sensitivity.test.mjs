@@ -14,7 +14,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 // symlink
 {
   await ensureEmptyDirectory(tempDirectoryUrl)
-  const projectDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
   const importerFileUrl = resolveUrl("project/src/file.js", tempDirectoryUrl)
   const fileUrl = resolveUrl("project/packages/NAME/Dep.js", tempDirectoryUrl)
   const linkUrl = resolveUrl("project/node_modules/NAME", tempDirectoryUrl)
@@ -29,7 +29,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "../node_modules/name/dep.js",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl,
+      rootDirectoryUrl,
       logLevel: "error",
     },
   )
@@ -47,7 +47,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
   await ensureEmptyDirectory(tempDirectoryUrl)
   const importerFileUrl = resolveUrl("project/importer", tempDirectoryUrl)
   const resolvedFileUrl = resolveUrl("project/file.js", tempDirectoryUrl)
-  const projectDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
   await writeFile(importerFileUrl)
   await writeFile(resolvedFileUrl)
 
@@ -55,7 +55,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
     "./File.js",
     urlToFileSystemPath(importerFileUrl),
     {
-      projectDirectoryUrl,
+      rootDirectoryUrl,
       logLevel: "error",
     },
   )
