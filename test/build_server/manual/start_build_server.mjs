@@ -13,6 +13,7 @@ await startBuildServer({
   protocol: "https",
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
+  listenAnyIp: true,
   rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   buildCommand: "node ./build.mjs",
@@ -21,6 +22,6 @@ await startBuildServer({
   // versioning: false,
   autorestart: {
     logLevel: "info",
-    urlToFork: import.meta.url,
+    url: import.meta.url,
   },
 })

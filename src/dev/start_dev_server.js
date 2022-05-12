@@ -1,6 +1,7 @@
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
+import { initProcessAutorestart } from "@jsenv/utils/file_watcher/process_auto_restart.js"
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
@@ -12,9 +13,10 @@ import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
+  handleSIGINT,
   logLevel,
-  port,
-  protocol,
+  port = 3456,
+  protocol = "http",
   listenAnyIp,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
@@ -41,11 +43,39 @@ export const startDevServer = async ({
     },
   },
   toolbar = false,
+  autorestart,
 }) => {
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+  const autorestartProcess = await initProcessAutorestart({
+    signal,
+    handleSIGINT,
+    ...(autorestart
+      ? {
+          enabled: true,
+          logLevel: autorestart.logLevel,
+          urlToRestart: autorestart.url,
+          urlsToWatch: [
+            ...(autorestart.urlsToWatch || []),
+            new URL("package.json", rootDirectoryUrl),
+            new URL("jsenv.config.mjs", rootDirectoryUrl),
+          ],
+        }
+      : {
+          enabled: false,
+        }),
+  })
+  if (autorestartProcess.isPrimary) {
+    return {
+      origin: `${protocol}://127.0.0.1:${port}`,
+      stop: () => {
+        autorestartProcess.stop()
+      },
+    }
+  }
+
   const logger = createLogger({ logLevel })
   const startServerTask = createTaskLog(logger, "start server")
 
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const urlGraph = createUrlGraph()
   const kitchen = createKitchen({
     signal,
@@ -98,5 +128,8 @@ export const startDevServer = async ({
       kitchen.pluginController.callHooks("destroy")
     }
   })
-  return server
+  return {
+    origin: server.origin,
+    stop: server.stop,
+  }
 }
