@@ -30,7 +30,12 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
   )
   const expected = {
     found: false,
-    path: urlToFileSystemPath(resolveUrl("project/file.js", tempDirectoryUrl)),
+    path: urlToFileSystemPath(
+      resolveUrl(
+        process.platform === "linux" ? "project/File.js" : "project/file.js",
+        tempDirectoryUrl,
+      ),
+    ),
   }
   assert({ actual, expected })
 }
