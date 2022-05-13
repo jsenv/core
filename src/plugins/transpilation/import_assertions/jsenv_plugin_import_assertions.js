@@ -106,14 +106,14 @@ const jsenvPluginAsModules = () => {
       if (!originalUrlInfo) {
         return null
       }
-      const jsonText = originalUrlInfo.content.trim()
+      const jsonText = JSON.stringify(originalUrlInfo.content.trim())
       return {
         type: "js_module",
         contentType: "text/javascript",
         // here we could `export default ${jsonText}`:
         // but js engine are optimized to recognize JSON.parse
         // and use a faster parsing strategy
-        content: `export default JSON.parse(${JSON.stringify(jsonText)}))`,
+        content: `export default JSON.parse(${jsonText})`,
       }
     },
   }
