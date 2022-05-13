@@ -22,7 +22,7 @@ const devServer = await startDevServer({
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   autoreload: {
-    cooldownBetweenFileEvents: 50,
+    cooldownBetweenFileEvents: 250,
   },
 })
 const browser = await chromium.launch({
