@@ -18,10 +18,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const isWebWorker = isWebWorkerUrlInfo(urlInfo)
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [
-      [
-        babelPluginMetadataJsUrlMentions,
-        { isJsModule, isWebWorker, searchSystemJs: !isJsModule },
-      ],
+      [babelPluginMetadataJsUrlMentions, { isJsModule, isWebWorker }],
     ],
     urlInfo,
   })
@@ -67,10 +64,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
  * https://github.com/mjackson/babel-plugin-import-visitor
  *
  */
-const babelPluginMetadataJsUrlMentions = (
-  _,
-  { isJsModule, isWebWorker, searchSystemJs },
-) => {
+const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
   return {
     name: "metadata-js-mentions",
     visitor: {
@@ -112,20 +106,16 @@ const babelPluginMetadataJsUrlMentions = (
           },
           NewExpression: (path) => {
             callStaticAnalyzers(path, [
-              analyzeNewWorkerOrNewSharedWorker,
-              (path) =>
-                analyzeNewUrlCall(path, {
-                  searchSystemJs,
-                }),
+              (path) => analyzeNewWorkerOrNewSharedWorker(path, { isJsModule }),
+              (path) => analyzeNewUrlCall(path, { isJsModule }),
             ])
           },
         }
         const callExpressionStaticAnalysers = [
-          ...(isJsModule ? [analyzeImportCall] : []),
+          ...(isJsModule
+            ? [analyzeImportCall]
+            : [analyzeSystemRegisterCall, analyzeSystemImportCall]),
           ...(isWebWorker ? [analyzeImportScriptCalls] : []),
-          ...(searchSystemJs
-            ? [analyzeSystemRegisterCall, analyzeSystemImportCall]
-            : []),
           analyzeServiceWorkerRegisterCall,
         ]
         visitors.CallExpression = (path) => {

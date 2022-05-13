@@ -53,7 +53,11 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       // but only for import specifier (static/dynamic import + re-export)
       // All other references won't get the ?as_js_classic
       // otherwise we could try to transform inline ressources, specifiers inside new URL(). ...
-      if (reference.type !== "js_import_export") {
+      if (
+        reference.type !== "js_import_export" &&
+        reference.subtype !== "system_register_arg" &&
+        reference.subtype !== "system_import_arg"
+      ) {
         return null
       }
       const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)

@@ -67,15 +67,15 @@ export const analyzeImportExportDeclaration = (path) => {
   return handler ? handler(path) : null
 }
 
-export const analyzeNewWorkerOrNewSharedWorker = (path) => {
+export const analyzeNewWorkerOrNewSharedWorker = (path, { isJsModule }) => {
   const node = path.node
   if (!isNewWorkerOrNewSharedWorker(node)) {
     return null
   }
-  return analyzeWorkerCallArguments(
-    path,
-    node.callee.name === "Worker" ? "worker" : "shared_worker",
-  )
+  return analyzeWorkerCallArguments(path, {
+    isJsModule,
+    workerType: node.callee.name === "Worker" ? "worker" : "shared_worker",
+  })
 }
 const isNewWorkerOrNewSharedWorker = (node) => {
   return (
@@ -85,7 +85,7 @@ const isNewWorkerOrNewSharedWorker = (node) => {
   )
 }
 
-const analyzeWorkerCallArguments = (path, workerType) => {
+const analyzeWorkerCallArguments = (path, { isJsModule, workerType }) => {
   const node = path.node
   const mentions = []
   let expectedType = "js_classic"
@@ -130,6 +130,7 @@ const analyzeWorkerCallArguments = (path, workerType) => {
     return mentions
   }
   const newUrlMentions = analyzeNewUrlCall(path.get("arguments")[0], {
+    isJsModule,
     ignoreInsideWorker: false,
   })
   if (!newUrlMentions) {
@@ -145,12 +146,15 @@ const analyzeWorkerCallArguments = (path, workerType) => {
   return newUrlMentions
 }
 
-export const analyzeServiceWorkerRegisterCall = (path) => {
+export const analyzeServiceWorkerRegisterCall = (path, { isJsModule } = {}) => {
   const node = path.node
   if (!isServiceWorkerRegisterCall(node)) {
     return null
   }
-  return analyzeWorkerCallArguments(path, "service_worker")
+  return analyzeWorkerCallArguments(path, {
+    isJsModule,
+    workerType: "service_worker",
+  })
 }
 const isServiceWorkerRegisterCall = (node) => {
   if (node.type !== "CallExpression") {
@@ -200,7 +204,7 @@ const isServiceWorkerRegisterCall = (node) => {
 
 export const analyzeNewUrlCall = (
   path,
-  { searchSystemJs = false, ignoreInsideWorker = true } = {},
+  { isJsModule = false, ignoreInsideWorker = true } = {},
 ) => {
   const node = path.node
   if (!isNewUrlCall(node)) {
@@ -235,7 +239,7 @@ export const analyzeNewUrlCall = (
   if (node.arguments.length === 2) {
     const firstArgNode = node.arguments[0]
     const secondArgNode = node.arguments[1]
-    const baseUrlType = analyzeUrlNodeType(secondArgNode, { searchSystemJs })
+    const baseUrlType = analyzeUrlNodeType(secondArgNode, { isJsModule })
     if (baseUrlType) {
       // we can understand the second argument
       const urlType = analyzeUrlNodeType(firstArgNode)
@@ -270,7 +274,7 @@ const isNewUrlCall = (node) => {
     node.callee.name === "URL"
   )
 }
-const analyzeUrlNodeType = (secondArgNode, { searchSystemJs = false } = {}) => {
+const analyzeUrlNodeType = (secondArgNode, { isJsModule } = {}) => {
   if (secondArgNode.type === "StringLiteral") {
     return "StringLiteral"
   }
@@ -283,7 +287,7 @@ const analyzeUrlNodeType = (secondArgNode, { searchSystemJs = false } = {}) => {
     return "import.meta.url"
   }
   if (
-    searchSystemJs &&
+    !isJsModule &&
     secondArgNode.type === "MemberExpression" &&
     secondArgNode.object.type === "MemberExpression" &&
     secondArgNode.object.object.type === "Identifier" &&

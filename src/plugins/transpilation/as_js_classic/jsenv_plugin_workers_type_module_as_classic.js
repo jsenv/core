@@ -25,6 +25,7 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
           babelPluginMetadataWorkerMentions,
           {
             workersToTranspile,
+            isJsModule: urlInfo.type === "js_module",
           },
         ],
       ],
@@ -101,7 +102,10 @@ const getWorkersToTranspile = (urlInfo, context) => {
   return { worker, serviceWorker, sharedWorker }
 }
 
-const babelPluginMetadataWorkerMentions = (_, { workersToTranspile }) => {
+const babelPluginMetadataWorkerMentions = (
+  _,
+  { workersToTranspile, isJsModule },
+) => {
   return {
     name: "metadata-worker-mentions",
     visitor: {
@@ -110,7 +114,9 @@ const babelPluginMetadataWorkerMentions = (_, { workersToTranspile }) => {
         const visitors = {
           NewExpression: (path) => {
             if (workersToTranspile.worker || workersToTranspile.sharedWorker) {
-              const mentions = analyzeNewWorkerOrNewSharedWorker(path)
+              const mentions = analyzeNewWorkerOrNewSharedWorker(path, {
+                isJsModule,
+              })
               if (mentions) {
                 workerMentions.push(...mentions)
               }
