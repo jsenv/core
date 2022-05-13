@@ -3,8 +3,9 @@ export const msAsDuration = (ms) => {
     // it would be barely readable to write 0.0001 second (stands for 0.1 millisecond)
     // and this precision does not matter
     // (this function is meant to display a duration to a human)
-    // so in this case we'll return "less than 1 millisecond"
-    return "less than 1 millisecond"
+    // so in this case we'll return "0 second" which means "less than 1 millisecond"
+    // (I prefer "0 second" to be consistent with other logs wich will likely measure in "second")
+    return "0 second"
   }
   const { primary, remaining } = parseMs(ms)
   if (!remaining) {
