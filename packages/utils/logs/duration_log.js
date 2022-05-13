@@ -1,8 +1,10 @@
 export const msAsDuration = (ms) => {
   if (ms < 1) {
-    // it would be messy to write 0.0001 second (stands for 0.1 milliseconds)
-    // but is not in the scope of this for now
-    return "not implemented"
+    // it would be barely readable to write 0.0001 second (stands for 0.1 millisecond)
+    // and this precision does not matter
+    // (this function is meant to display a duration to a human)
+    // so in this case we'll return "less than 1 millisecond"
+    return "less than 1 millisecond"
   }
   const { primary, remaining } = parseMs(ms)
   if (!remaining) {
