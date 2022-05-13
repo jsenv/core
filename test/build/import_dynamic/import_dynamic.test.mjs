@@ -37,4 +37,16 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-await test()
+// support for <script type="module">
+await test({
+  runtimeCompat: {
+    chrome: "63",
+  },
+})
+
+// no support for <script type="module">
+await test({
+  runtimeCompat: {
+    chrome: "62",
+  },
+})
