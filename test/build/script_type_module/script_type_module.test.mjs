@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/test/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
-const test = async (params) => {
+const test = async ({ expectedUrl, ...rest }) => {
   await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -12,9 +12,8 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    versioning: false,
     minification: false,
-    ...params,
+    ...rest,
   })
 
   const server = await startFileServer({
@@ -24,51 +23,42 @@ const test = async (params) => {
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.namespacePromise
+      return window.resultPromise
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue, server }
-}
-
-// default
-{
-  const { returnValue, server } = await test()
   const actual = returnValue
   const expected = {
     answer: 42,
-    url: `${server.origin}/js/main.js`,
+    url: `${server.origin}${expectedUrl}`,
   }
   assert({ actual, expected })
 }
+
+// support for <script type="module">
+await test({
+  runtimeCompat: {
+    chrome: "63",
+  },
+  versioning: false,
+  expectedUrl: "/js/main.js",
+})
 
 // no support for <script type="module">
-{
-  const { returnValue, server } = await test({
-    runtimeCompat: {
-      chrome: "60",
-    },
-  })
-  const actual = returnValue
-  const expected = {
-    answer: 42,
-    url: `${server.origin}/js/main.es5.js`,
-  }
-  assert({ actual, expected })
-}
+await test({
+  runtimeCompat: {
+    chrome: "60",
+  },
+  versioning: false,
+  expectedUrl: "/js/main.es5.js",
+})
 
 // no support + without bundling
-{
-  const { returnValue, server } = await test({
-    runtimeCompat: {
-      chrome: "60",
-    },
-    bundling: false,
-  })
-  const actual = returnValue
-  const expected = {
-    answer: 42,
-    url: `${server.origin}/js/main.es5.js`,
-  }
-  assert({ actual, expected })
-}
+await test({
+  runtimeCompat: {
+    chrome: "60",
+  },
+  bundling: false,
+  versioning: false,
+  expectedUrl: `/js/main.es5.js`,
+})

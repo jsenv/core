@@ -3,9 +3,7 @@ import {
   visitHtmlAst,
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
-  assignHtmlNodeAttributes,
   removeHtmlNode,
-  removeHtmlNodeAttributeByName,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 import { GRAPH } from "./graph_utils.js"
@@ -16,7 +14,6 @@ export const resyncRessourceHints = async ({
   finalGraphKitchen,
   finalGraph,
   buildUrls,
-  buildUrlRedirections,
 }) => {
   const ressourceHintActions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
@@ -35,28 +32,6 @@ export const resyncRessourceHints = async ({
         const buildUrl = buildUrls[href]
         const urlInfo = finalGraph.getUrlInfo(buildUrl)
         if (!urlInfo) {
-          return
-        }
-        const buildUrlRedirected = buildUrlRedirections[buildUrl]
-        if (buildUrlRedirected) {
-          const urlInfoRedirected = finalGraph.getUrlInfo(buildUrlRedirected)
-          hrefAttribute.value = urlInfoRedirected.data.buildUrlSpecifier
-          if (
-            urlInfo.type === "js_module" &&
-            urlInfoRedirected.type === "js_classic"
-          ) {
-            const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel")
-            const rel = relAttribute ? relAttribute.value : undefined
-            if (rel === "modulepreload") {
-              assignHtmlNodeAttributes(linkNode, {
-                rel: "preload",
-                as: "script",
-              })
-            }
-            if (rel === "preload") {
-              removeHtmlNodeAttributeByName(linkNode, "crossorigin")
-            }
-          }
           return
         }
         if (urlInfo.dependents.size === 0) {

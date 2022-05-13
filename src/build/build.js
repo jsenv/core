@@ -812,7 +812,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     finalGraph,
     rawUrls,
     buildUrls,
-    buildUrlRedirections,
   })
   const cleanupActions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {

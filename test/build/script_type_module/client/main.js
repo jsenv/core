@@ -2,7 +2,7 @@ import { answer } from "./file.js"
 
 setTimeout(() => {
   const url = import.meta.url
-  window.resolveNamespacePromise({
+  window.resolveResultPromise({
     answer,
     url,
   })
