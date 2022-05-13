@@ -414,7 +414,10 @@ const isSystemImportCall = (node) => {
   return (
     callee.type === "MemberExpression" &&
     callee.object.type === "Identifier" &&
-    callee.object.name === "_context" &&
+    // because of minification we can't assume _context.
+    // so anything matching "*.import()"
+    // will be assumed to be the equivalent to "import()"
+    // callee.object.name === "_context" &&
     callee.property.type === "Identifier" &&
     callee.property.name === "import"
   )
