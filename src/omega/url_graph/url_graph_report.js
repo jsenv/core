@@ -22,7 +22,7 @@ const createUrlGraphReport = (urlGraph) => {
     html: 0,
     css: 0,
     js: 0,
-    assets: 0,
+    other: 0,
     sourcemaps: 0,
     total: 0,
   }
@@ -31,7 +31,7 @@ const createUrlGraphReport = (urlGraph) => {
     css: 0,
     js: 0,
     sourcemaps: 0,
-    assets: 0,
+    other: 0,
     total: 0,
   }
   Object.keys(urlInfos).forEach((url) => {
@@ -81,8 +81,8 @@ const createUrlGraphReport = (urlGraph) => {
       sizeGroups.js += urlContentSize
       return
     }
-    countGroups.assets++
-    sizeGroups.assets += urlContentSize
+    countGroups.other++
+    sizeGroups.other += urlContentSize
     return
   })
   return {
@@ -90,7 +90,7 @@ const createUrlGraphReport = (urlGraph) => {
     css: { count: countGroups.css, size: sizeGroups.css },
     js: { count: countGroups.js, size: sizeGroups.js },
     sourcemaps: { count: countGroups.sourcemaps, size: sizeGroups.sourcemaps },
-    assets: { count: countGroups.assets, size: sizeGroups.assets },
+    other: { count: countGroups.other, size: sizeGroups.other },
     total: { count: countGroups.total, size: sizeGroups.total },
   }
 }
@@ -108,10 +108,10 @@ const determineCategory = (urlInfo) => {
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
     return "js"
   }
-  return "assets"
+  return "other"
 }
 
-const createRepartitionMessage = ({ html, css, js, assets }) => {
+const createRepartitionMessage = ({ html, css, js, other }) => {
   const parts = []
   if (html.count) {
     parts.push(
@@ -141,10 +141,10 @@ const createRepartitionMessage = ({ html, css, js, assets }) => {
   //     } (${byteAsFileSize(sourcemaps.size)})`,
   //   )
   // }
-  if (assets.count) {
+  if (other.count) {
     parts.push(
-      `${ANSI.color(`assets:`, ANSI.GREY)} ${assets.count} (${byteAsFileSize(
-        assets.size,
+      `${ANSI.color(`other:`, ANSI.GREY)} ${other.count} (${byteAsFileSize(
+        other.size,
       )})`,
     )
   }
