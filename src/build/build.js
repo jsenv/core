@@ -364,14 +364,15 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
                 filename: reference.filename,
               },
             })
-            const originalUrl = reference.original.url
-            const originalBuildUrl = urlIsInsideOf(
-              reference.url,
-              buildDirectoryUrl,
-            )
-              ? originalUrl
-              : Object.keys(rawUrls).find((key) => rawUrls[key] === originalUrl)
-            buildUrlRedirections[originalBuildUrl] = buildUrl
+            const referenceOriginalUrl = reference.original.url
+            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
+              buildUrlRedirections[referenceOriginalUrl] = buildUrl
+            } else {
+              const originalBuildUrl = Object.keys(rawUrls).find(
+                (key) => rawUrls[key] === referenceOriginalUrl,
+              )
+              buildUrlRedirections[originalBuildUrl] = buildUrl
+            }
             rawUrls[buildUrl] = reference.url
             return buildUrl
           }

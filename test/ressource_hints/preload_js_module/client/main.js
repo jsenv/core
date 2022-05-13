@@ -2,6 +2,6 @@
 await new Promise((resolve) => {
   setTimeout(resolve, 5000)
 })
-window.resolveNamespacePromise({
+window.resolveResultPromise({
   answer: 42,
 })
