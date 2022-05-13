@@ -98,7 +98,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
         })
 
         const jsModuleUrls = []
-        const getReferenceAsJsClassic = (reference) => {
+        const getReferenceAsJsClassic = async (reference) => {
           const [newReference, newUrlInfo] = context.referenceUtils.update(
             reference,
             {
@@ -112,6 +112,15 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           const jsModuleUrl = newUrlInfo.url
           if (!jsModuleUrls.includes(jsModuleUrl)) {
             jsModuleUrls.push(newUrlInfo.url)
+            // during dev it means js modules will be cooked before server sends the HTML
+            // it's ok because:
+            // - during dev script_type_module are supported (dev use a recent browser)
+            // - even if browser is not supported it still works it's jus a bit slower
+            //   because it needs to decide if systemjs will be injected or not
+            await context.cook({
+              reference: newReference,
+              urlInfo: newUrlInfo,
+            })
           }
           return [newReference, newUrlInfo]
         }
@@ -131,8 +140,8 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           // we assume we want to preload "classic" but it might not be the case
           // but it's unlikely to happen and people should use "modulepreload" in that case anyway
           if (expectedScriptType === "module") {
-            actions.push(() => {
-              const [newReference] = getReferenceAsJsClassic(
+            actions.push(async () => {
+              const [newReference] = await getReferenceAsJsClassic(
                 context.referenceUtils.findByGeneratedSpecifier(href),
               )
               assignHtmlNodeAttributes(preloadAsScriptNode, {
@@ -148,8 +157,8 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
             "href",
           )
           const href = hrefAttribute.value
-          actions.push(() => {
-            const [newReference] = getReferenceAsJsClassic(
+          actions.push(async () => {
+            const [newReference] = await getReferenceAsJsClassic(
               context.referenceUtils.findByGeneratedSpecifier(href),
             )
             assignHtmlNodeAttributes(modulePreloadNode, {
@@ -167,20 +176,11 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           if (srcAttribute) {
             actions.push(async () => {
               const specifier = srcAttribute.value
-              const [newReference, newUrlInfo] = getReferenceAsJsClassic(
+              const [newReference] = await getReferenceAsJsClassic(
                 context.referenceUtils.findByGeneratedSpecifier(specifier),
               )
               removeHtmlNodeAttributeByName(moduleScriptNode, "type")
               srcAttribute.value = newReference.generatedSpecifier
-              // during dev it means js modules will be cooked before server sends the HTML
-              // it's ok because:
-              // - during dev script_type_module are supported (dev use a recent browser)
-              // - even if browser is not supported it still works it's jus a bit slower
-              //   because it needs to decide if systemjs will be injected or not
-              await context.cook({
-                reference: newReference,
-                urlInfo: newUrlInfo,
-              })
             })
             return
           }
@@ -212,12 +212,9 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               contentType: "application/javascript",
               content: textNode.value,
             })
-            const [newReference, newUrlInfo] =
-              getReferenceAsJsClassic(inlineReference)
-            await context.cook({
-              reference: newReference,
-              urlInfo: newUrlInfo,
-            })
+            const [, newUrlInfo] = await getReferenceAsJsClassic(
+              inlineReference,
+            )
             removeHtmlNodeAttributeByName(moduleScriptNode, "type")
             setHtmlNodeGeneratedText(moduleScriptNode, {
               generatedText: newUrlInfo.content,

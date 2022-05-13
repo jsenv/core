@@ -349,10 +349,30 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           //   - injecting "?as_js_classic" for the first time
           //   - injecting "?as_js_classic" because the parentUrl has it
           if (reference.original) {
+            const referenceOriginalUrl = reference.original.url
+            let originalBuildUrl
+            if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
+              originalBuildUrl = referenceOriginalUrl
+            } else {
+              originalBuildUrl = Object.keys(rawUrls).find(
+                (key) => rawUrls[key] === referenceOriginalUrl,
+              )
+            }
+            let rawUrl
+            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
+              // rawUrl = rawUrls[reference.url] || reference.url
+              const originalBuildUrl =
+                buildUrlRedirections[referenceOriginalUrl]
+              rawUrl = originalBuildUrl
+                ? rawUrls[originalBuildUrl]
+                : reference.url
+            } else {
+              rawUrl = reference.url
+            }
             // the url info do not exists yet (it will be created after this "normalize" hook)
             // And the content will be generated when url is cooked by url graph loader.
             // Here we just want to reserve an url for that file
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+            const buildUrl = buildUrlsGenerator.generate(rawUrl, {
               urlInfo: {
                 data: {
                   ...reference.data,
@@ -364,16 +384,8 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
                 filename: reference.filename,
               },
             })
-            const referenceOriginalUrl = reference.original.url
-            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-              buildUrlRedirections[referenceOriginalUrl] = buildUrl
-            } else {
-              const originalBuildUrl = Object.keys(rawUrls).find(
-                (key) => rawUrls[key] === referenceOriginalUrl,
-              )
-              buildUrlRedirections[originalBuildUrl] = buildUrl
-            }
-            rawUrls[buildUrl] = reference.url
+            buildUrlRedirections[originalBuildUrl] = buildUrl
+            rawUrls[buildUrl] = rawUrl
             return buildUrl
           }
           if (reference.isInline) {

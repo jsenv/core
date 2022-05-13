@@ -1,3 +1,10 @@
+/*
+ * Update <link rel="preload"> and friends after build (once we know everything)
+ *
+ * - Used to remove ressource hint targeting an url that is no longer used:
+ *   - Happens because of import assertions transpilation (file is inlined into JS)
+ */
+
 import {
   parseHtmlString,
   visitHtmlAst,
@@ -8,8 +15,6 @@ import {
 
 import { GRAPH } from "./graph_utils.js"
 
-// update ressource hint that where targeting a file that has changed during build
-// (happens for import assertions and file modified by "?as_js_classic")
 export const resyncRessourceHints = async ({
   finalGraphKitchen,
   finalGraph,
@@ -35,7 +40,6 @@ export const resyncRessourceHints = async ({
           return
         }
         if (urlInfo.dependents.size === 0) {
-          console.warn("Remove non unused preload link")
           removeHtmlNode(linkNode)
           return
         }
