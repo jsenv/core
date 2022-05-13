@@ -49,13 +49,12 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
     normalizeUrl: (reference, context) => {
-      if (reference.isInline) {
-        if (reference.contentType !== "text/javascript") {
-          // We want to propagate transformation of js module to js classic
-          // so we don't want to propagate when the reference is not js:
-          // - ignore "string" in `JSON.parse(string)` for instance
-          return null
-        }
+      // We want to propagate transformation of js module to js classic
+      // but only for import specifier (static/dynamic import + re-export)
+      // All other references won't get the ?as_js_classic
+      // otherwise we could try to transform inline ressources, specifiers inside new URL(). ...
+      if (reference.type !== "js_import_export") {
+        return null
       }
       const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
       if (

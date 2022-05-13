@@ -113,7 +113,10 @@ const babelPluginMetadataJsUrlMentions = (
           NewExpression: (path) => {
             callStaticAnalyzers(path, [
               analyzeNewWorkerOrNewSharedWorker,
-              analyzeNewUrlCall,
+              (path) =>
+                analyzeNewUrlCall(path, {
+                  searchSystemJs,
+                }),
             ])
           },
         }

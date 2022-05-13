@@ -198,7 +198,10 @@ const isServiceWorkerRegisterCall = (node) => {
   return false
 }
 
-export const analyzeNewUrlCall = (path, { ignoreInsideWorker = true } = {}) => {
+export const analyzeNewUrlCall = (
+  path,
+  { searchSystemJs = false, ignoreInsideWorker = true } = {},
+) => {
   const node = path.node
   if (!isNewUrlCall(node)) {
     return null
@@ -232,7 +235,7 @@ export const analyzeNewUrlCall = (path, { ignoreInsideWorker = true } = {}) => {
   if (node.arguments.length === 2) {
     const firstArgNode = node.arguments[0]
     const secondArgNode = node.arguments[1]
-    const baseUrlType = analyzeUrlNodeType(secondArgNode)
+    const baseUrlType = analyzeUrlNodeType(secondArgNode, { searchSystemJs })
     if (baseUrlType) {
       // we can understand the second argument
       const urlType = analyzeUrlNodeType(firstArgNode)
@@ -267,7 +270,7 @@ const isNewUrlCall = (node) => {
     node.callee.name === "URL"
   )
 }
-const analyzeUrlNodeType = (secondArgNode) => {
+const analyzeUrlNodeType = (secondArgNode, { searchSystemJs = false } = {}) => {
   if (secondArgNode.type === "StringLiteral") {
     return "StringLiteral"
   }
@@ -278,6 +281,22 @@ const analyzeUrlNodeType = (secondArgNode) => {
     secondArgNode.property.name === "url"
   ) {
     return "import.meta.url"
+  }
+  if (
+    searchSystemJs &&
+    secondArgNode.type === "MemberExpression" &&
+    secondArgNode.object.type === "MemberExpression" &&
+    secondArgNode.object.object.type === "Identifier" &&
+    // because of minification we can't assume _context.
+    // so anything matching "*.meta.url" (in the context of new URL())
+    // will be assumed to be the equivalent to "import.meta.url"
+    // secondArgNode.object.object.name === "_context" &&
+    secondArgNode.object.property.type === "Identifier" &&
+    secondArgNode.object.property.name === "meta" &&
+    secondArgNode.property.type === "Identifier" &&
+    secondArgNode.property.name === "url"
+  ) {
+    return "context.meta.url"
   }
   if (
     secondArgNode.type === "MemberExpression" &&
@@ -395,6 +414,11 @@ const isSystemImportCall = (node) => {
     callee.property.type === "Identifier" &&
     callee.property.name === "import"
   )
+}
+
+export const analyzeSystemNewUrlCall = () => {
+  // TODO: new URL(specifier, _context.meta.url)
+  // apparently it won't recognize the service worker without this so I have to take that into account
 }
 
 const getNodePosition = (node) => {
