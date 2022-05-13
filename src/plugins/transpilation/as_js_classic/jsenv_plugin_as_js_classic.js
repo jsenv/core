@@ -15,11 +15,12 @@ import { createRequire } from "node:module"
 import { readFileSync, urlToFilename } from "@jsenv/filesystem"
 
 import { requireBabelPlugin } from "@jsenv/babel-plugins"
-
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
+
+import { fetchOriginalUrlInfo } from "../fetch_original_url_info.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginScriptTypeModuleAsClassic } from "./jsenv_plugin_script_type_module_as_classic.js"
 import { jsenvPluginWorkersTypeModuleAsClassic } from "./jsenv_plugin_workers_type_module_as_classic.js"
@@ -70,28 +71,18 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
       return urlTransformed
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const urlObject = new URL(urlInfo.url)
-      const { searchParams } = urlObject
-      if (!searchParams.has("as_js_classic")) {
-        return null
-      }
-      searchParams.delete("as_js_classic")
-      const originalUrl = urlObject.href
-      const originalReference = {
-        ...(context.reference.original || context.reference),
+      const originalUrlInfo = await fetchOriginalUrlInfo({
+        urlInfo,
+        context,
+        searchParam: "as_js_classic",
         // override the expectedType to "js_module"
         // because when there is ?as_js_classic it means the underlying ressource
         // is a js_module
         expectedType: "js_module",
-      }
-      originalReference.url = originalUrl
-      const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-        originalReference.url,
-      )
-      await context.fetchUrlContent({
-        reference: originalReference,
-        urlInfo: originalUrlInfo,
       })
+      if (!originalUrlInfo) {
+        return null
+      }
       const isJsEntryPoint =
         // in general html files are entry points
         // but during build js can be sepcified as an entry point

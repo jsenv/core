@@ -3,12 +3,13 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
+    <link rel="modulepreload" href="./src/main.js" />
   </head>
 
   <body>
     <script>
-      window.namespacePromise = new Promise((resolve) => {
-        window.resolveNamespacePromise = resolve
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
       })
     </script>
     <script type="module">
@@ -17,7 +18,7 @@
       util()
 
       const dynamicImportNamespace = await import("./src/main.js")
-      window.resolveNamespacePromise(dynamicImportNamespace)
+      window.resolveResultPromise(dynamicImportNamespace)
     </script>
   </body>
 </html>

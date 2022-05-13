@@ -149,12 +149,13 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           )
           const href = hrefAttribute.value
           actions.push(() => {
+            const [newReference] = getReferenceAsJsClassic(
+              context.referenceUtils.findByGeneratedSpecifier(href),
+            )
             assignHtmlNodeAttributes(modulePreloadNode, {
               rel: "preload",
               as: "script",
-              href: injectQueryParamsIntoSpecifier(href, {
-                as_js_classic: "",
-              }),
+              href: newReference.generatedSpecifier,
             })
           })
         })

@@ -5,6 +5,7 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 
+import { fetchOriginalUrlInfo } from "../fetch_original_url_info.js"
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
 
 export const jsenvPluginImportAssertions = () => {
@@ -95,125 +96,106 @@ const jsenvPluginAsModules = () => {
   const asJsonModule = {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
-    fetchUrlContent: (urlInfo, context) => {
-      return fetchOriginalUrl({
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_json_module",
-        convertToJsModule: (urlInfo) => {
-          // here we could `export default ${jsonText}`:
-          // but js engine are optimized to recognize JSON.parse
-          // and use a faster parsing strategy
-          return `export default JSON.parse(${JSON.stringify(
-            urlInfo.content.trim(),
-          )})`
-        },
+        expectedType: "json",
       })
+      if (!originalUrlInfo) {
+        return null
+      }
+      const jsonText = originalUrlInfo.content.trim()
+      return {
+        type: "js_module",
+        contentType: "text/javascript",
+        // here we could `export default ${jsonText}`:
+        // but js engine are optimized to recognize JSON.parse
+        // and use a faster parsing strategy
+        content: `export default JSON.parse(${JSON.stringify(jsonText)}))`,
+      }
     },
   }
 
   const asCssModule = {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
-    fetchUrlContent: (urlInfo, context) => {
-      return fetchOriginalUrl({
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_css_module",
-        convertToJsModule: (urlInfo) => {
-          const cssText = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
-            // If template string is choosen and runtime do not support template literals
-            // it's ok because "jsenv:new_inline_content" plugin executes after this one
-            // and convert template strings into raw strings
-            canUseTemplateString: true,
-          })
-          return `import { InlineContent } from ${JSON.stringify(
-            inlineContentClientFileUrl,
-          )}
-    
-const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
-const stylesheet = new CSSStyleSheet()
-stylesheet.replaceSync(inlineContent.text)
-export default stylesheet`
-        },
+        expectedType: "css",
       })
+      if (!originalUrlInfo) {
+        return null
+      }
+      const cssText = JS_QUOTES.escapeSpecialChars(originalUrlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true,
+      })
+      return {
+        type: "js_module",
+        contentType: "text/javascript",
+        content: `import { InlineContent } from ${JSON.stringify(
+          inlineContentClientFileUrl,
+        )}
+  
+  const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
+  const stylesheet = new CSSStyleSheet()
+  stylesheet.replaceSync(inlineContent.text)
+  export default stylesheet`,
+      }
     },
   }
 
   const asTextModule = {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
-    fetchUrlContent: (urlInfo, context) => {
-      return fetchOriginalUrl({
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_text_module",
-        convertToJsModule: (urlInfo) => {
-          const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
-            // If template string is choosen and runtime do not support template literals
-            // it's ok because "jsenv:new_inline_content" plugin executes after this one
-            // and convert template strings into raw strings
-            canUseTemplateString: true,
-          })
-          return `import { InlineContent } from ${JSON.stringify(
-            inlineContentClientFileUrl,
-          )}
-    
-const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
-export default inlineContent.text`
-        },
+        expectedType: "text",
       })
+      if (!originalUrlInfo) {
+        return null
+      }
+      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true,
+      })
+      return {
+        type: "js_module",
+        contentType: "text/javascript",
+        content: `import { InlineContent } from ${JSON.stringify(
+          inlineContentClientFileUrl,
+        )}
+  
+const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
+export default inlineContent.text`,
+      }
     },
   }
 
   return [asJsonModule, asCssModule, asTextModule]
 }
 
-const fetchOriginalUrl = async ({
-  urlInfo,
-  context,
-  searchParam,
-  expectedType,
-  convertToJsModule,
-}) => {
-  const urlObject = new URL(urlInfo.url)
-  const { searchParams } = urlObject
-  if (!searchParams.has(searchParam)) {
-    return null
-  }
-  searchParams.delete(searchParam)
-  const originalUrl = urlObject.href
-  const originalReference = {
-    ...(context.reference.original || context.reference),
-    expectedType,
-  }
-  originalReference.url = originalUrl
-  const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-    originalReference.url,
-  )
-  await context.fetchUrlContent({
-    reference: originalReference,
-    urlInfo: originalUrlInfo,
-  })
-  return {
-    type: "js_module",
-    contentType: "text/javascript",
-    content: convertToJsModule(originalUrlInfo, context),
-  }
-}
-
 const importAsInfos = {
   json: {
     searchParam: "as_json_module",
-    expectedType: "json",
   },
   css: {
     searchParam: "as_css_module",
-    expectedType: "css",
   },
   text: {
     searchParam: "as_text_module",
-    expectedType: "text",
   },
 }
 

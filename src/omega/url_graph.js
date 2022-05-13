@@ -4,7 +4,16 @@ import { urlToRelativeUrl } from "@jsenv/filesystem"
 export const createUrlGraph = () => {
   const urlInfos = {}
   const getUrlInfo = (url) => urlInfos[url]
-  const deleteUrlInfo = (url) => delete urlInfos[url]
+  const deleteUrlInfo = (url) => {
+    const urlInfo = urlInfos[url]
+    if (urlInfo) {
+      delete urlInfos[url]
+      if (urlInfo.sourcemapReference) {
+        deleteUrlInfo(urlInfo.sourcemapReference.url)
+      }
+    }
+  }
+
   const reuseOrCreateUrlInfo = (url) => {
     const existingUrlInfo = urlInfos[url]
     if (existingUrlInfo) return existingUrlInfo

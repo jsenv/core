@@ -1,8 +1,3 @@
-/*
- * TODO: test with a module preload on the dynamically imported chunk
- * this is what generates the erro
- */
-
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -27,7 +22,7 @@ const test = async (params) => {
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.namespacePromise
+      return window.resultPromise
     },
     /* eslint-enable no-undef */
   })
@@ -38,13 +33,23 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// support for script_type_module
-// await test()
+// support for <script type="module">
+await test({
+  runtimeCompat: {
+    chrome: "63",
+  },
+})
 
-// no support for script_type_module
+// no support <script type="module">
 await test({
   runtimeCompat: {
     chrome: "60",
   },
-  // sourcemaps: "file", // TODO: retest with sourcemap as file, it throw an error
+  // At some point generating sourcemap in this scenario was throwing an error
+  // because the sourcemap for js module files where not generated
+  // and in the end code was expecting to find sourcemapUrlInfo.content
+  // What should happen instead is that js modules files are gone, so their sourcemap
+  // should not appear in the url graph.
+  // We generate sourcemap here to ensure there won't be a regression on that
+  sourcemaps: "file",
 })
