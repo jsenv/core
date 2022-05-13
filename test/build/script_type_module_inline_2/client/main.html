@@ -12,11 +12,11 @@
       })
     </script>
     <script type="module">
-      import { util } from "./util.js"
+      import { util } from "./src/util.js"
 
       util()
 
-      const dynamicImportNamespace = await import("./main.js")
+      const dynamicImportNamespace = await import("./src/main.js")
       window.resolveNamespacePromise(dynamicImportNamespace)
     </script>
   </body>
