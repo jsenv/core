@@ -12,6 +12,12 @@ await executeTestPlan({
         allocatedMs: 30 * 1000,
       },
     },
+    "test/**/coverage_universal.test.mjs": {
+      node: {
+        runtime: nodeProcess,
+        allocatedMs: 60 * 1000,
+      },
+    },
   },
   // completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
