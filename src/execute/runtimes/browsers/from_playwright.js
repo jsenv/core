@@ -191,8 +191,8 @@ export const createRuntimeFromPlaywright = ({
                 navigation: performance.navigation.toJSON(),
                 measures,
               }
-              /* eslint-enable no-undef */
             },
+            /* eslint-enable no-undef */
           )
           result.performance = performance
           return result
