@@ -46,19 +46,44 @@ import { injectGlobalVersionMapping } from "./inject_global_version_mappings.js"
 import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
 import { resyncRessourceHints } from "./resync_ressource_hints.js"
 
+/**
+ * Generate an optimized version of source files into a directory
+ * @param {Object} buildParameters
+ * @param {string|url} buildParameters.rootDirectoryUrl
+ *        Directory containing source files
+ * @param {string|url} buildParameters.buildDirectoryUrl
+ *        Directory where optimized files will be written
+ * @param {object} buildParameters.entryPoints
+ *        Describe entry point paths and control their names in the build directory
+ * @param {object} buildParameters.runtimeCompat
+ *        Code generated will be compatible with these runtimes
+ * @param {string="/"} buildParameters.baseUrl
+ *        All urls in build file contents are prefixed with this url
+ * @param {boolean|object} [buildParameters.minification=true]
+ *        Minify build file contents
+ * @param {boolean} [buildParameters.versioning=true]
+ *        Controls if url in build file contents are versioned
+ * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
+ *        Controls how url are versioned
+ * @param {boolean|string} [buildParameters.sourcemaps=false]
+ *        Generate sourcemaps in the build directory
+ * @return {Object} buildReturnValue
+ * @return {Object} buildReturnValue.buildFileContents
+ *        Contains all build file paths relative to the build directory and their content
+ * @return {Object} buildReturnValue.buildInlineContents
+ *        Contains content that is inline into build files
+ * @return {Object} buildReturnValue.buildManifest
+ *        Map build file paths without versioning to versioned file paths
+ */
 export const build = async ({
   signal = new AbortController().signal,
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
-  // for now it's here but I think preview will become an other script
-  // that will just pass different options to build project
-  // and this function will be agnostic about "preview" concept
-  isPreview = false,
 
   plugins = [],
-  sourcemaps = isPreview ? "file" : false,
+  sourcemaps = false,
   nodeEsmResolution,
   fileSystemMagicResolution,
   injectedGlobals,
