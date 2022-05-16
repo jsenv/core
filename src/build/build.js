@@ -167,6 +167,7 @@ build ${entryPointKeys.length} entry points`)
             specifier: key,
           })
           entryUrls.push(entryUrlInfo.url)
+          entryUrlInfo.filename = entryPoints[key]
         })
       },
     })

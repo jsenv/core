@@ -45,7 +45,7 @@ export const startBuildServer = async ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   buildCommand,
-  mainBuildFile,
+  mainBuildFile = "/index.html",
   watchedFilePatterns,
   cooldownBetweenFileEvents,
   autorestart,

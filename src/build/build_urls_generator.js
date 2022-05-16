@@ -4,6 +4,17 @@ import { memoizeByUrl } from "@jsenv/utils/memoize/memoize_by_url.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}
+
+  const getUrlName = (url, urlInfo) => {
+    if (!urlInfo) {
+      return urlToFilename(url)
+    }
+    if (urlInfo.filename) {
+      return urlInfo.filename
+    }
+    return urlToFilename(url)
+  }
+
   const generate = memoizeByUrl((url, { urlInfo, parentUrlInfo }) => {
     const directoryPath = determineDirectoryPath({
       urlInfo,
@@ -16,9 +27,7 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
     }
     const urlObject = new URL(url)
     let { search, hash } = urlObject
-    let name = urlInfo
-      ? urlInfo.filename || urlToFilename(url)
-      : urlToFilename(url)
+    let name = getUrlName(url, urlInfo)
     const [basename, extension] = splitFileExtension(name)
     let nameCandidate = name
     let integer = 1
