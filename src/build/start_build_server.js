@@ -21,6 +21,7 @@ import {
   pluginCORS,
   fetchFileSystem,
 } from "@jsenv/server"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 import { Abort } from "@jsenv/abort"
 
@@ -50,6 +51,9 @@ export const startBuildServer = async ({
   cooldownBetweenFileEvents,
   autorestart,
 }) => {
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
+
   const autorestartProcess = await initProcessAutorestart({
     signal,
     handleSIGINT,
