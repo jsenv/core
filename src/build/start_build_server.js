@@ -45,7 +45,7 @@ export const startBuildServer = async ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   buildCommand,
-  mainBuildFile = "/index.html",
+  mainBuildFileUrl = "/index.html",
   watchedFilePatterns,
   cooldownBetweenFileEvents,
   autorestart,
@@ -145,10 +145,10 @@ export const startBuildServer = async ({
         request.ressource,
         request.origin,
       ).searchParams.has("v")
-      if (mainBuildFile && request.ressource === "/") {
+      if (mainBuildFileUrl && request.ressource === "/") {
         request = {
           ...request,
-          ressource: `/${mainBuildFile}`,
+          ressource: mainBuildFileUrl,
         }
       }
       return fetchFileSystem(
