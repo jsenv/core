@@ -22,6 +22,7 @@ import {
   fetchFileSystem,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
+import { Abort } from "@jsenv/abort"
 
 import { initProcessAutorestart } from "@jsenv/utils/file_watcher/process_auto_restart.js"
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
@@ -79,13 +80,17 @@ export const startBuildServer = async ({
   const logger = createLogger({ logLevel })
 
   let buildPromise
-  let abortController
+  let buildAbortController
   const runBuild = async () => {
+    buildAbortController = new AbortController()
+    const buildOperation = Abort.startOperation()
+    buildOperation.addAbortSignal(signal)
+    buildOperation.addAbortSignal(buildAbortController.signal)
     const buildTask = createTaskLog(logger, `execute build command`)
     buildPromise = executeCommand(buildCommand, {
       cwd: rootDirectoryUrl,
       logLevel: buildCommandLogLevel,
-      signal,
+      signal: buildOperation.signal,
     })
     try {
       await buildPromise
@@ -173,7 +178,7 @@ export const startBuildServer = async ({
     watchedFilePatterns,
     cooldownBetweenFileEvents,
     fileChangeCallback: ({ url, event }) => {
-      abortController.abort()
+      buildAbortController.abort()
       // setTimeout is to ensure the abortController.abort() above
       // is properly taken into account so that logs about abort comes first
       // then logs about re-running the build happens
