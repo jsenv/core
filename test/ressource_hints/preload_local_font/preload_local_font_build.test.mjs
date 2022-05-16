@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/test/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
-const test = async () => {
+const test = async (params) => {
   await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -13,6 +13,7 @@ const test = async () => {
       "./main.html": "main.html",
     },
     minification: false,
+    ...params,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -38,4 +39,8 @@ const test = async () => {
   assert({ actual, expected })
 }
 
-await test()
+await test({
+  logLevel: "debug",
+  // bundling: true,
+  versioning: false,
+})

@@ -579,220 +579,22 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   )
   if (versioning) {
-    const versioningTask = createTaskLog(logger, "inject version in urls")
-    try {
-      const urlsSorted = sortUrlGraphByDependencies(finalGraph)
-      urlsSorted.forEach((url) => {
-        if (url.startsWith("data:")) {
-          return
-        }
-        const urlInfo = finalGraph.getUrlInfo(url)
-        if (urlInfo.type === "sourcemap") {
-          return
-        }
-        // ignore:
-        // - inline files:
-        //   they are already taken into account in the file where they appear
-        // - external files
-        //   we don't know their content
-        // - unused files without reference
-        //   File updated such as style.css -> style.css.js or file.js->file.es5.js
-        //   Are used at some point just to be discarded later because they need to be converted
-        //   There is no need to version them and we could not because the file have been ignored
-        //   so their content is unknown
-        if (urlInfo.isInline) {
-          return
-        }
-        if (urlInfo.external) {
-          return
-        }
-        if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
-          return
-        }
-
-        const urlContent =
-          urlInfo.type === "html"
-            ? stringifyHtmlAst(
-                parseHtmlString(urlInfo.content, {
-                  storeOriginalPositions: false,
-                }),
-                { removeOriginalPositionAttributes: true },
-              )
-            : urlInfo.content
-        const versionGenerator = createVersionGenerator()
-        versionGenerator.augmentWithContent({
-          content: urlContent,
-          contentType: urlInfo.contentType,
-          lineBreakNormalization,
-        })
-        urlInfo.dependencies.forEach((dependencyUrl) => {
-          // this dependency is inline (data:) or remote (http://, https://)
-          if (!dependencyUrl.startsWith("file:")) {
-            return
-          }
-          const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
-          if (
-            // this content is part of the file, no need to take into account twice
-            dependencyUrlInfo.isInline ||
-            // this dependency content is not known
-            dependencyUrlInfo.external
-          ) {
-            return
-          }
-          if (dependencyUrlInfo.data.version) {
-            versionGenerator.augmentWithDependencyVersion(
-              dependencyUrlInfo.data.version,
-            )
-          } else {
-            // because all dependencies are know, if the dependency has no version
-            // it means there is a circular dependency between this file
-            // and it's dependency
-            // in that case we'll use the dependency content
-            versionGenerator.augmentWithContent({
-              content: dependencyUrlInfo.content,
-              contentType: dependencyUrlInfo.contentType,
-              lineBreakNormalization,
-            })
-          }
-        })
-        urlInfo.data.version = versionGenerator.generate()
-
-        urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
-          buildUrl: urlInfo.url,
-          version: urlInfo.data.version,
-          versioningMethod,
-        })
-      })
-      const versionMappings = {}
-      const usedVersionMappings = []
-      const versioningKitchen = createKitchen({
-        logger,
-        rootDirectoryUrl: buildDirectoryUrl,
-        urlGraph: finalGraph,
-        scenario: "build",
-        sourcemaps,
-        runtimeCompat,
-        plugins: [
-          jsenvPluginInline({
-            fetchInlineUrls: false,
-            analyzeConvertedScripts: true, // to be able to version their urls
-            allowEscapeForVersioning: true,
-          }),
-          {
-            name: "jsenv:versioning",
-            appliesDuring: { build: true },
-            resolveUrl: (reference) => {
-              if (reference.specifier[0] === "#") {
-                reference.external = true
-              }
-              const buildUrl = buildUrls[reference.specifier]
-              if (buildUrl) {
-                return buildUrl
-              }
-              const url = new URL(reference.specifier, reference.parentUrl).href
-              return url
-            },
-            formatUrl: (reference) => {
-              if (reference.isInline) {
-                return null
-              }
-              // specifier comes from "normalize" hook done a bit earlier in this file
-              // we want to get back their build url to access their infos
-              const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
-              if (!canUseVersionedUrl(referencedUrlInfo)) {
-                return reference.specifier
-              }
-              // data:* urls and so on
-              if (!referencedUrlInfo.url.startsWith("file:")) {
-                return null
-              }
-              const versionedUrl = referencedUrlInfo.data.versionedUrl
-              if (!versionedUrl) {
-                // happens for sourcemap
-                return `${baseUrl}${urlToRelativeUrl(
-                  referencedUrlInfo.url,
-                  buildDirectoryUrl,
-                )}`
-              }
-              const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
-                versionedUrl,
-                buildDirectoryUrl,
-              )}`
-              versionMappings[reference.specifier] = versionedSpecifier
-              buildUrls[versionedSpecifier] = versionedUrl
-
-              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
-              if (parentUrlInfo.jsQuote) {
-                // the url is inline inside js quotes
-                usedVersionMappings.push(reference.specifier)
-                return () =>
-                  `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
-                    reference.specifier,
-                  )})+${parentUrlInfo.jsQuote}`
-              }
-              if (
-                reference.type === "js_url_specifier" ||
-                reference.subtype === "import_dynamic"
-              ) {
-                usedVersionMappings.push(reference.specifier)
-                return () => `__v__(${JSON.stringify(reference.specifier)})`
-              }
-              return versionedSpecifier
-            },
-            fetchUrlContent: (versionedUrlInfo) => {
-              if (!versionedUrlInfo.url.startsWith("file:")) {
-                return { external: true }
-              }
-              if (versionedUrlInfo.isInline) {
-                const rawUrlInfo = rawGraph.getUrlInfo(
-                  rawUrls[versionedUrlInfo.url],
-                )
-                const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
-                return {
-                  originalContent: rawUrlInfo
-                    ? rawUrlInfo.originalContent
-                    : undefined,
-                  sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
-                  contentType: versionedUrlInfo.contentType,
-                  content: versionedUrlInfo.content,
-                }
-              }
-              return versionedUrlInfo
-            },
-          },
-        ],
-      })
-      await loadUrlGraph({
-        urlGraph: finalGraph,
-        kitchen: versioningKitchen,
-        startLoading: (cookEntryFile) => {
-          postBuildEntryUrls.forEach((postBuildEntryUrl) => {
-            cookEntryFile({
-              trace: `entryPoint`,
-              type: "entry_point",
-              specifier: postBuildEntryUrl,
-            })
-          })
-        },
-      })
-      if (usedVersionMappings.length) {
-        const versionMappingsNeeded = {}
-        usedVersionMappings.forEach((specifier) => {
-          versionMappingsNeeded[specifier] = versionMappings[specifier]
-        })
-        await injectGlobalVersionMapping({
-          finalGraphKitchen,
-          finalGraph,
-          versionMappings: versionMappingsNeeded,
-        })
-      }
-    } catch (e) {
-      versioningTask.fail()
-      throw e
-    }
-    versioningTask.done()
+    await applyUrlVersioning({
+      logger,
+      buildDirectoryUrl,
+      rawUrls,
+      buildUrls,
+      baseUrl,
+      postBuildEntryUrls,
+      sourcemaps,
+      runtimeCompat,
+      rawGraph,
+      finalGraph,
+      finalGraphKitchen,
+      lineBreakNormalization,
+      versioningMethod,
+    })
   }
-
   GRAPH.forEach(finalGraph, (urlInfo) => {
     if (!urlInfo.url.startsWith("file:")) {
       return
@@ -818,7 +620,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     urlInfo.data.buildUrlIsVersioned = useVersionedUrl
     urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
   })
-
   await resyncRessourceHints({
     finalGraphKitchen,
     finalGraph,
@@ -846,7 +647,6 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     finalGraph,
     lineBreakNormalization,
   })
-
   logger.debug(
     `graph urls post-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
@@ -903,6 +703,235 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     buildInlineContents,
     buildManifest,
   }
+}
+
+const applyUrlVersioning = async ({
+  logger,
+  buildDirectoryUrl,
+  rawUrls,
+  buildUrls,
+  baseUrl,
+  postBuildEntryUrls,
+  sourcemaps,
+  runtimeCompat,
+  rawGraph,
+  finalGraph,
+  finalGraphKitchen,
+  lineBreakNormalization,
+  versioningMethod,
+}) => {
+  const versioningTask = createTaskLog(logger, "inject version in urls")
+  try {
+    const urlsSorted = sortUrlGraphByDependencies(finalGraph)
+    urlsSorted.forEach((url) => {
+      if (url.startsWith("data:")) {
+        return
+      }
+      const urlInfo = finalGraph.getUrlInfo(url)
+      if (urlInfo.type === "sourcemap") {
+        return
+      }
+      // ignore:
+      // - inline files:
+      //   they are already taken into account in the file where they appear
+      // - external files
+      //   we don't know their content
+      // - unused files without reference
+      //   File updated such as style.css -> style.css.js or file.js->file.es5.js
+      //   Are used at some point just to be discarded later because they need to be converted
+      //   There is no need to version them and we could not because the file have been ignored
+      //   so their content is unknown
+      if (urlInfo.isInline) {
+        return
+      }
+      if (urlInfo.external) {
+        return
+      }
+      if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
+        return
+      }
+
+      const urlContent =
+        urlInfo.type === "html"
+          ? stringifyHtmlAst(
+              parseHtmlString(urlInfo.content, {
+                storeOriginalPositions: false,
+              }),
+              { removeOriginalPositionAttributes: true },
+            )
+          : urlInfo.content
+      const versionGenerator = createVersionGenerator()
+      versionGenerator.augmentWithContent({
+        content: urlContent,
+        contentType: urlInfo.contentType,
+        lineBreakNormalization,
+      })
+      urlInfo.dependencies.forEach((dependencyUrl) => {
+        // this dependency is inline (data:) or remote (http://, https://)
+        if (!dependencyUrl.startsWith("file:")) {
+          return
+        }
+        const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
+        if (
+          // this content is part of the file, no need to take into account twice
+          dependencyUrlInfo.isInline ||
+          // this dependency content is not known
+          dependencyUrlInfo.external
+        ) {
+          return
+        }
+        if (dependencyUrlInfo.data.version) {
+          versionGenerator.augmentWithDependencyVersion(
+            dependencyUrlInfo.data.version,
+          )
+        } else {
+          // because all dependencies are know, if the dependency has no version
+          // it means there is a circular dependency between this file
+          // and it's dependency
+          // in that case we'll use the dependency content
+          versionGenerator.augmentWithContent({
+            content: dependencyUrlInfo.content,
+            contentType: dependencyUrlInfo.contentType,
+            lineBreakNormalization,
+          })
+        }
+      })
+      urlInfo.data.version = versionGenerator.generate()
+
+      urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
+        buildUrl: urlInfo.url,
+        version: urlInfo.data.version,
+        versioningMethod,
+      })
+    })
+    const versionMappings = {}
+    const usedVersionMappings = []
+    const versioningKitchen = createKitchen({
+      logger,
+      rootDirectoryUrl: buildDirectoryUrl,
+      urlGraph: finalGraph,
+      scenario: "build",
+      sourcemaps,
+      runtimeCompat,
+      plugins: [
+        jsenvPluginInline({
+          fetchInlineUrls: false,
+          analyzeConvertedScripts: true, // to be able to version their urls
+          allowEscapeForVersioning: true,
+        }),
+        {
+          name: "jsenv:versioning",
+          appliesDuring: { build: true },
+          resolveUrl: (reference) => {
+            if (reference.specifier[0] === "#") {
+              reference.external = true
+            }
+            const buildUrl = buildUrls[reference.specifier]
+            if (buildUrl) {
+              return buildUrl
+            }
+            const url = new URL(reference.specifier, reference.parentUrl).href
+            return url
+          },
+          formatUrl: (reference) => {
+            if (reference.isInline) {
+              return null
+            }
+            // specifier comes from "normalize" hook done a bit earlier in this file
+            // we want to get back their build url to access their infos
+            const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
+            if (!canUseVersionedUrl(referencedUrlInfo)) {
+              return reference.specifier
+            }
+            // data:* urls and so on
+            if (!referencedUrlInfo.url.startsWith("file:")) {
+              return null
+            }
+            const versionedUrl = referencedUrlInfo.data.versionedUrl
+            if (!versionedUrl) {
+              // happens for sourcemap
+              return `${baseUrl}${urlToRelativeUrl(
+                referencedUrlInfo.url,
+                buildDirectoryUrl,
+              )}`
+            }
+            const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
+              versionedUrl,
+              buildDirectoryUrl,
+            )}`
+            versionMappings[reference.specifier] = versionedSpecifier
+            buildUrls[versionedSpecifier] = versionedUrl
+
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+            if (parentUrlInfo.jsQuote) {
+              // the url is inline inside js quotes
+              usedVersionMappings.push(reference.specifier)
+              return () =>
+                `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
+                  reference.specifier,
+                )})+${parentUrlInfo.jsQuote}`
+            }
+            if (
+              reference.type === "js_url_specifier" ||
+              reference.subtype === "import_dynamic"
+            ) {
+              usedVersionMappings.push(reference.specifier)
+              return () => `__v__(${JSON.stringify(reference.specifier)})`
+            }
+            return versionedSpecifier
+          },
+          fetchUrlContent: (versionedUrlInfo) => {
+            if (!versionedUrlInfo.url.startsWith("file:")) {
+              return { external: true }
+            }
+            if (versionedUrlInfo.isInline) {
+              const rawUrlInfo = rawGraph.getUrlInfo(
+                rawUrls[versionedUrlInfo.url],
+              )
+              const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
+              return {
+                originalContent: rawUrlInfo
+                  ? rawUrlInfo.originalContent
+                  : undefined,
+                sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
+                contentType: versionedUrlInfo.contentType,
+                content: versionedUrlInfo.content,
+              }
+            }
+            return versionedUrlInfo
+          },
+        },
+      ],
+    })
+    await loadUrlGraph({
+      urlGraph: finalGraph,
+      kitchen: versioningKitchen,
+      startLoading: (cookEntryFile) => {
+        postBuildEntryUrls.forEach((postBuildEntryUrl) => {
+          cookEntryFile({
+            trace: `entryPoint`,
+            type: "entry_point",
+            specifier: postBuildEntryUrl,
+          })
+        })
+      },
+    })
+    if (usedVersionMappings.length) {
+      const versionMappingsNeeded = {}
+      usedVersionMappings.forEach((specifier) => {
+        versionMappingsNeeded[specifier] = versionMappings[specifier]
+      })
+      await injectGlobalVersionMapping({
+        finalGraphKitchen,
+        finalGraph,
+        versionMappings: versionMappingsNeeded,
+      })
+    }
+  } catch (e) {
+    versioningTask.fail()
+    throw e
+  }
+  versioningTask.done()
 }
 
 const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {

@@ -176,7 +176,18 @@ const rollupPluginJsenv = ({
             fileUrlConverter,
             jsModuleUrlInfos,
           })
-          return insideJs ? `js/${chunkInfo.name}.js` : `${chunkInfo.name}.js`
+          let nameFromUrlInfo
+          if (chunkInfo.facadeModuleId) {
+            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId)
+            const urlInfo = jsModuleUrlInfos.find(
+              (jsModuleUrlInfo) => jsModuleUrlInfo.url === url,
+            )
+            if (urlInfo) {
+              nameFromUrlInfo = urlInfo.filename
+            }
+          }
+          const name = nameFromUrlInfo || `${chunkInfo.name}.js`
+          return insideJs ? `js/${name}` : `${name}`
         },
         // https://rollupjs.org/guide/en/#outputpaths
         // paths: (id) => {
