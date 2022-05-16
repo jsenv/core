@@ -66,18 +66,6 @@ export const initProcessAutorestart = async ({
   cluster.on("online", (worker) => {
     logger.debug(`worker ${worker.process.pid} is online`)
   })
-  const exitEventCallback = (worker, code, signal) => {
-    // https://nodejs.org/dist/latest-v16.x/docs/api/cluster.html#workerexitedafterdisconnect
-    if (worker.exitedAfterDisconnect) {
-      logger.debug(
-        `worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`,
-      )
-      logger.debug(`starting a new worker`)
-
-      startWorker()
-    }
-  }
-  cluster.on("exit", exitEventCallback)
 
   const killWorkers = () => {
     Object.keys(cluster.workers).forEach((workerId) => {
@@ -109,8 +97,22 @@ export const initProcessAutorestart = async ({
       removed: () => {
         onFileEvent({ url, event: "removed" })
       },
+      keepProcessAlive: false,
     })
   })
+
+  const exitEventCallback = (worker, code, signal) => {
+    // https://nodejs.org/dist/latest-v16.x/docs/api/cluster.html#workerexitedafterdisconnect
+    if (worker.exitedAfterDisconnect) {
+      logger.debug(
+        `worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`,
+      )
+      logger.debug(`starting a new worker`)
+
+      startWorker()
+    }
+  }
+  cluster.on("exit", exitEventCallback)
 
   const stop = () => {
     unregisters.forEach((unregister) => {
