@@ -7,8 +7,7 @@ node_modules/
 /dev_exploring/
 /experimental/
 /node_modules/
-/old_src/
-/old_test/
+/old/
 
 **/babel_helpers/
 **/client/regenerator_runtime.js
