@@ -18,7 +18,7 @@ const worker2 = new Worker(new URL("./worker.js", import.meta.url), {
 })
 const worker2Response = await testWorker(worker2)
 
-window.resolveNamespacePromise({
+window.resolveResultPromise({
   workerResponse,
   worker2Response,
 })

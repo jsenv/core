@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
-    "@jsenv/utils": "1.4.2",
+    "@jsenv/utils": "1.4.4",
     "@jsenv/url-meta": "6.2.0"
   },
   "devDependencies": {
