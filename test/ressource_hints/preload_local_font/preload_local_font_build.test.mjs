@@ -39,8 +39,18 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
+// support for <script type="module">
 await test({
-  logLevel: "debug",
-  // bundling: true,
-  versioning: false,
+  bundling: true,
+  runtimeCompat: {
+    chrome: "63",
+  },
+})
+
+// no support for <script type="module">
+await test({
+  bundling: true,
+  runtimeCompat: {
+    chrome: "60",
+  },
 })

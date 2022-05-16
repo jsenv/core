@@ -234,6 +234,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       })
     }
   })
+  const bundleUrlRedirections = {}
   await Object.keys(bundlers).reduce(async (previous, type) => {
     await previous
     const bundler = bundlers[type]
@@ -276,6 +277,13 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
         rawUrlRedirections[url] = buildUrl
         rawUrls[buildUrl] = url
         bundleUrlInfos[buildUrl] = bundleUrlInfo
+        if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+          const urlForBundler = new URL(
+            bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
+            buildDirectoryUrl,
+          ).href
+          bundleUrlRedirections[urlForBundler] = buildUrl
+        }
       })
     } catch (e) {
       bundleTask.fail()
@@ -313,6 +321,10 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
             reference.specifier[0] === "/"
               ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
               : new URL(reference.specifier, reference.parentUrl).href
+          const urlRedirectedByBundle = bundleUrlRedirections[url]
+          if (urlRedirectedByBundle) {
+            return urlRedirectedByBundle
+          }
           const parentIsFromBundle = Boolean(
             bundleUrlInfos[reference.parentUrl],
           )

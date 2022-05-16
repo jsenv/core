@@ -132,9 +132,9 @@ const rollupPluginJsenv = ({
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
           const jsModuleBundleUrlInfo = {
-            // buildRelativeUrl: rollupFileInfo.fileName,
             data: {
               generatedBy: "rollup",
+              bundleRelativeUrl: rollupFileInfo.fileName,
               usesImport:
                 rollupFileInfo.imports.length > 0 ||
                 rollupFileInfo.dynamicImports.length > 0,
