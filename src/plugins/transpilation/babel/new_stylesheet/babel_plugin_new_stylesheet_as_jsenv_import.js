@@ -1,9 +1,3 @@
-/*
- * TODO:
- * - code should also inject helper when code uses new keyword on "CSSStyleSheet"
- * - code should also inject helper when code uses "document.adoptedStylesheets"
- */
-
 import { pathToFileURL } from "node:url"
 
 import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js"
@@ -27,6 +21,18 @@ export const babelPluginNewStylesheetAsJsenvImport = (
         }
         let usesNewStylesheet = false
         programPath.traverse({
+          NewExpression: (path) => {
+            usesNewStylesheet = isNewCssStyleSheetCall(path.node)
+            if (usesNewStylesheet) {
+              path.stop()
+            }
+          },
+          MemberExpression: (path) => {
+            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node)
+            if (usesNewStylesheet) {
+              path.stop()
+            }
+          },
           CallExpression: (path) => {
             if (path.node.callee.type !== "Import") {
               // Some other function call, not import();
@@ -88,6 +94,25 @@ export const babelPluginNewStylesheetAsJsenvImport = (
       },
     },
   }
+}
+
+const isNewCssStyleSheetCall = (node) => {
+  return (
+    node.type === "NewExpression" &&
+    node.callee.type === "Identifier" &&
+    node.callee.name === "CSSStyleSheet"
+  )
+}
+
+const isDocumentAdoptedStyleSheets = (node) => {
+  const callee = node.callee
+  return (
+    callee.type === "MemberExpression" &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === "document" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "adoptedStyleSheets"
+  )
 }
 
 const hasCssModuleQueryParam = (path) => {
