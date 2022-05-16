@@ -105,13 +105,12 @@ const isNewCssStyleSheetCall = (node) => {
 }
 
 const isDocumentAdoptedStyleSheets = (node) => {
-  const callee = node.callee
   return (
-    callee.type === "MemberExpression" &&
-    callee.object.type === "Identifier" &&
-    callee.object.name === "document" &&
-    callee.property.type === "Identifier" &&
-    callee.property.name === "adoptedStyleSheets"
+    node.type === "MemberExpression" &&
+    node.object.type === "Identifier" &&
+    node.object.name === "document" &&
+    node.property.type === "Identifier" &&
+    node.property.name === "adoptedStyleSheets"
   )
 }
 
