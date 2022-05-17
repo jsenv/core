@@ -70,14 +70,16 @@ ${filesRemoved.join(`\n`)}`)
   let latestCompileInfo
   if (isNew) {
     latestCompileInfo = {
-      content,
+      // was used at some point to ensure the compiled file matches browser etag
+      // etag: bufferToEtag(Buffer.from(content)),
       assetInfos,
       createdMs: Number(Date.now()),
       lastModifiedMs: Number(Date.now()),
     }
   } else if (isUpdated) {
     latestCompileInfo = {
-      content,
+      // was used at some point to ensure the compiled file matches browser etag
+      // etag: bufferToEtag(Buffer.from(content)),
       assetInfos,
       lastModifiedMs: Number(Date.now()),
     }

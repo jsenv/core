@@ -33,14 +33,14 @@ export const validateCompileCache = async ({
     : { isValid: true, code: "ASSETS_VALIDATION_DISABLED" }
   validity.assets = assetsValidity
   mergeValidity(validity, assetsValidity)
-  if (!validity.valid) {
+  if (!validity.isValid) {
     return validity
   }
   return validity
 }
 
 const validateCompileInfoFile = ({ compiledFileUrl }) => {
-  const compileInfoFileUrl = `${compiledFileUrl}__compile_info.json`
+  const compileInfoFileUrl = `${compiledFileUrl}__compile_info__.json`
   const validity = { isValid: true, data: {} }
   let compileInfoFileContentAsBuffer
   try {
@@ -66,9 +66,9 @@ const validateCompileInfoFile = ({ compiledFileUrl }) => {
     throw error
   }
   validity.data = compileInfo
-  if (compileInfo.sources.length === 0) {
+  if (Object.keys(compileInfo.assetInfos).length === 0) {
     validity.isValid = false
-    validity.code = "SOURCES_EMPTY"
+    validity.code = "ASSETS_EMPTY"
     return validity
   }
   return validity
@@ -145,8 +145,8 @@ const validateAssets = ({ compiledFileUrl, compileInfo }) => {
       })
     }
     assetsValidity.data[assetUrl] = assetValidity
-    mergeValidity(assetsValidity, assetUrl, assetValidity)
-    if (!assetsValidity.valid) {
+    mergeValidity(assetsValidity, assetValidity)
+    if (!assetsValidity.isValid) {
       break
     }
   }
@@ -158,7 +158,7 @@ const validateSource = (validity, { sourceFileUrl, eTag }) => {
   try {
     const sourceBuffer = readFileSync(new URL(sourceFileUrl))
     const sourceETag = bufferToEtag(sourceBuffer)
-    validity.data.content = sourceBuffer
+    validity.data.content = String(sourceBuffer)
     validity.data.etag = sourceETag
     if (sourceETag !== eTag) {
       validity.isValid = false
@@ -210,7 +210,7 @@ const validateSourcemap = (validity, { sourcemapFileUrl }) => {
     }
     throw error
   }
-  validity.data = sourcemap
+  validity.data.sourcemap = sourcemap
   return validity
 }
 

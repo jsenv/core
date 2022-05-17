@@ -38,14 +38,15 @@ export const reuseOrCreateCompiledFile = async ({
         let sourcemap = null
         Object.keys(compileInfo.assetInfos).forEach((assetRelativeUrl) => {
           const assetUrl = new URL(assetRelativeUrl, compiledFileUrl).href
+          const assetValidity = cacheValidity.assets.data[assetUrl]
           const asset = {
             type: compileInfo.assetInfos[assetRelativeUrl].type,
-            content: compileInfo.assetInfos[assetRelativeUrl].content,
-            etag: cacheValidity.assets.data[assetUrl].etag,
+            etag: compileInfo.assetInfos[assetRelativeUrl].etag,
+            content: assetValidity.data.content,
           }
           assets[assetUrl] = asset
           if (asset.type === "sourcemap") {
-            sourcemap = JSON.parse(asset.content)
+            sourcemap = assetValidity.data.sourcemap
           }
         })
         updateCompileCache({
@@ -60,7 +61,6 @@ export const reuseOrCreateCompiledFile = async ({
           sourcemap,
         }
       }
-
       if (cacheValidity.code === "SOURCES_EMPTY") {
         logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
       }
