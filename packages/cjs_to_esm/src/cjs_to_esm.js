@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url"
+import { createLogger } from "@jsenv/logger"
 
 import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js"
 
 export const commonJsToJsModule = async ({
-  logger,
-  // rootDirectoryUrl,
+  logLevel,
   url,
   compiledUrl,
 
@@ -20,12 +20,12 @@ export const commonJsToJsModule = async ({
   external = [],
   sourcemapExcludeSources,
 } = {}) => {
+  const logger = createLogger({ logLevel })
   if (!url.startsWith("file:///")) {
     // it's possible to make rollup compatible with http:// for instance
     // however it's an exotic use case for now
     throw new Error(`compatible only with file:// protocol, got ${url}`)
   }
-
   const filePath = fileURLToPath(url)
 
   const { nodeResolve } = await import("@rollup/plugin-node-resolve")
@@ -149,11 +149,17 @@ export const commonJsToJsModule = async ({
     ...(compiledUrl
       ? { dir: fileURLToPath(new URL("./", compiledUrl).href) }
       : {}),
+    sourcemapPathTransform: (relativePath) => {
+      return new URL(relativePath, url).href
+    },
   }
 
   const { output } = await rollupBuild.generate(generateOptions)
   const { code, map } = output[0]
-  return { code, map }
+  return {
+    content: code,
+    sourcemap: map,
+  }
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

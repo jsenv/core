@@ -6,7 +6,7 @@ import { urlToExtension } from "@jsenv/filesystem"
 import { applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginFileSystemMagic = ({
-  magicExtensions = ["inherit"],
+  magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preservesSymlink = true,
 } = {}) => {

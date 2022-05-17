@@ -7,14 +7,68 @@ import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
+import { commonJsToJsModule } from "@jsenv/cjs-to-esm"
+import { fetchOriginalUrlInfo } from "@jsenv/core/src/plugins/transpilation/fetch_original_url_info.js"
 
-export const jsenvPluginReact = ({
+export const jsenvPluginReact = ({ hotRefreshPatterns } = {}) => {
+  return [
+    jsenvPluginReactAsJsModule(),
+    jsenvPluginJsxAndRefresh({
+      hotRefreshPatterns,
+    }),
+  ]
+}
+
+const jsenvPluginReactAsJsModule = () => {
+  return {
+    name: "jsenv:react_as_js_module",
+    appliesDuring: "*",
+    normalizeUrl: (reference) => {
+      if (reference.specifier === "react") {
+        return `${reference.url}?react_as_js_module`
+      }
+      if (reference.specifier === "react-dom") {
+        return `${reference.url}?react_as_js_module`
+      }
+      if (reference.specifier === "react/jsx-runtime") {
+        return `${reference.url}?react_as_js_module`
+      }
+      if (reference.specifier === "react-refresh/runtime") {
+        return `${reference.url}?react_as_js_module`
+      }
+      return null
+    },
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await fetchOriginalUrlInfo({
+        urlInfo,
+        context,
+        searchParam: "react_as_js_module",
+      })
+      if (!originalUrlInfo) {
+        return null
+      }
+      const { content, sourcemap } = await commonJsToJsModule({
+        rootDirectoryUrl: context.rootDirectoryUrl,
+        url: originalUrlInfo.url,
+        external: ["react"],
+      })
+      return {
+        type: "js_module",
+        contentType: "text/javascript",
+        content,
+        sourcemap,
+      }
+    },
+  }
+}
+
+const jsenvPluginJsxAndRefresh = ({
   hotRefreshPatterns = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
     "./**/node_modules/": false,
   },
-} = {}) => {
+}) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
       hot: hotRefreshPatterns,
@@ -63,8 +117,8 @@ export const jsenvPluginReact = ({
           `"react/jsx-runtime"`,
         ]
         for (const importSpecifier of injectedSpecifiers) {
-          const index = code.indexOf(importSpecifier)
-          if (index > -1) {
+          let index = code.indexOf(importSpecifier)
+          while (index > -1) {
             const [injectedReference] = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
@@ -75,6 +129,7 @@ export const jsenvPluginReact = ({
               end: index + importSpecifier.length,
               replacement: injectedReference.generatedSpecifier,
             })
+            index = code.indexOf(importSpecifier, index + 1)
           }
         }
         if (hotRefreshEnabled) {
@@ -104,29 +159,6 @@ import.meta.hot.accept(__react_refresh__.acceptCallback)`)
           sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
         }
       },
-    },
-    resolveUrl: {
-      js_import_export: (reference) => {
-        if (reference.specifier === "react-dom") {
-          // il faut retourner react ?
-        }
-        if (reference.specifier === "react/jsx-dev-runtime") {
-          //
-        }
-        if (reference.specifier === "react/jsx-runtime") {
-        }
-        return null
-      },
-    },
-    fetchUrlContent: (urlInfo) => {
-      // here we want to serve the react/jsx-dev-runtime
-      // and react/jsx-runtime as esmodule
-      // find how to do that
-
-      // we also want to convert react from commonjs to esm by the way
-      if (urlInfo.url === "") {
-      }
-      return null
     },
   }
 }

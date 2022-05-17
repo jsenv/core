@@ -104,7 +104,11 @@ const applyPackageSpecifierResolution = ({
   }
 }
 
-const applyBrowserFieldResolution = ({ conditions, parentUrl, specifier }) => {
+const applyBrowserFieldResolution = ({
+  conditions,
+  parentUrl,
+  packageSpecifier,
+}) => {
   const browserCondition = conditions.includes("browser")
   if (!browserCondition) {
     return null
@@ -125,22 +129,24 @@ const applyBrowserFieldResolution = ({ conditions, parentUrl, specifier }) => {
     return null
   }
   let url
-  if (specifier.startsWith(".")) {
-    const specifierUrl = new URL(specifier, parentUrl).href
-    const specifierRelativeToPackage = specifierUrl.slice(packageUrl.length)
-    const specifierRelativeNotation = `./${specifierRelativeToPackage}`
-    const browserMapping = browser[specifierRelativeNotation]
+  if (packageSpecifier.startsWith(".")) {
+    const packageSpecifierUrl = new URL(packageSpecifier, parentUrl).href
+    const packageSpecifierRelativeUrl = packageSpecifierUrl.slice(
+      packageUrl.length,
+    )
+    const packageSpecifierRelativeNotation = `./${packageSpecifierRelativeUrl}`
+    const browserMapping = browser[packageSpecifierRelativeNotation]
     if (typeof browserMapping === "string") {
       url = new URL(browserMapping, packageUrl).href
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifierUrl.slice("file:///")}`
+      url = `file:///@ignore/${packageSpecifierUrl.slice("file:///")}`
     }
   } else {
-    const browserMapping = browser[specifier]
+    const browserMapping = browser[packageSpecifier]
     if (typeof browserMapping === "string") {
       url = new URL(browserMapping, packageUrl).href
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifier}`
+      url = `file:///@ignore/${packageSpecifier}`
     }
   }
   if (url) {

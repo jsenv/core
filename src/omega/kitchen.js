@@ -208,6 +208,7 @@ export const createKitchen = ({
       })
     }
   }
+  baseContext.resolveReference = resolveReference
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     urlGraph,
