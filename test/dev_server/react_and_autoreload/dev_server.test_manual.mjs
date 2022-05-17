@@ -13,11 +13,11 @@ await startDevServer({
   listenAnyIp: true,
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [jsenvPluginReact()],
   explorerGroups: {
     main: {
-      "./client/main.html": true,
+      "./main.html": true,
     },
   },
   autorestart: {

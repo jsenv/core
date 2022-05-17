@@ -53,7 +53,7 @@ const jsenvPluginReactAsJsModule = () => {
       }
       const { content, sourcemap } = await commonJsToJsModule({
         rootDirectoryUrl: context.rootDirectoryUrl,
-        url: originalUrlInfo.url,
+        sourceFileUrl: originalUrlInfo.url,
         external: ["react"],
       })
       return {

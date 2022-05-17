@@ -1,167 +1,64 @@
-import { fileURLToPath } from "node:url"
-import { createLogger } from "@jsenv/logger"
+import {
+  assertAndNormalizeDirectoryUrl,
+  urlIsInsideOf,
+  moveUrl,
+  ensureWindowsDriveLetter,
+} from "@jsenv/filesystem"
 
-import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js"
+import { commonJsToJsModuleRaw } from "./cjs_to_esm_raw.js"
+import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.js"
 
-export const commonJsToJsModule = async ({
-  logLevel,
-  url,
-  compiledUrl,
+export const commonJsToJsModule = ({
+  filesystemCache = true,
+  rootDirectoryUrl,
+  sourceFileUrl,
+  ...rest
+}) => {
+  if (filesystemCache) {
+    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+    const compileDirectoryUrl = new URL(
+      "./.jsenv/cjs_to_esm/",
+      rootDirectoryUrl,
+    )
+    const compiledFileUrl = determineCompiledFileUrl({
+      url: sourceFileUrl,
+      rootDirectoryUrl,
+      compileDirectoryUrl,
+    })
 
-  replaceGlobalObject = true,
-  replaceGlobalFilename = true,
-  replaceGlobalDirname = true,
-  replaceProcessEnvNodeEnv = true,
-  replaceProcess = true,
-  replaceBuffer = true,
-  processEnvNodeEnv = process.env.NODE_ENV,
-  replaceMap = {},
-  convertBuiltinsToBrowser = true,
-  external = [],
-  sourcemapExcludeSources,
-} = {}) => {
-  const logger = createLogger({ logLevel })
-  if (!url.startsWith("file:///")) {
-    // it's possible to make rollup compatible with http:// for instance
-    // however it's an exotic use case for now
-    throw new Error(`compatible only with file:// protocol, got ${url}`)
+    return reuseOrCreateCompiledFile({
+      sourceFileUrl,
+      compiledFileUrl,
+      compile: () => {
+        return commonJsToJsModuleRaw({
+          rootDirectoryUrl,
+          sourceFileUrl,
+          compiledFileUrl,
+          ...rest,
+        })
+      },
+    })
   }
-  const filePath = fileURLToPath(url)
-
-  const { nodeResolve } = await import("@rollup/plugin-node-resolve")
-  const nodeResolveRollupPlugin = nodeResolve({
-    mainFields: [
-      "browser:module",
-      "module",
-      "browser",
-      "main:esnext",
-      "jsnext:main",
-      "main",
-    ],
-    extensions: [".mjs", ".cjs", ".js", ".json"],
-    preferBuiltins: false,
-    exportConditions: [],
+  return commonJsToJsModuleRaw({
+    rootDirectoryUrl,
+    sourceFileUrl,
+    ...rest,
   })
-
-  const { default: createJSONRollupPlugin } = await import(
-    "@rollup/plugin-json"
-  )
-  const jsonRollupPlugin = createJSONRollupPlugin({
-    preferConst: true,
-    indent: "  ",
-    compact: false,
-    namedExports: true,
-  })
-
-  const { default: createReplaceRollupPlugin } = await import(
-    "@rollup/plugin-replace"
-  )
-  const replaceRollupPlugin = createReplaceRollupPlugin({
-    preventAssignment: true,
-    values: {
-      ...(replaceProcessEnvNodeEnv
-        ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
-        : {}),
-      ...(replaceGlobalObject ? { global: "globalThis" } : {}),
-      ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
-      ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
-      ...replaceMap,
-    },
-  })
-
-  const { default: commonjs } = await import("@rollup/plugin-commonjs")
-  const commonJsRollupPlugin = commonjs({
-    extensions: [".js", ".cjs"],
-    // esmExternals: true,
-    // defaultIsModuleExports: true,
-    // requireReturnsDefault: "namespace",
-    requireReturnsDefault: "auto",
-  })
-
-  const { default: createNodeGlobalRollupPlugin } = await import(
-    "rollup-plugin-node-globals"
-  )
-  const nodeGlobalRollupPlugin = createNodeGlobalRollupPlugin({
-    global: false, // handled by replaceMap
-    dirname: false, // handled by replaceMap
-    filename: false, // handled by replaceMap
-    process: replaceProcess,
-    buffer: replaceBuffer,
-  })
-
-  const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
-    logger,
-  })
-
-  const { default: rollupPluginNodePolyfills } = await import(
-    "rollup-plugin-polyfill-node"
-  )
-
-  const { rollup } = await import("rollup")
-  const rollupBuild = await rollup({
-    input: filePath,
-    inlineDynamicImports: true,
-    external,
-    plugins: [
-      nodeResolveRollupPlugin,
-      jsonRollupPlugin,
-      replaceRollupPlugin,
-      commonJsRollupPlugin,
-      commonJsNamedExportsRollupPlugin,
-      nodeGlobalRollupPlugin,
-      ...(convertBuiltinsToBrowser
-        ? [
-            rollupPluginNodePolyfills({
-              include: null,
-            }),
-          ]
-        : []),
-    ],
-    onwarn: (warning) => {
-      const { loc, message } = warning
-      const logMessage = loc
-        ? `${loc.file}:${loc.line}:${loc.column} ${message}`
-        : message
-
-      // These warnings are usually harmless in packages, so don't show them by default
-      if (
-        warning.code === "CIRCULAR_DEPENDENCY" ||
-        warning.code === "NAMESPACE_CONFLICT" ||
-        warning.code === "THIS_IS_UNDEFINED" ||
-        warning.code === "EMPTY_BUNDLE" ||
-        warning.code === "UNUSED_EXTERNAL_IMPORT"
-      ) {
-        logger.debug(logMessage)
-      } else {
-        logger.warn(logMessage)
-      }
-    },
-  })
-
-  const generateOptions = {
-    // https://rollupjs.org/guide/en#output-format
-    format: "esm",
-    // entryFileNames: `./[name].js`,
-    // https://rollupjs.org/guide/en#output-sourcemap
-    sourcemap: true,
-    sourcemapExcludeSources,
-    exports: "named",
-    ...(compiledUrl
-      ? { dir: fileURLToPath(new URL("./", compiledUrl).href) }
-      : {}),
-    sourcemapPathTransform: (relativePath) => {
-      return new URL(relativePath, url).href
-    },
-  }
-
-  const { output } = await rollupBuild.generate(generateOptions)
-  const { code, map } = output[0]
-  return {
-    content: code,
-    sourcemap: map,
-  }
 }
 
-const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
-
-const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`
+const determineCompiledFileUrl = ({
+  url,
+  rootDirectoryUrl,
+  compileDirectoryUrl,
+}) => {
+  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", url)
+    url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
+  }
+  return moveUrl({
+    url,
+    from: rootDirectoryUrl,
+    to: compileDirectoryUrl,
+    preferAbsolute: true,
+  })
+}

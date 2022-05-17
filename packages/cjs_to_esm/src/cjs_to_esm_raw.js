@@ -1,0 +1,225 @@
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { createLogger } from "@jsenv/logger"
+
+import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
+import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js"
+
+export const commonJsToJsModuleRaw = async ({
+  logLevel,
+  sourceFileUrl,
+  compiledFileUrl,
+
+  replaceGlobalObject = true,
+  replaceGlobalFilename = true,
+  replaceGlobalDirname = true,
+  replaceProcessEnvNodeEnv = true,
+  replaceProcess = true,
+  replaceBuffer = true,
+  processEnvNodeEnv = process.env.NODE_ENV,
+  replaceMap = {},
+  convertBuiltinsToBrowser = true,
+  external = [],
+  sourcemapExcludeSources,
+} = {}) => {
+  const logger = createLogger({ logLevel })
+  if (!sourceFileUrl.startsWith("file:///")) {
+    // it's possible to make rollup compatible with http:// for instance
+    // however it's an exotic use case for now
+    throw new Error(
+      `compatible only with file:// protocol, got ${sourceFileUrl}`,
+    )
+  }
+  const sourceFilePath = fileURLToPath(sourceFileUrl)
+
+  const { nodeResolve } = await import("@rollup/plugin-node-resolve")
+  const nodeResolveRollupPlugin = nodeResolve({
+    mainFields: [
+      "browser:module",
+      "module",
+      "browser",
+      "main:esnext",
+      "jsnext:main",
+      "main",
+    ],
+    extensions: [".mjs", ".cjs", ".js", ".json"],
+    preferBuiltins: false,
+    exportConditions: [],
+  })
+
+  const { default: createJSONRollupPlugin } = await import(
+    "@rollup/plugin-json"
+  )
+  const jsonRollupPlugin = createJSONRollupPlugin({
+    preferConst: true,
+    indent: "  ",
+    compact: false,
+    namedExports: true,
+  })
+
+  const { default: createReplaceRollupPlugin } = await import(
+    "@rollup/plugin-replace"
+  )
+  const replaceRollupPlugin = createReplaceRollupPlugin({
+    preventAssignment: true,
+    values: {
+      ...(replaceProcessEnvNodeEnv
+        ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
+        : {}),
+      ...(replaceGlobalObject ? { global: "globalThis" } : {}),
+      ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
+      ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
+      ...replaceMap,
+    },
+  })
+
+  const { default: commonjs } = await import("@rollup/plugin-commonjs")
+  const commonJsRollupPlugin = commonjs({
+    extensions: [".js", ".cjs"],
+    // esmExternals: true,
+    // defaultIsModuleExports: true,
+    // requireReturnsDefault: "namespace",
+    requireReturnsDefault: "auto",
+  })
+
+  const { default: createNodeGlobalRollupPlugin } = await import(
+    "rollup-plugin-node-globals"
+  )
+  const nodeGlobalRollupPlugin = createNodeGlobalRollupPlugin({
+    global: false, // handled by replaceMap
+    dirname: false, // handled by replaceMap
+    filename: false, // handled by replaceMap
+    process: replaceProcess,
+    buffer: replaceBuffer,
+  })
+
+  const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
+    logger,
+  })
+
+  const { default: rollupPluginNodePolyfills } = await import(
+    "rollup-plugin-polyfill-node"
+  )
+
+  const { rollup } = await import("rollup")
+  const rollupBuild = await rollup({
+    input: sourceFilePath,
+    inlineDynamicImports: true,
+    external,
+    plugins: [
+      nodeResolveRollupPlugin,
+      jsonRollupPlugin,
+      replaceRollupPlugin,
+      commonJsRollupPlugin,
+      commonJsNamedExportsRollupPlugin,
+      nodeGlobalRollupPlugin,
+      ...(convertBuiltinsToBrowser
+        ? [
+            rollupPluginNodePolyfills({
+              include: null,
+            }),
+          ]
+        : []),
+    ],
+    onwarn: (warning) => {
+      const { loc, message } = warning
+      const logMessage = loc
+        ? `${loc.file}:${loc.line}:${loc.column} ${message}`
+        : message
+
+      // These warnings are usually harmless in packages, so don't show them by default
+      if (
+        warning.code === "CIRCULAR_DEPENDENCY" ||
+        warning.code === "NAMESPACE_CONFLICT" ||
+        warning.code === "THIS_IS_UNDEFINED" ||
+        warning.code === "EMPTY_BUNDLE" ||
+        warning.code === "UNUSED_EXTERNAL_IMPORT"
+      ) {
+        logger.debug(logMessage)
+      } else {
+        logger.warn(logMessage)
+      }
+    },
+  })
+
+  const generateOptions = {
+    // https://rollupjs.org/guide/en#output-format
+    format: "esm",
+    // entryFileNames: `./[name].js`,
+    // https://rollupjs.org/guide/en#output-sourcemap
+    sourcemap: true,
+    sourcemapExcludeSources,
+    exports: "named",
+    ...(compiledFileUrl
+      ? { dir: fileURLToPath(new URL("./", compiledFileUrl).href) }
+      : {}),
+    sourcemapPathTransform: (relativePath) => {
+      return new URL(relativePath, sourceFileUrl).href
+    },
+  }
+
+  const { output } = await rollupBuild.generate(generateOptions)
+  const { code, map } = output[0]
+  const assets = extractCompileAssets({
+    sourceUrl: sourceFileUrl,
+    sourceContent: String(readFileSync(new URL(sourceFileUrl))),
+    compiledUrl: compiledFileUrl,
+    compiledContent: code,
+    sourcemap: map,
+  })
+  return {
+    content: code,
+    sourcemap: map,
+    assets,
+  }
+}
+
+const extractCompileAssets = ({
+  sourceUrl,
+  sourceContent,
+  compiledUrl,
+  sourcemap,
+}) => {
+  const compileAssets = {}
+  const addCompileAsset = ({ url, type, subtype, content }) => {
+    compileAssets[url] = {
+      type,
+      subtype,
+      content,
+    }
+  }
+
+  // ensure the source file is part of sources no matter what
+  // it covers cases where sourcemap.sources is empty
+  // or do not contain the real source file
+  // there is a check to prevent duplicate sources in case the sourcemap is correct and contains
+  // the source file in sourcemap.sources
+  addCompileAsset(sourceUrl, {
+    type: "source",
+    content: sourceContent,
+  })
+  if (sourcemap) {
+    sourcemap.sources.forEach((source, index) => {
+      if (source.startsWith("file://")) {
+        const contentFromSourcemap = sourcemap.sourcesContent
+          ? sourcemap.sourcesContent[index]
+          : null
+        addCompileAsset(source, {
+          type: "source",
+          content:
+            contentFromSourcemap || String(readFileSync(new URL(source))),
+        })
+      }
+    })
+    addCompileAsset(setUrlExtension(compiledUrl, ".map"), {
+      type: "sourcemap",
+      content: JSON.stringify(sourcemap),
+    })
+  }
+
+  return compileAssets
+}
+
+const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
+
+const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`
