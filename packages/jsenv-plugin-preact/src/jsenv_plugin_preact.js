@@ -113,14 +113,15 @@ import ${preactDevtoolsReference.generatedSpecifier}
         for (const importSpecifier of injectedSpecifiers) {
           const index = code.indexOf(importSpecifier)
           if (index > -1) {
+            const [injectedReference] = referenceUtils.inject({
+              type: "js_import_export",
+              expectedType: "js_module",
+              specifier: importSpecifier.slice(1, -1),
+            })
             magicSource.replace({
               start: index,
               end: index + importSpecifier.length,
-              replacement: referenceUtils.inject({
-                type: "js_import_export",
-                expectedType: "js_module",
-                specifier: importSpecifier.slice(1, -1),
-              }).generatedSpecifier,
+              replacement: injectedReference.generatedSpecifier,
             })
           }
         }
@@ -128,7 +129,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const prefreshClientFileReference = referenceUtils.inject({
+            const [prefreshClientFileReference] = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
               specifier: "@jsenv/plugin-preact/src/client/prefresh.js",
@@ -136,12 +137,12 @@ import ${preactDevtoolsReference.generatedSpecifier}
             magicSource.prepend(`import { installPrefresh } from ${
               prefreshClientFileReference.generatedSpecifier
             }
-            const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
-            `)
+const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
+`)
             if (hasReg) {
               magicSource.append(`
-            __prefresh__.end()
-            import.meta.hot.accept(__prefresh__.acceptCallback)`)
+__prefresh__.end()
+import.meta.hot.accept(__prefresh__.acceptCallback)`)
             }
           }
         }
