@@ -5,7 +5,7 @@ export const App = () => {
 
   return (
     <div>
-      <span style="color: black">toto: {count}</span>
+      <span style={{ color: "black" }}>tata: {count}</span>
       <button
         onClick={() => {
           countSetter((prev) => prev + 1)

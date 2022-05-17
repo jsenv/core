@@ -7,6 +7,7 @@ import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
+import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { commonJsToJsModule } from "@jsenv/cjs-to-esm"
 import { fetchOriginalUrlInfo } from "@jsenv/core/src/plugins/transpilation/fetch_original_url_info.js"
 
@@ -23,20 +24,23 @@ const jsenvPluginReactAsJsModule = () => {
   return {
     name: "jsenv:react_as_js_module",
     appliesDuring: "*",
-    normalizeUrl: (reference) => {
-      if (reference.specifier === "react") {
-        return `${reference.url}?react_as_js_module`
-      }
-      if (reference.specifier === "react-dom") {
-        return `${reference.url}?react_as_js_module`
-      }
-      if (reference.specifier === "react/jsx-runtime") {
-        return `${reference.url}?react_as_js_module`
-      }
-      if (reference.specifier === "react-refresh/runtime") {
-        return `${reference.url}?react_as_js_module`
-      }
-      return null
+    normalizeUrl: {
+      js_import_export: (reference) => {
+        if (
+          [
+            "react",
+            "react-dom",
+            "react/jsx-runtime",
+            "react/jsx-dev-runtime",
+            "react-refresh",
+          ].includes(reference.specifier)
+        ) {
+          return injectQueryParams(reference.url, {
+            react_as_js_module: "",
+          })
+        }
+        return null
+      },
     },
     fetchUrlContent: async (urlInfo, context) => {
       const originalUrlInfo = await fetchOriginalUrlInfo({
@@ -99,7 +103,9 @@ const jsenvPluginJsxAndRefresh = ({
               },
             ],
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
-            ...(hotRefreshEnabled ? ["react-refresh/babel"] : []),
+            ...(hotRefreshEnabled
+              ? [["react-refresh/babel", { skipEnvCheck: true }]]
+              : []),
           ],
           urlInfo,
         })
@@ -119,10 +125,11 @@ const jsenvPluginJsxAndRefresh = ({
         for (const importSpecifier of injectedSpecifiers) {
           let index = code.indexOf(importSpecifier)
           while (index > -1) {
+            const specifier = importSpecifier.slice(1, -1)
             const [injectedReference] = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
-              specifier: importSpecifier.slice(1, -1),
+              specifier,
             })
             magicSource.replace({
               start: index,
