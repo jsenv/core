@@ -1,0 +1,30 @@
+{
+  "name": "@jsenv/plugin-react",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-plugin-react"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js"
+    },
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@babel/plugin-transform-react-jsx": "7.17.3",
+    "@jsenv/url-meta": "6.2.0",
+    "@jsenv/utils": "1.4.4"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-react-jsx-development": "7.16.7",
+    "babel-plugin-transform-hook-names": "1.0.2",
+    "react-refresh": "0.13.0"
+  }
+}

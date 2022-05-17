@@ -8,20 +8,13 @@ import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
-import {
-  parseHtmlString,
-  stringifyHtmlAst,
-  injectScriptAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
 
-export const jsenvPluginPreact = ({
+export const jsenvPluginReact = ({
   hotRefreshPatterns = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
     "./**/node_modules/": false,
   },
-  preactDevtoolsDuringBuild = false,
 } = {}) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
@@ -34,48 +27,9 @@ export const jsenvPluginPreact = ({
   }
 
   return {
-    name: "jsenv:preact",
+    name: "jsenv:react",
     appliesDuring: "*",
-    resolveUrl: {
-      js_import_export: (reference, context) => {
-        if (
-          reference.specifier === "react" ||
-          reference.specifier === "react-dom"
-        ) {
-          reference.specifier = "preact/compat"
-          return context.resolveReference(reference).url
-        }
-        return null
-      },
-    },
     transformUrlContent: {
-      html: ({ content }, { scenario, referenceUtils }) => {
-        if (!preactDevtoolsDuringBuild && scenario === "build") {
-          return null
-        }
-        const htmlAst = parseHtmlString(content)
-        const [preactDevtoolsReference] = referenceUtils.inject({
-          type: "js_import_export",
-          expectedType: "js_module",
-          specifier:
-            scenario === "dev" || scenario === "test"
-              ? "preact/debug"
-              : "preact/devtools",
-        })
-        injectScriptAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            "tagName": "script",
-            "type": "module",
-            "textContent": `
-import ${preactDevtoolsReference.generatedSpecifier}
-`,
-            "injected-by": "jsenv:preact",
-          }),
-        )
-        const htmlModified = stringifyHtmlAst(htmlAst)
-        return { content: htmlModified }
-      },
       js_module: async (urlInfo, { scenario, referenceUtils }) => {
         const hotRefreshEnabled =
           scenario === "dev" ? shouldEnableHotRefresh(urlInfo.url) : false
@@ -92,23 +46,22 @@ import ${preactDevtoolsReference.generatedSpecifier}
               },
             ],
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
-            ...(hotRefreshEnabled ? ["@prefresh/babel-plugin"] : []),
+            ...(hotRefreshEnabled ? ["react-refresh/babel"] : []),
           ],
           urlInfo,
         })
         const magicSource = createMagicSource(code)
         // "@babel/plugin-transform-react-jsx" is injecting some of these 3 imports into the code:
-        // 1. import { jsx } from "preact/jsx-runtime"
-        // 2. import { jsxDev } from "preact/jsx-dev-runtime"
-        // 3. import { createElement } from "preact"
+        // 1. import { jsx } from "react/jsx-runtime"
+        // 2. import { jsxDev } from "react/jsx-dev-runtime"
+        // 3. import { createElement } from "react"
         // see https://github.com/babel/babel/blob/410c9acf1b9212cac69d50b5bb2015b9f372acc4/packages/babel-plugin-transform-react-jsx/src/create-plugin.ts#L743-L755
         // "@babel/plugin-transform-react-jsx" cannot be configured to inject what we want
-        // ("/node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js" instead of "preact/jsx-runtime")
-        // but that's fine we can still replace these imports afterwards as done below.
+        // but that's fine we can still replace these imports afterwards as done below
         const injectedSpecifiers = [
-          `"preact"`,
-          `"preact/jsx-dev-runtime"`,
-          `"preact/jsx-runtime"`,
+          `"react"`,
+          `"react/jsx-dev-runtime"`,
+          `"react/jsx-runtime"`,
         ]
         for (const importSpecifier of injectedSpecifiers) {
           const index = code.indexOf(importSpecifier)
@@ -128,20 +81,20 @@ import ${preactDevtoolsReference.generatedSpecifier}
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const prefreshClientFileReference = referenceUtils.inject({
+            const refreshClientFileReference = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
-              specifier: "@jsenv/plugin-preact/src/client/prefresh.js",
+              specifier: "@jsenv/plugin-react/src/client/refresh.js",
             })
             magicSource.prepend(`import { installPrefresh } from ${
-              prefreshClientFileReference.generatedSpecifier
+              refreshClientFileReference.generatedSpecifier
             }
-            const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
-            `)
+const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
+`)
             if (hasReg) {
               magicSource.append(`
-            __prefresh__.end()
-            import.meta.hot.accept(__prefresh__.acceptCallback)`)
+__prefresh__.end()
+import.meta.hot.accept(__prefresh__.acceptCallback)`)
             }
           }
         }
