@@ -73,6 +73,7 @@ export const createFileService = ({
           "cache-control": `private,max-age=0,must-revalidate`,
         },
         body: content,
+        timing: urlInfo.timing,
       }
     } catch (e) {
       const code = e.code

@@ -1,3 +1,5 @@
+import { timeStart } from "@jsenv/server"
+
 export const createPluginController = ({
   plugins,
   scenario,
@@ -47,7 +49,13 @@ export const createPluginController = ({
     }
     currentPlugin = hook.plugin
     currentHookName = hook.hookName
+    const timeEnd = timeStart(
+      `${currentPlugin.name.replace("jsenv:", "")}.${currentHookName}`,
+    )
     let valueReturned = hookFn(info, context)
+    if (info.timing) {
+      Object.assign(info.timing, timeEnd())
+    }
     valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned)
     currentPlugin = null
     currentHookName = null
@@ -60,7 +68,13 @@ export const createPluginController = ({
     }
     currentPlugin = hook.plugin
     currentHookName = hook.hookName
+    const timeEnd = timeStart(
+      `${currentPlugin.name.replace("jsenv:", "")}.${currentHookName}`,
+    )
     let valueReturned = await hookFn(info, context)
+    if (info.timing) {
+      Object.assign(info.timing, timeEnd())
+    }
     valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned)
     currentPlugin = null
     currentHookName = null

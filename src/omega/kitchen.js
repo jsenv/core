@@ -119,6 +119,7 @@ export const createKitchen = ({
       // for inline ressources the reference contains the content
       content,
       contentType,
+      timing: {},
     }
   }
   const mutateReference = (reference, newReference) => {
@@ -652,6 +653,7 @@ export const createKitchen = ({
 
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   Object.assign(urlInfo.data, reference.data)
+  Object.assign(urlInfo.timing, reference.timing)
   if (reference.injected) {
     urlInfo.data.injected = true
   }

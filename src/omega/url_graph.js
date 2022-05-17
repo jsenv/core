@@ -150,5 +150,6 @@ const createUrlInfo = (url) => {
     content: undefined,
     sourcemap: null,
     sourcemapReference: null,
+    timing: {},
   }
 }
