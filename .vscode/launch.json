@@ -5,15 +5,15 @@
       "name": "node",
       "type": "node",
       "request": "launch",
-      "protocol": "inspector",
       "program": "${file}",
       // "runtimeVersion": "14.5.0",
       "runtimeArgs": [
         "--inspect",
         "--experimental-json-modules",
         "--experimental-import-meta-resolve",
-        "--trace-warnings",
-        "--preserve-symlinks"
+        "--trace-warnings"
+        // "--preserve-symlinks",
+        // "--preserve-symlinks-main"
       ],
       "console": "integratedTerminal",
       // "args": ["--coverage"],
@@ -32,40 +32,6 @@
         "node_modules/playwright-firefox/**",
         "node_modules/playwright-core/**",
         "<node_internals>/**"
-      ]
-    },
-    {
-      "name": "jsenv-node",
-      "type": "node",
-      "request": "launch",
-      "protocol": "inspector",
-      "program": "${workspaceFolder}/script/run-node/run-node.js",
-      // "program": "${workspaceFolder}/script/run-node/run-node.common.js",
-      "runtimeArgs": [
-        // "--unhandled-rejections=strict"
-        // this is to disable experimental warnings, but it would disable unhandled rejection warning
-        // "--no-warnings"
-      ],
-      "args": ["${relativeFile}"],
-      "autoAttachChildProcesses": true,
-      // "sourceMaps": false,
-      "smartStep": true,
-      "skipFiles": [
-        "<node_internals>/**/*.js",
-        // "node_modules/**",
-        "node_modules/@babel/template/**",
-        "node_modules/@babel/core/**",
-        "node_modules/gensync/**",
-        "node_modules/@jsenv/core/**",
-        // "node_modules/@jsenv/assert/**",
-        "node_modules/@jsenv/cancellation/**",
-        "node_modules/@rollup/**",
-        "node_modules/playwright/**",
-        "node_modules/playwright-core/**",
-        "node_modules/rollup/**",
-        "**/node-feature-detect/**",
-        "src/execute.js",
-        "script/run-node/**"
       ]
     },
     {

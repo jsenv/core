@@ -13,7 +13,7 @@ export const reuseOrCreateCompiledFile = async ({
   sourceFileUrl,
   compiledFileUrl,
   compileCacheStrategy,
-  compileCacheSourcesValidation,
+  compileCacheAssetsValidation,
   compile,
 }) => {
   sourceFileUrl = assertAndNormalizeFileUrl(sourceFileUrl)
@@ -29,13 +29,25 @@ export const reuseOrCreateCompiledFile = async ({
         logger,
         compiledFileUrl,
         compileCacheStrategy,
-        compileCacheSourcesValidation,
+        compileCacheAssetsValidation,
       })
       if (cacheValidity.isValid) {
+        const compileInfo = cacheValidity.compileInfo.data
         const content = String(cacheValidity.compiledFile.data.buffer)
         const assets = {}
-        const assetInfos = cacheValidity.compileInfo.data
-        const sourcemap = "" // search in assets
+        let sourcemap = null
+        Object.keys(compileInfo.assetInfos).forEach((assetRelativeUrl) => {
+          const assetUrl = new URL(assetRelativeUrl, compiledFileUrl).href
+          const asset = {
+            type: compileInfo.assetInfos[assetRelativeUrl].type,
+            content: compileInfo.assetInfos[assetRelativeUrl].content,
+            etag: cacheValidity.assets.data[assetUrl].etag,
+          }
+          assets[assetUrl] = asset
+          if (asset.type === "sourcemap") {
+            sourcemap = JSON.parse(asset.content)
+          }
+        })
         updateCompileCache({
           logger,
           compiledFileUrl,

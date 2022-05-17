@@ -1,14 +1,11 @@
-import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { createLogger } from "@jsenv/logger"
 
-import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
 import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js"
 
 export const commonJsToJsModuleRaw = async ({
   logLevel,
   sourceFileUrl,
-  compiledFileUrl,
 
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
@@ -141,7 +138,7 @@ export const commonJsToJsModuleRaw = async ({
       }
     },
   })
-
+  const abstractDirUrl = new URL("./dist/", sourceFileUrl) // to help rollup generate property sourcemap paths
   const generateOptions = {
     // https://rollupjs.org/guide/en#output-format
     format: "esm",
@@ -150,74 +147,19 @@ export const commonJsToJsModuleRaw = async ({
     sourcemap: true,
     sourcemapExcludeSources,
     exports: "named",
-    ...(compiledFileUrl
-      ? { dir: fileURLToPath(new URL("./", compiledFileUrl).href) }
-      : {}),
+    dir: fileURLToPath(abstractDirUrl),
     sourcemapPathTransform: (relativePath) => {
-      return new URL(relativePath, sourceFileUrl).href
+      const sourceUrl = new URL(relativePath, abstractDirUrl).href
+      return sourceUrl
     },
   }
 
   const { output } = await rollupBuild.generate(generateOptions)
   const { code, map } = output[0]
-  const assets = extractCompileAssets({
-    sourceUrl: sourceFileUrl,
-    sourceContent: String(readFileSync(new URL(sourceFileUrl))),
-    compiledUrl: compiledFileUrl,
-    compiledContent: code,
-    sourcemap: map,
-  })
   return {
     content: code,
     sourcemap: map,
-    assets,
   }
-}
-
-const extractCompileAssets = ({
-  sourceUrl,
-  sourceContent,
-  compiledUrl,
-  sourcemap,
-}) => {
-  const compileAssets = {}
-  const addCompileAsset = ({ url, type, subtype, content }) => {
-    compileAssets[url] = {
-      type,
-      subtype,
-      content,
-    }
-  }
-
-  // ensure the source file is part of sources no matter what
-  // it covers cases where sourcemap.sources is empty
-  // or do not contain the real source file
-  // there is a check to prevent duplicate sources in case the sourcemap is correct and contains
-  // the source file in sourcemap.sources
-  addCompileAsset(sourceUrl, {
-    type: "source",
-    content: sourceContent,
-  })
-  if (sourcemap) {
-    sourcemap.sources.forEach((source, index) => {
-      if (source.startsWith("file://")) {
-        const contentFromSourcemap = sourcemap.sourcesContent
-          ? sourcemap.sourcesContent[index]
-          : null
-        addCompileAsset(source, {
-          type: "source",
-          content:
-            contentFromSourcemap || String(readFileSync(new URL(source))),
-        })
-      }
-    })
-    addCompileAsset(setUrlExtension(compiledUrl, ".map"), {
-      type: "sourcemap",
-      content: JSON.stringify(sourcemap),
-    })
-  }
-
-  return compileAssets
 }
 
 const __filenameReplacement = `import.meta.url.slice('file:///'.length)`

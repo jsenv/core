@@ -4,32 +4,35 @@ import { bufferToEtag } from "@jsenv/filesystem"
 export const validateCompileCache = async ({
   compiledFileUrl,
   compileCacheStrategy,
-  compileCacheSourcesValidation = true,
+  compileCacheAssetsValidation = true,
 }) => {
   const validity = { isValid: true }
   const compileInfoValidity = validateCompileInfoFile({
     compiledFileUrl,
   })
-  mergeValidity(validity, "compileInfo", compileInfoValidity)
+  validity.compileInfo = compileInfoValidity
+  mergeValidity(validity, compileInfoValidity)
   if (!validity.isValid) {
     return validity
   }
-  const compiledFileValidation = validateCompiledFile({
+  const compiledFileValidity = validateCompiledFile({
     compiledFileUrl,
     compileCacheStrategy,
   })
-  mergeValidity(validity, "compiledFile", compiledFileValidation)
+  validity.compiledFile = compiledFileValidity
+  mergeValidity(validity, compiledFileValidity)
   if (!validity.isValid) {
     return validity
   }
   const compileInfo = compileInfoValidity.data
-  const sourcesValidity = compileCacheSourcesValidation
-    ? validateSources({
+  const assetsValidity = compileCacheAssetsValidation
+    ? validateAssets({
         compiledFileUrl,
         compileInfo,
       })
-    : { isValid: true, code: "SOURCES_VALIDATION_DISABLED" }
-  mergeValidity(validity, "sources", sourcesValidity)
+    : { isValid: true, code: "ASSETS_VALIDATION_DISABLED" }
+  validity.assets = assetsValidity
+  mergeValidity(validity, assetsValidity)
   if (!validity.valid) {
     return validity
   }
@@ -122,36 +125,41 @@ const validateCompiledFile = ({
   }
 }
 
-const validateSources = ({ compiledFileUrl, compileInfo }) => {
-  const sourcesValidity = { isValid: true }
+const validateAssets = ({ compiledFileUrl, compileInfo }) => {
+  const assetsValidity = { isValid: true, data: {} }
+
   const assetRelativeUrls = Object.keys(compileInfo.assetInfos)
   for (const assetRelativeUrl of assetRelativeUrls) {
     const assetInfo = compileInfo.assetInfos[assetRelativeUrl]
-    if (assetInfo.type !== "source") {
-      continue
+    const assetUrl = new URL(assetRelativeUrl, compiledFileUrl).href
+    const assetValidity = { isValid: true, data: {} }
+    if (assetInfo.type === "source") {
+      validateSource(assetValidity, {
+        sourceFileUrl: assetUrl,
+        eTag: assetInfo.etag,
+      })
     }
-    const sourceValidity = validateSource({
-      compiledFileUrl,
-      sourceRelativeUrl: assetRelativeUrl,
-      eTag: assetInfo.etag,
-    })
-    mergeValidity(sourcesValidity, assetRelativeUrl, sourceValidity)
-    if (!sourcesValidity.valid) {
+    if (assetInfo.type === "sourcemap") {
+      validateSourcemap(assetValidity, {
+        sourcemapFileUrl: assetUrl,
+      })
+    }
+    assetsValidity.data[assetUrl] = assetValidity
+    mergeValidity(assetsValidity, assetUrl, assetValidity)
+    if (!assetsValidity.valid) {
       break
     }
   }
 
-  return sourcesValidity
+  return assetsValidity
 }
 
-const validateSource = ({ compiledFileUrl, sourceRelativeUrl, eTag }) => {
-  const validity = { isValid: true, data: {} }
-  const sourceFileUrlObject = new URL(sourceRelativeUrl, compiledFileUrl)
+const validateSource = (validity, { sourceFileUrl, eTag }) => {
   try {
-    const sourceBuffer = readFileSync(sourceFileUrlObject)
+    const sourceBuffer = readFileSync(new URL(sourceFileUrl))
     const sourceETag = bufferToEtag(sourceBuffer)
-    validity.data.sourceBuffer = sourceBuffer
-    validity.data.sourceETag = sourceETag
+    validity.data.content = sourceBuffer
+    validity.data.etag = sourceETag
     if (sourceETag !== eTag) {
       validity.isValid = false
       validity.code = "SOURCE_ETAG_MISMATCH"
@@ -177,10 +185,38 @@ const validateSource = ({ compiledFileUrl, sourceRelativeUrl, eTag }) => {
   }
 }
 
-const mergeValidity = (parentValidity, childValidityName, childValidity) => {
+const validateSourcemap = (validity, { sourcemapFileUrl }) => {
+  let sourcemapFileContentAsBuffer
+  try {
+    sourcemapFileContentAsBuffer = readFileSync(new URL(sourcemapFileUrl))
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      validity.isValid = false
+      validity.code = "SOURCEMAP_FILE_NOT_FOUND"
+      return validity
+    }
+    throw error
+  }
+  const sourcemapFileContentAsString = String(sourcemapFileContentAsBuffer)
+  validity.data.content = sourcemapFileContentAsString
+  let sourcemap
+  try {
+    sourcemap = JSON.parse(sourcemapFileContentAsString)
+  } catch (error) {
+    if (error && error.name === "SyntaxError") {
+      validity.isValid = false
+      validity.code = "SOURCEMAP_FILE_SYNTAX_ERROR"
+      return validity
+    }
+    throw error
+  }
+  validity.data = sourcemap
+  return validity
+}
+
+const mergeValidity = (parentValidity, childValidity) => {
   parentValidity.isValid = childValidity.isValid
   if (childValidity.code) parentValidity.code = childValidity.code
-  parentValidity[childValidityName] = childValidity
 }
 
 const dateToSecondsPrecision = (date) => {

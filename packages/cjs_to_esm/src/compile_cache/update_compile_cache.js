@@ -23,7 +23,11 @@ export const updateCompileCache = ({
   // ensure source that does not leads to files are not capable to invalidate the cache
   const filesRemoved = []
   Object.keys(assets).forEach((assetUrl) => {
-    if (assetUrl.startsWith("file://") && !existsSync(new URL(assetUrl))) {
+    if (
+      assetUrl.startsWith("file://") &&
+      assets[assetUrl].type === "source" &&
+      !existsSync(new URL(assetUrl))
+    ) {
       delete assets[assetUrl]
       filesRemoved.push(assetUrl)
     }
@@ -54,9 +58,11 @@ ${filesRemoved.join(`\n`)}`)
     writeFileSync(assetUrl, asset.content, {
       fileLikelyNotFound: isNew,
     })
-    assetInfos[urlToRelativeUrl(assetUrl, compiledFileUrl)] = {
+    const assetRelativeUrl = urlToRelativeUrl(assetUrl, compiledFileUrl)
+    const assetEtag = asset.etag || bufferToEtag(Buffer.from(asset.content))
+    assetInfos[assetRelativeUrl] = {
       type: asset.type,
-      etag: bufferToEtag(Buffer.from(asset.content)),
+      etag: assetEtag,
     }
   })
 
