@@ -1,6 +1,4 @@
-export const jsenvPluginUrlVersion = ({
-  longTermCache = false, // will become true once things get more stable
-} = {}) => {
+export const jsenvPluginUrlVersion = ({ longTermCache = true } = {}) => {
   return {
     name: "jsenv:url_version",
     appliesDuring: "*", // maybe only during dev?
@@ -15,7 +13,7 @@ export const jsenvPluginUrlVersion = ({
       urlObject.searchParams.delete("v")
       return urlObject.href
     },
-    transformUrl: (reference) => {
+    transformUrlSearchParams: (reference) => {
       if (!reference.data.version) {
         return null
       }
@@ -26,15 +24,14 @@ export const jsenvPluginUrlVersion = ({
         v: reference.data.version,
       }
     },
-    augmentResponse: ({ url }) => {
+    augmentResponse: ({ reference }) => {
       if (!longTermCache) {
         return null
       }
-      const urlObject = new URL(url)
-      if (!urlObject.searchParams.has("v")) {
+      if (!reference.searchParams.has("v")) {
         return null
       }
-      if (urlObject.searchParams.has("hmr")) {
+      if (reference.searchParams.has("hmr")) {
         return null
       }
       // When url is versioned put it in browser cache for 30 days

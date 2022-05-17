@@ -60,11 +60,11 @@ export const createFileService = ({
           [runtimeName]: runtimeVersion,
         },
       })
-      const { response, contentType, content } = urlInfo
+      let { response, contentType, content } = urlInfo
       if (response) {
         return response
       }
-      return {
+      response = {
         url: reference.url,
         status: 200,
         headers: {
@@ -75,6 +75,15 @@ export const createFileService = ({
         body: content,
         timing: urlInfo.timing,
       }
+      kitchen.pluginController.callHooks(
+        "augmentResponse",
+        { reference, urlInfo },
+        {},
+        (returnValue) => {
+          response = composeTwoResponses(response, returnValue)
+        },
+      )
+      return response
     } catch (e) {
       const code = e.code
       if (code === "PARSE_ERROR") {
@@ -126,16 +135,7 @@ export const createFileService = ({
   }
   return async (request) => {
     let response = await getResponse(request)
-    if (response.url) {
-      kitchen.pluginController.callHooks(
-        "augmentResponse",
-        response,
-        {},
-        (returnValue) => {
-          response = composeTwoResponses(response, returnValue)
-        },
-      )
-    }
+
     return response
   }
 }

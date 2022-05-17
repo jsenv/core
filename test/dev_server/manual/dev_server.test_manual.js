@@ -1,7 +1,6 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startDevServer } from "@jsenv/core"
-import { jsenvPluginPreact } from "@jsenv/core/packages/jsenv-plugin-preact/main.js"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost({
@@ -14,10 +13,7 @@ await startDevServer({
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
   rootDirectoryUrl: new URL("./", import.meta.url),
-  // autoreload: false,
-  // sourcemaps: "file",
   plugins: [
-    jsenvPluginPreact(),
     {
       name: "plugin_throwing",
       appliesDuring: "*",
@@ -47,13 +43,7 @@ await startDevServer({
       "./errors/**/*.html": true,
     },
   },
-  // toolbar: false,
   autorestart: {
     url: import.meta.url,
   },
 })
-
-// const { fetchUrl } = await import("@jsenv/core/src/internal/fetching.js")
-// const response = await fetchUrl(`${server.origin}/main.js`)
-// const text = await response.text()
-// console.log(text)
