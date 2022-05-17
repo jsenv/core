@@ -3,7 +3,7 @@
 import "@prefresh/core"
 import { flush } from "@prefresh/utils"
 
-export const installPrefresh = (url) => {
+export const installPreactRefresh = (url) => {
   let prevRefreshReg = self.$RefreshReg$ || (() => {})
   let prevRefreshSig = self.$RefreshSig$ || (() => (type) => type)
   self.$RefreshReg$ = (type, id) => {

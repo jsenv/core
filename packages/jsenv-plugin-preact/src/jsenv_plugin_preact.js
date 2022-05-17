@@ -129,20 +129,20 @@ import ${preactDevtoolsReference.generatedSpecifier}
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const [prefreshClientFileReference] = referenceUtils.inject({
+            const [preactRefreshClientReference] = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
-              specifier: "@jsenv/plugin-preact/src/client/prefresh.js",
+              specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
             })
-            magicSource.prepend(`import { installPrefresh } from ${
-              prefreshClientFileReference.generatedSpecifier
+            magicSource.prepend(`import { installPreactRefresh } from ${
+              preactRefreshClientReference.generatedSpecifier
             }
-const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
+const __preact_refresh__ = installPreactRefresh(${JSON.stringify(urlInfo.url)})
 `)
             if (hasReg) {
               magicSource.append(`
-__prefresh__.end()
-import.meta.hot.accept(__prefresh__.acceptCallback)`)
+__preact_refresh__.end()
+import.meta.hot.accept(__preact_refresh__.acceptCallback)`)
             }
           }
         }

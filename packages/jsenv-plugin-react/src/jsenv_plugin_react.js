@@ -1,6 +1,5 @@
 /*
- * - https://github.com/preactjs/preset-vite/blob/main/src/index.ts
- * - https://github.com/preactjs/prefresh/blob/main/packages/vite/src/index.js
+ * - https://github.com/vitejs/vite/blob/main/packages/plugin-react/src/index.ts
  */
 
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
@@ -66,14 +65,15 @@ export const jsenvPluginReact = ({
         for (const importSpecifier of injectedSpecifiers) {
           const index = code.indexOf(importSpecifier)
           if (index > -1) {
+            const [injectedReference] = referenceUtils.inject({
+              type: "js_import_export",
+              expectedType: "js_module",
+              specifier: importSpecifier.slice(1, -1),
+            })
             magicSource.replace({
               start: index,
               end: index + importSpecifier.length,
-              replacement: referenceUtils.inject({
-                type: "js_import_export",
-                expectedType: "js_module",
-                specifier: importSpecifier.slice(1, -1),
-              }).generatedSpecifier,
+              replacement: injectedReference.generatedSpecifier,
             })
           }
         }
@@ -81,20 +81,20 @@ export const jsenvPluginReact = ({
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const refreshClientFileReference = referenceUtils.inject({
+            const [reactRefreshClientReference] = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
-              specifier: "@jsenv/plugin-react/src/client/refresh.js",
+              specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
             })
-            magicSource.prepend(`import { installPrefresh } from ${
-              refreshClientFileReference.generatedSpecifier
+            magicSource.prepend(`import { installReactRefresh } from ${
+              reactRefreshClientReference.generatedSpecifier
             }
-const __prefresh__ = installPrefresh(${JSON.stringify(urlInfo.url)})
+const __react_refresh__ = installReactRefresh(${JSON.stringify(urlInfo.url)})
 `)
             if (hasReg) {
               magicSource.append(`
-__prefresh__.end()
-import.meta.hot.accept(__prefresh__.acceptCallback)`)
+__react_refresh__.end()
+import.meta.hot.accept(__react_refresh__.acceptCallback)`)
             }
           }
         }

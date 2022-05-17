@@ -2,7 +2,7 @@
 
 import RefreshRuntime from "react-refresh"
 
-export const installRefresh = (url) => {
+export const installReactRefresh = (url) => {
   RefreshRuntime.injectIntoGlobalHook(self)
   self.$RefreshReg$ = () => {}
   self.$RefreshSig$ = () => (type) => type
