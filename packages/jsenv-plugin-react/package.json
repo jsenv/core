@@ -18,6 +18,7 @@
     "./*": "./*"
   },
   "dependencies": {
+    "@jsenv/cjs-to-esm": "0.0.1",
     "@babel/plugin-transform-react-jsx": "7.17.3",
     "@jsenv/url-meta": "6.2.0",
     "@jsenv/utils": "1.4.4"

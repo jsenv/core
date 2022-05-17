@@ -41,7 +41,7 @@ export const jsenvPluginReact = ({
                 : "@babel/plugin-transform-react-jsx",
               {
                 runtime: "automatic",
-                importSource: "preact",
+                importSource: "react",
               },
             ],
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
@@ -104,6 +104,29 @@ import.meta.hot.accept(__react_refresh__.acceptCallback)`)
           sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
         }
       },
+    },
+    resolveUrl: {
+      js_import_export: (reference) => {
+        if (reference.specifier === "react-dom") {
+          // il faut retourner react ?
+        }
+        if (reference.specifier === "react/jsx-dev-runtime") {
+          //
+        }
+        if (reference.specifier === "react/jsx-runtime") {
+        }
+        return null
+      },
+    },
+    fetchUrlContent: (urlInfo) => {
+      // here we want to serve the react/jsx-dev-runtime
+      // and react/jsx-runtime as esmodule
+      // find how to do that
+
+      // we also want to convert react from commonjs to esm by the way
+      if (urlInfo.url === "") {
+      }
+      return null
     },
   }
 }

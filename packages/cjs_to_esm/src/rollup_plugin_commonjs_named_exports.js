@@ -1,12 +1,11 @@
 // https://github.com/snowpackjs/snowpack/blob/main/esinstall/src/rollup-plugins/rollup-plugin-wrap-install-targets.ts
 
 import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { VM as VM2 } from "vm2"
-import isValidIdentifier from "is-valid-identifier"
 import resolve from "resolve"
+import isValidIdentifier from "is-valid-identifier"
 import { init, parse } from "cjs-module-lexer"
-import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
 export const rollupPluginCommonJsNamedExports = ({ logger }) => {
   const inputSummaries = {}
@@ -18,7 +17,7 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
 
       Object.keys(input).forEach((key) => {
         const inputFilePath = input[key]
-        const inputFileUrl = fileSystemPathToUrl(inputFilePath)
+        const inputFileUrl = pathToFileURL(inputFilePath)
         inputSummaries[inputFileUrl] = {
           all: true,
           default: true,
@@ -90,7 +89,7 @@ const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
         const reExportedFilePath = resolve.sync(reexport, {
           basedir: fileURLToPath(new URL("./", fileUrl)),
         })
-        const reExportedFileUrl = fileSystemPathToUrl(reExportedFilePath)
+        const reExportedFileUrl = pathToFileURL(reExportedFilePath)
         const staticExports = detectStaticExports({
           logger,
           fileUrl: reExportedFileUrl,

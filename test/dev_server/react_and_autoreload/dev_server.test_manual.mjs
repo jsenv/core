@@ -14,21 +14,13 @@ await startDevServer({
   certificate: serverCertificate,
   privateKey: serverCertificatePrivateKey,
   rootDirectoryUrl: new URL("./", import.meta.url),
-  // autoreload: false,
-  // sourcemaps: "file",
   plugins: [jsenvPluginReact()],
   explorerGroups: {
     main: {
       "./client/main.html": true,
     },
   },
-  // toolbar: false,
   autorestart: {
     url: import.meta.url,
   },
 })
-
-// const { fetchUrl } = await import("@jsenv/core/src/internal/fetching.js")
-// const response = await fetchUrl(`${server.origin}/main.js`)
-// const text = await response.text()
-// console.log(text)
