@@ -16,7 +16,7 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 export const jsenvPluginPreact = ({
-  hotRefreshPatterns = {
+  refreshPatterns = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
     "./**/node_modules/": false,
@@ -25,12 +25,12 @@ export const jsenvPluginPreact = ({
 } = {}) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
-      hot: hotRefreshPatterns,
+      refresh: refreshPatterns,
     },
     "file://",
   )
-  const shouldEnableHotRefresh = (url) => {
-    return urlToMeta({ url, structuredMetaMap }).hot
+  const shouldEnableRefresh = (url) => {
+    return urlToMeta({ url, structuredMetaMap }).refresh
   }
 
   return {
@@ -77,8 +77,8 @@ import ${preactDevtoolsReference.generatedSpecifier}
         return { content: htmlModified }
       },
       js_module: async (urlInfo, { scenario, referenceUtils }) => {
-        const hotRefreshEnabled =
-          scenario === "dev" ? shouldEnableHotRefresh(urlInfo.url) : false
+        const refreshEnabled =
+          scenario === "dev" ? shouldEnableRefresh(urlInfo.url) : false
         const hookNamesEnabled = scenario === "dev"
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
@@ -92,7 +92,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
               },
             ],
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
-            ...(hotRefreshEnabled ? ["@prefresh/babel-plugin"] : []),
+            ...(refreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
           urlInfo,
         })
@@ -127,7 +127,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             index = code.indexOf(importSpecifier, index + 1)
           }
         }
-        if (hotRefreshEnabled) {
+        if (refreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {

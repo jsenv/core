@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/test/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
-import { jsenvPluginPreact } from "@jsenv/plugin-preact"
+import { jsenvPluginReact } from "@jsenv/plugin-react"
 
 const test = async (params) => {
   await build({
@@ -13,7 +13,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [jsenvPluginPreact()],
+    plugins: [jsenvPluginReact()],
     minification: false,
     ...params,
   })

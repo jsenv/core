@@ -70,7 +70,7 @@ const jsenvPluginReactAsJsModule = () => {
 }
 
 const jsenvPluginJsxAndRefresh = ({
-  hotRefreshPatterns = {
+  refreshPatterns = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
     "./**/node_modules/": false,
@@ -78,12 +78,12 @@ const jsenvPluginJsxAndRefresh = ({
 }) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
-      hot: hotRefreshPatterns,
+      refresh: refreshPatterns,
     },
     "file://",
   )
-  const shouldEnableHotRefresh = (url) => {
-    return urlToMeta({ url, structuredMetaMap }).hot
+  const shouldEnableRefresh = (url) => {
+    return urlToMeta({ url, structuredMetaMap }).refresh
   }
 
   return {
@@ -91,8 +91,8 @@ const jsenvPluginJsxAndRefresh = ({
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, { scenario, referenceUtils }) => {
-        const hotRefreshEnabled =
-          scenario === "dev" ? shouldEnableHotRefresh(urlInfo.url) : false
+        const refreshEnabled =
+          scenario === "dev" ? shouldEnableRefresh(urlInfo.url) : false
         const hookNamesEnabled = scenario === "dev"
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
@@ -106,7 +106,7 @@ const jsenvPluginJsxAndRefresh = ({
               },
             ],
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
-            ...(hotRefreshEnabled
+            ...(refreshEnabled
               ? [["react-refresh/babel", { skipEnvCheck: true }]]
               : []),
           ],
@@ -142,7 +142,7 @@ const jsenvPluginJsxAndRefresh = ({
             index = code.indexOf(importSpecifier, index + 1)
           }
         }
-        if (hotRefreshEnabled) {
+        if (refreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
