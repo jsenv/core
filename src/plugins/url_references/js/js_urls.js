@@ -14,15 +14,9 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
-  const isJsModule = urlInfo.type === "js_module"
-  const isWebWorker = isWebWorkerUrlInfo(urlInfo)
-  const { metadata } = await applyBabelPlugins({
-    babelPlugins: [
-      [babelPluginMetadataJsUrlMentions, { isJsModule, isWebWorker }],
-    ],
-    urlInfo,
-  })
-  const { jsMentions, usesTopLevelAwait, usesImport, usesExport } = metadata
+  const { usesImport, usesExport, usesTopLevelAwait, jsMentions } =
+    await performJsStaticAnalysis(urlInfo)
+
   urlInfo.data.usesImport = usesImport
   urlInfo.data.usesExport = usesExport
   urlInfo.data.usesTopLevelAwait = usesTopLevelAwait
@@ -56,6 +50,63 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   })
   await Promise.all(actions.map((action) => action()))
   return magicSource.toContentAndSourcemap()
+}
+
+const performJsStaticAnalysis = async (urlInfo) => {
+  const isJsModule = urlInfo.type === "js_module"
+  const isWebWorker = isWebWorkerUrlInfo(urlInfo)
+  if (canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
+    return {
+      usesTopLevelAwait: false,
+      usesImport: false,
+      usesExport: false,
+      jsMentions: [],
+    }
+  }
+
+  const { metadata } = await applyBabelPlugins({
+    babelPlugins: [
+      [babelPluginMetadataJsUrlMentions, { isJsModule, isWebWorker }],
+    ],
+    urlInfo,
+  })
+  const { jsMentions, usesTopLevelAwait, usesImport, usesExport } = metadata
+  return {
+    jsMentions,
+    usesTopLevelAwait,
+    usesImport,
+    usesExport,
+  }
+}
+
+const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
+  const js = urlInfo.content
+  if (
+    isJsModule &&
+    (js.includes("import ") ||
+      js.includes("import(") ||
+      js.includes(" from ") || // to catch re-export
+      js.includes("await ") ||
+      js.includes("new URL(") ||
+      js.includes("new Worker(") ||
+      js.includes("new SharedWorker(") ||
+      js.includes("serviceWorker.register("))
+  ) {
+    return false
+  }
+  if (
+    js.includes("System.") ||
+    js.includes("new URL(") ||
+    js.includes("new Worker(") ||
+    js.includes("new SharedWorker(") ||
+    js.includes("serviceWorker.register(")
+  ) {
+    return false
+  }
+  if (isWebWorker && js.includes("importScripts(")) {
+    return false
+  }
+  return true
 }
 
 /*

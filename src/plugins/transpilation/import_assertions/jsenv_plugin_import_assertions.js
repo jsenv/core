@@ -14,6 +14,12 @@ export const jsenvPluginImportAssertions = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
+        if (
+          !urlInfo.content.includes(" assert ") &&
+          !urlInfo.content.includes("import(")
+        ) {
+          return null
+        }
         const importTypesToTranspile = getImportTypesToTranspile(context)
         if (importTypesToTranspile.length === 0) {
           return null

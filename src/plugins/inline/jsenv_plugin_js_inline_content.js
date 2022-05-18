@@ -7,6 +7,13 @@ import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_g
 
 export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
+    if (
+      !urlInfo.content.includes("InlineContent(") &&
+      !urlInfo.content.includes("new Blob(") &&
+      !urlInfo.content.includes("JSON.parse(")
+    ) {
+      return null
+    }
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [babelPluginMetadataInlineContentCalls],
       urlInfo,

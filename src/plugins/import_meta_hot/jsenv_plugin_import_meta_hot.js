@@ -40,6 +40,9 @@ export const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptDependencies = []
       },
       js_module: async (urlInfo, context) => {
+        if (!urlInfo.content.includes("import.meta.hot")) {
+          return null
+        }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
           urlInfo,

@@ -50,7 +50,7 @@ export const createPluginController = ({
     currentPlugin = hook.plugin
     currentHookName = hook.hookName
     const timeEnd = timeStart(
-      `${currentPlugin.name.replace("jsenv:", "")}.${currentHookName}`,
+      `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
     )
     let valueReturned = hookFn(info, context)
     if (info.timing) {
@@ -69,7 +69,7 @@ export const createPluginController = ({
     currentPlugin = hook.plugin
     currentHookName = hook.hookName
     const timeEnd = timeStart(
-      `${currentPlugin.name.replace("jsenv:", "")}.${currentHookName}`,
+      `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
     )
     let valueReturned = await hookFn(info, context)
     if (info.timing) {

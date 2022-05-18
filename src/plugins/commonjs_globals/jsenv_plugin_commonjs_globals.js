@@ -12,8 +12,15 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const jsenvPluginCommonJsGlobals = () => {
   const transformCommonJsGlobals = async (urlInfo, { scenario }) => {
+    if (
+      !urlInfo.content.includes("process.env.NODE_ENV") &&
+      !urlInfo.content.includes("global") &&
+      !urlInfo.content.includes("__filename") &&
+      !urlInfo.content.includes("__dirname")
+    ) {
+      return null
+    }
     const isJsModule = urlInfo.type === "js_module"
-
     const replaceMap = {
       "process.env.NODE_ENV": `("${
         scenario === "dev" || scenario === "test" ? "dev" : "prod"

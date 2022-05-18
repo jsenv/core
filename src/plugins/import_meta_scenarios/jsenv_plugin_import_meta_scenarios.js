@@ -18,6 +18,13 @@ export const jsenvPluginImportMetaScenarios = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, { scenario }) => {
+        if (
+          !urlInfo.content.includes("import.meta.dev") &&
+          !urlInfo.content.includes("import.meta.test") &&
+          !urlInfo.content.includes("import.meta.build")
+        ) {
+          return null
+        }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
           urlInfo,
