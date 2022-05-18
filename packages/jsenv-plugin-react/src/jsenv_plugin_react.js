@@ -1,5 +1,8 @@
 /*
  * - https://github.com/vitejs/vite/blob/main/packages/plugin-react/src/index.ts
+ * TODO: transform the runtime to inject the following
+ * - https://github.com/vitejs/vite/blob/0858450b2a258b216ae9aa797cc02e9a0d4eb0af/packages/plugin-react/src/fast-refresh.ts#L16-L26
+ * and hmr should work
  */
 
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
