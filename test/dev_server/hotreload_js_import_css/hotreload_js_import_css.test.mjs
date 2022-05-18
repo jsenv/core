@@ -1,8 +1,8 @@
 import { chromium } from "playwright"
 import { readFile, writeFile } from "@jsenv/filesystem"
+import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { assert } from "@jsenv/assert"
 
 const jsFileUrl = new URL("./client/main.js", import.meta.url)
 const jsFileContent = {

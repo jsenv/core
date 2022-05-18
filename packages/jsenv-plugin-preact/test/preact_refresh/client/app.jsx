@@ -1,11 +1,13 @@
 import { useState } from "preact/hooks"
 
+import { CountLabel } from "./count_label.jsx"
+
 export const App = () => {
   const [count, countSetter] = useState(0)
 
   return (
     <div>
-      <span style="color: black">toto: {count}</span>
+      <CountLabel count={count}></CountLabel>
       <button
         onClick={() => {
           countSetter((prev) => prev + 1)
