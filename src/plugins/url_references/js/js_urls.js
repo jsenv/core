@@ -1,4 +1,3 @@
-import { init, parse } from "es-module-lexer"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
   analyzeImportCall,
@@ -11,6 +10,7 @@ import {
   analyzeSystemImportCall,
   analyzeServiceWorkerRegisterCall,
 } from "@jsenv/utils/js_ast/js_static_analysis.js"
+import { detectJsModuleImports } from "@jsenv/utils/js_ast/detect_js_module_imports.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
@@ -54,10 +54,9 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
 }
 
 const performJsStaticAnalysis = async (urlInfo) => {
-  await init
   const isJsModule = urlInfo.type === "js_module"
   const isWebWorker = isWebWorkerUrlInfo(urlInfo)
-  if (canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
+  if (await canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
     return {
       usesTopLevelAwait: false,
       usesImport: false,
@@ -81,7 +80,7 @@ const performJsStaticAnalysis = async (urlInfo) => {
   }
 }
 
-const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
+const canSkipStaticAnalysis = async (urlInfo, { isJsModule, isWebWorker }) => {
   const js = urlInfo.content
   if (isJsModule) {
     if (
@@ -93,12 +92,10 @@ const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
     ) {
       return false
     }
-    // ideally we would use es-module-lexer
-    // first for imports
-    // and a second pass with babel for new URL
-    // and workers etc...
-    const [imports] = parse(js)
-    if (imports.length > 0) {
+    const imports = await detectJsModuleImports(js)
+    const importDetectionResult =
+      imports === null ? "maybe" : imports.length === 0 ? "no" : "yes"
+    if (importDetectionResult !== "no") {
       return false
     }
   }
