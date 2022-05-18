@@ -7,7 +7,7 @@ export const App = () => {
 
   return (
     <div>
-      <CountLabel count={count}></CountLabel>
+      <CountLabel count={count} />
       <button
         id="button_increase"
         onClick={() => {
