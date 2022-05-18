@@ -1,8 +1,7 @@
+// data.usesTopLevelAwait could certainly be faster
+// and should be split to an other plugin
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
-  analyzeImportCall,
-  isImportCall,
-  analyzeImportExportDeclaration,
   analyzeNewUrlCall,
   analyzeNewWorkerOrNewSharedWorker,
   analyzeImportScriptCalls,
@@ -10,16 +9,13 @@ import {
   analyzeSystemImportCall,
   analyzeServiceWorkerRegisterCall,
 } from "@jsenv/utils/js_ast/js_static_analysis.js"
-import { detectJsModuleImports } from "@jsenv/utils/js_ast/detect_js_module_imports.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
-  const { usesImport, usesExport, usesTopLevelAwait, jsMentions } =
-    await performJsStaticAnalysis(urlInfo)
-
-  urlInfo.data.usesImport = usesImport
-  urlInfo.data.usesExport = usesExport
+  const { usesTopLevelAwait, jsMentions } = await performJsStaticAnalysis(
+    urlInfo,
+  )
   urlInfo.data.usesTopLevelAwait = usesTopLevelAwait
 
   const { rootDirectoryUrl, referenceUtils } = context
@@ -56,11 +52,9 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
 const performJsStaticAnalysis = async (urlInfo) => {
   const isJsModule = urlInfo.type === "js_module"
   const isWebWorker = isWebWorkerUrlInfo(urlInfo)
-  if (await canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
+  if (canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
     return {
       usesTopLevelAwait: false,
-      usesImport: false,
-      usesExport: false,
       jsMentions: [],
     }
   }
@@ -71,16 +65,14 @@ const performJsStaticAnalysis = async (urlInfo) => {
     ],
     urlInfo,
   })
-  const { jsMentions, usesTopLevelAwait, usesImport, usesExport } = metadata
+  const { usesTopLevelAwait, jsMentions } = metadata
   return {
-    jsMentions,
     usesTopLevelAwait,
-    usesImport,
-    usesExport,
+    jsMentions,
   }
 }
 
-const canSkipStaticAnalysis = async (urlInfo, { isJsModule, isWebWorker }) => {
+const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
   const js = urlInfo.content
   if (isJsModule) {
     if (
@@ -90,12 +82,6 @@ const canSkipStaticAnalysis = async (urlInfo, { isJsModule, isWebWorker }) => {
       js.includes("new SharedWorker(") ||
       js.includes("serviceWorker.register(")
     ) {
-      return false
-    }
-    const imports = await detectJsModuleImports(js)
-    const importDetectionResult =
-      imports === null ? "maybe" : imports.length === 0 ? "no" : "yes"
-    if (importDetectionResult !== "no") {
       return false
     }
   }
@@ -128,8 +114,6 @@ const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
     visitor: {
       Program(programPath, state) {
         const jsMentions = []
-        let usesImport = false
-        let usesExport = false
         let usesTopLevelAwait = false
 
         const callOneStaticAnalyzer = (path, analyzer) => {
@@ -171,50 +155,18 @@ const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
         }
         const callExpressionStaticAnalysers = [
           ...(isJsModule
-            ? [analyzeImportCall]
+            ? []
             : [analyzeSystemRegisterCall, analyzeSystemImportCall]),
           ...(isWebWorker ? [analyzeImportScriptCalls] : []),
           analyzeServiceWorkerRegisterCall,
         ]
         visitors.CallExpression = (path) => {
-          if (isJsModule && !usesImport && isImportCall(path.node)) {
-            usesImport = true
-          }
           callStaticAnalyzers(path, callExpressionStaticAnalysers)
         }
 
-        if (isJsModule) {
-          Object.assign(visitors, {
-            ExportNamedDeclaration: (path) => {
-              if (!usesImport && path.node.source) {
-                usesImport = true
-              }
-              usesExport = true
-              callStaticAnalyzers(path, [analyzeImportExportDeclaration])
-            },
-            ExportAllDeclaration: (path) => {
-              usesImport = true
-              usesExport = true
-              callStaticAnalyzers(path, [analyzeImportExportDeclaration])
-            },
-            ExportDefaultDeclaration: (path) => {
-              if (!usesImport && path.node.source) {
-                usesImport = true
-              }
-              usesExport = true
-              callStaticAnalyzers(path, [analyzeImportExportDeclaration])
-            },
-            ImportDeclaration: (path) => {
-              usesImport = true
-              callStaticAnalyzers(path, [analyzeImportExportDeclaration])
-            },
-          })
-        }
         programPath.traverse(visitors)
-        state.file.metadata.jsMentions = jsMentions
-        state.file.metadata.usesImport = usesImport
-        state.file.metadata.usesExport = usesExport
         state.file.metadata.usesTopLevelAwait = usesTopLevelAwait
+        state.file.metadata.jsMentions = jsMentions
       },
     },
   }

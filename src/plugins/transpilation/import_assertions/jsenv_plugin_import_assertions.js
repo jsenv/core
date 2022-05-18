@@ -4,7 +4,6 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
-import { detectJsModuleImports } from "@jsenv/utils/js_ast/detect_js_module_imports.js"
 
 import { fetchOriginalUrlInfo } from "../fetch_original_url_info.js"
 import { babelPluginMetadataImportAssertions } from "./helpers/babel_plugin_metadata_import_assertions.js"
@@ -15,8 +14,8 @@ export const jsenvPluginImportAssertions = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
-        const imports = await detectJsModuleImports(urlInfo.content)
-        if (imports && imports.every((importInfo) => importInfo.a === -1)) {
+        // "usesImportAssertion" is set by "jsenv:imports_analysis"
+        if (!urlInfo.data.usesImportAssertion) {
           return null
         }
         const importTypesToTranspile = getImportTypesToTranspile(context)
