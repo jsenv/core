@@ -30,8 +30,30 @@ export const composeTwoSourcemaps = async (firstSourcemap, secondSourcemap) => {
     sourcemapGenerator.addMapping(mapping)
   })
   const sourcemap = sourcemapGenerator.toJSON()
-  sourcemap.sourcesContent =
-    secondSourcemap.sourcesContent || firstSourcemap.sourcesContent
+  const sources = []
+  const sourcesContent = []
+  const firstSourcesContent = firstSourcemap.sourcesContent
+  const secondSourcesContent = secondSourcemap.sourcesContent
+  sourcemap.sources.forEach((source) => {
+    sources.push(source)
+    if (secondSourcesContent) {
+      const secondSourceIndex = secondSourcemap.sources.indexOf(source)
+      if (secondSourceIndex > -1) {
+        sourcesContent.push(secondSourcesContent[secondSourceIndex])
+        return
+      }
+    }
+    if (firstSourcesContent) {
+      const firstSourceIndex = firstSourcemap.sources.indexOf(source)
+      if (firstSourceIndex > -1) {
+        sourcesContent.push(firstSourcesContent[firstSourceIndex])
+        return
+      }
+    }
+    sourcesContent.push(null)
+  })
+  sourcemap.sources = sources
+  sourcemap.sourcesContent = sourcesContent
   return sourcemap
 }
 

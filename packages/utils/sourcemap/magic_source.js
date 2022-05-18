@@ -26,7 +26,7 @@ export const createMagicSource = (content) => {
         magicString.remove(start, end)
       })
     },
-    toContentAndSourcemap: () => {
+    toContentAndSourcemap: ({ source } = {}) => {
       if (mutations.length === 0) {
         return {
           content,
@@ -40,6 +40,8 @@ export const createMagicSource = (content) => {
       const code = magicString.toString()
       const map = magicString.generateMap({
         hires: true,
+        includeContent: true,
+        source,
       })
       return {
         content: code,
