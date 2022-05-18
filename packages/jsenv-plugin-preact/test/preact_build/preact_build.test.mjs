@@ -2,8 +2,8 @@ import { assert } from "@jsenv/assert"
 
 import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 import { build } from "@jsenv/core"
-import { startFileServer } from "../../../../test/start_file_server.js"
-import { executeInChromium } from "../../../../test/execute_in_chromium.js"
+import { startFileServer } from "@jsenv/core/test/start_file_server.js"
+import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
 const test = async (params) => {
   await build({

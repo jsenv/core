@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@jsenv/core": [
+        "./main.js"
+      ],
+      "@jsenv/core/*": [
+        "./*"
+      ],
+    }
+  }
+}

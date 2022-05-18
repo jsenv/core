@@ -11,10 +11,8 @@
 /script/**/dist/
 /script/**/.coverage/
 /test-manual/**/.jsenv/
-/node_resolution.importmap
 /package-lock.json
 /secrets.json
-/jsconfig.json
 /yarn.lock
 .DS_STORE
 /todo.txt
