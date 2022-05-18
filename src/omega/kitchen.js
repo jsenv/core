@@ -13,7 +13,6 @@ import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 import { setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
-import { jsenvPluginUrlReferences } from "../plugins/url_references/jsenv_plugin_url_references.js"
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
 import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
@@ -50,7 +49,7 @@ export const createKitchen = ({
   writeOnFileSystem = true,
 }) => {
   const pluginController = createPluginController({
-    plugins: [jsenvPluginUrlReferences(), ...plugins],
+    plugins,
     scenario,
   })
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href

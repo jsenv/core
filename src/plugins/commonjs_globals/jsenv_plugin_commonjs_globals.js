@@ -14,7 +14,6 @@ export const jsenvPluginCommonJsGlobals = () => {
   const transformCommonJsGlobals = async (urlInfo, { scenario }) => {
     if (
       !urlInfo.content.includes("process.env.NODE_ENV") &&
-      !urlInfo.content.includes("global") &&
       !urlInfo.content.includes("__filename") &&
       !urlInfo.content.includes("__dirname")
     ) {

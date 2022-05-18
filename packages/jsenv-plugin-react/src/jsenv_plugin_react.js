@@ -50,6 +50,9 @@ const jsenvPluginReactAsJsModule = () => {
         urlInfo,
         context,
         searchParam: "react_as_js_module",
+        // during this fetch we don't want to alter the original file
+        // so we consider it as text
+        expectedType: "text",
       })
       if (!originalUrlInfo) {
         return null

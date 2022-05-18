@@ -1,3 +1,4 @@
+import { init, parse } from "es-module-lexer"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
   analyzeImportCall,
@@ -53,6 +54,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
 }
 
 const performJsStaticAnalysis = async (urlInfo) => {
+  await init
   const isJsModule = urlInfo.type === "js_module"
   const isWebWorker = isWebWorkerUrlInfo(urlInfo)
   if (canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
@@ -81,27 +83,35 @@ const performJsStaticAnalysis = async (urlInfo) => {
 
 const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
   const js = urlInfo.content
-  if (
-    isJsModule &&
-    (js.includes("import ") ||
-      js.includes("import(") ||
-      js.includes(" from ") || // to catch re-export
-      js.includes("await ") ||
+  if (isJsModule) {
+    if (
+      js.includes("await") ||
       js.includes("new URL(") ||
       js.includes("new Worker(") ||
       js.includes("new SharedWorker(") ||
-      js.includes("serviceWorker.register("))
-  ) {
-    return false
+      js.includes("serviceWorker.register(")
+    ) {
+      return false
+    }
+    // ideally we would use es-module-lexer
+    // first for imports
+    // and a second pass with babel for new URL
+    // and workers etc...
+    const [imports] = parse(js)
+    if (imports.length > 0) {
+      return false
+    }
   }
-  if (
-    js.includes("System.") ||
-    js.includes("new URL(") ||
-    js.includes("new Worker(") ||
-    js.includes("new SharedWorker(") ||
-    js.includes("serviceWorker.register(")
-  ) {
-    return false
+  if (!isJsModule) {
+    if (
+      js.includes("System.") ||
+      js.includes("new URL(") ||
+      js.includes("new Worker(") ||
+      js.includes("new SharedWorker(") ||
+      js.includes("serviceWorker.register(")
+    ) {
+      return false
+    }
   }
   if (isWebWorker && js.includes("importScripts(")) {
     return false

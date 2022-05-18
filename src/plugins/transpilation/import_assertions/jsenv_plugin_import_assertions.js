@@ -1,3 +1,4 @@
+import { init, parse } from "es-module-lexer"
 import { urlToFilename } from "@jsenv/filesystem"
 
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
@@ -14,10 +15,12 @@ export const jsenvPluginImportAssertions = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
-        if (
-          !urlInfo.content.includes(" assert ") &&
-          !urlInfo.content.includes("import(")
-        ) {
+        // fast detection of import assertions
+        // see https://github.com/guybedford/es-module-lexer#usage
+        // ideally we would use solely es-module-lexer (if possible)
+        await init
+        const [imports] = parse(urlInfo.content)
+        if (imports.every((importInfo) => importInfo.a === -1)) {
           return null
         }
         const importTypesToTranspile = getImportTypesToTranspile(context)

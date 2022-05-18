@@ -1,3 +1,4 @@
+import { jsenvPluginUrlReferences } from "../plugins/url_references/jsenv_plugin_url_references.js"
 import { jsenvPluginLeadingSlash } from "./leading_slash/jsenv_plugin_leading_slash.js"
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js"
 import { jsenvPluginUrlResolution } from "./url_resolution/jsenv_plugin_url_resolution.js"
@@ -39,6 +40,7 @@ export const getCorePlugins = ({
     autoreload = {}
   }
   return [
+    jsenvPluginUrlReferences(),
     jsenvPluginTranspilation(transpilation),
     ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
