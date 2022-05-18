@@ -1,8 +1,6 @@
 import { render } from "preact"
 
-const App = () => {
-  return <span>Hello world</span>
-}
+const { App } = await import("./app.jsx")
 
 render(<App />, document.querySelector("#app"))
 
