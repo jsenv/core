@@ -47,11 +47,11 @@ await test({
 })
 
 // no support for <script type="module">
-// await test({
-//   runtimeCompat: {
-//     chrome: "55",
-//     edge: "14",
-//     firefox: "52",
-//     safari: "11",
-//   },
-// })
+await test({
+  runtimeCompat: {
+    chrome: "55",
+    edge: "14",
+    firefox: "52",
+    safari: "11",
+  },
+})
