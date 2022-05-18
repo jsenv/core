@@ -111,18 +111,20 @@ import ${preactDevtoolsReference.generatedSpecifier}
           `"preact/jsx-runtime"`,
         ]
         for (const importSpecifier of injectedSpecifiers) {
-          const index = code.indexOf(importSpecifier)
-          if (index > -1) {
+          let index = code.indexOf(importSpecifier)
+          while (index > -1) {
+            const specifier = importSpecifier.slice(1, -1)
             const [injectedReference] = referenceUtils.inject({
               type: "js_import_export",
               expectedType: "js_module",
-              specifier: importSpecifier.slice(1, -1),
+              specifier,
             })
             magicSource.replace({
               start: index,
               end: index + importSpecifier.length,
               replacement: injectedReference.generatedSpecifier,
             })
+            index = code.indexOf(importSpecifier, index + 1)
           }
         }
         if (hotRefreshEnabled) {
@@ -146,7 +148,9 @@ import.meta.hot.accept(__preact_refresh__.acceptCallback)`)
             }
           }
         }
-        const result = magicSource.toContentAndSourcemap()
+        const result = magicSource.toContentAndSourcemap({
+          source: "jsenv:plugin_preact",
+        })
         return {
           content: result.content,
           sourcemap: await composeTwoSourcemaps(map, result.sourcemap),

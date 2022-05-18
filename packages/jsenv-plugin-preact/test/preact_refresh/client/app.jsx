@@ -9,6 +9,7 @@ export const App = () => {
     <div>
       <CountLabel count={count}></CountLabel>
       <button
+        id="button_increase"
         onClick={() => {
           countSetter((prev) => prev + 1)
         }}

@@ -46,14 +46,70 @@ const getCountLabelText = () => {
     /* eslint-enable no-undef */
   )
 }
+const increase = () => {
+  return page.click("#button_increase")
+}
 
 {
+  await increase()
   const actual = {
     countLabelText: await getCountLabelText(),
     pageLogs,
   }
   const expected = {
-    countLabelText: "toto: 0",
+    countLabelText: "toto: 1",
+    pageLogs: expectedPageLogs,
+  }
+  assert({ actual, expected })
+}
+await countLabelJsxFileContent.update(`
+export const CountLabel = ({ count }) => {
+  return (
+    <span id="count_label" style="color: black">
+      tata: {count}
+    </span>
+  )
+}`)
+await new Promise((resolve) => setTimeout(resolve, 500))
+{
+  const actual = {
+    countLabelText: await getCountLabelText(),
+    pageLogs,
+  }
+  expectedPageLogs.push(
+    ...[
+      {
+        type: "startGroup",
+        text: "[jsenv] hot reloading: file.js",
+      },
+      {
+        type: "log",
+        text: "call dispose callback",
+      },
+      {
+        type: "log",
+        text: "remove stylesheet",
+      },
+      {
+        type: "log",
+        text: "importing js module",
+      },
+      {
+        type: "log",
+        text: "adding stylesheet",
+      },
+      {
+        type: "log",
+        text: "js module import done",
+      },
+      {
+        type: "endGroup",
+        text: "console.groupEnd",
+      },
+    ],
+  )
+  const expected = {
+    countLabelText: "tata: 1",
     pageLogs: expectedPageLogs,
   }
   assert({ actual, expected })

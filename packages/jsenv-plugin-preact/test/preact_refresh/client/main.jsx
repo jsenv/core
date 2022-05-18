@@ -1,7 +1,8 @@
 import { render } from "preact"
-import { App } from "./app.jsx"
 
-render(<App />, document.getElementById("app"))
+const { App } = await import("./app.jsx")
+
+render(<App />, document.querySelector("#app"))
 
 if (import.meta.hot) {
   import.meta.hot.accept()
