@@ -5,7 +5,10 @@ import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
 import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 
-const countLabelJsxFileUrl = new URL("./client/main.jsx", import.meta.url)
+const countLabelJsxFileUrl = new URL(
+  "./client/count_label.jsx",
+  import.meta.url,
+)
 const countLabelJsxFileContent = {
   beforeTest: await readFile(countLabelJsxFileUrl),
   update: (content) => writeFile(countLabelJsxFileUrl, content),
@@ -25,12 +28,7 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({
   headless: true,
 })
-const pageLogs = []
-const expectedPageLogs = []
 const page = await browser.newPage({ ignoreHTTPSErrors: true })
-page.on("console", (message) => {
-  pageLogs.push({ type: message.type(), text: message.text() })
-})
 await page.goto(`${devServer.origin}/main.html`)
 await page.evaluate(
   /* eslint-disable no-undef */
@@ -54,11 +52,9 @@ const increase = () => {
   await increase()
   const actual = {
     countLabelText: await getCountLabelText(),
-    pageLogs,
   }
   const expected = {
     countLabelText: "toto: 1",
-    pageLogs: expectedPageLogs,
   }
   assert({ actual, expected })
 }
@@ -74,43 +70,19 @@ await new Promise((resolve) => setTimeout(resolve, 500))
 {
   const actual = {
     countLabelText: await getCountLabelText(),
-    pageLogs,
   }
-  expectedPageLogs.push(
-    ...[
-      {
-        type: "startGroup",
-        text: "[jsenv] hot reloading: file.js",
-      },
-      {
-        type: "log",
-        text: "call dispose callback",
-      },
-      {
-        type: "log",
-        text: "remove stylesheet",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "adding stylesheet",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-    ],
-  )
   const expected = {
     countLabelText: "tata: 1",
-    pageLogs: expectedPageLogs,
+  }
+  assert({ actual, expected })
+}
+{
+  await increase()
+  const actual = {
+    countLabelText: await getCountLabelText(),
+  }
+  const expected = {
+    countLabelText: "tata: 2",
   }
   assert({ actual, expected })
 }
