@@ -3,13 +3,12 @@
 import RefreshRuntime from "react-refresh"
 
 export const installReactRefresh = (url) => {
-  RefreshRuntime.injectIntoGlobalHook(self)
-  self.$RefreshReg$ = () => {}
-  self.$RefreshSig$ = () => (type) => type
+  if (!self.__react_refresh_installed__) {
+    throw new Error("react refresh not installed")
+  }
 
   let prevRefreshReg
   let prevRefreshSig
-
   prevRefreshReg = self.$RefreshReg$
   prevRefreshSig = self.$RefreshSig$
   self.$RefreshReg$ = (type, id) => {
@@ -23,9 +22,9 @@ export const installReactRefresh = (url) => {
       self.$RefreshSig$ = prevRefreshSig
     },
     acceptCallback: () => {
-      if (!self.__vite_plugin_react_timeout) {
-        self.__vite_plugin_react_timeout = setTimeout(() => {
-          self.__vite_plugin_react_timeout = 0
+      if (!self.__react_refresh_timeout__) {
+        self.__react_refresh_timeout__ = setTimeout(() => {
+          self.__react_refresh_timeout__ = 0
           RefreshRuntime.performReactRefresh()
         }, 30)
       }
