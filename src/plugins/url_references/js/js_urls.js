@@ -1,5 +1,3 @@
-// data.usesTopLevelAwait could certainly be faster
-// and should be split to an other plugin
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import {
   analyzeNewUrlCall,
@@ -13,11 +11,7 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
-  const { usesTopLevelAwait, jsMentions } = await performJsStaticAnalysis(
-    urlInfo,
-  )
-  urlInfo.data.usesTopLevelAwait = usesTopLevelAwait
-
+  const jsMentions = await performJsUrlsStaticAnalysis(urlInfo)
   const { rootDirectoryUrl, referenceUtils } = context
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
@@ -49,34 +43,26 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   return magicSource.toContentAndSourcemap()
 }
 
-const performJsStaticAnalysis = async (urlInfo) => {
+const performJsUrlsStaticAnalysis = async (urlInfo) => {
   const isJsModule = urlInfo.type === "js_module"
   const isWebWorker = isWebWorkerUrlInfo(urlInfo)
   if (canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
-    return {
-      usesTopLevelAwait: false,
-      jsMentions: [],
-    }
+    return []
   }
-
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [
       [babelPluginMetadataJsUrlMentions, { isJsModule, isWebWorker }],
     ],
     urlInfo,
   })
-  const { usesTopLevelAwait, jsMentions } = metadata
-  return {
-    usesTopLevelAwait,
-    jsMentions,
-  }
+  const { jsMentions } = metadata
+  return jsMentions
 }
 
 const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
   const js = urlInfo.content
   if (isJsModule) {
     if (
-      js.includes("await") ||
       js.includes("new URL(") ||
       js.includes("new Worker(") ||
       js.includes("new SharedWorker(") ||
@@ -114,8 +100,6 @@ const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
     visitor: {
       Program(programPath, state) {
         const jsMentions = []
-        let usesTopLevelAwait = false
-
         const callOneStaticAnalyzer = (path, analyzer) => {
           const returnValue = analyzer(path)
           if (returnValue === null) {
@@ -138,14 +122,7 @@ const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
             }
           }
         }
-
         const visitors = {
-          AwaitExpression: (path) => {
-            const closestFunction = path.getFunctionParent()
-            if (!closestFunction) {
-              usesTopLevelAwait = true
-            }
-          },
           NewExpression: (path) => {
             callStaticAnalyzers(path, [
               (path) => analyzeNewWorkerOrNewSharedWorker(path, { isJsModule }),
@@ -163,9 +140,7 @@ const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
         visitors.CallExpression = (path) => {
           callStaticAnalyzers(path, callExpressionStaticAnalysers)
         }
-
         programPath.traverse(visitors)
-        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait
         state.file.metadata.jsMentions = jsMentions
       },
     },

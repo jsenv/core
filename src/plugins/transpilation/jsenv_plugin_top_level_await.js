@@ -8,10 +8,11 @@ export const jsenvPluginTopLevelAwait = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
-        if (!urlInfo.data.usesTopLevelAwait) {
+        if (context.isSupportedOnCurrentClients("top_level_await")) {
           return null
         }
-        if (context.isSupportedOnCurrentClients("top_level_await")) {
+        const usesTLA = await usesTopLevelAwait(urlInfo)
+        if (!usesTLA) {
           return null
         }
         const { code, map } = await applyBabelPlugins({
@@ -31,6 +32,38 @@ export const jsenvPluginTopLevelAwait = () => {
           content: code,
           sourcemap: map,
         }
+      },
+    },
+  }
+}
+
+const usesTopLevelAwait = async (urlInfo) => {
+  if (!urlInfo.content.includes("await ")) {
+    return false
+  }
+  const { metadata } = await applyBabelPlugins({
+    urlInfo,
+    babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
+  })
+  return metadata.usesTopLevelAwait
+}
+
+const babelPluginMetadataUsesTopLevelAwait = () => {
+  return {
+    name: "metadata-uses-top-level-await",
+    visitor: {
+      Program: (programPath, state) => {
+        let usesTopLevelAwait = false
+        programPath.traverse({
+          AwaitExpression: (path) => {
+            const closestFunction = path.getFunctionParent()
+            if (!closestFunction) {
+              usesTopLevelAwait = true
+              path.stop()
+            }
+          },
+        })
+        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait
       },
     },
   }
