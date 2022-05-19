@@ -8,6 +8,12 @@ await executeTestPlan({
         runtime: nodeProcess,
       },
     },
+    "test/**/react_build.test.mjs": {
+      node: {
+        runtime: nodeProcess,
+        allocatedMs: 60_000,
+      },
+    },
   },
   completedExecutionLogMerging: true,
   coverage: process.argv.includes("--coverage"),
