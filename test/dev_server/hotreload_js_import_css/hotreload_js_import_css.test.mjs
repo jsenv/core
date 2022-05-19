@@ -28,197 +28,201 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({
   headless: true,
 })
-const pageLogs = []
-const expectedPageLogs = []
-const page = await browser.newPage({ ignoreHTTPSErrors: true })
-page.on("console", (message) => {
-  pageLogs.push({ type: message.type(), text: message.text() })
-})
-await page.goto(`${devServer.origin}/main.html`)
-await page.evaluate(
-  /* eslint-disable no-undef */
-  () => window.readyPromise,
-  /* eslint-enable no-undef */
-)
-const getDocumentBodyBackgroundColor = () => {
-  return page.evaluate(
+try {
+  const pageLogs = []
+  const expectedPageLogs = []
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  page.on("console", (message) => {
+    pageLogs.push({ type: message.type(), text: message.text() })
+  })
+  await page.goto(`${devServer.origin}/main.html`)
+  await page.evaluate(
     /* eslint-disable no-undef */
-    () => {
-      return window.getComputedStyle(document.body).backgroundColor
-    },
+    () => window.readyPromise,
     /* eslint-enable no-undef */
   )
-}
+  const getDocumentBodyBackgroundColor = () => {
+    return page.evaluate(
+      /* eslint-disable no-undef */
+      () => {
+        return window.getComputedStyle(document.body).backgroundColor
+      },
+      /* eslint-enable no-undef */
+    )
+  }
 
-{
-  const actual = {
-    bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-    pageLogs,
+  {
+    const actual = {
+      bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
+      pageLogs,
+    }
+    expectedPageLogs.push({
+      type: "log",
+      text: "adding stylesheet",
+    })
+    const expected = {
+      bodyBackgroundColor: "rgb(255, 0, 0)", // red
+      pageLogs: expectedPageLogs,
+    }
+    assert({ actual, expected })
   }
-  expectedPageLogs.push({
-    type: "log",
-    text: "adding stylesheet",
-  })
-  const expected = {
-    bodyBackgroundColor: "rgb(255, 0, 0)", // red
-    pageLogs: expectedPageLogs,
+  await cssFileContent.update(`body { background: green; }`)
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  {
+    const actual = {
+      bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
+      pageLogs,
+    }
+    expectedPageLogs.push(
+      ...[
+        {
+          type: "startGroup",
+          text: "[jsenv] hot reloading: file.js",
+        },
+        {
+          type: "log",
+          text: "call dispose callback",
+        },
+        {
+          type: "log",
+          text: "remove stylesheet",
+        },
+        {
+          type: "log",
+          text: "importing js module",
+        },
+        {
+          type: "log",
+          text: "adding stylesheet",
+        },
+        {
+          type: "log",
+          text: "js module import done",
+        },
+        {
+          type: "endGroup",
+          text: "console.groupEnd",
+        },
+      ],
+    )
+    const expected = {
+      bodyBackgroundColor: "rgb(0, 128, 0)", // green
+      pageLogs: expectedPageLogs,
+    }
+    assert({ actual, expected })
   }
-  assert({ actual, expected })
-}
-await cssFileContent.update(`body { background: green; }`)
-await new Promise((resolve) => setTimeout(resolve, 500))
-{
-  const actual = {
-    bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-    pageLogs,
-  }
-  expectedPageLogs.push(
-    ...[
-      {
-        type: "startGroup",
-        text: "[jsenv] hot reloading: file.js",
-      },
-      {
-        type: "log",
-        text: "call dispose callback",
-      },
-      {
-        type: "log",
-        text: "remove stylesheet",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "adding stylesheet",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-    ],
+  // remove usage of the css file
+  await jsFileContent.update(
+    `if (import.meta.hot) { import.meta.hot.accept() }`,
   )
-  const expected = {
-    bodyBackgroundColor: "rgb(0, 128, 0)", // green
-    pageLogs: expectedPageLogs,
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  {
+    const actual = {
+      bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
+      pageLogs,
+    }
+    expectedPageLogs.push(
+      ...[
+        {
+          type: "startGroup",
+          text: "[jsenv] hot reloading: main.js",
+        },
+        {
+          type: "log",
+          text: "importing js module",
+        },
+        {
+          type: "log",
+          text: "js module import done",
+        },
+        {
+          type: "endGroup",
+          text: "console.groupEnd",
+        },
+        {
+          type: "startGroup",
+          text: "[jsenv] prune: style.css (inside main.js)",
+        },
+        {
+          type: "log",
+          text: "cleanup pruned url",
+        },
+        {
+          type: "endGroup",
+          text: "console.groupEnd",
+        },
+        {
+          type: "startGroup",
+          text: "[jsenv] prune: file.js (inside main.js)",
+        },
+        {
+          type: "log",
+          text: "call dispose callback",
+        },
+        {
+          type: "log",
+          text: "remove stylesheet",
+        },
+        {
+          type: "log",
+          text: "cleanup pruned url",
+        },
+        {
+          type: "endGroup",
+          text: "console.groupEnd",
+        },
+      ],
+    )
+    const expected = {
+      bodyBackgroundColor: "rgba(0, 0, 0, 0)",
+      pageLogs: expectedPageLogs,
+    }
+    assert({ actual, expected })
   }
-  assert({ actual, expected })
-}
-// remove usage of the css file
-await jsFileContent.update(`if (import.meta.hot) { import.meta.hot.accept() }`)
-await new Promise((resolve) => setTimeout(resolve, 500))
-{
-  const actual = {
-    bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-    pageLogs,
-  }
-  expectedPageLogs.push(
-    ...[
-      {
-        type: "startGroup",
-        text: "[jsenv] hot reloading: main.js",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-      {
-        type: "startGroup",
-        text: "[jsenv] prune: style.css (inside main.js)",
-      },
-      {
-        type: "log",
-        text: "cleanup pruned url",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-      {
-        type: "startGroup",
-        text: "[jsenv] prune: file.js (inside main.js)",
-      },
-      {
-        type: "log",
-        text: "call dispose callback",
-      },
-      {
-        type: "log",
-        text: "remove stylesheet",
-      },
-      {
-        type: "log",
-        text: "cleanup pruned url",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-    ],
-  )
-  const expected = {
-    bodyBackgroundColor: "rgba(0, 0, 0, 0)",
-    pageLogs: expectedPageLogs,
-  }
-  assert({ actual, expected })
-}
-// restore deps on css file
-await jsFileContent.update(`import "./file.js"
+  // restore deps on css file
+  await jsFileContent.update(`import "./file.js"
 
 if (import.meta.hot) {
   import.meta.hot.accept()
 }`)
-await new Promise((resolve) => setTimeout(resolve, 500))
-{
-  const actual = {
-    bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-    pageLogs,
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  {
+    const actual = {
+      bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
+      pageLogs,
+    }
+    expectedPageLogs.push(
+      ...[
+        {
+          type: "startGroup",
+          text: "[jsenv] hot reloading: main.js",
+        },
+        {
+          type: "log",
+          text: "importing js module",
+        },
+        {
+          type: "log",
+          text: "adding stylesheet",
+        },
+        {
+          type: "log",
+          text: "js module import done",
+        },
+        {
+          type: "endGroup",
+          text: "console.groupEnd",
+        },
+      ],
+    )
+    const expected = {
+      bodyBackgroundColor: "rgb(0, 128, 0)", // green
+      pageLogs: expectedPageLogs,
+    }
+    assert({ actual, expected })
   }
-  expectedPageLogs.push(
-    ...[
-      {
-        type: "startGroup",
-        text: "[jsenv] hot reloading: main.js",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "adding stylesheet",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-    ],
-  )
-  const expected = {
-    bodyBackgroundColor: "rgb(0, 128, 0)", // green
-    pageLogs: expectedPageLogs,
-  }
-  assert({ actual, expected })
+} finally {
+  browser.close()
+  jsFileContent.restore()
+  cssFileContent.restore()
 }
-
-browser.close()
-jsFileContent.restore()
-cssFileContent.restore()

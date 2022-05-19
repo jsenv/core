@@ -28,37 +28,38 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({
   headless: true,
 })
-const page = await browser.newPage({ ignoreHTTPSErrors: true })
-await page.goto(`${devServer.origin}/main.html`)
-await page.evaluate(
-  /* eslint-disable no-undef */
-  () => window.readyPromise,
-  /* eslint-enable no-undef */
-)
-const getCountLabelText = () => {
-  return page.evaluate(
+try {
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  await page.goto(`${devServer.origin}/main.html`)
+  await page.evaluate(
     /* eslint-disable no-undef */
-    () => {
-      return document.querySelector("#count_label").innerHTML
-    },
+    () => window.readyPromise,
     /* eslint-enable no-undef */
   )
-}
-const increase = () => {
-  return page.click("#button_increase")
-}
+  const getCountLabelText = () => {
+    return page.evaluate(
+      /* eslint-disable no-undef */
+      () => {
+        return document.querySelector("#count_label").innerHTML
+      },
+      /* eslint-enable no-undef */
+    )
+  }
+  const increase = () => {
+    return page.click("#button_increase")
+  }
 
-{
-  await increase()
-  const actual = {
-    countLabelText: await getCountLabelText(),
+  {
+    await increase()
+    const actual = {
+      countLabelText: await getCountLabelText(),
+    }
+    const expected = {
+      countLabelText: "toto: 1",
+    }
+    assert({ actual, expected })
   }
-  const expected = {
-    countLabelText: "toto: 1",
-  }
-  assert({ actual, expected })
-}
-await countLabelJsxFileContent.update(`
+  await countLabelJsxFileContent.update(`
 export const CountLabel = ({ count }) => {
   return (
     <span id="count_label" style="color: black">
@@ -66,26 +67,27 @@ export const CountLabel = ({ count }) => {
     </span>
   )
 }`)
-await new Promise((resolve) => setTimeout(resolve, 500))
-{
-  const actual = {
-    countLabelText: await getCountLabelText(),
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  {
+    const actual = {
+      countLabelText: await getCountLabelText(),
+    }
+    const expected = {
+      countLabelText: "tata: 1",
+    }
+    assert({ actual, expected })
   }
-  const expected = {
-    countLabelText: "tata: 1",
+  {
+    await increase()
+    const actual = {
+      countLabelText: await getCountLabelText(),
+    }
+    const expected = {
+      countLabelText: "tata: 2",
+    }
+    assert({ actual, expected })
   }
-  assert({ actual, expected })
+} finally {
+  browser.close()
+  countLabelJsxFileContent.restore()
 }
-{
-  await increase()
-  const actual = {
-    countLabelText: await getCountLabelText(),
-  }
-  const expected = {
-    countLabelText: "tata: 2",
-  }
-  assert({ actual, expected })
-}
-
-browser.close()
-countLabelJsxFileContent.restore()
