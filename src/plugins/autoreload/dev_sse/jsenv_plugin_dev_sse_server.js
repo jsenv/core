@@ -81,7 +81,8 @@ export const jsenvPluginDevSSEServer = ({
             declinedBy: dependentUrl,
           }
         }
-        if (dependentUrlInfo.data.hotAcceptDependencies.includes(urlInfo.url)) {
+        const { hotAcceptDependencies = [] } = dependentUrlInfo.data
+        if (hotAcceptDependencies.includes(urlInfo.url)) {
           instructions.push({
             type: dependentUrlInfo.type,
             boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
