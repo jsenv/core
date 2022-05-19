@@ -142,7 +142,10 @@ export const executePlan = async (
         plugins: [
           ...plugins,
           ...getCorePlugins({
+            rootDirectoryUrl,
+            urlGraph,
             scenario,
+
             htmlSupervisor: true,
             nodeEsmResolution,
             fileSystemMagicResolution,

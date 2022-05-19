@@ -7,25 +7,91 @@
  *   it should likely be an other plugin happening after the others
  */
 
+import { registerFileLifecycle } from "@jsenv/filesystem"
+
 import {
   applyNodeEsmResolution,
-  lookupPackageScope,
-  readPackageJson,
+  defaultLookupPackageScope,
+  defaultReadPackageJson,
 } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({
+  rootDirectoryUrl,
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = ["browser", "import"],
-} = {}) => {
-  const nodeEsmResolution = {
+  filesInvalidatingCache = ["package.json", "package-lock.json"],
+}) => {
+  const packageScopesCache = new Map()
+  const lookupPackageScope = (url) => {
+    const fromCache = packageScopesCache.get(url)
+    if (fromCache) {
+      return fromCache
+    }
+    const packageScope = defaultLookupPackageScope(url)
+    packageScopesCache.set(url, packageScope)
+    return packageScope
+  }
+  const packageJsonsCache = new Map()
+  const readPackageJson = (url) => {
+    const fromCache = packageJsonsCache.get(url)
+    if (fromCache) {
+      return fromCache
+    }
+    const packageJson = defaultReadPackageJson(url)
+    packageJsonsCache.set(url, packageJson)
+    return packageJson
+  }
+
+  const unregisters = []
+  filesInvalidatingCache.forEach((file) => {
+    const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
+      added: () => {
+        packageScopesCache.clear()
+        packageJsonsCache.clear()
+      },
+      updated: () => {
+        packageScopesCache.clear()
+        packageJsonsCache.clear()
+      },
+      removed: () => {
+        packageScopesCache.clear()
+        packageJsonsCache.clear()
+      },
+      keepProcessAlive: false,
+    })
+    unregisters.push(unregister)
+  })
+
+  return [
+    jsenvPluginNodeEsmResolver({
+      packageConditions,
+      lookupPackageScope,
+      readPackageJson,
+    }),
+    jsenvPluginNodeModulesVersionInUrls({
+      lookupPackageScope,
+      readPackageJson,
+    }),
+  ]
+}
+
+const jsenvPluginNodeEsmResolver = ({
+  packageConditions,
+  lookupPackageScope,
+  readPackageJson,
+}) => {
+  return {
     name: "jsenv:node_esm_resolve",
     appliesDuring: "*",
     resolveUrl: {
       js_import_export: (reference) => {
+        const { parentUrl, specifier } = reference
         const { url } = applyNodeEsmResolution({
           conditions: packageConditions,
-          parentUrl: reference.parentUrl,
-          specifier: reference.specifier,
+          parentUrl,
+          specifier,
+          lookupPackageScope,
+          readPackageJson,
         })
         return url
       },
@@ -39,9 +105,14 @@ export const jsenvPluginNodeEsmResolution = ({
       return null
     },
   }
+}
 
-  const packageVersionInUrl = {
-    name: "jsenv:package_url_version",
+const jsenvPluginNodeModulesVersionInUrls = ({
+  lookupPackageScope,
+  readPackageJson,
+}) => {
+  return {
+    name: "jsenv:node_modules_version_in_urls",
     appliesDuring: {
       dev: true,
       test: true,
@@ -72,6 +143,4 @@ export const jsenvPluginNodeEsmResolution = ({
       }
     },
   }
-
-  return [nodeEsmResolution, packageVersionInUrl]
 }

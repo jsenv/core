@@ -39,6 +39,9 @@ export const getCorePlugins = ({
   if (autoreload === true) {
     autoreload = {}
   }
+  if (nodeEsmResolution === true) {
+    nodeEsmResolution = {}
+  }
   return [
     jsenvPluginUrlReferences(),
     jsenvPluginTranspilation(transpilation),
@@ -48,7 +51,11 @@ export const getCorePlugins = ({
     jsenvPluginFileUrls(),
     jsenvPluginHttpUrls(),
     jsenvPluginLeadingSlash(),
-    jsenvPluginNodeEsmResolution(nodeEsmResolution), // before url resolution to handle "js_import_export" resolution
+    // before url resolution to handle "js_import_export" resolution
+    jsenvPluginNodeEsmResolution({
+      rootDirectoryUrl,
+      ...nodeEsmResolution,
+    }),
     jsenvPluginUrlResolution(),
     jsenvPluginFileSystemMagic(fileSystemMagicResolution),
     jsenvPluginUrlVersion(),

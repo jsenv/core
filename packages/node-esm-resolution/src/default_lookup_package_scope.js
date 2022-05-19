@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 
 import { getParentUrl, asDirectoryUrl } from "./url_utils.js"
 
-export const lookupPackageScope = (url) => {
+export const defaultLookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url)
   while (scopeUrl !== "file:///") {
     if (scopeUrl.endsWith("node_modules/")) {

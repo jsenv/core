@@ -142,6 +142,10 @@ build ${entryPointKeys.length} entry points`)
         },
       },
       ...getCorePlugins({
+        rootDirectoryUrl,
+        urlGraph: rawGraph,
+        scenario: "build",
+
         nodeEsmResolution,
         fileSystemMagicResolution,
         injectedGlobals,

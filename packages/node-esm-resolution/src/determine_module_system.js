@@ -1,5 +1,5 @@
-import { lookupPackageScope } from "./lookup_package_scope.js"
-import { readPackageJson } from "./read_package_json.js"
+import { defaultLookupPackageScope } from "./default_lookup_package_scope.js"
+import { defaultReadPackageJson } from "./default_read_package_json.js"
 
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
 export const determineModuleSystem = (
@@ -29,11 +29,11 @@ export const determineModuleSystem = (
     return "url"
   }
   if (ambiguousExtensions.includes(extension)) {
-    const packageUrl = lookupPackageScope(url)
+    const packageUrl = defaultLookupPackageScope(url)
     if (!packageUrl) {
       return "commonjs"
     }
-    const packageJson = readPackageJson(packageUrl)
+    const packageJson = defaultReadPackageJson(packageUrl)
     if (packageJson.type === "module") {
       return "module"
     }
