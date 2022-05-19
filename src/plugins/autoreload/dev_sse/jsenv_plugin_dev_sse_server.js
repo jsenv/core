@@ -43,9 +43,8 @@ export const jsenvPluginDevSSEServer = ({
       urlInfo.data.hmrTimestamp = hmrTimestamp
       urlInfo.dependents.forEach((dependentUrl) => {
         const dependentUrlInfo = urlInfos[dependentUrl]
-        if (
-          !dependentUrlInfo.data.hotAcceptDependencies.includes(urlInfo.url)
-        ) {
+        const { hotAcceptDependencies = [] } = dependentUrlInfo.data
+        if (!hotAcceptDependencies.includes(urlInfo.url)) {
           iterate(dependentUrlInfo, hmrTimestamp)
         }
       })
