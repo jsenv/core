@@ -2,38 +2,28 @@ import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { getTypePropertyNode } from "@jsenv/utils/js_ast/js_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 
 export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
-    if (
-      !urlInfo.content.includes("InlineContent(") &&
-      !urlInfo.content.includes("new Blob(") &&
-      !urlInfo.content.includes("JSON.parse(")
-    ) {
-      return null
-    }
-    const { metadata } = await applyBabelPlugins({
-      babelPlugins: [babelPluginMetadataInlineContentCalls],
-      urlInfo,
+    const inlineContentInfos = parseJsInlineContentInfos({
+      js: urlInfo.content,
     })
-    const { inlineContentCalls } = metadata
-    if (inlineContentCalls.length === 0) {
+    if (inlineContentInfos.length === 0) {
       return null
     }
     const magicSource = createMagicSource(urlInfo.content)
-    await inlineContentCalls.reduce(async (previous, inlineContentCall) => {
+    await inlineContentInfos.reduce(async (previous, inlineContentInfo) => {
       await previous
       const inlineUrl = generateInlineContentUrl({
         url: urlInfo.url,
-        extension: CONTENT_TYPE.asFileExtension(inlineContentCall.contentType),
-        line: inlineContentCall.line,
-        column: inlineContentCall.column,
-        lineEnd: inlineContentCall.lineEnd,
-        columnEnd: inlineContentCall.columnEnd,
+        extension: CONTENT_TYPE.asFileExtension(inlineContentInfo.contentType),
+        line: inlineContentInfo.line,
+        column: inlineContentInfo.column,
+        lineEnd: inlineContentInfo.lineEnd,
+        columnEnd: inlineContentInfo.columnEnd,
       })
-      let { quote } = inlineContentCall
+      let { quote } = inlineContentInfo
       if (
         quote === "`" &&
         !context.isSupportedOnCurrentClients("template_literals")
@@ -41,18 +31,18 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
         // if quote is "`" and template literals are not supported
         // we'll use a regular string (single or double quote)
         // when rendering the string
-        quote = JS_QUOTES.pickBest(inlineContentCall.content)
+        quote = JS_QUOTES.pickBest(inlineContentInfo.content)
       }
       const [inlineReference, inlineUrlInfo] =
         context.referenceUtils.foundInline({
           type: "js_inline_content",
-          subtype: inlineContentCall.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
+          subtype: inlineContentInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
           isOriginalPosition: urlInfo.content === urlInfo.originalContent,
-          line: inlineContentCall.line,
-          column: inlineContentCall.column,
+          line: inlineContentInfo.line,
+          column: inlineContentInfo.column,
           specifier: inlineUrl,
-          contentType: inlineContentCall.contentType,
-          content: inlineContentCall.content,
+          contentType: inlineContentInfo.contentType,
+          content: inlineContentInfo.content,
         })
       inlineUrlInfo.jsQuote = quote
       inlineReference.escape = (value) =>
@@ -62,8 +52,8 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
         urlInfo: inlineUrlInfo,
       })
       magicSource.replace({
-        start: inlineContentCall.start,
-        end: inlineContentCall.end,
+        start: inlineContentInfo.start,
+        end: inlineContentInfo.end,
         replacement: JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
           quote,
           allowEscapeForVersioning,
@@ -83,78 +73,132 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   }
 }
 
-const babelPluginMetadataInlineContentCalls = () => {
+const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
+  if (
+    !js.includes("InlineContent") &&
+    !js.includes("new Blob(") &&
+    !js.includes("JSON.parse(")
+  ) {
+    return []
+  }
+  const { metadata } = await applyBabelPlugins({
+    babelPlugins: [babelPluginMetadataInlineContents],
+    urlInfo: {
+      url,
+      type: isJsModule ? "js_module" : "js_classic",
+      content: js,
+    },
+  })
+  return metadata.inlineContents
+}
+
+const babelPluginMetadataInlineContents = () => {
   return {
-    name: "metadata-inline-content-calls",
+    name: "metadata-inline-contents",
     visitor: {
       Program: (programPath, state) => {
-        const inlineContentCalls = []
+        const inlineContentInfos = []
+        const onInlineContentInfo = (inlineContentInfo) => {
+          inlineContentInfos.push(inlineContentInfo)
+        }
         programPath.traverse({
           NewExpression: (path) => {
-            const inlineContentCall = analyzeNewInlineContentCall(path)
-            if (inlineContentCall) {
-              inlineContentCalls.push(inlineContentCall)
+            if (isNewInlineContentCall(path)) {
+              analyzeNewInlineContentCall(path.node, {
+                onInlineContentInfo,
+              })
+              return
+            }
+            if (isNewBlobCall(path.node)) {
+              analyzeNewBlobCall(path.node, {
+                onInlineContentInfo,
+              })
               return
             }
           },
           CallExpression: (path) => {
-            const jsonParseCall = analyzeJsonParseCall(path)
-            if (jsonParseCall) {
-              inlineContentCalls.push(jsonParseCall)
-              return
+            const node = path.node
+            if (isJSONParseCall(node)) {
+              analyzeJsonParseCall(node, {
+                onInlineContentInfo,
+              })
             }
           },
         })
-        state.file.metadata.inlineContentCalls = inlineContentCalls
+        state.file.metadata.inlineContentInfos = inlineContentInfos
       },
     },
   }
 }
 
-const analyzeNewInlineContentCall = (path) => {
-  const identifier = parseNewIdentifier(path)
-  if (!identifier) {
-    return null
-  }
+const isNewInlineContentCall = (path) => {
   const node = path.node
-  if (node.arguments.length !== 2) {
-    return null
+  if (node.callee.type === "Identifier") {
+    // terser rename import to use a shorter name
+    const name = getOriginalName(path, node.callee.name)
+    return name === "InlineContent"
   }
-  const [firstArg, secondArg] = node.arguments
-  const typePropertyNode = getTypePropertyNode(secondArg)
-  if (!typePropertyNode || typePropertyNode.value.type !== "StringLiteral") {
-    return null
+  if (node.callee.id && node.callee.id.type === "Identifier") {
+    const name = getOriginalName(path, node.callee.id.name)
+    return name === "InlineContent"
   }
-  const contentType = typePropertyNode.value.value
-  const type = identifier.type
-  let nodeHoldingInlineContent
-  if (type === "new_inline_content") {
-    nodeHoldingInlineContent = firstArg
-  } else if (type === "new_blob") {
-    if (firstArg.type !== "ArrayExpression") {
-      return null
-    }
-    if (firstArg.elements.length !== 1) {
-      return null
-    }
-    nodeHoldingInlineContent = firstArg.elements[0]
-  }
-  const inlineContentInfo = extractInlineContentInfo(nodeHoldingInlineContent)
-  if (!inlineContentInfo) {
-    return null
-  }
-  return {
-    type:
-      type === "new_inline_content"
-        ? "new_inline_content_first_arg"
-        : "new_blob_first_arg",
-    contentType,
-    ...inlineContentInfo,
-    ...getNodePosition(nodeHoldingInlineContent),
-  }
+  return false
+}
+const analyzeNewInlineContentCall = (node, { onInlineContentInfo }) => {
+  analyzeArguments({
+    node,
+    onInlineContentInfo,
+    nodeHoldingInlineContent: node.arguments[0],
+    type: "new_inline_content_first_arg",
+  })
 }
 
-const extractInlineContentInfo = (node) => {
+const isNewBlobCall = (node) => {
+  return node.callee.type === "Identifier" && node.callee.name === "Blob"
+}
+const analyzeNewBlobCall = (node, { onInlineContentInfo }) => {
+  const firstArg = node.arguments[0]
+  if (firstArg.type !== "ArrayExpression") {
+    return
+  }
+  if (firstArg.elements.length !== 1) {
+    return
+  }
+  analyzeArguments({
+    node,
+    onInlineContentInfo,
+    nodeHoldingInlineContent: firstArg.elements[0],
+    type: "new_blob_first_arg",
+  })
+}
+
+const analyzeArguments = ({
+  node,
+  onInlineContentInfo,
+  nodeHoldingContent,
+  type,
+}) => {
+  if (node.arguments.length !== 2) {
+    return
+  }
+  const [, secondArg] = node.arguments
+  const typePropertyNode = getTypePropertyNode(secondArg)
+  if (!typePropertyNode || typePropertyNode.value.type !== "StringLiteral") {
+    return
+  }
+  const contentType = typePropertyNode.value.value
+  const contentDetails = extractContentDetails(nodeHoldingContent)
+  if (contentDetails) {
+    onInlineContentInfo({
+      node: nodeHoldingContent,
+      ...getNodePosition(nodeHoldingContent),
+      type,
+      contentType,
+      ...contentDetails,
+    })
+  }
+}
+const extractContentDetails = (node) => {
   if (node.type === "StringLiteral") {
     return {
       nodeType: "StringLiteral",
@@ -177,55 +221,6 @@ const extractInlineContentInfo = (node) => {
   return null
 }
 
-const parseNewIdentifier = (path) => {
-  const node = path.node
-  if (node.callee.type === "Identifier") {
-    // terser rename import to use a shorter name
-    const name = getOriginalName(path, node.callee.name)
-    if (name === "InlineContent") {
-      return {
-        type: "new_inline_content",
-      }
-    }
-    if (name === "Blob") {
-      return {
-        type: "new_blob",
-      }
-    }
-    return null
-  }
-  if (node.callee.id) {
-    // terser might combine new InlineContent('') declaration and usage
-    if (node.callee.id.type !== "Identifier") {
-      return null
-    }
-    const name = getOriginalName(path, node.callee.id.name)
-    if (name === "InlineContent") {
-      return {
-        type: "new_inline_content",
-      }
-    }
-  }
-  return null
-}
-
-const analyzeJsonParseCall = (path) => {
-  const node = path.node
-  if (!isJSONParseCall(node)) {
-    return null
-  }
-  const inlineContentInfo = extractInlineContentInfo(node.arguments[0])
-  if (!inlineContentInfo) {
-    return null
-  }
-  return {
-    type: "json_parse_first_arg",
-    contentType: "application/json",
-    ...inlineContentInfo,
-    ...getNodePosition(node.arguments[0]),
-  }
-}
-
 const isJSONParseCall = (node) => {
   const callee = node.callee
   return (
@@ -235,6 +230,19 @@ const isJSONParseCall = (node) => {
     callee.property.type === "Identifier" &&
     callee.property.name === "parse"
   )
+}
+const analyzeJsonParseCall = (node, { onInlineContentInfo }) => {
+  const firstArgNode = node.arguments[0]
+  const contentDetails = extractContentDetails(firstArgNode)
+  if (contentDetails) {
+    onInlineContentInfo({
+      node: firstArgNode,
+      ...getNodePosition(firstArgNode),
+      type: "json_parse_first_arg",
+      contentType: "application/json",
+      ...contentDetails,
+    })
+  }
 }
 
 const getNodePosition = (node) => {
@@ -247,7 +255,6 @@ const getNodePosition = (node) => {
     columnEnd: node.loc.end.column,
   }
 }
-
 const getOriginalName = (path, name) => {
   const binding = path.scope.getBinding(name)
   if (!binding) {
@@ -267,4 +274,17 @@ const getOriginalName = (path, name) => {
     }
   }
   return name
+}
+const getTypePropertyNode = (node) => {
+  if (node.type !== "ObjectExpression") {
+    return null
+  }
+  const { properties } = node
+  return properties.find((property) => {
+    return (
+      property.type === "ObjectProperty" &&
+      property.key.type === "Identifier" &&
+      property.key.name === "type"
+    )
+  })
 }
