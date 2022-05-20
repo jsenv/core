@@ -1,6 +1,6 @@
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-import { parseJsUrls } from "@jsenv/core/packages/utils/js_ast/parse_js_urls.js"
+import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js"
 
 export const jsenvPluginWorkersTypeModuleAsClassic = ({
   generateJsClassicFilename,
