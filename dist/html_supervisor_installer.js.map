@@ -2,16 +2,16 @@
   "version": 3,
   "file": "html_supervisor_installer.js",
   "sources": [
-    "../../node_modules/@jsenv/uneval/src/internal/isComposite.js",
-    "../../node_modules/@jsenv/uneval/src/internal/global-value-path.js",
-    "../../node_modules/@jsenv/uneval/src/internal/decompose.js",
-    "../../node_modules/@jsenv/uneval/src/internal/sortRecipe.js",
-    "../../node_modules/@jsenv/uneval/src/internal/escapeString.js",
-    "../../node_modules/@jsenv/uneval/src/uneval.js",
-    "../../src/plugins/html_supervisor/client/uneval_exception.js",
-    "../../src/plugins/html_supervisor/client/error_in_document.js",
-    "../../src/plugins/html_supervisor/client/error_in_notification.js",
-    "../../src/plugins/html_supervisor/client/html_supervisor_installer.js"
+    "../node_modules/@jsenv/uneval/src/internal/isComposite.js",
+    "../node_modules/@jsenv/uneval/src/internal/global-value-path.js",
+    "../node_modules/@jsenv/uneval/src/internal/decompose.js",
+    "../node_modules/@jsenv/uneval/src/internal/sortRecipe.js",
+    "../node_modules/@jsenv/uneval/src/internal/escapeString.js",
+    "../node_modules/@jsenv/uneval/src/uneval.js",
+    "../src/plugins/html_supervisor/client/uneval_exception.js",
+    "../src/plugins/html_supervisor/client/error_in_document.js",
+    "../src/plugins/html_supervisor/client/error_in_notification.js",
+    "../src/plugins/html_supervisor/client/html_supervisor_installer.js"
   ],
   "sourcesContent": [
     "// https://developer.mozilla.org/en-US/docs/Glossary/Primitive\n\nexport const isComposite = (value) => {\n  if (value === null) {\n    return false\n  }\n\n  const type = typeof value\n  if (type === \"object\") {\n    return true\n  }\n\n  if (type === \"function\") {\n    return true\n  }\n\n  return false\n}\n",
