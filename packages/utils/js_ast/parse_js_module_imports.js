@@ -1,14 +1,16 @@
 import { init, parse } from "es-module-lexer"
 
+import { createJsParseError } from "./js_parse_error.js"
+
 // see https://github.com/guybedford/es-module-lexer#usage
-export const parseJsModuleImports = async (js, url) => {
+export const parseJsModuleImports = async ({ js, url }) => {
   await init
   let parseReturnValue
   try {
     parseReturnValue = parse(js, url)
   } catch (e) {
     if (e && e.idx === 0) {
-      throw createParseError({
+      throw createJsParseError({
         message: e,
         url,
         line: e.message.split(":")[1],
@@ -37,16 +39,6 @@ export const parseJsModuleImports = async (js, url) => {
     }
   })
   return [literalImportsClean, exports]
-}
-
-const createParseError = ({ message, reasonCode, url, line, column }) => {
-  const parseError = new Error(message)
-  parseError.reasonCode = reasonCode
-  parseError.code = "PARSE_ERROR"
-  parseError.url = url
-  parseError.line = line
-  parseError.column = column
-  return parseError
 }
 
 const createLineAndColumnFinder = (string) => {

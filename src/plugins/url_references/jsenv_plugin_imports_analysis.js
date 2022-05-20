@@ -7,10 +7,10 @@ export const jsenvPluginImportsAnalysis = () => {
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
-        const [imports, exports] = await parseJsModuleImports(
-          urlInfo.content,
-          (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
-        )
+        const [imports, exports] = await parseJsModuleImports({
+          js: urlInfo.content,
+          url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+        })
         const actions = []
         const magicSource = createMagicSource(urlInfo.content)
         urlInfo.data.usesImport = imports.length > 0

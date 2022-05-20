@@ -1,17 +1,14 @@
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import {
-  analyzeNewUrlCall,
-  analyzeNewWorkerOrNewSharedWorker,
-  analyzeImportScriptCalls,
-  analyzeSystemRegisterCall,
-  analyzeSystemImportCall,
-  analyzeServiceWorkerRegisterCall,
-} from "@jsenv/utils/js_ast/js_static_analysis.js"
+import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
-  const jsMentions = await performJsUrlsStaticAnalysis(urlInfo)
+  const jsMentions = await parseJsUrls({
+    js: urlInfo.content,
+    url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+    isJsModule: urlInfo.type === "js_module",
+    isWebWorker: isWebWorkerUrlInfo(urlInfo),
+  })
   const { rootDirectoryUrl, referenceUtils } = context
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
@@ -41,108 +38,4 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   })
   await Promise.all(actions.map((action) => action()))
   return magicSource.toContentAndSourcemap()
-}
-
-const performJsUrlsStaticAnalysis = async (urlInfo) => {
-  const isJsModule = urlInfo.type === "js_module"
-  const isWebWorker = isWebWorkerUrlInfo(urlInfo)
-  if (canSkipStaticAnalysis(urlInfo, { isJsModule, isWebWorker })) {
-    return []
-  }
-  const { metadata } = await applyBabelPlugins({
-    babelPlugins: [
-      [babelPluginMetadataJsUrlMentions, { isJsModule, isWebWorker }],
-    ],
-    urlInfo,
-  })
-  const { jsMentions } = metadata
-  return jsMentions
-}
-
-const canSkipStaticAnalysis = (urlInfo, { isJsModule, isWebWorker }) => {
-  const js = urlInfo.content
-  if (isJsModule) {
-    if (
-      js.includes("new URL(") ||
-      js.includes("new Worker(") ||
-      js.includes("new SharedWorker(") ||
-      js.includes("serviceWorker.register(")
-    ) {
-      return false
-    }
-  }
-  if (!isJsModule) {
-    if (
-      js.includes("System.") ||
-      js.includes("new URL(") ||
-      js.includes("new Worker(") ||
-      js.includes("new SharedWorker(") ||
-      js.includes("serviceWorker.register(")
-    ) {
-      return false
-    }
-  }
-  if (isWebWorker && js.includes("importScripts(")) {
-    return false
-  }
-  return true
-}
-
-/*
- * see also
- * https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md
- * https://github.com/mjackson/babel-plugin-import-visitor
- *
- */
-const babelPluginMetadataJsUrlMentions = (_, { isJsModule, isWebWorker }) => {
-  return {
-    name: "metadata-js-mentions",
-    visitor: {
-      Program(programPath, state) {
-        const jsMentions = []
-        const callOneStaticAnalyzer = (path, analyzer) => {
-          const returnValue = analyzer(path)
-          if (returnValue === null) {
-            return false
-          }
-          if (Array.isArray(returnValue)) {
-            jsMentions.push(...returnValue)
-            return true
-          }
-          if (typeof returnValue === "object") {
-            jsMentions.push(returnValue)
-            return true
-          }
-          return false
-        }
-        const callStaticAnalyzers = (path, analysers) => {
-          for (const analyzer of analysers) {
-            if (callOneStaticAnalyzer(path, analyzer)) {
-              break
-            }
-          }
-        }
-        const visitors = {
-          NewExpression: (path) => {
-            callStaticAnalyzers(path, [
-              (path) => analyzeNewWorkerOrNewSharedWorker(path, { isJsModule }),
-              (path) => analyzeNewUrlCall(path, { isJsModule }),
-            ])
-          },
-        }
-        const callExpressionStaticAnalysers = [
-          ...(isJsModule
-            ? []
-            : [analyzeSystemRegisterCall, analyzeSystemImportCall]),
-          ...(isWebWorker ? [analyzeImportScriptCalls] : []),
-          analyzeServiceWorkerRegisterCall,
-        ]
-        visitors.CallExpression = (path) => {
-          callStaticAnalyzers(path, callExpressionStaticAnalysers)
-        }
-        programPath.traverse(visitors)
-        state.file.metadata.jsMentions = jsMentions
-      },
-    },
-  }
 }

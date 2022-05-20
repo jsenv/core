@@ -5,6 +5,8 @@
  */
 import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
 
+import { createJsParseError } from "./js_parse_error.js"
+
 export const applyBabelPlugins = async ({
   babelPlugins,
   urlInfo,
@@ -75,7 +77,7 @@ export const applyBabelPlugins = async ({
     return result
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw createParseError({
+      throw createJsParseError({
         message: error.message,
         reasonCode: error.reasonCode,
         content,
@@ -86,16 +88,6 @@ export const applyBabelPlugins = async ({
     }
     throw error
   }
-}
-
-const createParseError = ({ message, reasonCode, url, line, column }) => {
-  const parseError = new Error(message)
-  parseError.reasonCode = reasonCode
-  parseError.code = "PARSE_ERROR"
-  parseError.url = url
-  parseError.line = line
-  parseError.column = column
-  return parseError
 }
 
 // const pattern = [
