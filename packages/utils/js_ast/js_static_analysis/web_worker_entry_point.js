@@ -108,14 +108,17 @@ const analyzeWorkerCallArguments = (
   { isJsModule, onNewUrlNode, onUrl, referenceSubtype, expectedSubtype },
 ) => {
   let expectedType = "js_classic"
-  let typeArgNode
+  let typePropertyNode
   const secondArgNode = node.arguments[1]
   if (secondArgNode) {
-    typeArgNode = getTypePropertyNode(secondArgNode)
-    if (typeArgNode && isStringLiteralNode(typeArgNode)) {
-      const typeArgValue = typeArgNode.value.value
-      if (typeArgValue === "module") {
-        expectedType = "js_module"
+    typePropertyNode = getTypePropertyNode(secondArgNode)
+    if (typePropertyNode) {
+      const typePropertyValueNode = typePropertyNode.value
+      if (isStringLiteralNode(typePropertyValueNode)) {
+        const typePropertyValue = typePropertyValueNode.value
+        if (typePropertyValue === "module") {
+          expectedType = "js_module"
+        }
       }
     }
   }
@@ -130,7 +133,7 @@ const analyzeWorkerCallArguments = (
       expectedType,
       expectedSubtype,
       specifier: firstArgNode.value,
-      typeArgNode,
+      typePropertyNode,
     })
     return
   }
@@ -142,7 +145,7 @@ const analyzeWorkerCallArguments = (
         Object.assign(mention, {
           expectedType,
           expectedSubtype,
-          typeArgNode,
+          typePropertyNode,
         })
         onUrl(mention)
       },

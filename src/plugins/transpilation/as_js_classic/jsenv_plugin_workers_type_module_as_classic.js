@@ -47,8 +47,8 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
         replacement: newReference.generatedSpecifier,
       })
       magicSource.replace({
-        start: jsUrl.typeArgNode.value.start,
-        end: jsUrl.typeArgNode.value.end,
+        start: jsUrl.typePropertyNode.value.start,
+        end: jsUrl.typePropertyNode.value.end,
         replacement: JSON.stringify("classic"),
       })
     })

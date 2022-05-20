@@ -185,10 +185,14 @@ const analyzeArguments = ({
   }
   const [, secondArg] = node.arguments
   const typePropertyNode = getTypePropertyNode(secondArg)
-  if (!typePropertyNode || typePropertyNode.value.type !== "StringLiteral") {
+  if (!typePropertyNode) {
     return
   }
-  const contentType = typePropertyNode.value.value
+  const typePropertyValueNode = typePropertyValueNode.value
+  if (typePropertyValueNode.type !== "StringLiteral") {
+    return
+  }
+  const contentType = typePropertyValueNode.value
   const contentDetails = extractContentDetails(nodeHoldingContent)
   if (contentDetails) {
     onInlineContentInfo({
