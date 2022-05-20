@@ -188,7 +188,7 @@ const analyzeArguments = ({
   if (!typePropertyNode) {
     return
   }
-  const typePropertyValueNode = typePropertyValueNode.value
+  const typePropertyValueNode = typePropertyNode.value
   if (typePropertyValueNode.type !== "StringLiteral") {
     return
   }

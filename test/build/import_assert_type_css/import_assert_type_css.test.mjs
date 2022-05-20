@@ -25,7 +25,7 @@ const test = async (options) => {
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.namespacePromise
+      return window.resultPromise
     },
     /* eslint-enable no-undef */
   })

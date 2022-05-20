@@ -1,8 +1,6 @@
-import { Parser, getLineInfo } from "acorn"
-import { importAssertions } from "acorn-import-assertions"
 import { simple } from "acorn-walk"
 
-import { createJsParseError } from "./js_parse_error.js"
+import { parseJsWithAcorn } from "./parse_js_with_acorn.js"
 import {
   isNewWorkerCall,
   analyzeNewWorkerCall,
@@ -26,11 +24,9 @@ import {
   analyzeSystemImportCall,
 } from "./js_static_analysis/system.js"
 
-const AcornParser = Parser.extend(importAssertions)
-
 export const parseJsUrls = ({
   js,
-  url, // will be used for syntax error
+  url,
   isJsModule = false,
   isWebWorker = false,
 } = {}) => {
@@ -38,27 +34,11 @@ export const parseJsUrls = ({
   if (canSkipStaticAnalysis({ js, isJsModule, isWebWorker })) {
     return jsUrls
   }
-  let jsAst
-  try {
-    // https://github.com/acornjs/acorn/tree/master/acorn#interface
-    jsAst = AcornParser.parse(js, {
-      locations: true,
-      allowAwaitOutsideFunction: true,
-      sourceType: isJsModule ? "module" : "script",
-      ecmaVersion: 2022,
-    })
-  } catch (e) {
-    if (e && e.name === "SyntaxError") {
-      const { line, column } = getLineInfo(js, e.raisedAt)
-      throw createJsParseError({
-        message: e.message,
-        url,
-        line,
-        column,
-      })
-    }
-    throw e
-  }
+  const jsAst = parseJsWithAcorn({
+    js,
+    url,
+    isJsModule,
+  })
   const onUrl = (jsUrl) => {
     jsUrls.push(jsUrl)
   }

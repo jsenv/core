@@ -23,11 +23,13 @@ export const executeInChromium = async ({
     })
   }
   const pageErrors = []
-  if (collectErrors) {
-    page.on("pageerror", (error) => {
+  page.on("pageerror", (error) => {
+    if (collectErrors) {
       pageErrors.push(error)
-    })
-  }
+    } else {
+      throw error
+    }
+  })
 
   await page.goto(url)
   if (headScriptUrl) {

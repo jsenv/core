@@ -21,7 +21,7 @@ const bodyBackgroundImage = getComputedStyle(document.body).backgroundImage
 
 console.log({ bodyBackgroundImage })
 
-window.resolveNamespacePromise({
+window.resolveResultPromise({
   bodyBackgroundColor,
   bodyBackgroundImage,
 })

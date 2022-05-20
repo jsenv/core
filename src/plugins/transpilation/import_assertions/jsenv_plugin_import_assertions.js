@@ -32,54 +32,27 @@ export const jsenvPluginImportAssertions = () => {
             return
           }
           const { searchParam } = importAsInfos[assertType]
-          const { path } = importAssertion
-          const { node } = path
-          if (node.type === "CallExpression") {
-            const importSpecifierPath = path.get("arguments")[0]
-            const specifier = importSpecifierPath.node.value
-            const reference = context.referenceUtils.findByGeneratedSpecifier(
-              JSON.stringify(specifier),
-            )
-            const [newReference] = context.referenceUtils.update(reference, {
-              expectedType: "js_module",
-              specifier: injectQueryParamsIntoSpecifier(specifier, {
-                [searchParam]: "",
-              }),
-              filename: `${urlToFilename(reference.url)}.js`,
-            })
-            magicSource.replace({
-              start: importSpecifierPath.node.start,
-              end: importSpecifierPath.node.end,
-              replacement: newReference.generatedSpecifier,
-            })
-            const secondArgPath = path.get("arguments")[1]
-            magicSource.remove({
-              start: secondArgPath.node.start,
-              end: secondArgPath.node.end,
-            })
-            return
-          }
-          const importSpecifierPath = path.get("source")
-          const specifier = importSpecifierPath.node.value
           const reference = context.referenceUtils.findByGeneratedSpecifier(
-            JSON.stringify(specifier),
+            JSON.stringify(importAssertion.specifier),
           )
           const [newReference] = context.referenceUtils.update(reference, {
             expectedType: "js_module",
-            specifier: injectQueryParamsIntoSpecifier(specifier, {
-              [searchParam]: "",
-            }),
+            specifier: injectQueryParamsIntoSpecifier(
+              importAssertion.specifier,
+              {
+                [searchParam]: "",
+              },
+            ),
             filename: `${urlToFilename(reference.url)}.js`,
           })
           magicSource.replace({
-            start: importSpecifierPath.node.start,
-            end: importSpecifierPath.node.end,
+            start: importAssertion.specifierStart,
+            end: importAssertion.specifierEnd,
             replacement: newReference.generatedSpecifier,
           })
-          const assertionsPath = path.get("assertions")[0]
           magicSource.remove({
-            start: assertionsPath.node.start,
-            end: assertionsPath.node.end,
+            start: importAssertion.assertNode.start,
+            end: importAssertion.assertNode.end,
           })
         })
         return magicSource.toContentAndSourcemap()
