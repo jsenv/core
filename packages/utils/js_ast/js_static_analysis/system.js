@@ -53,11 +53,10 @@ export const isSystemImportCall = (node) => {
     callee.property.name === "import"
   )
 }
-export const analyzeSystemImportCall = (node) => {
-  const mentions = []
+export const analyzeSystemImportCall = (node, { onUrl }) => {
   const firstArgNode = node.arguments[0]
   if (isStringLiteralNode(firstArgNode)) {
-    mentions.push({
+    onUrl({
       node: firstArgNode,
       ...getNodePosition(firstArgNode),
       type: "js_url_specifier",
@@ -66,5 +65,4 @@ export const analyzeSystemImportCall = (node) => {
       specifier: firstArgNode.value,
     })
   }
-  return mentions
 }
