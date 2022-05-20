@@ -29,7 +29,7 @@ const test = async (params) => {
 }
 
 if (process.platform === "darwin") {
-  // no support
+  // no support for {type: "module"} on service worker
   {
     const actual = await test({
       runtimeCompat: {
@@ -46,7 +46,7 @@ if (process.platform === "darwin") {
     assert({ actual, expected })
   }
 
-  // no support + no bundling
+  // no support for {type: "module"} on service worker + no bundling
   {
     const actual = await test({
       runtimeCompat: {

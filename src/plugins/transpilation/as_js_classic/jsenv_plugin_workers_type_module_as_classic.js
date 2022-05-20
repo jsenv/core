@@ -6,33 +6,60 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
   generateJsClassicFilename,
 }) => {
   const transformJsWorkerTypes = async (urlInfo, context) => {
-    const workersToTranspile = getWorkersToTranspile(urlInfo, context)
-    if (
-      !workersToTranspile.worker &&
-      !workersToTranspile.serviceWorker &&
-      !workersToTranspile.sharedServiceWorker
-    ) {
-      return null
-    }
+    const toUpdate = []
+    let workerTypeModuleIsSupported
+    let serviceWorkerTypeModuleIsSupported
+    let sharedWorkerTypeModuleIsSupported
     const jsUrls = parseJsUrls({
       js: urlInfo.content,
       url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
       isJsModule: urlInfo.type === "js_module",
     })
+    jsUrls.forEach((jsUrlMention) => {
+      if (jsUrlMention.expectedType !== "js_module") {
+        return
+      }
+      if (jsUrlMention.expectedSubtype === "worker") {
+        if (workerTypeModuleIsSupported === undefined) {
+          workerTypeModuleIsSupported =
+            context.isSupportedOnCurrentClients("worker_type_module")
+        }
+        if (workerTypeModuleIsSupported) {
+          return
+        }
+        toUpdate.push(jsUrlMention)
+        return
+      }
+      if (jsUrlMention.expectedSubtype === "service_worker") {
+        if (serviceWorkerTypeModuleIsSupported === undefined) {
+          serviceWorkerTypeModuleIsSupported =
+            context.isSupportedOnCurrentClients("service_worker_type_module")
+        }
+        if (serviceWorkerTypeModuleIsSupported) {
+          return
+        }
+        toUpdate.push(jsUrlMention)
+        return
+      }
+      if (jsUrlMention.expectedSubtype === "shared_worker") {
+        if (sharedWorkerTypeModuleIsSupported === undefined) {
+          sharedWorkerTypeModuleIsSupported =
+            context.isSupportedOnCurrentClients("shared_worker_type_module")
+        }
+        if (sharedWorkerTypeModuleIsSupported) {
+          return
+        }
+        toUpdate.push(jsUrlMention)
+        return
+      }
+    })
+    if (toUpdate.length === 0) {
+      return null
+    }
     const magicSource = createMagicSource(urlInfo.content)
-    jsUrls.forEach((jsUrl) => {
-      if (
-        jsUrl.type !== "new_worker_first_arg" &&
-        jsUrl.type !== "new_shared_worker_first_arg" &&
-        jsUrl.type !== "service_worker_register_first_arg"
-      ) {
-        return
-      }
-      if (jsUrl.expectedType !== "js_module") {
-        return
-      }
+    toUpdate.forEach((jsUrlMention) => {
       const reference = context.referenceUtils.findByGeneratedSpecifier(
-        JSON.stringify(jsUrl.specifier),
+        JSON.stringify(jsUrlMention.specifier),
       )
       const [newReference] = context.referenceUtils.update(reference, {
         expectedType: "js_classic",
@@ -42,13 +69,13 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
         filename: generateJsClassicFilename(reference.url),
       })
       magicSource.replace({
-        start: jsUrl.start,
-        end: jsUrl.end,
+        start: jsUrlMention.start,
+        end: jsUrlMention.end,
         replacement: newReference.generatedSpecifier,
       })
       magicSource.replace({
-        start: jsUrl.typePropertyNode.value.start,
-        end: jsUrl.typePropertyNode.value.end,
+        start: jsUrlMention.typePropertyNode.value.start,
+        end: jsUrlMention.typePropertyNode.value.end,
         replacement: JSON.stringify("classic"),
       })
     })
@@ -63,34 +90,4 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
       js_classic: transformJsWorkerTypes,
     },
   }
-}
-
-const getWorkersToTranspile = (urlInfo, context) => {
-  let worker = false
-  let serviceWorker = false
-  let sharedWorker = false
-  for (const reference of urlInfo.references) {
-    if (reference.expectedType !== "js_module") {
-      continue
-    }
-    if (
-      reference.expectedSubtype === "worker" &&
-      !context.isSupportedOnCurrentClients("worker_type_module")
-    ) {
-      worker = true
-    }
-    if (
-      reference.expectedSubtype === "service_worker" &&
-      !context.isSupportedOnCurrentClients("service_worker_type_module")
-    ) {
-      serviceWorker = true
-    }
-    if (
-      reference.expectedSubtype === "shared_worker" &&
-      !context.isSupportedOnCurrentClients("shared_worker_type_module")
-    ) {
-      sharedWorker = true
-    }
-  }
-  return { worker, serviceWorker, sharedWorker }
 }
