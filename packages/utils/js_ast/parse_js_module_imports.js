@@ -4,6 +4,11 @@ import { createJsParseError } from "./js_parse_error.js"
 
 // see https://github.com/guybedford/es-module-lexer#usage
 export const parseJsModuleImports = async ({ js, url }) => {
+  // 99% of js modules uses import/export. For thoose who don't we can afford to parse for nothing
+  // instead of checking for nothing 99% of the time
+  // if (!js.includes("import") && !js.includes("export")) {
+  //   return [[], []]
+  // }
   await init
   let parseReturnValue
   try {

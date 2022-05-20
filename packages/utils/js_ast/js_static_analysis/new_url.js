@@ -10,7 +10,7 @@ export const isNewUrlCall = (node) => {
 export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
   if (node.arguments.length === 1) {
     const firstArgNode = node.arguments[0]
-    const urlType = analyzeUrlNodeType(firstArgNode)
+    const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule })
     if (urlType === "StringLiteral") {
       onUrl({
         node: firstArgNode,
