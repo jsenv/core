@@ -2,6 +2,12 @@ import { ancestor } from "acorn-walk"
 
 import { parseJsWithAcorn } from "./parse_js_with_acorn.js"
 import {
+  analyzeImportExpression,
+  analyzeImportDeclaration,
+  analyzeExportNamedDeclaration,
+  analyzeExportAllDeclaration,
+} from "./js_static_analysis/import_export.js"
+import {
   isNewWorkerCall,
   analyzeNewWorkerCall,
   isNewSharedWorkerCall,
@@ -31,9 +37,6 @@ export const parseJsUrls = ({
   isWebWorker = false,
 } = {}) => {
   const jsUrls = []
-  if (canSkipStaticAnalysis({ js, isJsModule, isWebWorker })) {
-    return jsUrls
-  }
   const jsAst = parseJsWithAcorn({
     js,
     url,
@@ -43,6 +46,18 @@ export const parseJsUrls = ({
     jsUrls.push(jsUrl)
   }
   ancestor(jsAst, {
+    ImportDeclaration: (node) => {
+      analyzeImportDeclaration(node, { onUrl })
+    },
+    ImportExpression: (node) => {
+      analyzeImportExpression(node, { onUrl })
+    },
+    ExportNamedDeclaration: (node) => {
+      analyzeExportNamedDeclaration(node, { onUrl })
+    },
+    ExportAllDeclaration: (node) => {
+      analyzeExportAllDeclaration(node, { onUrl })
+    },
     CallExpression: (node) => {
       if (isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
@@ -104,32 +119,4 @@ export const parseJsUrls = ({
     },
   })
   return jsUrls
-}
-
-const canSkipStaticAnalysis = ({ js, isJsModule, isWebWorker }) => {
-  if (isJsModule) {
-    if (
-      js.includes("new URL(") ||
-      js.includes("new Worker(") ||
-      js.includes("new SharedWorker(") ||
-      js.includes("serviceWorker.register(")
-    ) {
-      return false
-    }
-  }
-  if (!isJsModule) {
-    if (
-      js.includes("System.") ||
-      js.includes("new URL(") ||
-      js.includes("new Worker(") ||
-      js.includes("new SharedWorker(") ||
-      js.includes("serviceWorker.register(")
-    ) {
-      return false
-    }
-  }
-  if (isWebWorker && js.includes("importScripts(")) {
-    return false
-  }
-  return true
 }

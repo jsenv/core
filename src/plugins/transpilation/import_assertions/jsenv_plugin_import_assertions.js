@@ -1,61 +1,79 @@
+/*
+ * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
+ * ```js
+ * const file = "./style.css"
+ * const type = "css"
+ * import(file, { assert: { type }})
+ * ```
+ * Jsenv could throw an error when it knows some browsers in runtimeCompat
+ * do not support import assertions
+ * But for now (as it is simpler) we let the browser throw the error
+ */
+
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { parseJsImportAssertions } from "@jsenv/utils/js_ast/parse_js_import_assertions.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 
 import { fetchOriginalUrlInfo } from "../fetch_original_url_info.js"
 
 export const jsenvPluginImportAssertions = () => {
+  const updateReference = (reference, searchParam) => {
+    reference.expectedType = "js_module"
+    reference.filename = `${urlToFilename(reference.url)}.js`
+    reference.mutation = (magicSource) => {
+      magicSource.remove({
+        start: reference.assertNode.start,
+        end: reference.assertNode.end,
+      })
+    }
+
+    return injectQueryParams(reference.url, {
+      [searchParam]: "",
+    })
+  }
+
   const importAssertions = {
     name: "jsenv:import_assertions",
     appliesDuring: "*",
-    transformUrlContent: {
-      js_module: async (urlInfo, context) => {
-        // "usesImportAssertion" is set by "jsenv:imports_analysis"
-        if (urlInfo.data.usesImportAssertion === false) {
+    normalizeUrl: {
+      js_import_export: (reference, context) => {
+        if (!reference.assert) {
           return null
         }
-        const importTypesToTranspile = getImportTypesToTranspile(context)
-        if (importTypesToTranspile.length === 0) {
-          return null
-        }
-        const importAssertions = await parseJsImportAssertions({
-          js: urlInfo.content,
-          url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
-        })
-        const magicSource = createMagicSource(urlInfo.content)
-        importAssertions.forEach((importAssertion) => {
-          const assertType = importAssertion.assert.type
-          if (!importTypesToTranspile.includes(assertType)) {
-            return
+        // during build always replace import assertions with the js:
+        // - avoid rollup to see import assertions
+        //   We would have to tell rollup to ignore import with assertion
+        // - means rollup can bundle more js file together
+        // - means url versioning can work for css inlined in js
+        if (reference.assert.type === "json") {
+          if (
+            context.scenario !== "build" &&
+            context.isSupportedOnCurrentClients("import_type_json")
+          ) {
+            return null
           }
-          const { searchParam } = importAsInfos[assertType]
-          const reference = context.referenceUtils.findByGeneratedSpecifier(
-            JSON.stringify(importAssertion.specifier),
-          )
-          const [newReference] = context.referenceUtils.update(reference, {
-            expectedType: "js_module",
-            specifier: injectQueryParamsIntoSpecifier(
-              importAssertion.specifier,
-              {
-                [searchParam]: "",
-              },
-            ),
-            filename: `${urlToFilename(reference.url)}.js`,
-          })
-          magicSource.replace({
-            start: importAssertion.specifierStart,
-            end: importAssertion.specifierEnd,
-            replacement: newReference.generatedSpecifier,
-          })
-          magicSource.remove({
-            start: importAssertion.assertNode.start,
-            end: importAssertion.assertNode.end,
-          })
-        })
-        return magicSource.toContentAndSourcemap()
+          return updateReference(reference, "as_json_module")
+        }
+        if (reference.assert.type === "css") {
+          if (
+            context.scenario !== "build" &&
+            context.isSupportedOnCurrentClients("import_type_css")
+          ) {
+            return null
+          }
+          return updateReference(reference, "as_css_module")
+        }
+        if (reference.assert.type === "text") {
+          if (
+            context.scenario !== "build" &&
+            context.isSupportedOnCurrentClients("import_type_text")
+          ) {
+            return null
+          }
+          return updateReference(reference, "as_text_module")
+        }
+        return null
       },
     },
   }
@@ -160,41 +178,4 @@ export default inlineContent.text`,
   }
 
   return [asJsonModule, asCssModule, asTextModule]
-}
-
-const importAsInfos = {
-  json: {
-    searchParam: "as_json_module",
-  },
-  css: {
-    searchParam: "as_css_module",
-  },
-  text: {
-    searchParam: "as_text_module",
-  },
-}
-
-const getImportTypesToTranspile = ({
-  scenario,
-  isSupportedOnCurrentClients,
-}) => {
-  // during build always replace import assertions with the js:
-  // - avoid rollup to see import assertions
-  //   We would have to tell rollup to ignore import with assertion
-  // - means rollup can bundle more js file together
-  // - means url versioning can work for css inlined in js
-  if (scenario === "build") {
-    return ["json", "css", "text"]
-  }
-  const importTypes = []
-  if (!isSupportedOnCurrentClients("import_type_json")) {
-    importTypes.push("json")
-  }
-  if (!isSupportedOnCurrentClients("import_type_css")) {
-    importTypes.push("css")
-  }
-  if (!isSupportedOnCurrentClients("import_type_text")) {
-    importTypes.push("text")
-  }
-  return importTypes
 }

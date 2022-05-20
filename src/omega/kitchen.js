@@ -80,17 +80,24 @@ export const createKitchen = ({
     integrity,
     crossorigin,
     specifier,
+    specifierStart,
+    specifierEnd,
+    specifierLine,
+    specifierColumn,
     baseUrl,
     isOriginalPosition,
-    line,
-    column,
     external = false,
     isInline = false,
     injected = false,
     isRessourceHint = false,
     content,
     contentType,
+    assert,
+    assertNode,
   }) => {
+    if (typeof specifier !== "string") {
+      throw new TypeError(`"specifier" must be a string, got ${specifier}`)
+    }
     return {
       original: null,
       prev: null,
@@ -108,10 +115,12 @@ export const createKitchen = ({
       integrity,
       crossorigin,
       specifier,
+      specifierStart,
+      specifierEnd,
+      specifierLine,
+      specifierColumn,
       baseUrl,
       isOriginalPosition,
-      line,
-      column,
       external,
       isInline,
       injected,
@@ -120,6 +129,8 @@ export const createKitchen = ({
       content,
       contentType,
       timing: {},
+      assert,
+      assertNode,
     }
   }
   const mutateReference = (reference, newReference) => {
@@ -228,19 +239,27 @@ export const createKitchen = ({
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
-    foundSourcemap: ({ urlInfo, line, column, type, specifier }) => {
+    foundSourcemap: ({
+      urlInfo,
+      type,
+      specifier,
+      specifierLine,
+      specifierColumn,
+    }) => {
       const sourcemapReference = createReference({
         trace: stringifyUrlSite(
           adjustUrlSite(urlInfo, {
             urlGraph,
             url: urlInfo.url,
-            line,
-            column,
+            line: specifierLine,
+            column: specifierColumn,
           }),
         ),
         type,
         parentUrl: urlInfo.url,
         specifier,
+        specifierLine,
+        specifierColumn,
       })
       const sourcemapUrlInfo = resolveReference(sourcemapReference)
       sourcemapUrlInfo.type = "sourcemap"
@@ -460,7 +479,14 @@ export const createKitchen = ({
       },
       becomesInline: (
         reference,
-        { isOriginalPosition, line, column, specifier, contentType, content },
+        {
+          isOriginalPosition,
+          specifier,
+          specifierLine,
+          specifierColumn,
+          contentType,
+          content,
+        },
       ) => {
         const parentUrl = isOriginalPosition
           ? urlInfo.url
@@ -472,12 +498,14 @@ export const createKitchen = ({
           trace: stringifyUrlSite({
             url: parentUrl,
             content: parentContent,
-            line,
-            column,
+            line: specifierLine,
+            column: specifierColumn,
           }),
           isOriginalPosition,
           isInline: true,
           specifier,
+          specifierLine,
+          specifierColumn,
           contentType,
           content,
         })

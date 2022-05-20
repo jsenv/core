@@ -39,11 +39,11 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       const [reference] = referenceUtils.found({
         type,
         expectedType,
-        line,
-        column,
         originalLine,
         originalColumn,
         specifier,
+        specifierLine: line,
+        specifierColumn: column,
         isRessourceHint,
       })
       actions.push(async () => {

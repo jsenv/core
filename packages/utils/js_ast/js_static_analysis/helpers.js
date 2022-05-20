@@ -15,14 +15,3 @@ export const getTypePropertyNode = (node) => {
 export const isStringLiteralNode = (node) => {
   return node.type === "Literal" && typeof node.value === "string"
 }
-
-export const getNodePosition = (node) => {
-  return {
-    start: node.start,
-    end: node.end,
-    line: node.loc.start.line,
-    column: node.loc.start.column,
-    lineEnd: node.loc.end.line,
-    columnEnd: node.loc.end.column,
-  }
-}

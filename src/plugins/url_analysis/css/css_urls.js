@@ -26,8 +26,10 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
             node: declarationNode,
             type: `css_${type}`,
             specifier,
-            line,
-            column,
+            specifierStart: start,
+            specifierEnd: end,
+            specifierLine: line,
+            specifierColumn: column,
           })
           actions.push(async () => {
             magicSource.replace({

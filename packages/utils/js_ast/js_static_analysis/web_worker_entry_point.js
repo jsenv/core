@@ -1,8 +1,4 @@
-import {
-  getNodePosition,
-  getTypePropertyNode,
-  isStringLiteralNode,
-} from "./helpers.js"
+import { getTypePropertyNode, isStringLiteralNode } from "./helpers.js"
 import { isNewUrlCall, analyzeNewUrlCall } from "./new_url.js"
 
 export const isNewWorkerCall = (node) => {
@@ -116,15 +112,18 @@ const analyzeWorkerCallArguments = (
 
   const firstArgNode = node.arguments[0]
   if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode
     onUrl({
-      node: firstArgNode,
-      ...getNodePosition(firstArgNode),
       type: "js_url_specifier",
       subtype: referenceSubtype,
       expectedType,
       expectedSubtype,
-      specifier: firstArgNode.value,
       typePropertyNode,
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column,
     })
     return
   }

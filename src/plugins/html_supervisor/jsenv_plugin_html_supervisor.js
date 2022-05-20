@@ -33,10 +33,10 @@ export const jsenvPluginHtmlSupervisor = ({
     urlIsInsideOf(rootDirectoryUrl, jsenvRootDirectoryUrl)
   const htmlSupervisorSetupFileUrl = preferSourceFiles
     ? new URL("./client/html_supervisor_setup.js", import.meta.url).href
-    : new URL("./dist/html_supervisor_setup.js", jsenvRootDirectoryUrl)
+    : new URL("./dist/html_supervisor_setup.js", jsenvRootDirectoryUrl).href
   const htmlSupervisorInstallerFileUrl = preferSourceFiles
     ? new URL("./client/html_supervisor_installer.js", import.meta.url).href
-    : new URL("./dist/html_supervisor_installer.js", jsenvRootDirectoryUrl)
+    : new URL("./dist/html_supervisor_installer.js", jsenvRootDirectoryUrl).href
 
   return {
     name: "jsenv:html_supervisor",

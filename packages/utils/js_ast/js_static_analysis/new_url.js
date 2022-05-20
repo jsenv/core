@@ -1,4 +1,4 @@
-import { getNodePosition, isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js"
 
 export const isNewUrlCall = (node) => {
   return (
@@ -12,12 +12,15 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
     const firstArgNode = node.arguments[0]
     const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule })
     if (urlType === "StringLiteral") {
+      const specifierNode = firstArgNode
       onUrl({
-        node: firstArgNode,
-        ...getNodePosition(firstArgNode),
         type: "js_url_specifier",
         subtype: "new_url_first_arg",
-        specifier: firstArgNode.value,
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column,
       })
     }
     return
@@ -31,24 +34,30 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
       const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule })
       if (urlType === "StringLiteral") {
         // we can understand the first argument
+        const specifierNode = firstArgNode
         onUrl({
-          node: firstArgNode,
-          ...getNodePosition(firstArgNode),
           type: "js_url_specifier",
           subtype: "new_url_first_arg",
-          specifier: firstArgNode.value,
+          specifier: specifierNode.value,
+          specifierStart: specifierNode.start,
+          specifierEnd: specifierNode.end,
+          specifierLine: specifierNode.loc.start.line,
+          specifierColumn: specifierNode.loc.start.column,
           baseUrlType,
           baseUrl:
             baseUrlType === "StringLiteral" ? secondArgNode.value : undefined,
         })
       }
       if (baseUrlType === "StringLiteral") {
+        const specifierNode = secondArgNode.value
         onUrl({
-          node: secondArgNode,
-          ...getNodePosition(secondArgNode),
           type: "js_url_specifier",
           subtype: "new_url_second_arg",
-          specifier: secondArgNode.value,
+          specifier: specifierNode.value,
+          specifierStart: specifierNode.start,
+          specifierEnd: specifierNode.end,
+          specifierLine: specifierNode.loc.start.line,
+          specifierColumn: specifierNode.loc.start.column,
         })
       }
     }

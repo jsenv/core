@@ -30,7 +30,7 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
 
-import { jsenvPluginUrlReferences } from "../plugins/url_references/jsenv_plugin_url_references.js"
+import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { createUrlGraph } from "../omega/url_graph.js"
@@ -339,7 +339,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     sourcemapsRelativeSources: true,
     runtimeCompat,
     plugins: [
-      jsenvPluginUrlReferences(),
+      jsenvPluginUrlAnalysis(),
       jsenvPluginAsJsClassic({
         systemJsInjection: true,
       }),
@@ -862,7 +862,7 @@ const applyUrlVersioning = async ({
       sourcemaps,
       runtimeCompat,
       plugins: [
-        jsenvPluginUrlReferences(),
+        jsenvPluginUrlAnalysis(),
         jsenvPluginInline({
           fetchInlineUrls: false,
           analyzeConvertedScripts: true, // to be able to version their urls

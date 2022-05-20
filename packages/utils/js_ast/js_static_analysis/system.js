@@ -1,4 +1,4 @@
-import { getNodePosition, isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js"
 
 export const isSystemRegisterCall = (node) => {
   const callee = node.callee
@@ -28,13 +28,16 @@ const analyzeSystemRegisterDeps = (node, { onUrl }) => {
   const elements = node.elements
   elements.forEach((element) => {
     if (isStringLiteralNode(element)) {
+      const specifierNode = element
       onUrl({
-        node: element,
-        ...getNodePosition(element),
         type: "js_url_specifier",
         subtype: "system_register_arg",
         expectedType: "js_classic",
-        specifier: element.value,
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column,
       })
     }
   })
@@ -56,13 +59,16 @@ export const isSystemImportCall = (node) => {
 export const analyzeSystemImportCall = (node, { onUrl }) => {
   const firstArgNode = node.arguments[0]
   if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode
     onUrl({
-      node: firstArgNode,
-      ...getNodePosition(firstArgNode),
       type: "js_url_specifier",
       subtype: "system_import_arg",
       expectedType: "js_classic",
-      specifier: firstArgNode.value,
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column,
     })
   }
 }

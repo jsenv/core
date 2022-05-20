@@ -85,9 +85,9 @@ export const createUrlInfoTransformer = ({
       const [sourcemapReference, sourcemapUrlInfo] = foundSourcemap({
         urlInfo,
         type,
-        line,
-        column,
         specifier,
+        specifierLine: line,
+        specifierColumn: column,
       })
       try {
         await context.cook({

@@ -1,4 +1,4 @@
-import { getNodePosition, isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js"
 
 export const isImportScriptsCall = (node) => {
   const callee = node.callee
@@ -16,13 +16,16 @@ export const isImportScriptsCall = (node) => {
 export const analyzeImportScriptCalls = (node, { onUrl }) => {
   node.arguments.forEach((arg) => {
     if (isStringLiteralNode(arg)) {
+      const specifierNode = arg
       onUrl({
-        node: arg,
-        ...getNodePosition(arg),
         type: "js_url_specifier",
         subtype: "self_import_scripts_arg",
         expectedType: "js_classic",
-        specifier: arg.value,
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column,
       })
     }
   })

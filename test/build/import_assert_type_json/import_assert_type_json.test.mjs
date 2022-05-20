@@ -36,7 +36,11 @@ const test = async (options) => {
 }
 
 // support for <script type="module">
-await test({})
+await test({
+  runtimeCompat: {
+    chrome: "63",
+  },
+})
 
 // no support <script type="module">
 await test({

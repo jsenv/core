@@ -12,15 +12,32 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const { rootDirectoryUrl, referenceUtils } = context
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
+  urlInfo.data.usesImport = false
+  urlInfo.data.usesExport = false
+  urlInfo.data.usesImportAssertion = false
   jsMentions.forEach((jsMention) => {
+    if (jsMention.assert) {
+      urlInfo.data.usesImportAssertion = true
+    }
+    if (
+      jsMention.subtype === "import_static" ||
+      jsMention.subtype === "import_dynamic"
+    ) {
+      urlInfo.data.usesImport = true
+    }
+    if (jsMention.subtype === "export") {
+      urlInfo.data.usesExport = true
+    }
     const [reference] = referenceUtils.found({
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
       expectedSubtype: jsMention.expectedSubtype || urlInfo.subtype,
-      line: jsMention.line,
-      column: jsMention.column,
       specifier: jsMention.specifier,
+      specifierStart: jsMention.specifierStart,
+      specifierEnd: jsMention.specifierEnd,
+      line: jsMention.specifierLine,
+      column: jsMention.specifierColumn,
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
@@ -29,15 +46,21 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,
       }[jsMention.baseUrlType],
+      assert: jsMention.assert,
+      assertNode: jsMention.assertNode,
     })
     actions.push(async () => {
       magicSource.replace({
-        start: jsMention.start,
-        end: jsMention.end,
+        start: jsMention.specifierStart,
+        end: jsMention.specifierEnd,
         replacement: await referenceUtils.readGeneratedSpecifier(reference),
       })
+      if (reference.mutation) {
+        reference.mutation(magicSource)
+      }
     })
   })
   await Promise.all(actions.map((action) => action()))
-  return magicSource.toContentAndSourcemap()
+  const { content, sourcemap } = magicSource.toContentAndSourcemap()
+  return { content, sourcemap }
 }
