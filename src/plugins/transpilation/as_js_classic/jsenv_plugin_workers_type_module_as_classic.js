@@ -1,12 +1,7 @@
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-import {
-  analyzeNewWorkerOrNewSharedWorker,
-  analyzeServiceWorkerRegisterCall,
-} from "@jsenv/utils/js_ast/js_static_analysis.js"
+import { parseJsUrls } from "@jsenv/core/packages/utils/js_ast/parse_js_urls.js"
 
-// TODO: handle also service worker and shared worker in this plugin
 export const jsenvPluginWorkersTypeModuleAsClassic = ({
   generateJsClassicFilename,
 }) => {
@@ -19,43 +14,41 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
     ) {
       return null
     }
-    const { metadata } = await applyBabelPlugins({
-      babelPlugins: [
-        [
-          babelPluginMetadataWorkerMentions,
-          {
-            workersToTranspile,
-            isJsModule: urlInfo.type === "js_module",
-          },
-        ],
-      ],
-      urlInfo,
+    const jsUrls = parseJsUrls({
+      js: urlInfo.content,
+      url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+      isJsModule: urlInfo.type === "js_module",
     })
-    const { workerMentions } = metadata
     const magicSource = createMagicSource(urlInfo.content)
-    workerMentions.forEach((workerMention) => {
-      if (workerMention.expectedType !== "js_module") {
+    jsUrls.forEach((jsUrl) => {
+      if (
+        jsUrl.type !== "new_worker_first_arg" &&
+        jsUrl.type !== "new_shared_worker_first_arg" &&
+        jsUrl.type !== "service_worker_register_first_arg"
+      ) {
         return
       }
-      const specifier = workerMention.specifier
+      if (jsUrl.expectedType !== "js_module") {
+        return
+      }
       const reference = context.referenceUtils.findByGeneratedSpecifier(
-        JSON.stringify(specifier),
+        JSON.stringify(jsUrl.specifier),
       )
       const [newReference] = context.referenceUtils.update(reference, {
         expectedType: "js_classic",
-        specifier: injectQueryParamsIntoSpecifier(specifier, {
+        specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
           as_js_classic: "",
         }),
         filename: generateJsClassicFilename(reference.url),
       })
       magicSource.replace({
-        start: workerMention.start,
-        end: workerMention.end,
+        start: jsUrl.start,
+        end: jsUrl.end,
         replacement: newReference.generatedSpecifier,
       })
       magicSource.replace({
-        start: workerMention.typeArgNode.value.start,
-        end: workerMention.typeArgNode.value.end,
+        start: jsUrl.typeArgNode.value.start,
+        end: jsUrl.typeArgNode.value.end,
         replacement: JSON.stringify("classic"),
       })
     })
@@ -100,40 +93,4 @@ const getWorkersToTranspile = (urlInfo, context) => {
     }
   }
   return { worker, serviceWorker, sharedWorker }
-}
-
-const babelPluginMetadataWorkerMentions = (
-  _,
-  { workersToTranspile, isJsModule },
-) => {
-  return {
-    name: "metadata-worker-mentions",
-    visitor: {
-      Program(programPath, state) {
-        const workerMentions = []
-        const visitors = {
-          NewExpression: (path) => {
-            if (workersToTranspile.worker || workersToTranspile.sharedWorker) {
-              const mentions = analyzeNewWorkerOrNewSharedWorker(path, {
-                isJsModule,
-              })
-              if (mentions) {
-                workerMentions.push(...mentions)
-              }
-            }
-          },
-        }
-        if (workersToTranspile.serviceWorker) {
-          visitors.CallExpression = (path) => {
-            const mentions = analyzeServiceWorkerRegisterCall(path)
-            if (mentions) {
-              workerMentions.push(...mentions)
-            }
-          }
-        }
-        programPath.traverse(visitors)
-        state.file.metadata.workerMentions = workerMentions
-      },
-    },
-  }
 }
