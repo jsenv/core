@@ -47,13 +47,13 @@ export const parseJsImportAssertions = ({ js, url }) => {
       if (isStringLiteralNode(typeNode)) {
         const type = typeNode.value
         importAssertions.push({
+          type: "import_static",
           node,
           ...getNodePosition(node),
-          assertNode: typeAssertionNode,
-          type: "import_static",
           specifier: node.source.value,
           specifierStart: node.source.start,
           specifierEnd: node.source.end,
+          assertNode: typeAssertionNode,
           assert: {
             type,
           },
@@ -96,6 +96,7 @@ export const parseJsImportAssertions = ({ js, url }) => {
       }
       const type = typePropertyValue.value
       importAssertions.push({
+        type: "import_dynamic",
         node,
         ...getNodePosition(node),
         specifier: firstArgNode.value,

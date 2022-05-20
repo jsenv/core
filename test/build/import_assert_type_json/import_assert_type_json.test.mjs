@@ -22,16 +22,10 @@ const test = async (options) => {
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.namespacePromise
+      return window.resultPromise
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue }
-}
-
-// bundling
-{
-  const { returnValue } = await test()
   const actual = returnValue
   const expected = {
     data: {
@@ -41,33 +35,17 @@ const test = async (options) => {
   assert({ actual, expected })
 }
 
-// bundling + no support for script_type_module
-{
-  const { returnValue } = await test({
-    runtimeCompat: {
-      chrome: "60",
-    },
-    versioning: false,
-  })
-  const actual = returnValue
-  const expected = {
-    data: {
-      answer: 42,
-    },
-  }
-  assert({ actual, expected })
-}
+// support for <script type="module">
+await test({})
+
+// no support <script type="module">
+await test({
+  runtimeCompat: {
+    chrome: "60",
+  },
+})
 
 // no bundling
-{
-  const { returnValue } = await test({
-    bundling: false,
-  })
-  const actual = returnValue
-  const expected = {
-    data: {
-      answer: 42,
-    },
-  }
-  assert({ actual, expected })
-}
+await test({
+  bundling: false,
+})
