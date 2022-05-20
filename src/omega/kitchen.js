@@ -631,6 +631,8 @@ export const createKitchen = ({
   const prepareEntryPoint = (params) => {
     const entryReference = createReference(params)
     const entryUrlInfo = resolveReference(entryReference)
+    // I should likely delete urlInfo.sourcemap
+    // otherwise it is reused when page is reloaded
     return [entryReference, entryUrlInfo]
   }
 

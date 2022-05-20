@@ -13,6 +13,8 @@ const test = async (params) => {
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
+    collectConsole: true,
+    collectErrors: true,
     /* eslint-disable no-undef */
     pageFunction: async () => {
       return window.__html_supervisor__.getScriptExecutionResults()

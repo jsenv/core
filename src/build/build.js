@@ -223,9 +223,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     })
   })
   const addToBundlerIfAny = (rawUrlInfo) => {
-    if (rawUrlInfo.dependencies.size === 0) {
-      return
-    }
+    // if (rawUrlInfo.dependencies.size === 0) {
+    //   return
+    // }
     const bundler = bundlers[rawUrlInfo.type]
     if (bundler) {
       bundler.urlInfos.push(rawUrlInfo)

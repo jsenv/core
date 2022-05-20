@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
-    "@jsenv/utils": "1.6.0",
+    "@jsenv/utils": "1.6.1",
     "@jsenv/url-meta": "6.2.0"
   },
   "devDependencies": {
