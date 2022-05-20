@@ -24,10 +24,10 @@ ${new URL("./client/foo.js", import.meta.url).href}
 --- url reference trace ---
 ${urlToFileSystemPath(
   new URL("./client/intermediate.js", import.meta.url).href,
-)}:2:8
+)}:2:7
   1 | // eslint-disable-next-line import/no-unresolved
 > 2 | import "./foo.js"
-             ^
+            ^
   3 |${" "}
 --- plugin name ---
 "jsenv:fetch_file_urls"`

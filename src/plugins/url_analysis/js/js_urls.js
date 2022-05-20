@@ -36,8 +36,8 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       specifier: jsMention.specifier,
       specifierStart: jsMention.specifierStart,
       specifierEnd: jsMention.specifierEnd,
-      line: jsMention.specifierLine,
-      column: jsMention.specifierColumn,
+      specifierLine: jsMention.specifierLine,
+      specifierColumn: jsMention.specifierColumn,
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
