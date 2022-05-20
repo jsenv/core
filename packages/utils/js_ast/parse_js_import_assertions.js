@@ -1,13 +1,13 @@
 /*
  * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
  * ```js
- * const file ="./style.css"
+ * const file = "./style.css"
  * const type = "css"
  * import(file, { assert: { type }})
  * ```
- * Jsenv could throw an error because we know browser will fail to execute the code
- * because import assertions are not supported.
- * But for now (as it is simpler to do so) we let the browser throw the error
+ * Jsenv could throw an error when it knows some browsers in runtimeCompat
+ * do not support import assertions
+ * But for now (as it is simpler) we let the browser throw the error
  */
 
 import { simple } from "acorn-walk"
@@ -60,38 +60,37 @@ export const parseJsImportAssertions = ({ js, url }) => {
         })
       }
     },
-    CallExpression: (node) => {
-      if (node.callee.type !== "Import") {
-        // Some other function call, not import();
-        return
-      }
-      const args = node.arguments
-      const [firstArgNode, secondArgNode] = args
-      if (isStringLiteralNode(firstArgNode)) {
+    ImportExpression: (node) => {
+      if (!isStringLiteralNode(node.source)) {
         // Non-string argument, probably a variable or expression, e.g.
         // import(moduleId)
         // import('./' + moduleName)
         return
       }
-      if (!secondArgNode) {
+      const firstArgNode = node.arguments[0]
+      if (!firstArgNode) {
         return
       }
-      const { properties } = secondArgNode
+      const { properties } = firstArgNode
       const assertProperty = properties.find((property) => {
         return property.key.name === "assert"
       })
       if (!assertProperty) {
         return
       }
-      const assertProperties = assertProperty.value.properties
-      const typePropertyNode = assertProperties.find((property) => {
+      const assertValueNode = assertProperty.value
+      if (assertValueNode.type !== "ObjectExpression") {
+        return
+      }
+      const assertValueProperties = assertValueNode.properties
+      const typePropertyNode = assertValueProperties.find((property) => {
         return property.key.name === "type"
       })
       if (!typePropertyNode) {
         return
       }
       const typePropertyValue = typePropertyNode.value
-      if (isStringLiteralNode(typePropertyValue)) {
+      if (!isStringLiteralNode(typePropertyValue)) {
         return
       }
       const type = typePropertyValue.value
@@ -99,10 +98,10 @@ export const parseJsImportAssertions = ({ js, url }) => {
         type: "import_dynamic",
         node,
         ...getNodePosition(node),
-        specifier: firstArgNode.value,
-        specifierStart: firstArgNode.start,
-        specifierEnd: firstArgNode.end,
-        assertNode: secondArgNode,
+        specifier: node.source.value,
+        specifierStart: node.source.start,
+        specifierEnd: node.source.end,
+        assertNode: firstArgNode,
         assert: {
           type,
         },

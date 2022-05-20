@@ -179,10 +179,10 @@ const getImportTypesToTranspile = ({
   isSupportedOnCurrentClients,
 }) => {
   // during build always replace import assertions with the js:
-  // - means rollup can bundle more js file together
-  // - means url versioning can work for css inlined in js
   // - avoid rollup to see import assertions
   //   We would have to tell rollup to ignore import with assertion
+  // - means rollup can bundle more js file together
+  // - means url versioning can work for css inlined in js
   if (scenario === "build") {
     return ["json", "css", "text"]
   }

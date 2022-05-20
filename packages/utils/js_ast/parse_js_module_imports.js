@@ -31,16 +31,33 @@ export const parseJsModuleImports = async ({ js, url }) => {
   }
   const findLineAndColumn = createLineAndColumnFinder(js)
   const literalImportsClean = literalImports.map((importInfo) => {
-    const { line, column } = findLineAndColumn(importInfo.s)
     const isDynamic = importInfo.d > -1
+    const usesAssert = importInfo.a > -1
+    const specifierStart = isDynamic ? importInfo.s : importInfo.s - 1
+    const specifierEnd = isDynamic ? importInfo.e : importInfo.e + 1
+    const { line, column } = findLineAndColumn(specifierStart)
+
+    let expectedType = "js_module"
+    if (usesAssert) {
+      const assertString = js.slice(importInfo.a, importInfo.se - 1)
+      if (assertString.includes("json")) {
+        expectedType = "json"
+      } else if (assertString.includes("css")) {
+        expectedType = "css"
+      } else if (assertString.includes("text")) {
+        expectedType = "text"
+      }
+    }
+
     return {
       subtype: isDynamic ? "import_dynamic" : "import_static",
       specifier: importInfo.n,
-      start: isDynamic ? importInfo.s : importInfo.s - 1,
-      end: isDynamic ? importInfo.e : importInfo.e + 1,
-      usesAssert: importInfo.a > -1,
-      line,
-      column,
+      specifierStart,
+      specifierEnd,
+      specifierLine: line,
+      specifierColumn: column,
+      usesAssert,
+      expectedType,
     }
   })
   return [literalImportsClean, exports]

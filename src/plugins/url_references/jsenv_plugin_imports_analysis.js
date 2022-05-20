@@ -16,22 +16,22 @@ export const jsenvPluginImportsAnalysis = () => {
         urlInfo.data.usesImport = imports.length > 0
         urlInfo.data.usesExport = exports.length > 0
         urlInfo.data.usesImportAssertion = imports.some(
-          (importInfo) => importInfo.usesAssert,
+          (importInfo) => typeof importInfo.usesAssert,
         )
         imports.forEach((importInfo) => {
           const [reference] = context.referenceUtils.found({
             type: "js_import_export",
             subtype: importInfo.subtype,
-            expectedType: "js_module",
+            expectedType: importInfo.expectedType, // can be json for import assertions
             expectedSubtype: urlInfo.subtype,
-            line: importInfo.line,
-            column: importInfo.column,
+            line: importInfo.specifierLine,
+            column: importInfo.specifierColumn,
             specifier: importInfo.specifier,
           })
           actions.push(async () => {
             magicSource.replace({
-              start: importInfo.start,
-              end: importInfo.end,
+              start: importInfo.specifierStart,
+              end: importInfo.specifierEnd,
               replacement: await context.referenceUtils.readGeneratedSpecifier(
                 reference,
               ),
