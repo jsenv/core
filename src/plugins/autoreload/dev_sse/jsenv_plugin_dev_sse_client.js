@@ -1,15 +1,20 @@
+import { urlIsInsideOf } from "@jsenv/filesystem"
+
 import {
   parseHtmlString,
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
+import { jsenvRootDirectoryUrl } from "@jsenv/core/src/jsenv_root_directory_url.js"
 
-export const jsenvPluginDevSSEClient = () => {
-  const eventSourceClientFileUrl = new URL(
-    "./client/event_source_client.js",
-    import.meta.url,
-  ).href
+export const jsenvPluginDevSSEClient = ({ rootDirectoryUrl }) => {
+  const preferSourceFiles =
+    rootDirectoryUrl === jsenvRootDirectoryUrl ||
+    urlIsInsideOf(rootDirectoryUrl, jsenvRootDirectoryUrl)
+  const eventSourceClientFileUrl = preferSourceFiles
+    ? new URL("./client/event_source_client.js", import.meta.url).href
+    : new URL("./dist/event_source_client.js", jsenvRootDirectoryUrl).href
 
   return {
     name: "jsenv:dev_sse_client",

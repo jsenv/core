@@ -14,7 +14,9 @@ export const jsenvPluginAutoreload = ({
   }
   return [
     jsenvPluginHmr(),
-    jsenvPluginDevSSEClient(),
+    jsenvPluginDevSSEClient({
+      rootDirectoryUrl,
+    }),
     jsenvPluginDevSSEServer({
       rootDirectoryUrl,
       urlGraph,
