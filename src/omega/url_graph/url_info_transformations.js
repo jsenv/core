@@ -147,7 +147,8 @@ export const createUrlInfoTransformer = ({
       const sourcemap = urlInfo.sourcemap
       if (sourcemapsRelativeSources) {
         sourcemap.sources = sourcemap.sources.map((source) => {
-          return urlToRelativeUrl(source, urlInfo.url)
+          const sourceRelative = urlToRelativeUrl(source, urlInfo.url)
+          return sourceRelative
         })
       }
       sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")

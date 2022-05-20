@@ -3,7 +3,12 @@
  * - https://astexplorer.net/
  * - https://bvaughn.github.io/babel-repl
  */
-import { urlToExtension, urlToFileSystemPath } from "@jsenv/filesystem"
+import {
+  fileSystemPathToUrl,
+  isFileSystemPath,
+  urlToExtension,
+  urlToFileSystemPath,
+} from "@jsenv/filesystem"
 
 import { createJsParseError } from "./js_parse_error.js"
 
@@ -71,10 +76,10 @@ export const applyBabelPlugins = async ({
   try {
     if (ast) {
       const result = await transformFromAstAsync(ast, content, options)
-      return result
+      return normalizeBabelReturnValue(result)
     }
     const result = await transformAsync(content, options)
-    return result
+    return normalizeBabelReturnValue(result)
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createJsParseError({
@@ -88,6 +93,18 @@ export const applyBabelPlugins = async ({
     }
     throw error
   }
+}
+
+const normalizeBabelReturnValue = (babelReturnValue) => {
+  const { map } = babelReturnValue
+  if (map) {
+    map.sources.forEach((source, index) => {
+      if (isFileSystemPath(source)) {
+        map.sources[index] = fileSystemPathToUrl(source)
+      }
+    })
+  }
+  return babelReturnValue
 }
 
 // const pattern = [
