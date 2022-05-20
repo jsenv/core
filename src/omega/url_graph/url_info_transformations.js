@@ -1,3 +1,4 @@
+import { urlToRelativeUrl } from "@jsenv/filesystem"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {
   SOURCEMAP,
@@ -9,6 +10,7 @@ export const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
   sourcemapsSources,
+  sourcemapsRelativeSources,
   urlGraph,
   injectSourcemapPlaceholder,
   foundSourcemap,
@@ -142,11 +144,15 @@ export const createUrlInfoTransformer = ({
       const sourcemapReference = urlInfo.sourcemapReference
       const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
       sourcemapUrlInfo.contentType = "application/json"
-      sourcemapUrlInfo.content = JSON.stringify(urlInfo.sourcemap, null, "  ")
+      const sourcemap = urlInfo.sourcemap
+      if (sourcemapsRelativeSources) {
+        sourcemap.sources = sourcemap.sources.map((source) => {
+          return urlToRelativeUrl(source, urlInfo.url)
+        })
+      }
+      sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")
       if (sourcemaps === "inline") {
-        sourcemapReference.generatedSpecifier = sourcemapToBase64Url(
-          urlInfo.sourcemap,
-        )
+        sourcemapReference.generatedSpecifier = sourcemapToBase64Url(sourcemap)
       }
       if (sourcemaps === "file" || sourcemaps === "inline") {
         urlInfo.content = SOURCEMAP.writeComment({

@@ -45,6 +45,7 @@ export const createKitchen = ({
     test: false,
     build: true,
   }[scenario],
+  sourcemapsRelativeSources,
   runtimeCompat = defaultRuntimeCompat,
   writeOnFileSystem = true,
 }) => {
@@ -214,6 +215,7 @@ export const createKitchen = ({
     urlGraph,
     sourcemaps,
     sourcemapsSources,
+    sourcemapsRelativeSources,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
       const sourcemapReference = createReference({
         trace: `sourcemap comment placeholder for ${urlInfo.url}`,

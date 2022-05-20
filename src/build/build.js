@@ -223,6 +223,9 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     })
   })
   const addToBundlerIfAny = (rawUrlInfo) => {
+    if (rawUrlInfo.dependencies.size === 0) {
+      return
+    }
     const bundler = bundlers[rawUrlInfo.type]
     if (bundler) {
       bundler.urlInfos.push(rawUrlInfo)
@@ -333,6 +336,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     urlGraph: finalGraph,
     scenario: "build",
     sourcemaps,
+    sourcemapsRelativeSources: true,
     runtimeCompat,
     plugins: [
       jsenvPluginUrlReferences(),
