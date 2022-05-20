@@ -49,7 +49,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
         })
       }
       if (baseUrlType === "StringLiteral") {
-        const specifierNode = secondArgNode.value
+        const specifierNode = secondArgNode
         onUrl({
           type: "js_url_specifier",
           subtype: "new_url_second_arg",

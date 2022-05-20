@@ -94,6 +94,7 @@ export const createKitchen = ({
     contentType,
     assert,
     assertNode,
+    typePropertyNode,
   }) => {
     if (typeof specifier !== "string") {
       throw new TypeError(`"specifier" must be a string, got ${specifier}`)
@@ -131,6 +132,7 @@ export const createKitchen = ({
       timing: {},
       assert,
       assertNode,
+      typePropertyNode,
     }
   }
   const mutateReference = (reference, newReference) => {
@@ -360,14 +362,14 @@ export const createKitchen = ({
     clientRuntimeCompat = runtimeCompat,
     cookDuringCook = cook,
   }) => {
+    baseContext.isSupportedOnCurrentClients = (feature) => {
+      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
+    }
     const context = {
       ...baseContext,
       reference,
       outDirectoryUrl,
       clientRuntimeCompat,
-      isSupportedOnCurrentClients: (feature) => {
-        return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
-      },
       cook: (params) => {
         return cookDuringCook({
           outDirectoryUrl,
@@ -416,20 +418,20 @@ export const createKitchen = ({
         }
         return reference.generatedSpecifier
       },
-      found: ({ line, column, ...rest }) => {
+      found: ({ specifierLine, specifierColumn, ...rest }) => {
         const trace = stringifyUrlSite(
           adjustUrlSite(urlInfo, {
             urlGraph,
             url: urlInfo.url,
-            line,
-            column,
+            line: specifierLine,
+            column: specifierColumn,
           }),
         )
         // console.log(trace)
         return addReference({
           trace,
-          line,
-          column,
+          specifierLine,
+          specifierColumn,
           ...rest,
         })
       },

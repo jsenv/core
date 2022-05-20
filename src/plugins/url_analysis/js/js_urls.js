@@ -48,6 +48,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       }[jsMention.baseUrlType],
       assert: jsMention.assert,
       assertNode: jsMention.assertNode,
+      typePropertyNode: jsMention.typePropertyNode,
     })
     actions.push(async () => {
       magicSource.replace({
