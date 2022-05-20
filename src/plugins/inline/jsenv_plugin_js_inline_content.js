@@ -150,7 +150,7 @@ const analyzeNewInlineContentCall = (node, { onInlineContentInfo }) => {
   analyzeArguments({
     node,
     onInlineContentInfo,
-    nodeHoldingInlineContent: node.arguments[0],
+    nodeHoldingContent: node.arguments[0],
     type: "new_inline_content_first_arg",
   })
 }
@@ -169,7 +169,7 @@ const analyzeNewBlobCall = (node, { onInlineContentInfo }) => {
   analyzeArguments({
     node,
     onInlineContentInfo,
-    nodeHoldingInlineContent: firstArg.elements[0],
+    nodeHoldingContent: firstArg.elements[0],
     type: "new_blob_first_arg",
   })
 }
