@@ -6,8 +6,10 @@ import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_g
 
 export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
-    const inlineContentInfos = parseJsInlineContentInfos({
+    const inlineContentInfos = await parseJsInlineContentInfos({
       js: urlInfo.content,
+      url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+      isJsModule: urlInfo.type === "js_module",
     })
     if (inlineContentInfos.length === 0) {
       return null
@@ -89,7 +91,7 @@ const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
       content: js,
     },
   })
-  return metadata.inlineContents
+  return metadata.inlineContentInfos
 }
 
 const babelPluginMetadataInlineContents = () => {
