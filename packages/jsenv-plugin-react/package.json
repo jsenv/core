@@ -17,6 +17,10 @@
     },
     "./*": "./*"
   },
+  "files": [
+    "/src/",
+    "/main.js"
+  ],
   "scripts": {
     "test": "node ./script/test/test.mjs"
   },
