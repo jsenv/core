@@ -12,13 +12,9 @@ export const isNewWorkerCall = (node) => {
     node.callee.name === "Worker"
   )
 }
-export const analyzeNewWorkerCall = (
-  node,
-  { isJsModule, onNewUrlNode, onUrl },
-) => {
-  return analyzeWorkerCallArguments(node, {
+export const analyzeNewWorkerCall = (node, { isJsModule, onUrl }) => {
+  analyzeWorkerCallArguments(node, {
     isJsModule,
-    onNewUrlNode,
     onUrl,
     referenceSubtype: "new_worker_first_arg",
     expectedSubtype: "worker",
@@ -32,13 +28,9 @@ export const isNewSharedWorkerCall = (node) => {
     node.callee.name === "SharedWorker"
   )
 }
-export const analyzeNewSharedWorkerCall = (
-  node,
-  { isJsModule, onNewUrlNode, onUrl },
-) => {
-  return analyzeWorkerCallArguments(node, {
+export const analyzeNewSharedWorkerCall = (node, { isJsModule, onUrl }) => {
+  analyzeWorkerCallArguments(node, {
     isJsModule,
-    onNewUrlNode,
     onUrl,
     referenceSubtype: "new_shared_worker_first_arg",
     expectedSubtype: "shared_worker",
@@ -92,11 +84,10 @@ export const isServiceWorkerRegisterCall = (node) => {
 }
 export const analyzeServiceWorkerRegisterCall = (
   node,
-  { isJsModule, onNewUrlNode, onUrl },
+  { isJsModule, onUrl },
 ) => {
-  return analyzeWorkerCallArguments(node, {
+  analyzeWorkerCallArguments(node, {
     isJsModule,
-    onNewUrlNode,
     onUrl,
     referenceSubtype: "service_worker_register_first_arg",
     expectedSubtype: "service_worker",
@@ -105,7 +96,7 @@ export const analyzeServiceWorkerRegisterCall = (
 
 const analyzeWorkerCallArguments = (
   node,
-  { isJsModule, onNewUrlNode, onUrl, referenceSubtype, expectedSubtype },
+  { isJsModule, onUrl, referenceSubtype, expectedSubtype },
 ) => {
   let expectedType = "js_classic"
   let typePropertyNode
@@ -138,7 +129,6 @@ const analyzeWorkerCallArguments = (
     return
   }
   if (isNewUrlCall(firstArgNode)) {
-    onNewUrlNode(firstArgNode)
     analyzeNewUrlCall(firstArgNode, {
       isJsModule,
       onUrl: (mention) => {

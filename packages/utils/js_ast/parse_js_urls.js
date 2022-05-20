@@ -1,4 +1,4 @@
-import { simple } from "acorn-walk"
+import { ancestor } from "acorn-walk"
 
 import { parseJsWithAcorn } from "./parse_js_with_acorn.js"
 import {
@@ -42,45 +42,12 @@ export const parseJsUrls = ({
   const onUrl = (jsUrl) => {
     jsUrls.push(jsUrl)
   }
-  const newUrlNodeVisitedByWebWorkers = []
-  const onNewUrlNodeInWorker = (newUrlNode) => {
-    newUrlNodeVisitedByWebWorkers.push(newUrlNode)
-  }
-  simple(jsAst, {
-    NewExpression: (node) => {
-      if (isNewWorkerCall(node)) {
-        analyzeNewWorkerCall(node, {
-          isJsModule,
-          onUrl,
-          onNewUrlNode: onNewUrlNodeInWorker,
-        })
-        return
-      }
-      if (isNewSharedWorkerCall(node)) {
-        analyzeNewSharedWorkerCall(node, {
-          isJsModule,
-          onUrl,
-          onNewUrlNode: onNewUrlNodeInWorker,
-        })
-        return
-      }
-      if (isNewUrlCall(node)) {
-        if (newUrlNodeVisitedByWebWorkers.includes(node)) {
-          return
-        }
-        analyzeNewUrlCall(node, {
-          isJsModule,
-          onUrl,
-        })
-        return
-      }
-    },
+  ancestor(jsAst, {
     CallExpression: (node) => {
       if (isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
           isJsModule,
           onUrl,
-          onNewUrlNode: onNewUrlNodeInWorker,
         })
         return
       }
@@ -98,6 +65,38 @@ export const parseJsUrls = ({
       }
       if (!isJsModule && isSystemImportCall(node)) {
         analyzeSystemImportCall(node, {
+          onUrl,
+        })
+        return
+      }
+    },
+    NewExpression: (node, ancestors) => {
+      if (isNewWorkerCall(node)) {
+        analyzeNewWorkerCall(node, {
+          isJsModule,
+          onUrl,
+        })
+        return
+      }
+      if (isNewSharedWorkerCall(node)) {
+        analyzeNewSharedWorkerCall(node, {
+          isJsModule,
+          onUrl,
+        })
+        return
+      }
+      if (isNewUrlCall(node)) {
+        const parent = ancestors[ancestors.length - 2]
+        if (
+          parent &&
+          (isNewWorkerCall(parent) ||
+            isNewSharedWorkerCall(parent) ||
+            isServiceWorkerRegisterCall(parent))
+        ) {
+          return
+        }
+        analyzeNewUrlCall(node, {
+          isJsModule,
           onUrl,
         })
         return

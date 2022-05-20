@@ -5,8 +5,8 @@ export const executeInChromium = async ({
   headScriptUrl,
   pageFunction,
   pageArguments = [],
-  collectConsole = true,
-  collectErrors = true,
+  collectConsole = false,
+  collectErrors = false,
   debug = false,
   headless = !debug,
   autoStop = !debug,
@@ -17,11 +17,14 @@ export const executeInChromium = async ({
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
   const pageLogs = []
-  if (collectConsole) {
-    page.on("console", (message) => {
+  page.on("console", (message) => {
+    if (collectConsole) {
       pageLogs.push({ type: message.type(), text: message.text() })
-    })
-  }
+    } else if (message.type() === "error") {
+      console.error(message.text())
+    }
+  })
+
   const pageErrors = []
   page.on("pageerror", (error) => {
     if (collectErrors) {
