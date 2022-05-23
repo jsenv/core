@@ -62,7 +62,9 @@ export const createFileService = ({
     )
     try {
       // urlInfo objects are reused, they must be "reset" before cooking then again
-      urlGraph.resetUrlInfo(urlInfo)
+      if (!urlInfo.isInline) {
+        urlGraph.resetUrlInfo(urlInfo)
+      }
       await kitchen.cook({
         reference: referenceFromGraph || reference,
         urlInfo,

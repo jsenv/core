@@ -99,11 +99,17 @@ export const jsenvPluginHtmlSupervisor = ({
           const crossorigin = crossoriginAttribute
             ? crossoriginAttribute.value
             : undefined
+          const deferAttribute = getHtmlNodeAttributeByName(node, "crossorigin")
+          const defer = deferAttribute ? deferAttribute.value : undefined
+          const asyncAttribute = getHtmlNodeAttributeByName(node, "crossorigin")
+          const async = asyncAttribute ? asyncAttribute.value : undefined
           removeHtmlNodeAttributeByName(node, "src")
           scriptsToSupervise.push({
             node,
             type: scriptCategory,
             src: srcAttribute.value,
+            defer,
+            async,
             integrity,
             crossorigin,
           })
@@ -183,11 +189,23 @@ export const jsenvPluginHtmlSupervisor = ({
           }),
         )
         scriptsToSupervise.forEach(
-          ({ node, isInline, type, src, integrity, crossorigin }) => {
+          ({
+            node,
+            isInline,
+            type,
+            src,
+            defer,
+            async,
+            integrity,
+            crossorigin,
+          }) => {
             setHtmlNodeGeneratedText(node, {
               generatedText: generateCodeToSuperviseScript({
                 type,
                 src,
+                isInline,
+                defer,
+                async,
                 integrity,
                 crossorigin,
                 htmlSupervisorInstallerSpecifier:
@@ -213,11 +231,21 @@ export const jsenvPluginHtmlSupervisor = ({
 const generateCodeToSuperviseScript = ({
   type,
   src,
+  isInline,
+  defer,
+  async,
   integrity,
   crossorigin,
   htmlSupervisorInstallerSpecifier,
 }) => {
-  const paramsAsJson = JSON.stringify({ src, integrity, crossorigin })
+  const paramsAsJson = JSON.stringify({
+    src,
+    isInline,
+    defer,
+    async,
+    integrity,
+    crossorigin,
+  })
   if (type === "module") {
     return `
       import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}

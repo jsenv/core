@@ -39,4 +39,13 @@ await startDevServer({
       "./test/**/client/main.html": true,
     },
   },
+  clientFiles: {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./**/dist/": false,
+    "./**/docs/": false,
+    "./**/experimental/": false,
+    "./**/node_modules/": false,
+    "./**/packages/": false,
+  },
 })

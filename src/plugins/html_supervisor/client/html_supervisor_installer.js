@@ -69,62 +69,135 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
     }
   }
 
-  __html_supervisor__.addExecution = async ({
-    type,
+  const performExecution = async ({
     src,
+    type,
     currentScript,
-    promise,
+    execute,
+    // https://developer.mozilla.org/en-US/docs/web/html/element/script
   }) => {
     if (logs) {
       console.group(`[jsenv] loading ${type} ${src}`)
     }
     onExecutionStart(src)
-    promise.then(
-      (namespace) => {
-        const executionResult = {
-          status: "completed",
-          namespace,
-          coverage: window.__coverage__,
-        }
-        onExecutionSettled(src, executionResult)
-        if (logs) {
-          console.log(`${type} load ended`)
-          console.groupEnd()
-        }
-      },
-      async (e) => {
-        let error = e
-        const executionResult = {
-          status: "errored",
-          coverage: window.__coverage__,
-        }
-        let errorExposureInConsole = true
-        if (e.name === "SyntaxError") {
-          // errorExposureInConsole = false
-        }
-        if (errorTransformer) {
-          try {
-            error = await errorTransformer(e)
-          } catch (e) {}
-        }
-        executionResult.error = error
-        onExecutionSettled(src, executionResult)
-        onExecutionError(executionResult, {
-          currentScript,
-        })
-        if (errorExposureInConsole) {
-          if (typeof window.reportError === "function") {
-            window.reportError(error)
-          } else {
-            console.error(error)
-          }
-        }
-        if (logs) {
-          console.groupEnd()
-        }
-      },
-    )
+    let completed
+    let result
+    let error
+    try {
+      result = await execute()
+      completed = true
+    } catch (e) {
+      completed = false
+      error = e
+    }
+    if (completed) {
+      const executionResult = {
+        status: "completed",
+        namespace: result,
+        coverage: window.__coverage__,
+      }
+      onExecutionSettled(src, executionResult)
+      if (logs) {
+        console.log(`${type} load ended`)
+        console.groupEnd()
+      }
+      return
+    }
+    const executionResult = {
+      status: "errored",
+      coverage: window.__coverage__,
+    }
+    let errorExposureInConsole = true
+    if (error.name === "SyntaxError") {
+      // errorExposureInConsole = false
+    }
+    if (errorTransformer) {
+      try {
+        error = await errorTransformer(error)
+      } catch (e) {}
+    }
+    executionResult.error = error
+    onExecutionSettled(src, executionResult)
+    onExecutionError(executionResult, {
+      currentScript,
+    })
+    if (errorExposureInConsole) {
+      if (typeof window.reportError === "function") {
+        window.reportError(error)
+      } else {
+        console.error(error)
+      }
+    }
+    if (logs) {
+      console.groupEnd()
+    }
   }
+
+  const queue = []
+  let previousDonePromise = null
+  const dequeue = () => {
+    const next = queue.shift()
+    if (next) {
+      __html_supervisor__.addScriptToExecute(next)
+    } else {
+      const nextDefered = deferQueue.shift()
+      if (nextDefered) {
+        __html_supervisor__.addScriptToExecute(nextDefered)
+      }
+    }
+  }
+  const deferQueue = []
+  let previousDeferDonePromise = null
+  __html_supervisor__.addScriptToExecute = async (scriptToExecute) => {
+    if (scriptToExecute.async) {
+      performExecution(scriptToExecute)
+      return
+    }
+    const useDeferQueue =
+      scriptToExecute.defer || scriptToExecute.type === "js_module"
+    if (useDeferQueue) {
+      if (document.readyState !== "interactive") {
+        deferQueue.push(scriptToExecute)
+        return
+      }
+      if (previousDonePromise) {
+        // defer must wait for the regular script to be done
+        deferQueue.push(scriptToExecute)
+        return
+      }
+      if (previousDeferDonePromise) {
+        deferQueue.push(scriptToExecute)
+        return
+      }
+      previousDeferDonePromise = performExecution(scriptToExecute)
+      await previousDeferDonePromise
+      previousDeferDonePromise = null
+      dequeue()
+      return
+    }
+    if (previousDonePromise) {
+      queue.push(scriptToExecute)
+      return
+    }
+    previousDonePromise = performExecution(scriptToExecute)
+    await previousDonePromise
+    previousDonePromise = null
+    dequeue()
+  }
+  if (
+    document.readyState !== "intractive" &&
+    document.readyState !== "complete"
+  ) {
+    document.addEventListener("readystatechange", () => {
+      if (document.readyState === "interactive") {
+        const nextDefered = deferQueue.shift()
+        if (nextDefered) {
+          __html_supervisor__.addScriptToExecute(nextDefered)
+        }
+      }
+    })
+  }
+
   __html_supervisor__.collectScriptResults = async () => {
     collectCalled = true
     if (pendingExecutionCount === 0) {
@@ -150,20 +223,20 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
       scriptExecutionResults,
     }
   }
-}
 
-export const superviseScriptTypeModule = ({ src }) => {
-  __html_supervisor__.addExecution({
-    type: "js_module",
-    currentScript: null,
-    improveErrorWithFetch: true,
-    src,
-    promise: import(new URL(src, document.location.href).href),
+  const { scriptsToExecute } = __html_supervisor__
+  const copy = scriptsToExecute.slice()
+  scriptsToExecute.length = 0
+  copy.forEach((scriptToExecute) => {
+    __html_supervisor__.addScriptToExecute(scriptToExecute)
   })
 }
 
-const { executions } = __html_supervisor__
-executions.forEach((execution) => {
-  __html_supervisor__.addExecution(execution)
-})
-executions.length = 0
+export const superviseScriptTypeModule = ({ src, isInline }) => {
+  __html_supervisor__.addScriptToExecute({
+    src,
+    type: "js_module",
+    isInline,
+    execute: () => import(new URL(src, document.location.href).href),
+  })
+}

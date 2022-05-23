@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script>
+      window.executionOrder = []
+    </script>
+    <script>
+      window.executionOrder.push("classic_inline_before_a")
+    </script>
+    <script src="./a.js"></script>
+    <script>
+      window.executionOrder.push("classic_inline_after_a")
+    </script>
+    <script type="module">
+      window.executionOrder.push("module_inline")
+    </script>
+    <script>
+      window.executionOrder.push("classic_after_module")
+    </script>
+  </body>
+</html>

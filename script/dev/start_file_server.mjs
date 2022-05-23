@@ -16,6 +16,7 @@ await startServer({
   certificate: serverCertificate,
   requestToResponse: (request) => {
     return fetchFileSystem(new URL(request.ressource.slice(1), directoryUrl), {
+      rootDirectoryUrl: directoryUrl,
       headers: request.headers,
       canReadDirectory: true,
     })

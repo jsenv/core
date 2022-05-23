@@ -38,7 +38,7 @@ export const startDevServer = async ({
   clientFiles = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./dist/": false,
+    "./**/dist/": false,
     "./**/node_modules/": false,
   },
   cooldownBetweenFileEvents,
