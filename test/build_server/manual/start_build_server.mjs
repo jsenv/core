@@ -20,8 +20,6 @@ await startBuildServer({
   buildCommandLogLevel: "warn",
   // minification: false,
   // versioning: false,
-  autorestart: {
-    logLevel: "info",
-    file: import.meta.url,
-  },
+  buildServerAutoreload: true,
+  buildServerMainFile: import.meta.url,
 })

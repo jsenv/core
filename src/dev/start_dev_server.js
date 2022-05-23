@@ -17,7 +17,7 @@ import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
 export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT,
-  logLevel = "warn",
+  logLevel = "info",
   port = 3456,
   protocol = "http",
   listenAnyIp,
@@ -61,6 +61,7 @@ export const startDevServer = async ({
   },
   toolbar = false,
 }) => {
+  const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const reloadableProcess = await initReloadableProcess({
     signal,
@@ -75,15 +76,13 @@ export const startDevServer = async ({
           enabled: false,
         }),
   })
-  const devServerFileChangeCallbackList = []
-  const clientFileChangeCallbackList = []
-  const clientFilesPruneCallbackList = []
   if (reloadableProcess.isPrimary) {
     const devServerFileChangeCallback = ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
-      devServerFileChangeCallbackList.forEach((callback) => {
-        callback({ url, event })
-      })
+      if (devServerAutoreload) {
+        logger.info(`file ${event} ${url} -> restarting server...`)
+        reloadableProcess.reload()
+      }
     }
     const unregisterDevServerFilesWatcher = registerDirectoryLifecycle(
       rootDirectoryUrl,
@@ -106,55 +105,43 @@ export const startDevServer = async ({
         },
       },
     )
-
-    const clientFileChangeCallback = ({ relativeUrl, event }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href
-      clientFileChangeCallbackList.forEach((callback) => {
-        callback({ url, event })
-      })
-    }
-    const unregisterClientFilesWatcher = registerDirectoryLifecycle(
-      rootDirectoryUrl,
-      {
-        watchPatterns: clientFiles,
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "added", relativeUrl })
-        },
-        updated: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "modified", relativeUrl })
-        },
-        removed: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "removed", relativeUrl })
-        },
-      },
-    )
     signal.addEventListener("abort", () => {
       unregisterDevServerFilesWatcher()
-      unregisterClientFilesWatcher()
     })
-
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
         unregisterDevServerFilesWatcher()
-        unregisterClientFilesWatcher()
         reloadableProcess.stop()
       },
     }
   }
 
-  const logger = createLogger({ logLevel })
   const startServerTask = createTaskLog(logger, "start server")
 
-  if (devServerAutoreload) {
-    devServerFileChangeCallbackList.push(({ url, event }) => {
-      logger.info(`file ${event} ${url} -> restarting server...`)
-      reloadableProcess.reload()
+  const clientFileChangeCallbackList = []
+  const clientFilesPruneCallbackList = []
+  const clientFileChangeCallback = ({ relativeUrl, event }) => {
+    const url = new URL(relativeUrl, rootDirectoryUrl).href
+    clientFileChangeCallbackList.forEach((callback) => {
+      callback({ url, event })
     })
   }
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: clientFiles,
+    cooldownBetweenFileEvents,
+    keepProcessAlive: false,
+    recursive: true,
+    added: ({ relativeUrl }) => {
+      clientFileChangeCallback({ event: "added", relativeUrl })
+    },
+    updated: ({ relativeUrl }) => {
+      clientFileChangeCallback({ event: "modified", relativeUrl })
+    },
+    removed: ({ relativeUrl }) => {
+      clientFileChangeCallback({ event: "removed", relativeUrl })
+    },
+  })
   const urlGraph = createUrlGraph({
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList,
@@ -189,7 +176,7 @@ export const startDevServer = async ({
     ],
   })
   const server = await startOmegaServer({
-    logger,
+    logLevel: "warn",
     keepProcessAlive,
     listenAnyIp,
     port,
@@ -215,6 +202,9 @@ export const startDevServer = async ({
   })
   return {
     origin: server.origin,
-    stop: server.stop,
+    stop: () => {
+      stopWatchingClientFiles()
+      server.stop()
+    },
   }
 }

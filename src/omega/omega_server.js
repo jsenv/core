@@ -8,14 +8,13 @@ import {
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
-import { loggerToLogLevel } from "@jsenv/logger"
 
 import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
   signal,
   handleSIGINT,
-  logger,
+  logLevel,
   protocol = "http",
   http2 = protocol === "https",
   privateKey,
@@ -48,7 +47,7 @@ export const startOmegaServer = async ({
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
     keepProcessAlive,
-    logLevel: loggerToLogLevel(logger),
+    logLevel,
     startLog: false,
 
     protocol,

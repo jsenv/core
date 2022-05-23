@@ -89,10 +89,9 @@ export const execute = async ({
         }),
       ],
     })
-    const serverLogger = createLogger({ logLevel: "warn" })
     const server = await startOmegaServer({
       signal: executeOperation.signal,
-      logger: serverLogger,
+      logLevel: "warn",
       rootDirectoryUrl,
       urlGraph,
       kitchen,

@@ -107,12 +107,14 @@ export const createUrlGraph = ({
       // should we delete?
       // delete urlInfos[prunedUrlInfo.url]
     })
-    clientFilesPruneCallbackList.forEach((callback) => {
-      callback({
-        firstUrlInfo,
-        prunedUrlInfos,
+    if (clientFilesPruneCallbackList) {
+      clientFilesPruneCallbackList.forEach((callback) => {
+        callback({
+          firstUrlInfo,
+          prunedUrlInfos,
+        })
       })
-    })
+    }
   }
 
   if (clientFileChangeCallbackList) {
@@ -136,7 +138,9 @@ export const createUrlGraph = ({
     }
     clientFileChangeCallbackList.push(({ url }) => {
       const urlInfo = urlInfos[url]
-      updateModifiedTimestamp(urlInfo, Date.now())
+      if (urlInfo) {
+        updateModifiedTimestamp(urlInfo, Date.now())
+      }
     })
   }
 

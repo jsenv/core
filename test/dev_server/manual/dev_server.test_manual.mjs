@@ -43,7 +43,6 @@ await startDevServer({
       "./errors/**/*.html": true,
     },
   },
-  autorestart: {
-    file: import.meta.url,
-  },
+  devServerMainFile: import.meta.url,
+  devServerAutoreload: true,
 })

@@ -62,33 +62,32 @@ export const startBuildServer = async ({
   cooldownBetweenFileEvents,
   buildCommand,
   mainBuildFileUrl = "/index.html",
-  autorestart,
 }) => {
+  const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
   const reloadableProcess = await initReloadableProcess({
     handleSIGINT,
-    ...(autorestart
+    ...(buildServerAutoreload
       ? {
           enabled: true,
-          logLevel: autorestart.logLevel,
-          fileToRestart: autorestart.file,
+          logLevel: "info",
+          fileToRestart: buildServerMainFile,
         }
       : {
           enabled: false,
         }),
   })
-  const buildServerFileChangeCallbackList = []
-  const clientFileChangeCallbackList = []
   if (reloadableProcess.isPrimary) {
     const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
-      buildServerFileChangeCallbackList.forEach((callback) => {
-        callback({ url, event })
-      })
+      if (buildServerAutoreload) {
+        logger.info(`file ${event} ${url} -> restarting server...`)
+        reloadableProcess.reload()
+      }
     }
-    const unregisterBuildServerFilesWatcher = registerDirectoryLifecycle(
+    const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
       rootDirectoryUrl,
       {
         watchPatterns: {
@@ -109,54 +108,19 @@ export const startBuildServer = async ({
         },
       },
     )
-
-    const clientFileChangeCallback = ({ relativeUrl, event }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href
-      clientFileChangeCallbackList.forEach((callback) => {
-        callback({ url, event })
-      })
-    }
-    const unregisterClientFilesWatcher = registerDirectoryLifecycle(
-      rootDirectoryUrl,
-      {
-        watchPatterns: clientFiles,
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "added", relativeUrl })
-        },
-        updated: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "modified", relativeUrl })
-        },
-        removed: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "removed", relativeUrl })
-        },
-      },
-    )
     signal.addEventListener("abort", () => {
-      unregisterBuildServerFilesWatcher()
-      unregisterClientFilesWatcher()
+      stopWatchingBuildServerFiles()
     })
-
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
-        unregisterBuildServerFilesWatcher()
-        unregisterClientFilesWatcher()
+        stopWatchingBuildServerFiles()
+
         reloadableProcess.stop()
       },
     }
   }
   signal = reloadableProcess.signal
-  const logger = createLogger({ logLevel })
-
-  if (buildServerAutoreload) {
-    buildServerFileChangeCallbackList.push(({ url, event }) => {
-      logger.info(`file ${event} ${url} -> restarting server...`)
-      reloadableProcess.reload()
-    })
-  }
 
   let buildPromise
   let buildAbortController
@@ -253,7 +217,8 @@ export const startBuildServer = async ({
   logger.info(``)
 
   runBuild()
-  clientFileChangeCallbackList.push(({ url, event }) => {
+  const clientFileChangeCallback = ({ relativeUrl, event }) => {
+    const url = new URL(relativeUrl, rootDirectoryUrl).href
     buildAbortController.abort()
     // setTimeout is to ensure the abortController.abort() above
     // is properly taken into account so that logs about abort comes first
@@ -262,10 +227,28 @@ export const startBuildServer = async ({
       logger.info(`${url.slice(rootDirectoryUrl.length)} ${event} -> rebuild`)
       runBuild()
     })
+  }
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: clientFiles,
+    cooldownBetweenFileEvents,
+    keepProcessAlive: false,
+    recursive: true,
+    added: ({ relativeUrl }) => {
+      clientFileChangeCallback({ relativeUrl, event: "added" })
+    },
+    updated: ({ relativeUrl }) => {
+      clientFileChangeCallback({ relativeUrl, event: "modified" })
+    },
+    removed: ({ relativeUrl }) => {
+      clientFileChangeCallback({ relativeUrl, event: "removed" })
+    },
   })
   return {
     origin: server.origin,
-    stop: () => server.stop(),
+    stop: () => {
+      stopWatchingClientFiles()
+      server.stop()
+    },
   }
 }
 

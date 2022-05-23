@@ -60,7 +60,7 @@
     "@financial-times/polyfill-useragent-normaliser": "2.0.1",
     "@jsenv/abort": "4.1.2",
     "@jsenv/babel-plugins": "1.0.2",
-    "@jsenv/filesystem": "3.2.0",
+    "@jsenv/filesystem": "3.2.1",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "1.5.2",

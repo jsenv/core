@@ -4,7 +4,7 @@ let AcornParser
 let _getLineInfo
 
 export const parseJsWithAcorn = async ({ js, url, isJsModule }) => {
-  await initAcornParser
+  await initAcornParser()
   try {
     // https://github.com/acornjs/acorn/tree/master/acorn#interface
     const jsAst = AcornParser.parse(js, {

@@ -11,11 +11,7 @@ import {
   urlToMeta,
   writeFileSync,
 } from "@jsenv/filesystem"
-import {
-  createLogger,
-  createDetailedMessage,
-  loggerToLevels,
-} from "@jsenv/logger"
+import { createDetailedMessage, loggerToLevels } from "@jsenv/logger"
 import { createLog, startSpinner } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
@@ -173,10 +169,9 @@ export const executePlan = async (
           }),
         ],
       })
-      const serverLogger = createLogger({ logLevel: "warn" })
       const server = await startOmegaServer({
         signal: multipleExecutionsOperation.signal,
-        logger: serverLogger,
+        logLevel: "warn",
         rootDirectoryUrl,
         urlGraph,
         kitchen,
