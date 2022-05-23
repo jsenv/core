@@ -61,6 +61,8 @@ export const createFileService = ({
       reference.parentUrl,
     )
     try {
+      // urlInfo objects are reused, they must be "reset" before cooking then again
+      urlGraph.resetUrlInfo(urlInfo)
       await kitchen.cook({
         reference: referenceFromGraph || reference,
         urlInfo,
