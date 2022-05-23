@@ -14,8 +14,8 @@ export const initProcessAutorestart = async ({
   logLevel,
   signal,
   handleSIGINT = true,
-  urlToRestart,
-  urlsToWatch,
+  fileToRestart,
+  filesToWatch,
 }) => {
   if (cluster.isWorker) {
     // Code is interacting with the primary process, the worker is used
@@ -53,15 +53,15 @@ export const initProcessAutorestart = async ({
     }
   }
 
-  const urls = [urlToRestart, ...urlsToWatch].map((url) => String(url))
+  const fileUrls = [fileToRestart, ...filesToWatch].map((url) => String(url))
   const logger = createLogger({ logLevel })
   const startWorker = () => {
     cluster.fork()
   }
 
-  logger.debug(`setup primary ${urlToRestart}`)
+  logger.debug(`setup primary ${fileToRestart}`)
   cluster.setupPrimary({
-    exec: fileURLToPath(urlToRestart),
+    exec: fileURLToPath(fileToRestart),
   })
   cluster.on("online", (worker) => {
     logger.debug(`worker ${worker.process.pid} is online`)
@@ -86,16 +86,16 @@ export const initProcessAutorestart = async ({
     logger.info(`file ${event} ${url} -> restarting...`)
     killWorkers()
   }, 50)
-  const unregisters = urls.map((url) => {
-    return registerFileLifecycle(url, {
+  const unregisters = fileUrls.map((fileUrl) => {
+    return registerFileLifecycle(fileUrl, {
       added: () => {
-        onFileEvent({ url, event: "added" })
+        onFileEvent({ url: fileUrl, event: "added" })
       },
       updated: () => {
-        onFileEvent({ url, event: "modified" })
+        onFileEvent({ url: fileUrl, event: "modified" })
       },
       removed: () => {
-        onFileEvent({ url, event: "removed" })
+        onFileEvent({ url: fileUrl, event: "removed" })
       },
       keepProcessAlive: false,
     })

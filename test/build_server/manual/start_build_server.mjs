@@ -22,6 +22,6 @@ await startBuildServer({
   // versioning: false,
   autorestart: {
     logLevel: "info",
-    url: import.meta.url,
+    file: import.meta.url,
   },
 })

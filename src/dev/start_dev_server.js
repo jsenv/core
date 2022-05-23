@@ -54,9 +54,9 @@ export const startDevServer = async ({
       ? {
           enabled: true,
           logLevel: autorestart.logLevel,
-          urlToRestart: autorestart.url,
-          urlsToWatch: [
-            ...(autorestart.urlsToWatch || []),
+          fileToRestart: autorestart.file,
+          filesToWatch: [
+            ...(autorestart.filesToWatch || []),
             new URL("package.json", rootDirectoryUrl),
             new URL("jsenv.config.mjs", rootDirectoryUrl),
           ],

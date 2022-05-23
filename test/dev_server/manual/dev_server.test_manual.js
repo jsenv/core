@@ -44,6 +44,6 @@ await startDevServer({
     },
   },
   autorestart: {
-    url: import.meta.url,
+    file: import.meta.url,
   },
 })
