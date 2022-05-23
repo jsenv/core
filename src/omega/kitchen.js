@@ -619,7 +619,7 @@ export const createKitchen = ({
       },
     )
   }
-  const cook = async ({ urlInfo, outDirectoryUrl, ...rest }) => {
+  const cook = memoizeCook(async ({ urlInfo, outDirectoryUrl, ...rest }) => {
     outDirectoryUrl = outDirectoryUrl ? String(outDirectoryUrl) : undefined
 
     const writeFiles = ({ gotError }) => {
@@ -654,7 +654,7 @@ export const createKitchen = ({
       writeFiles({ gotError: true })
       throw e
     }
-  }
+  })
 
   baseContext.cook = cook
 
@@ -681,6 +681,37 @@ export const createKitchen = ({
     cook,
     prepareEntryPoint,
     injectReference,
+  }
+}
+
+const memoizeCook = (cook) => {
+  const pendingDishes = new Map()
+  return async (params) => {
+    const { urlInfo } = params
+    const { url, modifiedTimestamp } = urlInfo
+    const pendingDish = pendingDishes.get(url)
+    if (pendingDish) {
+      if (!modifiedTimestamp) {
+        await pendingDish.promise
+        return
+      }
+      if (pendingDish.timestamp > modifiedTimestamp) {
+        await pendingDish.promise
+        return
+      }
+      pendingDishes.delete(url)
+    }
+    const timestamp = Date.now()
+    const promise = cook(params)
+    pendingDishes.set(url, {
+      timestamp,
+      promise,
+    })
+    try {
+      await promise
+    } finally {
+      pendingDishes.delete(url)
+    }
   }
 }
 
