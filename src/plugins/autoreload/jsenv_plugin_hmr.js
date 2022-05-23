@@ -23,12 +23,12 @@ export const jsenvPluginHmr = () => {
         return null
       }
       const urlInfo = context.urlGraph.getUrlInfo(reference.url)
-      if (!urlInfo.data.hmrTimestamp) {
+      if (!urlInfo.modifiedTimestamp) {
         return null
       }
       return {
         hmr: "",
-        v: urlInfo.data.hmrTimestamp,
+        v: urlInfo.modifiedTimestamp,
       }
     },
   }

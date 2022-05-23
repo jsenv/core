@@ -1,31 +1,8 @@
 import { createSSERoom } from "@jsenv/server"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
-import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
-
-export const createSSEService = ({
-  rootDirectoryUrl,
-  watchedFilePatterns,
-  cooldownBetweenFileEvents,
-  onFileChange,
-  serverEventCallbackList,
-}) => {
+export const createSSEService = ({ serverEventCallbackList }) => {
   const destroyCallbackList = createCallbackListNotifiedOnce()
-  // wait 100ms to actually start watching
-  // otherwise server starting is delayed by the filesystem scan done in
-  // registerDirectoryLifecycle
-  const timeout = setTimeout(() => {
-    const unregisterDirectoryLifecyle = watchFiles({
-      rootDirectoryUrl,
-      watchedFilePatterns,
-      cooldownBetweenFileEvents,
-      fileChangeCallback: onFileChange,
-    })
-    destroyCallbackList.add(unregisterDirectoryLifecyle)
-  }, 100)
-  destroyCallbackList.add(() => {
-    clearTimeout(timeout)
-  })
 
   const cache = []
   const sseRoomLimit = 100

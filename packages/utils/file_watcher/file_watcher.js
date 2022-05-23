@@ -1,10 +1,8 @@
 import { registerDirectoryLifecycle } from "@jsenv/filesystem"
 
-import { guardTooFastSecondCall } from "./guard_second_call.js"
-
 export const watchFiles = ({
   rootDirectoryUrl,
-  watchedFilePatterns = {
+  watchPatterns = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
     "./dist/": false,
@@ -13,16 +11,13 @@ export const watchFiles = ({
   cooldownBetweenFileEvents = 0,
   fileChangeCallback,
 }) => {
-  if (cooldownBetweenFileEvents) {
-    fileChangeCallback = guardTooFastSecondCall(
-      fileChangeCallback,
-      cooldownBetweenFileEvents,
-    )
-  }
   const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
     rootDirectoryUrl,
     {
-      watchDescription: watchedFilePatterns,
+      watchPatterns,
+      cooldownBetweenFileEvents,
+      keepProcessAlive: false,
+      recursive: true,
       updated: ({ relativeUrl }) => {
         fileChangeCallback({
           url: new URL(relativeUrl, rootDirectoryUrl).href,
@@ -41,8 +36,6 @@ export const watchFiles = ({
           event: "added",
         })
       },
-      keepProcessAlive: false,
-      recursive: true,
     },
   )
 

@@ -1,7 +1,9 @@
-import { createCallbackList } from "@jsenv/abort"
 import { urlToRelativeUrl } from "@jsenv/filesystem"
 
-export const createUrlGraph = () => {
+export const createUrlGraph = ({
+  clientFileChangeCallbackList,
+  clientFilesPruneCallbackList,
+} = {}) => {
   const urlInfos = {}
   const getUrlInfo = (url) => urlInfos[url]
   const deleteUrlInfo = (url) => {
@@ -49,7 +51,6 @@ export const createUrlGraph = () => {
     return visitDependents(urlInfo)
   }
 
-  const prunedCallbackList = createCallbackList()
   const updateReferences = (urlInfo, references) => {
     const dependencyUrls = []
     references.forEach((reference) => {
@@ -101,7 +102,42 @@ export const createUrlGraph = () => {
     if (prunedUrlInfos.length === 0) {
       return
     }
-    prunedCallbackList.notify({ prunedUrlInfos, firstUrlInfo })
+    prunedUrlInfos.forEach((prunedUrlInfo) => {
+      prunedUrlInfo.modifiedTimestamp = Date.now()
+      // should we delete?
+      // delete urlInfos[prunedUrlInfo.url]
+    })
+    clientFilesPruneCallbackList.forEach((callback) => {
+      callback({
+        firstUrlInfo,
+        prunedUrlInfos,
+      })
+    })
+  }
+
+  if (clientFileChangeCallbackList) {
+    const updateModifiedTimestamp = (urlInfo, modifiedTimestamp) => {
+      const seen = []
+      const iterate = (urlInfo) => {
+        if (seen.includes(urlInfo.url)) {
+          return
+        }
+        seen.push(urlInfo.url)
+        urlInfo.modifiedTimestamp = modifiedTimestamp
+        urlInfo.dependents.forEach((dependentUrl) => {
+          const dependentUrlInfo = urlInfos[dependentUrl]
+          const { hotAcceptDependencies = [] } = dependentUrlInfo.data
+          if (!hotAcceptDependencies.includes(urlInfo.url)) {
+            iterate(dependentUrlInfo)
+          }
+        })
+      }
+      iterate(urlInfo)
+    }
+    clientFileChangeCallbackList.push(({ url }) => {
+      const urlInfo = urlInfos[url]
+      updateModifiedTimestamp(urlInfo, Date.now())
+    })
   }
 
   return {
@@ -111,8 +147,6 @@ export const createUrlGraph = () => {
     deleteUrlInfo,
     inferReference,
     findDependent,
-
-    prunedCallbackList,
     updateReferences,
 
     toJSON: (rootDirectoryUrl) => {
@@ -133,6 +167,7 @@ export const createUrlGraph = () => {
 
 const createUrlInfo = (url) => {
   return {
+    modifiedTimestamp: 0,
     data: {}, // plugins can put whatever they want here
     references: [],
     dependencies: new Set(),

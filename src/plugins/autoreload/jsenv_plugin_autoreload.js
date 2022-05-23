@@ -6,8 +6,8 @@ export const jsenvPluginAutoreload = ({
   rootDirectoryUrl,
   urlGraph,
   scenario,
-  watchedFilePatterns,
-  cooldownBetweenFileEvents,
+  clientFileChangeCallbackList,
+  clientFilesPruneCallbackList,
 }) => {
   if (scenario === "build") {
     return []
@@ -20,8 +20,8 @@ export const jsenvPluginAutoreload = ({
     jsenvPluginDevSSEServer({
       rootDirectoryUrl,
       urlGraph,
-      watchedFilePatterns,
-      cooldownBetweenFileEvents,
+      clientFileChangeCallbackList,
+      clientFilesPruneCallbackList,
     }),
   ]
 }

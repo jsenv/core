@@ -6,10 +6,12 @@ import { createSSEService } from "@jsenv/utils/event_source/sse_service.js"
 export const jsenvPluginDevSSEServer = ({
   rootDirectoryUrl,
   urlGraph,
-  watchedFilePatterns,
-  cooldownBetweenFileEvents,
+  clientFileChangeCallbackList,
+  clientFilesPruneCallbackList,
 }) => {
   const serverEventCallbackList = createCallbackList()
+  const sseService = createSSEService({ serverEventCallbackList })
+
   const notifyDeclined = ({ cause, reason, declinedBy }) => {
     serverEventCallbackList.notify({
       type: "reload",
@@ -31,25 +33,6 @@ export const jsenvPluginDevSSEServer = ({
         hotInstructions: instructions,
       }),
     })
-  }
-  const updateHmrTimestamp = (urlInfo, hmrTimestamp) => {
-    const urlInfos = urlGraph.urlInfos
-    const seen = []
-    const iterate = (urlInfo) => {
-      if (seen.includes(urlInfo.url)) {
-        return
-      }
-      seen.push(urlInfo.url)
-      urlInfo.data.hmrTimestamp = hmrTimestamp
-      urlInfo.dependents.forEach((dependentUrl) => {
-        const dependentUrlInfo = urlInfos[dependentUrl]
-        const { hotAcceptDependencies = [] } = dependentUrlInfo.data
-        if (!hotAcceptDependencies.includes(urlInfo.url)) {
-          iterate(dependentUrlInfo, hmrTimestamp)
-        }
-      })
-    }
-    iterate(urlInfo)
   }
   const propagateUpdate = (firstUrlInfo) => {
     const urlInfos = urlGraph.urlInfos
@@ -129,41 +112,29 @@ export const jsenvPluginDevSSEServer = ({
     const trace = []
     return iterate(firstUrlInfo, trace)
   }
-  const sseService = createSSEService({
-    rootDirectoryUrl,
-    watchedFilePatterns,
-    cooldownBetweenFileEvents,
-    serverEventCallbackList,
-    onFileChange: ({ url, event }) => {
-      const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
-      const urlInfo = urlGraph.urlInfos[url]
-      // file not part of dependency graph
-      if (!urlInfo) {
-        return
-      }
-      updateHmrTimestamp(urlInfo, Date.now())
-      const hotUpdate = propagateUpdate(urlInfo)
-      if (hotUpdate.declined) {
-        notifyDeclined({
-          cause: `${relativeUrl} ${event}`,
-          reason: hotUpdate.reason,
-          declinedBy: hotUpdate.declinedBy,
-        })
-      } else {
-        notifyAccepted({
-          cause: `${relativeUrl} ${event}`,
-          reason: hotUpdate.reason,
-          instructions: hotUpdate.instructions,
-        })
-      }
-    },
+  clientFileChangeCallbackList.push(({ url, event }) => {
+    const urlInfo = urlGraph.urlInfos[url]
+    // file not part of dependency graph
+    if (!urlInfo) {
+      return
+    }
+    const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
+    const hotUpdate = propagateUpdate(urlInfo)
+    if (hotUpdate.declined) {
+      notifyDeclined({
+        cause: `${relativeUrl} ${event}`,
+        reason: hotUpdate.reason,
+        declinedBy: hotUpdate.declinedBy,
+      })
+    } else {
+      notifyAccepted({
+        cause: `${relativeUrl} ${event}`,
+        reason: hotUpdate.reason,
+        instructions: hotUpdate.instructions,
+      })
+    }
   })
-  urlGraph.prunedCallbackList.add(({ prunedUrlInfos, firstUrlInfo }) => {
-    prunedUrlInfos.forEach((prunedUrlInfo) => {
-      prunedUrlInfo.data.hmrTimestamp = Date.now()
-      // should we delete instead?
-      // delete urlGraph.urlInfos[prunedUrlInfo.url]
-    })
+  clientFilesPruneCallbackList.push(({ prunedUrlInfos, firstUrlInfo }) => {
     const mainHotUpdate = propagateUpdate(firstUrlInfo)
     const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
       (prunedUrlInfo) => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
@@ -207,7 +178,7 @@ export const jsenvPluginDevSSEServer = ({
   return {
     name: "jsenv:sse_server",
     appliesDuring: { dev: true },
-    serve: (request, { urlGraph, rootDirectoryUrl }) => {
+    serve: (request) => {
       if (request.ressource === "/__graph__") {
         const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl))
         return {

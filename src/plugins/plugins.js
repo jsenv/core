@@ -31,13 +31,12 @@ export const getCorePlugins = ({
   minification = false,
   bundling = false,
 
-  autoreload = false,
+  clientAutoreload = false,
+  clientFileChangeCallbackList,
+  clientFilesPruneCallbackList,
 } = {}) => {
   if (htmlSupervisor === true) {
     htmlSupervisor = {}
-  }
-  if (autoreload === true) {
-    autoreload = {}
   }
   if (nodeEsmResolution === true) {
     nodeEsmResolution = {}
@@ -75,13 +74,14 @@ export const getCorePlugins = ({
     jsenvPluginMinification(minification),
 
     jsenvPluginImportMetaHot(),
-    ...(autoreload
+    ...(clientAutoreload
       ? [
           jsenvPluginAutoreload({
             rootDirectoryUrl,
             urlGraph,
             scenario,
-            ...autoreload,
+            clientFileChangeCallbackList,
+            clientFilesPruneCallbackList,
           }),
         ]
       : []),

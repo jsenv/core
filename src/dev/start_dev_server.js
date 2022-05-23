@@ -1,4 +1,7 @@
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
+import {
+  assertAndNormalizeDirectoryUrl,
+  registerDirectoryLifecycle,
+} from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
 import { initProcessAutorestart } from "@jsenv/utils/file_watcher/process_auto_restart.js"
@@ -14,7 +17,7 @@ import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
 export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT,
-  logLevel,
+  logLevel = "warn",
   port = 3456,
   protocol = "http",
   listenAnyIp,
@@ -25,6 +28,20 @@ export const startDevServer = async ({
   privateKey,
   keepProcessAlive = true,
   rootDirectoryUrl,
+  clientFiles = {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./dist/": false,
+    "./**/node_modules/": false,
+  },
+  serverFiles = {
+    "./package.json": true,
+    "./jsenv.config.mjs": true,
+  },
+  cooldownBetweenFileEvents,
+  clientAutoreload = true,
+  serverAutoreloadFile,
+  serverAutoreload = false,
 
   sourcemaps = "inline",
   plugins = [],
@@ -33,7 +50,6 @@ export const startDevServer = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
-  autoreload = true,
   explorerGroups = {
     source: {
       "./*.html": true,
@@ -44,31 +60,71 @@ export const startDevServer = async ({
     },
   },
   toolbar = false,
-  autorestart,
 }) => {
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const autorestartProcess = await initProcessAutorestart({
     signal,
     handleSIGINT,
-    ...(autorestart
+    ...(serverAutoreload
       ? {
           enabled: true,
-          logLevel: autorestart.logLevel,
-          fileToRestart: autorestart.file,
-          filesToWatch: [
-            ...(autorestart.filesToWatch || []),
-            new URL("package.json", rootDirectoryUrl),
-            new URL("jsenv.config.mjs", rootDirectoryUrl),
-          ],
+          logLevel: "warn",
+          fileToRestart: serverAutoreloadFile,
+          filesToWatch: serverFiles,
         }
       : {
           enabled: false,
         }),
   })
+  const serveFileChangeCallbackList = []
+  const clientFileChangeCallbackList = []
+  const clientFilesPruneCallbackList = []
   if (autorestartProcess.isPrimary) {
+    // TODO: je pense pas que ça marche vu qu'on wrap ça dans directory lifecycle
+    // (il faudrait pouvoir passer un truc différement)
+    const watchPatterns = {}
+    Object.keys(clientFiles).forEach((pattern) => {
+      watchPatterns[pattern] = clientFiles[pattern] ? { client: true } : null
+    })
+    Object.keys(serverFiles).forEach((pattern) => {
+      watchPatterns[pattern] = serverFiles[pattern] ? { server: true } : null
+    })
+
+    const fileChangeCallback = ({ relativeUrl, event, patternValue }) => {
+      const url = new URL(relativeUrl, rootDirectoryUrl).href
+      const { client, server } = patternValue
+      if (client) {
+        clientFileChangeCallbackList.forEach((callback) => {
+          callback({ url, event })
+        })
+      }
+      if (server) {
+        // do stuff
+      }
+    }
+    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+      rootDirectoryUrl,
+      {
+        watchPatterns,
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({ relativeUrl, patternValue }) => {
+          fileChangeCallback({ event: "added", relativeUrl, patternValue })
+        },
+        updated: ({ relativeUrl, patternValue }) => {
+          fileChangeCallback({ event: "modified", relativeUrl, patternValue })
+        },
+        removed: ({ relativeUrl, patternValue }) => {
+          fileChangeCallback({ event: "removed", relativeUrl, patternValue })
+        },
+      },
+    )
+
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
+        unregisterDirectoryLifecyle()
         autorestartProcess.stop()
       },
     }
@@ -77,7 +133,10 @@ export const startDevServer = async ({
   const logger = createLogger({ logLevel })
   const startServerTask = createTaskLog(logger, "start server")
 
-  const urlGraph = createUrlGraph()
+  const urlGraph = createUrlGraph({
+    clientFileChangeCallbackList,
+    clientFilesPruneCallbackList,
+  })
   const kitchen = createKitchen({
     signal,
     logger,
@@ -97,7 +156,9 @@ export const startDevServer = async ({
         nodeEsmResolution,
         fileSystemMagicResolution,
         transpilation,
-        autoreload,
+        clientAutoreload,
+        clientFileChangeCallbackList,
+        clientFilesPruneCallbackList,
       }),
       jsenvPluginExplorer({
         groups: explorerGroups,
