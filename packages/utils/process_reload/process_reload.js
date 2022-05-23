@@ -1,21 +1,17 @@
 import cluster from "node:cluster"
 import { fileURLToPath } from "node:url"
-import { registerFileLifecycle } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { guardTooFastSecondCall } from "./guard_second_call.js"
-
-export const isAutorestartProcess = cluster.isWorker
+export const isRestartProcess = cluster.isWorker
 
 // https://nodejs.org/api/cluster.html
-export const initProcessAutorestart = async ({
+export const initReloadableProcess = async ({
   enabled = true,
   logLevel,
   signal,
   handleSIGINT = true,
   fileToRestart,
-  filesToWatch,
 }) => {
   if (cluster.isWorker) {
     // Code is interacting with the primary process, the worker is used
@@ -53,7 +49,6 @@ export const initProcessAutorestart = async ({
     }
   }
 
-  const fileUrls = [fileToRestart, ...filesToWatch].map((url) => String(url))
   const logger = createLogger({ logLevel })
   const startWorker = () => {
     cluster.fork()
@@ -82,25 +77,6 @@ export const initProcessAutorestart = async ({
     })
   }
 
-  const onFileEvent = guardTooFastSecondCall(({ url, event }) => {
-    logger.info(`file ${event} ${url} -> restarting...`)
-    killWorkers()
-  }, 50)
-  const unregisters = fileUrls.map((fileUrl) => {
-    return registerFileLifecycle(fileUrl, {
-      added: () => {
-        onFileEvent({ url: fileUrl, event: "added" })
-      },
-      updated: () => {
-        onFileEvent({ url: fileUrl, event: "modified" })
-      },
-      removed: () => {
-        onFileEvent({ url: fileUrl, event: "removed" })
-      },
-      keepProcessAlive: false,
-    })
-  })
-
   const exitEventCallback = (worker, code, signal) => {
     // https://nodejs.org/dist/latest-v16.x/docs/api/cluster.html#workerexitedafterdisconnect
     if (worker.exitedAfterDisconnect) {
@@ -115,9 +91,6 @@ export const initProcessAutorestart = async ({
   cluster.on("exit", exitEventCallback)
 
   const stop = () => {
-    unregisters.forEach((unregister) => {
-      unregister()
-    })
     cluster.removeListener("exit", exitEventCallback)
     killWorkers()
   }
@@ -129,5 +102,8 @@ export const initProcessAutorestart = async ({
     isPrimary: true,
     signal: operation.signal,
     stop,
+    reload: () => {
+      killWorkers()
+    },
   }
 }

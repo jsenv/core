@@ -4,7 +4,7 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 
-import { initProcessAutorestart } from "@jsenv/utils/file_watcher/process_auto_restart.js"
+import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
@@ -28,20 +28,20 @@ export const startDevServer = async ({
   privateKey,
   keepProcessAlive = true,
   rootDirectoryUrl,
+  devServerFiles = {
+    "./package.json": true,
+    "./jsenv.config.mjs": true,
+  },
+  devServerMainFile,
+  devServerAutoreload = false,
   clientFiles = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
     "./dist/": false,
     "./**/node_modules/": false,
   },
-  serverFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true,
-  },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
-  serverAutoreloadFile,
-  serverAutoreload = false,
 
   sourcemaps = "inline",
   plugins = [],
@@ -62,70 +62,86 @@ export const startDevServer = async ({
   toolbar = false,
 }) => {
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
-  const autorestartProcess = await initProcessAutorestart({
+  const reloadableProcess = await initReloadableProcess({
     signal,
     handleSIGINT,
-    ...(serverAutoreload
+    ...(devServerAutoreload
       ? {
           enabled: true,
           logLevel: "warn",
-          fileToRestart: serverAutoreloadFile,
-          filesToWatch: serverFiles,
+          fileToRestart: devServerMainFile,
         }
       : {
           enabled: false,
         }),
   })
-  const serveFileChangeCallbackList = []
+  const devServerFileChangeCallbackList = []
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
-  if (autorestartProcess.isPrimary) {
-    // TODO: je pense pas que ça marche vu qu'on wrap ça dans directory lifecycle
-    // (il faudrait pouvoir passer un truc différement)
-    const watchPatterns = {}
-    Object.keys(clientFiles).forEach((pattern) => {
-      watchPatterns[pattern] = clientFiles[pattern] ? { client: true } : null
-    })
-    Object.keys(serverFiles).forEach((pattern) => {
-      watchPatterns[pattern] = serverFiles[pattern] ? { server: true } : null
-    })
-
-    const fileChangeCallback = ({ relativeUrl, event, patternValue }) => {
+  if (reloadableProcess.isPrimary) {
+    const devServerFileChangeCallback = ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
-      const { client, server } = patternValue
-      if (client) {
-        clientFileChangeCallbackList.forEach((callback) => {
-          callback({ url, event })
-        })
-      }
-      if (server) {
-        // do stuff
-      }
+      devServerFileChangeCallbackList.forEach((callback) => {
+        callback({ url, event })
+      })
     }
-    const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+    const unregisterDevServerFilesWatcher = registerDirectoryLifecycle(
       rootDirectoryUrl,
       {
-        watchPatterns,
+        watchPatterns: {
+          [devServerMainFile]: true,
+          ...devServerFiles,
+        },
         cooldownBetweenFileEvents,
         keepProcessAlive: false,
         recursive: true,
-        added: ({ relativeUrl, patternValue }) => {
-          fileChangeCallback({ event: "added", relativeUrl, patternValue })
+        added: ({ relativeUrl }) => {
+          devServerFileChangeCallback({ relativeUrl, event: "added" })
         },
-        updated: ({ relativeUrl, patternValue }) => {
-          fileChangeCallback({ event: "modified", relativeUrl, patternValue })
+        updated: ({ relativeUrl }) => {
+          devServerFileChangeCallback({ relativeUrl, event: "modified" })
         },
-        removed: ({ relativeUrl, patternValue }) => {
-          fileChangeCallback({ event: "removed", relativeUrl, patternValue })
+        removed: ({ relativeUrl }) => {
+          devServerFileChangeCallback({ relativeUrl, event: "removed" })
         },
       },
     )
 
+    const clientFileChangeCallback = ({ relativeUrl, event }) => {
+      const url = new URL(relativeUrl, rootDirectoryUrl).href
+      clientFileChangeCallbackList.forEach((callback) => {
+        callback({ url, event })
+      })
+    }
+    const unregisterClientFilesWatcher = registerDirectoryLifecycle(
+      rootDirectoryUrl,
+      {
+        watchPatterns: clientFiles,
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "added", relativeUrl })
+        },
+        updated: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "modified", relativeUrl })
+        },
+        removed: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "removed", relativeUrl })
+        },
+      },
+    )
+    signal.addEventListener("abort", () => {
+      unregisterDevServerFilesWatcher()
+      unregisterClientFilesWatcher()
+    })
+
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
-        unregisterDirectoryLifecyle()
-        autorestartProcess.stop()
+        unregisterDevServerFilesWatcher()
+        unregisterClientFilesWatcher()
+        reloadableProcess.stop()
       },
     }
   }
@@ -133,6 +149,12 @@ export const startDevServer = async ({
   const logger = createLogger({ logLevel })
   const startServerTask = createTaskLog(logger, "start server")
 
+  if (devServerAutoreload) {
+    devServerFileChangeCallbackList.push(({ url, event }) => {
+      logger.info(`file ${event} ${url} -> restarting server...`)
+      reloadableProcess.reload()
+    })
+  }
   const urlGraph = createUrlGraph({
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList,

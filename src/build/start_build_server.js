@@ -21,13 +21,15 @@ import {
   pluginCORS,
   fetchFileSystem,
 } from "@jsenv/server"
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
+import {
+  assertAndNormalizeDirectoryUrl,
+  registerDirectoryLifecycle,
+} from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
 import { Abort } from "@jsenv/abort"
 
-import { initProcessAutorestart } from "@jsenv/utils/file_watcher/process_auto_restart.js"
+import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
-import { watchFiles } from "@jsenv/utils/file_watcher/file_watcher.js"
 import { executeCommand } from "@jsenv/utils/command/command.js"
 
 export const startBuildServer = async ({
@@ -45,43 +47,116 @@ export const startBuildServer = async ({
 
   rootDirectoryUrl,
   buildDirectoryUrl,
+  buildServerFiles = {
+    "./package.json": true,
+    "./jsenv.config.mjs": true,
+  },
+  buildServerMainFile,
+  buildServerAutoreload = false,
+  clientFiles = {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./dist/": false,
+    "./**/node_modules/": false,
+  },
+  cooldownBetweenFileEvents,
   buildCommand,
   mainBuildFileUrl = "/index.html",
-  watchedFilePatterns,
-  cooldownBetweenFileEvents,
   autorestart,
 }) => {
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
-  const autorestartProcess = await initProcessAutorestart({
-    signal,
+  const reloadableProcess = await initReloadableProcess({
     handleSIGINT,
     ...(autorestart
       ? {
           enabled: true,
           logLevel: autorestart.logLevel,
           fileToRestart: autorestart.file,
-          filesToWatch: [
-            ...(autorestart.filesToWatch || []),
-            new URL("package.json", rootDirectoryUrl),
-            new URL("jsenv.config.mjs", rootDirectoryUrl),
-          ],
         }
       : {
           enabled: false,
         }),
   })
-  if (autorestartProcess.isPrimary) {
+  const buildServerFileChangeCallbackList = []
+  const clientFileChangeCallbackList = []
+  if (reloadableProcess.isPrimary) {
+    const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
+      const url = new URL(relativeUrl, rootDirectoryUrl).href
+      buildServerFileChangeCallbackList.forEach((callback) => {
+        callback({ url, event })
+      })
+    }
+    const unregisterBuildServerFilesWatcher = registerDirectoryLifecycle(
+      rootDirectoryUrl,
+      {
+        watchPatterns: {
+          [buildServerMainFile]: true,
+          ...buildServerFiles,
+        },
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({ relativeUrl }) => {
+          buildServerFileChangeCallback({ relativeUrl, event: "added" })
+        },
+        updated: ({ relativeUrl }) => {
+          buildServerFileChangeCallback({ relativeUrl, event: "modified" })
+        },
+        removed: ({ relativeUrl }) => {
+          buildServerFileChangeCallback({ relativeUrl, event: "removed" })
+        },
+      },
+    )
+
+    const clientFileChangeCallback = ({ relativeUrl, event }) => {
+      const url = new URL(relativeUrl, rootDirectoryUrl).href
+      clientFileChangeCallbackList.forEach((callback) => {
+        callback({ url, event })
+      })
+    }
+    const unregisterClientFilesWatcher = registerDirectoryLifecycle(
+      rootDirectoryUrl,
+      {
+        watchPatterns: clientFiles,
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "added", relativeUrl })
+        },
+        updated: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "modified", relativeUrl })
+        },
+        removed: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "removed", relativeUrl })
+        },
+      },
+    )
+    signal.addEventListener("abort", () => {
+      unregisterBuildServerFilesWatcher()
+      unregisterClientFilesWatcher()
+    })
+
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
-        autorestartProcess.stop()
+        unregisterBuildServerFilesWatcher()
+        unregisterClientFilesWatcher()
+        reloadableProcess.stop()
       },
     }
   }
-  signal = autorestartProcess.signal
+  signal = reloadableProcess.signal
   const logger = createLogger({ logLevel })
+
+  if (buildServerAutoreload) {
+    buildServerFileChangeCallbackList.push(({ url, event }) => {
+      logger.info(`file ${event} ${url} -> restarting server...`)
+      reloadableProcess.reload()
+    })
+  }
 
   let buildPromise
   let buildAbortController
@@ -177,25 +252,17 @@ export const startBuildServer = async ({
   })
   logger.info(``)
 
-  const unregisterDirectoryLifecyle = watchFiles({
-    rootDirectoryUrl,
-    watchedFilePatterns,
-    cooldownBetweenFileEvents,
-    fileChangeCallback: ({ url, event }) => {
-      buildAbortController.abort()
-      // setTimeout is to ensure the abortController.abort() above
-      // is properly taken into account so that logs about abort comes first
-      // then logs about re-running the build happens
-      setTimeout(() => {
-        logger.info(`${url.slice(rootDirectoryUrl.length)} ${event} -> rebuild`)
-        runBuild()
-      })
-    },
-  })
-  signal.addEventListener("abort", () => {
-    unregisterDirectoryLifecyle()
-  })
   runBuild()
+  clientFileChangeCallbackList.push(({ url, event }) => {
+    buildAbortController.abort()
+    // setTimeout is to ensure the abortController.abort() above
+    // is properly taken into account so that logs about abort comes first
+    // then logs about re-running the build happens
+    setTimeout(() => {
+      logger.info(`${url.slice(rootDirectoryUrl.length)} ${event} -> rebuild`)
+      runBuild()
+    })
+  })
   return {
     origin: server.origin,
     stop: () => server.stop(),

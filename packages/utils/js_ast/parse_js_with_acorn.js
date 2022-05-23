@@ -1,11 +1,10 @@
-import { Parser, getLineInfo } from "acorn"
-import { importAssertions } from "acorn-import-assertions"
-
 import { createJsParseError } from "./js_parse_error.js"
 
-const AcornParser = Parser.extend(importAssertions)
+let AcornParser
+let _getLineInfo
 
-export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
+export const parseJsWithAcorn = async ({ js, url, isJsModule }) => {
+  await initAcornParser
   try {
     // https://github.com/acornjs/acorn/tree/master/acorn#interface
     const jsAst = AcornParser.parse(js, {
@@ -17,7 +16,7 @@ export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
     return jsAst
   } catch (e) {
     if (e && e.name === "SyntaxError") {
-      const { line, column } = getLineInfo(js, e.raisedAt)
+      const { line, column } = _getLineInfo(js, e.raisedAt)
       throw createJsParseError({
         message: e.message,
         url,
@@ -27,4 +26,15 @@ export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
     }
     throw e
   }
+}
+
+const initAcornParser = async () => {
+  if (AcornParser) {
+    return
+  }
+  const { Parser, getLineInfo } = await import("acorn")
+  const { importAssertions } = await import("acorn-import-assertions")
+
+  AcornParser = Parser.extend(importAssertions)
+  _getLineInfo = getLineInfo
 }

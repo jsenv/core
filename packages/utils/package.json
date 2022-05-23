@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/utils",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,7 +27,6 @@
     "acorn-walk": "8.2.0",
     "ansi-to-html": "0.7.2",
     "bytes": "3.1.2",
-    "es-module-lexer": "0.10.5",
     "magic-string": "0.26.1",
     "parse5": "6.0.1",
     "postcss": "8.4.12",

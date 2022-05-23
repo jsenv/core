@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-unresolved
 import { init, parse } from "es-module-lexer"
 
 import { createJsParseError } from "./js_parse_error.js"

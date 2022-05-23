@@ -30,14 +30,14 @@ import {
   analyzeSystemImportCall,
 } from "./js_static_analysis/system.js"
 
-export const parseJsUrls = ({
+export const parseJsUrls = async ({
   js,
   url,
   isJsModule = false,
   isWebWorker = false,
 } = {}) => {
   const jsUrls = []
-  const jsAst = parseJsWithAcorn({
+  const jsAst = await parseJsWithAcorn({
     js,
     url,
     isJsModule,
