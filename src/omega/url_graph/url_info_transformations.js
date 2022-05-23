@@ -1,4 +1,5 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
+import { bufferToEtag, urlToRelativeUrl } from "@jsenv/filesystem"
+
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {
   SOURCEMAP,
@@ -163,6 +164,7 @@ export const createUrlInfoTransformer = ({
         })
       }
     }
+    urlInfo.contentEtag = bufferToEtag(Buffer.from(urlInfo.content))
   }
 
   return {

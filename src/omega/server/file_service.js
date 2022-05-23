@@ -47,6 +47,15 @@ export const createFileService = ({
       type: "entry_point",
       specifier: request.ressource,
     })
+    const ifNoneMatch = request.headers["if-none-match"]
+    if (ifNoneMatch && urlInfo.contentEtag === ifNoneMatch) {
+      return {
+        status: 304,
+        headers: {
+          "cache-control": `private,max-age=0,must-revalidate`,
+        },
+      }
+    }
     const referenceFromGraph = urlGraph.inferReference(
       reference.url,
       reference.parentUrl,
@@ -60,7 +69,7 @@ export const createFileService = ({
           [runtimeName]: runtimeVersion,
         },
       })
-      let { response, contentType, content } = urlInfo
+      let { response, contentType, content, contentEtag } = urlInfo
       if (response) {
         return response
       }
@@ -71,6 +80,7 @@ export const createFileService = ({
           "content-type": contentType,
           "content-length": Buffer.byteLength(content),
           "cache-control": `private,max-age=0,must-revalidate`,
+          "eTag": contentEtag,
         },
         body: content,
         timing: urlInfo.timing,

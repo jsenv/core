@@ -140,6 +140,7 @@ export const createUrlGraph = ({
       const urlInfo = urlInfos[url]
       if (urlInfo) {
         updateModifiedTimestamp(urlInfo, Date.now())
+        urlInfo.contentEtag = null
       }
     })
   }
@@ -187,6 +188,7 @@ const createUrlInfo = (url) => {
     external: false,
     originalContent: undefined,
     content: undefined,
+    contentEtag: null,
     sourcemap: null,
     sourcemapReference: null,
     timing: {},
