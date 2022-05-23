@@ -1,72 +1,72 @@
 window.__html_supervisor__ = {
   // "html_supervisor_installer.js" will implement
-  // - "addExecution"
-  // - "collectScriptResults"
+  // - "addScriptToExecute"
   // - "superviseScriptTypeModule"
-  // and take all executions in "executions" and implement their supervision
-  executions: [],
-  addExecution: execution => {
-    window.__html_supervisor__.executions.push(execution);
-  },
-  collectScriptResults: () => {
-    throw new Error("htmlSupervisor not installed");
-  },
-  superviseScriptTypeModule: () => {
-    throw new Error("htmlSupervisor not installed");
+  // - "collectScriptResults"
+  // and take all executions in "scriptsToExecute" and implement their supervision
+  scriptsToExecute: [],
+  addScriptToExecute: scriptToExecute => {
+    window.__html_supervisor__.scriptsToExecute.push(scriptToExecute);
   },
   superviseScript: ({
     src,
+    isInline,
     crossorigin,
     integrity
   }) => {
-    window.__html_supervisor__.addExecution({
-      type: "js_classic",
-      improveErrorWithFetch: true,
-      currentScript: document.currentScript,
+    window.__html_supervisor__.addScriptToExecute({
       src,
-      promise: new Promise((resolve, reject) => {
-        const script = document.createElement("script");
+      type: "js_classic",
+      isInline,
+      currentScript: document.currentScript,
+      execute: () => {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
 
-        if (crossorigin) {
-          script.crossorigin = crossorigin;
-        }
-
-        if (integrity) {
-          script.integrity = integrity;
-        }
-
-        script.src = src;
-        const scriptUrl = new URL(src, window.location).href;
-        let lastWindowErrorUrl;
-        let lastWindowError;
-
-        const windowErrorCallback = e => {
-          lastWindowErrorUrl = e.filename;
-          lastWindowError = e.error;
-        };
-
-        const cleanup = () => {
-          document.body.removeChild(script);
-          window.removeEventListener("error", windowErrorCallback);
-        };
-
-        window.addEventListener("error", windowErrorCallback);
-        script.addEventListener("error", () => {
-          cleanup();
-          reject(src);
-        });
-        script.addEventListener("load", () => {
-          cleanup();
-
-          if (lastWindowErrorUrl === scriptUrl) {
-            reject(lastWindowError);
-          } else {
-            resolve();
+          if (crossorigin) {
+            script.crossorigin = crossorigin;
           }
+
+          if (integrity) {
+            script.integrity = integrity;
+          }
+
+          script.src = src;
+          const scriptUrl = new URL(src, window.location).href;
+          let lastWindowErrorUrl;
+          let lastWindowError;
+
+          const windowErrorCallback = e => {
+            lastWindowErrorUrl = e.filename;
+            lastWindowError = e.error;
+          };
+
+          const cleanup = () => {
+            document.body.removeChild(script);
+            window.removeEventListener("error", windowErrorCallback);
+          };
+
+          window.addEventListener("error", windowErrorCallback);
+          script.addEventListener("error", () => {
+            cleanup();
+            reject(src);
+          });
+          script.addEventListener("load", () => {
+            cleanup();
+
+            if (lastWindowErrorUrl === scriptUrl) {
+              reject(lastWindowError);
+            } else {
+              resolve();
+            }
+          });
+          document.body.appendChild(script);
         });
-        document.body.appendChild(script);
-      })
+      }
     });
+  },
+  superviseScriptTypeModule: () => {
+    throw new Error("htmlSupervisor not installed");
   },
   getScriptExecutionResults: () => {
     // wait for page to load before collecting script execution results
@@ -86,7 +86,10 @@ window.__html_supervisor__ = {
     return htmlReadyPromise.then(() => {
       return window.__html_supervisor__.collectScriptResults();
     });
+  },
+  collectScriptResults: () => {
+    throw new Error("htmlSupervisor not installed");
   }
 };
 
-//# sourceMappingURL=/html_supervisor_setup.js.map
+//# sourceMappingURL=html_supervisor_setup.js.map

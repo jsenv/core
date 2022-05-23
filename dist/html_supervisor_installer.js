@@ -1039,21 +1039,34 @@ const installHtmlSupervisor = ({
     }
   };
 
-  __html_supervisor__.addExecution = async ({
-    type,
+  const performExecution = async ({
     src,
+    type,
     currentScript,
-    promise
+    execute // https://developer.mozilla.org/en-US/docs/web/html/element/script
+
   }) => {
     if (logs) {
       console.group("[jsenv] loading ".concat(type, " ").concat(src));
     }
 
     onExecutionStart(src);
-    promise.then(namespace => {
+    let completed;
+    let result;
+    let error;
+
+    try {
+      result = await execute();
+      completed = true;
+    } catch (e) {
+      completed = false;
+      error = e;
+    }
+
+    if (completed) {
       const executionResult = {
         status: "completed",
-        namespace,
+        namespace: result,
         coverage: window.__coverage__
       };
       onExecutionSettled(src, executionResult);
@@ -1062,34 +1075,110 @@ const installHtmlSupervisor = ({
         console.log("".concat(type, " load ended"));
         console.groupEnd();
       }
-    }, async e => {
-      let error = e;
-      const executionResult = {
-        status: "errored",
-        coverage: window.__coverage__
-      };
 
-      if (e.name === "SyntaxError") ;
+      return;
+    }
 
-      executionResult.error = error;
-      onExecutionSettled(src, executionResult);
-      onExecutionError(executionResult, {
-        currentScript
-      });
+    const executionResult = {
+      status: "errored",
+      coverage: window.__coverage__
+    };
 
-      {
-        if (typeof window.reportError === "function") {
-          window.reportError(error);
-        } else {
-          console.error(error);
+    if (error.name === "SyntaxError") ;
+
+    executionResult.error = error;
+    onExecutionSettled(src, executionResult);
+    onExecutionError(executionResult, {
+      currentScript
+    });
+
+    {
+      if (typeof window.reportError === "function") {
+        window.reportError(error);
+      } else {
+        console.error(error);
+      }
+    }
+
+    if (logs) {
+      console.groupEnd();
+    }
+  };
+
+  const queue = [];
+  let previousDonePromise = null;
+
+  const dequeue = () => {
+    const next = queue.shift();
+
+    if (next) {
+      __html_supervisor__.addScriptToExecute(next);
+    } else {
+      const nextDefered = deferQueue.shift();
+
+      if (nextDefered) {
+        __html_supervisor__.addScriptToExecute(nextDefered);
+      }
+    }
+  };
+
+  const deferQueue = [];
+  let previousDeferDonePromise = null;
+
+  __html_supervisor__.addScriptToExecute = async scriptToExecute => {
+    if (scriptToExecute.async) {
+      performExecution(scriptToExecute);
+      return;
+    }
+
+    const useDeferQueue = scriptToExecute.defer || scriptToExecute.type === "js_module";
+
+    if (useDeferQueue) {
+      if (document.readyState !== "interactive") {
+        deferQueue.push(scriptToExecute);
+        return;
+      }
+
+      if (previousDonePromise) {
+        // defer must wait for the regular script to be done
+        deferQueue.push(scriptToExecute);
+        return;
+      }
+
+      if (previousDeferDonePromise) {
+        deferQueue.push(scriptToExecute);
+        return;
+      }
+
+      previousDeferDonePromise = performExecution(scriptToExecute);
+      await previousDeferDonePromise;
+      previousDeferDonePromise = null;
+      dequeue();
+      return;
+    }
+
+    if (previousDonePromise) {
+      queue.push(scriptToExecute);
+      return;
+    }
+
+    previousDonePromise = performExecution(scriptToExecute);
+    await previousDonePromise;
+    previousDonePromise = null;
+    dequeue();
+  };
+
+  if (document.readyState !== "intractive" && document.readyState !== "complete") {
+    document.addEventListener("readystatechange", () => {
+      if (document.readyState === "interactive") {
+        const nextDefered = deferQueue.shift();
+
+        if (nextDefered) {
+          __html_supervisor__.addScriptToExecute(nextDefered);
         }
       }
-
-      if (logs) {
-        console.groupEnd();
-      }
     });
-  };
+  }
 
   __html_supervisor__.collectScriptResults = async () => {
     collectCalled = true;
@@ -1120,26 +1209,28 @@ const installHtmlSupervisor = ({
       scriptExecutionResults
     };
   };
-};
-const superviseScriptTypeModule = ({
-  src
-}) => {
-  __html_supervisor__.addExecution({
-    type: "js_module",
-    currentScript: null,
-    improveErrorWithFetch: true,
-    src,
-    promise: import(new URL(src, document.location.href).href)
+
+  const {
+    scriptsToExecute
+  } = __html_supervisor__;
+  const copy = scriptsToExecute.slice();
+  scriptsToExecute.length = 0;
+  copy.forEach(scriptToExecute => {
+    __html_supervisor__.addScriptToExecute(scriptToExecute);
   });
 };
-const {
-  executions
-} = __html_supervisor__;
-executions.forEach(execution => {
-  __html_supervisor__.addExecution(execution);
-});
-executions.length = 0;
+const superviseScriptTypeModule = ({
+  src,
+  isInline
+}) => {
+  __html_supervisor__.addScriptToExecute({
+    src,
+    type: "js_module",
+    isInline,
+    execute: () => import(new URL(src, document.location.href).href)
+  });
+};
 
 export { installHtmlSupervisor, superviseScriptTypeModule };
 
-//# sourceMappingURL=/html_supervisor_installer.js.map
+//# sourceMappingURL=html_supervisor_installer.js.map

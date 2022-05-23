@@ -160,7 +160,10 @@ export const createUrlInfoTransformer = ({
         urlInfo.content = SOURCEMAP.writeComment({
           contentType: urlInfo.contentType,
           content: urlInfo.content,
-          specifier: sourcemapReference.generatedSpecifier,
+          specifier:
+            sourcemaps === "file" && sourcemapsRelativeSources
+              ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
+              : sourcemapReference.generatedSpecifier,
         })
       }
     }
