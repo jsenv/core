@@ -18,6 +18,7 @@ export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT,
   logLevel = "info",
+  omegaServerLogLevel = "warn",
   port = 3456,
   protocol = "http",
   listenAnyIp,
@@ -176,7 +177,7 @@ export const startDevServer = async ({
     ],
   })
   const server = await startOmegaServer({
-    logLevel: "warn",
+    logLevel: omegaServerLogLevel,
     keepProcessAlive,
     listenAnyIp,
     port,
