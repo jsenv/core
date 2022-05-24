@@ -62,7 +62,7 @@ export const createFileService = ({
     )
     try {
       // urlInfo objects are reused, they must be "reset" before cooking then again
-      if (!urlInfo.isInline) {
+      if (!urlInfo.isInline && !urlInfo.type === "sourcemap") {
         urlGraph.resetUrlInfo(urlInfo)
       }
       await kitchen.cook({
