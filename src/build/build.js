@@ -336,7 +336,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     urlGraph: finalGraph,
     scenario: "build",
     sourcemaps,
-    sourcemapsRelativeSources: true,
+    sourcemapsRelativeSources: !versioning,
     runtimeCompat,
     plugins: [
       jsenvPluginUrlAnalysis(),
@@ -873,6 +873,7 @@ const applyUrlVersioning = async ({
       urlGraph: finalGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsRelativeSources: true,
       runtimeCompat,
       plugins: [
         jsenvPluginUrlAnalysis(),
