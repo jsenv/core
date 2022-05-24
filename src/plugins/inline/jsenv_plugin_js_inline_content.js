@@ -274,8 +274,9 @@ const getOriginalName = (path, name) => {
     return getOriginalName(path, importedName)
   }
   if (binding.path.type === "VariableDeclarator") {
-    if (binding.path.node.init.type === "Identifier") {
-      const previousName = binding.path.node.init.name
+    const { init } = binding.path.node
+    if (init && init.type === "Identifier") {
+      const previousName = init.name
       return getOriginalName(path, previousName)
     }
   }
