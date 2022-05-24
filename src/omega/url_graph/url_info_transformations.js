@@ -10,7 +10,7 @@ import {
 export const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
-  sourcemapsSources,
+  sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   urlGraph,
   injectSourcemapPlaceholder,
@@ -26,7 +26,7 @@ export const createUrlInfoTransformer = ({
       // for inline content (<script> insdide html)
       // chrome won't be able to fetch the file as it does not exists
       // so sourcemap must contain sources
-      sourcemapsSources ||
+      sourcemapsSourcesContent ||
       urlInfo.isInline ||
       (sourcemap.sources &&
         sourcemap.sources.some(

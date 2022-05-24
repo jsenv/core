@@ -38,7 +38,7 @@ export const createKitchen = ({
     test: "inline",
     build: "none",
   }[scenario],
-  sourcemapsSources = {
+  sourcemapsSourcesContent = {
     // during dev/test, chrome is able to find the sourcemap sources
     // as long as they use file:// protocol in the sourcemap files
     dev: false,
@@ -227,7 +227,7 @@ export const createKitchen = ({
     logger,
     urlGraph,
     sourcemaps,
-    sourcemapsSources,
+    sourcemapsSourcesContent,
     sourcemapsRelativeSources,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
       const sourcemapReference = createReference({
