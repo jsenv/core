@@ -1,6 +1,4 @@
-export const sortUrlGraphByDependencies = (urlGraph) => {
-  const { urlInfos } = urlGraph
-
+export const sortByDependencies = (nodes) => {
   const visited = []
   const sorted = []
   const circular = []
@@ -15,13 +13,13 @@ export const sortUrlGraphByDependencies = (urlGraph) => {
       sorted.push(url)
     } else {
       visited.push(url)
-      urlInfos[url].dependencies.forEach((dependencyUrl) => {
+      nodes[url].dependencies.forEach((dependencyUrl) => {
         visit(dependencyUrl, url)
       })
       sorted.push(url)
     }
   }
-  Object.keys(urlInfos).forEach((url) => {
+  Object.keys(nodes).forEach((url) => {
     visit(url)
   })
   sorted.circular = circular

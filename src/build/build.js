@@ -29,6 +29,7 @@ import {
   parseHtmlString,
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
+import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js"
 
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
@@ -38,7 +39,6 @@ import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
 import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
-import { sortUrlGraphByDependencies } from "../omega/url_graph/url_graph_sort.js"
 import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
 import { GRAPH } from "./graph_utils.js"
@@ -783,7 +783,7 @@ const applyUrlVersioning = async ({
 }) => {
   const versioningTask = createTaskLog(logger, "inject version in urls")
   try {
-    const urlsSorted = sortUrlGraphByDependencies(finalGraph)
+    const urlsSorted = sortByDependencies(finalGraph.urlInfos)
     urlsSorted.forEach((url) => {
       if (url.startsWith("data:")) {
         return

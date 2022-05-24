@@ -93,7 +93,7 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
             }
 
             const atRuleStart = atImportNode.source.start.offset
-            const atRuleEnd = atImportNode.source.end.offset
+            const atRuleEnd = atImportNode.source.end.offset + 1 // for the ";"
             const atRuleRaw = atImportNode.source.input.css.slice(
               atRuleStart,
               atRuleEnd,
@@ -101,16 +101,19 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
             const specifierIndex = atRuleRaw.indexOf(atImportNode.params)
             const specifierStart = atRuleStart + specifierIndex
             const specifierEnd = specifierStart + atImportNode.params.length
-            const line = atImportNode.source.start.line
-            const column = atImportNode.source.start.column + specifierIndex
+            const specifierLine = atImportNode.source.start.line
+            const specifierColumn =
+              atImportNode.source.start.column + specifierIndex
             urlVisitor({
               declarationNode: atImportNode,
               type: "@import",
+              atRuleStart,
+              atRuleEnd,
               specifier,
-              line,
-              column,
-              start: specifierStart,
-              end: specifierEnd,
+              specifierLine,
+              specifierColumn,
+              specifierStart,
+              specifierEnd,
               replace: (newUrlSpecifier) => {
                 if (newUrlSpecifier === urlNode.value) {
                   return
@@ -165,8 +168,8 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               // declarationNode.source.input.css.slice(valueStart)
               // specifier raw
               // declarationNode.source.input.css.slice(specifierStart, specifierEnd)
-              const line = declarationNode.source.start.line
-              const column =
+              const specifierLine = declarationNode.source.start.line
+              const specifierColumn =
                 declarationNode.source.start.column +
                 (specifierStart - declarationNodeStart)
 
@@ -174,10 +177,10 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 declarationNode,
                 type: "url",
                 specifier,
-                line,
-                column,
-                start: specifierStart,
-                end: specifierEnd,
+                specifierLine,
+                specifierColumn,
+                specifierStart,
+                specifierEnd,
                 replace: (newUrlSpecifier) => {
                   urlMutations.push(() => {
                     // the specifier desires to be inside double quotes

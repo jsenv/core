@@ -13,19 +13,26 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
     sourcemaps: false,
     plugins: [
       postCssPluginUrlVisitor({
-        urlVisitor: ({ type, specifier, line, column, start, end }) => {
+        urlVisitor: ({
+          type,
+          specifier,
+          specifierStart,
+          specifierEnd,
+          specifierLine,
+          specifierColumn,
+        }) => {
           const [reference] = context.referenceUtils.found({
             type: `css_${type}`,
             specifier,
-            specifierStart: start,
-            specifierEnd: end,
-            specifierLine: line,
-            specifierColumn: column,
+            specifierStart,
+            specifierEnd,
+            specifierLine,
+            specifierColumn,
           })
           actions.push(async () => {
             magicSource.replace({
-              start,
-              end,
+              start: specifierStart,
+              end: specifierEnd,
               replacement: await context.referenceUtils.readGeneratedSpecifier(
                 reference,
               ),
