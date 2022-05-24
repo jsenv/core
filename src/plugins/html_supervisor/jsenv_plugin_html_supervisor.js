@@ -147,9 +147,6 @@ export const jsenvPluginHtmlSupervisor = ({
             return
           }
         })
-        if (scriptsToSupervise.length === 0) {
-          return null
-        }
         const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
           type: "js_import_export",
           expectedType: "js_module",
