@@ -44,12 +44,12 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               context.referenceUtils.foundInline({
                 type: "link_href",
                 expectedType: "css",
+                isOriginalPosition: isOriginal,
                 // we remove 1 to the line because imagine the following html:
                 // <style>body { color: red; }</style>
                 // -> content starts same line as <style>
-                line: line - 1,
-                column,
-                isOriginalPosition: isOriginal,
+                specifierLine: line - 1,
+                specifierColumn: column,
                 specifier: inlineStyleUrl,
                 contentType: "text/css",
                 content: textNode.value,
@@ -127,8 +127,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
                 // -> content starts same line as <script>
-                line: line - 1,
-                column,
+                specifierLine: line - 1,
+                specifierColumn: column,
                 isOriginalPosition: isOriginal,
                 specifier: inlineScriptUrl,
                 contentType,

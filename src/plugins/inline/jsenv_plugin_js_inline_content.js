@@ -40,8 +40,8 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
           type: "js_inline_content",
           subtype: inlineContentInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
           isOriginalPosition: urlInfo.content === urlInfo.originalContent,
-          line: inlineContentInfo.line,
-          column: inlineContentInfo.column,
+          specifierLine: inlineContentInfo.line,
+          specifierColumn: inlineContentInfo.column,
           specifier: inlineUrl,
           contentType: inlineContentInfo.contentType,
           content: inlineContentInfo.content,

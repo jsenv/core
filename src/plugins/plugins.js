@@ -73,7 +73,9 @@ export const getCorePlugins = ({
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
 
-    jsenvPluginImportMetaHot(),
+    jsenvPluginImportMetaHot({
+      rootDirectoryUrl,
+    }),
     ...(clientAutoreload
       ? [
           jsenvPluginAutoreload({

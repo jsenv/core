@@ -202,12 +202,12 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               node: moduleScriptNode,
               type: "script_src",
               expectedType: "js_module",
+              isOriginalPosition: isOriginal,
               // we remove 1 to the line because imagine the following html:
               // <script>console.log('ok')</script>
               // -> content starts same line as <script>
-              line: line - 1,
-              column,
-              isOriginalPosition: isOriginal,
+              specifierLine: line - 1,
+              specifierColumn: column,
               specifier: inlineScriptUrl,
               contentType: "application/javascript",
               content: textNode.value,

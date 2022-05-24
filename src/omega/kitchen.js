@@ -732,8 +732,8 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       content: reference.isOriginalPosition
         ? parentUrlInfo.originalContent
         : parentUrlInfo.content,
-      line: reference.line,
-      column: reference.column,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
     }
     urlInfo.contentType = reference.contentType
     urlInfo.originalContent =

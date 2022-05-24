@@ -68,9 +68,9 @@ export const jsenvPluginHtmlSupervisor = ({
             expectedType: { classic: "js_classic", module: "js_module" }[
               scriptCategory
             ],
-            line: line - 1,
-            column,
             isOriginalPosition: isOriginal,
+            specifierLine: line - 1,
+            specifierColumn: column,
             specifier: inlineScriptUrl,
             contentType: "text/javascript",
             content: textNode.value,
