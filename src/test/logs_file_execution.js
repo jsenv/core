@@ -60,7 +60,7 @@ export const formatExecutionResult = (
       file: fileRelativeUrl,
       runtime: `${runtimeName}/${runtimeVersion}`,
       duration: msAsDuration(duration),
-      ...(error ? { error: error.stack } : {}),
+      ...(error ? { error: error.stack || error.message || error } : {}),
     },
     consoleOutput,
   })
