@@ -33,7 +33,7 @@ const test = async (params) => {
   }
   const expected = {
     returnValue: {
-      fontFamily: "Roboto",
+      fontSize: "20px",
     },
     pageLogs: [],
   }
@@ -44,5 +44,13 @@ const test = async (params) => {
 await test({
   runtimeCompat: {
     chrome: "63",
+  },
+})
+
+// no support for <script type="module">
+await test({
+  bundling: false,
+  runtimeCompat: {
+    chrome: "62",
   },
 })

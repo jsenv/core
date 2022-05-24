@@ -6,6 +6,7 @@ export const loadUrlGraph = async ({
   startLoading,
   outDirectoryUrl,
   clientRuntimeCompat,
+  skipRessourceHint = false,
 }) => {
   if (outDirectoryUrl) {
     await ensureEmptyDirectory(outDirectoryUrl)
@@ -33,6 +34,9 @@ export const loadUrlGraph = async ({
     })
     const { references } = urlInfo
     references.forEach((reference) => {
+      if (skipRessourceHint && reference.isRessourceHint) {
+        return
+      }
       // we use reference.generatedUrl to mimic what a browser would do:
       // do a fetch to the specifier as found in the file
       const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(

@@ -27,10 +27,10 @@ export const jsenvPluginImportAssertions = () => {
         end: reference.assertNode.end,
       })
     }
-
-    return injectQueryParams(reference.url, {
+    const newUrl = injectQueryParams(reference.url, {
       [searchParam]: "",
     })
+    return newUrl
   }
 
   const importAssertions = {

@@ -119,7 +119,15 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
 
 const generateJsClassicFilename = (url) => {
   const filename = urlToFilename(url)
-  const [basename, extension] = splitFileExtension(filename)
+  let [basename, extension] = splitFileExtension(filename)
+  const { searchParams } = new URL(url)
+  if (
+    searchParams.has("as_json_module") ||
+    searchParams.has("as_css_module") ||
+    searchParams.has("as_text_module")
+  ) {
+    extension = ".js"
+  }
   return `${basename}.es5${extension}`
 }
 

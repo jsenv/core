@@ -56,8 +56,8 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
 // To keep in mind: if you have "user.jsx" and "user.js" AND both file are not bundled
 // you end up with "dist/js/user.js" and "dist/js/user2.js"
 const extensionMappings = {
-  ".ts": ".js",
   ".jsx": ".js",
+  ".ts": ".js",
   ".tsx": ".js",
 }
 

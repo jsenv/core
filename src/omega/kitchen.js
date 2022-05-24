@@ -164,6 +164,12 @@ export const createKitchen = ({
           if (returnValue === reference.url) {
             return
           }
+          const normalizedReturnValue = returnValue.startsWith("data:")
+            ? returnValue
+            : returnValue.replace(/[=](?=&|$)/g, "")
+          if (normalizedReturnValue === reference.url) {
+            return
+          }
           const previousReference = { ...reference }
           reference.url = returnValue
           mutateReference(previousReference, reference)

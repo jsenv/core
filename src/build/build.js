@@ -618,6 +618,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
       urlGraph: finalGraph,
       kitchen: finalGraphKitchen,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+      skipRessourceHint: true,
       startLoading: (cookEntryFile) => {
         entryUrls.forEach((entryUrl) => {
           const [, postBuildEntryUrlInfo] = cookEntryFile({
@@ -698,7 +699,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       urlInfo.dependents.size === 0
     ) {
       cleanupActions.push(() => {
-        delete finalGraph.urlInfos[urlInfo.url]
+        finalGraph.deleteUrlInfo(urlInfo.url)
       })
     }
   })
@@ -969,6 +970,7 @@ const applyUrlVersioning = async ({
     await loadUrlGraph({
       urlGraph: finalGraph,
       kitchen: versioningKitchen,
+      skipRessourceHint: true,
       startLoading: (cookEntryFile) => {
         postBuildEntryUrls.forEach((postBuildEntryUrl) => {
           cookEntryFile({
