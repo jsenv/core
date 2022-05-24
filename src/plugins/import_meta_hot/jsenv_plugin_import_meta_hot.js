@@ -1,16 +1,20 @@
+import { urlIsInsideOf } from "@jsenv/filesystem"
+
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { parseHtmlString } from "@jsenv/utils/html_ast/html_ast.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-
+import { jsenvRootDirectoryUrl } from "@jsenv/core/src/jsenv_root_directory_url.js"
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-const importMetaHotClientFileUrl = new URL(
-  "./client/import_meta_hot.js",
-  import.meta.url,
-).href
+export const jsenvPluginImportMetaHot = ({ rootDirectoryUrl }) => {
+  const preferSourceFiles =
+    rootDirectoryUrl === jsenvRootDirectoryUrl ||
+    urlIsInsideOf(rootDirectoryUrl, jsenvRootDirectoryUrl)
+  const importMetaHotClientFileUrl = preferSourceFiles
+    ? new URL("./client/import_meta_hot.js", import.meta.url).href
+    : new URL("./dist/import_meta_hot.js", jsenvRootDirectoryUrl).href
 
-export const jsenvPluginImportMetaHot = () => {
   return {
     name: "jsenv:import_meta_hot",
     appliesDuring: "*",
@@ -62,7 +66,7 @@ export const jsenvPluginImportMetaHot = () => {
         if (context.scenario === "build") {
           return removeImportMetaHots(urlInfo, importMetaHotPaths)
         }
-        return injectImportMetaHot(urlInfo, context)
+        return injectImportMetaHot(urlInfo, context, importMetaHotClientFileUrl)
       },
     },
   }
@@ -84,7 +88,7 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 // better sourcemap than doing the equivalent with babel
 // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
 // which is likely not well supported by babel
-const injectImportMetaHot = (urlInfo, context) => {
+const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
   const [importMetaHotClientFileReference] = context.referenceUtils.inject({
     parentUrl: urlInfo.url,
     type: "js_import_export",

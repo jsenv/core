@@ -510,12 +510,25 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
           // remove eventual search params and hash
           const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
-          // if a file is in the same directory we could prefer the relative notation
-          // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
-          const specifier = `${baseUrl}${urlToRelativeUrl(
-            urlUntilPathname,
-            buildDirectoryUrl,
-          )}`
+          let specifier
+          if (baseUrl === "./") {
+            const relativeUrl = urlToRelativeUrl(
+              urlUntilPathname,
+              reference.parentUrl === rootDirectoryUrl
+                ? buildDirectoryUrl
+                : reference.parentUrl,
+            )
+            // ensure "./" on relative url (otherwise it could be a "bare specifier")
+            specifier =
+              relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`
+          } else {
+            // if a file is in the same directory we could prefer the relative notation
+            // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
+            specifier = `${baseUrl}${urlToRelativeUrl(
+              urlUntilPathname,
+              buildDirectoryUrl,
+            )}`
+          }
           buildUrls[specifier] = reference.generatedUrl
           return specifier
         },

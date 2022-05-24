@@ -1,3 +1,5 @@
+import { urlHotMetas } from "./import_meta_hot.js";
+
 /* eslint-env browser */
 const createEventSourceConnection = (eventSourceUrl, events = {}, {
   retryMaxAttempt = Infinity,
@@ -202,12 +204,6 @@ const listenEvent = (emitter, event, callback) => {
     emitter.removeEventListener(event, callback);
   };
 };
-
-/*
- * https://vitejs.dev/guide/api-hmr.html#hot-accept-deps-cb
- * https://modern-web.dev/docs/dev-server/plugins/hmr/
- */
-const urlHotMetas = {};
 
 const isAutoreloadEnabled = () => {
   const value = window.localStorage.getItem("autoreload");

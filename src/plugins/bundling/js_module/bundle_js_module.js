@@ -1,11 +1,19 @@
-import { isFileSystemPath } from "@jsenv/filesystem"
+import {
+  isFileSystemPath,
+  normalizeStructuredMetaMap,
+  urlToMeta,
+} from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 
-export const bundleJsModule = async ({ jsModuleUrlInfos, context }) => {
+export const bundleJsModule = async ({
+  jsModuleUrlInfos,
+  context,
+  options,
+}) => {
   const {
     signal,
     logger,
@@ -25,6 +33,7 @@ export const bundleJsModule = async ({ jsModuleUrlInfos, context }) => {
 
     runtimeCompat,
     sourcemaps,
+    options,
   })
   return jsModuleBundleUrlInfos
 }
@@ -39,6 +48,7 @@ export const buildWithRollup = async ({
 
   runtimeCompat,
   sourcemaps,
+  options,
 }) => {
   const resultRef = { current: null }
   try {
@@ -54,6 +64,7 @@ export const buildWithRollup = async ({
 
           runtimeCompat,
           sourcemaps,
+          options,
           resultRef,
         }),
       ],
@@ -86,6 +97,7 @@ const rollupPluginJsenv = ({
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
+  options,
 
   resultRef,
 }) => {
@@ -97,6 +109,21 @@ const rollupPluginJsenv = ({
       type: "chunk",
       ...chunk,
     })
+  }
+  let importCanBeBundled = () => true
+  if (options.include) {
+    const bundleIncludeConfig = normalizeStructuredMetaMap(
+      {
+        bundle: options.include,
+      },
+      rootDirectoryUrl,
+    )
+    importCanBeBundled = (url) => {
+      return urlToMeta({
+        url,
+        structuredMetaMap: bundleIncludeConfig,
+      }).bundle
+    }
   }
   const urlImporters = {}
 
@@ -205,6 +232,9 @@ const rollupPluginJsenv = ({
         urlImporters[url] = importer
       }
       if (!url.startsWith("file:")) {
+        return { id: url, external: true }
+      }
+      if (!importCanBeBundled(url)) {
         return { id: url, external: true }
       }
       const filePath = fileUrlConverter.asFilePath(url)

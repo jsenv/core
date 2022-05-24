@@ -23,28 +23,31 @@ export const jsenvPluginBundling = (bundling) => {
     },
     bundle: {
       css: bundling.css
-        ? (cssUrlInfos, context) =>
-            bundleCss({
+        ? (cssUrlInfos, context) => {
+            return bundleCss({
               cssUrlInfos,
               context,
               options: bundling.css,
             })
+          }
         : undefined,
       js_classic: bundling.js_classic
-        ? (jsClassicUrlInfos, context) =>
-            bundleJsClassicWorkers({
+        ? (jsClassicUrlInfos, context) => {
+            return bundleJsClassicWorkers({
               jsClassicUrlInfos,
               context,
               options: bundling.js_classic_workers,
             })
+          }
         : undefined,
       js_module: bundling.js_module
-        ? (jsModuleUrlInfos, context) =>
-            bundleJsModule({
+        ? (jsModuleUrlInfos, context) => {
+            return bundleJsModule({
               jsModuleUrlInfos,
               context,
               options: bundling.js_module,
             })
+          }
         : undefined,
     },
   }
