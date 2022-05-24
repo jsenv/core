@@ -1,6 +1,6 @@
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { memoizeByUrl } from "@jsenv/utils/memoize/memoize_by_url.js"
+import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}
@@ -15,7 +15,7 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
     return urlToFilename(url)
   }
 
-  const generate = memoizeByUrl((url, { urlInfo, parentUrlInfo }) => {
+  const generate = memoizeByFirstArgument((url, { urlInfo, parentUrlInfo }) => {
     const directoryPath = determineDirectoryPath({
       urlInfo,
       parentUrlInfo,

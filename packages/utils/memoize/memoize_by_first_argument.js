@@ -1,4 +1,4 @@
-export const memoizeByUrl = (compute) => {
+export const memoizeByFirstArgument = (compute) => {
   const urlCache = new Map()
 
   const fnWithMemoization = (url, ...args) => {

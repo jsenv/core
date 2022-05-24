@@ -39,9 +39,6 @@ export const createFileService = ({
     if (responseFromPlugin) {
       return responseFromPlugin
     }
-    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-      request.headers["user-agent"],
-    )
     const [reference, urlInfo] = kitchen.prepareEntryPoint({
       parentUrl: inferParentFromRequest(request, rootDirectoryUrl),
       type: "entry_point",
@@ -65,6 +62,9 @@ export const createFileService = ({
       if (!urlInfo.isInline && !urlInfo.type === "sourcemap") {
         urlGraph.resetUrlInfo(urlInfo)
       }
+      const { runtimeName, runtimeVersion } = parseUserAgentHeader(
+        request.headers["user-agent"],
+      )
       await kitchen.cook({
         reference: referenceFromGraph || reference,
         urlInfo,

@@ -113,6 +113,9 @@ export const createPluginController = ({
   }
   const callAsyncHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName]
+    if (hooks.length === 0) {
+      return null
+    }
     return new Promise((resolve, reject) => {
       const visit = (index) => {
         if (index >= hooks.length) {

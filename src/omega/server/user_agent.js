@@ -1,8 +1,10 @@
 import { createRequire } from "node:module"
 
+import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
+
 const require = createRequire(import.meta.url)
 
-export const parseUserAgentHeader = (userAgent) => {
+export const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
   if (userAgent.includes("node-fetch/")) {
     // it's not really node and conceptually we can't assume the node version
     // but good enough for now
@@ -19,4 +21,4 @@ export const parseUserAgentHeader = (userAgent) => {
     runtimeVersion:
       family === "Other" ? "unknown" : `${major}.${minor}${patch}`,
   }
-}
+})
