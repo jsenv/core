@@ -96,8 +96,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       ...readFetchMetas(node),
     })
   }
-  const onNode = (node) => {
-    if (node.nodeName === "link") {
+  const visitors = {
+    link: (node) => {
       const relAttribute = getHtmlNodeAttributeByName(node, "rel")
       const rel = relAttribute ? relAttribute.value : undefined
       const typeAttribute = getHtmlNodeAttributeByName(node, "type")
@@ -114,13 +114,9 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
           stylesheet: "css",
         }[rel],
       })
-      return
-    }
-    // if (node.nodeName === "style") {
-    //   // styles.push(node)
-    //   return
-    // }
-    if (node.nodeName === "script") {
+    },
+    // style: () => {},
+    script: (node) => {
       const typeAttributeNode = getHtmlNodeAttributeByName(node, "type")
       visitAttributeAsUrlSpecifier({
         type: "script_src",
@@ -133,23 +129,22 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         node,
         attributeName: "src",
       })
-      return
-    }
-    if (node.nodeName === "a") {
+    },
+    a: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "a_href",
         node,
         attributeName: "href",
       })
-    }
-    if (node.nodeName === "iframe") {
+    },
+    iframe: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "iframe_src",
         node,
         attributeName: "src",
       })
-    }
-    if (node.nodeName === "img") {
+    },
+    img: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "img_src",
         node,
@@ -159,9 +154,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         type: "img_srcset",
         node,
       })
-      return
-    }
-    if (node.nodeName === "source") {
+    },
+    souce: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "source_src",
         node,
@@ -171,25 +165,22 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         type: "source_srcset",
         node,
       })
-      return
-    }
+    },
     // svg <image> tag
-    if (node.nodeName === "image") {
+    image: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "image_href",
         node,
         attributeName: "href",
       })
-      return
-    }
-    if (node.nodeName === "use") {
+    },
+    use: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "use_href",
         node,
         attributeName: "href",
       })
-      return
-    }
+    },
   }
   const visitAttributeAsUrlSpecifier = ({
     type,
@@ -252,7 +243,12 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       })
     }
   }
-  visitHtmlAst(htmlAst, onNode)
+  visitHtmlAst(htmlAst, (node) => {
+    const visitor = visitors[node.nodeName]
+    if (visitor) {
+      visitor(node)
+    }
+  })
 }
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"]
