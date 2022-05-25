@@ -21,7 +21,7 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
   return {
     name: "jsenv:workers_type_module_as_classic",
     appliesDuring: "*",
-    normalizeUrl: {
+    redirectUrl: {
       js_url_specifier: (reference, context) => {
         if (reference.expectedType !== "js_module") {
           return null

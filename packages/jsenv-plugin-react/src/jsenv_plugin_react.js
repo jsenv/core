@@ -27,7 +27,7 @@ const jsenvPluginReactAsJsModule = () => {
   return {
     name: "jsenv:react_as_js_module",
     appliesDuring: "*",
-    normalizeUrl: {
+    redirectUrl: {
       js_import_export: (reference) => {
         if (
           [

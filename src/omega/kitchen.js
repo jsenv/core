@@ -10,7 +10,7 @@ import { createDetailedMessage } from "@jsenv/logger"
 
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
-import { setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
+import { normalizeUrl, setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
@@ -142,7 +142,7 @@ export const createKitchen = ({
   }
   const resolveReference = (reference) => {
     try {
-      const resolvedUrl = pluginController.callHooksUntil(
+      let resolvedUrl = pluginController.callHooksUntil(
         "resolveUrl",
         reference,
         baseContext,
@@ -150,6 +150,7 @@ export const createKitchen = ({
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
       }
+      resolvedUrl = normalizeUrl(resolvedUrl)
       reference.url = resolvedUrl
       if (reference.external) {
         reference.generatedUrl = resolvedUrl
@@ -157,35 +158,20 @@ export const createKitchen = ({
         return urlGraph.reuseOrCreateUrlInfo(reference.url)
       }
       pluginController.callHooks(
-        "normalizeUrl",
+        "redirectUrl",
         reference,
         baseContext,
         (returnValue) => {
-          if (returnValue === reference.url) {
-            return
-          }
-          const normalizedReturnValue = returnValue.startsWith("data:")
-            ? returnValue
-            : returnValue.replace(/[=](?=&|$)/g, "")
+          const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
             return
           }
           const previousReference = { ...reference }
-          reference.url = returnValue
+          reference.url = normalizedReturnValue
           mutateReference(previousReference, reference)
         },
       )
-      // force a last normalization on url search params
-      // some plugin use URLSearchParams to alter the url search params
-      // which can result into "file:///file.css?css_module"
-      // becoming "file:///file.css?css_module="
-      // we want to get rid of the "=" and consider it's the same url
-      if (
-        // disable on data urls (would mess up base64 encoding)
-        !reference.url.startsWith("data:")
-      ) {
-        reference.url = reference.url.replace(/[=](?=&|$)/g, "")
-      }
+
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, baseContext)
 

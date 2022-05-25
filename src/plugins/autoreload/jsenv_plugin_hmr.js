@@ -2,7 +2,7 @@ export const jsenvPluginHmr = () => {
   return {
     name: "jsenv:hmr",
     appliesDuring: { dev: true },
-    normalizeUrl: (reference) => {
+    redirectUrl: (reference) => {
       const urlObject = new URL(reference.url)
       if (!urlObject.searchParams.has("hmr")) {
         reference.data.hmr = false

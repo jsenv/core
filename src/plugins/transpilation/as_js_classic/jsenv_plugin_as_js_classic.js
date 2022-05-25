@@ -48,7 +48,7 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
     name: "jsenv:as_js_classic",
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
-    normalizeUrl: (reference, context) => {
+    redirectUrl: (reference, context) => {
       // We want to propagate transformation of js module to js classic
       // but only for import specifier (static/dynamic import + re-export)
       // All other references won't get the ?as_js_classic

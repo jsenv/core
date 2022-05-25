@@ -16,6 +16,22 @@ export const isValidUrl = (url) => {
   }
 }
 
+// normalize url search params:
+// Using URLSearchParams to alter the url search params
+// can result into "file:///file.css?css_module"
+// becoming "file:///file.css?css_module="
+// we want to get rid of the "=" and consider it's the same url
+export const normalizeUrl = (url) => {
+  if (url.includes("?")) {
+    // disable on data urls (would mess up base64 encoding)
+    if (url.startsWith("data:")) {
+      return url
+    }
+    return url.replace(/[=](?=&|$)/g, "")
+  }
+  return url
+}
+
 export const injectQueryParamsIntoSpecifier = (specifier, params) => {
   if (isValidUrl(specifier)) {
     return injectQueryParams(specifier, params)
@@ -27,7 +43,7 @@ export const injectQueryParamsIntoSpecifier = (specifier, params) => {
   })
   const paramsString = searchParams.toString()
   if (paramsString) {
-    return `${beforeQuestion}?${paramsString.replace(/[=](?=&|$)/g, "")}`
+    return `${beforeQuestion}?${paramsString}`
   }
   return specifier
 }
@@ -38,11 +54,7 @@ export const injectQueryParams = (url, params) => {
     urlObject.searchParams.set(key, params[key])
   })
   const urlWithParams = urlObject.href
-  // injectQueryParams('http://example.com/file.js', { hmr: '' })
-  // returns
-  // "http://example.com/file.js?hmr="
-  // It is technically valid but "=" signs hurts readability
-  return urlWithParams.replace(/[=](?=&|$)/g, "")
+  return urlWithParams
 }
 
 export const setUrlExtension = (url, extension) => {

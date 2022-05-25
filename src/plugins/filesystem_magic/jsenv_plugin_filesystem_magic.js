@@ -13,7 +13,7 @@ export const jsenvPluginFileSystemMagic = ({
   return {
     name: "jsenv:filesystem_magic",
     appliesDuring: "*",
-    normalizeUrl: (reference) => {
+    redirectUrl: (reference) => {
       // http, https, data, about, etc
       if (!reference.url.startsWith("file:")) {
         return null

@@ -36,7 +36,7 @@ export const jsenvPluginImportAssertions = () => {
   const importAssertions = {
     name: "jsenv:import_assertions",
     appliesDuring: "*",
-    normalizeUrl: {
+    redirectUrl: {
       js_import_export: (reference, context) => {
         if (!reference.assert) {
           return null

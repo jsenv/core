@@ -22,6 +22,7 @@ import {
   injectQueryParams,
   setUrlFilename,
   asUrlUntilPathname,
+  normalizeUrl,
 } from "@jsenv/utils/urls/url_utils.js"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
@@ -364,7 +365,7 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           const urlRedirected = rawUrlRedirections[url]
           return urlRedirected || url
         },
-        normalizeUrl: (reference) => {
+        redirectUrl: (reference) => {
           if (!reference.url.startsWith("file:")) {
             return null
           }
@@ -845,11 +846,13 @@ const applyUrlVersioning = async ({
       })
       urlInfo.data.version = versionGenerator.generate()
 
-      urlInfo.data.versionedUrl = injectVersionIntoBuildUrl({
-        buildUrl: urlInfo.url,
-        version: urlInfo.data.version,
-        versioningMethod,
-      })
+      urlInfo.data.versionedUrl = normalizeUrl(
+        injectVersionIntoBuildUrl({
+          buildUrl: urlInfo.url,
+          version: urlInfo.data.version,
+          versioningMethod,
+        }),
+      )
     })
     const versionMappings = {}
     const usedVersionMappings = []

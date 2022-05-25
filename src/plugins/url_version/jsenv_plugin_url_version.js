@@ -2,7 +2,7 @@ export const jsenvPluginUrlVersion = ({ longTermCache = true } = {}) => {
   return {
     name: "jsenv:url_version",
     appliesDuring: "*", // maybe only during dev?
-    normalizeUrl: (reference) => {
+    redirectUrl: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
       // it is also used by hmr to bypass browser cache

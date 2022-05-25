@@ -5,7 +5,7 @@ export const createPluginController = ({
   scenario,
   hooks = [
     "resolveUrl",
-    "normalizeUrl",
+    "redirectUrl",
     "fetchUrlContent",
     "transformUrlContent",
     "transformUrlSearchParams",
@@ -226,7 +226,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
 const returnValueAssertions = [
   {
     name: "url_assertion",
-    appliesTo: ["resolveUrl", "normalizeUrl"],
+    appliesTo: ["resolveUrl", "redirectUrl"],
     assertion: (valueReturned) => {
       if (valueReturned instanceof URL) {
         return valueReturned.href
