@@ -13,9 +13,14 @@ import { fetchOriginalUrlInfo } from "@jsenv/core/src/plugins/transpilation/fetc
 
 import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_preamble.js"
 
-export const jsenvPluginReact = ({ hotRefreshPatterns } = {}) => {
+export const jsenvPluginReact = ({
+  asJsModuleLogLevel,
+  hotRefreshPatterns,
+} = {}) => {
   return [
-    jsenvPluginReactAsJsModule(),
+    jsenvPluginReactAsJsModule({
+      asJsModuleLogLevel,
+    }),
     jsenvPluginReactRefreshPreamble(),
     jsenvPluginJsxAndRefresh({
       hotRefreshPatterns,
@@ -23,7 +28,7 @@ export const jsenvPluginReact = ({ hotRefreshPatterns } = {}) => {
   ]
 }
 
-const jsenvPluginReactAsJsModule = () => {
+const jsenvPluginReactAsJsModule = ({ asJsModuleLogLevel }) => {
   return {
     name: "jsenv:react_as_js_module",
     appliesDuring: "*",
@@ -58,6 +63,7 @@ const jsenvPluginReactAsJsModule = () => {
         return null
       }
       const { content, sourcemap } = await commonJsToJsModule({
+        logLevel: asJsModuleLogLevel,
         rootDirectoryUrl: context.rootDirectoryUrl,
         sourceFileUrl: originalUrlInfo.url,
         external: ["react"],

@@ -11,6 +11,7 @@ import { commonJsToJsModuleRaw } from "./cjs_to_esm_raw.js"
 import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.js"
 
 export const commonJsToJsModule = ({
+  logLevel,
   filesystemCache = true,
   rootDirectoryUrl,
   sourceFileUrl,
@@ -29,11 +30,13 @@ export const commonJsToJsModule = ({
     })
 
     return reuseOrCreateCompiledFile({
+      logLevel,
       compileDirectoryUrl,
       sourceFileUrl,
       compiledFileUrl,
       compile: async () => {
         const { content, sourcemap } = await commonJsToJsModuleRaw({
+          logLevel,
           rootDirectoryUrl,
           sourceFileUrl,
           ...rest,
@@ -54,6 +57,7 @@ export const commonJsToJsModule = ({
     })
   }
   return commonJsToJsModuleRaw({
+    logLevel,
     rootDirectoryUrl,
     sourceFileUrl,
     ...rest,

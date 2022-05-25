@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from "node:fs"
 import { bufferToEtag } from "@jsenv/filesystem"
 
-export const validateCompileCache = async ({
+export const validateCompileCache = ({
   compiledFileUrl,
   compileCacheStrategy,
   compileCacheAssetsValidation = true,

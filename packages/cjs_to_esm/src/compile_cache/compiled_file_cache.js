@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { createLogger } from "@jsenv/logger"
+import { UNICODE } from "@jsenv/log"
 import {
   assertAndNormalizeFileUrl,
   ensureEmptyDirectory,
@@ -20,24 +21,24 @@ export const reuseOrCreateCompiledFile = async ({
   compileCacheAssetsValidation,
   compile,
 }) => {
-  await initCompileDirectory(compileDirectoryUrl)
-
+  const logger = createLogger({ logLevel })
+  await initCompileDirectory({ logger, compileDirectoryUrl })
   sourceFileUrl = assertAndNormalizeFileUrl(sourceFileUrl)
-
   if (typeof compile !== "function") {
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
-  const logger = createLogger({ logLevel })
 
   return startAsap(
     async () => {
-      const cacheValidity = await validateCompileCache({
+      logger.debug(`check cache for ${compiledFileUrl}`)
+      const cacheValidity = validateCompileCache({
         logger,
         compiledFileUrl,
         compileCacheStrategy,
         compileCacheAssetsValidation,
       })
       if (cacheValidity.isValid) {
+        logger.debug(`${UNICODE.OK} found a valid cache`)
         const compileInfo = cacheValidity.compileInfo.data
         const content = String(cacheValidity.compiledFile.data.buffer)
         const assets = {}
@@ -68,14 +69,17 @@ export const reuseOrCreateCompiledFile = async ({
         }
       }
       if (cacheValidity.code === "SOURCES_EMPTY") {
-        logger.warn(`WARNING: meta.sources is empty for ${compiledFileUrl}`)
+        logger.warn(
+          `${UNICODE.WARN} meta.sources is empty for ${compiledFileUrl}`,
+        )
       }
+      logger.debug(`${UNICODE.INFO} cache not found or invalid`)
       const compileInfoIsValid = cacheValidity.compileInfo
         ? cacheValidity.compileInfo.isValid
         : false
       const fileContentAsBuffer = readFileSync(new URL(sourceFileUrl))
       const fileContentAsString = String(fileContentAsBuffer)
-      logger.debug(`compile ${sourceFileUrl}`)
+
       const compileResult = await compile({
         content: fileContentAsString,
       })
@@ -103,16 +107,32 @@ export const reuseOrCreateCompiledFile = async ({
   )
 }
 
-const initCompileDirectory = async (compileDirectoryUrl) => {
+const initalized = {}
+const initCompileDirectory = async ({ logger, compileDirectoryUrl }) => {
+  if (initalized[compileDirectoryUrl]) {
+    return
+  }
+  initalized[compileDirectoryUrl] = true
+  logger.debug(`check compile directory at ${compileDirectoryUrl}`)
   const compileContextJsonFileUrl = new URL(
     "./__compile_context__.json",
     compileDirectoryUrl,
   )
   const version = JSON.parse(
-    readFileSync(new URL("../package.json", import.meta.url)),
+    readFileSync(new URL("../../package.json", import.meta.url)),
   ).version
-  const compileContext = readCompileContextFile(compileContextJsonFileUrl)
-  if (!compileContext || compileContext.version !== version) {
+  const compileContext = readCompileContextFile({
+    logger,
+    compileContextJsonFileUrl,
+  })
+  if (compileContext && compileContext.version === version) {
+    logger.debug(`${UNICODE.OK} reuse compile directory`)
+  } else {
+    if (compileContext) {
+      logger.debug(`${UNICODE.WARN} clean existing directory`)
+    } else {
+      logger.debug(`${UNICODE.INFO} create an empty directory`)
+    }
     await ensureEmptyDirectory(compileDirectoryUrl)
     writeFileSync(
       compileContextJsonFileUrl,
@@ -121,12 +141,14 @@ const initCompileDirectory = async (compileDirectoryUrl) => {
   }
 }
 
-const readCompileContextFile = (compileContextJsonFileUrl) => {
+const readCompileContextFile = ({ logger, compileContextJsonFileUrl }) => {
   let compileContextFileContent
   try {
     compileContextFileContent = readFileSync(compileContextJsonFileUrl)
   } catch (e) {
-    // we don't have the compile context, we don't know if cache is valid
+    logger.debug(
+      `${UNICODE.INFO} cannot read compile context at ${compileContextJsonFileUrl}`,
+    )
     return null
   }
   try {
@@ -134,6 +156,9 @@ const readCompileContextFile = (compileContextJsonFileUrl) => {
     return compileContext
   } catch (e) {
     if (e.name === "SyntaxError") {
+      logger.warn(
+        `${UNICODE.WARN} syntax error in ${compileContextJsonFileUrl}`,
+      )
       return null
     }
     throw e
