@@ -280,6 +280,9 @@ export const createRuntimeFromPlaywright = ({
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
                 () => {
+                  if (!window.__html_supervisor__) {
+                    throw new Error(`window.__html_supervisor__ not found`)
+                  }
                   return window.__html_supervisor__.getScriptExecutionResults()
                 },
                 /* eslint-enable no-undef */
