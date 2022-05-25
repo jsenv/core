@@ -29,6 +29,7 @@ export const commonJsToJsModule = ({
     })
 
     return reuseOrCreateCompiledFile({
+      compileDirectoryUrl,
       sourceFileUrl,
       compiledFileUrl,
       compile: async () => {

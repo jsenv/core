@@ -1,6 +1,9 @@
-import { readFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 import { createLogger } from "@jsenv/logger"
-import { assertAndNormalizeFileUrl } from "@jsenv/filesystem"
+import {
+  assertAndNormalizeFileUrl,
+  ensureEmptyDirectory,
+} from "@jsenv/filesystem"
 
 import { validateCompileCache } from "./validate_compile_cache.js"
 import { createLockRegistry } from "./file_lock_registry.js"
@@ -10,12 +13,15 @@ const { lockForRessource } = createLockRegistry()
 
 export const reuseOrCreateCompiledFile = async ({
   logLevel,
+  compileDirectoryUrl,
   sourceFileUrl,
   compiledFileUrl,
   compileCacheStrategy,
   compileCacheAssetsValidation,
   compile,
 }) => {
+  await initCompileDirectory(compileDirectoryUrl)
+
   sourceFileUrl = assertAndNormalizeFileUrl(sourceFileUrl)
 
   if (typeof compile !== "function") {
@@ -95,6 +101,43 @@ export const reuseOrCreateCompiledFile = async ({
       compiledFileUrl,
     },
   )
+}
+
+const initCompileDirectory = async (compileDirectoryUrl) => {
+  const compileContextJsonFileUrl = new URL(
+    "./__compile_context__.json",
+    compileDirectoryUrl,
+  )
+  const version = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url)),
+  ).version
+  const compileContext = readCompileContextFile(compileContextJsonFileUrl)
+  if (!compileContext || compileContext.version !== version) {
+    await ensureEmptyDirectory(compileDirectoryUrl)
+    writeFileSync(
+      compileContextJsonFileUrl,
+      JSON.stringify({ version }, null, "  "),
+    )
+  }
+}
+
+const readCompileContextFile = (compileContextJsonFileUrl) => {
+  let compileContextFileContent
+  try {
+    compileContextFileContent = readFileSync(compileContextJsonFileUrl)
+  } catch (e) {
+    // we don't have the compile context, we don't know if cache is valid
+    return null
+  }
+  try {
+    const compileContext = JSON.parse(compileContextFileContent)
+    return compileContext
+  } catch (e) {
+    if (e.name === "SyntaxError") {
+      return null
+    }
+    throw e
+  }
 }
 
 const startAsap = async (fn, { compiledFileUrl }) => {
