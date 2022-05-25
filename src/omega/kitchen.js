@@ -267,12 +267,13 @@ export const createKitchen = ({
       return
     }
     try {
-      const returnValue = await pluginController.callAsyncHooksUntil(
-        "fetchUrlContent",
-        urlInfo,
-        context,
-      )
-      if (!returnValue) {
+      const fetchUrlContentReturnValue =
+        await pluginController.callAsyncHooksUntil(
+          "fetchUrlContent",
+          urlInfo,
+          context,
+        )
+      if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
             `no plugin has handled the url during "fetchUrlContent" hook -> consider url as external (ignore it)`,
@@ -285,7 +286,7 @@ export const createKitchen = ({
         urlInfo.external = true
         return
       }
-      if (returnValue.external) {
+      if (fetchUrlContentReturnValue.external) {
         urlInfo.external = true
         return
       }
@@ -298,7 +299,7 @@ export const createKitchen = ({
         content,
         sourcemap,
         filename,
-      } = returnValue
+      } = fetchUrlContentReturnValue
       urlInfo.type =
         type ||
         reference.expectedType ||

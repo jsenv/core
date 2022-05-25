@@ -247,7 +247,7 @@ const rollupPluginJsenv = ({
         code: urlInfo.content,
         map: urlInfo.sourcemap
           ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
-          : urlInfo.sourcemap,
+          : null,
       }
     },
   }

@@ -224,7 +224,14 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
     })
   })
   const addToBundlerIfAny = (rawUrlInfo) => {
-    if (rawUrlInfo.dependencies.size === 0) {
+    if (
+      // entry point must be given to the bundler (rollup)
+      // so that the bundler know it's an entry point, even if it has no dependency
+      // this way the bundler can share code properly and avoid inlining an entry point
+      // if it's used by an other entry point
+      !rawUrlInfo.data.isEntryPoint &&
+      rawUrlInfo.dependencies.size === 0
+    ) {
       return
     }
     const bundler = bundlers[rawUrlInfo.type]

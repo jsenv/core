@@ -6,15 +6,19 @@ import {
 
 export const sourcemapConverter = {
   toFileUrls: (sourcemap) => {
-    sourcemap.sources = sourcemap.sources.map((source) => {
-      return isFileSystemPath(source) ? fileSystemPathToUrl(source) : source
-    })
-    return sourcemap
+    return {
+      ...sourcemap,
+      sources: sourcemap.sources.map((source) => {
+        return isFileSystemPath(source) ? fileSystemPathToUrl(source) : source
+      }),
+    }
   },
   toFilePaths: (sourcemap) => {
-    sourcemap.sources = sourcemap.sources.map((source) => {
-      return urlToFileSystemPath(source)
-    })
-    return sourcemap
+    return {
+      ...sourcemap,
+      sources: sourcemap.sources.map((source) => {
+        return urlToFileSystemPath(source)
+      }),
+    }
   },
 }
