@@ -44,34 +44,42 @@ export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
 }
 
 const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
+  const propagateJsClassicSearchParam = (reference, context) => {
+    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+    if (
+      !parentUrlInfo ||
+      !new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
+    ) {
+      return null
+    }
+    const urlTransformed = injectQueryParams(reference.url, {
+      as_js_classic: "",
+    })
+    reference.filename = generateJsClassicFilename(reference.url)
+    return urlTransformed
+  }
+
   return {
     name: "jsenv:as_js_classic",
     appliesDuring: "*",
     // forward ?as_js_classic to referenced urls
-    redirectUrl: (reference, context) => {
-      // We want to propagate transformation of js module to js classic
-      // but only for import specifier (static/dynamic import + re-export)
-      // All other references won't get the ?as_js_classic
-      // otherwise we could try to transform inline ressources, specifiers inside new URL(). ...
-      if (
-        reference.type !== "js_import_export" &&
-        reference.subtype !== "system_register_arg" &&
-        reference.subtype !== "system_import_arg"
-      ) {
+    redirectUrl: {
+      // We want to propagate transformation of js module to js classic to:
+      // - import specifier (static/dynamic import + re-export)
+      // - url specifier when inside System.register/_context.import()
+      //   (because it's the transpiled equivalent of static and dynamic imports)
+      // And not other references otherwise we could try to transform inline ressources
+      // or specifiers inside new URL()...
+      js_import_export: propagateJsClassicSearchParam,
+      js_url_specifier: (reference, context) => {
+        if (
+          reference.subtype === "system_register_arg" ||
+          reference.subtype === "system_import_arg"
+        ) {
+          return propagateJsClassicSearchParam(reference, context)
+        }
         return null
-      }
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-      if (
-        !parentUrlInfo ||
-        !new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
-      ) {
-        return null
-      }
-      const urlTransformed = injectQueryParams(reference.url, {
-        as_js_classic: "",
-      })
-      reference.filename = generateJsClassicFilename(reference.url)
-      return urlTransformed
+      },
     },
     fetchUrlContent: async (urlInfo, context) => {
       const originalUrlInfo = await fetchOriginalUrlInfo({
