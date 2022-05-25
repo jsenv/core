@@ -6,7 +6,6 @@ export const loadUrlGraph = async ({
   startLoading,
   outDirectoryUrl,
   clientRuntimeCompat,
-  skipRessourceHint = false,
 }) => {
   if (outDirectoryUrl) {
     await ensureEmptyDirectory(outDirectoryUrl)
@@ -34,7 +33,11 @@ export const loadUrlGraph = async ({
     })
     const { references } = urlInfo
     references.forEach((reference) => {
-      if (skipRessourceHint && reference.isRessourceHint) {
+      // we don't cook ressource hints
+      // because they might refer to ressource that will be modified during build
+      // It also means something else have to reference that url in order to cook it
+      // so that the preload is deleted by "resync_ressource_hints.js" otherwise
+      if (reference.isRessourceHint) {
         return
       }
       // we use reference.generatedUrl to mimic what a browser would do:

@@ -250,17 +250,6 @@ const rollupPluginJsenv = ({
           : urlInfo.sourcemap,
       }
     },
-    // resolveFileUrl: ({ moduleId }) => {
-    //   return `${fileUrlConverter.asFileUrl(moduleId)}`
-    // },
-    renderChunk: (code, chunkInfo) => {
-      const { facadeModuleId } = chunkInfo
-      if (!facadeModuleId) {
-        // happens for inline module scripts for instance
-        return null
-      }
-      return null
-    },
   }
 }
 

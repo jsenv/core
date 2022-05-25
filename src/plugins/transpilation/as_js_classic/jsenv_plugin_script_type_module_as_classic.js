@@ -98,7 +98,16 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
         })
 
         const jsModuleUrls = []
-        const getReferenceAsJsClassic = async (reference) => {
+        const getReferenceAsJsClassic = async (
+          reference,
+          {
+            // we don't cook ressource hints
+            // because they might refer to ressource that will be modified during build
+            // It also means something else HAVE to reference that url in order to cook it
+            // so that the preload is deleted by "resync_ressource_hints.js" otherwise
+            cookIt = false,
+          } = {},
+        ) => {
           const [newReference, newUrlInfo] = context.referenceUtils.update(
             reference,
             {
@@ -112,15 +121,17 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           const jsModuleUrl = newUrlInfo.url
           if (!jsModuleUrls.includes(jsModuleUrl)) {
             jsModuleUrls.push(newUrlInfo.url)
-            // during dev it means js modules will be cooked before server sends the HTML
-            // it's ok because:
-            // - during dev script_type_module are supported (dev use a recent browser)
-            // - even if browser is not supported it still works it's jus a bit slower
-            //   because it needs to decide if systemjs will be injected or not
-            await context.cook({
-              reference: newReference,
-              urlInfo: newUrlInfo,
-            })
+            if (cookIt) {
+              // during dev it means js modules will be cooked before server sends the HTML
+              // it's ok because:
+              // - during dev script_type_module are supported (dev use a recent browser)
+              // - even if browser is not supported it still works it's jus a bit slower
+              //   because it needs to decide if systemjs will be injected or not
+              await context.cook({
+                reference: newReference,
+                urlInfo: newUrlInfo,
+              })
+            }
           }
           return [newReference, newUrlInfo]
         }
@@ -158,9 +169,9 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
           )
           const href = hrefAttribute.value
           actions.push(async () => {
-            const [newReference] = await getReferenceAsJsClassic(
-              context.referenceUtils.findByGeneratedSpecifier(href),
-            )
+            const reference =
+              context.referenceUtils.findByGeneratedSpecifier(href)
+            const [newReference] = await getReferenceAsJsClassic(reference)
             assignHtmlNodeAttributes(modulePreloadNode, {
               rel: "preload",
               as: "script",
@@ -178,6 +189,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
               const specifier = srcAttribute.value
               const [newReference] = await getReferenceAsJsClassic(
                 context.referenceUtils.findByGeneratedSpecifier(specifier),
+                { cookIt: true },
               )
               removeHtmlNodeAttributeByName(moduleScriptNode, "type")
               srcAttribute.value = newReference.generatedSpecifier
@@ -214,6 +226,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
             })
             const [, newUrlInfo] = await getReferenceAsJsClassic(
               inlineReference,
+              { cookIt: true },
             )
             removeHtmlNodeAttributeByName(moduleScriptNode, "type")
             setHtmlNodeGeneratedText(moduleScriptNode, {

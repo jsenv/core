@@ -254,6 +254,21 @@ ${Object.keys(rawGraph.urlInfos).join("\n")}`,
           }
           addToBundlerIfAny(dependencyUrlInfo)
         })
+        rawUrlInfo.references.forEach((reference) => {
+          if (
+            reference.isRessourceHint &&
+            reference.expectedType === "js_module"
+          ) {
+            const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
+            if (
+              referencedUrlInfo &&
+              // something else than the ressource hint is using this url
+              referencedUrlInfo.dependents.size > 0
+            ) {
+              addToBundlerIfAny(referencedUrlInfo)
+            }
+          }
+        })
         return
       }
     }

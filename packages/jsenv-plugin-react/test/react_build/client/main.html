@@ -4,6 +4,7 @@
     <title>Title</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
+    <link rel="modulepreload" href="./app.jsx" />
   </head>
 
   <body>
@@ -14,7 +15,7 @@
     </script>
     <div id="app"></div>
     <script type="module">
-      import("./main.jsx")
+      import("./boot.js")
     </script>
   </body>
 </html>

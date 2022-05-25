@@ -13,8 +13,11 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [jsenvPluginReact()],
-    minification: false,
+    plugins: [
+      jsenvPluginReact({
+        asJsModuleLogLevel: "warn",
+      }),
+    ],
     ...params,
   })
   const server = await startFileServer({
@@ -44,6 +47,7 @@ await test({
   runtimeCompat: {
     chrome: "63",
   },
+  minification: false,
 })
 
 // no support for <script type="module">
@@ -54,4 +58,15 @@ await test({
     firefox: "52",
     safari: "11",
   },
+  minification: false,
+})
+
+await test({
+  runtimeCompat: {
+    chrome: "55",
+    edge: "14",
+    firefox: "52",
+    safari: "11",
+  },
+  minification: true,
 })
