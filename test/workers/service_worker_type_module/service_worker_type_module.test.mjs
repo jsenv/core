@@ -41,6 +41,9 @@ if (process.platform === "darwin") {
       serviceWorkerUrls: {
         "/main.html": { versioned: false, version: "00df3d73" },
         "/css/style.css?v=65c914e7": { versioned: true },
+        "/js/babel_helpers.es5.js?as_js_classic&v=10e40f65": {
+          versioned: true,
+        },
       },
     }
     assert({ actual, expected })
@@ -96,6 +99,7 @@ if (process.platform === "darwin") {
       serviceWorkerUrls: {
         "/main.html": { versioned: false, version: "876aac63" },
         "/css/style.css?v=65c914e7": { versioned: true },
+        "/js/babel_helpers.js?v=27bcc5e3": { versioned: true },
       },
     }
     assert({ actual, expected })

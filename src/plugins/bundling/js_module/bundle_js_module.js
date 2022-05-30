@@ -1,6 +1,7 @@
 import {
   isFileSystemPath,
   normalizeStructuredMetaMap,
+  urlIsInsideOf,
   urlToMeta,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
@@ -8,6 +9,12 @@ import { createDetailedMessage } from "@jsenv/logger"
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
+import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
+
+const jsenvBabelPluginDirectoryUrl = new URL(
+  "../../transpilation/babel/",
+  import.meta.url,
+).href
 
 export const bundleJsModule = async ({
   jsModuleUrlInfos,
@@ -215,6 +222,23 @@ const rollupPluginJsenv = ({
           }
           const name = nameFromUrlInfo || `${chunkInfo.name}.js`
           return insideJs ? `js/${name}` : `${name}`
+        },
+        manualChunks: (id) => {
+          const fileUrl = fileUrlConverter.asFileUrl(id)
+          if (
+            fileUrl.endsWith(
+              "babel-plugin-transform-async-to-promises/helpers.mjs",
+            )
+          ) {
+            return "babel_helpers"
+          }
+          if (babelHelperNameFromUrl(fileUrl)) {
+            return "babel_helpers"
+          }
+          if (urlIsInsideOf(fileUrl, jsenvBabelPluginDirectoryUrl)) {
+            return "babel_helpers"
+          }
+          return null
         },
         // https://rollupjs.org/guide/en/#outputpaths
         // paths: (id) => {
