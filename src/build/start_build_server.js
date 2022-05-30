@@ -68,6 +68,7 @@ export const startBuildServer = async ({
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
   const reloadableProcess = await initReloadableProcess({
+    signal,
     handleSIGINT,
     ...(buildServerAutoreload
       ? {

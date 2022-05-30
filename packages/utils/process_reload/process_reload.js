@@ -7,10 +7,10 @@ export const isRestartProcess = cluster.isWorker
 
 // https://nodejs.org/api/cluster.html
 export const initReloadableProcess = async ({
-  enabled = true,
-  logLevel,
   signal,
   handleSIGINT = true,
+  logLevel,
+  enabled = true,
   fileToRestart,
 }) => {
   if (cluster.isWorker) {
