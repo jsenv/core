@@ -31,6 +31,11 @@ export const createTaskLog = (
         `${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`,
       )
     },
+    happen: (label) => {
+      taskSpinner.stop(
+        `${UNICODE.INFO} ${label} (at ${new Date().toLocaleTimeString()})`,
+      )
+    },
     fail: (message = `failed to ${label}`) => {
       taskSpinner.stop(`${UNICODE.FAILURE} ${message}`)
     },

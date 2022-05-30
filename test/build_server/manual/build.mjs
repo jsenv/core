@@ -6,4 +6,5 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
+  watch: true,
 })

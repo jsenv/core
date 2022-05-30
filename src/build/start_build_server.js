@@ -26,17 +26,15 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/logger"
-import { Abort } from "@jsenv/abort"
 
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
-import { executeCommand } from "@jsenv/utils/command/command.js"
 
 export const startBuildServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel,
-  buildCommandLogLevel = "warn",
+  serverLogLevel = "warn",
   protocol = "http",
   http2,
   certificate,
@@ -53,14 +51,7 @@ export const startBuildServer = async ({
   },
   buildServerMainFile,
   buildServerAutoreload = false,
-  clientFiles = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./dist/": false,
-    "./**/node_modules/": false,
-  },
   cooldownBetweenFileEvents,
-  buildCommand,
   mainBuildFileUrl = "/index.html",
 }) => {
   const logger = createLogger({ logLevel })
@@ -123,32 +114,6 @@ export const startBuildServer = async ({
   }
   signal = reloadableProcess.signal
 
-  let buildPromise
-  let buildAbortController
-  const runBuild = async () => {
-    buildAbortController = new AbortController()
-    const buildOperation = Abort.startOperation()
-    buildOperation.addAbortSignal(signal)
-    buildOperation.addAbortSignal(buildAbortController.signal)
-    const buildTask = createTaskLog(logger, `execute build command`)
-    buildPromise = executeCommand(buildCommand, {
-      cwd: rootDirectoryUrl,
-      logLevel: buildCommandLogLevel,
-      signal: buildOperation.signal,
-    })
-    try {
-      await buildPromise
-      buildTask.done()
-    } catch (e) {
-      if (e.code === "ABORT_ERR") {
-        buildTask.fail(`execute build command aborted`)
-      } else {
-        buildTask.fail()
-        throw e
-      }
-    }
-  }
-
   const startServerTask = createTaskLog(logger, "start build server")
   const server = await startServer({
     signal,
@@ -156,7 +121,7 @@ export const startBuildServer = async ({
     stopOnSIGINT: false,
     stopOnInternalError: false,
     keepProcessAlive: true,
-    logLevel,
+    logLevel: serverLogLevel,
     startLog: false,
 
     protocol,
@@ -183,8 +148,7 @@ export const startBuildServer = async ({
       }),
     },
     sendErrorDetails: true,
-    requestToResponse: async (request) => {
-      await buildPromise
+    requestToResponse: (request) => {
       const urlIsVersioned = new URL(
         request.ressource,
         request.origin,
@@ -217,37 +181,9 @@ export const startBuildServer = async ({
   })
   logger.info(``)
 
-  runBuild()
-  const clientFileChangeCallback = ({ relativeUrl, event }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href
-    buildAbortController.abort()
-    // setTimeout is to ensure the abortController.abort() above
-    // is properly taken into account so that logs about abort comes first
-    // then logs about re-running the build happens
-    setTimeout(() => {
-      logger.info(`${url.slice(rootDirectoryUrl.length)} ${event} -> rebuild`)
-      runBuild()
-    })
-  }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFiles,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: false,
-    recursive: true,
-    added: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "added" })
-    },
-    updated: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "modified" })
-    },
-    removed: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "removed" })
-    },
-  })
   return {
     origin: server.origin,
     stop: () => {
-      stopWatchingClientFiles()
       server.stop()
     },
   }

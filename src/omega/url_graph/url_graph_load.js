@@ -1,6 +1,7 @@
 import { ensureEmptyDirectory } from "@jsenv/filesystem"
 
 export const loadUrlGraph = async ({
+  operation,
   urlGraph,
   kitchen,
   startLoading,
@@ -69,6 +70,7 @@ export const loadUrlGraph = async ({
   )
 
   const waitAll = async () => {
+    operation.throwIfAborted()
     if (promises.length === 0) {
       return
     }

@@ -14,7 +14,9 @@ import {
   urlToExtension,
   urlToRelativeUrl,
   writeFile,
+  registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
@@ -79,6 +81,7 @@ import { resyncRessourceHints } from "./resync_ressource_hints.js"
  */
 export const build = async ({
   signal = new AbortController().signal,
+  handleSIGINT = true,
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
@@ -97,13 +100,34 @@ export const build = async ({
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
 
+  clientFiles = {
+    "./**": true,
+    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./dist/": false,
+    "./**/node_modules/": false,
+  },
+  cooldownBetweenFileEvents,
+  watch = false,
+
   writeOnFileSystem = true,
   buildDirectoryClean = true,
   baseUrl = "/",
   assetManifest = true,
   assetManifestFileRelativeUrl = "asset-manifest.json",
 }) => {
-  const logger = createLogger({ logLevel })
+  const operation = Abort.startOperation()
+  operation.addAbortSignal(signal)
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        abort,
+      )
+    })
+  }
+
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
   assertEntryPoints({ entryPoints })
@@ -113,659 +137,727 @@ export const build = async ({
     )
   }
 
-  const entryPointKeys = Object.keys(entryPoints)
-  if (entryPointKeys.length === 1) {
-    logger.info(`
+  const runBuild = async ({ signal, logLevel }) => {
+    const logger = createLogger({ logLevel })
+    const buildOperation = Abort.startOperation()
+    buildOperation.addAbortSignal(signal)
+    const entryPointKeys = Object.keys(entryPoints)
+    if (entryPointKeys.length === 1) {
+      logger.info(`
 build "${entryPointKeys[0]}"`)
-  } else {
-    logger.info(`
+    } else {
+      logger.info(`
 build ${entryPointKeys.length} entry points`)
-  }
-  const rawGraph = createUrlGraph()
-  const prebuildTask = createTaskLog(logger, "prebuild")
-  let urlCount = 0
-  const rawGraphKitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl,
-    urlGraph: rawGraph,
-    scenario: "build",
-    sourcemaps,
-    runtimeCompat,
-    plugins: [
-      ...plugins,
-      {
-        name: "jsenv:build_log",
-        appliesDuring: { build: true },
-        cooked: () => {
-          urlCount++
-          prebuildTask.setRightText(urlCount)
-        },
-      },
-      ...getCorePlugins({
-        rootDirectoryUrl,
-        urlGraph: rawGraph,
-        scenario: "build",
+    }
 
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        injectedGlobals,
-        transpilation: {
-          ...transpilation,
-          jsModuleAsJsClassic: false,
-        },
-        minification,
-        bundling,
-      }),
-    ],
-  })
-  const entryUrls = []
-  try {
-    await loadUrlGraph({
+    const rawGraph = createUrlGraph()
+    const prebuildTask = createTaskLog(logger, "prebuild")
+    let urlCount = 0
+    const rawGraphKitchen = createKitchen({
+      signal,
+      logger,
+      rootDirectoryUrl,
       urlGraph: rawGraph,
-      kitchen: rawGraphKitchen,
-      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
-      startLoading: (cookEntryFile) => {
-        Object.keys(entryPoints).forEach((key) => {
-          const [, entryUrlInfo] = cookEntryFile({
-            trace: `"${key}" in entryPoints parameter`,
-            type: "entry_point",
-            specifier: key,
-          })
-          entryUrls.push(entryUrlInfo.url)
-          entryUrlInfo.filename = entryPoints[key]
-        })
-      },
-    })
-  } catch (e) {
-    prebuildTask.fail()
-    throw e
-  }
-  // here we can perform many checks such as ensuring ressource hints are used
-  prebuildTask.done()
-  logger.debug(
-    `raw graph urls:
-${Object.keys(rawGraph.urlInfos).join("\n")}`,
-  )
+      scenario: "build",
+      sourcemaps,
+      runtimeCompat,
+      plugins: [
+        ...plugins,
+        {
+          name: "jsenv:build_log",
+          appliesDuring: { build: true },
+          cooked: () => {
+            urlCount++
+            prebuildTask.setRightText(urlCount)
+          },
+        },
+        ...getCorePlugins({
+          rootDirectoryUrl,
+          urlGraph: rawGraph,
+          scenario: "build",
 
-  const buildUrlsGenerator = createBuilUrlsGenerator({
-    buildDirectoryUrl,
-  })
-  const rawUrls = {}
-  const buildUrls = {}
-  const rawUrlRedirections = {}
-  const bundleUrlInfos = {}
-  const bundlers = {}
-  rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
-    const bundle = plugin.bundle
-    if (!bundle) {
-      return
-    }
-    if (typeof bundle !== "object") {
-      throw new Error(
-        `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
-      )
-    }
-    Object.keys(bundle).forEach((type) => {
-      const bundleFunction = bundle[type]
-      if (!bundleFunction) {
-        return
-      }
-      const bundlerForThatType = bundlers[type]
-      if (bundlerForThatType) {
-        // first plugin to define a bundle hook wins
-        return
-      }
-      bundlers[type] = {
-        plugin,
-        bundleFunction: bundle[type],
-        urlInfos: [],
-      }
+          nodeEsmResolution,
+          fileSystemMagicResolution,
+          injectedGlobals,
+          transpilation: {
+            ...transpilation,
+            jsModuleAsJsClassic: false,
+          },
+          minification,
+          bundling,
+        }),
+      ],
     })
-  })
-  const addToBundlerIfAny = (rawUrlInfo) => {
-    const bundler = bundlers[rawUrlInfo.type]
-    if (bundler) {
-      bundler.urlInfos.push(rawUrlInfo)
-      return
-    }
-  }
-  GRAPH.forEach(rawGraph, (rawUrlInfo) => {
-    if (rawUrlInfo.data.isEntryPoint) {
-      addToBundlerIfAny(rawUrlInfo)
-      if (rawUrlInfo.type === "html") {
-        rawUrlInfo.dependencies.forEach((dependencyUrl) => {
-          const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-          if (dependencyUrlInfo.isInline) {
-            if (dependencyUrlInfo.type === "js_module") {
-              // bundle inline script type module deps
-              dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                if (inlineScriptRef.type === "js_import_export") {
-                  const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url)
-                  addToBundlerIfAny(inlineUrlInfo)
-                }
-              })
-            }
-            // inline content cannot be bundled
-            return
-          }
-          addToBundlerIfAny(dependencyUrlInfo)
-        })
-        rawUrlInfo.references.forEach((reference) => {
-          if (
-            reference.isRessourceHint &&
-            reference.expectedType === "js_module"
-          ) {
-            const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
-            if (
-              referencedUrlInfo &&
-              // something else than the ressource hint is using this url
-              referencedUrlInfo.dependents.size > 0
-            ) {
-              addToBundlerIfAny(referencedUrlInfo)
-            }
-          }
-        })
-        return
-      }
-    }
-    // File referenced with new URL('./file.js', import.meta.url)
-    // are entry points that can be bundled
-    // For instance we will bundle service worker/workers detected like this
-    if (rawUrlInfo.type === "js_module") {
-      rawUrlInfo.references.forEach((reference) => {
-        if (reference.type === "js_url_specifier") {
-          const urlInfo = rawGraph.getUrlInfo(reference.url)
-          addToBundlerIfAny(urlInfo)
-        }
-      })
-    }
-  })
-  const bundleUrlRedirections = {}
-  await Object.keys(bundlers).reduce(async (previous, type) => {
-    await previous
-    const bundler = bundlers[type]
-    const urlInfosToBundle = bundler.urlInfos
-    if (urlInfosToBundle.length === 0) {
-      return
-    }
-    const bundleTask = createTaskLog(logger, `bundle "${type}"`)
+    const entryUrls = []
     try {
-      const bundlerGeneratedUrlInfos =
-        await rawGraphKitchen.pluginController.callAsyncHook(
-          {
-            plugin: bundler.plugin,
-            hookName: "bundle",
-            value: bundler.bundleFunction,
-          },
-          urlInfosToBundle,
-          {
-            ...rawGraphKitchen.baseContext,
-            buildDirectoryUrl,
-          },
-        )
-      Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
-        const rawUrlInfo = rawGraph.getUrlInfo(url)
-        const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url]
-        const bundleUrlInfo = {
-          type,
-          subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-          filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
-          ...bundlerGeneratedUrlInfo,
-          data: {
-            ...(rawUrlInfo ? rawUrlInfo.data : {}),
-            ...bundlerGeneratedUrlInfo.data,
-            fromBundle: true,
-          },
-        }
-        const buildUrl = buildUrlsGenerator.generate(url, {
-          urlInfo: bundleUrlInfo,
-        })
-        rawUrlRedirections[url] = buildUrl
-        rawUrls[buildUrl] = url
-        bundleUrlInfos[buildUrl] = bundleUrlInfo
-        if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-          const urlForBundler = new URL(
-            bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
-            buildDirectoryUrl,
-          ).href
-          bundleUrlRedirections[urlForBundler] = buildUrl
-        }
+      await loadUrlGraph({
+        operation: buildOperation,
+        urlGraph: rawGraph,
+        kitchen: rawGraphKitchen,
+        outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
+        startLoading: (cookEntryFile) => {
+          Object.keys(entryPoints).forEach((key) => {
+            const [, entryUrlInfo] = cookEntryFile({
+              trace: `"${key}" in entryPoints parameter`,
+              type: "entry_point",
+              specifier: key,
+            })
+            entryUrls.push(entryUrlInfo.url)
+            entryUrlInfo.filename = entryPoints[key]
+          })
+        },
       })
     } catch (e) {
-      bundleTask.fail()
+      prebuildTask.fail()
       throw e
     }
-    bundleTask.done()
-  }, Promise.resolve())
+    prebuildTask.done()
 
-  const buildUrlRedirections = {}
-  const finalGraph = createUrlGraph()
-  const optimizeUrlContentHooks =
-    rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
-  const finalGraphKitchen = createKitchen({
-    logger,
-    rootDirectoryUrl,
-    urlGraph: finalGraph,
-    scenario: "build",
-    sourcemaps,
-    sourcemapsRelativeSources: !versioning,
-    runtimeCompat,
-    plugins: [
-      jsenvPluginUrlAnalysis(),
-      jsenvPluginAsJsClassic({
-        systemJsInjection: true,
-      }),
-      jsenvPluginInline({
-        fetchInlineUrls: false,
-      }),
-      {
-        name: "jsenv:postbuild",
-        appliesDuring: { build: true },
-        resolveUrl: (reference) => {
-          if (reference.specifier[0] === "#") {
-            reference.external = true
-          }
-          let url =
-            reference.specifier[0] === "/"
-              ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
-              : new URL(reference.specifier, reference.parentUrl).href
-          const urlRedirectedByBundle = bundleUrlRedirections[url]
-          if (urlRedirectedByBundle) {
-            return urlRedirectedByBundle
-          }
-          const urlRedirected = rawUrlRedirections[url]
-          return urlRedirected || url
-        },
-        redirectUrl: (reference) => {
-          if (!reference.url.startsWith("file:")) {
-            return null
-          }
-          // already a build url
-          const rawUrl = rawUrls[reference.url]
-          if (rawUrl) {
-            return reference.url
-          }
-          // from rollup or postcss
-          const bundleUrlInfo = bundleUrlInfos[reference.url]
-          if (bundleUrlInfo) {
-            return reference.url
-          }
-          // from "js_module_as_js_classic":
-          //   - injecting "?as_js_classic" for the first time
-          //   - injecting "?as_js_classic" because the parentUrl has it
-          if (reference.original) {
-            const referenceOriginalUrl = reference.original.url
-            let originalBuildUrl
-            if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
-              originalBuildUrl = referenceOriginalUrl
-            } else {
-              originalBuildUrl = Object.keys(rawUrls).find(
-                (key) => rawUrls[key] === referenceOriginalUrl,
-              )
+    const buildUrlsGenerator = createBuilUrlsGenerator({
+      buildDirectoryUrl,
+    })
+    const rawUrls = {}
+    const buildUrls = {}
+    const rawUrlRedirections = {}
+    const bundleUrlInfos = {}
+    const bundlers = {}
+    rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
+      const bundle = plugin.bundle
+      if (!bundle) {
+        return
+      }
+      if (typeof bundle !== "object") {
+        throw new Error(
+          `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
+        )
+      }
+      Object.keys(bundle).forEach((type) => {
+        const bundleFunction = bundle[type]
+        if (!bundleFunction) {
+          return
+        }
+        const bundlerForThatType = bundlers[type]
+        if (bundlerForThatType) {
+          // first plugin to define a bundle hook wins
+          return
+        }
+        bundlers[type] = {
+          plugin,
+          bundleFunction: bundle[type],
+          urlInfos: [],
+        }
+      })
+    })
+    const addToBundlerIfAny = (rawUrlInfo) => {
+      const bundler = bundlers[rawUrlInfo.type]
+      if (bundler) {
+        bundler.urlInfos.push(rawUrlInfo)
+        return
+      }
+    }
+    GRAPH.forEach(rawGraph, (rawUrlInfo) => {
+      if (rawUrlInfo.data.isEntryPoint) {
+        addToBundlerIfAny(rawUrlInfo)
+        if (rawUrlInfo.type === "html") {
+          rawUrlInfo.dependencies.forEach((dependencyUrl) => {
+            const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
+            if (dependencyUrlInfo.isInline) {
+              if (dependencyUrlInfo.type === "js_module") {
+                // bundle inline script type module deps
+                dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+                  if (inlineScriptRef.type === "js_import_export") {
+                    const inlineUrlInfo = rawGraph.getUrlInfo(
+                      inlineScriptRef.url,
+                    )
+                    addToBundlerIfAny(inlineUrlInfo)
+                  }
+                })
+              }
+              // inline content cannot be bundled
+              return
             }
-            let rawUrl
-            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-              // rawUrl = rawUrls[reference.url] || reference.url
-              const originalBuildUrl =
-                buildUrlRedirections[referenceOriginalUrl]
-              rawUrl = originalBuildUrl
-                ? rawUrls[originalBuildUrl]
-                : reference.url
-            } else {
-              rawUrl = reference.url
+            addToBundlerIfAny(dependencyUrlInfo)
+          })
+          rawUrlInfo.references.forEach((reference) => {
+            if (
+              reference.isRessourceHint &&
+              reference.expectedType === "js_module"
+            ) {
+              const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
+              if (
+                referencedUrlInfo &&
+                // something else than the ressource hint is using this url
+                referencedUrlInfo.dependents.size > 0
+              ) {
+                addToBundlerIfAny(referencedUrlInfo)
+              }
             }
-            // the url info do not exists yet (it will be created after this "normalize" hook)
-            // And the content will be generated when url is cooked by url graph loader.
-            // Here we just want to reserve an url for that file
-            const buildUrl = buildUrlsGenerator.generate(rawUrl, {
-              urlInfo: {
-                data: {
-                  ...reference.data,
-                  isWebWorkerEntryPoint:
-                    isWebWorkerEntryPointReference(reference),
-                },
-                type: reference.expectedType,
-                subtype: reference.expectedSubtype,
-                filename: reference.filename,
-              },
-            })
-            buildUrlRedirections[originalBuildUrl] = buildUrl
-            rawUrls[buildUrl] = rawUrl
-            return buildUrl
+          })
+          return
+        }
+      }
+      // File referenced with new URL('./file.js', import.meta.url)
+      // are entry points that can be bundled
+      // For instance we will bundle service worker/workers detected like this
+      if (rawUrlInfo.type === "js_module") {
+        rawUrlInfo.references.forEach((reference) => {
+          if (reference.type === "js_url_specifier") {
+            const urlInfo = rawGraph.getUrlInfo(reference.url)
+            addToBundlerIfAny(urlInfo)
           }
-          if (reference.isInline) {
-            const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
-              if (!rawUrlInfo.isInline) {
-                return false
-              }
-              if (rawUrlInfo.content === reference.content) {
-                return true
-              }
-              if (rawUrlInfo.originalContent === reference.content) {
-                return true
-              }
-              return false
-            })
-            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
-            if (!rawUrlInfo) {
-              // generated during final graph
-              // (happens for JSON.parse injected for import assertions for instance)
-              // throw new Error(`cannot find raw url for "${reference.url}"`)
+        })
+      }
+    })
+    const bundleUrlRedirections = {}
+    await Object.keys(bundlers).reduce(async (previous, type) => {
+      await previous
+      const bundler = bundlers[type]
+      const urlInfosToBundle = bundler.urlInfos
+      if (urlInfosToBundle.length === 0) {
+        return
+      }
+      const bundleTask = createTaskLog(logger, `bundle "${type}"`)
+      try {
+        const bundlerGeneratedUrlInfos =
+          await rawGraphKitchen.pluginController.callAsyncHook(
+            {
+              plugin: bundler.plugin,
+              hookName: "bundle",
+              value: bundler.bundleFunction,
+            },
+            urlInfosToBundle,
+            {
+              ...rawGraphKitchen.baseContext,
+              buildDirectoryUrl,
+            },
+          )
+        Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
+          const rawUrlInfo = rawGraph.getUrlInfo(url)
+          const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url]
+          const bundleUrlInfo = {
+            type,
+            subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+            filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+            ...bundlerGeneratedUrlInfo,
+            data: {
+              ...(rawUrlInfo ? rawUrlInfo.data : {}),
+              ...bundlerGeneratedUrlInfo.data,
+              fromBundle: true,
+            },
+          }
+          const buildUrl = buildUrlsGenerator.generate(url, {
+            urlInfo: bundleUrlInfo,
+          })
+          rawUrlRedirections[url] = buildUrl
+          rawUrls[buildUrl] = url
+          bundleUrlInfos[buildUrl] = bundleUrlInfo
+          if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+            const urlForBundler = new URL(
+              bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
+              buildDirectoryUrl,
+            ).href
+            bundleUrlRedirections[urlForBundler] = buildUrl
+          }
+        })
+      } catch (e) {
+        bundleTask.fail()
+        throw e
+      }
+      bundleTask.done()
+    }, Promise.resolve())
+
+    const buildUrlRedirections = {}
+    const finalGraph = createUrlGraph()
+    const optimizeUrlContentHooks =
+      rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
+    const finalGraphKitchen = createKitchen({
+      logger,
+      rootDirectoryUrl,
+      urlGraph: finalGraph,
+      scenario: "build",
+      sourcemaps,
+      sourcemapsRelativeSources: !versioning,
+      runtimeCompat,
+      plugins: [
+        jsenvPluginUrlAnalysis(),
+        jsenvPluginAsJsClassic({
+          systemJsInjection: true,
+        }),
+        jsenvPluginInline({
+          fetchInlineUrls: false,
+        }),
+        {
+          name: "jsenv:postbuild",
+          appliesDuring: { build: true },
+          resolveUrl: (reference) => {
+            if (reference.specifier[0] === "#") {
+              reference.external = true
+            }
+            let url =
+              reference.specifier[0] === "/"
+                ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
+                : new URL(reference.specifier, reference.parentUrl).href
+            const urlRedirectedByBundle = bundleUrlRedirections[url]
+            if (urlRedirectedByBundle) {
+              return urlRedirectedByBundle
+            }
+            const urlRedirected = rawUrlRedirections[url]
+            return urlRedirected || url
+          },
+          redirectUrl: (reference) => {
+            if (!reference.url.startsWith("file:")) {
+              return null
+            }
+            // already a build url
+            const rawUrl = rawUrls[reference.url]
+            if (rawUrl) {
               return reference.url
             }
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              urlInfo: rawUrlInfo,
-              parentUrlInfo,
-            })
-            rawUrls[buildUrl] = rawUrlInfo.url
-            return buildUrl
-          }
-          // from "js_module_as_js_classic":
-          //   - to inject "s.js"
-          if (reference.injected) {
+            // from rollup or postcss
+            const bundleUrlInfo = bundleUrlInfos[reference.url]
+            if (bundleUrlInfo) {
+              return reference.url
+            }
+            // from "js_module_as_js_classic":
+            //   - injecting "?as_js_classic" for the first time
+            //   - injecting "?as_js_classic" because the parentUrl has it
+            if (reference.original) {
+              const referenceOriginalUrl = reference.original.url
+              let originalBuildUrl
+              if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
+                originalBuildUrl = referenceOriginalUrl
+              } else {
+                originalBuildUrl = Object.keys(rawUrls).find(
+                  (key) => rawUrls[key] === referenceOriginalUrl,
+                )
+              }
+              let rawUrl
+              if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
+                // rawUrl = rawUrls[reference.url] || reference.url
+                const originalBuildUrl =
+                  buildUrlRedirections[referenceOriginalUrl]
+                rawUrl = originalBuildUrl
+                  ? rawUrls[originalBuildUrl]
+                  : reference.url
+              } else {
+                rawUrl = reference.url
+              }
+              // the url info do not exists yet (it will be created after this "normalize" hook)
+              // And the content will be generated when url is cooked by url graph loader.
+              // Here we just want to reserve an url for that file
+              const buildUrl = buildUrlsGenerator.generate(rawUrl, {
+                urlInfo: {
+                  data: {
+                    ...reference.data,
+                    isWebWorkerEntryPoint:
+                      isWebWorkerEntryPointReference(reference),
+                  },
+                  type: reference.expectedType,
+                  subtype: reference.expectedSubtype,
+                  filename: reference.filename,
+                },
+              })
+              buildUrlRedirections[originalBuildUrl] = buildUrl
+              rawUrls[buildUrl] = rawUrl
+              return buildUrl
+            }
+            if (reference.isInline) {
+              const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
+                if (!rawUrlInfo.isInline) {
+                  return false
+                }
+                if (rawUrlInfo.content === reference.content) {
+                  return true
+                }
+                if (rawUrlInfo.originalContent === reference.content) {
+                  return true
+                }
+                return false
+              })
+              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+              if (!rawUrlInfo) {
+                // generated during final graph
+                // (happens for JSON.parse injected for import assertions for instance)
+                // throw new Error(`cannot find raw url for "${reference.url}"`)
+                return reference.url
+              }
+              const buildUrl = buildUrlsGenerator.generate(reference.url, {
+                urlInfo: rawUrlInfo,
+                parentUrlInfo,
+              })
+              rawUrls[buildUrl] = rawUrlInfo.url
+              return buildUrl
+            }
+            // from "js_module_as_js_classic":
+            //   - to inject "s.js"
+            if (reference.injected) {
+              const buildUrl = buildUrlsGenerator.generate(reference.url, {
+                urlInfo: {
+                  data: {},
+                  type: "js_classic",
+                },
+              })
+              rawUrls[buildUrl] = reference.url
+              return buildUrl
+            }
+            const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
+            // files from root directory but not given to rollup nor postcss
+            if (rawUrlInfo) {
+              const buildUrl = buildUrlsGenerator.generate(reference.url, {
+                urlInfo: rawUrlInfo,
+              })
+              rawUrls[buildUrl] = rawUrlInfo.url
+              return buildUrl
+            }
+            if (reference.type === "sourcemap_comment") {
+              // inherit parent build url
+              return generateSourcemapUrl(reference.parentUrl)
+            }
+            // files generated during the final graph:
+            // - sourcemaps
+            // const finalUrlInfo = finalGraph.getUrlInfo(url)
             const buildUrl = buildUrlsGenerator.generate(reference.url, {
               urlInfo: {
                 data: {},
-                type: "js_classic",
+                type: "asset",
               },
             })
-            rawUrls[buildUrl] = reference.url
             return buildUrl
-          }
-          const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
-          // files from root directory but not given to rollup nor postcss
-          if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              urlInfo: rawUrlInfo,
-            })
-            rawUrls[buildUrl] = rawUrlInfo.url
-            return buildUrl
-          }
-          if (reference.type === "sourcemap_comment") {
-            // inherit parent build url
-            return generateSourcemapUrl(reference.parentUrl)
-          }
-          // files generated during the final graph:
-          // - sourcemaps
-          // const finalUrlInfo = finalGraph.getUrlInfo(url)
-          const buildUrl = buildUrlsGenerator.generate(reference.url, {
-            urlInfo: {
-              data: {},
-              type: "asset",
-            },
-          })
-          return buildUrl
-        },
-        formatUrl: (reference) => {
-          if (!reference.generatedUrl.startsWith("file:")) {
-            return null
-          }
-          if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
-            throw new Error(
-              `urls should be inside build directory at this stage, found "${reference.url}"`,
-            )
-          }
-          // remove eventual search params and hash
-          const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
-          let specifier
-          if (baseUrl === "./") {
-            const relativeUrl = urlToRelativeUrl(
-              urlUntilPathname,
-              reference.parentUrl === rootDirectoryUrl
-                ? buildDirectoryUrl
-                : reference.parentUrl,
-            )
-            // ensure "./" on relative url (otherwise it could be a "bare specifier")
-            specifier =
-              relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`
-          } else {
-            // if a file is in the same directory we could prefer the relative notation
-            // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
-            specifier = `${baseUrl}${urlToRelativeUrl(
-              urlUntilPathname,
-              buildDirectoryUrl,
-            )}`
-          }
-          buildUrls[specifier] = reference.generatedUrl
-          return specifier
-        },
-        fetchUrlContent: async (finalUrlInfo, context) => {
-          if (!finalUrlInfo.url.startsWith("file:")) {
-            return { external: true }
-          }
-          const fromBundleOrRawGraph = (url) => {
-            const bundleUrlInfo = bundleUrlInfos[url]
-            if (bundleUrlInfo) {
-              return bundleUrlInfo
+          },
+          formatUrl: (reference) => {
+            if (!reference.generatedUrl.startsWith("file:")) {
+              return null
             }
-            const rawUrl = rawUrls[url] || url
-            const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
-            if (!rawUrlInfo) {
-              const originalBuildUrl = buildUrlRedirections[url]
-              if (originalBuildUrl) {
-                return fromBundleOrRawGraph(originalBuildUrl)
+            if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
+              throw new Error(
+                `urls should be inside build directory at this stage, found "${reference.url}"`,
+              )
+            }
+            // remove eventual search params and hash
+            const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
+            let specifier
+            if (baseUrl === "./") {
+              const relativeUrl = urlToRelativeUrl(
+                urlUntilPathname,
+                reference.parentUrl === rootDirectoryUrl
+                  ? buildDirectoryUrl
+                  : reference.parentUrl,
+              )
+              // ensure "./" on relative url (otherwise it could be a "bare specifier")
+              specifier =
+                relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`
+            } else {
+              // if a file is in the same directory we could prefer the relative notation
+              // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
+              specifier = `${baseUrl}${urlToRelativeUrl(
+                urlUntilPathname,
+                buildDirectoryUrl,
+              )}`
+            }
+            buildUrls[specifier] = reference.generatedUrl
+            return specifier
+          },
+          fetchUrlContent: async (finalUrlInfo, context) => {
+            if (!finalUrlInfo.url.startsWith("file:")) {
+              return { external: true }
+            }
+            const fromBundleOrRawGraph = (url) => {
+              const bundleUrlInfo = bundleUrlInfos[url]
+              if (bundleUrlInfo) {
+                return bundleUrlInfo
               }
-              throw new Error(`Cannot find url`)
-            }
-            if (rawUrlInfo.isInline) {
-              // Inline content, such as <script> inside html, is transformed during the previous phase.
-              // If we read the inline content it would be considered as the original content.
-              // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-              //   as the original content.
-              //   - But it would not work when sourcemap are not generated
-              //   - would be a bit slower
-              // - So instead of reading the inline content directly, we search into raw graph
-              //   to get "originalContent" and "sourcemap"
-              finalUrlInfo.type = rawUrlInfo.type
-              finalUrlInfo.subtype = rawUrlInfo.subtype
+              const rawUrl = rawUrls[url] || url
+              const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
+              if (!rawUrlInfo) {
+                const originalBuildUrl = buildUrlRedirections[url]
+                if (originalBuildUrl) {
+                  return fromBundleOrRawGraph(originalBuildUrl)
+                }
+                throw new Error(`Cannot find url`)
+              }
+              if (rawUrlInfo.isInline) {
+                // Inline content, such as <script> inside html, is transformed during the previous phase.
+                // If we read the inline content it would be considered as the original content.
+                // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+                //   as the original content.
+                //   - But it would not work when sourcemap are not generated
+                //   - would be a bit slower
+                // - So instead of reading the inline content directly, we search into raw graph
+                //   to get "originalContent" and "sourcemap"
+                finalUrlInfo.type = rawUrlInfo.type
+                finalUrlInfo.subtype = rawUrlInfo.subtype
+                return rawUrlInfo
+              }
               return rawUrlInfo
             }
-            return rawUrlInfo
-          }
-          // reference injected during "postbuild":
-          // - happens for "as_js_classic" injecting "s.js"
-          if (context.reference.injected) {
-            const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-              type: context.reference.type,
-              expectedType: context.reference.expectedType,
-              expectedSubtype: context.reference.expectedSubtype,
-              parentUrl: rawUrls[context.reference.parentUrl],
-              specifier: context.reference.specifier,
-              injected: true,
-            })
-            await rawGraphKitchen.cook({
-              reference: ref,
-              urlInfo: rawUrlInfo,
-            })
-            return rawUrlInfo
-          }
-          // reference updated during "postbuild":
-          // - happens for "as_js_classic"
-          if (context.reference.original) {
-            return fromBundleOrRawGraph(context.reference.original.url)
-          }
-          return fromBundleOrRawGraph(finalUrlInfo.url)
+            // reference injected during "postbuild":
+            // - happens for "as_js_classic" injecting "s.js"
+            if (context.reference.injected) {
+              const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
+                type: context.reference.type,
+                expectedType: context.reference.expectedType,
+                expectedSubtype: context.reference.expectedSubtype,
+                parentUrl: rawUrls[context.reference.parentUrl],
+                specifier: context.reference.specifier,
+                injected: true,
+              })
+              await rawGraphKitchen.cook({
+                reference: ref,
+                urlInfo: rawUrlInfo,
+              })
+              return rawUrlInfo
+            }
+            // reference updated during "postbuild":
+            // - happens for "as_js_classic"
+            if (context.reference.original) {
+              return fromBundleOrRawGraph(context.reference.original.url)
+            }
+            return fromBundleOrRawGraph(finalUrlInfo.url)
+          },
         },
-      },
-      {
-        name: "jsenv:optimize",
-        appliesDuring: { build: true },
-        finalizeUrlContent: async (urlInfo, context) => {
-          if (optimizeUrlContentHooks.length) {
-            await rawGraphKitchen.pluginController.callAsyncHooks(
-              "optimizeUrlContent",
-              urlInfo,
-              context,
-              async (optimizeReturnValue) => {
-                await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
-                  urlInfo,
-                  optimizeReturnValue,
-                )
-              },
-            )
-          }
+        {
+          name: "jsenv:optimize",
+          appliesDuring: { build: true },
+          finalizeUrlContent: async (urlInfo, context) => {
+            if (optimizeUrlContentHooks.length) {
+              await rawGraphKitchen.pluginController.callAsyncHooks(
+                "optimizeUrlContent",
+                urlInfo,
+                context,
+                async (optimizeReturnValue) => {
+                  await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+                    urlInfo,
+                    optimizeReturnValue,
+                  )
+                },
+              )
+            }
+          },
         },
-      },
-    ],
-  })
-  const buildTask = createTaskLog(logger, "build")
-  const postBuildEntryUrls = []
-  try {
-    await loadUrlGraph({
-      urlGraph: finalGraph,
-      kitchen: finalGraphKitchen,
-      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
-      skipRessourceHint: true,
-      startLoading: (cookEntryFile) => {
-        entryUrls.forEach((entryUrl) => {
-          const [, postBuildEntryUrlInfo] = cookEntryFile({
-            trace: `entryPoint`,
-            type: "entry_point",
-            specifier: entryUrl,
-          })
-          postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
-        })
-      },
+      ],
     })
-  } catch (e) {
-    buildTask.fail()
-    throw e
-  }
-  buildTask.done()
+    const buildTask = createTaskLog(logger, "build")
+    const postBuildEntryUrls = []
+    try {
+      await loadUrlGraph({
+        operation: buildOperation,
+        urlGraph: finalGraph,
+        kitchen: finalGraphKitchen,
+        outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+        skipRessourceHint: true,
+        startLoading: (cookEntryFile) => {
+          entryUrls.forEach((entryUrl) => {
+            const [, postBuildEntryUrlInfo] = cookEntryFile({
+              trace: `entryPoint`,
+              type: "entry_point",
+              specifier: entryUrl,
+            })
+            postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
+          })
+        },
+      })
+    } catch (e) {
+      buildTask.fail()
+      throw e
+    }
+    buildTask.done()
 
-  logger.debug(
-    `graph urls pre-versioning:
+    logger.debug(
+      `graph urls pre-versioning:
 ${Object.keys(finalGraph.urlInfos).join("\n")}`,
-  )
-  if (versioning) {
-    await applyUrlVersioning({
-      logger,
-      buildDirectoryUrl,
+    )
+    if (versioning) {
+      await applyUrlVersioning({
+        buildOperation,
+        logger,
+        buildDirectoryUrl,
+        rawUrls,
+        buildUrls,
+        baseUrl,
+        postBuildEntryUrls,
+        sourcemaps,
+        runtimeCompat,
+        rawGraph,
+        finalGraph,
+        finalGraphKitchen,
+        lineBreakNormalization,
+        versioningMethod,
+      })
+    }
+    GRAPH.forEach(finalGraph, (urlInfo) => {
+      if (!urlInfo.url.startsWith("file:")) {
+        return
+      }
+      if (urlInfo.external) {
+        return
+      }
+      if (urlInfo.type === "html") {
+        const htmlAst = parseHtmlString(urlInfo.content, {
+          storeOriginalPositions: false,
+        })
+        urlInfo.content = stringifyHtmlAst(htmlAst, {
+          removeOriginalPositionAttributes: true,
+        })
+      }
+      const version = urlInfo.data.version
+      const useVersionedUrl = version && canUseVersionedUrl(urlInfo, finalGraph)
+      const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url
+      const buildUrlSpecifier = Object.keys(buildUrls).find(
+        (key) => buildUrls[key] === buildUrl,
+      )
+      urlInfo.data.buildUrl = buildUrl
+      urlInfo.data.buildUrlIsVersioned = useVersionedUrl
+      urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
+    })
+    await resyncRessourceHints({
+      finalGraphKitchen,
+      finalGraph,
       rawUrls,
       buildUrls,
-      baseUrl,
-      postBuildEntryUrls,
-      sourcemaps,
-      runtimeCompat,
-      rawGraph,
-      finalGraph,
-      finalGraphKitchen,
-      lineBreakNormalization,
-      versioningMethod,
     })
-  }
-  GRAPH.forEach(finalGraph, (urlInfo) => {
-    if (!urlInfo.url.startsWith("file:")) {
-      return
-    }
-    if (urlInfo.external) {
-      return
-    }
-    if (urlInfo.type === "html") {
-      const htmlAst = parseHtmlString(urlInfo.content, {
-        storeOriginalPositions: false,
-      })
-      urlInfo.content = stringifyHtmlAst(htmlAst, {
-        removeOriginalPositionAttributes: true,
-      })
-    }
-    const version = urlInfo.data.version
-    const useVersionedUrl = version && canUseVersionedUrl(urlInfo, finalGraph)
-    const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url
-    const buildUrlSpecifier = Object.keys(buildUrls).find(
-      (key) => buildUrls[key] === buildUrl,
-    )
-    urlInfo.data.buildUrl = buildUrl
-    urlInfo.data.buildUrlIsVersioned = useVersionedUrl
-    urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
-  })
-  await resyncRessourceHints({
-    finalGraphKitchen,
-    finalGraph,
-    rawUrls,
-    buildUrls,
-  })
-  const cleanupActions = []
-  GRAPH.forEach(finalGraph, (urlInfo) => {
-    // nothing uses this url anymore
-    // - versioning update inline content
-    // - file converted for import assertion of js_classic conversion
-    if (
-      !urlInfo.data.isEntryPoint &&
-      urlInfo.type !== "sourcemap" &&
-      urlInfo.dependents.size === 0
-    ) {
-      cleanupActions.push(() => {
-        finalGraph.deleteUrlInfo(urlInfo.url)
-      })
-    }
-  })
-  cleanupActions.forEach((cleanupAction) => cleanupAction())
-  await injectServiceWorkerUrls({
-    finalGraphKitchen,
-    finalGraph,
-    lineBreakNormalization,
-  })
-  logger.debug(
-    `graph urls post-versioning:
-${Object.keys(finalGraph.urlInfos).join("\n")}`,
-  )
+    buildOperation.throwIfAborted()
+    const cleanupActions = []
+    GRAPH.forEach(finalGraph, (urlInfo) => {
+      // nothing uses this url anymore
+      // - versioning update inline content
+      // - file converted for import assertion of js_classic conversion
+      if (
+        !urlInfo.data.isEntryPoint &&
+        urlInfo.type !== "sourcemap" &&
+        urlInfo.dependents.size === 0
+      ) {
+        cleanupActions.push(() => {
+          finalGraph.deleteUrlInfo(urlInfo.url)
+        })
+      }
+    })
+    cleanupActions.forEach((cleanupAction) => cleanupAction())
+    await injectServiceWorkerUrls({
+      finalGraphKitchen,
+      finalGraph,
+      lineBreakNormalization,
+    })
+    buildOperation.throwIfAborted()
 
-  const buildManifest = {}
-  const buildFileContents = {}
-  const buildInlineContents = {}
-  GRAPH.forEach(finalGraph, (urlInfo) => {
-    if (urlInfo.external) {
-      return
-    }
-    if (urlInfo.url.startsWith("data:")) {
-      return
-    }
-    const buildRelativeUrl = urlToRelativeUrl(
-      urlInfo.data.buildUrl,
-      buildDirectoryUrl,
-    )
-    if (urlInfo.isInline) {
-      buildInlineContents[buildRelativeUrl] = urlInfo.content
-    } else {
-      buildFileContents[buildRelativeUrl] = urlInfo.content
-      const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
-        urlInfo.url,
+    const buildManifest = {}
+    const buildFileContents = {}
+    const buildInlineContents = {}
+    GRAPH.forEach(finalGraph, (urlInfo) => {
+      if (urlInfo.external) {
+        return
+      }
+      if (urlInfo.url.startsWith("data:")) {
+        return
+      }
+      const buildRelativeUrl = urlToRelativeUrl(
+        urlInfo.data.buildUrl,
         buildDirectoryUrl,
       )
-      buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
-    }
-  })
-  if (writeOnFileSystem) {
-    if (buildDirectoryClean) {
-      await ensureEmptyDirectory(buildDirectoryUrl)
-    }
-    const buildRelativeUrls = Object.keys(buildFileContents)
-    await Promise.all(
-      buildRelativeUrls.map(async (buildRelativeUrl) => {
-        await writeFile(
-          new URL(buildRelativeUrl, buildDirectoryUrl),
-          buildFileContents[buildRelativeUrl],
+      if (urlInfo.isInline) {
+        buildInlineContents[buildRelativeUrl] = urlInfo.content
+      } else {
+        buildFileContents[buildRelativeUrl] = urlInfo.content
+        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+          urlInfo.url,
+          buildDirectoryUrl,
         )
-      }),
-    )
-    if (versioning && assetManifest && Object.keys(buildManifest).length) {
-      await writeFile(
-        new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
-        JSON.stringify(buildManifest, null, "  "),
+        buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
+      }
+    })
+    if (writeOnFileSystem) {
+      if (buildDirectoryClean) {
+        await ensureEmptyDirectory(buildDirectoryUrl)
+      }
+      const buildRelativeUrls = Object.keys(buildFileContents)
+      await Promise.all(
+        buildRelativeUrls.map(async (buildRelativeUrl) => {
+          await writeFile(
+            new URL(buildRelativeUrl, buildDirectoryUrl),
+            buildFileContents[buildRelativeUrl],
+          )
+        }),
       )
+      if (versioning && assetManifest && Object.keys(buildManifest).length) {
+        await writeFile(
+          new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
+          JSON.stringify(buildManifest, null, "  "),
+        )
+      }
+    }
+    logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }))
+    return {
+      buildFileContents,
+      buildInlineContents,
+      buildManifest,
     }
   }
-  logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }))
-  return {
-    buildFileContents,
-    buildInlineContents,
-    buildManifest,
+
+  if (!watch) {
+    return runBuild({ signal: operation.signal, logLevel })
   }
+
+  const watchLogger = createLogger({ logLevel: "info" })
+  let buildAbortController
+  let watchFilesTask
+  const startBuild = async () => {
+    const buildTask = createTaskLog(watchLogger, "build")
+    buildAbortController = new AbortController()
+    try {
+      await runBuild({ signal: buildAbortController.signal, logLevel: "warn" })
+      buildTask.done()
+      watchFilesTask = createTaskLog(watchLogger, "watch files")
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        buildTask.fail(`build aborted`)
+      } else if (e.code === "PARSE_ERROR") {
+        buildTask.fail()
+        watchLogger.error(e.stack)
+        watchFilesTask = createTaskLog(watchLogger, "watch files")
+      } else {
+        buildTask.fail()
+        throw e
+      }
+    }
+  }
+
+  startBuild()
+  let startTimeout
+  const clientFileChangeCallback = ({ relativeUrl, event }) => {
+    const url = new URL(relativeUrl, rootDirectoryUrl).href
+    if (watchFilesTask) {
+      watchFilesTask.happen(`${url.slice(rootDirectoryUrl.length)} ${event}`)
+      watchFilesTask = null
+    }
+    buildAbortController.abort()
+    // setTimeout is to ensure the abortController.abort() above
+    // is properly taken into account so that logs about abort comes first
+    // then logs about re-running the build happens
+    clearTimeout(startTimeout)
+    startTimeout = setTimeout(startBuild, 20)
+  }
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: clientFiles,
+    cooldownBetweenFileEvents,
+    keepProcessAlive: true,
+    recursive: true,
+    added: ({ relativeUrl }) => {
+      clientFileChangeCallback({ relativeUrl, event: "added" })
+    },
+    updated: ({ relativeUrl }) => {
+      clientFileChangeCallback({ relativeUrl, event: "modified" })
+    },
+    removed: ({ relativeUrl }) => {
+      clientFileChangeCallback({ relativeUrl, event: "removed" })
+    },
+  })
+  operation.addAbortCallback(() => {
+    stopWatchingClientFiles()
+  })
+  return stopWatchingClientFiles
 }
 
 const applyUrlVersioning = async ({
+  buildOperation,
   logger,
   buildDirectoryUrl,
   rawUrls,
@@ -968,6 +1060,7 @@ const applyUrlVersioning = async ({
       ],
     })
     await loadUrlGraph({
+      operation: buildOperation,
       urlGraph: finalGraph,
       kitchen: versioningKitchen,
       skipRessourceHint: true,
