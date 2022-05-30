@@ -730,12 +730,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       buildInlineContents[buildRelativeUrl] = urlInfo.content
     } else {
       buildFileContents[buildRelativeUrl] = urlInfo.content
+      const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+        urlInfo.url,
+        buildDirectoryUrl,
+      )
+      buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
     }
-    const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
-      urlInfo.url,
-      buildDirectoryUrl,
-    )
-    buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
   })
   if (writeOnFileSystem) {
     if (buildDirectoryClean) {
