@@ -1,5 +1,6 @@
 import cluster from "node:cluster"
 import { fileURLToPath } from "node:url"
+import { parentPort } from "node:worker_threads"
 import { createLogger } from "@jsenv/logger"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
@@ -41,6 +42,11 @@ export const initReloadableProcess = async ({
       )
     })
   }
+  const logger = createLogger({ logLevel })
+  if (parentPort) {
+    enabled = false
+    logger.warn(`Cannot make process reloadable as it is a worker`)
+  }
   if (!enabled) {
     return {
       isPrimary: false,
@@ -49,7 +55,6 @@ export const initReloadableProcess = async ({
     }
   }
 
-  const logger = createLogger({ logLevel })
   const startWorker = () => {
     cluster.fork()
   }
