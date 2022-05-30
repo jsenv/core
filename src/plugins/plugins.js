@@ -17,6 +17,7 @@ import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
 import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js"
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
+import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
@@ -68,7 +69,6 @@ export const getCorePlugins = ({
     jsenvPluginInjectGlobals(injectedGlobals),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
-    // jsenvPluginWorkers(),
 
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
@@ -87,5 +87,6 @@ export const getCorePlugins = ({
           }),
         ]
       : []),
+    jsenvPluginCacheControl(),
   ]
 }

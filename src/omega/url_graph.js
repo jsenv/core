@@ -15,16 +15,6 @@ export const createUrlGraph = ({
       }
     }
   }
-  const resetUrlInfo = (urlInfo) => {
-    urlInfo.sourcemap = null
-    urlInfo.sourcemapReference = null
-    urlInfo.content = null
-    urlInfo.originalContent = null
-    urlInfo.type = null
-    urlInfo.subtype = null
-    urlInfo.data = {}
-    urlInfo.timing = {}
-  }
 
   const reuseOrCreateUrlInfo = (url) => {
     const existingUrlInfo = urlInfos[url]
@@ -160,7 +150,6 @@ export const createUrlGraph = ({
     reuseOrCreateUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
-    resetUrlInfo,
     inferReference,
     findDependent,
     updateReferences,

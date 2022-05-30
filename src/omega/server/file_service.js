@@ -20,6 +20,11 @@ export const createFileService = ({
     urlGraph,
     scenario,
   }
+  const augmentResponseContext = {
+    rootDirectoryUrl,
+    urlGraph,
+    scenario,
+  }
 
   const getResponse = async (request) => {
     // serve file inside ".jsenv" directory
@@ -58,9 +63,19 @@ export const createFileService = ({
       reference.parentUrl,
     )
     try {
-      // urlInfo objects are reused, they must be "reset" before cooking then again
-      if (!urlInfo.isInline && !urlInfo.type === "sourcemap") {
-        urlGraph.resetUrlInfo(urlInfo)
+      // urlInfo objects are reused, they must be "reset" before cooking them again
+      if (
+        urlInfo.contentEtag &&
+        !urlInfo.isInline &&
+        urlInfo.type !== "sourcemap"
+      ) {
+        urlInfo.sourcemap = null
+        urlInfo.sourcemapReference = null
+        urlInfo.content = null
+        urlInfo.originalContent = null
+        urlInfo.type = null
+        urlInfo.subtype = null
+        urlInfo.timing = {}
       }
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"],
@@ -92,7 +107,7 @@ export const createFileService = ({
       kitchen.pluginController.callHooks(
         "augmentResponse",
         { reference, urlInfo },
-        {},
+        augmentResponseContext,
         (returnValue) => {
           response = composeTwoResponses(response, returnValue)
         },

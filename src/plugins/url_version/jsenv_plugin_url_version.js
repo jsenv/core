@@ -1,7 +1,7 @@
-export const jsenvPluginUrlVersion = ({ longTermCache = true } = {}) => {
+export const jsenvPluginUrlVersion = () => {
   return {
     name: "jsenv:url_version",
-    appliesDuring: "*", // maybe only during dev?
+    appliesDuring: "*",
     redirectUrl: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
@@ -24,24 +24,5 @@ export const jsenvPluginUrlVersion = ({ longTermCache = true } = {}) => {
         v: reference.data.version,
       }
     },
-    augmentResponse: ({ reference }) => {
-      if (!longTermCache) {
-        return null
-      }
-      if (!reference.searchParams.has("v")) {
-        return null
-      }
-      if (reference.searchParams.has("hmr")) {
-        return null
-      }
-      // When url is versioned put it in browser cache for 30 days
-      return {
-        headers: {
-          "cache-control": `private,max-age=${SECONDS_IN_30_DAYS},immutable`,
-        },
-      }
-    },
   }
 }
-
-const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30
