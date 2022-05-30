@@ -785,22 +785,88 @@
 (function () {
   // worker or service worker
   if (typeof WorkerGlobalScope === 'function' && self instanceof WorkerGlobalScope) {
-    // auto import first register
-    var messageEvents = []
-    var messageCallback = (event) => {
-      messageEvents.push(event)
+    /*
+     * SystemJs loads X files before executing the worker/service worker main file
+     * It mean events dispatched during this phase could be missed
+     * A warning like the one below is displayed in chrome devtools:
+     * "Event handler of 'install' event must be added on the initial evaluation of worker script"
+     * To fix that code below listen for these events early and redispatch them later
+     * once the worker file is executed (the listeners are installed)
+    */
+    var firstRegisterCallbacks = []
+    var isServiceWorker = typeof self.skipWaiting === 'function'
+    if (isServiceWorker) {
+      // for service worker there is more events to listen
+      // and, to get rid of the warning, we override self.addEventListener
+      var eventsToCatch = ['message', 'install', 'activate', 'fetch']
+      var eventCallbackProxies = {}
+      var firstRegisterPromise = new Promise((resolve) => {
+        firstRegisterCallbacks.push(resolve)
+      })
+      eventsToCatch.forEach(function(eventName) {
+        var eventsToDispatch = []
+        var eventCallback = function (event) {
+          const eventCallbackProxy = eventCallbackProxies[event.type]
+          if (eventCallbackProxy) {
+            eventCallbackProxy(event)
+          }
+          else {
+            eventsToDispatch.push(event)
+            event.waitUntil(firstRegisterPromise)
+          }
+        }
+        self.addEventListener(eventName, eventCallback)
+        firstRegisterCallbacks.push(function() {
+          if (eventsToDispatch.length) {
+            const eventCallbackProxy = eventCallbackProxies[eventsToDispatch[0].type]
+            if (eventCallbackProxy) {
+              eventsToDispatch.forEach(function (event) {
+                eventCallbackProxy(event)
+              })
+            }
+            eventsToDispatch.length = 0
+          }
+        })
+      })
+     
+      var addEventListener = self.addEventListener
+      self.addEventListener = function (eventName, callback, options) {
+        if (eventsToCatch.indexOf(eventName) > -1) {
+          eventCallbackProxies[eventName] = callback
+          return
+        }
+        return addEventListener.call(self, eventName, callback, options)
+      }
     }
-    self.addEventListener('message', messageCallback)
+    else {
+      var eventsToCatch = ['message']
+      eventsToCatch.forEach(function (eventName) {
+        var eventQueue = []
+        var eventCallback = (event) => {
+          eventQueue.push(event)
+        }
+        self.addEventListener(eventName, eventCallback)
+        firstRegisterCallbacks.push(function() {
+          self.removeEventListener(eventName, eventCallback)
+          eventQueue.forEach(function (event) {
+            self.dispatchEvent(event)
+          })
+          eventQueue.length = 0
+        })
+      })
+    }
+
+
+    // auto import first register
     var register = System.register;
     System.register = function(deps, declare) {
       System.register = register;
       System.registerRegistry[self.location.href] = [deps, declare];
       return System.import(self.location.href).then((result) => {
-        self.removeEventListener('message', messageCallback)
-        messageEvents.forEach((messageEvent) => {
-          self.dispatchEvent(messageEvent)
+        firstRegisterCallbacks.forEach(firstRegisterCallback => {
+          firstRegisterCallback()
         })
-        messageEvents = null
+        firstRegisterCallbacks.length = 0
         return result
       })
     }
