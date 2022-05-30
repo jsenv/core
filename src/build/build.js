@@ -796,6 +796,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     return runBuild({ signal: operation.signal, logLevel })
   }
 
+  let resolveFirstBuild
+  let rejectFirstBuild
+  const firstBuildPromise = new Promise((resolve, reject) => {
+    resolveFirstBuild = resolve
+    rejectFirstBuild = reject
+  })
   const watchLogger = createLogger({ logLevel: "info" })
   let buildAbortController
   let watchFilesTask
@@ -803,8 +809,12 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     const buildTask = createTaskLog(watchLogger, "build")
     buildAbortController = new AbortController()
     try {
-      await runBuild({ signal: buildAbortController.signal, logLevel: "warn" })
+      const result = await runBuild({
+        signal: buildAbortController.signal,
+        logLevel: "warn",
+      })
       buildTask.done()
+      resolveFirstBuild(result)
       watchFilesTask = createTaskLog(watchLogger, "watch files")
     } catch (e) {
       if (Abort.isAbortError(e)) {
@@ -815,6 +825,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         watchFilesTask = createTaskLog(watchLogger, "watch files")
       } else {
         buildTask.fail()
+        rejectFirstBuild(e)
         throw e
       }
     }
@@ -853,6 +864,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
   operation.addAbortCallback(() => {
     stopWatchingClientFiles()
   })
+  await firstBuildPromise
   return stopWatchingClientFiles
 }
 
