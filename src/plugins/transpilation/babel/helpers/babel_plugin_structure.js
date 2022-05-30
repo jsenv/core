@@ -1,7 +1,12 @@
 import { getBabelHelperFileUrl, requireBabelPlugin } from "@jsenv/babel-plugins"
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
-export const getBaseBabelPluginStructure = ({ url, isSupported }) => {
+export const getBaseBabelPluginStructure = ({
+  url,
+  isSupported,
+  // isJsModule,
+  // getImportSpecifier,
+}) => {
   const isBabelPluginNeeded = (babelPluginName) => {
     return !isSupported(babelPluginCompatMap[babelPluginName])
   }
@@ -35,6 +40,12 @@ export const getBaseBabelPluginStructure = ({ url, isSupported }) => {
       requireBabelPlugin("babel-plugin-transform-async-to-promises"),
       {
         topLevelAwait: "ignore", // will be handled by "jsenv:top_level_await" plugin
+        externalHelpers: false,
+        // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
+        // externalHelpers: isJsModule,
+        // externalHelpersPath: isJsModule ? getImportSpecifier(
+        //     "babel-plugin-transform-async-to-promises/helpers.mjs",
+        //   ) : null
       },
     ]
   }

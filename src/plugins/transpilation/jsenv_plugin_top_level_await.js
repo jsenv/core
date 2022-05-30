@@ -24,6 +24,16 @@ export const jsenvPluginTopLevelAwait = () => {
                 // Maybe we could pass target: "es6" when we support arrow function
                 // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
                 topLevelAwait: "simple",
+                // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
+                // externalHelpers: true,
+                // externalHelpersPath: JSON.parse(
+                //   context.referenceUtils.inject({
+                //     type: "js_import_export",
+                //     expectedType: "js_module",
+                //     specifier:
+                //       "babel-plugin-transform-async-to-promises/helpers.mjs",
+                //   })[0],
+                // ),
               },
             ],
           ],

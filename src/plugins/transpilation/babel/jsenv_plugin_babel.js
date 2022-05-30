@@ -33,27 +33,29 @@ export const jsenvPluginBabel = ({ getCustomBabelPlugins } = {}) => {
       )
     }
 
-    const { referenceUtils } = context
     const isSupported = (feature) =>
       RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
+    const getImportSpecifier = (clientFileUrl) => {
+      const [reference] = context.referenceUtils.inject({
+        type: "js_import_export",
+        expectedType: "js_module",
+        specifier: clientFileUrl,
+      })
+      return JSON.parse(reference.generatedSpecifier)
+    }
+
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupported,
       isWorkerContext,
+      isJsModule,
+      getImportSpecifier,
     })
     if (getCustomBabelPlugins) {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context))
     }
 
     if (isJsModule) {
-      const getImportSpecifier = (clientFileUrl) => {
-        const [reference] = referenceUtils.inject({
-          type: "js_import_export",
-          expectedType: "js_module",
-          specifier: clientFileUrl,
-        })
-        return JSON.parse(reference.generatedSpecifier)
-      }
       if (!isSupported("global_this")) {
         babelPluginStructure["global-this-as-jsenv-import"] = [
           babelPluginGlobalThisAsJsenvImport,
