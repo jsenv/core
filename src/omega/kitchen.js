@@ -192,10 +192,7 @@ export const createKitchen = ({
           Object.keys(returnValue).forEach((key) => {
             referenceUrlObject.searchParams.set(key, returnValue[key])
           })
-          reference.generatedUrl = referenceUrlObject.href.replace(
-            /[=](?=&|$)/g,
-            "",
-          )
+          reference.generatedUrl = normalizeUrl(referenceUrlObject.href)
         },
       )
       const returnValue = pluginController.callHooksUntil(
@@ -654,8 +651,6 @@ export const createKitchen = ({
   const prepareEntryPoint = (params) => {
     const entryReference = createReference(params)
     const entryUrlInfo = resolveReference(entryReference)
-    // I should likely delete urlInfo.sourcemap
-    // otherwise it is reused when page is reloaded
     return [entryReference, entryUrlInfo]
   }
 
