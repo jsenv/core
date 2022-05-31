@@ -26,13 +26,16 @@ const dequeue = async () => {
   const callbacks = pendingCallbacks.slice()
   pendingCallbacks = []
   running = true
-  await callbacks.reduce(async (previous, callback) => {
-    await previous
-    await callback()
-  }, Promise.resolve())
-  running = false
-  if (pendingCallbacks.length) {
-    dequeue()
+  try {
+    await callbacks.reduce(async (previous, callback) => {
+      await previous
+      await callback()
+    }, Promise.resolve())
+  } finally {
+    running = false
+    if (pendingCallbacks.length) {
+      dequeue()
+    }
   }
 }
 

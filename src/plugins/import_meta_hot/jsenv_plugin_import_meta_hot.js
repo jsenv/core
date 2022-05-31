@@ -25,7 +25,7 @@ export const jsenvPluginImportMetaHot = ({ rootDirectoryUrl }) => {
           return
         }
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
-        const { hotReferences } = collectHotDataFromHtmlAst(htmlAst)
+        const hotReferences = collectHotDataFromHtmlAst(htmlAst)
         htmlUrlInfo.data.hotDecline = false
         htmlUrlInfo.data.hotAcceptSelf = false
         htmlUrlInfo.data.hotAcceptDependencies = hotReferences.map(

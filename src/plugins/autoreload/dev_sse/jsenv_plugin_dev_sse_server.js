@@ -113,7 +113,7 @@ export const jsenvPluginDevSSEServer = ({
     return iterate(firstUrlInfo, trace)
   }
   clientFileChangeCallbackList.push(({ url, event }) => {
-    const urlInfo = urlGraph.urlInfos[url]
+    const urlInfo = urlGraph.getUrlInfo(url)
     // file not part of dependency graph
     if (!urlInfo) {
       return

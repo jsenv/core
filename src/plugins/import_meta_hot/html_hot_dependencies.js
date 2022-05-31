@@ -103,7 +103,7 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
   }
   iterate(htmlAst, {})
 
-  return { hotReferences }
+  return hotReferences
 }
 
 const nodeNamesWithHref = ["link", "a", "image", "use"]
@@ -125,7 +125,7 @@ const getNodeContext = (node) => {
 
 const htmlNodeCanHotReload = (node) => {
   if (node.nodeName === "link") {
-    const { isStylesheet, isRessourceHint } = parseLinkNode(node)
+    const { isStylesheet, isRessourceHint, rel } = parseLinkNode(node)
     if (isStylesheet) {
       // stylesheets can be hot replaced by default
       return true
@@ -133,6 +133,9 @@ const htmlNodeCanHotReload = (node) => {
     if (isRessourceHint) {
       // for ressource hints html will be notified the underlying ressource has changed
       // but we won't do anything (if the ressource is deleted we should?)
+      return true
+    }
+    if (rel === "icon") {
       return true
     }
     return false
