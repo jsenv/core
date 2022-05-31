@@ -263,8 +263,8 @@ The presence of a jsenv configuration file is **optional**.
 /*
  * This file exports configuration reused by other files such as
  *
- * script/test/test.mjs
- * script/build/build.mjs
+ * scripts/test/test.mjs
+ * scripts/build/build.mjs
  *
  * Read more at https://github.com/jsenv/jsenv-core#configuration
  */

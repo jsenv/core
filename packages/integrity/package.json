@@ -21,7 +21,7 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node ./script/test/test.mjs"
+    "test": "node ./scripts/test/test.mjs"
   },
   "devDependencies": {
     "@jsenv/assert": "2.5.3",

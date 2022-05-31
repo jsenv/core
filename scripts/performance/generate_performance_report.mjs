@@ -2,7 +2,7 @@
  * This file is designed to be executed locally or by an automated process.
  *
  * To run it locally, use one of
- * - node --expose-gc ./script/performance/generate_performance_report.mjs --log
+ * - node --expose-gc ./scripts/performance/generate_performance_report.mjs --log
  * - npm run measure-performances
  *
  * The automated process is a GitHub workflow: ".github/workflows/performance_impact.yml"

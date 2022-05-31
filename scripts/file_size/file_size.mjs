@@ -2,7 +2,7 @@
  * This file is designed to be executed locally or by an automated process.
  *
  * To run it locally, use one ofs
- * - node ./script/file_size/file_size.mjs --local
+ * - node ./scripts/file_size/file_size.mjs --local
  * - npm run file-size
  *
  * The automated process is a GitHub workflow: ".github/workflows/file_size_impact.yml"

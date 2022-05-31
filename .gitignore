@@ -7,9 +7,9 @@
 /docs/**/package-lock.json
 /node_modules/
 /packages/node_modules/
-/script/**/.jsenv/
-/script/**/dist/
-/script/**/.coverage/
+/scripts/**/.jsenv/
+/scripts/**/dist/
+/scripts/**/.coverage/
 /test-manual/**/.jsenv/
 /package-lock.json
 /secrets.json
