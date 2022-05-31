@@ -68,7 +68,7 @@
     "@jsenv/node-esm-resolution": "0.0.6",
     "@jsenv/server": "12.6.2",
     "@jsenv/uneval": "1.6.0",
-    "@jsenv/utils": "1.7.4",
+    "@jsenv/utils": "1.7.5",
     "construct-style-sheets-polyfill": "3.1.0",
     "cssnano": "5.1.7",
     "cssnano-preset-default": "5.2.7",
