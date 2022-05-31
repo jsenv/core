@@ -109,8 +109,9 @@ export const build = async ({
   cooldownBetweenFileEvents,
   watch = false,
 
-  writeOnFileSystem = true,
   buildDirectoryClean = true,
+  writeOnFileSystem = true,
+  writeGeneratedFiles = false,
   baseUrl = "/",
   assetManifest = true,
   assetManifestFileRelativeUrl = "asset-manifest.json",
@@ -161,6 +162,7 @@ build ${entryPointKeys.length} entry points`)
       scenario: "build",
       sourcemaps,
       runtimeCompat,
+      writeGeneratedFiles,
       plugins: [
         ...plugins,
         {
@@ -378,6 +380,7 @@ build ${entryPointKeys.length} entry points`)
       sourcemaps,
       sourcemapsRelativeSources: !versioning,
       runtimeCompat,
+      writeGeneratedFiles,
       plugins: [
         jsenvPluginUrlAnalysis(),
         jsenvPluginAsJsClassic({
@@ -677,6 +680,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         postBuildEntryUrls,
         sourcemaps,
         runtimeCompat,
+        writeGeneratedFiles,
         rawGraph,
         finalGraph,
         finalGraphKitchen,
@@ -878,6 +882,7 @@ const applyUrlVersioning = async ({
   postBuildEntryUrls,
   sourcemaps,
   runtimeCompat,
+  writeGeneratedFiles,
   rawGraph,
   finalGraph,
   finalGraphKitchen,
@@ -980,6 +985,7 @@ const applyUrlVersioning = async ({
       sourcemaps,
       sourcemapsRelativeSources: true,
       runtimeCompat,
+      writeGeneratedFiles,
       plugins: [
         jsenvPluginUrlAnalysis(),
         jsenvPluginInline({

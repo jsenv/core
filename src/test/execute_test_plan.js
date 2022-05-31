@@ -87,6 +87,7 @@ export const executeTestPlan = async ({
   injectedGlobals,
   nodeEsmResolution,
   fileSystemMagicResolution,
+  writeGeneratedFiles = false,
 
   protocol,
   privateKey,
@@ -173,6 +174,7 @@ export const executeTestPlan = async ({
     injectedGlobals,
     nodeEsmResolution,
     fileSystemMagicResolution,
+    writeGeneratedFiles,
 
     protocol,
     privateKey,

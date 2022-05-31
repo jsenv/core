@@ -65,6 +65,7 @@ export const executePlan = async (
     nodeEsmResolution,
     fileSystemMagicResolution,
     transpilation,
+    writeGeneratedFiles,
 
     protocol,
     privateKey,
@@ -134,7 +135,7 @@ export const executePlan = async (
         urlGraph,
         scenario,
         sourcemaps,
-        writeOnFileSystem: false,
+        writeGeneratedFiles,
         plugins: [
           ...plugins,
           ...getCorePlugins({

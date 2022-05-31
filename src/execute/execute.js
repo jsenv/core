@@ -35,6 +35,7 @@ export const execute = async ({
   injectedGlobals,
   transpilation,
   htmlSupervisor = true,
+  writeGeneratedFiles = false,
 
   port,
   protocol,
@@ -74,6 +75,7 @@ export const execute = async ({
       urlGraph,
       scenario,
       sourcemaps,
+      writeGeneratedFiles,
       plugins: [
         ...plugins,
         ...getCorePlugins({

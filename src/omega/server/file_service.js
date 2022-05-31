@@ -83,7 +83,10 @@ export const createFileService = ({
       await kitchen.cook({
         reference: referenceFromGraph || reference,
         urlInfo,
-        outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
+        outDirectoryUrl:
+          scenario === "dev"
+            ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
+            : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
         clientRuntimeCompat: {
           [runtimeName]: runtimeVersion,
         },

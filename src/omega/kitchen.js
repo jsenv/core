@@ -47,7 +47,7 @@ export const createKitchen = ({
   }[scenario],
   sourcemapsRelativeSources,
   runtimeCompat = defaultRuntimeCompat,
-  writeOnFileSystem = true,
+  writeGeneratedFiles,
 }) => {
   const pluginController = createPluginController({
     plugins,
@@ -613,7 +613,7 @@ export const createKitchen = ({
     outDirectoryUrl = outDirectoryUrl ? String(outDirectoryUrl) : undefined
 
     const writeFiles = ({ gotError }) => {
-      if (!writeOnFileSystem || !outDirectoryUrl) {
+      if (!writeGeneratedFiles || !outDirectoryUrl) {
         return
       }
       const { generatedUrl } = urlInfo

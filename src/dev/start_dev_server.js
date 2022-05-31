@@ -61,6 +61,7 @@ export const startDevServer = async ({
     },
   },
   toolbar = false,
+  writeGeneratedFiles = true,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
@@ -154,6 +155,7 @@ export const startDevServer = async ({
     urlGraph,
     scenario: "dev",
     sourcemaps,
+    writeGeneratedFiles,
     plugins: [
       ...plugins,
       ...getCorePlugins({
