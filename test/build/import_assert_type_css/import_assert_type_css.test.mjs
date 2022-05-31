@@ -12,9 +12,6 @@ const test = async (options) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    transpilation: {
-      topLevelAwait: false,
-    },
     minification: false,
     ...options,
   })
@@ -29,12 +26,6 @@ const test = async (options) => {
     },
     /* eslint-enable no-undef */
   })
-  return { server, buildManifest, returnValue }
-}
-
-// with bundling (default)
-{
-  const { server, buildManifest, returnValue } = await test()
   const actual = returnValue
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
@@ -43,36 +34,31 @@ const test = async (options) => {
   assert({ actual, expected })
 }
 
-// bundling + no support for script_type_module
-{
-  const { server, buildManifest, returnValue } = await test({
-    transpilation: {
-      topLevelAwait: true,
-    },
-    runtimeCompat: {
-      chrome: "60",
-    },
-  })
-  const actual = returnValue
-  const expected = {
-    bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
-  }
-  assert({ actual, expected })
-}
+// support for <script type="module">
+await test({
+  // logLevel: "info",
+  runtimeCompat: {
+    chrome: "65",
+  },
+})
 
-// without bundling
-{
-  const { server, buildManifest, returnValue } = await test({
-    bundling: false,
-  })
-  const actual = returnValue
-  const expected = {
-    bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
-  }
-  assert({ actual, expected })
-}
+// no bundling
+await test({
+  bundling: false,
+  runtimeCompat: {
+    chrome: "65",
+  },
+})
+
+// no support for <script type="module">
+await test({
+  // transpilation: {
+  //   topLevelAwait: true,
+  // },
+  runtimeCompat: {
+    chrome: "60",
+  },
+})
 
 // minification
 {
@@ -82,9 +68,6 @@ const test = async (options) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
-    },
-    transpilation: {
-      topLevelAwait: false,
     },
     minification: {
       js: false,

@@ -1,36 +1,35 @@
 import { ANSI } from "@jsenv/log"
 
 import { byteAsFileSize } from "@jsenv/utils/logs/size_log.js"
+import { distributeNumbers } from "@jsenv/utils/logs/number_distribution.js"
 
 export const createUrlGraphSummary = (
   urlGraph,
   { title = "graph summary" } = {},
 ) => {
   const graphReport = createUrlGraphReport(urlGraph)
-  const totalLabel = `Total`
   return `--- ${title} ---  
 ${createRepartitionMessage(graphReport)}
-${ANSI.color(totalLabel, ANSI.GREY)} ${
-    graphReport.total.count
-  } (${byteAsFileSize(graphReport.total.size)})
 --------------------`
 }
 
 const createUrlGraphReport = (urlGraph) => {
   const { urlInfos } = urlGraph
   const countGroups = {
+    sourcemaps: 0,
     html: 0,
     css: 0,
     js: 0,
+    json: 0,
     other: 0,
-    sourcemaps: 0,
     total: 0,
   }
   const sizeGroups = {
+    sourcemaps: 0,
     html: 0,
     css: 0,
     js: 0,
-    sourcemaps: 0,
+    json: 0,
     other: 0,
     total: 0,
   }
@@ -81,17 +80,67 @@ const createUrlGraphReport = (urlGraph) => {
       sizeGroups.js += urlContentSize
       return
     }
+    if (category === "json") {
+      countGroups.json++
+      sizeGroups.json += urlContentSize
+      return
+    }
     countGroups.other++
     sizeGroups.other += urlContentSize
     return
   })
+
+  const sizesToDistribute = {}
+  Object.keys(sizeGroups).forEach((groupName) => {
+    if (groupName !== "sourcemaps" && groupName !== "total") {
+      sizesToDistribute[groupName] = sizeGroups[groupName]
+    }
+  })
+  const ratios = distributeNumbers(sizesToDistribute)
+  const percentageGroups = {}
+  Object.keys(ratios).forEach((groupName) => {
+    percentageGroups[groupName] = parseFloat(ratios[groupName]) * 100
+  })
+
   return {
-    html: { count: countGroups.html, size: sizeGroups.html },
-    css: { count: countGroups.css, size: sizeGroups.css },
-    js: { count: countGroups.js, size: sizeGroups.js },
-    sourcemaps: { count: countGroups.sourcemaps, size: sizeGroups.sourcemaps },
-    other: { count: countGroups.other, size: sizeGroups.other },
-    total: { count: countGroups.total, size: sizeGroups.total },
+    // sourcemaps are special, there size are ignored
+    // so there is no "percentage" associated
+    sourcemaps: {
+      count: countGroups.sourcemaps,
+      size: sizeGroups.sourcemaps,
+      percentage: undefined,
+    },
+
+    html: {
+      count: countGroups.html,
+      size: sizeGroups.html,
+      percentage: percentageGroups.html,
+    },
+    css: {
+      count: countGroups.css,
+      size: sizeGroups.css,
+      percentage: percentageGroups.css,
+    },
+    js: {
+      count: countGroups.js,
+      size: sizeGroups.js,
+      percentage: percentageGroups.js,
+    },
+    json: {
+      count: countGroups.json,
+      size: sizeGroups.json,
+      percentage: percentageGroups.json,
+    },
+    other: {
+      count: countGroups.other,
+      size: sizeGroups.other,
+      percentage: percentageGroups.other,
+    },
+    total: {
+      count: countGroups.total,
+      size: sizeGroups.total,
+      percentage: 100,
+    },
   }
 }
 
@@ -108,32 +157,22 @@ const determineCategory = (urlInfo) => {
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
     return "js"
   }
+  if (urlInfo.type === "json") {
+    return "json"
+  }
   return "other"
 }
 
-const createRepartitionMessage = ({ html, css, js, other }) => {
+const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
+  const addPart = (name, { count, size, percentage }) => {
+    parts.push(
+      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${byteAsFileSize(
+        size,
+      )} / ${percentage} %)`,
+    )
+  }
+
   const parts = []
-  if (html.count) {
-    parts.push(
-      `${ANSI.color(`html:`, ANSI.GREY)} ${html.count} (${byteAsFileSize(
-        html.size,
-      )})`,
-    )
-  }
-  if (css.count) {
-    parts.push(
-      `${ANSI.color(`css:`, ANSI.GREY)} ${css.count} (${byteAsFileSize(
-        css.size,
-      )})`,
-    )
-  }
-  if (js.count) {
-    parts.push(
-      `${ANSI.color(`js:`, ANSI.GREY)} ${js.count} (${byteAsFileSize(
-        js.size,
-      )})`,
-    )
-  }
   // if (sourcemaps.count) {
   //   parts.push(
   //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
@@ -141,13 +180,22 @@ const createRepartitionMessage = ({ html, css, js, other }) => {
   //     } (${byteAsFileSize(sourcemaps.size)})`,
   //   )
   // }
-  if (other.count) {
-    parts.push(
-      `${ANSI.color(`other:`, ANSI.GREY)} ${other.count} (${byteAsFileSize(
-        other.size,
-      )})`,
-    )
+  if (html.count) {
+    addPart("html ", html)
   }
+  if (css.count) {
+    addPart("css  ", css)
+  }
+  if (js.count) {
+    addPart("js   ", js)
+  }
+  if (json.count) {
+    addPart("json ", json)
+  }
+  if (other.count) {
+    addPart("other", other)
+  }
+  addPart("total", total)
   return `- ${parts.join(`
 - `)}`
 }
