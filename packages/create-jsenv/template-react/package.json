@@ -1,0 +1,28 @@
+{
+  "name": "jsenv-starter",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "test": "node ./scripts/test.mjs",
+    "build": "node ./scripts/build.mjs",
+    "preview": "node ./scripts/preview.mjs"
+  },
+  "dependencies": {
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "7.17.0",
+    "@babel/plugin-syntax-import-assertions": "7.16.7",
+    "@babel/plugin-transform-react-jsx": "7.16.5",
+    "@jsenv/core": "27.0.0-alpha.60",
+    "eslint": "8.15.0",
+    "eslint-plugin-html": "6.2.0",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-react": "7.30.0",
+    "@jsenv/eslint-config": "16.0.9",
+    "@jsenv/eslint-import-resolver": "0.1.7"
+  }
+}

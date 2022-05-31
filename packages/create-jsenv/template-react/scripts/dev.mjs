@@ -5,10 +5,11 @@
 
 import { startDevServer } from "@jsenv/core"
 
-import { rootDirectoryUrl } from "../jsenv.config.mjs"
+import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
 export const server = await startDevServer({
   rootDirectoryUrl,
+  plugins,
   port: 3472,
   explorerGroups: {
     "app": {

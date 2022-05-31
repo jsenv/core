@@ -5,10 +5,11 @@
 
 import { executeTestPlan, chromium, firefox } from "@jsenv/core"
 
-import { rootDirectoryUrl } from "../jsenv.config.mjs"
+import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
 await executeTestPlan({
   rootDirectoryUrl,
+  plugins,
   testPlan: {
     "./test/**/*.test.html": {
       chromium: {
