@@ -11,7 +11,7 @@ await executeTestPlan({
     "test/**/react_build.test.mjs": {
       node: {
         runtime: nodeProcess,
-        allocatedMs: 60_000,
+        allocatedMs: 90_000,
       },
     },
   },
