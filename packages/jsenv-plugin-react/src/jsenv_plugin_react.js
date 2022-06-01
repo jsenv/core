@@ -67,6 +67,10 @@ const jsenvPluginReactAsJsModule = ({ asJsModuleLogLevel }) => {
         rootDirectoryUrl: context.rootDirectoryUrl,
         sourceFileUrl: originalUrlInfo.url,
         external: ["react"],
+        processEnvNodeEnv:
+          context.scenario === "dev" || context.scenario === "test"
+            ? "development"
+            : "production",
       })
       return {
         type: "js_module",

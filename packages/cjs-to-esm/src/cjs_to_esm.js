@@ -4,9 +4,11 @@ import {
   urlIsInsideOf,
   moveUrl,
   ensureWindowsDriveLetter,
+  urlToExtension,
+  urlToBasename,
 } from "@jsenv/filesystem"
 
-import { setUrlExtension } from "@jsenv/utils/urls/url_utils.js"
+import { setUrlExtension, setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
 import { commonJsToJsModuleRaw } from "./cjs_to_esm_raw.js"
 import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.js"
 
@@ -15,6 +17,7 @@ export const commonJsToJsModule = ({
   filesystemCache = true,
   rootDirectoryUrl,
   sourceFileUrl,
+  processEnvNodeEnv,
   ...rest
 }) => {
   if (filesystemCache) {
@@ -27,6 +30,7 @@ export const commonJsToJsModule = ({
       url: sourceFileUrl,
       rootDirectoryUrl,
       compileDirectoryUrl,
+      processEnvNodeEnv,
     })
 
     return reuseOrCreateCompiledFile({
@@ -39,6 +43,7 @@ export const commonJsToJsModule = ({
           logLevel,
           rootDirectoryUrl,
           sourceFileUrl,
+          processEnvNodeEnv,
           ...rest,
         })
         const assets = extractCompileAssets({
@@ -104,10 +109,16 @@ const determineCompiledFileUrl = ({
   url,
   rootDirectoryUrl,
   compileDirectoryUrl,
+  processEnvNodeEnv,
 }) => {
   if (!urlIsInsideOf(url, rootDirectoryUrl)) {
     const fsRootUrl = ensureWindowsDriveLetter("file:///", url)
     url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
+  }
+  if (processEnvNodeEnv) {
+    const basename = urlToBasename(url)
+    const extension = urlToExtension(url)
+    url = setUrlFilename(url, `${basename}.${processEnvNodeEnv}${extension}`)
   }
   return moveUrl({
     url,
