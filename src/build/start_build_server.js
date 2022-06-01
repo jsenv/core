@@ -53,9 +53,11 @@ export const startBuildServer = async ({
     "./jsenv.config.mjs": true,
   },
   buildServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed inside worker thread
+  // force disable server autoreload when this code is executed:
+  // - inside a forked child process
+  // - inside a worker thread
   // (because node cluster won't work)
-  buildServerAutoreload = !parentPort,
+  buildServerAutoreload = typeof process.send === "function" && !parentPort,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })

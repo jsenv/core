@@ -36,9 +36,11 @@ export const startDevServer = async ({
     "./jsenv.config.mjs": true,
   },
   devServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed inside worker thread
+  // force disable server autoreload when this code is executed:
+  // - inside a forked child process
+  // - inside a worker thread
   // (because node cluster won't work)
-  devServerAutoreload = !parentPort,
+  devServerAutoreload = typeof process.send === "function" && !parentPort,
   clientFiles = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
