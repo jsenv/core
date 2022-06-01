@@ -13,6 +13,7 @@
  * we want to be in the user shoes and we should not alter build files.
  */
 
+import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -28,6 +29,7 @@ import {
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/log"
+import { getCallerPosition } from "@jsenv/utils/src/caller_position.js"
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 
 export const startBuildServer = async ({
@@ -45,14 +47,16 @@ export const startBuildServer = async ({
 
   rootDirectoryUrl,
   buildDirectoryUrl,
+  mainBuildFileUrl = "/index.html",
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
   },
-  buildServerMainFile,
-  buildServerAutoreload = false,
+  buildServerMainFile = getCallerPosition().url,
+  // force disable server autoreload when this code is executed inside worker thread
+  // (because node cluster won't work)
+  buildServerAutoreload = !parentPort,
   cooldownBetweenFileEvents,
-  mainBuildFileUrl = "/index.html",
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)

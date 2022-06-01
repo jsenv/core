@@ -1,3 +1,4 @@
+import { parentPort } from "node:worker_threads"
 import {
   assertAndNormalizeDirectoryUrl,
   registerDirectoryLifecycle,
@@ -5,6 +6,7 @@ import {
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/log"
+import { getCallerPosition } from "@jsenv/utils/src/caller_position.js"
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
@@ -33,8 +35,10 @@ export const startDevServer = async ({
     "./package.json": true,
     "./jsenv.config.mjs": true,
   },
-  devServerMainFile,
-  devServerAutoreload = false,
+  devServerMainFile = getCallerPosition().url,
+  // force disable server autoreload when this code is executed inside worker thread
+  // (because node cluster won't work)
+  devServerAutoreload = !parentPort,
   clientFiles = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)

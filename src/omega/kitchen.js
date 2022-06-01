@@ -1,13 +1,12 @@
 import {
   urlIsInsideOf,
   writeFileSync,
-  isFileSystemPath,
-  fileSystemPathToUrl,
   moveUrl,
   ensureWindowsDriveLetter,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { getCallerPosition } from "@jsenv/utils/src/caller_position.js"
 import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 import { normalizeUrl, setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
@@ -504,21 +503,11 @@ export const createKitchen = ({
       },
       inject: ({ trace, ...rest }) => {
         if (trace === undefined) {
-          const { prepareStackTrace } = Error
-          Error.prepareStackTrace = (error, stack) => {
-            Error.prepareStackTrace = prepareStackTrace
-            return stack
-          }
-          const { stack } = new Error()
-          const callerCallsite = stack[1]
-          const fileName = callerCallsite.getFileName()
+          const { url, line, column } = getCallerPosition()
           trace = stringifyUrlSite({
-            url:
-              fileName && isFileSystemPath(fileName)
-                ? fileSystemPathToUrl(fileName)
-                : fileName,
-            line: callerCallsite.getLineNumber(),
-            column: callerCallsite.getColumnNumber(),
+            url,
+            line,
+            column,
           })
         }
         return addReference({

@@ -3,9 +3,9 @@
  * https://github.com/jsenv/jsenv-core/tree/master/docs/dev_server#jsenv-dev-server
  */
 
-import { startDevServer } from "@jsenv/core";
+import { startDevServer } from "@jsenv/core"
 
-import { rootDirectoryUrl } from "../jsenv.config.mjs";
+import { rootDirectoryUrl } from "../jsenv.config.mjs"
 
 export const server = await startDevServer({
   rootDirectoryUrl,
@@ -18,4 +18,4 @@ export const server = await startDevServer({
       "test/**/*.test.html": true,
     },
   },
-});
+})
