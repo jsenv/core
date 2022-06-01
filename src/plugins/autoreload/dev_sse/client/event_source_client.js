@@ -96,11 +96,15 @@ const applyHotReload = async ({ hotInstructions }) => {
       // if (!urlHotMeta) {return }
 
       if (type === "prune") {
-        console.group(`[jsenv] prune: ${boundary} (inside ${acceptedBy})`)
+        console.groupCollapsed(
+          `[jsenv] prune: ${boundary} (inside ${acceptedBy})`,
+        )
       } else if (acceptedBy === boundary) {
-        console.group(`[jsenv] hot reloading: ${boundary}`)
+        console.groupCollapsed(`[jsenv] hot reloading: ${boundary}`)
       } else {
-        console.group(`[jsenv] hot reloading: ${acceptedBy} inside ${boundary}`)
+        console.groupCollapsed(
+          `[jsenv] hot reloading: ${acceptedBy} inside ${boundary}`,
+        )
       }
       if (urlHotMeta && urlHotMeta.disposeCallback) {
         console.log(`call dispose callback`)
