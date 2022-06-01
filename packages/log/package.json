@@ -3,21 +3,21 @@
   "version": "1.6.0",
   "description": "Nice and dynamic logs in the terminal",
   "license": "MIT",
-  "author": {
-    "name": "dmail",
-    "email": "dmaillard06@gmail.com",
-    "url": "https://twitter.com/damienmaillard"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
     "directory": "packages/log"
   },
-  "engines": {
-    "node": ">=16.14.0"
-  },
   "publishConfig": {
     "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "engines": {
+    "node": ">=16.14.0"
   },
   "type": "module",
   "exports": {
@@ -36,11 +36,11 @@
   "dependencies": {
     "ansi-escapes": "5.0.0",
     "is-unicode-supported": "1.1.0",
-    "string-width": "5.0.1",
-    "supports-color": "9.0.2"
+    "string-width": "5.1.2",
+    "supports-color": "9.2.2"
   },
   "devDependencies": {
-    "@jsenv/assert": "2.5.3",
+    "@jsenv/assert": "2.5.4",
     "@jsenv/core": "../../"
   }
 }
