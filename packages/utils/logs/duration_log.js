@@ -1,3 +1,5 @@
+import { roundNumber } from "./decimals.js"
+
 export const msAsDuration = (ms) => {
   if (ms < 1) {
     // it would be barely readable to write 0.0001 second (stands for 0.1 millisecond)
@@ -40,13 +42,6 @@ const formatUnit = (unit, maxDecimals = 0) => {
     return `${count} ${unit.name}`
   }
   return `${count} ${unit.name}s`
-}
-
-const roundNumber = (value, maxDecimals) => {
-  const expValue = Math.pow(10, maxDecimals)
-  const roundedValue = Math.round(expValue * value) / expValue
-  const valueAsString = roundedValue.toFixed(maxDecimals)
-  return parseFloat(valueAsString)
 }
 
 const MS_PER_UNITS = {

@@ -1,7 +1,7 @@
 import { ANSI } from "@jsenv/log"
 
 import { byteAsFileSize } from "@jsenv/utils/logs/size_log.js"
-import { distributeNumbers } from "@jsenv/utils/logs/number_distribution.js"
+import { distributePercentages } from "@jsenv/utils/logs/percentage_distribution.js"
 
 export const createUrlGraphSummary = (
   urlGraph,
@@ -96,11 +96,7 @@ const createUrlGraphReport = (urlGraph) => {
       sizesToDistribute[groupName] = sizeGroups[groupName]
     }
   })
-  const ratios = distributeNumbers(sizesToDistribute)
-  const percentageGroups = {}
-  Object.keys(ratios).forEach((groupName) => {
-    percentageGroups[groupName] = parseFloat(ratios[groupName]) * 100
-  })
+  const percentageGroups = distributePercentages(sizesToDistribute)
 
   return {
     // sourcemaps are special, there size are ignored

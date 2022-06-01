@@ -3,6 +3,12 @@ import { assert } from "@jsenv/assert"
 import { msAsDuration } from "./duration_log.js"
 
 {
+  const actual = msAsDuration(0.1)
+  const expected = `0 second`
+  assert({ actual, expected })
+}
+
+{
   const actual = msAsDuration(1.02)
   const expected = `0.001 second`
   assert({ actual, expected })
