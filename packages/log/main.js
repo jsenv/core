@@ -14,4 +14,10 @@ export { msAsDuration } from "./src/duration_log.js"
 export { byteAsFileSize, byteAsMemoryUsage } from "./src/size_log.js"
 export { distributePercentages } from "./src/percentage_distribution.js"
 
-export { roundNumber, setPrecision, getPrecision } from "./src/decimals.js"
+export {
+  getPrecision,
+  setRoundedPrecision,
+  setFlooredPrecision,
+  setCeiledPrecision,
+  setPrecision,
+} from "./src/decimals.js"

@@ -1,4 +1,4 @@
-import { roundNumber } from "./decimals.js"
+import { setPrecision } from "./decimals.js"
 
 export const msAsDuration = (ms) => {
   if (ms < 1) {
@@ -37,7 +37,7 @@ const determineMaxDecimals = (unit) => {
 }
 
 const formatUnit = (unit, maxDecimals = 0) => {
-  const count = roundNumber(unit.count, maxDecimals)
+  const count = setPrecision(unit.count, maxDecimals)
   if (count <= 1) {
     return `${count} ${unit.name}`
   }
