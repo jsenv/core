@@ -44,8 +44,8 @@ const copyDirectoryContent = (fromUrl, toUrl) => {
 const argv = process.argv.slice(2)
 const cwdUrl = `${pathToFileURL(process.cwd())}/`
 let targetDirectory = argv[0]
-const js = argv.includes("--js")
-const react = argv.includes("--react")
+const webVanilla = argv.includes("--web")
+const webReact = argv.includes("--web-react")
 const projectName = targetDirectory
   ? basename(targetDirectory.trim())
   : "jsenv-project"
@@ -88,18 +88,18 @@ const runPrompts = async () => {
           name: "overwriteChecker",
         },
         {
-          type: js || react ? null : "select",
+          type: webVanilla || webReact ? null : "select",
           name: "template",
           message: "Select a template:",
           initial: 0,
           choices: [
             {
-              title: "js",
-              value: "js",
+              title: "web",
+              value: "web",
             },
             {
-              title: "react",
-              value: "react",
+              title: "web-react",
+              value: "web-react",
             },
           ],
         },
