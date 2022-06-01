@@ -41,40 +41,45 @@ const copyDirectoryContent = (fromUrl, toUrl) => {
   }
 }
 
-const argv = process.argv.slice(2)
 const cwdUrl = `${pathToFileURL(process.cwd())}/`
-let targetDirectory = argv[0]
-const webVanilla = argv.includes("--web")
-const webReact = argv.includes("--web-react")
-const projectName = targetDirectory
-  ? basename(targetDirectory.trim())
-  : "jsenv-project"
 
-const runPrompts = async () => {
+const getParamsFromProcessArgsAndPrompts = async () => {
+  const argv = process.argv.slice(2)
+  const directoryArg = argv[0] ? argv[0].trim() : ""
+  let directoryUrl = directoryArg ? new URL(`${directoryUrl}/`, cwdUrl) : null
+  const webVanilla = argv.includes("--web")
+  const webReact = argv.includes("--web-react")
+
   try {
+    const projectName = directoryUrl
+      ? basename(fileURLToPath(directoryUrl))
+      : "jsenv-project"
+
     const result = await prompts(
       [
         {
-          type: targetDirectory ? null : "text",
-          name: "projectName",
-          message: "Project name:",
+          type: directoryUrl ? null : "text",
+          name: "directoryUrl",
+          message: "directory path:",
           initial: projectName,
           onState: (state) => {
-            targetDirectory =
-              state.value.trim().replace(/\/+$/g, "") || projectName
+            const value = state.value.trim().replace(/\/+$/g, "") || projectName
+            directoryUrl = new URL(`${value}/`, cwdUrl)
           },
         },
         {
-          type: () =>
-            !existsSync(targetDirectory) || directoryIsEmpty(targetDirectory)
-              ? null
-              : "confirm",
+          type: () => {
+            if (existsSync(directoryUrl) && !directoryIsEmpty(directoryUrl)) {
+              return "confirm"
+            }
+            return null
+          },
           name: "overwrite",
           message: () => {
             const directoryLabel =
-              targetDirectory === "."
+              directoryUrl.href === cwdUrl.href
                 ? "Current directory"
-                : `Target directory "${targetDirectory}"`
+                : `Target directory "${fileURLToPath(directoryUrl)}"`
             return `${directoryLabel} is not empty. Remove existing files and continue?`
           },
         },
@@ -110,19 +115,21 @@ const runPrompts = async () => {
         },
       },
     )
-    return result
+    return {
+      ...result,
+      directoryUrl,
+    }
   } catch (cancelled) {
     return { cancelled }
   }
 }
 
-const createFilesFromTemplate = ({ overwrite, template }) => {
-  const rootDirectoryUrl = new URL(`${targetDirectory}/`, cwdUrl)
-  console.log(`\n  setup project in ${rootDirectoryUrl.href}`)
+const createFilesFromTemplate = ({ directoryUrl, overwrite, template }) => {
+  console.log(`\n  setup project in ${directoryUrl.href}`)
   if (overwrite) {
-    makeDirectoryEmpty(rootDirectoryUrl)
-  } else if (!existsSync(rootDirectoryUrl)) {
-    mkdirSync(rootDirectoryUrl, { recursive: true })
+    makeDirectoryEmpty(directoryUrl)
+  } else if (!existsSync(directoryUrl)) {
+    mkdirSync(directoryUrl, { recursive: true })
   }
 
   const templateDirectoryUrl = new URL(
@@ -135,26 +142,28 @@ const createFilesFromTemplate = ({ overwrite, template }) => {
     const fromUrl = new URL(file, templateDirectoryUrl)
     const toUrl = new URL(
       file === "_gitignore" ? ".gitignore" : file,
-      rootDirectoryUrl,
+      directoryUrl,
     )
     copy(fromUrl, toUrl)
   }
 
   console.log(`\nDone. Now run:\n`)
-  if (rootDirectoryUrl.href !== cwdUrl.href) {
+  if (directoryUrl.href !== cwdUrl.href) {
     console.log(
-      `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(rootDirectoryUrl))}`,
+      `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl))}`,
     )
   }
   console.log(`npm install`)
   console.log(`npm run dev`)
 }
 
-const { cancelled, overwrite, template } = await runPrompts()
+const { cancelled, directoryUrl, overwrite, template } =
+  await getParamsFromProcessArgsAndPrompts()
 if (cancelled) {
   console.log(cancelled.message)
 } else {
   createFilesFromTemplate({
+    directoryUrl,
     overwrite,
     template,
   })
