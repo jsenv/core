@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { distributePercentages } from "./percentage_distribution.js"
+import { distributePercentages } from "@jsenv/log"
 
 {
   const actual = distributePercentages({

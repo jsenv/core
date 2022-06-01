@@ -1,6 +1,5 @@
 import { writeFile, urlToFileSystemPath } from "@jsenv/filesystem"
-
-import { byteAsFileSize } from "@jsenv/utils/logs/size_log.js"
+import { byteAsFileSize } from "@jsenv/log"
 
 export const generateCoverageJsonFile = async ({
   coverage,

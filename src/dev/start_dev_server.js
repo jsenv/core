@@ -2,10 +2,10 @@ import {
   assertAndNormalizeDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, loggerToLevels } from "@jsenv/logger"
 
+import { createTaskLog } from "@jsenv/log"
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
-import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
@@ -119,7 +119,9 @@ export const startDevServer = async ({
     }
   }
 
-  const startServerTask = createTaskLog(logger, "start server")
+  const startDevServerTask = createTaskLog("start dev server", {
+    disabled: !loggerToLevels(logger).info,
+  })
 
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
@@ -192,7 +194,7 @@ export const startDevServer = async ({
     kitchen,
     scenario: "dev",
   })
-  startServerTask.done()
+  startDevServerTask.done()
   logger.info(``)
   Object.keys(server.origins).forEach((key) => {
     logger.info(`- ${server.origins[key]}`)

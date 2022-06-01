@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { msAsDuration } from "./duration_log.js"
+import { msAsDuration } from "@jsenv/log"
 
 {
   const actual = msAsDuration(0.1)

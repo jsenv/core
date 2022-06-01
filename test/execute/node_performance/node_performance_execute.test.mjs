@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { execute, nodeProcess } from "@jsenv/core"
 
 const { performance } = await execute({
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   fileRelativeUrl: `./main.js`,
   // logLevel: "debug",
   runtime: nodeProcess,

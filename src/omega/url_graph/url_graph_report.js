@@ -1,7 +1,4 @@
-import { ANSI } from "@jsenv/log"
-
-import { byteAsFileSize } from "@jsenv/utils/logs/size_log.js"
-import { distributePercentages } from "@jsenv/utils/logs/percentage_distribution.js"
+import { ANSI, byteAsFileSize, distributePercentages } from "@jsenv/log"
 
 export const createUrlGraphSummary = (
   urlGraph,

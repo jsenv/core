@@ -25,10 +25,10 @@ import {
   assertAndNormalizeDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, loggerToLevels } from "@jsenv/logger"
 
+import { createTaskLog } from "@jsenv/log"
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
-import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
 
 export const startBuildServer = async ({
   signal = new AbortController().signal,
@@ -114,7 +114,9 @@ export const startBuildServer = async ({
   }
   signal = reloadableProcess.signal
 
-  const startServerTask = createTaskLog(logger, "start build server")
+  const startBuildServerTask = createTaskLog("start build server", {
+    disabled: !loggerToLevels(logger).info,
+  })
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -174,7 +176,7 @@ export const startBuildServer = async ({
       )
     },
   })
-  startServerTask.done()
+  startBuildServerTask.done()
   logger.info(``)
   Object.keys(server.origins).forEach((key) => {
     logger.info(`- ${server.origins[key]}`)

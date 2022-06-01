@@ -1,17 +1,14 @@
-import { createLog, startSpinner, UNICODE } from "@jsenv/log"
-import { loggerToLevels } from "@jsenv/logger"
-
-import { msAsDuration } from "@jsenv/utils/logs/duration_log.js"
+import { createLog, startSpinner, UNICODE, msAsDuration } from "@jsenv/log"
 
 export const createTaskLog = (
-  logger,
   label,
-  { stopOnWriteFromOutside } = {},
+  { disabled = false, stopOnWriteFromOutside } = {},
 ) => {
-  if (!loggerToLevels(logger).info) {
+  if (disabled) {
     return {
       setRightText: () => {},
       done: () => {},
+      happen: () => {},
       fail: () => {},
     }
   }
@@ -31,9 +28,9 @@ export const createTaskLog = (
         `${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`,
       )
     },
-    happen: (label) => {
+    happen: (message) => {
       taskSpinner.stop(
-        `${UNICODE.INFO} ${label} (at ${new Date().toLocaleTimeString()})`,
+        `${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`,
       )
     },
     fail: (message = `failed to ${label}`) => {

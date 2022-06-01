@@ -17,9 +17,9 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger } from "@jsenv/logger"
+import { createLogger, loggerToLevels } from "@jsenv/logger"
 
-import { createTaskLog } from "@jsenv/utils/logs/task_log.js"
+import { createTaskLog } from "@jsenv/log"
 import {
   injectQueryParams,
   setUrlFilename,
@@ -141,6 +141,7 @@ export const build = async ({
   const runBuild = async ({ signal, logLevel }) => {
     const logger = createLogger({ logLevel })
     const buildOperation = Abort.startOperation()
+    const infoLogsAreDisabled = !loggerToLevels(logger).info
     buildOperation.addAbortSignal(signal)
     const entryPointKeys = Object.keys(entryPoints)
     if (entryPointKeys.length === 1) {
@@ -152,7 +153,9 @@ build ${entryPointKeys.length} entry points`)
     }
 
     const rawGraph = createUrlGraph()
-    const prebuildTask = createTaskLog(logger, "prebuild")
+    const prebuildTask = createTaskLog("prebuild", {
+      disabled: infoLogsAreDisabled,
+    })
     let urlCount = 0
     const rawGraphKitchen = createKitchen({
       signal,
@@ -318,7 +321,9 @@ build ${entryPointKeys.length} entry points`)
       if (urlInfosToBundle.length === 0) {
         return
       }
-      const bundleTask = createTaskLog(logger, `bundle "${type}"`)
+      const bundleTask = createTaskLog(`bundle "${type}"`, {
+        disabled: infoLogsAreDisabled,
+      })
       try {
         const bundlerGeneratedUrlInfos =
           await rawGraphKitchen.pluginController.callAsyncHook(
@@ -639,7 +644,7 @@ build ${entryPointKeys.length} entry points`)
         },
       ],
     })
-    const buildTask = createTaskLog(logger, "build")
+    const buildTask = createTaskLog("build", { disabled: infoLogsAreDisabled })
     const postBuildEntryUrls = []
     try {
       await loadUrlGraph({
@@ -673,6 +678,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       await applyUrlVersioning({
         buildOperation,
         logger,
+        infoLogsAreDisabled,
         buildDirectoryUrl,
         rawUrls,
         buildUrls,
@@ -806,11 +812,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     resolveFirstBuild = resolve
     rejectFirstBuild = reject
   })
-  const watchLogger = createLogger({ logLevel: "info" })
   let buildAbortController
   let watchFilesTask
   const startBuild = async () => {
-    const buildTask = createTaskLog(watchLogger, "build")
+    const buildTask = createTaskLog("build")
     buildAbortController = new AbortController()
     try {
       const result = await runBuild({
@@ -819,14 +824,14 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       })
       buildTask.done()
       resolveFirstBuild(result)
-      watchFilesTask = createTaskLog(watchLogger, "watch files")
+      watchFilesTask = createTaskLog("watch files")
     } catch (e) {
       if (Abort.isAbortError(e)) {
         buildTask.fail(`build aborted`)
       } else if (e.code === "PARSE_ERROR") {
         buildTask.fail()
-        watchLogger.error(e.stack)
-        watchFilesTask = createTaskLog(watchLogger, "watch files")
+        console.error(e.stack)
+        watchFilesTask = createTaskLog("watch files")
       } else {
         buildTask.fail()
         rejectFirstBuild(e)
@@ -875,6 +880,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
 const applyUrlVersioning = async ({
   buildOperation,
   logger,
+  infoLogsAreDisabled,
   buildDirectoryUrl,
   rawUrls,
   buildUrls,
@@ -889,7 +895,9 @@ const applyUrlVersioning = async ({
   lineBreakNormalization,
   versioningMethod,
 }) => {
-  const versioningTask = createTaskLog(logger, "inject version in urls")
+  const versioningTask = createTaskLog("inject version in urls", {
+    disabled: infoLogsAreDisabled,
+  })
   try {
     const urlsSorted = sortByDependencies(finalGraph.urlInfos)
     urlsSorted.forEach((url) => {
