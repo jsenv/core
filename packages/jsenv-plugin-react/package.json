@@ -27,9 +27,9 @@
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
     "@babel/plugin-transform-react-jsx-development": "7.16.7",
-    "@jsenv/cjs-to-esm": "0.0.3",
+    "@jsenv/cjs-to-esm": "0.0.4",
     "@jsenv/url-meta": "6.2.0",
-    "@jsenv/utils": "1.7.6",
+    "@jsenv/utils": "1.7.7",
     "react-refresh": "0.13.0"
   },
   "peerDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/utils",
-  "version": "1.7.6",
+  "version": "1.7.7",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,7 +18,7 @@
     "@babel/parser": "7.17.8",
     "@jsenv/abort": "4.1.2",
     "@jsenv/filesystem": "3.1.0",
-    "@jsenv/log": "1.6.0",
+    "@jsenv/log": "1.6.1",
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.6.0",
     "@parcel/css": "1.8.1",

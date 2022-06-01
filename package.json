@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "27.0.0-alpha.61",
+  "version": "27.0.0-alpha.62",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -68,12 +68,12 @@
     "@jsenv/filesystem": "3.2.2",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",
-    "@jsenv/log": "1.6.0",
+    "@jsenv/log": "1.6.1",
     "@jsenv/logger": "4.0.1",
     "@jsenv/node-esm-resolution": "0.0.6",
     "@jsenv/server": "12.6.2",
     "@jsenv/uneval": "1.6.0",
-    "@jsenv/utils": "1.7.6",
+    "@jsenv/utils": "1.7.7",
     "construct-style-sheets-polyfill": "3.1.0",
     "cssnano": "5.1.7",
     "cssnano-preset-default": "5.2.7",
