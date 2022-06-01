@@ -209,7 +209,13 @@ export const executePlan = async (
     const debugLogsEnabled = loggerToLevels(logger).debug
     const executionLogsEnabled = loggerToLevels(logger).info
     const executionSpinner =
-      !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY
+      !debugLogsEnabled &&
+      executionLogsEnabled &&
+      process.stdout.isTTY &&
+      // if there is an error during execution npm will mess up the output
+      // (happens when npm runs several command in a workspace)
+      // so we enable spinner only when !process.exitCode (no error so far)
+      !process.exitCode
 
     const startMs = Date.now()
     const report = {}

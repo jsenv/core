@@ -3,7 +3,7 @@ export const startSpinner = ({
   frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   fps = 20,
   keepProcessAlive = false,
-  stopOnWriteFromOutside = false,
+  stopOnWriteFromOutside = true,
   text = "",
   effect = () => {},
 }) => {

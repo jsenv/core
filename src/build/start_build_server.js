@@ -57,7 +57,7 @@ export const startBuildServer = async ({
   // - inside a forked child process
   // - inside a worker thread
   // (because node cluster won't work)
-  buildServerAutoreload = typeof process.send === "function" && !parentPort,
+  buildServerAutoreload = typeof process.send !== "function" && !parentPort,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })
