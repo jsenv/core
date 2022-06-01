@@ -449,11 +449,11 @@ const applyHotReload = async ({
     // if (!urlHotMeta) {return }
 
     if (type === "prune") {
-      console.group("[jsenv] prune: ".concat(boundary, " (inside ").concat(acceptedBy, ")"));
+      console.groupCollapsed("[jsenv] prune: ".concat(boundary, " (inside ").concat(acceptedBy, ")"));
     } else if (acceptedBy === boundary) {
-      console.group("[jsenv] hot reloading: ".concat(boundary));
+      console.groupCollapsed("[jsenv] hot reloading: ".concat(boundary));
     } else {
-      console.group("[jsenv] hot reloading: ".concat(acceptedBy, " inside ").concat(boundary));
+      console.groupCollapsed("[jsenv] hot reloading: ".concat(acceptedBy, " inside ").concat(boundary));
     }
 
     if (urlHotMeta && urlHotMeta.disposeCallback) {
