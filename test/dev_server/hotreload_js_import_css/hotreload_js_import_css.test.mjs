@@ -74,7 +74,7 @@ try {
     expectedPageLogs.push(
       ...[
         {
-          type: "startGroup",
+          type: "startGroupCollapsed",
           text: "[jsenv] hot reloading: file.js",
         },
         {
@@ -122,7 +122,7 @@ try {
     expectedPageLogs.push(
       ...[
         {
-          type: "startGroup",
+          type: "startGroupCollapsed",
           text: "[jsenv] hot reloading: main.js",
         },
         {
@@ -138,7 +138,7 @@ try {
           text: "console.groupEnd",
         },
         {
-          type: "startGroup",
+          type: "startGroupCollapsed",
           text: "[jsenv] prune: style.css (inside main.js)",
         },
         {
@@ -150,7 +150,7 @@ try {
           text: "console.groupEnd",
         },
         {
-          type: "startGroup",
+          type: "startGroupCollapsed",
           text: "[jsenv] prune: file.js (inside main.js)",
         },
         {
@@ -192,7 +192,7 @@ if (import.meta.hot) {
     expectedPageLogs.push(
       ...[
         {
-          type: "startGroup",
+          type: "startGroupCollapsed",
           text: "[jsenv] hot reloading: main.js",
         },
         {

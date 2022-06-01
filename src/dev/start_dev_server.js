@@ -40,7 +40,9 @@ export const startDevServer = async ({
   // - inside a forked child process
   // - inside a worker thread
   // (because node cluster won't work)
-  devServerAutoreload = typeof process.send !== "function" && !parentPort,
+  devServerAutoreload = typeof process.send !== "function" &&
+    !parentPort &&
+    !process.debugPort,
   clientFiles = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
