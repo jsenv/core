@@ -10,7 +10,7 @@ import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 export const server = await startDevServer({
   rootDirectoryUrl,
   plugins,
-  port: 3472,
+  port: 3401,
   explorerGroups: {
     "app": {
       "./src/main.html": true,

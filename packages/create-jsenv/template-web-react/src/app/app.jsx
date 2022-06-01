@@ -1,8 +1,8 @@
 import { useState, useLayoutEffect } from "react"
 
-import appStyleSheet from "./App.css" assert { type: "css" }
+import appStyleSheet from "./app.css" assert { type: "css" }
 
-const logoUrl = new URL("./logo.svg", import.meta.url)
+const reactLogoUrl = new URL("./react_logo.svg", import.meta.url)
 
 export const App = () => {
   const [count, setCount] = useState(0)
@@ -22,12 +22,14 @@ export const App = () => {
   return (
     <div className="app">
       <header className="app_header">
-        <img src={logoUrl} className="app_logo" alt="logo" />
+        <img src={reactLogoUrl} className="app_logo" alt="logo" />
         <p>Hello jsenv + React!</p>
         <p>
           <button type="button" onClick={() => setCount((count) => count + 1)}>
-            toto: {count}
+            Click me
           </button>
+          <br />
+          <span>number of click: {count}</span>
         </p>
         <p>
           Edit <code>app.jsx</code> and save to test HMR updates.

@@ -35,14 +35,14 @@ export const applyFileSystemMagicResolution = (
         magicExtensions,
       })
       return {
-        magicDirectoryIndex: true,
         ...result,
+        magicDirectoryIndex: true,
       }
     }
     return {
-      isDirectory: true,
       found: true,
       url: fileUrl,
+      isDirectory: true,
     }
   }
   if (magicExtensions && magicExtensions.length) {
@@ -56,9 +56,9 @@ export const applyFileSystemMagicResolution = (
     if (extensionLeadingToFile) {
       // magic extension worked
       return {
-        magicExtension: extensionLeadingToFile,
         found: true,
         url: `${fileUrl}${extensionLeadingToFile}`,
+        magicExtension: extensionLeadingToFile,
       }
     }
   }
