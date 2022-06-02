@@ -62,6 +62,7 @@ export const createFileService = ({
       reference.url,
       reference.parentUrl,
     )
+    reference = referenceFromGraph || reference
     try {
       // urlInfo objects are reused, they must be "reset" before cooking them again
       if (
@@ -82,7 +83,7 @@ export const createFileService = ({
       )
       await kitchen.cook(urlInfo, {
         request,
-        reference: referenceFromGraph || reference,
+        reference,
         clientRuntimeCompat: {
           [runtimeName]: runtimeVersion,
         },

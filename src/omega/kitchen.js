@@ -616,7 +616,7 @@ export const createKitchen = ({
       }
     }
   })
-  // kitchenContext.fetchUrlContent = fetchUrlContent
+  kitchenContext.fetchUrlContent = fetchUrlContent
   kitchenContext.cook = cook
 
   const prepareEntryPoint = (params) => {
