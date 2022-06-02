@@ -764,26 +764,36 @@ const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
   }
 }
 const mainLegacyResolvers = {
-  import: ({ module, jsnext }) => {
-    if (typeof module === "string") {
-      return { type: "module", path: module }
+  import: (packageJson) => {
+    if (typeof packageJson.module === "string") {
+      return { type: "module", path: packageJson.module }
     }
-    if (typeof jsnext === "string") {
-      return { type: "jsnext", path: jsnext }
+    if (typeof packageJson.jsnext === "string") {
+      return { type: "jsnext", path: packageJson.jsnext }
     }
     return null
   },
-  browser: ({ browser, module }, packageUrl) => {
+  browser: (packageJson, packageUrl) => {
     const browserMain =
-      typeof browser === "string"
-        ? browser
-        : typeof browser === "object" && browser !== null
-        ? browser["."]
+      typeof packageJson.browser === "string"
+        ? packageJson.browser
+        : typeof packageJson.browser === "object" &&
+          packageJson.browser !== null
+        ? packageJson.browser["."]
         : ""
     if (!browserMain) {
+      if (typeof packageJson.module === "string") {
+        return {
+          type: "module",
+          path: packageJson.module,
+        }
+      }
       return null
     }
-    if (typeof module !== "string" || module === browserMain) {
+    if (
+      typeof packageJson.module !== "string" ||
+      packageJson.module === browserMain
+    ) {
       return {
         type: "browser",
         path: browserMain,
@@ -798,7 +808,7 @@ const mainLegacyResolvers = {
     ) {
       return {
         type: "module",
-        path: module,
+        path: packageJson.module,
       }
     }
     return {
@@ -806,11 +816,11 @@ const mainLegacyResolvers = {
       path: browserMain,
     }
   },
-  node: ({ main }) => {
-    if (typeof main === "string") {
+  node: (packageJson) => {
+    if (typeof packageJson.main === "string") {
       return {
         type: "main",
-        path: main,
+        path: packageJson.main,
       }
     }
     return null
