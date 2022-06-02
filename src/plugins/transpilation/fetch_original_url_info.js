@@ -19,8 +19,7 @@ export const fetchOriginalUrlInfo = async ({
   const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
     originalReference.url,
   )
-  await context.fetchUrlContent({
-    urlInfo: originalUrlInfo,
+  await context.fetchUrlContent(originalUrlInfo, {
     reference: originalReference,
   })
   if (originalUrlInfo.dependents.size === 0) {

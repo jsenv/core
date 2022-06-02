@@ -257,7 +257,7 @@ export const createKitchen = ({
     },
   })
 
-  const fetchUrlContent = async ({ urlInfo, context, reference }) => {
+  const fetchUrlContent = async (urlInfo, { reference, context }) => {
     if (reference.external) {
       urlInfo.external = true
       return
@@ -362,16 +362,12 @@ export const createKitchen = ({
         ...nestedDishContext,
       })
     }
-    context.fetchUrlContent = ({ urlInfo, reference }) => {
-      return fetchUrlContent({
-        urlInfo,
-        context,
-        reference,
-      })
+    context.fetchUrlContent = (urlInfo, { reference }) => {
+      return fetchUrlContent(urlInfo, { reference, context })
     }
 
     // "fetchUrlContent" hook
-    await fetchUrlContent({ urlInfo, reference: context.reference, context })
+    await fetchUrlContent(urlInfo, { reference: context.reference, context })
     if (urlInfo.external) {
       return
     }
