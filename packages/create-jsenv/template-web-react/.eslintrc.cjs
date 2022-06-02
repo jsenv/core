@@ -82,10 +82,7 @@ const eslintConfig = composeEslintConfig(
     },
     rules: {
       ...jsenvEslintRulesForReact,
-      "react/jsx-filename-extension": [
-        "error",
-        { extensions: [".jsx", ".html"] },
-      ],
+      "react/jsx-filename-extension": ["error", { extensions: [".jsx"] }],
     },
   },
 
@@ -106,7 +103,7 @@ const eslintConfig = composeEslintConfig(
   {
     overrides: [
       {
-        files: ["./src/**", "./test/**", "./docs/**/src/**"],
+        files: ["./src/**", "./test/**"],
         env: {
           browser: true,
           node: false,
