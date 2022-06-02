@@ -54,9 +54,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 contentType: "text/css",
                 content: textNode.value,
               })
-            await context.cook({
+            await context.cook(inlineStyleUrlInfo, {
               reference: inlineStyleReference,
-              urlInfo: inlineStyleUrlInfo,
             })
             setHtmlNodeGeneratedText(node, {
               generatedText: inlineStyleUrlInfo.content,
@@ -135,9 +134,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 content: textNode.value,
               })
 
-            await context.cook({
+            await context.cook(inlineScriptUrlInfo, {
               reference: inlineScriptReference,
-              urlInfo: inlineScriptUrlInfo,
             })
             setHtmlNodeGeneratedText(node, {
               generatedText: inlineScriptUrlInfo.content,

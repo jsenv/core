@@ -13,24 +13,22 @@ export const loadUrlGraph = async ({
   }
   const promises = []
   const promiseMap = new Map()
-  const cook = ({ urlInfo, ...rest }) => {
+  const cook = (urlInfo, context) => {
     const promiseFromData = promiseMap.get(urlInfo)
     if (promiseFromData) return promiseFromData
-    const promise = _cook({
-      urlInfo,
+    const promise = _cook(urlInfo, {
       outDirectoryUrl,
       clientRuntimeCompat,
-      ...rest,
+      ...context,
     })
     promises.push(promise)
     promiseMap.set(urlInfo, promise)
     return promise
   }
-  const _cook = async ({ urlInfo, ...rest }) => {
-    await kitchen.cook({
-      urlInfo,
+  const _cook = async (urlInfo, context) => {
+    await kitchen.cook(urlInfo, {
       cookDuringCook: cook,
-      ...rest,
+      ...context,
     })
     const { references } = urlInfo
     references.forEach((reference) => {
@@ -46,10 +44,7 @@ export const loadUrlGraph = async ({
       const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(
         reference.generatedUrl,
       )
-      cook({
-        reference,
-        urlInfo: referencedUrlInfo,
-      })
+      cook(referencedUrlInfo, { reference })
     })
   }
   startLoading(
@@ -61,10 +56,7 @@ export const loadUrlGraph = async ({
         specifier,
       })
       entryUrlInfo.data.isEntryPoint = true
-      cook({
-        reference: entryReference,
-        urlInfo: entryUrlInfo,
-      })
+      cook(entryUrlInfo, { reference: entryReference })
       return [entryReference, entryUrlInfo]
     },
   )

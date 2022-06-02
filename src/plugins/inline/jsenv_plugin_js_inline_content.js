@@ -49,10 +49,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
       inlineUrlInfo.jsQuote = quote
       inlineReference.escape = (value) =>
         JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote })
-      await context.cook({
-        reference: inlineReference,
-        urlInfo: inlineUrlInfo,
-      })
+      await context.cook(inlineUrlInfo, { reference: inlineReference })
       magicSource.replace({
         start: inlineContentInfo.start,
         end: inlineContentInfo.end,

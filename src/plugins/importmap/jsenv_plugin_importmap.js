@@ -130,9 +130,8 @@ export const jsenvPluginImportmap = () => {
               contentType: "application/importmap+json",
               content: textNode.value,
             })
-          await context.cook({
+          await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference,
-            urlInfo: inlineImportmapUrlInfo,
           })
           setHtmlNodeGeneratedText(importmap, {
             generatedText: inlineImportmapUrlInfo.content,
@@ -154,9 +153,8 @@ export const jsenvPluginImportmap = () => {
           const importmapUrlInfo = context.urlGraph.getUrlInfo(
             importmapReference.url,
           )
-          await context.cook({
+          await context.cook(importmapUrlInfo, {
             reference: importmapReference,
-            urlInfo: importmapUrlInfo,
           })
           onHtmlImportmapParsed(
             JSON.parse(importmapUrlInfo.content),

@@ -334,7 +334,7 @@ build ${entryPointKeys.length} entry points`)
             },
             urlInfosToBundle,
             {
-              ...rawGraphKitchen.baseContext,
+              ...rawGraphKitchen.kitchenContext,
               buildDirectoryUrl,
             },
           )
@@ -609,10 +609,7 @@ build ${entryPointKeys.length} entry points`)
                 specifier: context.reference.specifier,
                 injected: true,
               })
-              await rawGraphKitchen.cook({
-                reference: ref,
-                urlInfo: rawUrlInfo,
-              })
+              await rawGraphKitchen.cook(rawUrlInfo, { reference: ref })
               return rawUrlInfo
             }
             // reference updated during "postbuild":

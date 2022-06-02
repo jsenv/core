@@ -91,10 +91,7 @@ export const createUrlInfoTransformer = ({
         specifierColumn: column,
       })
       try {
-        await context.cook({
-          reference: sourcemapReference,
-          urlInfo: sourcemapUrlInfo,
-        })
+        await context.cook(sourcemapUrlInfo, { reference: sourcemapReference })
         const sourcemap = JSON.parse(sourcemapUrlInfo.content)
         urlInfo.sourcemap = normalizeSourcemap(urlInfo, sourcemap)
       } catch (e) {

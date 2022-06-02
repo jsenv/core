@@ -44,7 +44,7 @@ export const createFileService = ({
     if (responseFromPlugin) {
       return responseFromPlugin
     }
-    const [reference, urlInfo] = kitchen.prepareEntryPoint({
+    let [reference, urlInfo] = kitchen.prepareEntryPoint({
       parentUrl: inferParentFromRequest(request, rootDirectoryUrl),
       type: "entry_point",
       specifier: request.ressource,
@@ -80,16 +80,16 @@ export const createFileService = ({
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"],
       )
-      await kitchen.cook({
+      await kitchen.cook(urlInfo, {
+        request,
         reference: referenceFromGraph || reference,
-        urlInfo,
+        clientRuntimeCompat: {
+          [runtimeName]: runtimeVersion,
+        },
         outDirectoryUrl:
           scenario === "dev"
             ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
             : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
-        clientRuntimeCompat: {
-          [runtimeName]: runtimeVersion,
-        },
       })
       let { response, contentType, content, contentEtag } = urlInfo
       if (response) {

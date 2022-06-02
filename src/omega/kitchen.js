@@ -53,7 +53,7 @@ export const createKitchen = ({
     scenario,
   })
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-  const baseContext = {
+  const kitchenContext = {
     signal,
     logger,
     rootDirectoryUrl,
@@ -144,7 +144,7 @@ export const createKitchen = ({
       let resolvedUrl = pluginController.callHooksUntil(
         "resolveUrl",
         reference,
-        baseContext,
+        kitchenContext,
       )
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
@@ -159,7 +159,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "redirectUrl",
         reference,
-        baseContext,
+        kitchenContext,
         (returnValue) => {
           const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
@@ -172,7 +172,7 @@ export const createKitchen = ({
       )
 
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, baseContext)
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext)
 
       const referenceUrlObject = new URL(reference.url)
       reference.searchParams = referenceUrlObject.searchParams
@@ -186,7 +186,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "transformUrlSearchParams",
         reference,
-        baseContext,
+        kitchenContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
             referenceUrlObject.searchParams.set(key, returnValue[key])
@@ -197,7 +197,7 @@ export const createKitchen = ({
       const returnValue = pluginController.callHooksUntil(
         "formatUrl",
         reference,
-        baseContext,
+        kitchenContext,
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       reference.generatedSpecifier = urlSpecifierFormat.encode(reference)
@@ -210,7 +210,7 @@ export const createKitchen = ({
       })
     }
   }
-  baseContext.resolveReference = resolveReference
+  kitchenContext.resolveReference = resolveReference
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     urlGraph,
@@ -257,7 +257,7 @@ export const createKitchen = ({
     },
   })
 
-  const fetchUrlContent = async ({ reference, urlInfo, context }) => {
+  const fetchUrlContent = async ({ urlInfo, context, reference }) => {
     if (reference.external) {
       urlInfo.external = true
       return
@@ -342,40 +342,36 @@ export const createKitchen = ({
     await urlInfoTransformer.initTransformations(urlInfo, context)
   }
 
-  const _cook = async ({
-    reference,
-    urlInfo,
-    outDirectoryUrl,
+  const _cook = async (urlInfo, dishContext) => {
     // during dev/test clientRuntimeCompat is a single runtime
     // during build clientRuntimeCompat is runtimeCompat
-    clientRuntimeCompat = runtimeCompat,
-    cookDuringCook = cook,
-  }) => {
-    baseContext.isSupportedOnCurrentClients = (feature) => {
+    const { clientRuntimeCompat = runtimeCompat } = dishContext
+    kitchenContext.isSupportedOnCurrentClients = (feature) => {
       return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
     }
     const context = {
-      ...baseContext,
-      reference,
-      outDirectoryUrl,
+      ...kitchenContext,
+      ...dishContext,
       clientRuntimeCompat,
-      cook: (params) => {
-        return cookDuringCook({
-          outDirectoryUrl,
-          clientRuntimeCompat,
-          ...params,
-        })
-      },
-      fetchUrlContent: (params) => {
-        return fetchUrlContent({
-          context,
-          ...params,
-        })
-      },
+    }
+    const { cookDuringCook = cook } = dishContext
+    context.cook = (urlInfo, nestedDishContext) => {
+      return cookDuringCook(urlInfo, {
+        outDirectoryUrl: dishContext.outDirectoryUrl,
+        clientRuntimeCompat: dishContext.clientRuntimeCompat,
+        ...nestedDishContext,
+      })
+    }
+    context.fetchUrlContent = ({ urlInfo, reference }) => {
+      return fetchUrlContent({
+        urlInfo,
+        context,
+        reference,
+      })
     }
 
     // "fetchUrlContent" hook
-    await fetchUrlContent({ reference, urlInfo, context })
+    await fetchUrlContent({ urlInfo, reference: context.reference, context })
     if (urlInfo.external) {
       return
     }
@@ -547,7 +543,7 @@ export const createKitchen = ({
     } catch (error) {
       throw createTransformUrlContentError({
         pluginController,
-        reference,
+        reference: context.reference,
         urlInfo,
         error,
       })
@@ -570,7 +566,7 @@ export const createKitchen = ({
     } catch (error) {
       throw createFinalizeUrlContentError({
         pluginController,
-        reference,
+        reference: context.reference,
         urlInfo,
         error,
       })
@@ -598,44 +594,30 @@ export const createKitchen = ({
       },
     )
   }
-  const cook = memoizeCook(async ({ urlInfo, outDirectoryUrl, ...rest }) => {
-    outDirectoryUrl = outDirectoryUrl ? String(outDirectoryUrl) : undefined
-
-    const writeFiles = ({ gotError }) => {
-      if (!writeGeneratedFiles || !outDirectoryUrl) {
-        return
-      }
-      const { generatedUrl } = urlInfo
-      // writing result inside ".jsenv" directory (debug purposes)
-      if (!generatedUrl || !generatedUrl.startsWith("file:")) {
-        return
-      }
-      // use writeSync to avoid concurrency on writing the file
-      const write = gotError ? writeFileSync : writeFileSync
-      write(new URL(generatedUrl), urlInfo.content)
-      const { sourcemapGeneratedUrl, sourcemap } = urlInfo
-      if (sourcemapGeneratedUrl && sourcemap) {
-        write(
-          new URL(sourcemapGeneratedUrl),
-          JSON.stringify(sourcemap, null, "  "),
-        )
-      }
+  const cook = memoizeCook(async (urlInfo, context) => {
+    if (!writeGeneratedFiles || !context.outDirectoryUrl) {
+      await _cook(urlInfo, context)
+      return
     }
-
+    // writing result inside ".jsenv" directory (debug purposes)
     try {
-      await _cook({
-        urlInfo,
-        outDirectoryUrl,
-        ...rest,
-      })
-      writeFiles({ gotError: false })
-    } catch (e) {
-      writeFiles({ gotError: true })
-      throw e
+      await _cook(urlInfo, context)
+    } finally {
+      const { generatedUrl } = urlInfo
+      if (generatedUrl && generatedUrl.startsWith("file:")) {
+        writeFileSync(new URL(generatedUrl), urlInfo.content)
+        const { sourcemapGeneratedUrl, sourcemap } = urlInfo
+        if (sourcemapGeneratedUrl && sourcemap) {
+          writeFileSync(
+            new URL(sourcemapGeneratedUrl),
+            JSON.stringify(sourcemap, null, "  "),
+          )
+        }
+      }
     }
   })
-
-  baseContext.cook = cook
+  // kitchenContext.fetchUrlContent = fetchUrlContent
+  kitchenContext.cook = cook
 
   const prepareEntryPoint = (params) => {
     const entryReference = createReference(params)
@@ -654,7 +636,7 @@ export const createKitchen = ({
     urlInfoTransformer,
     rootDirectoryUrl,
     jsenvDirectoryUrl,
-    baseContext,
+    kitchenContext,
     cook,
     prepareEntryPoint,
     injectReference,
@@ -663,8 +645,7 @@ export const createKitchen = ({
 
 const memoizeCook = (cook) => {
   const pendingDishes = new Map()
-  return async (params) => {
-    const { urlInfo } = params
+  return async (urlInfo, context) => {
     const { url, modifiedTimestamp } = urlInfo
     const pendingDish = pendingDishes.get(url)
     if (pendingDish) {
@@ -679,7 +660,7 @@ const memoizeCook = (cook) => {
       pendingDishes.delete(url)
     }
     const timestamp = Date.now()
-    const promise = cook(params)
+    const promise = cook(urlInfo, context)
     pendingDishes.set(url, {
       timestamp,
       promise,

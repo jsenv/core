@@ -35,10 +35,7 @@ export const jsenvPluginDataUrls = () => {
       }
       return (async () => {
         const urlInfo = context.urlGraph.getUrlInfo(reference.url)
-        await context.cook({
-          reference,
-          urlInfo,
-        })
+        await context.cook(urlInfo, { reference })
         if (urlInfo.originalContent === urlInfo.content) {
           return reference.generatedUrl
         }

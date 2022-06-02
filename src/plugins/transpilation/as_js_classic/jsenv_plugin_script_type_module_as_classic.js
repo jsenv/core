@@ -128,10 +128,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
             // - during dev script_type_module are supported (dev use a recent browser)
             // - even if browser is not supported it still works it's jus a bit slower
             //   because it needs to decide if systemjs will be injected or not
-            await context.cook({
-              reference: newReference,
-              urlInfo: newUrlInfo,
-            })
+            await context.cook(newUrlInfo, { reference: newReference })
           }
           return [newReference, newUrlInfo]
         }

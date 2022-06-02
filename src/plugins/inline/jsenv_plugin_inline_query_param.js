@@ -25,10 +25,7 @@ export const jsenvPluginInlineQueryParam = () => {
         }
         return (async () => {
           const urlInfo = context.urlGraph.getUrlInfo(reference.url)
-          await context.cook({
-            reference,
-            urlInfo,
-          })
+          await context.cook(urlInfo, { reference })
           const specifier = DataUrl.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,

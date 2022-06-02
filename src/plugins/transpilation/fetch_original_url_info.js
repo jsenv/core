@@ -20,8 +20,8 @@ export const fetchOriginalUrlInfo = async ({
     originalReference.url,
   )
   await context.fetchUrlContent({
-    reference: originalReference,
     urlInfo: originalUrlInfo,
+    reference: originalReference,
   })
   if (originalUrlInfo.dependents.size === 0) {
     context.urlGraph.deleteUrlInfo(originalUrlInfo.url)
