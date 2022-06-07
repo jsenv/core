@@ -1,6 +1,6 @@
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
-import { fetchOriginalUrlInfo } from "@jsenv/core/src/plugins/transpilation/fetch_original_url_info.js"
+import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 

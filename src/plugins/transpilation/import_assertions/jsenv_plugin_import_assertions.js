@@ -14,8 +14,7 @@ import { urlToFilename } from "@jsenv/filesystem"
 
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
-
-import { fetchOriginalUrlInfo } from "../fetch_original_url_info.js"
+import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 
 export const jsenvPluginImportAssertions = () => {
   const updateReference = (reference, searchParam) => {
