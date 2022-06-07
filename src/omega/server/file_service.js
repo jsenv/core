@@ -55,6 +55,7 @@ export const createFileService = ({
         status: 304,
         headers: {
           "cache-control": `private,max-age=0,must-revalidate`,
+          ...urlInfo.responseHeaders,
         },
       }
     }
@@ -77,6 +78,7 @@ export const createFileService = ({
         urlInfo.type = null
         urlInfo.subtype = null
         urlInfo.timing = {}
+        urlInfo.responseHeaders = {}
       }
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"],
@@ -104,6 +106,7 @@ export const createFileService = ({
           "content-length": Buffer.byteLength(content),
           "cache-control": `private,max-age=0,must-revalidate`,
           "eTag": contentEtag,
+          ...urlInfo.responseHeaders,
         },
         body: content,
         timing: urlInfo.timing,
@@ -168,7 +171,6 @@ export const createFileService = ({
   }
   return async (request) => {
     let response = await getResponse(request)
-
     return response
   }
 }
