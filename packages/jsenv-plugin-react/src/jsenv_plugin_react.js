@@ -7,9 +7,7 @@ import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
-import { commonJsToJsModule } from "@jsenv/cjs-to-esm"
-import { fetchOriginalUrlInfo } from "@jsenv/core/src/plugins/transpilation/fetch_original_url_info.js"
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 
 import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_preamble.js"
 
@@ -18,8 +16,15 @@ export const jsenvPluginReact = ({
   hotRefreshPatterns,
 } = {}) => {
   return [
-    jsenvPluginReactAsJsModule({
-      asJsModuleLogLevel,
+    jsenvPluginCommonJs({
+      logLevel: asJsModuleLogLevel,
+      include: {
+        "**/node_modules/react/": true,
+        "**/node_modules/react-dom/": { external: ["react"] },
+        "**/node_modules/react/jsx-runtime/": { external: ["react"] },
+        "**/node_modules/react/jsx-dev-runtime": { external: ["react"] },
+        "**/react-refresh/": { external: ["react"] },
+      },
     }),
     jsenvPluginReactRefreshPreamble(),
     jsenvPluginJsxAndRefresh({
@@ -28,80 +33,20 @@ export const jsenvPluginReact = ({
   ]
 }
 
-const jsenvPluginReactAsJsModule = ({ asJsModuleLogLevel }) => {
-  return {
-    name: "jsenv:react_as_js_module",
-    appliesDuring: "*",
-    redirectUrl: {
-      js_import_export: (reference) => {
-        if (
-          [
-            "react",
-            "react-dom",
-            "react/jsx-runtime",
-            "react/jsx-dev-runtime",
-            "react-refresh",
-          ].includes(reference.specifier)
-        ) {
-          return injectQueryParams(reference.url, {
-            react_as_js_module: "",
-          })
-        }
-        return null
-      },
-    },
-    fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
-        urlInfo,
-        context,
-        searchParam: "react_as_js_module",
-        // during this fetch we don't want to alter the original file
-        // so we consider it as text
-        expectedType: "text",
-      })
-      if (!originalUrlInfo) {
-        return null
-      }
-      const { content, sourcemap } = await commonJsToJsModule({
-        logLevel: asJsModuleLogLevel,
-        rootDirectoryUrl: context.rootDirectoryUrl,
-        sourceFileUrl: originalUrlInfo.url,
-        external: ["react"],
-        processEnvNodeEnv:
-          context.scenario === "dev" || context.scenario === "test"
-            ? "development"
-            : "production",
-      })
-      return {
-        type: "js_module",
-        contentType: "text/javascript",
-        content,
-        sourcemap,
-      }
-    },
-  }
-}
-
 const jsenvPluginJsxAndRefresh = ({
-  jsxPatterns = {
+  jsxInclude = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
-    "./**/node_modules/": false,
   },
-  refreshPatterns = {
+  refreshInclude = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
-    "./**/node_modules/": false,
   },
 }) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
-      jsx: jsxPatterns,
-      refresh: refreshPatterns,
-      hookNames: {
-        "./**/*": true,
-        "./**/node_modules": false,
-      },
+      jsx: jsxInclude,
+      refresh: refreshInclude,
     },
     "file://",
   )

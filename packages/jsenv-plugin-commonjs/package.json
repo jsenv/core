@@ -1,11 +1,11 @@
 {
-  "name": "@jsenv/cjs-to-esm",
+  "name": "@jsenv/plugin-commonjs",
   "version": "0.0.4",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
-    "directory": "packages/cjs-to-esm"
+    "directory": "packages/jsenv-plugin-commonjs"
   },
   "publishConfig": {
     "access": "public"
