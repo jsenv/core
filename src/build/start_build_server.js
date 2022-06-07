@@ -21,6 +21,7 @@ import {
   pluginRequestWaitingCheck,
   pluginCORS,
   fetchFileSystem,
+  composeServices,
 } from "@jsenv/server"
 import {
   assertAndNormalizeDirectoryUrl,
@@ -44,6 +45,7 @@ export const startBuildServer = async ({
   listenAnyIp,
   ip,
   port = 9779,
+  services = {},
 
   rootDirectoryUrl,
   buildDirectoryUrl,
@@ -146,10 +148,7 @@ export const startBuildServer = async ({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: [
-          ...jsenvAccessControlAllowedHeaders,
-          "x-jsenv-execution-id",
-        ],
+        accessControlAllowedRequestHeaders: jsenvAccessControlAllowedHeaders,
         accessControlAllowCredentials: true,
       }),
       ...pluginServerTiming(),
@@ -158,31 +157,13 @@ export const startBuildServer = async ({
       }),
     },
     sendErrorDetails: true,
-    requestToResponse: (request) => {
-      const urlIsVersioned = new URL(
-        request.ressource,
-        request.origin,
-      ).searchParams.has("v")
-      if (mainBuildFileUrl && request.ressource === "/") {
-        request = {
-          ...request,
-          ressource: mainBuildFileUrl,
-        }
-      }
-      return fetchFileSystem(
-        new URL(request.ressource.slice(1), buildDirectoryUrl),
-        {
-          headers: request.headers,
-          cacheControl: urlIsVersioned
-            ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-            : "private,max-age=0,must-revalidate",
-          etagEnabled: true,
-          compressionEnabled: !request.pathname.endsWith(".mp4"),
-          rootDirectoryUrl: buildDirectoryUrl,
-          canReadDirectory: true,
-        },
-      )
-    },
+    requestToResponse: composeServices({
+      ...services,
+      build_files_service: createBuildFilesService({
+        buildDirectoryUrl,
+        mainBuildFileUrl,
+      }),
+    }),
   })
   startBuildServerTask.done()
   logger.info(``)
@@ -196,6 +177,34 @@ export const startBuildServer = async ({
     stop: () => {
       server.stop()
     },
+  }
+}
+
+const createBuildFilesService = ({ buildDirectoryUrl, mainBuildFileUrl }) => {
+  return (request) => {
+    const urlIsVersioned = new URL(
+      request.ressource,
+      request.origin,
+    ).searchParams.has("v")
+    if (mainBuildFileUrl && request.ressource === "/") {
+      request = {
+        ...request,
+        ressource: mainBuildFileUrl,
+      }
+    }
+    return fetchFileSystem(
+      new URL(request.ressource.slice(1), buildDirectoryUrl),
+      {
+        headers: request.headers,
+        cacheControl: urlIsVersioned
+          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+          : "private,max-age=0,must-revalidate",
+        etagEnabled: true,
+        compressionEnabled: !request.pathname.endsWith(".mp4"),
+        rootDirectoryUrl: buildDirectoryUrl,
+        canReadDirectory: true,
+      },
+    )
   }
 }
 
