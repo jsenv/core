@@ -16,26 +16,25 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 
 export const jsenvPluginPreact = ({
-  jsxPatterns = {
+  jsxInclude = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
-    "./**/node_modules/": false,
   },
-  refreshPatterns = {
+  refreshInclude = {
     "./**/*.jsx": true,
     "./**/*.tsx": true,
-    "./**/node_modules/": false,
+  },
+  hookNamesInclude = {
+    "./**/*": true,
+    "./**/node_modules": false,
   },
   preactDevtoolsDuringBuild = false,
 } = {}) => {
   const structuredMetaMap = normalizeStructuredMetaMap(
     {
-      jsx: jsxPatterns,
-      refresh: refreshPatterns,
-      hookNames: {
-        "./**/*": true,
-        "./**/node_modules": false,
-      },
+      jsx: jsxInclude,
+      refresh: refreshInclude,
+      hookNames: hookNamesInclude,
     },
     "file://",
   )

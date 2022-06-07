@@ -771,6 +771,9 @@ const mainLegacyResolvers = {
     if (typeof packageJson.jsnext === "string") {
       return { type: "jsnext", path: packageJson.jsnext }
     }
+    if (typeof packageJson.main === "string") {
+      return { type: "main", path: packageJson.main }
+    }
     return null
   },
   browser: (packageJson, packageUrl) => {
