@@ -5,10 +5,11 @@ export const loadUrlGraph = async ({
   urlGraph,
   kitchen,
   startLoading,
+  writeGeneratedFiles,
   outDirectoryUrl,
   clientRuntimeCompat,
 }) => {
-  if (outDirectoryUrl) {
+  if (writeGeneratedFiles && outDirectoryUrl) {
     await ensureEmptyDirectory(outDirectoryUrl)
   }
   const promises = []

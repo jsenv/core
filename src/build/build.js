@@ -199,6 +199,7 @@ build ${entryPointKeys.length} entry points`)
         operation: buildOperation,
         urlGraph: rawGraph,
         kitchen: rawGraphKitchen,
+        writeGeneratedFiles,
         outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
         startLoading: (cookEntryFile) => {
           Object.keys(entryPoints).forEach((key) => {
@@ -401,16 +402,18 @@ build ${entryPointKeys.length} entry points`)
             if (reference.specifier[0] === "#") {
               reference.external = true
             }
-            let url =
+            const urlBeforePotentialRedirect =
               reference.specifier[0] === "/"
                 ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
                 : new URL(reference.specifier, reference.parentUrl).href
+            const url =
+              rawUrlRedirections[urlBeforePotentialRedirect] ||
+              urlBeforePotentialRedirect
             const urlRedirectedByBundle = bundleUrlRedirections[url]
             if (urlRedirectedByBundle) {
               return urlRedirectedByBundle
             }
-            const urlRedirected = rawUrlRedirections[url]
-            return urlRedirected || url
+            return url
           },
           redirectUrl: (reference) => {
             if (!reference.url.startsWith("file:")) {
@@ -649,6 +652,7 @@ build ${entryPointKeys.length} entry points`)
         urlGraph: finalGraph,
         kitchen: finalGraphKitchen,
         outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+        writeGeneratedFiles,
         skipRessourceHint: true,
         startLoading: (cookEntryFile) => {
           entryUrls.forEach((entryUrl) => {
@@ -1087,6 +1091,7 @@ const applyUrlVersioning = async ({
       urlGraph: finalGraph,
       kitchen: versioningKitchen,
       skipRessourceHint: true,
+      writeGeneratedFiles,
       startLoading: (cookEntryFile) => {
         postBuildEntryUrls.forEach((postBuildEntryUrl) => {
           cookEntryFile({
