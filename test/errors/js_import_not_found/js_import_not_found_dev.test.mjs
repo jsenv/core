@@ -1,16 +1,21 @@
 import { Script } from "node:vm"
+import { fileURLToPath } from "node:url"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/test/execute_in_chromium.js"
 
-const test = async (params) => {
+let warnCalls = []
+const warn = console.warn
+console.warn = (...args) => {
+  warnCalls.push(args.join(""))
+}
+try {
   const devServer = await startDevServer({
     logLevel: "warn",
-    omegaServerLogLevel: "error",
+    omegaServerLogLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    ...params,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
@@ -22,37 +27,52 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue, server: devServer, pageLogs, pageErrors }
-}
 
-const { server, pageLogs, pageErrors, returnValue } = await test()
-const error = new Script(returnValue.exceptionSource, {
-  filename: "",
-}).runInThisContext()
-const actual = {
-  pageLogs,
-  pageErrors,
-  error,
-}
-const expected = {
-  pageLogs: [
-    {
-      type: "error",
-      text: `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
-    },
-  ],
-  pageErrors: [
-    Object.assign(
-      new Error(
-        `Failed to fetch dynamically imported module: ${server.origin}/main.js`,
-      ),
+  const error = new Script(returnValue.exceptionSource, {
+    filename: "",
+  }).runInThisContext()
+  const actual = {
+    serverWarnOutput: warnCalls.join("\n"),
+    pageLogs,
+    pageErrors,
+    error,
+  }
+  const expected = {
+    serverWarnOutput: `GET http://localhost:3456/foo.js
+  [33m404[0m Failed to fetch url content
+  --- reason ---
+  no entry on filesystem
+  --- url ---
+  ${new URL("./client/foo.js", import.meta.url).href}
+  --- url reference trace ---
+  ${fileURLToPath(new URL("./client/intermediate.js", import.meta.url))}:2:7
+    1 | // eslint-disable-next-line import/no-unresolved
+  > 2 | import "./foo.js"
+              ^
+    3 |${" "}
+  --- plugin name ---
+  "jsenv:fetch_file_urls"`,
+    pageLogs: [
       {
-        name: "TypeError",
+        type: "error",
+        text: `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
       },
+    ],
+    pageErrors: [
+      Object.assign(
+        new Error(
+          `Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
+        ),
+        {
+          name: "TypeError",
+        },
+      ),
+    ],
+    error: new TypeError(
+      `Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
     ),
-  ],
-  error: new TypeError(
-    `Failed to fetch dynamically imported module: ${server.origin}/main.js`,
-  ),
+  }
+  assert({ actual, expected })
+} finally {
+  console.warn = warn
 }
-assert({ actual, expected })

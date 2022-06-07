@@ -1,4 +1,5 @@
 import { urlToRelativeUrl } from "@jsenv/filesystem"
+import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 
 export const createUrlGraph = ({
   clientFileChangeCallbackList,
@@ -23,13 +24,15 @@ export const createUrlGraph = ({
     urlInfos[url] = urlInfo
     return urlInfo
   }
-  const inferReference = (url, parentUrl) => {
+  const inferReference = (specifier, parentUrl) => {
     const parentUrlInfo = urlInfos[parentUrl]
     if (!parentUrlInfo) {
       return null
     }
     const firstReferenceOnThatUrl = parentUrlInfo.references.find(
-      (reference) => reference.url === url,
+      (reference) => {
+        return urlSpecifierEncoding.decode(reference) === specifier
+      },
     )
     return firstReferenceOnThatUrl
   }

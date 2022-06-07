@@ -210,7 +210,7 @@ export const startDevServer = async ({
   logger.info(``)
   server.addEffect(() => {
     return () => {
-      kitchen.pluginController.callHooks("destroy")
+      kitchen.pluginController.callHooks("destroy", {})
     }
   })
   return {

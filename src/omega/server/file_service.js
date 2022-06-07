@@ -44,11 +44,22 @@ export const createFileService = ({
     if (responseFromPlugin) {
       return responseFromPlugin
     }
-    let [reference, urlInfo] = kitchen.prepareEntryPoint({
-      parentUrl: inferParentFromRequest(request, rootDirectoryUrl),
-      type: "entry_point",
-      specifier: request.ressource,
-    })
+    let reference
+    const parentUrl = inferParentFromRequest(request, rootDirectoryUrl)
+    if (parentUrl) {
+      reference = urlGraph.inferReference(request.ressource, parentUrl)
+    }
+    if (!reference) {
+      const entryPoint = kitchen.prepareEntryPoint({
+        trace: parentUrl || rootDirectoryUrl,
+        parentUrl: parentUrl || rootDirectoryUrl,
+        type: "entry_point",
+        specifier: request.ressource,
+      })
+      reference = entryPoint[0]
+    }
+    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
+
     const ifNoneMatch = request.headers["if-none-match"]
     if (ifNoneMatch && urlInfo.contentEtag === ifNoneMatch) {
       return {
@@ -59,11 +70,6 @@ export const createFileService = ({
         },
       }
     }
-    const referenceFromGraph = urlGraph.inferReference(
-      reference.url,
-      reference.parentUrl,
-    )
-    reference = referenceFromGraph || reference
     try {
       // urlInfo objects are reused, they must be "reset" before cooking them again
       if (
@@ -178,7 +184,15 @@ export const createFileService = ({
 const inferParentFromRequest = (request, rootDirectoryUrl) => {
   const { referer } = request.headers
   if (!referer) {
-    return rootDirectoryUrl
+    return null
+  }
+  const refererUrlObject = new URL(referer)
+  refererUrlObject.searchParams.delete("hmr")
+  refererUrlObject.searchParams.delete("v")
+  const { pathname, search } = refererUrlObject
+  if (pathname.startsWith("/@fs/")) {
+    const fsRootRelativeUrl = pathname.slice("/@fs/".length)
+    return `file:///${fsRootRelativeUrl}${search}`
   }
   return moveUrl({
     url: referer,
