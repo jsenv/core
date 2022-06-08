@@ -110,90 +110,6 @@
     }
   }
 
-  /*
-   * Import maps implementation
-   *
-   * To make lookups fast we pre-resolve the entire import map
-   * and then match based on backtracked hash lookups
-   *
-   */
-
-  function resolveUrl (relUrl, parentUrl) {
-    return resolveIfNotPlainOrUrl(relUrl, parentUrl) || (relUrl.indexOf(':') !== -1 ? relUrl : resolveIfNotPlainOrUrl('./' + relUrl, parentUrl));
-  }
-
-  function resolveAndComposePackages (packages, outPackages, baseUrl, parentMap, parentUrl) {
-    for (var p in packages) {
-      var resolvedLhs = resolveIfNotPlainOrUrl(p, baseUrl) || p;
-      var rhs = packages[p];
-      // package fallbacks not currently supported
-      if (typeof rhs !== 'string')
-        continue;
-      var mapped = resolveImportMap(parentMap, resolveIfNotPlainOrUrl(rhs, baseUrl) || rhs, parentUrl);
-      if (!mapped) {
-        targetWarning('W1', p, rhs);
-      }
-      else
-        outPackages[resolvedLhs] = mapped;
-    }
-  }
-
-  function resolveAndComposeImportMap (json, baseUrl, outMap) {
-    if (json.imports)
-      resolveAndComposePackages(json.imports, outMap.imports, baseUrl, outMap, null);
-
-    var u;
-    for (u in json.scopes || {}) {
-      var resolvedScope = resolveUrl(u, baseUrl);
-      resolveAndComposePackages(json.scopes[u], outMap.scopes[resolvedScope] || (outMap.scopes[resolvedScope] = {}), baseUrl, outMap, resolvedScope);
-    }
-
-    for (u in json.depcache || {})
-      outMap.depcache[resolveUrl(u, baseUrl)] = json.depcache[u];
-    
-    for (u in json.integrity || {})
-      outMap.integrity[resolveUrl(u, baseUrl)] = json.integrity[u];
-  }
-
-  function getMatch (path, matchObj) {
-    if (matchObj[path])
-      return path;
-    var sepIndex = path.length;
-    do {
-      var segment = path.slice(0, sepIndex + 1);
-      if (segment in matchObj)
-        return segment;
-    } while ((sepIndex = path.lastIndexOf('/', sepIndex - 1)) !== -1)
-  }
-
-  function applyPackages (id, packages) {
-    var pkgName = getMatch(id, packages);
-    if (pkgName) {
-      var pkg = packages[pkgName];
-      if (pkg === null) return;
-      if (id.length > pkgName.length && pkg[pkg.length - 1] !== '/') {
-        targetWarning('W2', pkgName, pkg);
-      }
-      else
-        return pkg + id.slice(pkgName.length);
-    }
-  }
-
-  function targetWarning (code, match, target, msg) {
-    console.warn(errMsg(code, [target, match].join(', ') ));
-  }
-
-  function resolveImportMap (importMap, resolvedOrPlain, parentUrl) {
-    var scopes = importMap.scopes;
-    var scopeUrl = parentUrl && getMatch(parentUrl, scopes);
-    while (scopeUrl) {
-      var packageResolution = applyPackages(resolvedOrPlain, scopes[scopeUrl]);
-      if (packageResolution)
-        return packageResolution;
-      scopeUrl = getMatch(scopeUrl.slice(0, scopeUrl.lastIndexOf('/')), scopes);
-    }
-    return applyPackages(resolvedOrPlain, importMap.imports) || resolvedOrPlain.indexOf(':') !== -1 && resolvedOrPlain;
-  }
 
   /*
    * SystemJS Core
@@ -223,14 +139,9 @@
 
   systemJSPrototype.import = function (id, parentUrl) {
     var loader = this;
-    return Promise.resolve(loader.prepareImport())
-    .then(function() {
-      return loader.resolve(String(id), parentUrl);
-    })
-    .then(function (id) {
-      var load = getOrCreateLoad(loader, id);
-      return load.C || topLevelLoad(loader, load);
-    });
+    id = loader.resolve(String(id), parentUrl)
+    var load = getOrCreateLoad(loader, id);
+    return load.C || topLevelLoad(loader, load);
   };
 
   // Hookable createContext function -> allowing eg custom import meta
@@ -494,83 +405,7 @@
   /*
    * SystemJS browser attachments for script and import map processing
    */
-
-  var importMapPromise = Promise.resolve();
-  var importMap = { imports: {}, scopes: {}, depcache: {}, integrity: {} };
-  systemJSPrototype.importMap = importMap;
   systemJSPrototype.baseUrl = baseUrl;
-
-  // Scripts are processed immediately, on the first System.import, and on DOMReady.
-  // Import map scripts are processed only once (by being marked) and in order for each phase.
-  // This is to avoid using DOM mutation observers in core, although that would be an alternative.
-  var processFirst = hasDocument;
-  systemJSPrototype.prepareImport = function (doProcessScripts) {
-    if (processFirst || doProcessScripts) {
-      processScripts();
-      processFirst = false;
-    }
-    return importMapPromise;
-  };
-  if (hasDocument) {
-    processScripts();
-    window.addEventListener('DOMContentLoaded', processScripts);
-  }
-
-  function processScripts () {
-    [].forEach.call(document.querySelectorAll('script'), function (script) {
-      if (script.sp) // sp marker = systemjs processed
-        return;
-      // TODO: deprecate systemjs-module in next major now that we have auto import
-      if (script.type === 'systemjs-module') {
-        script.sp = true;
-        if (!script.src)
-          return;
-        System.import(script.src.slice(0, 7) === 'import:' ? script.src.slice(7) : resolveUrl(script.src, baseUrl)).catch(function (e) {
-          // if there is a script load error, dispatch an "error" event
-          // on the script tag.
-          if (e.message.indexOf('https://git.io/JvFET#3') > -1) {
-            var event = document.createEvent('Event');
-            event.initEvent('error', false, false);
-            script.dispatchEvent(event);
-          }
-          return Promise.reject(e);
-        });
-      }
-      else if (script.type === 'systemjs-importmap') {
-        script.sp = true;
-        // The passThrough property is for letting the module types fetch implementation know that this is not a SystemJS module.
-        var fetchPromise = script.src ? (System.fetch || fetch)(script.src, { integrity: script.integrity, passThrough: true }).then(function (res) {
-          if (!res.ok)
-            throw Error(res.status );
-          return res.text();
-        }).catch(function (err) {
-          err.message = errMsg('W4', script.src ) + '\n' + err.message;
-          console.warn(err);
-          if (typeof script.onerror === 'function') {
-              script.onerror();
-          }
-          return '{}';
-        }) : script.innerHTML;
-        importMapPromise = importMapPromise.then(function () {
-          return fetchPromise;
-        }).then(function (text) {
-          extendImportMap(importMap, text, script.src || baseUrl);
-          return importMap
-        });
-      }
-    });
-  }
-
-  function extendImportMap (importMap, newMapText, newMapUrl) {
-    var newMap = {};
-    try {
-      newMap = JSON.parse(newMapText);
-    } catch (err) {
-      console.warn(Error((errMsg('W5')  )));
-    }
-    resolveAndComposeImportMap(newMap, newMapUrl, importMap);
-  }
-  System.extendImportMap = extendImportMap
 
   /*
    * Script instantiation loading
@@ -592,9 +427,6 @@
     // - https://bugs.webkit.org/show_bug.cgi?id=171566
     if (url.indexOf(baseOrigin + '/'))
       script.crossOrigin = 'anonymous';
-    var integrity = importMap.integrity[url];
-    if (integrity)
-      script.integrity = integrity;
     script.src = url;
     return script;
   };
@@ -623,10 +455,8 @@
       // if this is already a System load, then the instantiate has already begun
       // so this re-import has no consequence
       var loader = this;
-      lastAutoImportTimeout = setTimeout(function () {
-        autoImportCandidates[lastAutoImportUrl] = [deps, declare];
-        loader.import(lastAutoImportUrl);
-      });
+      autoImportCandidates[lastAutoImportUrl] = [deps, declare];
+      loader.import(lastAutoImportUrl);
     }
     else {
       lastAutoImportDeps = undefined;
@@ -683,8 +513,7 @@
     if (!this.shouldFetch(url))
       return instantiate.apply(this, arguments);
     return this.fetch(url, {
-      credentials: 'same-origin',
-      integrity: importMap.integrity[url]
+      credentials: 'same-origin'
     })
     .then(function (res) {
       if (!res.ok)
@@ -703,22 +532,12 @@
 
   systemJSPrototype.resolve = function (id, parentUrl) {
     parentUrl = parentUrl || !true  || baseUrl;
-    return resolveImportMap((importMap), resolveIfNotPlainOrUrl(id, parentUrl) || id, parentUrl) || throwUnresolved(id, parentUrl);
+    return resolveIfNotPlainOrUrl(id, parentUrl) || id || throwUnresolved(id, parentUrl);
   };
 
   function throwUnresolved (id, parentUrl) {
     throw Error(errMsg(8, [id, parentUrl].join(', ') ));
   }
-
-  var systemInstantiate = systemJSPrototype.instantiate;
-  systemJSPrototype.instantiate = function (url, firstParentUrl) {
-    var preloads = (importMap).depcache[url];
-    if (preloads) {
-      for (var i = 0; i < preloads.length; i++)
-        getOrCreateLoad(this, this.resolve(preloads[i], url), url);
-    }
-    return systemInstantiate.call(this, url, firstParentUrl);
-  };
 
   /*
    * Supports loading System.register in workers
@@ -754,11 +573,9 @@
   System.register = function (name, deps, declare) {
     if (typeof name !== 'string') return register.apply(this, arguments);
     var define = [deps, declare];
-    return System.prepareImport().then(function () {
-      var url = System.resolve(`./${name}`);
-      registerRegistry[url] = define;
-      return register.call(System, deps, declare, url);
-    })
+    var url = System.resolve(`./${name}`);
+    registerRegistry[url] = define;
+    return register.call(System, deps, declare, url);
   };
 
   var instantiate = System.instantiate;

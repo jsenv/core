@@ -25,6 +25,7 @@ import {
   setUrlFilename,
   asUrlUntilPathname,
   normalizeUrl,
+  asUrlWithoutSearch,
 } from "@jsenv/utils/urls/url_utils.js"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
@@ -210,6 +211,7 @@ build ${entryPointKeys.length} entry points`)
             })
             entryUrls.push(entryUrlInfo.url)
             entryUrlInfo.filename = entryPoints[key]
+            // entryUrlInfo.data.entryPointKey = key
           })
         },
       })
@@ -359,6 +361,9 @@ build ${entryPointKeys.length} entry points`)
           rawUrlRedirections[url] = buildUrl
           rawUrls[buildUrl] = url
           bundleUrlInfos[buildUrl] = bundleUrlInfo
+          if (buildUrl.includes("?")) {
+            bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
+          }
           if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
             const urlForBundler = new URL(
               bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
@@ -517,6 +522,9 @@ build ${entryPointKeys.length} entry points`)
               const buildUrl = buildUrlsGenerator.generate(reference.url, {
                 urlInfo: rawUrlInfo,
               })
+              if (buildUrl.includes("?")) {
+                rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url
+              }
               rawUrls[buildUrl] = rawUrlInfo.url
               return buildUrl
             }
