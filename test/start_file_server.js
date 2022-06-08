@@ -9,6 +9,7 @@ export const startFileServer = ({
     logLevel: debug ? "info" : "error",
     protocol: "http",
     keepProcessAlive: debug,
+    port: debug ? 9777 : 0,
     sendErrorDetails: true,
     requestToResponse: (request) =>
       fetchFileSystem(new URL(request.ressource.slice(1), rootDirectoryUrl), {

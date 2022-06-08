@@ -13,6 +13,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     minification: false,
+    writeGeneratedFiles: true,
     ...params,
   })
   const server = await startFileServer({

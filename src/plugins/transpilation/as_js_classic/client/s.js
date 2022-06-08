@@ -427,7 +427,7 @@
       }
     }
     if (!lastAutoImportUrl) {
-      lastAutoImportUrl = hasDocument && document.currentScript
+      lastAutoImportUrl = hasDocument && document.currentScript && document.currentScript.src
         ? document.currentScript.src
         : self.location.href + "__inline_script__" + inlineScriptCount;
     }
