@@ -36,7 +36,7 @@ const test = async (params) => {
   const expected = {
     typeofCurrentScript: "object",
     answer: 42,
-    url: `${server.origin}/main.js`,
+    url: `${server.origin}/main.js?as_js_classic`,
   }
   assert({ actual, expected })
 }

@@ -185,7 +185,7 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
     dequeue()
   }
   if (
-    document.readyState !== "intractive" &&
+    document.readyState !== "interactive" &&
     document.readyState !== "complete"
   ) {
     document.addEventListener("readystatechange", () => {

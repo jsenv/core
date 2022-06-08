@@ -130,6 +130,7 @@
 
   var toStringTag = hasSymbol && Symbol.toStringTag;
   var REGISTRY = hasSymbol ? Symbol() : '@';
+  var registerRegistry = Object.create(null)
 
   function SystemJS () {
     this[REGISTRY] = {};
@@ -153,28 +154,6 @@
         return Promise.resolve(loader.resolve(id, parentUrl || parentId));
       }
     };
-  };
-  function loadToId (load) {
-    return load.id;
-  }
-  function triggerOnload (loader, load, err, isErrSource) {
-    loader.onload(err, load.id, load.d && load.d.map(loadToId), !!isErrSource);
-    if (err)
-      throw err;
-  }
-
-  var lastRegister;
-  systemJSPrototype.register = function (deps, declare) {
-    lastRegister = [deps, declare];
-  };
-
-  /*
-   * getRegister provides the last anonymous System.register call
-   */
-  systemJSPrototype.getRegister = function () {
-    var _lastRegister = lastRegister;
-    lastRegister = undefined;
-    return _lastRegister;
   };
 
   function getOrCreateLoad (loader, id, firstParentUrl) {
@@ -432,102 +411,79 @@
   };
 
   // Auto imports -> script tags can be inlined directly for load phase
-  var lastAutoImportDeps, lastAutoImportTimeout;
-  var autoImportCandidates = {};
-  var systemRegister = systemJSPrototype.register;
   var inlineScriptCount = 0;
+  systemJSPrototype.firstImportCallbacks = []
+
   systemJSPrototype.register = function (deps, declare, autoUrl) {
-    if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
+    var lastAutoImportUrl;
+    if (autoUrl) {
+      lastAutoImportUrl = autoUrl;
+    }
+    else if (hasDocument && document.readyState === 'loading' && typeof deps !== 'string') {
       var scripts = document.querySelectorAll('script');
       var lastScript = scripts[scripts.length - 1];
-      var lastAutoImportUrl
-      lastAutoImportDeps = deps;
       if (lastScript && lastScript.src) {
         lastAutoImportUrl = lastScript.src;
       }
-      else if (autoUrl) {
-        lastAutoImportUrl = autoUrl
-      }
-      else {
-        inlineScriptCount++
-        lastAutoImportUrl = document.location.href + "__inline_script__" + inlineScriptCount;
-      }
-      // if this is already a System load, then the instantiate has already begun
-      // so this re-import has no consequence
-      var loader = this;
-      autoImportCandidates[lastAutoImportUrl] = [deps, declare];
-      loader.import(lastAutoImportUrl);
     }
-    else {
-      lastAutoImportDeps = undefined;
+    if (!lastAutoImportUrl) {
+      lastAutoImportUrl = hasDocument && document.currentScript
+        ? document.currentScript.src
+        : self.location.href + "__inline_script__" + inlineScriptCount;
     }
-    return systemRegister.call(this, deps, declare);
+    var loader = this;
+    registerRegistry[lastAutoImportUrl] = [deps, declare];
+    return loader.import(lastAutoImportUrl).then(function(namespace) {
+      systemJSPrototype.firstImportCallbacks.forEach(function (firstImportCallback) {
+        firstImportCallback();
+      });
+      systemJSPrototype.firstImportCallbacks.length = 0;
+      return namespace;
+    })
   };
+
+  function getRegister(url, fetchAndExecute) {
+    var registration = registerRegistry[url];
+    if (registration) {
+      return registration;
+    }
+    var register = systemJSPrototype.register;
+    systemJSPrototype.register = function (deps, declare) {
+      registerRegistry[url] = [deps, declare];
+      register.call(this, deps, declare, url);
+    };
+    return Promise.resolve(fetchAndExecute()).then(function () {
+      systemJSPrototype.register = register;
+      return registerRegistry[url];
+    }, function (e) {
+      systemJSPrototype.register = register;
+      return Promise.reject(e);
+    });
+  }
 
   var lastWindowErrorUrl, lastWindowError;
   systemJSPrototype.instantiate = function (url, firstParentUrl) {
-    var autoImportRegistration = autoImportCandidates[url];
-    if (autoImportRegistration) {
-      delete autoImportCandidates[url];
-      return autoImportRegistration;
-    }
-    var loader = this;
-    return Promise.resolve(systemJSPrototype.createScript(url)).then(function (script) {
-      return new Promise(function (resolve, reject) {
-        script.addEventListener('error', function () {
-          reject(Error(errMsg(3, [url, firstParentUrl].join(', ') )));
+    return getRegister(url, function() {
+      return Promise.resolve(systemJSPrototype.createScript(url)).then(function (script) {
+        return new Promise(function (resolve, reject) {
+          script.addEventListener('error', function () {
+            reject(Error(errMsg(3, [url, firstParentUrl].join(', ') )));
+          });
+          script.addEventListener('load', function () {
+            document.head.removeChild(script);
+            // Note that if an error occurs that isn't caught by this if statement,
+            // that getRegister will return null and a "did not instantiate" error will be thrown.
+            if (lastWindowErrorUrl === url) {
+              reject(lastWindowError);
+            }
+            else {
+              resolve();
+            }
+          });
+          document.head.appendChild(script);
         });
-        script.addEventListener('load', function () {
-          document.head.removeChild(script);
-          // Note that if an error occurs that isn't caught by this if statement,
-          // that getRegister will return null and a "did not instantiate" error will be thrown.
-          if (lastWindowErrorUrl === url) {
-            reject(lastWindowError);
-          }
-          else {
-            var register = loader.getRegister(url);
-            // Clear any auto import registration for dynamic import scripts during load
-            if (register && register[0] === lastAutoImportDeps)
-              clearTimeout(lastAutoImportTimeout);
-            resolve(register);
-          }
-        });
-        document.head.appendChild(script);
       });
-    });
-  };
-
-  /*
-   * Fetch loader, sets up shouldFetch and fetch hooks
-   */
-  systemJSPrototype.shouldFetch = function () {
-    return false;
-  };
-  if (typeof fetch !== 'undefined')
-    systemJSPrototype.fetch = fetch;
-
-  var instantiate = systemJSPrototype.instantiate;
-  var jsContentTypeRegEx = /^(text|application)\/(x-)?javascript(;|$)/;
-  systemJSPrototype.instantiate = function (url, parent) {
-    var loader = this;
-    if (!this.shouldFetch(url))
-      return instantiate.apply(this, arguments);
-    return this.fetch(url, {
-      credentials: 'same-origin'
     })
-    .then(function (res) {
-      if (!res.ok)
-        throw Error(errMsg(7, [res.status, res.statusText, url, parent].join(', ') ));
-      var contentType = res.headers.get('content-type');
-      if (!contentType || !jsContentTypeRegEx.test(contentType))
-        throw Error(errMsg(4, contentType ));
-      return res.text().then(function (source) {
-        if (source.indexOf('//# sourceURL=') < 0)
-          source += '\n//# sourceURL=' + url;
-        (0, eval)(source);
-        return loader.getRegister(url);
-      });
-    });
   };
 
   systemJSPrototype.resolve = function (id, parentUrl) {
@@ -545,58 +501,22 @@
 
   if (hasSelf && typeof importScripts === 'function') {
     systemJSPrototype.instantiate = function (url) {
-      var loader = this;
-      return self.fetch(url, {
-        credentials: 'same-origin',
-      }).then(function (response) {
-        if (!response.ok) {
-          throw Error(errMsg(7,  [response.status, response.statusText, url].join(', ') ));
-        }
-        return response.text()
-      }).then(function (source) {
-        if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
-        (0, eval)(source);
-        return loader.getRegister(url);
+      return getRegister(url, function() {
+        return self.fetch(url, {
+          credentials: 'same-origin',
+        }).then(function (response) {
+          if (!response.ok) {
+            throw Error(errMsg(7,  [response.status, response.statusText, url].join(', ') ));
+          }
+          return response.text();
+        }).then(function (source) {
+          if (source.indexOf('//# sourceURL=') < 0) source += '\n//# sourceURL=' + url;
+          (0, eval)(source);
+        });
       })
     };
   }
 
-}());
-
-(function(){
-  var envGlobal = typeof self !== 'undefined' ? self : global;
-  var System = envGlobal.System;
-
-  var registerRegistry = Object.create(null)
-  var register = System.register;
-  System.registerRegistry = registerRegistry;
-  System.register = function (name, deps, declare) {
-    if (typeof name !== 'string') return register.apply(this, arguments);
-    var define = [deps, declare];
-    var url = System.resolve(`./${name}`);
-    registerRegistry[url] = define;
-    return register.call(System, deps, declare, url);
-  };
-
-  var instantiate = System.instantiate;
-  System.instantiate = function (url, firstParentUrl) {
-    var result = registerRegistry[url];
-
-    if (result) {
-      registerRegistry[url] = null;
-      return result;
-    } else {
-      return instantiate.call(this, url, firstParentUrl);
-    }
-  };
-
-  var getRegister = System.getRegister;
-  System.getRegister = function (url) {
-    // Calling getRegister() because other extras need to know it was called so they can perform side effects
-    var register = getRegister.call(this, url);
-    var result = registerRegistry[url] || register;
-    return result;
-  };
 }());
 
 (function () {
@@ -610,15 +530,14 @@
      * To fix that code below listen for these events early and redispatch them later
      * once the worker file is executed (the listeners are installed)
     */
-    var firstRegisterCallbacks = []
     var isServiceWorker = typeof self.skipWaiting === 'function'
     if (isServiceWorker) {
       // for service worker there is more events to listen
       // and, to get rid of the warning, we override self.addEventListener
       var eventsToCatch = ['message', 'install', 'activate', 'fetch']
       var eventCallbackProxies = {}
-      var firstRegisterPromise = new Promise((resolve) => {
-        firstRegisterCallbacks.push(resolve)
+      var firstImportPromise = new Promise((resolve) => {
+        System.firstImportCallbacks.push(resolve)
       })
       eventsToCatch.forEach(function(eventName) {
         var eventsToDispatch = []
@@ -629,11 +548,11 @@
           }
           else {
             eventsToDispatch.push(event)
-            event.waitUntil(firstRegisterPromise)
+            event.waitUntil(firstImportPromise)
           }
         }
         self.addEventListener(eventName, eventCallback)
-        firstRegisterCallbacks.push(function() {
+        System.firstImportCallbacks.push(function() {
           if (eventsToDispatch.length) {
             const eventCallbackProxy = eventCallbackProxies[eventsToDispatch[0].type]
             if (eventCallbackProxy) {
@@ -663,28 +582,13 @@
           eventQueue.push(event)
         }
         self.addEventListener(eventName, eventCallback)
-        firstRegisterCallbacks.push(function() {
+        System.firstImportCallbacks.push(function() {
           self.removeEventListener(eventName, eventCallback)
           eventQueue.forEach(function (event) {
             self.dispatchEvent(event)
           })
           eventQueue.length = 0
         })
-      })
-    }
-
-
-    // auto import first register
-    var register = System.register;
-    System.register = function(deps, declare) {
-      System.register = register;
-      System.registerRegistry[self.location.href] = [deps, declare];
-      return System.import(self.location.href).then((result) => {
-        firstRegisterCallbacks.forEach(firstRegisterCallback => {
-          firstRegisterCallback()
-        })
-        firstRegisterCallbacks.length = 0
-        return result
       })
     }
   }
