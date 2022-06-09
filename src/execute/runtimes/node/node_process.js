@@ -162,6 +162,9 @@ nodeProcess.run = async ({
   const winnerPromise = new Promise((resolve) => {
     raceCallbacks(
       {
+        aborted: (cb) => {
+          return actionOperation.addAbortCallback(cb)
+        },
         // https://nodejs.org/api/child_process.html#child_process_event_disconnect
         // disconnect: (cb) => {
         //   return onceProcessEvent(childProcess, "disconnect", cb)
@@ -194,6 +197,11 @@ nodeProcess.run = async ({
       },
     })
     const winner = await winnerPromise
+    if (winner.name === "aborted") {
+      return {
+        status: "aborted",
+      }
+    }
     if (winner.name === "error") {
       const error = winner.data
       removeOutputListener()

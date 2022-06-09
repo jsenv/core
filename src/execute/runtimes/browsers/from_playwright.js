@@ -216,9 +216,14 @@ export const createRuntimeFromPlaywright = ({
       },
     })
     cleanupCallbackList.add(removeConsoleListener)
+    const actionOperation = Abort.startOperation()
+    actionOperation.addAbortSignal(signal)
     const winnerPromise = new Promise((resolve, reject) => {
       raceCallbacks(
         {
+          aborted: (cb) => {
+            return actionOperation.addAbortCallback(cb)
+          },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
           error: (cb) => {
             return registerEvent({
@@ -317,6 +322,11 @@ export const createRuntimeFromPlaywright = ({
 
     const getResult = async () => {
       const winner = await winnerPromise
+      if (winner.name === "aborted") {
+        return {
+          status: "aborted",
+        }
+      }
       if (winner.name === "error" || winner.name === "pageerror") {
         const error = winner.data
         return {
