@@ -80,9 +80,14 @@ const generateClientCodeForVersionMappings = (
   { globalName },
 ) => {
   return `
+;(function() {
+
 var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
 ${globalName}.__v__ = function (specifier) {
   return __versionMappings__[specifier] || specifier
 };
+
+})();
+
 `
 }
