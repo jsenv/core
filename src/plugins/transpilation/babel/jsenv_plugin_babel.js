@@ -7,7 +7,10 @@ import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_pl
 import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
 import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 
-export const jsenvPluginBabel = ({ getCustomBabelPlugins } = {}) => {
+export const jsenvPluginBabel = ({
+  getCustomBabelPlugins,
+  babelHelpersAsImport = true,
+} = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module"
     const isWorker = urlInfo.subtype === "worker"
@@ -55,7 +58,7 @@ export const jsenvPluginBabel = ({ getCustomBabelPlugins } = {}) => {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context))
     }
 
-    if (isJsModule) {
+    if (isJsModule && babelHelpersAsImport) {
       if (!isSupported("global_this")) {
         babelPluginStructure["global-this-as-jsenv-import"] = [
           babelPluginGlobalThisAsJsenvImport,

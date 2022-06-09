@@ -19,6 +19,7 @@ export const jsenvPluginTranspilation = ({
   jsModuleAsJsClassic = true,
   systemJsInjection = true,
   topLevelAwait = true,
+  babelHelpersAsImport = true,
   getCustomBabelPlugins,
 }) => {
   return [
@@ -28,6 +29,7 @@ export const jsenvPluginTranspilation = ({
     jsenvPluginBabel({
       topLevelAwait,
       getCustomBabelPlugins,
+      babelHelpersAsImport,
     }),
     // but the conversion from js_module to js_classic
     // we want to do it after bundling

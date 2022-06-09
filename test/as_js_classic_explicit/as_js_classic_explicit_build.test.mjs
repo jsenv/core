@@ -54,12 +54,11 @@ await test({
   runtimeCompat: {
     chrome: "63",
   },
-  bundling: true,
 })
 
 // without support for <script type="module">
 await test({
   runtimeCompat: {
-    chrome: "62",
+    chrome: "55",
   },
 })

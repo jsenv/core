@@ -152,6 +152,9 @@ build "${entryPointKeys[0]}"`)
       logger.info(`
 build ${entryPointKeys.length} entry points`)
     }
+    const useExplicitJsClassicConversion = entryPointKeys.some((key) =>
+      entryPoints[key].includes("?as_js_classic"),
+    )
 
     const rawGraph = createUrlGraph()
     const prebuildTask = createTaskLog("prebuild", {
@@ -187,6 +190,7 @@ build ${entryPointKeys.length} entry points`)
           injectedGlobals,
           transpilation: {
             ...transpilation,
+            babelHelpersAsImport: !useExplicitJsClassicConversion,
             jsModuleAsJsClassic: false,
           },
           minification,
