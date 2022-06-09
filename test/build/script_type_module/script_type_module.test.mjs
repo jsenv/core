@@ -13,6 +13,7 @@ const test = async ({ expectedUrl, ...rest }) => {
       "./main.html": "main.html",
     },
     minification: false,
+    writeGeneratedFiles: true,
     ...rest,
   })
 

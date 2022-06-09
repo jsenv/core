@@ -2,43 +2,47 @@ import { setRoundedPrecision } from "./decimals.js"
 
 export const msAsEllapsedTime = (ms) => {
   if (ms < 1000) {
-    return msAsDuration(ms, { secondMaxDecimals: 1 })
-  }
-  return msAsDuration(ms, { secondMaxDecimals: 0 })
-}
-
-export const msAsDuration = (
-  ms,
-  {
-    // ignore ms below meaningfulMs so that:
-    // msAsDuration(0.5) -> "0 second"
-    // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-    // This tool is meant to be read by humans and it would be barely readable to see
-    // "0.0001 second" (stands for 0.1 millisecond)
-    // yes we could return "0.1 millisecond" but we choosed consistency over precision
-    // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-    meaningfulMs = 1,
-    secondMaxDecimals = 1,
-  } = {},
-) => {
-  if (ms < meaningfulMs) {
     return "0 second"
   }
   const { primary, remaining } = parseMs(ms)
-
   if (!remaining) {
-    return formatUnit(primary, { secondMaxDecimals })
+    return formatEllapsedUnit(primary)
   }
-  return `${formatUnit(primary, { secondMaxDecimals })} and ${formatUnit(
+  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`
+}
+
+const formatEllapsedUnit = (unit) => {
+  const count =
+    unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count)
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`
+  }
+  return `${count} ${unit.name}s`
+}
+
+export const msAsDuration = (ms) => {
+  // ignore ms below meaningfulMs so that:
+  // msAsDuration(0.5) -> "0 second"
+  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return "0 second"
+  }
+  const { primary, remaining } = parseMs(ms)
+  if (!remaining) {
+    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0)
+  }
+  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(
     remaining,
-    {
-      secondMaxDecimals: 0,
-    },
+    0,
   )}`
 }
 
-const formatUnit = (unit, { secondMaxDecimals }) => {
-  const decimals = unit.name === "second" ? secondMaxDecimals : 0
+const formatDurationUnit = (unit, decimals) => {
   const count = setRoundedPrecision(unit.count, {
     decimals,
   })

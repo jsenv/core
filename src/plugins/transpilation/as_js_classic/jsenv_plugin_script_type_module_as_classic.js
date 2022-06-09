@@ -24,12 +24,9 @@ export const jsenvPluginAsJsClassicHtml = ({
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        if (
-          context.isSupportedOnCurrentClients("script_type_module") &&
-          context.isSupportedOnCurrentClients("import_dynamic")
-        ) {
-          return null
-        }
+        const shouldTransformScriptTypeModule =
+          !context.isSupportedOnCurrentClients("script_type_module") ||
+          !context.isSupportedOnCurrentClients("import_dynamic")
         const htmlAst = parseHtmlString(urlInfo.content)
         const preloadAsScriptNodes = []
         const modulePreloadNodes = []
@@ -47,8 +44,8 @@ export const jsenvPluginAsJsClassicHtml = ({
           }
           if (rel === "preload") {
             const asAttribute = getHtmlNodeAttributeByName(node, "as")
-            const as = asAttribute ? asAttribute.value : undefined
-            if (as === "script") {
+            const asValue = asAttribute ? asAttribute.value : undefined
+            if (asValue === "script") {
               preloadAsScriptNodes.push(node)
             }
             return
@@ -74,30 +71,9 @@ export const jsenvPluginAsJsClassicHtml = ({
           visitScriptNodes(node)
         })
 
-        const classicScriptUrls = []
-        const moduleScriptUrls = []
-        classicScriptNodes.forEach((classicScriptNode) => {
-          const srcAttribute = getHtmlNodeAttributeByName(
-            classicScriptNode,
-            "src",
-          )
-          if (srcAttribute) {
-            const url = new URL(srcAttribute.value, urlInfo.url).href
-            classicScriptUrls.push(url)
-          }
-        })
-        moduleScriptNodes.forEach((moduleScriptNode) => {
-          const srcAttribute = getHtmlNodeAttributeByName(
-            moduleScriptNode,
-            "src",
-          )
-          if (srcAttribute) {
-            const url = new URL(srcAttribute.value, urlInfo.url).href
-            moduleScriptUrls.push(url)
-          }
-        })
-
+        const actions = []
         const jsModuleUrls = []
+        const convertedUrls = []
         const getReferenceAsJsClassic = async (
           reference,
           {
@@ -108,19 +84,20 @@ export const jsenvPluginAsJsClassicHtml = ({
             cookIt = false,
           } = {},
         ) => {
+          const newReferenceProps = {
+            expectedType: "js_classic",
+            specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
+              as_js_classic: "",
+            }),
+            filename: generateJsClassicFilename(reference.url),
+          }
           const [newReference, newUrlInfo] = context.referenceUtils.update(
             reference,
-            {
-              expectedType: "js_classic",
-              specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
-                as_js_classic: "",
-              }),
-              filename: generateJsClassicFilename(reference.url),
-            },
+            newReferenceProps,
           )
-          const jsModuleUrl = newUrlInfo.url
-          if (!jsModuleUrls.includes(jsModuleUrl)) {
-            jsModuleUrls.push(newUrlInfo.url)
+          const convertedUrl = newUrlInfo.url
+          if (!convertedUrls.includes(convertedUrl)) {
+            convertedUrls.push(convertedUrl)
           }
           if (cookIt) {
             // during dev it means js modules will be cooked before server sends the HTML
@@ -132,49 +109,31 @@ export const jsenvPluginAsJsClassicHtml = ({
           }
           return [newReference, newUrlInfo]
         }
-        const actions = []
-        preloadAsScriptNodes.forEach((preloadAsScriptNode) => {
-          const hrefAttribute = getHtmlNodeAttributeByName(
-            preloadAsScriptNode,
-            "href",
+
+        classicScriptNodes.forEach((classicScriptNode) => {
+          const srcAttribute = getHtmlNodeAttributeByName(
+            classicScriptNode,
+            "src",
           )
-          const href = hrefAttribute.value
-          const url = new URL(href, urlInfo.url).href
-          const expectedScriptType = moduleScriptUrls.includes(url)
-            ? "module"
-            : "classic"
-          // keep in mind:
-          // when the url is not referenced by a <script type="module">
-          // we assume we want to preload "classic" but it might not be the case
-          // but it's unlikely to happen and people should use "modulepreload" in that case anyway
-          if (expectedScriptType === "module") {
-            actions.push(async () => {
-              const reference =
-                context.referenceUtils.findByGeneratedSpecifier(href)
-              const [newReference] = await getReferenceAsJsClassic(reference)
-              assignHtmlNodeAttributes(preloadAsScriptNode, {
-                href: newReference.generatedSpecifier,
+          if (srcAttribute) {
+            const reference = urlInfo.references.find(
+              (ref) =>
+                ref.generatedSpecifier === srcAttribute.value &&
+                ref.type === "script_src",
+            )
+            const urlObject = new URL(reference.url)
+            if (urlObject.searchParams.has("as_js_classic")) {
+              const convertedUrl = urlObject.href
+              convertedUrls.push(convertedUrl)
+              urlObject.searchParams.delete("as_js_classic")
+              const jsModuleUrl = urlObject.href
+              jsModuleUrls.push(jsModuleUrl)
+              actions.push(async () => {
+                const urlInfo = context.urlGraph.getUrlInfo(convertedUrl)
+                await context.cook(urlInfo, { reference })
               })
-              removeHtmlNodeAttributeByName(preloadAsScriptNode, "crossorigin")
-            })
+            }
           }
-        })
-        modulePreloadNodes.forEach((modulePreloadNode) => {
-          const hrefAttribute = getHtmlNodeAttributeByName(
-            modulePreloadNode,
-            "href",
-          )
-          const href = hrefAttribute.value
-          actions.push(async () => {
-            const reference =
-              context.referenceUtils.findByGeneratedSpecifier(href)
-            const [newReference] = await getReferenceAsJsClassic(reference)
-            assignHtmlNodeAttributes(modulePreloadNode, {
-              rel: "preload",
-              as: "script",
-              href: newReference.generatedSpecifier,
-            })
-          })
         })
         moduleScriptNodes.forEach((moduleScriptNode) => {
           const srcAttribute = getHtmlNodeAttributeByName(
@@ -182,66 +141,142 @@ export const jsenvPluginAsJsClassicHtml = ({
             "src",
           )
           if (srcAttribute) {
-            actions.push(async () => {
-              const specifier = srcAttribute.value
-              const reference =
-                context.referenceUtils.findByGeneratedSpecifier(specifier)
-              const [newReference] = await getReferenceAsJsClassic(reference, {
-                cookIt: true,
+            const reference = urlInfo.references.find(
+              (ref) =>
+                ref.generatedSpecifier === srcAttribute.value &&
+                ref.type === "script_src" &&
+                ref.expectedType === "js_module",
+            )
+            jsModuleUrls.push(reference.url)
+            if (shouldTransformScriptTypeModule) {
+              actions.push(async () => {
+                const [newReference] = await getReferenceAsJsClassic(
+                  reference,
+                  {
+                    cookIt: true,
+                  },
+                )
+                removeHtmlNodeAttributeByName(moduleScriptNode, "type")
+                srcAttribute.value = newReference.generatedSpecifier
               })
-              removeHtmlNodeAttributeByName(moduleScriptNode, "type")
-              srcAttribute.value = newReference.generatedSpecifier
-            })
+            }
             return
           }
-          const textNode = getHtmlNodeTextNode(moduleScriptNode)
-          actions.push(async () => {
-            const { line, column, lineEnd, columnEnd, isOriginal } =
-              htmlNodePosition.readNodePosition(moduleScriptNode, {
-                preferOriginal: true,
+          if (shouldTransformScriptTypeModule) {
+            const textNode = getHtmlNodeTextNode(moduleScriptNode)
+            actions.push(async () => {
+              const { line, column, lineEnd, columnEnd, isOriginal } =
+                htmlNodePosition.readNodePosition(moduleScriptNode, {
+                  preferOriginal: true,
+                })
+              let inlineScriptUrl = generateInlineContentUrl({
+                url: urlInfo.url,
+                extension: ".js",
+                line,
+                column,
+                lineEnd,
+                columnEnd,
               })
-            let inlineScriptUrl = generateInlineContentUrl({
-              url: urlInfo.url,
-              extension: ".js",
-              line,
-              column,
-              lineEnd,
-              columnEnd,
+              const [inlineReference] = context.referenceUtils.foundInline({
+                node: moduleScriptNode,
+                type: "script_src",
+                expectedType: "js_module",
+                isOriginalPosition: isOriginal,
+                // we remove 1 to the line because imagine the following html:
+                // <script>console.log('ok')</script>
+                // -> content starts same line as <script>
+                specifierLine: line - 1,
+                specifierColumn: column,
+                specifier: inlineScriptUrl,
+                contentType: "application/javascript",
+                content: textNode.value,
+              })
+              const [, newUrlInfo] = await getReferenceAsJsClassic(
+                inlineReference,
+                { cookIt: true },
+              )
+              removeHtmlNodeAttributeByName(moduleScriptNode, "type")
+              setHtmlNodeGeneratedText(moduleScriptNode, {
+                generatedText: newUrlInfo.content,
+                generatedBy: "jsenv:as_js_classic_html",
+              })
             })
-            const [inlineReference] = context.referenceUtils.foundInline({
-              node: moduleScriptNode,
-              type: "script_src",
-              expectedType: "js_module",
-              isOriginalPosition: isOriginal,
-              // we remove 1 to the line because imagine the following html:
-              // <script>console.log('ok')</script>
-              // -> content starts same line as <script>
-              specifierLine: line - 1,
-              specifierColumn: column,
-              specifier: inlineScriptUrl,
-              contentType: "application/javascript",
-              content: textNode.value,
-            })
-            const [, newUrlInfo] = await getReferenceAsJsClassic(
-              inlineReference,
-              { cookIt: true },
+          }
+        })
+        if (shouldTransformScriptTypeModule) {
+          preloadAsScriptNodes.forEach((preloadAsScriptNode) => {
+            const hrefAttribute = getHtmlNodeAttributeByName(
+              preloadAsScriptNode,
+              "href",
             )
-            removeHtmlNodeAttributeByName(moduleScriptNode, "type")
-            setHtmlNodeGeneratedText(moduleScriptNode, {
-              generatedText: newUrlInfo.content,
-              generatedBy: "jsenv:as_js_classic_html",
+            const href = hrefAttribute.value
+            const reference = urlInfo.references.find(
+              (ref) =>
+                ref.generatedSpecifier === href &&
+                ref.type === "link_href" &&
+                ref.expectedType === undefined,
+            )
+            const expectedScriptType = jsModuleUrls.includes(reference.url)
+              ? "module"
+              : "classic"
+            if (expectedScriptType === "module") {
+              actions.push(async () => {
+                // reference modified by <script type="module"> conversion
+                let newReference
+                if (reference.next) {
+                  newReference = reference.next
+                } else {
+                  // when the url is not referenced by a <script type="module">
+                  // we assume we want to preload "classic" but it might not be the case
+                  // but it's unlikely to happen and people should use "modulepreload" in that case anyway
+                  ;[newReference] = await getReferenceAsJsClassic(reference)
+                }
+                assignHtmlNodeAttributes(preloadAsScriptNode, {
+                  href: newReference.generatedSpecifier,
+                })
+                removeHtmlNodeAttributeByName(
+                  preloadAsScriptNode,
+                  "crossorigin",
+                )
+              })
+            }
+          })
+          modulePreloadNodes.forEach((modulePreloadNode) => {
+            const hrefAttribute = getHtmlNodeAttributeByName(
+              modulePreloadNode,
+              "href",
+            )
+            const href = hrefAttribute.value
+            const reference = urlInfo.references.find(
+              (ref) =>
+                ref.generatedSpecifier === href &&
+                ref.type === "link_href" &&
+                ref.expectedType === "js_module",
+            )
+            actions.push(async () => {
+              let newReference
+              if (reference.next) {
+                newReference = reference.next
+              } else {
+                ;[newReference] = await getReferenceAsJsClassic(reference)
+              }
+              assignHtmlNodeAttributes(modulePreloadNode, {
+                rel: "preload",
+                as: "script",
+                href: newReference.generatedSpecifier,
+              })
             })
           })
-        })
+        }
 
         if (actions.length === 0) {
           return null
         }
         await Promise.all(actions.map((action) => action()))
         if (systemJsInjection) {
-          const needsSystemJs = jsModuleUrls.some(
-            (jsModuleUrl) =>
-              context.urlGraph.getUrlInfo(jsModuleUrl).data.jsClassicFormat ===
+          const needsSystemJs = convertedUrls.some(
+            (convertedUrl) =>
+              context.urlGraph.getUrlInfo(convertedUrl).data.jsClassicFormat ===
               "system",
           )
           if (needsSystemJs) {
@@ -255,7 +290,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               createHtmlNode({
                 "tagName": "script",
                 "src": systemJsReference.generatedSpecifier,
-                "injected-by": "jsenv:script_type_module_as_classic",
+                "injected-by": "jsenv:as_js_classic_html",
               }),
             )
           }

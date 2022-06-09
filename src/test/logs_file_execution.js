@@ -79,7 +79,7 @@ const createIntermediateSummary = ({
   timeEllapsed,
 }) => {
   const parts = []
-  if (executionIndex > 0) {
+  if (executionIndex > 0 || counters.done > 0) {
     parts.push(
       createStatusSummary({
         counters: {
