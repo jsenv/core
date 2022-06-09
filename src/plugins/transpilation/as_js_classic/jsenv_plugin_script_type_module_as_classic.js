@@ -14,13 +14,13 @@ import {
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
 import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
 
-export const jsenvPluginScriptTypeModuleAsClassic = ({
+export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
   systemJsClientFileUrl,
   generateJsClassicFilename,
 }) => {
   return {
-    name: "jsenv:script_type_module_as_classic",
+    name: "jsenv:as_js_classic_html",
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
@@ -229,7 +229,7 @@ export const jsenvPluginScriptTypeModuleAsClassic = ({
             removeHtmlNodeAttributeByName(moduleScriptNode, "type")
             setHtmlNodeGeneratedText(moduleScriptNode, {
               generatedText: newUrlInfo.content,
-              generatedBy: "jsenv:script_type_module_as_classic",
+              generatedBy: "jsenv:as_js_classic_html",
             })
           })
         })

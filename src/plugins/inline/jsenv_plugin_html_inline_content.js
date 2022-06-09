@@ -76,7 +76,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
           // - we want to avoid cooking twice a script during build
           const generatedBy = getHtmlNodeAttributeByName(node, "generated-by")
           if (generatedBy) {
-            if (generatedBy.value === "jsenv:script_type_module_as_classic") {
+            if (generatedBy.value === "jsenv:as_js_classic_html") {
               if (!analyzeConvertedScripts) {
                 return
               }
