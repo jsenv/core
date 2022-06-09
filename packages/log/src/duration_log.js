@@ -1,5 +1,12 @@
 import { setRoundedPrecision } from "./decimals.js"
 
+export const msAsEllapsedTime = (ms) => {
+  if (ms < 1000) {
+    return msAsDuration(ms, { secondMaxDecimals: 1 })
+  }
+  return msAsDuration(ms, { secondMaxDecimals: 0 })
+}
+
 export const msAsDuration = (
   ms,
   {

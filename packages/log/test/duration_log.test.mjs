@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { msAsDuration } from "@jsenv/log"
+import { msAsDuration, msAsEllapsedTime } from "@jsenv/log"
 
 {
   const actual = msAsDuration(0.1)
@@ -75,10 +75,7 @@ import { msAsDuration } from "@jsenv/log"
 }
 
 {
-  const actual = msAsDuration(2200, {
-    meaningfulMs: 1000,
-    secondMaxDecimals: 0,
-  })
+  const actual = msAsEllapsedTime(2200)
   const expected = "2 seconds"
   assert({ actual, expected })
 }

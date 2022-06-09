@@ -1,27 +1,14 @@
-import { ANSI, UNICODE, msAsDuration, byteAsMemoryUsage } from "@jsenv/log"
+import {
+  ANSI,
+  UNICODE,
+  msAsEllapsedTime,
+  msAsDuration,
+  byteAsMemoryUsage,
+} from "@jsenv/log"
 
 import { EXECUTION_COLORS } from "./execution_colors.js"
 
-export const formatExecuting = (
-  { executionIndex },
-  { counters, timeEllapsed, memoryHeap },
-) => {
-  const description = ANSI.color(
-    `executing ${executionIndex + 1} of ${counters.total}`,
-    EXECUTION_COLORS.executing,
-  )
-  const summary = `(${createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap,
-  })})`
-  return formatExecution({
-    label: `${description} ${summary}`,
-  })
-}
-
-export const formatExecutionResult = (
+export const createExecutionLog = (
   {
     executionIndex,
     fileRelativeUrl,
@@ -29,6 +16,8 @@ export const formatExecutionResult = (
     runtimeVersion,
     executionParams,
     executionResult,
+    startMs,
+    endMs,
   },
   { completedExecutionLogAbbreviation, counters, timeEllapsed, memoryHeap },
 ) => {
@@ -39,23 +28,26 @@ export const formatExecutionResult = (
     total: counters.total,
     executionParams,
   })
-  const summary = `(${createIntermediateSummary({
+  const summary = createIntermediateSummary({
     executionIndex,
     counters,
     timeEllapsed,
     memoryHeap,
-  })})`
+  })
   if (completedExecutionLogAbbreviation && status === "completed") {
-    return `${description} ${summary}`
+    return `${description}${summary}`
   }
-  const { consoleCalls = [], error, duration } = executionResult
+  const { consoleCalls = [], error } = executionResult
   const consoleOutput = formatConsoleCalls(consoleCalls)
   return formatExecution({
-    label: `${description} ${summary}`,
+    label: `${description}${summary}`,
     details: {
       file: fileRelativeUrl,
       runtime: `${runtimeName}/${runtimeVersion}`,
-      duration: msAsDuration(duration),
+      duration:
+        status === "executing"
+          ? msAsEllapsedTime(Date.now() - startMs)
+          : msAsDuration(endMs - startMs),
       ...(error ? { error: error.stack || error.message || error } : {}),
     },
     consoleOutput,
@@ -98,17 +90,15 @@ const createIntermediateSummary = ({
     )
   }
   if (timeEllapsed) {
-    parts.push(
-      `duration: ${msAsDuration(timeEllapsed, {
-        meaningfulMs: 1000,
-        secondMaxDecimals: 0,
-      })}`,
-    )
+    parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`)
   }
   if (memoryHeap) {
     parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`)
   }
-  return parts.join(` / `)
+  if (parts.length === 0) {
+    return ""
+  }
+  return ` (${parts.join(` / `)})`
 }
 
 const createStatusSummary = ({ counters }) => {
@@ -172,6 +162,12 @@ const createMixedDetails = ({ counters }) => {
 }
 
 const descriptionFormatters = {
+  executing: ({ index, total }) => {
+    return ANSI.color(
+      `executing ${index + 1} of ${total}`,
+      EXECUTION_COLORS.executing,
+    )
+  },
   aborted: ({ index, total }) => {
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} aborted`,

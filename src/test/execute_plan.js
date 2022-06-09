@@ -25,11 +25,7 @@ import { run } from "@jsenv/core/src/execute/run.js"
 
 import { ensureGlobalGc } from "./gc.js"
 import { generateExecutionSteps } from "./execution_steps.js"
-import {
-  formatExecuting,
-  formatExecutionResult,
-  createSummaryLog,
-} from "./logs_file_execution.js"
+import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js"
 
 export const executePlan = async (
   plan,
@@ -327,11 +323,15 @@ export const executePlan = async (
           runtimeVersion,
           executionIndex,
           executionParams,
+          startMs: Date.now(),
+          executionResult: {
+            status: "executing",
+          },
         }
         let spinner
         if (executionSpinner) {
           const renderSpinnerText = () =>
-            formatExecuting(beforeExecutionInfo, {
+            createExecutionLog(beforeExecutionInfo, {
               counters,
               ...(logTimeUsage
                 ? {
@@ -377,10 +377,15 @@ export const executePlan = async (
           }
         }
         counters.done++
-        if (fileRelativeUrl in report === false) {
-          report[fileRelativeUrl] = {}
+        const fileReport = report[fileRelativeUrl]
+        if (fileReport) {
+          fileReport[executionName] = executionResult
+        } else {
+          report[fileRelativeUrl] = {
+            [executionName]: executionResult,
+          }
         }
-        report[fileRelativeUrl][executionName] = executionResult
+
         const afterExecutionInfo = {
           ...beforeExecutionInfo,
           endMs: Date.now(),
@@ -401,7 +406,7 @@ export const executePlan = async (
           global.gc()
         }
         if (executionLogsEnabled) {
-          let log = formatExecutionResult(afterExecutionInfo, {
+          let log = createExecutionLog(afterExecutionInfo, {
             completedExecutionLogAbbreviation,
             counters,
             ...(logTimeUsage

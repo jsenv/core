@@ -10,7 +10,7 @@ export { UNICODE } from "./src/unicode.js"
 export { createLog } from "./src/log.js"
 export { startSpinner } from "./src/spinner.js"
 export { createTaskLog } from "./src/task_log.js"
-export { msAsDuration } from "./src/duration_log.js"
+export { msAsEllapsedTime, msAsDuration } from "./src/duration_log.js"
 export { byteAsFileSize, byteAsMemoryUsage } from "./src/size_log.js"
 export { distributePercentages } from "./src/percentage_distribution.js"
 
