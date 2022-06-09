@@ -73,3 +73,12 @@ import { msAsDuration } from "@jsenv/log"
   const expected = `2 hours and 8 minutes`
   assert({ actual, expected })
 }
+
+{
+  const actual = msAsDuration(2200, {
+    meaningfulMs: 1000,
+    secondMaxDecimals: 0,
+  })
+  const expected = "2 seconds"
+  assert({ actual, expected })
+}

@@ -5,6 +5,7 @@ export const startSpinner = ({
   keepProcessAlive = false,
   stopOnWriteFromOutside = true,
   text = "",
+  update = (text) => text,
   effect = () => {},
 }) => {
   let frameIndex = 0
@@ -15,6 +16,7 @@ export const startSpinner = ({
   }
 
   const render = () => {
+    spinner.text = update(spinner.text)
     return `${frames[frameIndex]} ${spinner.text}`
   }
 

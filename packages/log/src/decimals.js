@@ -4,29 +4,64 @@ export const getPrecision = (number) => {
   return decimals.length || 0
 }
 
-export const setRoundedPrecision = (number, decimals) => {
-  return setDecimalsPrecision(number, { decimals, transform: Math.round })
+export const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round,
+  })
 }
 
-export const setFlooredPrecision = (number, decimals) => {
-  return setDecimalsPrecision(number, { decimals, transform: Math.floor })
+export const setFlooredPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.floor,
+  })
 }
 
-export const setCeiledPrecision = (number, decimals) => {
-  return setDecimalsPrecision(number, { decimals, transform: Math.ceil })
+export const setCeiledPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.ceil,
+  })
 }
 
-export const setPrecision = (number, decimals) => {
-  return setDecimalsPrecision(number, { decimals, transform: parseInt })
+export const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt,
+  })
 }
 
-const setDecimalsPrecision = (number, { transform, decimals = 1 } = {}) => {
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
   if (number === 0) {
     return 0
   }
   let numberCandidate = Math.abs(number)
   if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimals - 1)
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1)
     let i = 1
     while (numberCandidate < integerGoal) {
       numberCandidate *= 10

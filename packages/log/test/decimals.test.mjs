@@ -79,7 +79,9 @@ import {
   assert({ actual, expected })
 }
 {
-  const actual = setRoundedPrecision(0.016556, 3)
+  const actual = setRoundedPrecision(0.016556, {
+    decimals: 3,
+  })
   const expected = 0.0166
   assert({ actual, expected })
 }

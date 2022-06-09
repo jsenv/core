@@ -1,43 +1,40 @@
-import { setPrecision } from "./decimals.js"
+import { setRoundedPrecision } from "./decimals.js"
 
-export const msAsDuration = (ms) => {
-  if (ms < 1) {
-    // it would be barely readable to write 0.0001 second (stands for 0.1 millisecond)
-    // and this precision does not matter
-    // (this function is meant to display a duration to a human)
-    // so in this case we'll return "0 second" which means "less than 1 millisecond"
-    // (I prefer "0 second" to be consistent with other logs wich will likely measure in "second")
+export const msAsDuration = (
+  ms,
+  {
+    // ignore ms below meaningfulMs so that:
+    // msAsDuration(0.5) -> "0 second"
+    // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+    // This tool is meant to be read by humans and it would be barely readable to see
+    // "0.0001 second" (stands for 0.1 millisecond)
+    // yes we could return "0.1 millisecond" but we choosed consistency over precision
+    // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+    meaningfulMs = 1,
+    secondMaxDecimals = 1,
+  } = {},
+) => {
+  if (ms < meaningfulMs) {
     return "0 second"
   }
   const { primary, remaining } = parseMs(ms)
+
   if (!remaining) {
-    return formatUnit(primary, determineMaxDecimals(primary))
+    return formatUnit(primary, { secondMaxDecimals })
   }
-  return `${formatUnit(primary)} and ${formatUnit(remaining)}`
+  return `${formatUnit(primary, { secondMaxDecimals })} and ${formatUnit(
+    remaining,
+    {
+      secondMaxDecimals: 0,
+    },
+  )}`
 }
 
-const determineMaxDecimals = (unit) => {
-  if (unit.name !== "second") {
-    return 0
-  }
-  const count = unit.count
-  if (count < 0.001) {
-    return 4
-  }
-  if (count < 0.01) {
-    return 3
-  }
-  if (count < 0.1) {
-    return 2
-  }
-  if (count < 1) {
-    return 1
-  }
-  return 1
-}
-
-const formatUnit = (unit, maxDecimals = 0) => {
-  const count = setPrecision(unit.count, maxDecimals)
+const formatUnit = (unit, { secondMaxDecimals }) => {
+  const decimals = unit.name === "second" ? secondMaxDecimals : 0
+  const count = setRoundedPrecision(unit.count, {
+    decimals,
+  })
   if (count <= 1) {
     return `${count} ${unit.name}`
   }

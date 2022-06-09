@@ -39,6 +39,7 @@ export const executePlan = async (
     logger,
     logSummary,
     logMemoryHeapUsage,
+    logTimeUsage,
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
@@ -329,14 +330,22 @@ export const executePlan = async (
         }
         let spinner
         if (executionSpinner) {
-          spinner = startSpinner({
-            log: executionLog,
-            text: formatExecuting(beforeExecutionInfo, {
+          const renderSpinnerText = () =>
+            formatExecuting(beforeExecutionInfo, {
               counters,
               ...(logMemoryHeapUsage
                 ? { memoryHeap: memoryUsage().heapUsed }
                 : {}),
-            }),
+              ...(logTimeUsage
+                ? {
+                    timeEllapsed: Date.now() - startMs,
+                  }
+                : {}),
+            })
+          spinner = startSpinner({
+            log: executionLog,
+            text: renderSpinnerText(),
+            update: renderSpinnerText,
           })
         }
         beforeExecutionCallback(beforeExecutionInfo)
@@ -397,6 +406,11 @@ export const executePlan = async (
             counters,
             ...(logMemoryHeapUsage
               ? { memoryHeap: memoryUsage().heapUsed }
+              : {}),
+            ...(logTimeUsage
+              ? {
+                  timeEllapsed: Date.now() - startMs,
+                }
               : {}),
           })
           log = `${log}
