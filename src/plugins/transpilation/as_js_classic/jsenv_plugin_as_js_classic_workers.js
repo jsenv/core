@@ -1,6 +1,6 @@
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 
-export const jsenvPluginWorkersTypeModuleAsClassic = ({
+export const jsenvPluginAsJsClassicWorkers = ({
   generateJsClassicFilename,
 }) => {
   const updateReference = (reference) => {
@@ -19,7 +19,7 @@ export const jsenvPluginWorkersTypeModuleAsClassic = ({
   }
 
   return {
-    name: "jsenv:workers_type_module_as_classic",
+    name: "jsenv:as_js_classic_workers",
     appliesDuring: "*",
     redirectUrl: {
       js_url_specifier: (reference, context) => {

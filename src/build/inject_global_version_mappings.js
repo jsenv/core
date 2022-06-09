@@ -43,8 +43,7 @@ const jsInjector = (urlInfo, { versionMappings }) => {
   const magicSource = createMagicSource(urlInfo.content)
   magicSource.prepend(
     generateClientCodeForVersionMappings(versionMappings, {
-      // self because it happens only for web workers
-      globalName: "self",
+      globalName: urlInfo.data.isWebWorkerEntryPoint ? "self" : "window",
     }),
   )
   return magicSource.toContentAndSourcemap()

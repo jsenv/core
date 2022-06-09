@@ -23,7 +23,7 @@ import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info
 
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginScriptTypeModuleAsClassic } from "./jsenv_plugin_script_type_module_as_classic.js"
-import { jsenvPluginWorkersTypeModuleAsClassic } from "./jsenv_plugin_workers_type_module_as_classic.js"
+import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
 
 const require = createRequire(import.meta.url)
 
@@ -31,19 +31,27 @@ export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
   return [
-    asJsClassic({ systemJsInjection, systemJsClientFileUrl }),
+    jsenvPluginAsJsClassicConversion({
+      systemJsInjection,
+      systemJsClientFileUrl,
+    }),
     jsenvPluginScriptTypeModuleAsClassic({
       systemJsInjection,
       systemJsClientFileUrl,
       generateJsClassicFilename,
     }),
-    jsenvPluginWorkersTypeModuleAsClassic({
+    jsenvPluginAsJsClassicWorkers({
       generateJsClassicFilename,
     }),
   ]
 }
 
-const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
+// propagate ?as_js_classic to referenced urls
+// and perform the conversion during fetchUrlContent
+const jsenvPluginAsJsClassicConversion = ({
+  systemJsInjection,
+  systemJsClientFileUrl,
+}) => {
   const propagateJsClassicSearchParam = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
     if (
@@ -60,9 +68,8 @@ const asJsClassic = ({ systemJsInjection, systemJsClientFileUrl }) => {
   }
 
   return {
-    name: "jsenv:as_js_classic",
+    name: "jsenv:as_js_classic_conversion",
     appliesDuring: "*",
-    // forward ?as_js_classic to referenced urls
     redirectUrl: {
       // We want to propagate transformation of js module to js classic to:
       // - import specifier (static/dynamic import + re-export)
