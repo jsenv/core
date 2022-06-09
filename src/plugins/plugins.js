@@ -44,7 +44,10 @@ export const getCorePlugins = ({
   }
   return [
     jsenvPluginUrlAnalysis(),
-    jsenvPluginTranspilation(transpilation),
+    jsenvPluginTranspilation({
+      rootDirectoryUrl,
+      ...transpilation,
+    }),
     ...(htmlSupervisor
       ? [
           jsenvPluginHtmlSupervisor({

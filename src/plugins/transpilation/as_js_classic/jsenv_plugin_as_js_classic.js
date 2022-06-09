@@ -12,7 +12,7 @@
  */
 
 import { createRequire } from "node:module"
-import { readFileSync, urlToFilename } from "@jsenv/filesystem"
+import { readFileSync, urlToFilename, urlIsInsideOf } from "@jsenv/filesystem"
 
 import { requireBabelPlugin } from "@jsenv/babel-plugins"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
@@ -21,14 +21,23 @@ import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 
+import { jsenvRootDirectoryUrl } from "@jsenv/core/src/jsenv_root_directory_url.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_script_type_module_as_classic.js"
 import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
 
 const require = createRequire(import.meta.url)
 
-export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
-  const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
+export const jsenvPluginAsJsClassic = ({
+  rootDirectoryUrl,
+  systemJsInjection,
+}) => {
+  const preferSourceFiles =
+    rootDirectoryUrl === jsenvRootDirectoryUrl ||
+    urlIsInsideOf(rootDirectoryUrl, jsenvRootDirectoryUrl)
+  const systemJsClientFileUrl = preferSourceFiles
+    ? new URL("./client/s.js", import.meta.url).href
+    : new URL("./dist/s.js", import.meta.url).href
 
   return [
     jsenvPluginAsJsClassicConversion({

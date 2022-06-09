@@ -399,6 +399,7 @@ build ${entryPointKeys.length} entry points`)
       plugins: [
         jsenvPluginUrlAnalysis(),
         jsenvPluginAsJsClassic({
+          rootDirectoryUrl,
           systemJsInjection: true,
         }),
         jsenvPluginInline({

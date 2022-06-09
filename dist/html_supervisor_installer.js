@@ -1168,7 +1168,7 @@ const installHtmlSupervisor = ({
     dequeue();
   };
 
-  if (document.readyState !== "intractive" && document.readyState !== "complete") {
+  if (document.readyState !== "interactive" && document.readyState !== "complete") {
     document.addEventListener("readystatechange", () => {
       if (document.readyState === "interactive") {
         const nextDefered = deferQueue.shift();
