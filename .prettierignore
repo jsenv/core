@@ -10,7 +10,6 @@ node_modules/
 
 **/babel_helpers/
 **/client/regenerator_runtime.js
-**/client/s.js
 
 /test/**/js_syntax_error.js
 /**/dist/**
