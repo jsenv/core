@@ -41,7 +41,10 @@ const injectVersionMappings = async ({ urlInfo, kitchen, versionMappings }) => {
 
 const jsInjector = (urlInfo, { versionMappings }) => {
   const magicSource = createMagicSource(urlInfo.content)
-  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings))
+  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings), {
+    // self because it happens only for web workers
+    globalName: "self",
+  })
   return magicSource.toContentAndSourcemap()
 }
 
@@ -57,7 +60,9 @@ const injectors = {
       htmlAst,
       createHtmlNode({
         "tagName": "script",
-        "textContent": generateClientCodeForVersionMappings(versionMappings),
+        "textContent": generateClientCodeForVersionMappings(versionMappings, {
+          globalName: "window",
+        }),
         "injected-by": "jsenv:versioning",
       }),
     )
@@ -69,11 +74,13 @@ const injectors = {
   js_module: jsInjector,
 }
 
-const generateClientCodeForVersionMappings = (versionMappings) => {
+const generateClientCodeForVersionMappings = (
+  versionMappings,
+  { globalName },
+) => {
   return `
 var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
-var __envGlobal__ = typeof self === 'undefined' ? global : self;
-__envGlobal__.__v__ = function (specifier) {
+${globalName}.__v__ = function (specifier) {
   return __versionMappings__[specifier] || specifier
 };
 `
