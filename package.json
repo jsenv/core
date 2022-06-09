@@ -68,7 +68,7 @@
     "@jsenv/filesystem": "3.2.2",
     "@jsenv/importmap": "1.2.0",
     "@jsenv/integrity": "0.0.1",
-    "@jsenv/log": "1.6.1",
+    "@jsenv/log": "1.6.2",
     "@jsenv/logger": "4.1.1",
     "@jsenv/node-esm-resolution": "0.0.8",
     "@jsenv/server": "12.6.3",
