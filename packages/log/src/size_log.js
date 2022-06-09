@@ -8,6 +8,13 @@ export const byteAsFileSize = (metricValue) => {
   return bytes(metricValue, { decimalPlaces: 2, unitSeparator: " " })
 }
 
-export const byteAsMemoryUsage = (metricValue) => {
-  return bytes(metricValue, { decimalPlaces: 2, unitSeparator: " " })
+export const byteAsMemoryUsage = (
+  metricValue,
+  { fixedDecimals = true } = {},
+) => {
+  return bytes(metricValue, {
+    decimalPlaces: 2,
+    unitSeparator: " ",
+    fixedDecimals,
+  })
 }

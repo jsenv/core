@@ -4,20 +4,18 @@ import { EXECUTION_COLORS } from "./execution_colors.js"
 
 export const formatExecuting = (
   { executionIndex },
-  { counters, memoryHeap },
+  { counters, timeEllapsed, memoryHeap },
 ) => {
   const description = ANSI.color(
     `executing ${executionIndex + 1} of ${counters.total}`,
     EXECUTION_COLORS.executing,
   )
-  const summary =
-    executionIndex === 0
-      ? ""
-      : `(${createIntermediateSummary({
-          executionIndex,
-          counters,
-          memoryHeap,
-        })})`
+  const summary = `(${createIntermediateSummary({
+    executionIndex,
+    counters,
+    timeEllapsed,
+    memoryHeap,
+  })})`
   return formatExecution({
     label: `${description} ${summary}`,
   })
@@ -32,7 +30,7 @@ export const formatExecutionResult = (
     executionParams,
     executionResult,
   },
-  { completedExecutionLogAbbreviation, counters, memoryHeap },
+  { completedExecutionLogAbbreviation, counters, timeEllapsed, memoryHeap },
 ) => {
   const { status } = executionResult
   const descriptionFormatter = descriptionFormatters[status]
@@ -44,6 +42,7 @@ export const formatExecutionResult = (
   const summary = `(${createIntermediateSummary({
     executionIndex,
     counters,
+    timeEllapsed,
     memoryHeap,
   })})`
   if (completedExecutionLogAbbreviation && status === "completed") {
@@ -85,17 +84,31 @@ const createIntermediateSummary = ({
   executionIndex,
   counters,
   memoryHeap,
+  timeEllapsed,
 }) => {
-  let intermediateSummary = createStatusSummary({
-    counters: {
-      ...counters,
-      total: executionIndex + 1,
-    },
-  })
-  if (memoryHeap) {
-    intermediateSummary += ` / memory heap: ${byteAsMemoryUsage(memoryHeap)}`
+  const parts = []
+  if (executionIndex > 0) {
+    parts.push(
+      createStatusSummary({
+        counters: {
+          ...counters,
+          total: executionIndex + 1,
+        },
+      }),
+    )
   }
-  return intermediateSummary
+  if (timeEllapsed) {
+    parts.push(
+      `duration: ${msAsDuration(timeEllapsed, {
+        meaningfulMs: 1000,
+        secondMaxDecimals: 0,
+      })}`,
+    )
+  }
+  if (memoryHeap) {
+    parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`)
+  }
+  return parts.join(` / `)
 }
 
 const createStatusSummary = ({ counters }) => {
