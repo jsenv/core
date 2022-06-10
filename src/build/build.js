@@ -35,10 +35,10 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js"
 
+import { createUrlGraph } from "../omega/url_graph.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
-import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
 import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
@@ -87,13 +87,25 @@ export const build = async ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
+  baseUrl = "/",
 
+  // default runtimeCompat corresponds to dynamic import
+  // (meaning we can keep <script type="module">)
+  runtimeCompat = {
+    // android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.2",
+  },
   plugins = [],
   sourcemaps = false,
   nodeEsmResolution,
   fileSystemMagicResolution,
   injectedGlobals,
-  runtimeCompat,
   transpilation = {},
   bundling = true,
   minification = true,
@@ -113,7 +125,6 @@ export const build = async ({
   buildDirectoryClean = true,
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
-  baseUrl = "/",
   assetManifest = true,
   assetManifestFileRelativeUrl = "asset-manifest.json",
 }) => {
@@ -184,6 +195,7 @@ build ${entryPointKeys.length} entry points`)
           rootDirectoryUrl,
           urlGraph: rawGraph,
           scenario: "build",
+          runtimeCompat,
 
           nodeEsmResolution,
           fileSystemMagicResolution,

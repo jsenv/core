@@ -15,7 +15,6 @@ import { createPluginController } from "../plugins/plugin_controller.js"
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
 import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
-import { defaultRuntimeCompat } from "./compat/default_runtime_compat.js"
 import {
   createResolveUrlError,
   createFetchUrlContentError,
@@ -46,7 +45,7 @@ export const createKitchen = ({
     build: true,
   }[scenario],
   sourcemapsRelativeSources,
-  runtimeCompat = defaultRuntimeCompat,
+  runtimeCompat,
   writeGeneratedFiles,
 }) => {
   const pluginController = createPluginController({

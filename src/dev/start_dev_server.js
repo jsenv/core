@@ -53,6 +53,16 @@ export const startDevServer = async ({
   clientAutoreload = true,
 
   sourcemaps = "inline",
+  // default runtimeCompat assume dev server will be request by recent browsers
+  // Used by "jsenv_plugin_node_runtime.js" to deactivate itself
+  // If dev server can be requested by Node.js to exec files
+  // we would add "node" to the potential runtimes. For now it's out of the scope of the dev server
+  // and "jsenv_plugin_node_runtime.js" applies only during build made for node.js
+  runtimeCompat = {
+    chrome: "100",
+    firefox: "100",
+    safari: "15.5",
+  },
   plugins = [],
   htmlSupervisor = true,
   injectedGlobals,
@@ -164,6 +174,7 @@ export const startDevServer = async ({
     rootDirectoryUrl,
     urlGraph,
     scenario: "dev",
+    runtimeCompat,
     sourcemaps,
     writeGeneratedFiles,
     plugins: [
@@ -172,6 +183,7 @@ export const startDevServer = async ({
         rootDirectoryUrl,
         urlGraph,
         scenario: "dev",
+        runtimeCompat,
 
         htmlSupervisor,
         injectedGlobals,

@@ -132,6 +132,7 @@ export const executePlan = async (
         urlGraph,
         scenario,
         sourcemaps,
+        runtimeCompat: runtimes,
         writeGeneratedFiles,
         plugins: [
           ...plugins,
@@ -139,6 +140,7 @@ export const executePlan = async (
             rootDirectoryUrl,
             urlGraph,
             scenario,
+            runtimeCompat: runtimes,
 
             htmlSupervisor: true,
             nodeEsmResolution,
