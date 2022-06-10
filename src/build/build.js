@@ -589,9 +589,6 @@ build ${entryPointKeys.length} entry points`)
             return specifier
           },
           fetchUrlContent: async (finalUrlInfo, context) => {
-            if (!finalUrlInfo.url.startsWith("file:")) {
-              return { shouldIgnore: true }
-            }
             const fromBundleOrRawGraph = (url) => {
               const bundleUrlInfo = bundleUrlInfos[url]
               if (bundleUrlInfo) {
@@ -1037,7 +1034,7 @@ const applyUrlVersioning = async ({
             return url
           },
           formatUrl: (reference) => {
-            if (reference.isInline) {
+            if (reference.isInline || reference.url.startsWith("data:")) {
               return null
             }
             // specifier comes from "normalize" hook done a bit earlier in this file
@@ -1046,8 +1043,7 @@ const applyUrlVersioning = async ({
             if (!canUseVersionedUrl(referencedUrlInfo)) {
               return reference.specifier
             }
-            // data:* urls and so on
-            if (!referencedUrlInfo.url.startsWith("file:")) {
+            if (!referencedUrlInfo.shouldHandle) {
               return null
             }
             const versionedUrl = referencedUrlInfo.data.versionedUrl
@@ -1084,9 +1080,6 @@ const applyUrlVersioning = async ({
             return versionedSpecifier
           },
           fetchUrlContent: (versionedUrlInfo) => {
-            if (!versionedUrlInfo.url.startsWith("file:")) {
-              return { shouldIgnore: true }
-            }
             if (versionedUrlInfo.isInline) {
               const rawUrlInfo = rawGraph.getUrlInfo(
                 rawUrls[versionedUrlInfo.url],
