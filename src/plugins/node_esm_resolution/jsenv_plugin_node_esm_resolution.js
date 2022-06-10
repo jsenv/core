@@ -82,9 +82,10 @@ const jsenvPluginNodeEsmResolver = ({
   lookupPackageScope,
   readPackageJson,
 }) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = packageConditions || [
-    Object.keys(runtimeCompat).includes("node") ? "node" : "browser",
+    nodeRuntimeEnabled ? "node" : "browser",
     "import",
   ]
   return {
@@ -101,7 +102,10 @@ const jsenvPluginNodeEsmResolver = ({
           readPackageJson,
         })
         if (type === "node_builtin_specifier") {
-          reference.shouldIgnore = true
+          if (nodeRuntimeEnabled) {
+            reference.shouldIgnore = true
+          }
+          // otherwise let browser throw on "node:" protocol
         }
         return url
       },

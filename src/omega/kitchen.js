@@ -154,6 +154,7 @@ export const createKitchen = ({
       if (reference.shouldIgnore) {
         reference.generatedUrl = resolvedUrl
         reference.generatedSpecifier = reference.specifier
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
         return urlGraph.reuseOrCreateUrlInfo(reference.url)
       }
       pluginController.callHooks(

@@ -92,6 +92,12 @@ const applyPackageSpecifierResolution = ({
   }
   try {
     const urlObject = new URL(specifier)
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier,
+      }
+    }
     return {
       type: "absolute_specifier",
       url: urlObject.href,

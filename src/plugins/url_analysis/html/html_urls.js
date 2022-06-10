@@ -46,11 +46,17 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         specifierColumn: column,
         isRessourceHint,
       })
+      if (reference.shouldIgnore) {
+        return
+      }
       actions.push(async () => {
         attribute.value = await referenceUtils.readGeneratedSpecifier(reference)
       })
     },
   })
+  if (actions.length === 0) {
+    return null
+  }
   await Promise.all(actions.map((action) => action()))
   return {
     content: stringifyHtmlAst(htmlAst),

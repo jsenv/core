@@ -8,10 +8,16 @@ export const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
       type: "webmanifest_icon_src",
       specifier: icon.src,
     })
+    if (reference.shouldIgnore) {
+      return
+    }
     actions.push(async () => {
       icon.src = await context.referenceUtils.readGeneratedSpecifier(reference)
     })
   })
+  if (actions.length === 0) {
+    return null
+  }
   await Promise.all(actions.map((action) => action()))
   return JSON.stringify(manifest, null, "  ")
 }
