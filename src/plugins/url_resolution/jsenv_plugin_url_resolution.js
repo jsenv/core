@@ -1,8 +1,5 @@
 export const jsenvPluginUrlResolution = () => {
   const urlResolver = (reference) => {
-    if (reference.specifier[0] === "#") {
-      reference.shouldIgnore = true
-    }
     return new URL(
       reference.specifier,
       reference.baseUrl || reference.parentUrl,

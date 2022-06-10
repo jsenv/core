@@ -94,19 +94,13 @@ const jsenvPluginNodeEsmResolver = ({
     resolveUrl: {
       js_import_export: (reference) => {
         const { parentUrl, specifier } = reference
-        const { type, url } = applyNodeEsmResolution({
+        const { url } = applyNodeEsmResolution({
           conditions: packageConditions,
           parentUrl,
           specifier,
           lookupPackageScope,
           readPackageJson,
         })
-        if (type === "node_builtin_specifier") {
-          if (nodeRuntimeEnabled) {
-            reference.shouldIgnore = true
-          }
-          // otherwise let browser throw on "node:" protocol
-        }
         return url
       },
     },

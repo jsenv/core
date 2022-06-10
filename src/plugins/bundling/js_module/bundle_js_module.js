@@ -262,7 +262,7 @@ const rollupPluginJsenv = ({
         return { id: url, external: true }
       }
       const urlInfo = urlGraph.getUrlInfo(url)
-      if (urlInfo && urlInfo.shouldIgnore) {
+      if (urlInfo && !urlInfo.shouldHandle) {
         return { id: url, external: true }
       }
       const filePath = fileUrlConverter.asFilePath(url)

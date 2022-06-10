@@ -38,7 +38,7 @@ const createUrlGraphReport = (urlGraph) => {
     // ignore:
     // - inline files: they are already taken into account in the file where they appear
     // - ignored files: we don't know their content
-    if (urlInfo.isInline || urlInfo.shouldIgnore) {
+    if (urlInfo.isInline || !urlInfo.shouldHandle) {
       return
     }
     // file loaded via import assertion are already inside the graph

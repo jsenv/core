@@ -252,8 +252,8 @@ const returnValueAssertions = [
         return { content: valueReturned }
       }
       if (typeof valueReturned === "object") {
-        const { shouldIgnore, content } = valueReturned
-        if (shouldIgnore) {
+        const { shouldHandle, content } = valueReturned
+        if (shouldHandle === false) {
           return undefined
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content)) {

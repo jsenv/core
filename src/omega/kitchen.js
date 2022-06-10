@@ -85,7 +85,7 @@ export const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    shouldIgnore = false,
+    shouldHandle = false,
     isInline = false,
     injected = false,
     isRessourceHint = false,
@@ -121,7 +121,7 @@ export const createKitchen = ({
       specifierColumn,
       baseUrl,
       isOriginalPosition,
-      shouldIgnore,
+      shouldHandle,
       isInline,
       injected,
       isRessourceHint,
@@ -151,12 +151,6 @@ export const createKitchen = ({
       }
       resolvedUrl = normalizeUrl(resolvedUrl)
       reference.url = resolvedUrl
-      if (reference.shouldIgnore) {
-        reference.generatedUrl = resolvedUrl
-        reference.generatedSpecifier = reference.specifier
-        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
-        return urlGraph.reuseOrCreateUrlInfo(reference.url)
-      }
       pluginController.callHooks(
         "redirectUrl",
         reference,
@@ -178,6 +172,12 @@ export const createKitchen = ({
       const referenceUrlObject = new URL(reference.url)
       reference.searchParams = referenceUrlObject.searchParams
       reference.generatedUrl = reference.url
+      if (!reference.shouldHandle) {
+        reference.generatedSpecifier = reference.specifier
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
+        return urlInfo
+      }
+
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
@@ -259,10 +259,6 @@ export const createKitchen = ({
   })
 
   const fetchUrlContent = async (urlInfo, { reference, context }) => {
-    if (reference.shouldIgnore) {
-      urlInfo.shouldIgnore = true
-      return
-    }
     try {
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
@@ -280,11 +276,6 @@ export const createKitchen = ({
             },
           ),
         )
-        urlInfo.shouldIgnore = true
-        return
-      }
-      if (fetchUrlContentReturnValue.shouldIgnore) {
-        urlInfo.shouldIgnore = true
         return
       }
       const {
@@ -367,11 +358,11 @@ export const createKitchen = ({
       return fetchUrlContent(urlInfo, { reference, context })
     }
 
-    // "fetchUrlContent" hook
-    await fetchUrlContent(urlInfo, { reference: context.reference, context })
-    if (urlInfo.shouldIgnore) {
+    if (!urlInfo.shouldHandle) {
       return
     }
+    // "fetchUrlContent" hook
+    await fetchUrlContent(urlInfo, { reference: context.reference, context })
 
     // parsing
     const references = []
@@ -671,6 +662,9 @@ const memoizeCook = (cook) => {
 }
 
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
+  if (reference.shouldHandle) {
+    urlInfo.shouldHandle = true
+  }
   Object.assign(urlInfo.data, reference.data)
   Object.assign(urlInfo.timing, reference.timing)
   if (reference.injected) {

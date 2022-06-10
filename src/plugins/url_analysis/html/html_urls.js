@@ -46,12 +46,13 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         specifierColumn: column,
         isRessourceHint,
       })
-      if (reference.shouldIgnore) {
-        return
+      if (reference.shouldHandle) {
+        actions.push(async () => {
+          attribute.value = await referenceUtils.readGeneratedSpecifier(
+            reference,
+          )
+        })
       }
-      actions.push(async () => {
-        attribute.value = await referenceUtils.readGeneratedSpecifier(reference)
-      })
     },
   })
   if (actions.length === 0) {

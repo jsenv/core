@@ -50,20 +50,21 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       assertNode: jsMention.assertNode,
       typePropertyNode: jsMention.typePropertyNode,
     })
-    if (reference.shouldIgnore) {
-      return
-    }
-    actions.push(async () => {
-      const replacement = await referenceUtils.readGeneratedSpecifier(reference)
-      magicSource.replace({
-        start: jsMention.specifierStart,
-        end: jsMention.specifierEnd,
-        replacement,
+    if (reference.shouldHandle) {
+      actions.push(async () => {
+        const replacement = await referenceUtils.readGeneratedSpecifier(
+          reference,
+        )
+        magicSource.replace({
+          start: jsMention.specifierStart,
+          end: jsMention.specifierEnd,
+          replacement,
+        })
+        if (reference.mutation) {
+          reference.mutation(magicSource)
+        }
       })
-      if (reference.mutation) {
-        reference.mutation(magicSource)
-      }
-    })
+    }
   })
   await Promise.all(actions.map((action) => action()))
   const { content, sourcemap } = magicSource.toContentAndSourcemap()

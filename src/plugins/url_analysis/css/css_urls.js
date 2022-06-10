@@ -29,18 +29,18 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
             specifierLine,
             specifierColumn,
           })
-          if (reference.shouldIgnore) {
-            return
-          }
-          actions.push(async () => {
-            magicSource.replace({
-              start: specifierStart,
-              end: specifierEnd,
-              replacement: await context.referenceUtils.readGeneratedSpecifier(
-                reference,
-              ),
+          if (reference.shouldHandle) {
+            actions.push(async () => {
+              magicSource.replace({
+                start: specifierStart,
+                end: specifierEnd,
+                replacement:
+                  await context.referenceUtils.readGeneratedSpecifier(
+                    reference,
+                  ),
+              })
             })
-          })
+          }
         },
       }),
     ],

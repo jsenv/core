@@ -416,13 +416,13 @@ build ${entryPointKeys.length} entry points`)
           name: "jsenv:postbuild",
           appliesDuring: { build: true },
           resolveUrl: (reference) => {
-            if (reference.specifier[0] === "#") {
-              reference.shouldIgnore = true
-            }
             const urlBeforePotentialRedirect =
               reference.specifier[0] === "/"
                 ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
-                : new URL(reference.specifier, reference.parentUrl).href
+                : new URL(
+                    reference.specifier,
+                    reference.baseUrl || reference.parentUrl,
+                  ).href
             const url =
               rawUrlRedirections[urlBeforePotentialRedirect] ||
               urlBeforePotentialRedirect
@@ -716,10 +716,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       })
     }
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (!urlInfo.url.startsWith("file:")) {
+      if (!urlInfo.shouldHandle) {
         return
       }
-      if (urlInfo.shouldIgnore) {
+      if (!urlInfo.url.startsWith("file:")) {
         return
       }
       if (urlInfo.type === "html") {
@@ -774,10 +774,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     const buildFileContents = {}
     const buildInlineContents = {}
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (urlInfo.shouldIgnore) {
+      if (!urlInfo.shouldHandle) {
         return
       }
-      if (urlInfo.url.startsWith("data:")) {
+      if (!urlInfo.url.startsWith("file:")) {
         return
       }
       const buildRelativeUrl = urlToRelativeUrl(
@@ -942,7 +942,7 @@ const applyUrlVersioning = async ({
       if (urlInfo.isInline) {
         return
       }
-      if (urlInfo.shouldIgnore) {
+      if (!urlInfo.shouldHandle) {
         return
       }
       if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
@@ -965,8 +965,8 @@ const applyUrlVersioning = async ({
         lineBreakNormalization,
       })
       urlInfo.dependencies.forEach((dependencyUrl) => {
-        // this dependency is inline (data:) or remote (http://, https://)
-        if (!dependencyUrl.startsWith("file:")) {
+        // this dependency is inline
+        if (dependencyUrl.startsWith("data:")) {
           return
         }
         const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
@@ -974,7 +974,7 @@ const applyUrlVersioning = async ({
           // this content is part of the file, no need to take into account twice
           dependencyUrlInfo.isInline ||
           // this dependency content is not known
-          dependencyUrlInfo.shouldIgnore
+          !dependencyUrlInfo.shouldHandle
         ) {
           return
         }
@@ -1026,14 +1026,14 @@ const applyUrlVersioning = async ({
           name: "jsenv:versioning",
           appliesDuring: { build: true },
           resolveUrl: (reference) => {
-            if (reference.specifier[0] === "#") {
-              reference.shouldIgnore = true
-            }
             const buildUrl = buildUrls[reference.specifier]
             if (buildUrl) {
               return buildUrl
             }
-            const url = new URL(reference.specifier, reference.parentUrl).href
+            const url = new URL(
+              reference.specifier,
+              reference.baseUrl || reference.parentUrl,
+            ).href
             return url
           },
           formatUrl: (reference) => {

@@ -7,6 +7,19 @@ export const jsenvPluginUrlAnalysis = () => {
   return {
     name: "jsenv:url_analysis",
     appliesDuring: "*",
+    redirectUrl: (reference) => {
+      if (reference.specifier[0] === "#") {
+        return
+      }
+      if (reference.url.startsWith("data:")) {
+        reference.shouldHandle = true
+        return
+      }
+      if (reference.url.startsWith("file:")) {
+        reference.shouldHandle = true
+        return
+      }
+    },
     transformUrlContent: {
       html: parseAndTransformHtmlUrls,
       css: parseAndTransformCssUrls,
