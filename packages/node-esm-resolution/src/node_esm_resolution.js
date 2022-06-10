@@ -22,14 +22,19 @@ import {
   createPackagePathNotExportedError,
   createInvalidPackageTargetError,
 } from "./errors.js"
+import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js"
 
 export const applyNodeEsmResolution = ({
-  conditions = ["node", "import"],
+  conditions,
   parentUrl,
   specifier,
   lookupPackageScope = defaultLookupPackageScope,
   readPackageJson = defaultReadPackageJson,
 }) => {
+  if (conditions === undefined) {
+    conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"]
+  }
+
   const resolution = applyPackageSpecifierResolution({
     conditions,
     parentUrl: String(parentUrl),

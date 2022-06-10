@@ -16,6 +16,7 @@ import {
   determineModuleSystem,
   applyNodeEsmResolution,
   applyFileSystemMagicResolution,
+  readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution/main.js"
 import { createLogger } from "./logger.js"
 import { applyImportmapResolution } from "./importmap_resolution.js"
@@ -50,6 +51,10 @@ ${file}
 --- root directory path ---
 ${urlToFileSystemPath(rootDirectoryUrl)}`)
 
+  packageConditions = [
+    ...readCustomConditionsFromProcessArgs(),
+    ...packageConditions,
+  ]
   const browserInPackageConditions = packageConditions.includes("browser")
   const nodeInPackageConditions = packageConditions.includes("node")
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {

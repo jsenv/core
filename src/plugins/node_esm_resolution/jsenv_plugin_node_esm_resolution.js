@@ -13,6 +13,7 @@ import {
   applyNodeEsmResolution,
   defaultLookupPackageScope,
   defaultReadPackageJson,
+  readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({
@@ -85,6 +86,7 @@ const jsenvPluginNodeEsmResolver = ({
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = packageConditions || [
+    ...readCustomConditionsFromProcessArgs(),
     nodeRuntimeEnabled ? "node" : "browser",
     "import",
   ]

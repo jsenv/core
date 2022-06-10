@@ -23,7 +23,10 @@
   "imports": {},
   "exports": {
     ".": {
-      "import": "./main.js"
+      "import": {
+        "development": "./main.js",
+        "default": "./dist/main.js"
+      }
     },
     "./*": "./*"
   },
