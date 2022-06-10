@@ -410,13 +410,8 @@ build ${entryPointKeys.length} entry points`)
       writeGeneratedFiles,
       plugins: [
         jsenvPluginUrlAnalysis(),
-        jsenvPluginAsJsClassic({
-          rootDirectoryUrl,
-          systemJsInjection: true,
-        }),
-        jsenvPluginInline({
-          fetchInlineUrls: false,
-        }),
+        jsenvPluginAsJsClassic({ systemJsInjection: true }),
+        jsenvPluginInline({ fetchInlineUrls: false }),
         {
           name: "jsenv:postbuild",
           appliesDuring: { build: true },

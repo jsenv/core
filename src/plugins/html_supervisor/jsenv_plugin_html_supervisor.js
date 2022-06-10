@@ -4,8 +4,6 @@
  * - scripts are wrapped to be supervised
  */
 
-import { urlIsInsideOf } from "@jsenv/filesystem"
-
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -21,22 +19,20 @@ import {
   setHtmlNodeGeneratedText,
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
-import { jsenvRootDirectoryUrl } from "@jsenv/core/src/jsenv_root_directory_url.js"
 
 export const jsenvPluginHtmlSupervisor = ({
-  rootDirectoryUrl,
   logs = false,
   measurePerf = false,
 }) => {
-  const preferSourceFiles =
-    rootDirectoryUrl === jsenvRootDirectoryUrl ||
-    urlIsInsideOf(rootDirectoryUrl, jsenvRootDirectoryUrl)
-  const htmlSupervisorSetupFileUrl = preferSourceFiles
-    ? new URL("./client/html_supervisor_setup.js", import.meta.url).href
-    : new URL("./dist/html_supervisor_setup.js", jsenvRootDirectoryUrl).href
-  const htmlSupervisorInstallerFileUrl = preferSourceFiles
-    ? new URL("./client/html_supervisor_installer.js", import.meta.url).href
-    : new URL("./dist/html_supervisor_installer.js", jsenvRootDirectoryUrl).href
+  const htmlSupervisorSetupFileUrl = new URL(
+    "./client/html_supervisor_setup.js?js_classic",
+    import.meta.url,
+  ).href
+
+  const htmlSupervisorInstallerFileUrl = new URL(
+    "./client/html_supervisor_installer.js",
+    import.meta.url,
+  ).href
 
   return {
     name: "jsenv:html_supervisor",

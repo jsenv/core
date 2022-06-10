@@ -48,18 +48,8 @@ export const getCorePlugins = ({
   }
   return [
     jsenvPluginUrlAnalysis(),
-    jsenvPluginTranspilation({
-      rootDirectoryUrl,
-      ...transpilation,
-    }),
-    ...(htmlSupervisor
-      ? [
-          jsenvPluginHtmlSupervisor({
-            rootDirectoryUrl,
-            ...htmlSupervisor,
-          }),
-        ]
-      : []), // before inline as it turns inline <script> into <script src>
+    jsenvPluginTranspilation(transpilation),
+    ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
     jsenvPluginFileUrls(),
@@ -82,9 +72,7 @@ export const getCorePlugins = ({
     jsenvPluginBundling(bundling),
     jsenvPluginMinification(minification),
 
-    jsenvPluginImportMetaHot({
-      rootDirectoryUrl,
-    }),
+    jsenvPluginImportMetaHot(),
     ...(clientAutoreload
       ? [
           jsenvPluginAutoreload({
