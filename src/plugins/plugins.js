@@ -28,6 +28,7 @@ export const getCorePlugins = ({
   scenario,
   runtimeCompat,
 
+  urlAnalysis = {},
   htmlSupervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
@@ -47,7 +48,7 @@ export const getCorePlugins = ({
     nodeEsmResolution = {}
   }
   return [
-    jsenvPluginUrlAnalysis(),
+    jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
     jsenvPluginTranspilation(transpilation),
     ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls

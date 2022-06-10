@@ -1,5 +1,4 @@
 import { build } from "@jsenv/core"
-import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
 
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
 const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
@@ -9,16 +8,6 @@ const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
 // - il faut garder comme externe toutes les deps pour commencer
 // (ensuite on fera une liste de ce qu'on peut bundle)
 // - il faut que jsenv puisse s'éxecuter depuis dist
-
-const ignoreMetaMap = normalizeStructuredMetaMap(
-  {
-    ignore: {
-      "**/*": false,
-      "**/node_modules/": true,
-    },
-  },
-  jsenvRootDirectoryUrl.href,
-)
 
 await build({
   rootDirectoryUrl: jsenvRootDirectoryUrl,
@@ -35,6 +24,15 @@ await build({
     node: "16.14",
   },
   writeGeneratedFiles: true,
+  // for now ignore all node_modules
+  // ideally later we'll selectively allow some node_modules
+  // to be bundled and move them to "@jsenv/core" devDependencies
+  urlAnalysis: {
+    include: {
+      "**/*": true,
+      "**/node_modules/": false,
+    },
+  },
   // bundling: {
   //   js_module: {
   //     include: {
@@ -43,21 +41,6 @@ await build({
   //     },
   //   },
   // },
-  // for now ignore all node_modules
-  // ideally later we'll selectively allow some node_modules
-  // to be bundled and move them to "@jsenv/core" devDependencies
-  plugins: [
-    {
-      name: "jsenv:ignore",
-      appliesDuring: "*",
-      redirectUrl: (reference) => {
-        reference.shouldIgnore = urlToMeta({
-          url: reference.url,
-          structuredMetaMap: ignoreMetaMap,
-        }).ignore
-      },
-    },
-  ],
 })
 
 // "s.js" is used in the build files, it must be compatible as much as possible

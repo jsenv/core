@@ -103,6 +103,7 @@ export const build = async ({
   },
   plugins = [],
   sourcemaps = false,
+  urlAnalysis = {},
   nodeEsmResolution,
   fileSystemMagicResolution,
   injectedGlobals,
@@ -197,6 +198,7 @@ build ${entryPointKeys.length} entry points`)
           scenario: "build",
           runtimeCompat,
 
+          urlAnalysis,
           nodeEsmResolution,
           fileSystemMagicResolution,
           injectedGlobals,
@@ -395,6 +397,10 @@ build ${entryPointKeys.length} entry points`)
       bundleTask.done()
     }, Promise.resolve())
 
+    const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
+      rootDirectoryUrl,
+      ...urlAnalysis,
+    })
     const buildUrlRedirections = {}
     const finalGraph = createUrlGraph()
     const optimizeUrlContentHooks =
@@ -409,7 +415,7 @@ build ${entryPointKeys.length} entry points`)
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [
-        jsenvPluginUrlAnalysis(),
+        urlAnalysisPlugin,
         jsenvPluginAsJsClassic({ systemJsInjection: true }),
         jsenvPluginInline({ fetchInlineUrls: false }),
         {
@@ -706,6 +712,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         runtimeCompat,
         writeGeneratedFiles,
         rawGraph,
+        urlAnalysisPlugin,
         finalGraph,
         finalGraphKitchen,
         lineBreakNormalization,
@@ -908,6 +915,7 @@ const applyUrlVersioning = async ({
   runtimeCompat,
   writeGeneratedFiles,
   rawGraph,
+  urlAnalysisPlugin,
   finalGraph,
   finalGraphKitchen,
   lineBreakNormalization,
@@ -1013,7 +1021,7 @@ const applyUrlVersioning = async ({
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [
-        jsenvPluginUrlAnalysis(),
+        urlAnalysisPlugin,
         jsenvPluginInline({
           fetchInlineUrls: false,
           analyzeConvertedScripts: true, // to be able to version their urls

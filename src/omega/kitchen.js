@@ -85,7 +85,7 @@ export const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    shouldHandle = false,
+    shouldHandle,
     isInline = false,
     injected = false,
     isRessourceHint = false,

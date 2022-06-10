@@ -64,6 +64,7 @@ export const startDevServer = async ({
     safari: "15.5",
   },
   plugins = [],
+  urlAnalysis = {},
   htmlSupervisor = true,
   injectedGlobals,
   nodeEsmResolution,
@@ -185,6 +186,7 @@ export const startDevServer = async ({
         scenario: "dev",
         runtimeCompat,
 
+        urlAnalysis,
         htmlSupervisor,
         injectedGlobals,
         nodeEsmResolution,
