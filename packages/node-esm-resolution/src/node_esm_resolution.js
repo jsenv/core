@@ -25,16 +25,12 @@ import {
 import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js"
 
 export const applyNodeEsmResolution = ({
-  conditions,
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
   parentUrl,
   specifier,
   lookupPackageScope = defaultLookupPackageScope,
   readPackageJson = defaultReadPackageJson,
 }) => {
-  if (conditions === undefined) {
-    conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"]
-  }
-
   const resolution = applyPackageSpecifierResolution({
     conditions,
     parentUrl: String(parentUrl),
@@ -757,7 +753,11 @@ const applyLegacySubpathResolution = ({
 
 const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
   for (const condition of conditions) {
-    const resolved = mainLegacyResolvers[condition](packageJson, packageUrl)
+    const conditionResolver = mainLegacyResolvers[condition]
+    if (!conditionResolver) {
+      continue
+    }
+    const resolved = conditionResolver(packageJson, packageUrl)
     if (resolved) {
       return {
         type: resolved.type,
