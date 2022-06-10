@@ -261,6 +261,10 @@ const rollupPluginJsenv = ({
       if (!importCanBeBundled(url)) {
         return { id: url, external: true }
       }
+      const urlInfo = urlGraph.getUrlInfo(url)
+      if (urlInfo && urlInfo.shouldIgnore) {
+        return { id: url, external: true }
+      }
       const filePath = fileUrlConverter.asFilePath(url)
       return filePath
     },

@@ -1,7 +1,7 @@
 export const jsenvPluginUrlResolution = () => {
   const urlResolver = (reference) => {
     if (reference.specifier[0] === "#") {
-      reference.external = true
+      reference.shouldIgnore = true
     }
     return new URL(
       reference.specifier,

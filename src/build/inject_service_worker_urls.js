@@ -22,7 +22,7 @@ export const injectServiceWorkerUrls = async ({
   }
   const serviceWorkerUrls = {}
   GRAPH.forEach(finalGraph, (urlInfo) => {
-    if (urlInfo.isInline || urlInfo.external) {
+    if (urlInfo.isInline || urlInfo.shouldIgnore) {
       return
     }
     if (!urlInfo.url.startsWith("file:")) {

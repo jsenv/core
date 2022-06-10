@@ -4,7 +4,7 @@ export const jsenvPluginHttpUrls = () => {
     appliesDuring: "*",
     fetchUrlContent: (urlInfo) => {
       if (urlInfo.url.startsWith("http") || urlInfo.url.startsWith("https")) {
-        return { external: true }
+        return { shouldIgnore: true }
       }
       return null
     },

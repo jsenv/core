@@ -410,7 +410,7 @@ build ${entryPointKeys.length} entry points`)
           appliesDuring: { build: true },
           resolveUrl: (reference) => {
             if (reference.specifier[0] === "#") {
-              reference.external = true
+              reference.shouldIgnore = true
             }
             const urlBeforePotentialRedirect =
               reference.specifier[0] === "/"
@@ -583,7 +583,7 @@ build ${entryPointKeys.length} entry points`)
           },
           fetchUrlContent: async (finalUrlInfo, context) => {
             if (!finalUrlInfo.url.startsWith("file:")) {
-              return { external: true }
+              return { shouldIgnore: true }
             }
             const fromBundleOrRawGraph = (url) => {
               const bundleUrlInfo = bundleUrlInfos[url]
@@ -712,7 +712,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       if (!urlInfo.url.startsWith("file:")) {
         return
       }
-      if (urlInfo.external) {
+      if (urlInfo.shouldIgnore) {
         return
       }
       if (urlInfo.type === "html") {
@@ -767,7 +767,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     const buildFileContents = {}
     const buildInlineContents = {}
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (urlInfo.external) {
+      if (urlInfo.shouldIgnore) {
         return
       }
       if (urlInfo.url.startsWith("data:")) {
@@ -925,7 +925,7 @@ const applyUrlVersioning = async ({
       // ignore:
       // - inline files:
       //   they are already taken into account in the file where they appear
-      // - external files
+      // - ignored files:
       //   we don't know their content
       // - unused files without reference
       //   File updated such as style.css -> style.css.js or file.js->file.es5.js
@@ -935,7 +935,7 @@ const applyUrlVersioning = async ({
       if (urlInfo.isInline) {
         return
       }
-      if (urlInfo.external) {
+      if (urlInfo.shouldIgnore) {
         return
       }
       if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
@@ -967,7 +967,7 @@ const applyUrlVersioning = async ({
           // this content is part of the file, no need to take into account twice
           dependencyUrlInfo.isInline ||
           // this dependency content is not known
-          dependencyUrlInfo.external
+          dependencyUrlInfo.shouldIgnore
         ) {
           return
         }
@@ -1020,7 +1020,7 @@ const applyUrlVersioning = async ({
           appliesDuring: { build: true },
           resolveUrl: (reference) => {
             if (reference.specifier[0] === "#") {
-              reference.external = true
+              reference.shouldIgnore = true
             }
             const buildUrl = buildUrls[reference.specifier]
             if (buildUrl) {
@@ -1078,7 +1078,7 @@ const applyUrlVersioning = async ({
           },
           fetchUrlContent: (versionedUrlInfo) => {
             if (!versionedUrlInfo.url.startsWith("file:")) {
-              return { external: true }
+              return { shouldIgnore: true }
             }
             if (versionedUrlInfo.isInline) {
               const rawUrlInfo = rawGraph.getUrlInfo(

@@ -86,7 +86,7 @@ export const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    external = false,
+    shouldIgnore = false,
     isInline = false,
     injected = false,
     isRessourceHint = false,
@@ -122,7 +122,7 @@ export const createKitchen = ({
       specifierColumn,
       baseUrl,
       isOriginalPosition,
-      external,
+      shouldIgnore,
       isInline,
       injected,
       isRessourceHint,
@@ -152,7 +152,7 @@ export const createKitchen = ({
       }
       resolvedUrl = normalizeUrl(resolvedUrl)
       reference.url = resolvedUrl
-      if (reference.external) {
+      if (reference.shouldIgnore) {
         reference.generatedUrl = resolvedUrl
         reference.generatedSpecifier = reference.specifier
         return urlGraph.reuseOrCreateUrlInfo(reference.url)
@@ -259,8 +259,8 @@ export const createKitchen = ({
   })
 
   const fetchUrlContent = async (urlInfo, { reference, context }) => {
-    if (reference.external) {
-      urlInfo.external = true
+    if (reference.shouldIgnore) {
+      urlInfo.shouldIgnore = true
       return
     }
     try {
@@ -273,18 +273,18 @@ export const createKitchen = ({
       if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
-            `no plugin has handled the url during "fetchUrlContent" hook -> consider url as external (ignore it)`,
+            `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
             {
               "url": urlInfo.url,
               "url reference trace": reference.trace,
             },
           ),
         )
-        urlInfo.external = true
+        urlInfo.shouldIgnore = true
         return
       }
-      if (fetchUrlContentReturnValue.external) {
-        urlInfo.external = true
+      if (fetchUrlContentReturnValue.shouldIgnore) {
+        urlInfo.shouldIgnore = true
         return
       }
       const {
@@ -369,7 +369,7 @@ export const createKitchen = ({
 
     // "fetchUrlContent" hook
     await fetchUrlContent(urlInfo, { reference: context.reference, context })
-    if (urlInfo.external) {
+    if (urlInfo.shouldIgnore) {
       return
     }
 
