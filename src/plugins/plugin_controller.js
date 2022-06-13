@@ -168,9 +168,20 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
         plugins.push(pluginEntry)
         return
       }
+      if (typeof appliesDuring === "string") {
+        if (!["dev", "build", "test"].includes(appliesDuring)) {
+          throw new Error(
+            `"appliesDuring" must be "dev", "test" or "build", got ${appliesDuring}`,
+          )
+        }
+        if (appliesDuring === scenario) {
+          plugins.push(pluginEntry)
+        }
+        return
+      }
       if (typeof appliesDuring !== "object") {
         throw new Error(
-          `"appliesDuring" must be an object or "*", got ${appliesDuring}`,
+          `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
         )
       }
       if (appliesDuring[scenario]) {

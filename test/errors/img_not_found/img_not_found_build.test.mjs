@@ -28,6 +28,6 @@ ${urlToFileSystemPath(new URL("./client/main.html", import.meta.url).href)}:9:10
                 ^
   10 |   </body>
 --- plugin name ---
-"jsenv:fetch_file_urls"`
+"jsenv:file_url_fetching"`
   assert({ actual, expected })
 }

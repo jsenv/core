@@ -1,4 +1,8 @@
-import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/filesystem"
+import {
+  normalizeStructuredMetaMap,
+  urlToMeta,
+  urlToRelativeUrl,
+} from "@jsenv/filesystem"
 
 import { parseAndTransformHtmlUrls } from "./html/html_urls.js"
 import { parseAndTransformCssUrls } from "./css/css_urls.js"
@@ -56,15 +60,45 @@ export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
       js_module: parseAndTransformJsUrls,
       webmanifest: parseAndTransformWebmanifestUrls,
       directory: (urlInfo, context) => {
+        const originalDirectoryReference = findOriginalDirectoryReference(
+          urlInfo,
+          context,
+        )
+        const directoryRelativeUrl = urlToRelativeUrl(
+          urlInfo.url,
+          context.rootDirectoryUrl,
+        )
         JSON.parse(urlInfo.content).forEach((directoryEntry) => {
           context.referenceUtils.found({
             type: "filesystem",
             subtype: "directory_entry",
             specifier: directoryEntry,
-            trace: `"${directoryEntry}" directory entry from ${context.reference.trace}`,
+            trace: `"${directoryRelativeUrl}${directoryEntry}" entry in directory referenced by ${originalDirectoryReference.trace}`,
           })
         })
       },
     },
   }
+}
+
+const findOriginalDirectoryReference = (urlInfo, context) => {
+  const findNonFileSystemAncestor = (urlInfo) => {
+    for (const dependentUrl of urlInfo.dependents) {
+      const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl)
+      if (dependentUrlInfo.type !== "directory") {
+        return [dependentUrlInfo, urlInfo]
+      }
+      const found = findNonFileSystemAncestor(dependentUrlInfo)
+      if (found) {
+        return found
+      }
+    }
+    return []
+  }
+  const [ancestor, child] = findNonFileSystemAncestor(urlInfo)
+  if (!ancestor) {
+    return null
+  }
+  const ref = ancestor.references.find((ref) => ref.url === child.url)
+  return ref
 }

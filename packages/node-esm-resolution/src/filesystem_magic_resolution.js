@@ -4,7 +4,7 @@ import { urlToFilename } from "./url_utils.js"
 
 export const applyFileSystemMagicResolution = (
   fileUrl,
-  { magicDirectoryIndex, magicExtensions },
+  { fileStat, magicDirectoryIndex, magicExtensions },
 ) => {
   let lastENOENTError = null
   const fileStatOrNull = (url) => {
@@ -18,8 +18,8 @@ export const applyFileSystemMagicResolution = (
       throw e
     }
   }
+  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat
 
-  const fileStat = fileStatOrNull(fileUrl)
   if (fileStat && fileStat.isFile()) {
     return {
       found: true,

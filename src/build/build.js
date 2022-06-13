@@ -26,6 +26,7 @@ import {
   asUrlUntilPathname,
   normalizeUrl,
   asUrlWithoutSearch,
+  ensurePathnameTrailingSlash,
 } from "@jsenv/utils/urls/url_utils.js"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
@@ -427,10 +428,10 @@ build ${entryPointKeys.length} entry points`)
             let urlBeforePotentialRedirect
 
             if (reference.type === "filesystem") {
-              urlBeforePotentialRedirect = new URL(
-                reference.specifier,
-                rawUrls[reference.parentUrl],
-              ).href
+              const parentRawUrl = rawUrls[reference.parentUrl]
+              const baseUrl = ensurePathnameTrailingSlash(parentRawUrl)
+              urlBeforePotentialRedirect = new URL(reference.specifier, baseUrl)
+                .href
             } else if (reference.specifier[0] === "/") {
               urlBeforePotentialRedirect = new URL(
                 reference.specifier.slice(1),

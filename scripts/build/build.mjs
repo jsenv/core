@@ -23,24 +23,17 @@ await build({
   runtimeCompat: {
     node: "16.14",
   },
-  writeGeneratedFiles: true,
-  // for now ignore all node_modules
-  // ideally later we'll selectively allow some node_modules
-  // to be bundled and move them to "@jsenv/core" devDependencies
+  directoryReferenceAllowed: true,
   urlAnalysis: {
+    // for now ignore all node_modules
+    // ideally later we'll selectively allow some node_modules
+    // to be bundled and move them to "@jsenv/core" devDependencies
     include: {
       "**/*": true,
       "**/node_modules/": false,
     },
   },
-  // bundling: {
-  //   js_module: {
-  //     include: {
-  //       "**/*": true,
-  //       "**/node_modules/": false,
-  //     },
-  //   },
-  // },
+  writeGeneratedFiles: true,
 })
 
 // "s.js" is used in the build files, it must be compatible as much as possible
