@@ -31,6 +31,7 @@ await build({
     include: {
       "**/*": true,
       "**/node_modules/": false,
+      "**/node_modules/@jsenv/babel-plugins/": true,
     },
   },
   writeGeneratedFiles: true,

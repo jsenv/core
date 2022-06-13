@@ -1,9 +1,33 @@
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js";
 import { findHighestVersion } from "@jsenv/utils/semantic_versioning/highest_version.js";
-import { requireBabelPlugin, getBabelHelperFileUrl } from "@jsenv/babel-plugins";
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js";
-import { babelHelperNameFromUrl, getBabelHelperFileUrl as getBabelHelperFileUrl$1 } from "@jsenv/babel-plugins/main.js";
+
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
+// the list of possible helpers:
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
+const babelHelperClientDirectoryUrl = new URL("../node_modules/@jsenv/babel-plugins/src/babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
+
+const getBabelHelperFileUrl = babelHelperName => {
+  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
+  return babelHelperFileUrl;
+};
+const babelHelperNameFromUrl = url => {
+  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
+    return null;
+  }
+
+  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
+  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
+  return babelHelperName;
+};
+
+const require = createRequire(import.meta.url); // eslint-disable-next-line import/no-dynamic-require
+
+
+const requireBabelPlugin = name => require(name);
 
 const featureCompats = {
   script_type_module: {
@@ -805,7 +829,7 @@ const babelPluginBabelHelpersAsJsenvImports = (babel, {
           return undefined;
         }
 
-        const babelHelperImportSpecifier = getBabelHelperFileUrl$1(name);
+        const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
         const helper = injectImport({
           programPath: file.path,
           from: getImportSpecifier(babelHelperImportSpecifier),
@@ -2283,4 +2307,4 @@ try {
   }
 })();
 
-export { RUNTIME_COMPAT as R, globalObject$1 as g, jsenvPluginBabel as j };
+export { RUNTIME_COMPAT as R, babelHelperNameFromUrl as b, globalObject$1 as g, jsenvPluginBabel as j, requireBabelPlugin as r };

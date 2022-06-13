@@ -2,7 +2,6 @@ import { pathToFileURL } from "node:url"
 import {
   isFileSystemPath,
   normalizeStructuredMetaMap,
-  urlIsInsideOf,
   urlToMeta,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
@@ -16,10 +15,14 @@ const globalThisClientFileUrl = new URL(
   "../../transpilation/babel/global_this/client/global_this.js",
   import.meta.url,
 ).href
-const jsenvBabelPluginDirectoryUrl = new URL(
-  "../../transpilation/babel/",
+const newStylesheetClientFileUrl = new URL(
+  "../../transpilation/babel/global_this/client/new_stylesheet.js",
   import.meta.url,
-).href
+)
+const regeneratorRuntimeClientFileUrl = new URL(
+  "../../transpilation/babel/regenerator_runtime/client/regenerator_runtime.js",
+  import.meta.url,
+)
 
 export const bundleJsModule = async ({
   jsModuleUrlInfos,
@@ -250,7 +253,13 @@ const rollupPluginJsenv = ({
           if (babelHelperNameFromUrl(fileUrl)) {
             return "babel_helpers"
           }
-          if (urlIsInsideOf(fileUrl, jsenvBabelPluginDirectoryUrl)) {
+          if (fileUrl === globalThisClientFileUrl) {
+            return "babel_helpers"
+          }
+          if (fileUrl === newStylesheetClientFileUrl) {
+            return "babel_helpers"
+          }
+          if (fileUrl === regeneratorRuntimeClientFileUrl) {
             return "babel_helpers"
           }
           return null

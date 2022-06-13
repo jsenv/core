@@ -23,10 +23,9 @@ import { DataUrl } from "@jsenv/utils/urls/data_url.js";
 import { transpileWithParcel, minifyWithParcel } from "@jsenv/utils/css_ast/parcel_css.js";
 import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js";
 import { createRequire } from "node:module";
-import { requireBabelPlugin, babelHelperNameFromUrl } from "@jsenv/babel-plugins";
+import { r as requireBabelPlugin, j as jsenvPluginBabel, b as babelHelperNameFromUrl, R as RUNTIME_COMPAT } from "./js/babel_helpers.js";
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js";
 import babelParser from "@babel/parser";
-import { j as jsenvPluginBabel, R as RUNTIME_COMPAT } from "./js/babel_helpers.js";
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js";
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js";
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js";
@@ -58,7 +57,6 @@ import { uneval } from "@jsenv/uneval";
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js";
 import "@jsenv/utils/semantic_versioning/highest_version.js";
 import "@jsenv/utils/js_ast/babel_utils.js";
-import "@jsenv/babel-plugins/main.js";
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.data.rawUrl || urlInfo.url;
