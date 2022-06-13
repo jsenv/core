@@ -205,6 +205,12 @@ build ${entryPointKeys.length} entry points`)
               )
             }
           },
+          formatUrl: (reference) => {
+            if (!reference.shouldHandle) {
+              return `ignore:${reference.specifier}`
+            }
+            return null
+          },
         },
         ...getCorePlugins({
           rootDirectoryUrl,
@@ -605,6 +611,9 @@ build ${entryPointKeys.length} entry points`)
           },
           formatUrl: (reference) => {
             if (!reference.generatedUrl.startsWith("file:")) {
+              if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
+                return reference.generatedUrl.slice("ignore:".length)
+              }
               return null
             }
             if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {

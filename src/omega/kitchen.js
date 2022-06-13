@@ -172,12 +172,6 @@ export const createKitchen = ({
       const referenceUrlObject = new URL(reference.url)
       reference.searchParams = referenceUrlObject.searchParams
       reference.generatedUrl = reference.url
-      if (!reference.shouldHandle) {
-        reference.generatedSpecifier = reference.specifier
-        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
-        return urlInfo
-      }
-
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
@@ -358,206 +352,207 @@ export const createKitchen = ({
       return fetchUrlContent(urlInfo, { reference, context })
     }
 
-    if (!urlInfo.shouldHandle) {
-      return
-    }
-    // "fetchUrlContent" hook
-    await fetchUrlContent(urlInfo, { reference: context.reference, context })
+    if (urlInfo.shouldHandle) {
+      // "fetchUrlContent" hook
+      await fetchUrlContent(urlInfo, { reference: context.reference, context })
 
-    // parsing
-    const references = []
-    const addReference = (props) => {
-      const reference = createReference({
-        parentUrl: urlInfo.url,
-        ...props,
-      })
-      references.push(reference)
-      const referencedUrlInfo = resolveReference(reference)
-      return [reference, referencedUrlInfo]
-    }
-    const referenceUtils = {
-      readGeneratedSpecifier: async (reference) => {
-        // "formatReferencedUrl" can be async BUT this is an exception
-        // for most cases it will be sync. We want to favor the sync signature to keep things simpler
-        // The only case where it needs to be async is when
-        // the specifier is a `data:*` url
-        // in this case we'll wait for the promise returned by
-        // "formatReferencedUrl"
-        if (reference.generatedSpecifier.then) {
-          return reference.generatedSpecifier.then((value) => {
-            reference.generatedSpecifier = value
-            return value
+      // parsing
+      const references = []
+      const addReference = (props) => {
+        const reference = createReference({
+          parentUrl: urlInfo.url,
+          ...props,
+        })
+        references.push(reference)
+        const referencedUrlInfo = resolveReference(reference)
+        return [reference, referencedUrlInfo]
+      }
+      const referenceUtils = {
+        readGeneratedSpecifier: async (reference) => {
+          // "formatReferencedUrl" can be async BUT this is an exception
+          // for most cases it will be sync. We want to favor the sync signature to keep things simpler
+          // The only case where it needs to be async is when
+          // the specifier is a `data:*` url
+          // in this case we'll wait for the promise returned by
+          // "formatReferencedUrl"
+          if (reference.generatedSpecifier.then) {
+            return reference.generatedSpecifier.then((value) => {
+              reference.generatedSpecifier = value
+              return value
+            })
+          }
+          return reference.generatedSpecifier
+        },
+        found: ({ trace, ...rest }) => {
+          if (trace === undefined) {
+            trace = stringifyUrlSite(
+              adjustUrlSite(urlInfo, {
+                urlGraph,
+                url: urlInfo.url,
+                line: rest.specifierLine,
+                column: rest.specifierColumn,
+              }),
+            )
+          }
+          // console.log(trace)
+          return addReference({
+            trace,
+            ...rest,
           })
-        }
-        return reference.generatedSpecifier
-      },
-      found: ({ trace, ...rest }) => {
-        if (trace === undefined) {
-          trace = stringifyUrlSite(
-            adjustUrlSite(urlInfo, {
-              urlGraph,
-              url: urlInfo.url,
-              line: rest.specifierLine,
-              column: rest.specifierColumn,
+        },
+        foundInline: ({ isOriginalPosition, line, column, ...rest }) => {
+          const parentUrl = isOriginalPosition
+            ? urlInfo.url
+            : urlInfo.generatedUrl
+          const parentContent = isOriginalPosition
+            ? urlInfo.originalContent
+            : urlInfo.content
+          return addReference({
+            trace: stringifyUrlSite({
+              url: parentUrl,
+              content: parentContent,
+              line,
+              column,
             }),
-          )
-        }
-        // console.log(trace)
-        return addReference({
-          trace,
-          ...rest,
-        })
-      },
-      foundInline: ({ isOriginalPosition, line, column, ...rest }) => {
-        const parentUrl = isOriginalPosition
-          ? urlInfo.url
-          : urlInfo.generatedUrl
-        const parentContent = isOriginalPosition
-          ? urlInfo.originalContent
-          : urlInfo.content
-        return addReference({
-          trace: stringifyUrlSite({
-            url: parentUrl,
-            content: parentContent,
+            isOriginalPosition,
             line,
             column,
-          }),
-          isOriginalPosition,
-          line,
-          column,
-          isInline: true,
-          ...rest,
-        })
-      },
-      update: (currentReference, newReferenceParams) => {
-        const index = references.indexOf(currentReference)
-        if (index === -1) {
-          throw new Error(`reference do not exists`)
-        }
-        const previousReference = currentReference
-        const nextReference = createReference({
-          ...previousReference,
-          ...newReferenceParams,
-        })
-        references[index] = nextReference
-        mutateReference(previousReference, nextReference)
-        const newUrlInfo = resolveReference(nextReference)
-        const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
-        if (
-          currentUrlInfo &&
-          currentUrlInfo !== newUrlInfo &&
-          currentUrlInfo.dependents.size === 0
-        ) {
-          context.urlGraph.deleteUrlInfo(currentReference.url)
-        }
-        return [nextReference, newUrlInfo]
-      },
-      becomesInline: (
-        reference,
-        {
-          isOriginalPosition,
-          specifier,
-          specifierLine,
-          specifierColumn,
-          contentType,
-          content,
-        },
-      ) => {
-        const parentUrl = isOriginalPosition
-          ? urlInfo.url
-          : urlInfo.generatedUrl
-        const parentContent = isOriginalPosition
-          ? urlInfo.originalContent
-          : urlInfo.content
-        return referenceUtils.update(reference, {
-          trace: stringifyUrlSite({
-            url: parentUrl,
-            content: parentContent,
-            line: specifierLine,
-            column: specifierColumn,
-          }),
-          isOriginalPosition,
-          isInline: true,
-          specifier,
-          specifierLine,
-          specifierColumn,
-          contentType,
-          content,
-        })
-      },
-      inject: ({ trace, ...rest }) => {
-        if (trace === undefined) {
-          const { url, line, column } = getCallerPosition()
-          trace = stringifyUrlSite({
-            url,
-            line,
-            column,
+            isInline: true,
+            ...rest,
           })
-        }
-        return addReference({
-          trace,
-          injected: true,
-          ...rest,
-        })
-      },
-      findByGeneratedSpecifier: (generatedSpecifier) => {
-        const reference = references.find(
-          (ref) => ref.generatedSpecifier === generatedSpecifier,
-        )
-        if (!reference) {
-          throw new Error(
-            `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
-          )
-        }
-        return reference
-      },
-    }
-
-    // "transform" hook
-    urlInfo.references = references
-    context.referenceUtils = referenceUtils
-    try {
-      await pluginController.callAsyncHooks(
-        "transformUrlContent",
-        urlInfo,
-        context,
-        async (transformReturnValue) => {
-          await urlInfoTransformer.applyIntermediateTransformations(
-            urlInfo,
-            transformReturnValue,
-          )
         },
-      )
-    } catch (error) {
-      throw createTransformUrlContentError({
-        pluginController,
-        reference: context.reference,
-        urlInfo,
-        error,
-      })
-    }
-    // after "transform" all references from originalContent
-    // and the one injected by plugin are known
-    urlGraph.updateReferences(urlInfo, references)
+        update: (currentReference, newReferenceParams) => {
+          const index = references.indexOf(currentReference)
+          if (index === -1) {
+            throw new Error(`reference do not exists`)
+          }
+          const previousReference = currentReference
+          const nextReference = createReference({
+            ...previousReference,
+            ...newReferenceParams,
+          })
+          references[index] = nextReference
+          mutateReference(previousReference, nextReference)
+          const newUrlInfo = resolveReference(nextReference)
+          const currentUrlInfo = context.urlGraph.getUrlInfo(
+            currentReference.url,
+          )
+          if (
+            currentUrlInfo &&
+            currentUrlInfo !== newUrlInfo &&
+            currentUrlInfo.dependents.size === 0
+          ) {
+            context.urlGraph.deleteUrlInfo(currentReference.url)
+          }
+          return [nextReference, newUrlInfo]
+        },
+        becomesInline: (
+          reference,
+          {
+            isOriginalPosition,
+            specifier,
+            specifierLine,
+            specifierColumn,
+            contentType,
+            content,
+          },
+        ) => {
+          const parentUrl = isOriginalPosition
+            ? urlInfo.url
+            : urlInfo.generatedUrl
+          const parentContent = isOriginalPosition
+            ? urlInfo.originalContent
+            : urlInfo.content
+          return referenceUtils.update(reference, {
+            trace: stringifyUrlSite({
+              url: parentUrl,
+              content: parentContent,
+              line: specifierLine,
+              column: specifierColumn,
+            }),
+            isOriginalPosition,
+            isInline: true,
+            specifier,
+            specifierLine,
+            specifierColumn,
+            contentType,
+            content,
+          })
+        },
+        inject: ({ trace, ...rest }) => {
+          if (trace === undefined) {
+            const { url, line, column } = getCallerPosition()
+            trace = stringifyUrlSite({
+              url,
+              line,
+              column,
+            })
+          }
+          return addReference({
+            trace,
+            injected: true,
+            ...rest,
+          })
+        },
+        findByGeneratedSpecifier: (generatedSpecifier) => {
+          const reference = references.find(
+            (ref) => ref.generatedSpecifier === generatedSpecifier,
+          )
+          if (!reference) {
+            throw new Error(
+              `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
+            )
+          }
+          return reference
+        },
+      }
 
-    // "finalize" hook
-    try {
-      const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
-        "finalizeUrlContent",
-        urlInfo,
-        context,
-      )
-      await urlInfoTransformer.applyFinalTransformations(
-        urlInfo,
-        finalizeReturnValue,
-      )
-    } catch (error) {
-      throw createFinalizeUrlContentError({
-        pluginController,
-        reference: context.reference,
-        urlInfo,
-        error,
-      })
+      // "transform" hook
+      urlInfo.references = references
+      context.referenceUtils = referenceUtils
+      try {
+        await pluginController.callAsyncHooks(
+          "transformUrlContent",
+          urlInfo,
+          context,
+          async (transformReturnValue) => {
+            await urlInfoTransformer.applyIntermediateTransformations(
+              urlInfo,
+              transformReturnValue,
+            )
+          },
+        )
+      } catch (error) {
+        throw createTransformUrlContentError({
+          pluginController,
+          reference: context.reference,
+          urlInfo,
+          error,
+        })
+      }
+      // after "transform" all references from originalContent
+      // and the one injected by plugin are known
+      urlGraph.updateReferences(urlInfo, references)
+
+      // "finalize" hook
+      try {
+        const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
+          "finalizeUrlContent",
+          urlInfo,
+          context,
+        )
+        await urlInfoTransformer.applyFinalTransformations(
+          urlInfo,
+          finalizeReturnValue,
+        )
+      } catch (error) {
+        throw createFinalizeUrlContentError({
+          pluginController,
+          reference: context.reference,
+          urlInfo,
+          error,
+        })
+      }
     }
 
     // "cooked" hook

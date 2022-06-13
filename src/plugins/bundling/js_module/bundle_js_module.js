@@ -167,7 +167,7 @@ const rollupPluginJsenv = ({
           implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
             ? [previousNonEntryPointModuleId]
             : null,
-          preserveSignature: "allow-extension",
+          // preserveSignature: "allow-extension",
         })
         previousNonEntryPointModuleId = id
       })

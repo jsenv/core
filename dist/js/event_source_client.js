@@ -1,209 +1,6 @@
+import { createEventSourceConnection } from "@jsenv/utils/event_source/event_source.js";
 import { urlHotMetas } from "./import_meta_hot.js";
-
-/* eslint-env browser */
-const createEventSourceConnection = (eventSourceUrl, events = {}, {
-  retryMaxAttempt = Infinity,
-  retryAllocatedMs = Infinity,
-  lastEventId
-} = {}) => {
-  const {
-    EventSource
-  } = window;
-
-  if (typeof EventSource !== "function") {
-    return () => {};
-  }
-
-  const eventSourceOrigin = new URL(eventSourceUrl).origin;
-  Object.keys(events).forEach(eventName => {
-    const eventCallback = events[eventName];
-
-    events[eventName] = e => {
-      if (e.origin === eventSourceOrigin) {
-        if (e.lastEventId) {
-          lastEventId = e.lastEventId;
-        }
-
-        eventCallback(e);
-      }
-    };
-  });
-  const status = {
-    value: "default",
-    goTo: value => {
-      if (value === status.value) {
-        return;
-      }
-
-      status.value = value;
-      status.onchange();
-    },
-    onchange: () => {}
-  };
-
-  let _disconnect = () => {};
-
-  const attemptConnection = url => {
-    const eventSource = new EventSource(url, {
-      withCredentials: true
-    });
-
-    _disconnect = () => {
-      if (status.value !== "connecting" && status.value !== "connected") {
-        console.warn("disconnect() ignored because connection is ".concat(status.value));
-        return;
-      }
-
-      eventSource.onerror = undefined;
-      eventSource.close();
-      Object.keys(events).forEach(eventName => {
-        eventSource.removeEventListener(eventName, events[eventName]);
-      });
-      status.goTo("disconnected");
-    };
-
-    let retryCount = 0;
-    let firstRetryMs = Date.now();
-
-    eventSource.onerror = errorEvent => {
-      if (errorEvent.target.readyState === EventSource.CONNECTING) {
-        if (retryCount > retryMaxAttempt) {
-          console.info("could not connect after ".concat(retryMaxAttempt, " attempt"));
-
-          _disconnect();
-
-          return;
-        }
-
-        if (retryCount === 0) {
-          firstRetryMs = Date.now();
-        } else {
-          const allRetryDuration = Date.now() - firstRetryMs;
-
-          if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
-            console.info("could not connect in less than ".concat(retryAllocatedMs, " ms"));
-
-            _disconnect();
-
-            return;
-          }
-        }
-
-        retryCount++;
-        status.goTo("connecting");
-        return;
-      }
-
-      if (errorEvent.target.readyState === EventSource.CLOSED) {
-        _disconnect();
-
-        return;
-      }
-    };
-
-    eventSource.onopen = () => {
-      status.goTo("connected");
-    };
-
-    Object.keys(events).forEach(eventName => {
-      eventSource.addEventListener(eventName, events[eventName]);
-    });
-
-    if (!events.hasOwnProperty("welcome")) {
-      eventSource.addEventListener("welcome", e => {
-        if (e.origin === eventSourceOrigin && e.lastEventId) {
-          lastEventId = e.lastEventId;
-        }
-      });
-    }
-
-    status.goTo("connecting");
-  };
-
-  let connect = () => {
-    attemptConnection(eventSourceUrl);
-
-    connect = () => {
-      attemptConnection(lastEventId ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId) : eventSourceUrl);
-    };
-  };
-
-  const removePageUnloadListener = listenPageUnload(() => {
-    if (status.value === "connecting" || status.value === "connected") {
-      _disconnect();
-    }
-  });
-
-  const destroy = () => {
-    removePageUnloadListener();
-
-    _disconnect();
-  };
-
-  return {
-    status,
-    connect,
-    disconnect: () => _disconnect(),
-    destroy
-  };
-};
-
-const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
-  if (url.indexOf("?") === -1) {
-    url += "?";
-  } else {
-    url += "&";
-  }
-
-  return "".concat(url, "last-event-id=").concat(encodeURIComponent(lastEventId));
-}; // const listenPageMightFreeze = (callback) => {
-//   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
-//     if (pageHideEvent.persisted === true) {
-//       callback(pageHideEvent)
-//     }
-//   })
-//   return removePageHideListener
-// }
-// const listenPageFreeze = (callback) => {
-//   const removeFreezeListener = listenEvent(document, "freeze", (freezeEvent) => {
-//     callback(freezeEvent)
-//   })
-//   return removeFreezeListener
-// }
-// const listenPageIsRestored = (callback) => {
-//   const removeResumeListener = listenEvent(document, "resume", (resumeEvent) => {
-//     removePageshowListener()
-//     callback(resumeEvent)
-//   })
-//   const removePageshowListener = listenEvent(window, "pageshow", (pageshowEvent) => {
-//     if (pageshowEvent.persisted === true) {
-//       removePageshowListener()
-//       removeResumeListener()
-//       callback(pageshowEvent)
-//     }
-//   })
-//   return () => {
-//     removeResumeListener()
-//     removePageshowListener()
-//   }
-// }
-
-
-const listenPageUnload = callback => {
-  const removePageHideListener = listenEvent(window, "pagehide", pageHideEvent => {
-    if (pageHideEvent.persisted !== true) {
-      callback(pageHideEvent);
-    }
-  });
-  return removePageHideListener;
-};
-
-const listenEvent = (emitter, event, callback) => {
-  emitter.addEventListener(event, callback);
-  return () => {
-    emitter.removeEventListener(event, callback);
-  };
-};
+import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
 
 const isAutoreloadEnabled = () => {
   const value = window.localStorage.getItem("autoreload");
@@ -236,27 +33,6 @@ const injectQuery = (url, query) => {
     searchParams.set(key, query[key]);
   });
   return String(urlObject);
-};
-
-const htmlAttributeSrcSet = {
-  parse: srcset => {
-    const srcCandidates = [];
-    srcset.split(",").forEach(set => {
-      const [specifier, descriptor] = set.trim().split(" ");
-      srcCandidates.push({
-        specifier,
-        descriptor
-      });
-    });
-    return srcCandidates;
-  },
-  stringify: srcCandidates => {
-    const srcset = srcCandidates.map(({
-      specifier,
-      descriptor
-    }) => "".concat(specifier, " ").concat(descriptor)).join(", ");
-    return srcset;
-  }
 };
 
 const reloadHtmlPage = () => {
@@ -295,10 +71,10 @@ const reloadDOMNodesUsingUrl = urlToReload => {
     });
   };
 
-  Array.from(document.querySelectorAll("link[rel=\"stylesheet\"]")).forEach(link => {
+  Array.from(document.querySelectorAll(`link[rel="stylesheet"]`)).forEach(link => {
     visitNodeAttributeAsUrl(link, "href");
   });
-  Array.from(document.querySelectorAll("link[rel=\"icon\"]")).forEach(link => {
+  Array.from(document.querySelectorAll(`link[rel="icon"]`)).forEach(link => {
     visitNodeAttributeAsUrl(link, "href");
   });
   Array.from(document.querySelector("script")).forEach(script => {
@@ -323,7 +99,7 @@ const reloadDOMNodesUsingUrl = urlToReload => {
     if (srcset) {
       const srcCandidates = htmlAttributeSrcSet.parse(srcset);
       srcCandidates.forEach(srcCandidate => {
-        const url = new URL(srcCandidate.specifier, "".concat(window.location.href));
+        const url = new URL(srcCandidate.specifier, `${window.location.href}`);
 
         if (shouldReloadUrl(url)) {
           srcCandidate.specifier = injectQuery(url, {
@@ -415,7 +191,8 @@ const applyReloadMessageEffects = async () => {
     }, e => {
       // TODO: reuse error display from html supervisor
       console.error(e);
-      console.error("[hmr] Failed to reload after ".concat(reloadMessage.reason, ".\nThis could be due to syntax errors or importing non-existent modules (see errors above)"));
+      console.error(`[hmr] Failed to reload after ${reloadMessage.reason}.
+This could be due to syntax errors or importing non-existent modules (see errors above)`);
       reloadMessage.status = "failed";
       reloadMessagesSignal.onchange();
     });
@@ -443,40 +220,40 @@ const applyHotReload = async ({
     acceptedBy
   }) => {
     await previous;
-    const urlToFetch = new URL(boundary, "".concat(window.location.origin, "/")).href;
+    const urlToFetch = new URL(boundary, `${window.location.origin}/`).href;
     const urlHotMeta = urlHotMetas[urlToFetch]; // TODO: we should return when there is no url hot meta because
     // it means code was not executed (code splitting with dynamic import)
     // if (!urlHotMeta) {return }
 
     if (type === "prune") {
-      console.groupCollapsed("[jsenv] prune: ".concat(boundary, " (inside ").concat(acceptedBy, ")"));
+      console.groupCollapsed(`[jsenv] prune: ${boundary} (inside ${acceptedBy})`);
     } else if (acceptedBy === boundary) {
-      console.groupCollapsed("[jsenv] hot reloading: ".concat(boundary));
+      console.groupCollapsed(`[jsenv] hot reloading: ${boundary}`);
     } else {
-      console.groupCollapsed("[jsenv] hot reloading: ".concat(acceptedBy, " inside ").concat(boundary));
+      console.groupCollapsed(`[jsenv] hot reloading: ${acceptedBy} inside ${boundary}`);
     }
 
     if (urlHotMeta && urlHotMeta.disposeCallback) {
-      console.log("call dispose callback");
+      console.log(`call dispose callback`);
       await urlHotMeta.disposeCallback();
     }
 
     if (type === "prune") {
       delete urlHotMetas[urlToFetch];
-      console.log("cleanup pruned url");
+      console.log(`cleanup pruned url`);
       console.groupEnd();
       return null;
     }
 
     if (type === "js_module") {
-      console.log("importing js module");
+      console.log(`importing js module`);
       const namespace = await reloadJsImport(urlToFetch);
 
       if (urlHotMeta && urlHotMeta.acceptCallback) {
         await urlHotMeta.acceptCallback(namespace);
       }
 
-      console.log("js module import done");
+      console.log(`js module import done`);
       console.groupEnd();
       return namespace;
     }
@@ -487,15 +264,15 @@ const applyHotReload = async ({
         return null;
       }
 
-      console.log("reloading url");
-      const urlToReload = new URL(acceptedBy, "".concat(window.location.origin, "/")).href;
+      console.log(`reloading url`);
+      const urlToReload = new URL(acceptedBy, `${window.location.origin}/`).href;
       reloadDOMNodesUsingUrl(urlToReload);
-      console.log("url reloaded");
+      console.log(`url reloaded`);
       console.groupEnd();
       return null;
     }
 
-    console.warn("unknown update type: \"".concat(type, "\""));
+    console.warn(`unknown update type: "${type}"`);
     return null;
   }, Promise.resolve());
 };
@@ -545,5 +322,3 @@ window.__jsenv_event_source_client__ = {
 //     )
 //   })
 // }
-
-//# sourceMappingURL=event_source_client.js.map

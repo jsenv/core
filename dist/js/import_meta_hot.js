@@ -41,7 +41,7 @@ const createImportMetaHot = importMetaUrl => {
         return;
       }
 
-      throw new Error("invalid call to import.meta.hot.accept(), received ".concat(firstArg));
+      throw new Error(`invalid call to import.meta.hot.accept(), received ${firstArg}`);
     },
     dispose: callback => {
       addUrlMeta(url, {
@@ -82,5 +82,3 @@ const asUrlWithoutHmrQuery = url => {
 };
 
 export { createImportMetaHot, urlHotMetas };
-
-//# sourceMappingURL=import_meta_hot.js.map
