@@ -1,4 +1,4 @@
-import { urlToFilename } from "@jsenv/filesystem"
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
 
@@ -17,6 +17,7 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
 
   const generate = memoizeByFirstArgument((url, { urlInfo, parentUrlInfo }) => {
     const directoryPath = determineDirectoryPath({
+      buildDirectoryUrl,
       urlInfo,
       parentUrlInfo,
     })
@@ -72,12 +73,24 @@ const splitFileExtension = (filename) => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }
 
-const determineDirectoryPath = ({ urlInfo, parentUrlInfo }) => {
+const determineDirectoryPath = ({
+  buildDirectoryUrl,
+  urlInfo,
+  parentUrlInfo,
+}) => {
   if (urlInfo.type === "directory") {
     return ""
   }
+  if (parentUrlInfo && parentUrlInfo.type === "directory") {
+    const parentDirectoryPath = urlToRelativeUrl(
+      parentUrlInfo.url,
+      buildDirectoryUrl,
+    )
+    return parentDirectoryPath
+  }
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
+      buildDirectoryUrl,
       urlInfo: parentUrlInfo,
     })
     return parentDirectoryPath

@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -28,47 +30,48 @@ const test = async (params) => {
   })
   const actual = {
     returnValue,
+    distSrcDirectoryContent: readdirSync(
+      new URL("./dist/src/", import.meta.url),
+    ),
   }
   const expected = {
     // TODO also assert the presence of src/file.js
     returnValue: {
-      directoryUrl: `${server.origin}/src/`,
+      directoryUrl: `${server.origin}/src/?v=1bce4c28`,
     },
+    distSrcDirectoryContent: ["file.js"],
   }
   assert({ actual, expected })
 }
 
 // by default referencing a directory throw an error
-// try {
-//   await test()
-//   throw new Error("should throw")
-// } catch (e) {
-//   const actual = {
-//     message: e.message,
-//   }
-//   const expected = {
-//     message: `Failed to fetch url content
-// --- reason ---
-// found a directory on filesystem
-// --- url ---
-// ${new URL("./client/src/", import.meta.url).href}
-// --- url reference trace ---
-// ${fileURLToPath(new URL("./client/main.html", import.meta.url))}:15:40
-//   14 |     <script type="module">
-// > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
-//                                               ^
-//   16 |${" "}
-// --- plugin name ---
-// "jsenv:fetch_file_urls"`,
-//   }
-//   assert({ actual, expected })
-// }
+try {
+  await test()
+  throw new Error("should throw")
+} catch (e) {
+  const actual = {
+    message: e.message,
+  }
+  const expected = {
+    message: `Failed to fetch url content
+--- reason ---
+found a directory on filesystem
+--- url ---
+${new URL("./client/src/", import.meta.url).href}
+--- url reference trace ---
+${fileURLToPath(new URL("./client/main.html", import.meta.url))}:15:40
+  14 |     <script type="module">
+> 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
+                                              ^
+  16 |${" "}
+--- plugin name ---
+"jsenv:fetch_file_urls"`,
+  }
+  assert({ actual, expected })
+}
 
 // but it can be allowed explicitely and it will copy the directory content
 // in the build directory and update the url accorindgly
 await test({
   directoryReferenceAllowed: true,
-  bundling: false,
-  minification: false,
-  versioning: false,
 })

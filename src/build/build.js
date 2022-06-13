@@ -548,10 +548,12 @@ build ${entryPointKeys.length} entry points`)
               return buildUrl
             }
             const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             // files from root directory but not given to rollup nor postcss
             if (rawUrlInfo) {
               const buildUrl = buildUrlsGenerator.generate(reference.url, {
                 urlInfo: rawUrlInfo,
+                parentUrlInfo,
               })
               if (buildUrl.includes("?")) {
                 rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url
