@@ -1054,10 +1054,27 @@ const applyUrlVersioning = async ({
             if (buildUrl) {
               return buildUrl
             }
-            const url = new URL(
+            const urlObject = new URL(
               reference.specifier,
               reference.baseUrl || reference.parentUrl,
-            ).href
+            )
+            const url = urlObject.href
+            // during versioning we revisit the deps
+            // but the code used to enforce trailing slash on directories
+            // is not applied because "jsenv:file_url_resolution" is not used
+            // so here we search if the url with a trailing slash exists
+            if (
+              reference.type === "filesystem" &&
+              !urlObject.pathname.endsWith("/")
+            ) {
+              const urlWithTrailingSlash = `${url}/`
+              const specifier = Object.keys(buildUrls).find(
+                (key) => buildUrls[key] === urlWithTrailingSlash,
+              )
+              if (specifier) {
+                return urlWithTrailingSlash
+              }
+            }
             return url
           },
           formatUrl: (reference) => {

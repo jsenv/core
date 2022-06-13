@@ -75,22 +75,9 @@ export const jsenvPluginFileUrls = ({
           return null
         }
         const urlObject = new URL(urlInfo.url)
-        try {
-          const fileBuffer = readFileSync(urlObject)
-          const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
-          if (CONTENT_TYPE.isTextual(contentType)) {
-            return {
-              contentType,
-              content: String(fileBuffer),
-            }
-          }
-          return {
-            contentType,
-            content: fileBuffer,
-          }
-        } catch (e) {
-          if (e.code === "EISDIR" && directoryReferenceAllowed) {
-            const directoryEntries = readdirSync(new URL(urlInfo.url))
+        if (context.reference.expectedType === "directory") {
+          if (directoryReferenceAllowed) {
+            const directoryEntries = readdirSync(urlObject)
             return {
               type: "directory",
               contentType: "application/json",
@@ -101,7 +88,21 @@ export const jsenvPluginFileUrls = ({
               ),
             }
           }
-          throw e
+          const error = new Error("found a directory on filesystem")
+          error.code = "EISDIR"
+          throw error
+        }
+        const fileBuffer = readFileSync(urlObject)
+        const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
+        if (CONTENT_TYPE.isTextual(contentType)) {
+          return {
+            contentType,
+            content: String(fileBuffer),
+          }
+        }
+        return {
+          contentType,
+          content: fileBuffer,
         }
       },
     },
@@ -149,8 +150,11 @@ const jsenvFileUrlResolution = ({
       urlObject.search = ""
       urlObject.hash = ""
       // force trailing slash on directories and remove eventual trailing slash on files
-      if (stat.isDirectory() && !pathnameUsesTrailingSlash) {
-        urlObject.pathname = `${urlObject.pathname}/`
+      if (stat.isDirectory()) {
+        reference.expectedType = "directory"
+        if (!pathnameUsesTrailingSlash) {
+          urlObject.pathname = `${urlObject.pathname}/`
+        }
       } else if (pathnameUsesTrailingSlash) {
         // a warning would be great because it's strange to do that
         urlObject.pathname = urlObject.pathname.slice(0, -1)
