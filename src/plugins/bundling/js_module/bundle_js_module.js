@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url"
 import {
   isFileSystemPath,
   normalizeStructuredMetaMap,
@@ -6,11 +7,15 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
-import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 
+const globalThisClientFileUrl = new URL(
+  "../../transpilation/babel/global_this/client/global_this.js",
+  import.meta.url,
+).href
 const jsenvBabelPluginDirectoryUrl = new URL(
   "../../transpilation/babel/",
   import.meta.url,
@@ -79,6 +84,16 @@ export const buildWithRollup = async ({
         input: [],
         onwarn: (warning) => {
           if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return
+          }
+          if (
+            warning.code === "THIS_IS_UNDEFINED" &&
+            pathToFileURL(warning.id).href === globalThisClientFileUrl
+          ) {
+            return
+          }
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
             return
           }
           logger.warn(String(warning))
@@ -262,7 +277,11 @@ const rollupPluginJsenv = ({
         return { id: url, external: true }
       }
       const urlInfo = urlGraph.getUrlInfo(url)
-      if (urlInfo && !urlInfo.shouldHandle) {
+      if (!urlInfo) {
+        // happen when excluded by urlAnalysis.include
+        return { id: url, external: true }
+      }
+      if (!urlInfo.shouldHandle) {
         return { id: url, external: true }
       }
       const filePath = fileUrlConverter.asFilePath(url)
