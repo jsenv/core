@@ -391,20 +391,20 @@ export const createKitchen = ({
         }
         return reference.generatedSpecifier
       },
-      found: ({ specifierLine, specifierColumn, ...rest }) => {
-        const trace = stringifyUrlSite(
-          adjustUrlSite(urlInfo, {
-            urlGraph,
-            url: urlInfo.url,
-            line: specifierLine,
-            column: specifierColumn,
-          }),
-        )
+      found: ({ trace, ...rest }) => {
+        if (trace === undefined) {
+          trace = stringifyUrlSite(
+            adjustUrlSite(urlInfo, {
+              urlGraph,
+              url: urlInfo.url,
+              line: rest.specifierLine,
+              column: rest.specifierColumn,
+            }),
+          )
+        }
         // console.log(trace)
         return addReference({
           trace,
-          specifierLine,
-          specifierColumn,
           ...rest,
         })
       },

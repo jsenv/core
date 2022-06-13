@@ -1,9 +1,3 @@
-/*
- * ce qu'on veut:
- * lorsqu'une ref pointe vers un dossier
- */
-
-import { fileURLToPath } from "node:url"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -32,9 +26,14 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  const actual = returnValue
+  const actual = {
+    returnValue,
+  }
   const expected = {
-    directoryUrl: new URL("./client/src/", import.meta.url).href,
+    // TODO also assert the presence of src/file.js
+    returnValue: {
+      directoryUrl: `${server.origin}/src/`,
+    },
   }
   assert({ actual, expected })
 }
@@ -69,4 +68,7 @@ const test = async (params) => {
 // in the build directory and update the url accorindgly
 await test({
   directoryReferenceAllowed: true,
+  bundling: false,
+  minification: false,
+  versioning: false,
 })

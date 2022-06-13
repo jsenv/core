@@ -424,13 +424,24 @@ build ${entryPointKeys.length} entry points`)
           name: "jsenv:postbuild",
           appliesDuring: { build: true },
           resolveUrl: (reference) => {
-            const urlBeforePotentialRedirect =
-              reference.specifier[0] === "/"
-                ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
-                : new URL(
-                    reference.specifier,
-                    reference.baseUrl || reference.parentUrl,
-                  ).href
+            let urlBeforePotentialRedirect
+
+            if (reference.type === "filesystem") {
+              urlBeforePotentialRedirect = new URL(
+                reference.specifier,
+                rawUrls[reference.parentUrl],
+              ).href
+            } else if (reference.specifier[0] === "/") {
+              urlBeforePotentialRedirect = new URL(
+                reference.specifier.slice(1),
+                buildDirectoryUrl,
+              ).href
+            } else {
+              urlBeforePotentialRedirect = new URL(
+                reference.specifier,
+                reference.baseUrl || reference.parentUrl,
+              ).href
+            }
             const url =
               rawUrlRedirections[urlBeforePotentialRedirect] ||
               urlBeforePotentialRedirect
@@ -566,10 +577,6 @@ build ${entryPointKeys.length} entry points`)
           formatUrl: (reference) => {
             if (!reference.generatedUrl.startsWith("file:")) {
               return null
-            }
-            const urlInfo = rawGraph.getUrlInfo(reference.url)
-            if (urlInfo && urlInfo.type === "directory") {
-              return urlToRelativeUrl(reference.url, buildDirectoryUrl)
             }
             if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
               throw new Error(

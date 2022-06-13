@@ -29,6 +29,9 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
     let { search, hash } = urlObject
     let name = getUrlName(url, urlInfo)
     let [basename, extension] = splitFileExtension(name)
+    if (urlObject.pathname.endsWith("/")) {
+      basename += "/"
+    }
     extension = extensionMappings[extension] || extension
     let nameCandidate = `${basename}${extension}` // reconstruct name in case extension was normalized
     let integer = 1

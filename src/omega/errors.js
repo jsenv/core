@@ -97,13 +97,16 @@ export const createTransformUrlContentError = ({
     ...details
   }) => {
     const transformError = new Error(
-      createDetailedMessage(`Failed to transform ${urlInfo.type} url content`, {
-        reason,
-        ...details,
-        "url": urlInfo.url,
-        "url reference trace": reference.trace,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage(
+        `Failed to transform url content of "${urlInfo.type}"`,
+        {
+          reason,
+          ...details,
+          "url": urlInfo.url,
+          "url reference trace": reference.trace,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     )
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR"
     transformError.code = code

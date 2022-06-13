@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
@@ -67,11 +67,11 @@ const jsenvPluginFetchFileUrls = ({ directoryReferenceAllowed }) => {
         }
       } catch (e) {
         if (e.code === "EISDIR" && directoryReferenceAllowed) {
-          if (directoryReferenceAllowed) {
-            return {
-              type: "directory",
-              content: "",
-            }
+          const directoryEntries = readdirSync(new URL(urlInfo.url))
+          return {
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryEntries, null, "  "),
           }
         }
         throw e

@@ -55,14 +55,15 @@ export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
       js_classic: parseAndTransformJsUrls,
       js_module: parseAndTransformJsUrls,
       webmanifest: parseAndTransformWebmanifestUrls,
-      directory: () => {
-        // on lit le dossier et pour chaque chose qu'on trouve
-        // on émet une réference pour que le fichier fasse partie du build
-        // ensuite il devrait pas y avoir grand chose a faire
-        // la chose a faire par contre c'est de s'assurer que tous les fichiers référencé
-        // comme ça se retrouve bien dans dist/folder_name/ par exemple
-        // et qu'ils sont copié "tel quel" (on change par leur nom, ni le chemin dans le dossier)
-        // ça se passera dans build_urls_generator ça
+      directory: (urlInfo, context) => {
+        JSON.parse(urlInfo.content).forEach((directoryEntry) => {
+          context.referenceUtils.found({
+            type: "filesystem",
+            subtype: "directory_entry",
+            specifier: directoryEntry,
+            trace: `"${directoryEntry}" directory entry from ${context.reference.trace}`,
+          })
+        })
       },
     },
   }
