@@ -16,13 +16,13 @@ const globalThisClientFileUrl = new URL(
   import.meta.url,
 ).href
 const newStylesheetClientFileUrl = new URL(
-  "../../transpilation/babel/global_this/client/new_stylesheet.js",
+  "../../transpilation/babel/new_stylesheet/client/new_stylesheet.js",
   import.meta.url,
-)
+).href
 const regeneratorRuntimeClientFileUrl = new URL(
   "../../transpilation/babel/regenerator_runtime/client/regenerator_runtime.js",
   import.meta.url,
-)
+).href
 
 export const bundleJsModule = async ({
   jsModuleUrlInfos,
@@ -38,6 +38,7 @@ export const bundleJsModule = async ({
     runtimeCompat,
     sourcemaps,
   } = context
+  const { babelHelpersChunk = true, include } = options
   const { jsModuleBundleUrlInfos } = await buildWithRollup({
     signal,
     logger,
@@ -48,7 +49,9 @@ export const bundleJsModule = async ({
 
     runtimeCompat,
     sourcemaps,
-    options,
+
+    include,
+    babelHelpersChunk,
   })
   return jsModuleBundleUrlInfos
 }
@@ -63,7 +66,9 @@ export const buildWithRollup = async ({
 
   runtimeCompat,
   sourcemaps,
-  options,
+
+  include,
+  babelHelpersChunk,
 }) => {
   const resultRef = { current: null }
   try {
@@ -79,7 +84,8 @@ export const buildWithRollup = async ({
 
           runtimeCompat,
           sourcemaps,
-          options,
+          include,
+          babelHelpersChunk,
           resultRef,
         }),
       ],
@@ -122,7 +128,9 @@ const rollupPluginJsenv = ({
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
-  options,
+
+  include,
+  babelHelpersChunk,
 
   resultRef,
 }) => {
@@ -136,10 +144,10 @@ const rollupPluginJsenv = ({
     })
   }
   let importCanBeBundled = () => true
-  if (options.include) {
+  if (include) {
     const bundleIncludeConfig = normalizeStructuredMetaMap(
       {
-        bundle: options.include,
+        bundle: include,
       },
       rootDirectoryUrl,
     )
@@ -242,25 +250,27 @@ const rollupPluginJsenv = ({
           return insideJs ? `js/${name}` : `${name}`
         },
         manualChunks: (id) => {
-          const fileUrl = fileUrlConverter.asFileUrl(id)
-          if (
-            fileUrl.endsWith(
-              "babel-plugin-transform-async-to-promises/helpers.mjs",
-            )
-          ) {
-            return "babel_helpers"
-          }
-          if (babelHelperNameFromUrl(fileUrl)) {
-            return "babel_helpers"
-          }
-          if (fileUrl === globalThisClientFileUrl) {
-            return "babel_helpers"
-          }
-          if (fileUrl === newStylesheetClientFileUrl) {
-            return "babel_helpers"
-          }
-          if (fileUrl === regeneratorRuntimeClientFileUrl) {
-            return "babel_helpers"
+          if (babelHelpersChunk) {
+            const fileUrl = fileUrlConverter.asFileUrl(id)
+            if (
+              fileUrl.endsWith(
+                "babel-plugin-transform-async-to-promises/helpers.mjs",
+              )
+            ) {
+              return "babel_helpers"
+            }
+            if (babelHelperNameFromUrl(fileUrl)) {
+              return "babel_helpers"
+            }
+            if (fileUrl === globalThisClientFileUrl) {
+              return "babel_helpers"
+            }
+            if (fileUrl === newStylesheetClientFileUrl) {
+              return "babel_helpers"
+            }
+            if (fileUrl === regeneratorRuntimeClientFileUrl) {
+              return "babel_helpers"
+            }
           }
           return null
         },

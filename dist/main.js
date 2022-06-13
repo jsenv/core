@@ -23,9 +23,10 @@ import { DataUrl } from "@jsenv/utils/urls/data_url.js";
 import { transpileWithParcel, minifyWithParcel } from "@jsenv/utils/css_ast/parcel_css.js";
 import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js";
 import { createRequire } from "node:module";
-import { r as requireBabelPlugin, j as jsenvPluginBabel, b as babelHelperNameFromUrl, R as RUNTIME_COMPAT } from "./js/babel_helpers.js";
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js";
 import babelParser from "@babel/parser";
+import { findHighestVersion } from "@jsenv/utils/semantic_versioning/highest_version.js";
+import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js";
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js";
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js";
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js";
@@ -55,8 +56,6 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_spec
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js";
-import "@jsenv/utils/semantic_versioning/highest_version.js";
-import "@jsenv/utils/js_ast/babel_utils.js";
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.data.rawUrl || urlInfo.url;
@@ -2705,6 +2704,31 @@ export default inlineContent.text`
   return [asJsonModule, asCssModule, asTextModule];
 };
 
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
+// the list of possible helpers:
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
+const babelHelperClientDirectoryUrl = new URL("./node_modules/@jsenv/babel-plugins/src/babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
+
+const getBabelHelperFileUrl = babelHelperName => {
+  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
+  return babelHelperFileUrl;
+};
+const babelHelperNameFromUrl = url => {
+  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
+    return null;
+  }
+
+  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
+  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
+  return babelHelperName;
+};
+
+const require$4 = createRequire(import.meta.url); // eslint-disable-next-line import/no-dynamic-require
+
+
+const requireBabelPlugin = name => require$4(name);
+
 const babelPluginTransformImportMetaUrl = babel => {
   return {
     name: "transform-import-meta-url",
@@ -3255,6 +3279,1121 @@ const convertJsModuleToJsClassic = async ({
   };
 };
 
+const featureCompats = {
+  script_type_module: {
+    edge: "16",
+    firefox: "60",
+    chrome: "61",
+    safari: "10.1",
+    opera: "48",
+    ios: "10.3",
+    android: "61",
+    samsung: "8.2"
+  },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4"
+  },
+  import_meta: {
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    safari: "11.1",
+    opera: "51",
+    ios: "12",
+    android: "9"
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
+  import_dynamic: {
+    android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.0",
+    node: "13.2"
+  },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios: "15",
+    node: "14.8"
+  },
+  // https://caniuse.com/import-maps
+  importmap: {
+    edge: "89",
+    chrome: "89",
+    opera: "76",
+    samsung: "15"
+  },
+  import_type_json: {
+    chrome: "91",
+    edge: "91"
+  },
+  import_type_css: {
+    chrome: "93",
+    edge: "93"
+  },
+  import_type_text: {},
+  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
+  new_stylesheet: {
+    chrome: "73",
+    edge: "79",
+    opera: "53",
+    android: "73"
+  },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios: "5",
+    android: "4.4"
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80"
+  },
+  worker_importmap: {},
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios: "11.3",
+    android: "12.12"
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80"
+  },
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6"
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67"
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios: "12.2",
+    android: "94",
+    node: "12"
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3"
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios: "9",
+    android: "4",
+    node: "4"
+  }
+};
+
+const RUNTIME_COMPAT = {
+  featureCompats,
+  add: (originalRuntimeCompat, feature) => {
+    const featureCompat = getFeatureCompat(feature);
+    const runtimeCompat = { ...originalRuntimeCompat
+    };
+    Object.keys(featureCompat).forEach(runtimeName => {
+      const firstVersion = originalRuntimeCompat[runtimeName];
+      const secondVersion = featureCompat[runtimeName];
+      runtimeCompat[runtimeName] = firstVersion ? findHighestVersion(firstVersion, secondVersion) : secondVersion;
+    });
+    return runtimeCompat;
+  },
+  isSupported: (runtimeCompat, feature) => {
+    const featureCompat = getFeatureCompat(feature);
+    const runtimeNames = Object.keys(runtimeCompat);
+    const runtimeWithoutCompat = runtimeNames.find(runtimeName => {
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
+      const highestVersion = findHighestVersion(runtimeVersion, runtimeVersionCompatible);
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
+  }
+};
+
+const getFeatureCompat = feature => {
+  if (typeof feature === "string") {
+    const compat = featureCompats[feature];
+
+    if (!compat) {
+      throw new Error(`"${feature}" feature is unknown`);
+    }
+
+    return compat;
+  }
+
+  if (typeof feature !== "object") {
+    throw new TypeError(`feature must be a string or an object, got ${feature}`);
+  }
+
+  return feature;
+};
+
+/* eslint-disable camelcase */
+// copied from
+// https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
+// https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
+// Because this is an hidden implementation detail of @babel/preset-env
+// it could be deprecated or moved anytime.
+// For that reason it makes more sens to have it inlined here
+// than importing it from an undocumented location.
+// Ideally it would be documented or a separate module
+const babelPluginCompatMap = {
+  "proposal-numeric-separator": {
+    chrome: "75",
+    opera: "62",
+    edge: "79",
+    firefox: "70",
+    safari: "13",
+    node: "12.5",
+    ios: "13",
+    samsung: "11",
+    electron: "6"
+  },
+  "proposal-class-properties": {
+    chrome: "74",
+    opera: "61",
+    edge: "79",
+    node: "12",
+    electron: "6.1"
+  },
+  "proposal-private-methods": {
+    chrome: "84",
+    opera: "71"
+  },
+  "proposal-nullish-coalescing-operator": {
+    chrome: "80",
+    opera: "67",
+    edge: "80",
+    firefox: "72",
+    safari: "13.1",
+    node: "14",
+    electron: "8.1"
+  },
+  "proposal-optional-chaining": {
+    chrome: "80",
+    opera: "67",
+    edge: "80",
+    firefox: "74",
+    safari: "13.1",
+    node: "14",
+    electron: "8.1"
+  },
+  "proposal-json-strings": {
+    chrome: "66",
+    opera: "53",
+    edge: "79",
+    firefox: "62",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "9",
+    electron: "3"
+  },
+  "proposal-optional-catch-binding": {
+    chrome: "66",
+    opera: "53",
+    edge: "79",
+    firefox: "58",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    electron: "3"
+  },
+  "transform-parameters": {
+    chrome: "49",
+    opera: "36",
+    edge: "18",
+    firefox: "53",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.37"
+  },
+  "proposal-async-generator-functions": {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3"
+  },
+  "proposal-object-rest-spread": {
+    chrome: "60",
+    opera: "47",
+    edge: "79",
+    firefox: "55",
+    safari: "11.1",
+    node: "8.3",
+    ios: "11.3",
+    samsung: "8",
+    electron: "2"
+  },
+  "transform-dotall-regex": {
+    chrome: "62",
+    opera: "49",
+    edge: "79",
+    firefox: "78",
+    safari: "11.1",
+    node: "8.10",
+    ios: "11.3",
+    samsung: "8",
+    electron: "3"
+  },
+  "proposal-unicode-property-regex": {
+    chrome: "64",
+    opera: "51",
+    edge: "79",
+    firefox: "78",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    electron: "3"
+  },
+  "transform-named-capturing-groups-regex": {
+    chrome: "64",
+    opera: "51",
+    edge: "79",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    electron: "3"
+  },
+  "transform-async-to-generator": {
+    chrome: "55",
+    opera: "42",
+    edge: "15",
+    firefox: "52",
+    safari: "11",
+    node: "7.6",
+    ios: "11",
+    samsung: "6",
+    electron: "1.6"
+  },
+  "transform-exponentiation-operator": {
+    chrome: "52",
+    opera: "39",
+    edge: "14",
+    firefox: "52",
+    safari: "10.1",
+    node: "7",
+    ios: "10.3",
+    samsung: "6",
+    electron: "1.3"
+  },
+  "transform-template-literals": {
+    chrome: "41",
+    opera: "28",
+    edge: "13",
+    electron: "0.22",
+    firefox: "34",
+    safari: "13",
+    node: "4",
+    ios: "13",
+    samsung: "3.4"
+  },
+  "transform-literals": {
+    chrome: "44",
+    opera: "31",
+    edge: "12",
+    firefox: "53",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.30"
+  },
+  "transform-function-name": {
+    chrome: "51",
+    opera: "38",
+    edge: "79",
+    firefox: "53",
+    safari: "10",
+    node: "6.5",
+    ios: "10",
+    samsung: "5",
+    electron: "1.2"
+  },
+  "transform-arrow-functions": {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-block-scoped-functions": {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22"
+  },
+  "transform-classes": {
+    chrome: "46",
+    opera: "33",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-object-super": {
+    chrome: "46",
+    opera: "33",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-shorthand-properties": {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28"
+  },
+  "transform-duplicate-keys": {
+    chrome: "42",
+    opera: "29",
+    edge: "12",
+    firefox: "34",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "3.4",
+    electron: "0.25"
+  },
+  "transform-computed-properties": {
+    chrome: "44",
+    opera: "31",
+    edge: "12",
+    firefox: "34",
+    safari: "7.1",
+    node: "4",
+    ios: "8",
+    samsung: "4",
+    electron: "0.30"
+  },
+  "transform-for-of": {
+    chrome: "51",
+    opera: "38",
+    edge: "15",
+    firefox: "53",
+    safari: "10",
+    node: "6.5",
+    ios: "10",
+    samsung: "5",
+    electron: "1.2"
+  },
+  "transform-sticky-regex": {
+    chrome: "49",
+    opera: "36",
+    edge: "13",
+    firefox: "3",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.37"
+  },
+  "transform-unicode-escapes": {
+    chrome: "44",
+    opera: "31",
+    edge: "12",
+    firefox: "53",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.30"
+  },
+  "transform-unicode-regex": {
+    chrome: "50",
+    opera: "37",
+    edge: "13",
+    firefox: "46",
+    safari: "12",
+    node: "6",
+    ios: "12",
+    samsung: "5",
+    electron: "1.1"
+  },
+  "transform-spread": {
+    chrome: "46",
+    opera: "33",
+    edge: "13",
+    firefox: "36",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-destructuring": {
+    chrome: "51",
+    opera: "38",
+    edge: "15",
+    firefox: "53",
+    safari: "10",
+    node: "6.5",
+    ios: "10",
+    samsung: "5",
+    electron: "1.2"
+  },
+  "transform-block-scoping": {
+    chrome: "49",
+    opera: "36",
+    edge: "14",
+    firefox: "51",
+    safari: "11",
+    node: "6",
+    ios: "11",
+    samsung: "5",
+    electron: "0.37"
+  },
+  "transform-typeof-symbol": {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    node: "0.12",
+    ios: "9",
+    samsung: "3",
+    electron: "0.20"
+  },
+  "transform-new-target": {
+    chrome: "46",
+    opera: "33",
+    edge: "14",
+    firefox: "41",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-regenerator": {
+    chrome: "50",
+    opera: "37",
+    edge: "13",
+    firefox: "53",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "1.1"
+  },
+  "transform-member-expression-literals": {
+    chrome: "7",
+    opera: "12",
+    edge: "12",
+    firefox: "2",
+    safari: "5.1",
+    node: "0.10",
+    ie: "9",
+    android: "4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  },
+  "transform-property-literals": {
+    chrome: "7",
+    opera: "12",
+    edge: "12",
+    firefox: "2",
+    safari: "5.1",
+    node: "0.10",
+    ie: "9",
+    android: "4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  },
+  "transform-reserved-words": {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  }
+}; // copy of transform-async-to-generator
+// so that async is not transpiled when supported
+
+babelPluginCompatMap["transform-async-to-promises"] = babelPluginCompatMap["transform-async-to-generator"];
+babelPluginCompatMap["regenerator-transform"] = babelPluginCompatMap["transform-regenerator"];
+
+const getBaseBabelPluginStructure = ({
+  url,
+  isSupported // isJsModule,
+  // getImportSpecifier,
+
+}) => {
+  const isBabelPluginNeeded = babelPluginName => {
+    return !isSupported(babelPluginCompatMap[babelPluginName]);
+  };
+
+  const babelPluginStructure = {};
+
+  if (isBabelPluginNeeded("proposal-numeric-separator")) {
+    babelPluginStructure["proposal-numeric-separator"] = requireBabelPlugin("@babel/plugin-proposal-numeric-separator");
+  }
+
+  if (isBabelPluginNeeded("proposal-json-strings")) {
+    babelPluginStructure["proposal-json-strings"] = requireBabelPlugin("@babel/plugin-proposal-json-strings");
+  }
+
+  if (isBabelPluginNeeded("proposal-object-rest-spread")) {
+    babelPluginStructure["proposal-object-rest-spread"] = requireBabelPlugin("@babel/plugin-proposal-object-rest-spread");
+  }
+
+  if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
+    babelPluginStructure["proposal-optional-catch-binding"] = requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding");
+  }
+
+  if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
+    babelPluginStructure["proposal-unicode-property-regex"] = requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
+  }
+
+  if (isBabelPluginNeeded("transform-async-to-promises")) {
+    babelPluginStructure["transform-async-to-promises"] = [requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+      topLevelAwait: "ignore",
+      // will be handled by "jsenv:top_level_await" plugin
+      externalHelpers: false // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
+      // externalHelpers: isJsModule,
+      // externalHelpersPath: isJsModule ? getImportSpecifier(
+      //     "babel-plugin-transform-async-to-promises/helpers.mjs",
+      //   ) : null
+
+    }];
+  }
+
+  if (isBabelPluginNeeded("transform-arrow-functions")) {
+    babelPluginStructure["transform-arrow-functions"] = requireBabelPlugin("@babel/plugin-transform-arrow-functions");
+  }
+
+  if (isBabelPluginNeeded("transform-block-scoped-functions")) {
+    babelPluginStructure["transform-block-scoped-functions"] = requireBabelPlugin("@babel/plugin-transform-block-scoped-functions");
+  }
+
+  if (isBabelPluginNeeded("transform-block-scoping")) {
+    babelPluginStructure["transform-block-scoping"] = requireBabelPlugin("@babel/plugin-transform-block-scoping");
+  }
+
+  if (isBabelPluginNeeded("transform-classes")) {
+    babelPluginStructure["transform-classes"] = requireBabelPlugin("@babel/plugin-transform-classes");
+  }
+
+  if (isBabelPluginNeeded("transform-computed-properties")) {
+    babelPluginStructure["transform-computed-properties"] = requireBabelPlugin("@babel/plugin-transform-computed-properties");
+  }
+
+  if (isBabelPluginNeeded("transform-destructuring")) {
+    babelPluginStructure["transform-destructuring"] = requireBabelPlugin("@babel/plugin-transform-destructuring");
+  }
+
+  if (isBabelPluginNeeded("transform-dotall-regex")) {
+    babelPluginStructure["transform-dotall-regex"] = requireBabelPlugin("@babel/plugin-transform-dotall-regex");
+  }
+
+  if (isBabelPluginNeeded("transform-duplicate-keys")) {
+    babelPluginStructure["transform-duplicate-keys"] = requireBabelPlugin("@babel/plugin-transform-duplicate-keys");
+  }
+
+  if (isBabelPluginNeeded("transform-exponentiation-operator")) {
+    babelPluginStructure["transform-exponentiation-operator"] = requireBabelPlugin("@babel/plugin-transform-exponentiation-operator");
+  }
+
+  if (isBabelPluginNeeded("transform-for-of")) {
+    babelPluginStructure["transform-for-of"] = requireBabelPlugin("@babel/plugin-transform-for-of");
+  }
+
+  if (isBabelPluginNeeded("transform-function-name")) {
+    babelPluginStructure["transform-function-name"] = requireBabelPlugin("@babel/plugin-transform-function-name");
+  }
+
+  if (isBabelPluginNeeded("transform-literals")) {
+    babelPluginStructure["transform-literals"] = requireBabelPlugin("@babel/plugin-transform-literals");
+  }
+
+  if (isBabelPluginNeeded("transform-new-target")) {
+    babelPluginStructure["transform-new-target"] = requireBabelPlugin("@babel/plugin-transform-new-target");
+  }
+
+  if (isBabelPluginNeeded("transform-object-super")) {
+    babelPluginStructure["transform-object-super"] = requireBabelPlugin("@babel/plugin-transform-object-super");
+  }
+
+  if (isBabelPluginNeeded("transform-parameters")) {
+    babelPluginStructure["transform-parameters"] = requireBabelPlugin("@babel/plugin-transform-parameters");
+  }
+
+  if (isBabelPluginNeeded("transform-regenerator")) {
+    babelPluginStructure["transform-regenerator"] = [requireBabelPlugin("@babel/plugin-transform-regenerator"), {
+      asyncGenerators: true,
+      generators: true,
+      async: false
+    }];
+  }
+
+  if (isBabelPluginNeeded("transform-shorthand-properties")) {
+    babelPluginStructure["transform-shorthand-properties"] = [requireBabelPlugin("@babel/plugin-transform-shorthand-properties")];
+  }
+
+  if (isBabelPluginNeeded("transform-spread")) {
+    babelPluginStructure["transform-spread"] = [requireBabelPlugin("@babel/plugin-transform-spread")];
+  }
+
+  if (isBabelPluginNeeded("transform-sticky-regex")) {
+    babelPluginStructure["transform-sticky-regex"] = [requireBabelPlugin("@babel/plugin-transform-sticky-regex")];
+  }
+
+  if (isBabelPluginNeeded("transform-template-literals")) {
+    babelPluginStructure["transform-template-literals"] = [requireBabelPlugin("@babel/plugin-transform-template-literals")];
+  }
+
+  if (isBabelPluginNeeded("transform-typeof-symbol") && // prevent "typeof" to be injected into itself:
+  // - not needed
+  // - would create infinite attempt to transform typeof
+  url !== getBabelHelperFileUrl("typeof")) {
+    babelPluginStructure["transform-typeof-symbol"] = [requireBabelPlugin("@babel/plugin-transform-typeof-symbol")];
+  }
+
+  if (isBabelPluginNeeded("transform-unicode-regex")) {
+    babelPluginStructure["transform-unicode-regex"] = [requireBabelPlugin("@babel/plugin-transform-unicode-regex")];
+  }
+
+  return babelPluginStructure;
+};
+
+// https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
+// for reference this is how it's done to reference
+// a global babel helper object instead of using
+// a named import
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
+
+const babelPluginBabelHelpersAsJsenvImports = (babel, {
+  getImportSpecifier
+}) => {
+  return {
+    name: "babel-helper-as-jsenv-import",
+    pre: file => {
+      const cachedHelpers = {};
+      file.set("helperGenerator", name => {
+        // the list of possible helpers name
+        // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
+        if (!file.availableHelper(name)) {
+          return undefined;
+        }
+
+        if (cachedHelpers[name]) {
+          return cachedHelpers[name];
+        }
+
+        const filePath = file.opts.filename;
+        const fileUrl = pathToFileURL(filePath).href;
+
+        if (babelHelperNameFromUrl(fileUrl) === name) {
+          return undefined;
+        }
+
+        const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
+        const helper = injectImport({
+          programPath: file.path,
+          from: getImportSpecifier(babelHelperImportSpecifier),
+          nameHint: `_${name}`,
+          // disable interop, useless as we work only with js modules
+          importedType: "es6" // importedInterop: "uncompiled",
+
+        });
+        cachedHelpers[name] = helper;
+        return helper;
+      });
+    }
+  };
+};
+
+const babelPluginNewStylesheetAsJsenvImport = (babel, {
+  getImportSpecifier
+}) => {
+  const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
+  return {
+    name: "new-stylesheet-as-jsenv-import",
+    visitor: {
+      Program: (programPath, {
+        filename
+      }) => {
+        const fileUrl = pathToFileURL(filename).href;
+
+        if (fileUrl === newStylesheetClientFileUrl) {
+          return;
+        }
+
+        let usesNewStylesheet = false;
+        programPath.traverse({
+          NewExpression: path => {
+            usesNewStylesheet = isNewCssStyleSheetCall(path.node);
+
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          MemberExpression: path => {
+            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node);
+
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          CallExpression: path => {
+            if (path.node.callee.type !== "Import") {
+              // Some other function call, not import();
+              return;
+            }
+
+            if (path.node.arguments[0].type !== "StringLiteral") {
+              // Non-string argument, probably a variable or expression, e.g.
+              // import(moduleId)
+              // import('./' + moduleName)
+              return;
+            }
+
+            const sourcePath = path.get("arguments")[0];
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
+
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          ImportDeclaration: path => {
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
+
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          ExportAllDeclaration: path => {
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
+
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          ExportNamedDeclaration: path => {
+            if (!path.node.source) {
+              // This export has no "source", so it's probably
+              // a local variable or function, e.g.
+              // export { varName }
+              // export const constName = ...
+              // export function funcName() {}
+              return;
+            }
+
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
+
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          }
+        });
+
+        if (usesNewStylesheet) {
+          injectImport({
+            programPath,
+            from: getImportSpecifier(newStylesheetClientFileUrl),
+            sideEffect: true
+          });
+        }
+      }
+    }
+  };
+};
+
+const isNewCssStyleSheetCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "CSSStyleSheet";
+};
+
+const isDocumentAdoptedStyleSheets = node => {
+  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "document" && node.property.type === "Identifier" && node.property.name === "adoptedStyleSheets";
+};
+
+const hasCssModuleQueryParam = path => {
+  const {
+    node
+  } = path;
+  return node.type === "StringLiteral" && new URL(node.value, "https://jsenv.dev").searchParams.has(`css_module`);
+};
+
+const hasImportTypeCssAssertion = path => {
+  const importAssertionsDescriptor = getImportAssertionsDescriptor(path.node.assertions);
+  return Boolean(importAssertionsDescriptor.type === "css");
+};
+
+const getImportAssertionsDescriptor = importAssertions => {
+  const importAssertionsDescriptor = {};
+
+  if (importAssertions) {
+    importAssertions.forEach(importAssertion => {
+      importAssertionsDescriptor[importAssertion.key.name] = importAssertion.value.value;
+    });
+  }
+
+  return importAssertionsDescriptor;
+};
+
+const babelPluginGlobalThisAsJsenvImport = (babel, {
+  getImportSpecifier
+}) => {
+  const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
+  return {
+    name: "global-this-as-jsenv-import",
+    visitor: {
+      Identifier(path, opts) {
+        const {
+          filename
+        } = opts;
+        const fileUrl = pathToFileURL(filename).href;
+
+        if (fileUrl === globalThisClientFileUrl) {
+          return;
+        }
+
+        const {
+          node
+        } = path; // we should do this once, tree shaking will remote it but still
+
+        if (node.name === "globalThis") {
+          injectImport({
+            programPath: path.scope.getProgramParent().path,
+            from: getImportSpecifier(globalThisClientFileUrl),
+            sideEffect: true
+          });
+        }
+      }
+
+    }
+  };
+};
+
+const babelPluginRegeneratorRuntimeAsJsenvImport = (babel, {
+  getImportSpecifier
+}) => {
+  const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
+  return {
+    name: "regenerator-runtime-as-jsenv-import",
+    visitor: {
+      Identifier(path, opts) {
+        const {
+          filename
+        } = opts;
+        const fileUrl = pathToFileURL(filename).href;
+
+        if (fileUrl === regeneratorRuntimeClientFileUrl) {
+          return;
+        }
+
+        const {
+          node
+        } = path;
+
+        if (node.name === "regeneratorRuntime") {
+          injectImport({
+            programPath: path.scope.getProgramParent().path,
+            from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
+            sideEffect: true
+          });
+        }
+      }
+
+    }
+  };
+};
+
+const jsenvPluginBabel = ({
+  getCustomBabelPlugins,
+  babelHelpersAsImport = true
+} = {}) => {
+  const transformWithBabel = async (urlInfo, context) => {
+    const isJsModule = urlInfo.type === "js_module";
+    const isWorker = urlInfo.subtype === "worker";
+    const isServiceWorker = urlInfo.subtype === "service_worker";
+    const isSharedWorker = urlInfo.subtype === "shared_worker";
+    const isWorkerContext = isWorker || isServiceWorker || isSharedWorker;
+    let {
+      clientRuntimeCompat
+    } = context;
+
+    if (isWorker) {
+      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker");
+    } else if (isServiceWorker) {
+      // when code is executed by a service worker we can assume
+      // the execution context supports more than the default one
+      // for instance arrow function are supported
+      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "service_worker");
+    } else if (isSharedWorker) {
+      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "shared_worker");
+    }
+
+    const isSupported = feature => RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
+
+    const getImportSpecifier = clientFileUrl => {
+      const [reference] = context.referenceUtils.inject({
+        type: "js_import_export",
+        expectedType: "js_module",
+        specifier: clientFileUrl
+      });
+      return JSON.parse(reference.generatedSpecifier);
+    };
+
+    const babelPluginStructure = getBaseBabelPluginStructure({
+      url: urlInfo.url,
+      isSupported,
+      isWorkerContext,
+      isJsModule,
+      getImportSpecifier
+    });
+
+    if (getCustomBabelPlugins) {
+      Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
+    }
+
+    if (isJsModule && babelHelpersAsImport) {
+      if (!isSupported("global_this")) {
+        babelPluginStructure["global-this-as-jsenv-import"] = [babelPluginGlobalThisAsJsenvImport, {
+          getImportSpecifier
+        }];
+      }
+
+      if (!isSupported("async_generator_function")) {
+        babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [babelPluginRegeneratorRuntimeAsJsenvImport, {
+          getImportSpecifier
+        }];
+      }
+
+      if (!isSupported("new_stylesheet")) {
+        babelPluginStructure["new-stylesheet-as-jsenv-import"] = [babelPluginNewStylesheetAsJsenvImport, {
+          getImportSpecifier
+        }];
+      }
+
+      if (Object.keys(babelPluginStructure).length > 0) {
+        babelPluginStructure["babel-helper-as-jsenv-import"] = [babelPluginBabelHelpersAsJsenvImports, {
+          getImportSpecifier
+        }];
+      }
+    } // otherwise, concerning global_this, and new_stylesheet we must inject the code
+    // (we cannot inject an import)
+
+
+    const babelPlugins = Object.keys(babelPluginStructure).map(babelPluginName => babelPluginStructure[babelPluginName]);
+    const {
+      code,
+      map
+    } = await applyBabelPlugins({
+      babelPlugins,
+      urlInfo
+    });
+    return {
+      content: code,
+      sourcemap: map
+    };
+  };
+
+  return {
+    name: "jsenv:babel",
+    appliesDuring: "*",
+    finalizeUrlContent: {
+      js_classic: transformWithBabel,
+      js_module: transformWithBabel
+    }
+  };
+};
+
 const jsenvPluginTopLevelAwait = () => {
   return {
     name: "jsenv:top_level_await",
@@ -3568,7 +4707,8 @@ const stringifyQuery = searchParams => {
 };
 
 const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
-const jsenvBabelPluginDirectoryUrl = new URL("./src/plugins/transpilation/babel/", import.meta.url).href;
+const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
+const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
 const bundleJsModule = async ({
   jsModuleUrlInfos,
   context,
@@ -3584,6 +4724,10 @@ const bundleJsModule = async ({
     sourcemaps
   } = context;
   const {
+    babelHelpersChunk = true,
+    include
+  } = options;
+  const {
     jsModuleBundleUrlInfos
   } = await buildWithRollup({
     signal,
@@ -3594,7 +4738,8 @@ const bundleJsModule = async ({
     jsModuleUrlInfos,
     runtimeCompat,
     sourcemaps,
-    options
+    include,
+    babelHelpersChunk
   });
   return jsModuleBundleUrlInfos;
 };
@@ -3607,7 +4752,8 @@ const buildWithRollup = async ({
   jsModuleUrlInfos,
   runtimeCompat,
   sourcemaps,
-  options
+  include,
+  babelHelpersChunk
 }) => {
   const resultRef = {
     current: null
@@ -3624,7 +4770,8 @@ const buildWithRollup = async ({
         jsModuleUrlInfos,
         runtimeCompat,
         sourcemaps,
-        options,
+        include,
+        babelHelpersChunk,
         resultRef
       })],
       inputOptions: {
@@ -3669,7 +4816,8 @@ const rollupPluginJsenv = ({
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
-  options,
+  include,
+  babelHelpersChunk,
   resultRef
 }) => {
   let _rollupEmitFile = () => {
@@ -3685,9 +4833,9 @@ const rollupPluginJsenv = ({
 
   let importCanBeBundled = () => true;
 
-  if (options.include) {
+  if (include) {
     const bundleIncludeConfig = normalizeStructuredMetaMap({
-      bundle: options.include
+      bundle: include
     }, rootDirectoryUrl);
 
     importCanBeBundled = url => {
@@ -3794,18 +4942,28 @@ const rollupPluginJsenv = ({
           return insideJs ? `js/${name}` : `${name}`;
         },
         manualChunks: id => {
-          const fileUrl = fileUrlConverter.asFileUrl(id);
+          if (babelHelpersChunk) {
+            const fileUrl = fileUrlConverter.asFileUrl(id);
 
-          if (fileUrl.endsWith("babel-plugin-transform-async-to-promises/helpers.mjs")) {
-            return "babel_helpers";
-          }
+            if (fileUrl.endsWith("babel-plugin-transform-async-to-promises/helpers.mjs")) {
+              return "babel_helpers";
+            }
 
-          if (babelHelperNameFromUrl(fileUrl)) {
-            return "babel_helpers";
-          }
+            if (babelHelperNameFromUrl(fileUrl)) {
+              return "babel_helpers";
+            }
 
-          if (urlIsInsideOf(fileUrl, jsenvBabelPluginDirectoryUrl)) {
-            return "babel_helpers";
+            if (fileUrl === globalThisClientFileUrl) {
+              return "babel_helpers";
+            }
+
+            if (fileUrl === newStylesheetClientFileUrl) {
+              return "babel_helpers";
+            }
+
+            if (fileUrl === regeneratorRuntimeClientFileUrl) {
+              return "babel_helpers";
+            }
           }
 
           return null;

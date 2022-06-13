@@ -34,6 +34,11 @@ await build({
       "**/node_modules/@jsenv/babel-plugins/": true,
     },
   },
+  bundling: {
+    js_module: {
+      babelHelpersChunk: false,
+    },
+  },
   writeGeneratedFiles: true,
 })
 
