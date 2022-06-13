@@ -175,6 +175,7 @@ build ${entryPointKeys.length} entry points`)
       disabled: infoLogsAreDisabled,
     })
     let urlCount = 0
+    const rawUrlRedirections = {}
     const rawGraphKitchen = createKitchen({
       signal,
       logger,
@@ -192,6 +193,18 @@ build ${entryPointKeys.length} entry points`)
           cooked: () => {
             urlCount++
             prebuildTask.setRightText(urlCount)
+          },
+        },
+        {
+          appliesDuring: "build",
+          fetchUrlContent: (urlInfo, context) => {
+            if (
+              context.reference.original &&
+              context.reference.type === "filesystem"
+            ) {
+              rawUrlRedirections[context.reference.original.url] =
+                context.reference.url
+            }
           },
         },
         ...getCorePlugins({
@@ -247,7 +260,6 @@ build ${entryPointKeys.length} entry points`)
     })
     const rawUrls = {}
     const buildUrls = {}
-    const rawUrlRedirections = {}
     const bundleUrlInfos = {}
     const bundlers = {}
     rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
@@ -423,35 +435,46 @@ build ${entryPointKeys.length} entry points`)
         jsenvPluginInline({ fetchInlineUrls: false }),
         {
           name: "jsenv:postbuild",
-          appliesDuring: { build: true },
+          appliesDuring: "build",
           resolveUrl: (reference) => {
-            let urlBeforePotentialRedirect
+            const performInternalRedirections = (url) => {
+              const rawUrlRedirection = rawUrlRedirections[url]
+              if (rawUrlRedirection) {
+                logger.debug(
+                  `url redirection (by plugin)\n${reference.url} ->\n${rawUrlRedirection}`,
+                )
+                url = rawUrlRedirection
+              }
+              const bundleUrlRedirection = bundleUrlRedirections[url]
+              if (bundleUrlRedirection) {
+                logger.debug(
+                  `url redirection (by bundler)\n${reference.url} ->\n${bundleUrlRedirection}`,
+                )
+                url = bundleUrlRedirection
+              }
+              return url
+            }
 
             if (reference.type === "filesystem") {
               const parentRawUrl = rawUrls[reference.parentUrl]
               const baseUrl = ensurePathnameTrailingSlash(parentRawUrl)
-              urlBeforePotentialRedirect = new URL(reference.specifier, baseUrl)
-                .href
-            } else if (reference.specifier[0] === "/") {
-              urlBeforePotentialRedirect = new URL(
-                reference.specifier.slice(1),
-                buildDirectoryUrl,
-              ).href
-            } else {
-              urlBeforePotentialRedirect = new URL(
+              return performInternalRedirections(
+                new URL(reference.specifier, baseUrl).href,
+              )
+            }
+            if (reference.specifier[0] === "/") {
+              return performInternalRedirections(
+                new URL(reference.specifier.slice(1), buildDirectoryUrl).href,
+              )
+            }
+            return performInternalRedirections(
+              new URL(
                 reference.specifier,
                 reference.baseUrl || reference.parentUrl,
-              ).href
-            }
-            const url =
-              rawUrlRedirections[urlBeforePotentialRedirect] ||
-              urlBeforePotentialRedirect
-            const urlRedirectedByBundle = bundleUrlRedirections[url]
-            if (urlRedirectedByBundle) {
-              return urlRedirectedByBundle
-            }
-            return url
+              ).href,
+            )
           },
+          // redirecting urls into the build directory
           redirectUrl: (reference) => {
             if (!reference.url.startsWith("file:")) {
               return null
@@ -664,7 +687,7 @@ build ${entryPointKeys.length} entry points`)
         },
         {
           name: "jsenv:optimize",
-          appliesDuring: { build: true },
+          appliesDuring: "build",
           finalizeUrlContent: async (urlInfo, context) => {
             if (optimizeUrlContentHooks.length) {
               await rawGraphKitchen.pluginController.callAsyncHooks(

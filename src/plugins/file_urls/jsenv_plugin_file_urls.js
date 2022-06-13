@@ -16,12 +16,86 @@ export const jsenvPluginFileUrls = ({
   preservesSymlink = true,
   directoryReferenceAllowed = false,
 }) => {
+  const getExtensionsToTry = (magicExtensions, importer) => {
+    const extensionsSet = new Set()
+    magicExtensions.forEach((magicExtension) => {
+      if (magicExtension === "inherit") {
+        const importerExtension = urlToExtension(importer)
+        extensionsSet.add(importerExtension)
+      } else {
+        extensionsSet.add(magicExtension)
+      }
+    })
+    return Array.from(extensionsSet.values())
+  }
+
   return [
-    jsenvFileUrlResolution({
-      magicExtensions,
-      magicDirectoryIndex,
-      preservesSymlink,
-    }),
+    {
+      name: "jsenv:file_url_resolution",
+      appliesDuring: "*",
+      redirectUrl: (reference) => {
+        // http, https, data, about, ...
+        if (!reference.url.startsWith("file:")) {
+          return null
+        }
+        if (reference.isInline) {
+          return null
+        }
+        const urlObject = new URL(reference.url)
+        let stat
+        try {
+          stat = statSync(urlObject)
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            stat = null
+          } else {
+            throw e
+          }
+        }
+        const { search, hash } = urlObject
+        const resolveSymlink = (fileUrl) => {
+          const realPath = realpathSync(new URL(fileUrl))
+          const realFileUrl = `${pathToFileURL(realPath)}${search}${hash}`
+          return realFileUrl
+        }
+
+        let { pathname } = urlObject
+        const pathnameUsesTrailingSlash = pathname.endsWith("/")
+        urlObject.search = ""
+        urlObject.hash = ""
+        // force trailing slash on directories and remove eventual trailing slash on files
+        if (stat && stat.isDirectory()) {
+          reference.expectedType = "directory"
+          if (!pathnameUsesTrailingSlash) {
+            urlObject.pathname = `${pathname}/`
+          }
+          if (directoryReferenceAllowed) {
+            return preservesSymlink
+              ? urlObject.href
+              : resolveSymlink(urlObject.href)
+          }
+          // give a chane to magic resolution if enabled
+        } else if (pathnameUsesTrailingSlash) {
+          // a warning would be great because it's strange to reference a file with a trailing slash
+          urlObject.pathname = pathname.slice(0, -1)
+        }
+        const url = urlObject.href
+        const filesystemResolution = applyFileSystemMagicResolution(url, {
+          fileStat: stat,
+          magicDirectoryIndex,
+          magicExtensions: getExtensionsToTry(
+            magicExtensions,
+            reference.parentUrl,
+          ),
+        })
+        if (!filesystemResolution.found) {
+          return null
+        }
+        const fileUrlRaw = filesystemResolution.url
+        const fileUrl = `${fileUrlRaw}${search}${hash}`
+        return preservesSymlink ? fileUrl : resolveSymlink(fileUrl)
+      },
+    },
     {
       name: "jsenv:filesystem_resolution",
       appliesDuring: "*",
@@ -107,80 +181,4 @@ export const jsenvPluginFileUrls = ({
       },
     },
   ]
-}
-
-const jsenvFileUrlResolution = ({
-  magicExtensions,
-  magicDirectoryIndex,
-  preservesSymlink,
-}) => {
-  const getExtensionsToTry = (magicExtensions, importer) => {
-    const extensionsSet = new Set()
-    magicExtensions.forEach((magicExtension) => {
-      if (magicExtension === "inherit") {
-        const importerExtension = urlToExtension(importer)
-        extensionsSet.add(importerExtension)
-      } else {
-        extensionsSet.add(magicExtension)
-      }
-    })
-    return Array.from(extensionsSet.values())
-  }
-
-  return {
-    name: "jsenv:file_url_resolution",
-    appliesDuring: "*",
-    redirectUrl: (reference) => {
-      // http, https, data, about, ...
-      if (!reference.url.startsWith("file:")) {
-        return null
-      }
-      const urlObject = new URL(reference.url)
-      let stat
-      try {
-        stat = statSync(urlObject)
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          return null
-        }
-        throw e
-      }
-      const { search, hash } = urlObject
-      const pathnameUsesTrailingSlash = urlObject.pathname.endsWith("/")
-      urlObject.search = ""
-      urlObject.hash = ""
-      // force trailing slash on directories and remove eventual trailing slash on files
-      if (stat.isDirectory()) {
-        reference.expectedType = "directory"
-        if (!pathnameUsesTrailingSlash) {
-          urlObject.pathname = `${urlObject.pathname}/`
-        }
-      } else if (pathnameUsesTrailingSlash) {
-        // a warning would be great because it's strange to do that
-        urlObject.pathname = urlObject.pathname.slice(0, -1)
-      }
-      const filesystemResolution = applyFileSystemMagicResolution(
-        urlObject.href,
-        {
-          fileStat: stat,
-          magicDirectoryIndex,
-          magicExtensions: getExtensionsToTry(
-            magicExtensions,
-            reference.parentUrl,
-          ),
-        },
-      )
-      if (!filesystemResolution.found) {
-        return null
-      }
-      const fileUrlRaw = filesystemResolution.url
-      const fileUrl = `${fileUrlRaw}${search}${hash}`
-      if (preservesSymlink) {
-        return fileUrl
-      }
-      const realPath = realpathSync(urlObject)
-      const realFileUrl = `${pathToFileURL(realPath)}${search}${hash}`
-      return realFileUrl
-    },
-  }
 }
