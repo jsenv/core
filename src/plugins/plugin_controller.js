@@ -159,6 +159,9 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
       return
     }
     if (typeof pluginEntry === "object" && pluginEntry !== null) {
+      if (!pluginEntry.name) {
+        pluginEntry.name = "anonymous"
+      }
       const { appliesDuring } = pluginEntry
       if (appliesDuring === undefined) {
         console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
