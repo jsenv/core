@@ -14,7 +14,7 @@ import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 
 import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js"
-import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
+// import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -79,7 +79,7 @@ export const startDevServer = async ({
       "./test/**/*.test.html": true,
     },
   },
-  toolbar = false,
+  // toolbar = false,
   writeGeneratedFiles = true,
 }) => {
   const logger = createLogger({ logLevel })
@@ -199,7 +199,7 @@ export const startDevServer = async ({
       jsenvPluginExplorer({
         groups: explorerGroups,
       }),
-      ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
+      // ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
     ],
   })
   const server = await startOmegaServer({
