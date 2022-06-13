@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module">
+      const directoryUrl = new URL("./src/", import.meta.url).href
+
+      window.resolveResultPromise({
+        directoryUrl,
+      })
+    </script>
+  </body>
+</html>

@@ -3,8 +3,11 @@ import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/filesystem"
 
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
-export const jsenvPluginFileUrls = () => {
-  return [jsenvPluginResolveAbsoluteFileUrls(), jsenvPluginFetchFileUrls()]
+export const jsenvPluginFileUrls = ({ directoryReferenceAllowed = false }) => {
+  return [
+    jsenvPluginResolveAbsoluteFileUrls(),
+    jsenvPluginFetchFileUrls({ directoryReferenceAllowed }),
+  ]
 }
 
 const jsenvPluginResolveAbsoluteFileUrls = () => {
@@ -40,7 +43,7 @@ const jsenvPluginResolveAbsoluteFileUrls = () => {
   }
 }
 
-const jsenvPluginFetchFileUrls = () => {
+const jsenvPluginFetchFileUrls = ({ directoryReferenceAllowed }) => {
   return {
     name: "jsenv:fetch_file_urls",
     appliesDuring: "*",
@@ -49,17 +52,29 @@ const jsenvPluginFetchFileUrls = () => {
         return null
       }
       const urlObject = new URL(urlInfo.url)
-      const fileBuffer = readFileSync(urlObject)
-      const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
-      if (CONTENT_TYPE.isTextual(contentType)) {
+      try {
+        const fileBuffer = readFileSync(urlObject)
+        const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
+        if (CONTENT_TYPE.isTextual(contentType)) {
+          return {
+            contentType,
+            content: String(fileBuffer),
+          }
+        }
         return {
           contentType,
-          content: String(fileBuffer),
+          content: fileBuffer,
         }
-      }
-      return {
-        contentType,
-        content: fileBuffer,
+      } catch (e) {
+        if (e.code === "EISDIR" && directoryReferenceAllowed) {
+          if (directoryReferenceAllowed) {
+            return {
+              type: "directory",
+              content: "",
+            }
+          }
+        }
+        throw e
       }
     },
   }

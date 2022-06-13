@@ -106,6 +106,7 @@ export const build = async ({
   urlAnalysis = {},
   nodeEsmResolution,
   fileSystemMagicResolution,
+  directoryReferenceAllowed,
   injectedGlobals,
   transpilation = {},
   bundling = true,
@@ -201,6 +202,7 @@ build ${entryPointKeys.length} entry points`)
           urlAnalysis,
           nodeEsmResolution,
           fileSystemMagicResolution,
+          directoryReferenceAllowed,
           injectedGlobals,
           transpilation: {
             ...transpilation,
@@ -565,6 +567,10 @@ build ${entryPointKeys.length} entry points`)
             if (!reference.generatedUrl.startsWith("file:")) {
               return null
             }
+            const urlInfo = rawGraph.getUrlInfo(reference.url)
+            if (urlInfo && urlInfo.type === "directory") {
+              return urlToRelativeUrl(reference.url, buildDirectoryUrl)
+            }
             if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
               throw new Error(
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
@@ -782,6 +788,9 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         return
       }
       if (!urlInfo.url.startsWith("file:")) {
+        return
+      }
+      if (urlInfo.type === "directory") {
         return
       }
       const buildRelativeUrl = urlToRelativeUrl(

@@ -32,6 +32,7 @@ export const getCorePlugins = ({
   htmlSupervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
+  directoryReferenceAllowed,
   injectedGlobals,
   transpilation = true,
   minification = false,
@@ -53,7 +54,7 @@ export const getCorePlugins = ({
     ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
-    jsenvPluginFileUrls(),
+    jsenvPluginFileUrls({ directoryReferenceAllowed }),
     jsenvPluginHttpUrls(),
     jsenvPluginLeadingSlash(),
     // before url resolution to handle "js_import_export" resolution

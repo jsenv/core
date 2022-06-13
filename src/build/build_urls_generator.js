@@ -70,6 +70,9 @@ const splitFileExtension = (filename) => {
 }
 
 const determineDirectoryPath = ({ urlInfo, parentUrlInfo }) => {
+  if (urlInfo.type === "directory") {
+    return ""
+  }
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
       urlInfo: parentUrlInfo,

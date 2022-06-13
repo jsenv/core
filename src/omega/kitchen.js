@@ -593,13 +593,17 @@ export const createKitchen = ({
     } finally {
       const { generatedUrl } = urlInfo
       if (generatedUrl && generatedUrl.startsWith("file:")) {
-        writeFileSync(new URL(generatedUrl), urlInfo.content)
-        const { sourcemapGeneratedUrl, sourcemap } = urlInfo
-        if (sourcemapGeneratedUrl && sourcemap) {
-          writeFileSync(
-            new URL(sourcemapGeneratedUrl),
-            JSON.stringify(sourcemap, null, "  "),
-          )
+        if (urlInfo.type === "directory") {
+          // no need to write the directory
+        } else {
+          writeFileSync(new URL(generatedUrl), urlInfo.content)
+          const { sourcemapGeneratedUrl, sourcemap } = urlInfo
+          if (sourcemapGeneratedUrl && sourcemap) {
+            writeFileSync(
+              new URL(sourcemapGeneratedUrl),
+              JSON.stringify(sourcemap, null, "  "),
+            )
+          }
         }
       }
     }
