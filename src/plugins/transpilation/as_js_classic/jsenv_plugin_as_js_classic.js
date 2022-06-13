@@ -22,7 +22,7 @@ import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_compositi
 import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
-import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_script_type_module_as_classic.js"
+import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_as_js_classic_html.js"
 import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
 
 const require = createRequire(import.meta.url)
