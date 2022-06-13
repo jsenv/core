@@ -175,7 +175,7 @@ build ${entryPointKeys.length} entry points`)
       disabled: infoLogsAreDisabled,
     })
     let urlCount = 0
-    const rawUrlRedirections = {}
+    const pluginRedirections = {}
     const rawGraphKitchen = createKitchen({
       signal,
       logger,
@@ -202,7 +202,7 @@ build ${entryPointKeys.length} entry points`)
               context.reference.original &&
               context.reference.type === "filesystem"
             ) {
-              rawUrlRedirections[context.reference.original.url] =
+              pluginRedirections[context.reference.original.url] =
                 context.reference.url
             }
           },
@@ -259,6 +259,7 @@ build ${entryPointKeys.length} entry points`)
       buildDirectoryUrl,
     })
     const rawUrls = {}
+    const bundleRedirections = {}
     const buildUrls = {}
     const bundleUrlInfos = {}
     const bundlers = {}
@@ -349,7 +350,7 @@ build ${entryPointKeys.length} entry points`)
         })
       }
     })
-    const bundleUrlRedirections = {}
+    const bundleInternalRedirections = {}
     await Object.keys(bundlers).reduce(async (previous, type) => {
       await previous
       const bundler = bundlers[type]
@@ -391,7 +392,7 @@ build ${entryPointKeys.length} entry points`)
           const buildUrl = buildUrlsGenerator.generate(url, {
             urlInfo: bundleUrlInfo,
           })
-          rawUrlRedirections[url] = buildUrl
+          bundleRedirections[url] = buildUrl
           rawUrls[buildUrl] = url
           bundleUrlInfos[buildUrl] = bundleUrlInfo
           if (buildUrl.includes("?")) {
@@ -402,7 +403,9 @@ build ${entryPointKeys.length} entry points`)
               bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
               buildDirectoryUrl,
             ).href
-            bundleUrlRedirections[urlForBundler] = buildUrl
+            if (urlForBundler !== buildUrl) {
+              bundleInternalRedirections[urlForBundler] = buildUrl
+            }
           }
         })
       } catch (e) {
@@ -416,7 +419,7 @@ build ${entryPointKeys.length} entry points`)
       rootDirectoryUrl,
       ...urlAnalysis,
     })
-    const buildUrlRedirections = {}
+    const buildRedirections = {}
     const finalGraph = createUrlGraph()
     const optimizeUrlContentHooks =
       rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
@@ -438,19 +441,26 @@ build ${entryPointKeys.length} entry points`)
           appliesDuring: "build",
           resolveUrl: (reference) => {
             const performInternalRedirections = (url) => {
-              const rawUrlRedirection = rawUrlRedirections[url]
-              if (rawUrlRedirection) {
+              const pluginRedirection = pluginRedirections[url]
+              if (pluginRedirection) {
                 logger.debug(
-                  `url redirection (by plugin)\n${reference.url} ->\n${rawUrlRedirection}`,
+                  `url redirection (from plugin)\n${url} ->\n${pluginRedirection}`,
                 )
-                url = rawUrlRedirection
+                url = pluginRedirection
               }
-              const bundleUrlRedirection = bundleUrlRedirections[url]
-              if (bundleUrlRedirection) {
+              const bundleRedirection = bundleRedirections[url]
+              if (bundleRedirection) {
                 logger.debug(
-                  `url redirection (by bundler)\n${reference.url} ->\n${bundleUrlRedirection}`,
+                  `url redirection (from bundler)\n${url} ->\n${pluginRedirection}`,
                 )
-                url = bundleUrlRedirection
+                url = bundleRedirection
+              }
+              const bundleInternalRedirection = bundleInternalRedirections[url]
+              if (bundleInternalRedirection) {
+                logger.debug(
+                  `url redirection (from bundler internal)\n${url} ->\n${bundleInternalRedirection}`,
+                )
+                url = bundleInternalRedirection
               }
               return url
             }
@@ -505,8 +515,7 @@ build ${entryPointKeys.length} entry points`)
               let rawUrl
               if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
                 // rawUrl = rawUrls[reference.url] || reference.url
-                const originalBuildUrl =
-                  buildUrlRedirections[referenceOriginalUrl]
+                const originalBuildUrl = buildRedirections[referenceOriginalUrl]
                 rawUrl = originalBuildUrl
                   ? rawUrls[originalBuildUrl]
                   : reference.url
@@ -528,7 +537,7 @@ build ${entryPointKeys.length} entry points`)
                   filename: reference.filename,
                 },
               })
-              buildUrlRedirections[originalBuildUrl] = buildUrl
+              buildRedirections[originalBuildUrl] = buildUrl
               rawUrls[buildUrl] = rawUrl
               return buildUrl
             }
@@ -642,10 +651,6 @@ build ${entryPointKeys.length} entry points`)
               const rawUrl = rawUrls[url] || url
               const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
               if (!rawUrlInfo) {
-                const originalBuildUrl = buildUrlRedirections[url]
-                if (originalBuildUrl) {
-                  return fromBundleOrRawGraph(originalBuildUrl)
-                }
                 throw new Error(`Cannot find url`)
               }
               if (rawUrlInfo.isInline) {
