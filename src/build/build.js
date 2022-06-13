@@ -175,7 +175,7 @@ build ${entryPointKeys.length} entry points`)
       disabled: infoLogsAreDisabled,
     })
     let urlCount = 0
-    const pluginRedirections = {}
+    const prebuildRedirections = new Map()
     const rawGraphKitchen = createKitchen({
       signal,
       logger,
@@ -198,12 +198,11 @@ build ${entryPointKeys.length} entry points`)
         {
           appliesDuring: "build",
           fetchUrlContent: (urlInfo, context) => {
-            if (
-              context.reference.original &&
-              context.reference.type === "filesystem"
-            ) {
-              pluginRedirections[context.reference.original.url] =
-                context.reference.url
+            if (context.reference.original) {
+              prebuildRedirections.set(
+                context.reference.original.url,
+                context.reference.url,
+              )
             }
           },
         },
@@ -419,7 +418,7 @@ build ${entryPointKeys.length} entry points`)
       rootDirectoryUrl,
       ...urlAnalysis,
     })
-    const buildRedirections = {}
+    const postBuildRedirections = {}
     const finalGraph = createUrlGraph()
     const optimizeUrlContentHooks =
       rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
@@ -441,24 +440,24 @@ build ${entryPointKeys.length} entry points`)
           appliesDuring: "build",
           resolveUrl: (reference) => {
             const performInternalRedirections = (url) => {
-              const pluginRedirection = pluginRedirections[url]
-              if (pluginRedirection) {
+              const prebuildRedirection = prebuildRedirections.get(url)
+              if (prebuildRedirection) {
                 logger.debug(
-                  `url redirection (from plugin)\n${url} ->\n${pluginRedirection}`,
+                  `\nprebuild redirection\n${url} ->\n${prebuildRedirection}\n`,
                 )
-                url = pluginRedirection
+                url = prebuildRedirection
               }
               const bundleRedirection = bundleRedirections[url]
               if (bundleRedirection) {
                 logger.debug(
-                  `url redirection (from bundler)\n${url} ->\n${pluginRedirection}`,
+                  `\nbundler redirection\n${url} ->\n${bundleRedirection}\n`,
                 )
                 url = bundleRedirection
               }
               const bundleInternalRedirection = bundleInternalRedirections[url]
               if (bundleInternalRedirection) {
                 logger.debug(
-                  `url redirection (from bundler internal)\n${url} ->\n${bundleInternalRedirection}`,
+                  `\nbundler internal redirection\n${url} ->\n${bundleInternalRedirection}\n`,
                 )
                 url = bundleInternalRedirection
               }
@@ -494,11 +493,6 @@ build ${entryPointKeys.length} entry points`)
             if (rawUrl) {
               return reference.url
             }
-            // from rollup or postcss
-            const bundleUrlInfo = bundleUrlInfos[reference.url]
-            if (bundleUrlInfo) {
-              return reference.url
-            }
             // from "js_module_as_js_classic":
             //   - injecting "?as_js_classic" for the first time
             //   - injecting "?as_js_classic" because the parentUrl has it
@@ -514,8 +508,8 @@ build ${entryPointKeys.length} entry points`)
               }
               let rawUrl
               if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-                // rawUrl = rawUrls[reference.url] || reference.url
-                const originalBuildUrl = buildRedirections[referenceOriginalUrl]
+                const originalBuildUrl =
+                  postBuildRedirections[referenceOriginalUrl]
                 rawUrl = originalBuildUrl
                   ? rawUrls[originalBuildUrl]
                   : reference.url
@@ -537,7 +531,7 @@ build ${entryPointKeys.length} entry points`)
                   filename: reference.filename,
                 },
               })
-              buildRedirections[originalBuildUrl] = buildUrl
+              postBuildRedirections[originalBuildUrl] = buildUrl
               rawUrls[buildUrl] = rawUrl
               return buildUrl
             }
@@ -618,6 +612,10 @@ build ${entryPointKeys.length} entry points`)
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
               )
             }
+            if (reference.isRessourceHint) {
+              // return the raw url, we will resync at the end
+              return rawUrls[reference.url]
+            }
             // remove eventual search params and hash
             const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
             let specifier
@@ -646,6 +644,7 @@ build ${entryPointKeys.length} entry points`)
             const fromBundleOrRawGraph = (url) => {
               const bundleUrlInfo = bundleUrlInfos[url]
               if (bundleUrlInfo) {
+                logger.debug(`fetching from bundle ${url}`)
                 return bundleUrlInfo
               }
               const rawUrl = rawUrls[url] || url
@@ -653,6 +652,7 @@ build ${entryPointKeys.length} entry points`)
               if (!rawUrlInfo) {
                 throw new Error(`Cannot find url`)
               }
+              logger.debug(`fetching from raw graph ${url}`)
               if (rawUrlInfo.isInline) {
                 // Inline content, such as <script> inside html, is transformed during the previous phase.
                 // If we read the inline content it would be considered as the original content.
@@ -789,10 +789,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
     })
     await resyncRessourceHints({
+      logger,
       finalGraphKitchen,
       finalGraph,
       rawUrls,
-      buildUrls,
+      postBuildRedirections,
     })
     buildOperation.throwIfAborted()
     const cleanupActions = []
@@ -1107,6 +1108,9 @@ const applyUrlVersioning = async ({
           },
           formatUrl: (reference) => {
             if (reference.isInline || reference.url.startsWith("data:")) {
+              return null
+            }
+            if (reference.isRessourceHint) {
               return null
             }
             // specifier comes from "normalize" hook done a bit earlier in this file

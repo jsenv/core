@@ -10,6 +10,7 @@ const { buildFileContents } = await build({
     "./main.html": "main.html",
   },
   minification: false,
+  writeGeneratedFiles: true,
 })
 const manifest = JSON.parse(buildFileContents["other/manifest.webmanifest"])
 const actual = manifest.icons
