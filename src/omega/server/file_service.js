@@ -143,7 +143,7 @@ export const createFileService = ({
           body: urlInfo.content,
         }
       }
-      if (code === "EISDIR") {
+      if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
         return serveDirectory(reference.url, {
           headers: {
             accept: "text/html",

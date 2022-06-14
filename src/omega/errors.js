@@ -67,9 +67,9 @@ export const createFetchUrlContentError = ({
       reason: `not allowed to read entry on filesystem`,
     })
   }
-  if (error.code === "EISDIR") {
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return createFailedToFetchUrlContentError({
-      code: "EISDIR",
+      code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
       reason: `found a directory on filesystem`,
     })
   }

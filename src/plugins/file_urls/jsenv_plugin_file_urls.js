@@ -54,26 +54,23 @@ export const jsenvPluginFileUrls = ({
           }
         }
         const { search, hash } = urlObject
-        const resolveSymlink = (fileUrl) => {
-          const realPath = realpathSync(new URL(fileUrl))
-          const realFileUrl = `${pathToFileURL(realPath)}${search}${hash}`
-          return realFileUrl
-        }
-
         let { pathname } = urlObject
         const pathnameUsesTrailingSlash = pathname.endsWith("/")
         urlObject.search = ""
         urlObject.hash = ""
         // force trailing slash on directories and remove eventual trailing slash on files
         if (stat && stat.isDirectory()) {
-          reference.expectedType = "directory"
           if (!pathnameUsesTrailingSlash) {
             urlObject.pathname = `${pathname}/`
           }
           if (directoryReferenceAllowed) {
-            return preservesSymlink
-              ? urlObject.href
-              : resolveSymlink(urlObject.href)
+            reference.expectedType = "directory"
+            const directoryFacadeUrl = urlObject.href
+            const directoryUrlRaw = preservesSymlink
+              ? directoryFacadeUrl
+              : resolveSymlink(directoryFacadeUrl)
+            const directoryUrl = `${directoryUrlRaw}${search}${hash}`
+            return directoryUrl
           }
           // give a chane to magic resolution if enabled
         } else if (pathnameUsesTrailingSlash) {
@@ -92,9 +89,15 @@ export const jsenvPluginFileUrls = ({
         if (!filesystemResolution.found) {
           return null
         }
-        const fileUrlRaw = filesystemResolution.url
+        if (filesystemResolution.isDirectory) {
+          reference.expectedType = "directory"
+        }
+        const fileFacadeUrl = filesystemResolution.url
+        const fileUrlRaw = preservesSymlink
+          ? fileFacadeUrl
+          : resolveSymlink(fileFacadeUrl)
         const fileUrl = `${fileUrlRaw}${search}${hash}`
-        return preservesSymlink ? fileUrl : resolveSymlink(fileUrl)
+        return fileUrl
       },
     },
     {
@@ -170,7 +173,7 @@ export const jsenvPluginFileUrls = ({
             }
           }
           const error = new Error("found a directory on filesystem")
-          error.code = "EISDIR"
+          error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED"
           throw error
         }
         const fileBuffer = readFileSync(urlObject)
@@ -188,4 +191,8 @@ export const jsenvPluginFileUrls = ({
       },
     },
   ]
+}
+
+const resolveSymlink = (fileUrl) => {
+  return pathToFileURL(realpathSync(new URL(fileUrl))).href
 }
