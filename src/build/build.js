@@ -1116,6 +1116,12 @@ const applyUrlVersioning = async ({
             return url
           },
           formatUrl: (reference) => {
+            if (!reference.shouldHandle) {
+              if (reference.generatedUrl.startsWith("ignore:")) {
+                return reference.generatedUrl.slice("ignore:".length)
+              }
+              return null
+            }
             if (reference.isInline || reference.url.startsWith("data:")) {
               return null
             }
