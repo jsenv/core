@@ -14,7 +14,6 @@ import { urlToFilename } from "@jsenv/filesystem"
 
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
-import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 
 export const jsenvPluginImportAssertions = () => {
   const updateReference = (reference, searchParam) => {
@@ -89,7 +88,7 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_json_module",
@@ -100,6 +99,8 @@ const jsenvPluginAsModules = () => {
       }
       const jsonText = JSON.stringify(originalUrlInfo.content.trim())
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         // here we could `export default ${jsonText}`:
@@ -114,7 +115,7 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_css_module",
@@ -130,6 +131,8 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       })
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(
@@ -148,7 +151,7 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_text_module",
@@ -164,6 +167,8 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       })
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(

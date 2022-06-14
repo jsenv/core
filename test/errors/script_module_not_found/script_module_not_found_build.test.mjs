@@ -30,6 +30,6 @@ ${urlToFileSystemPath(
                                  ^
   11 |   </body>
 --- plugin name ---
-"jsenv:fetch_file_urls"`
+"jsenv:file_url_fetching"`
   assert({ actual, expected })
 }

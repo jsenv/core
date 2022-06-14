@@ -7,20 +7,31 @@ await build({
   rootDirectoryUrl: jsenvRootDirectoryUrl,
   buildDirectoryUrl: jsenvDistDirectoryUrl,
   entryPoints: {
-    "./src/plugins/html_supervisor/client/html_supervisor_installer.js":
-      "html_supervisor_installer.js",
-    "./src/plugins/autoreload/dev_sse/client/event_source_client.js":
-      "event_source_client.js",
-    "./src/plugins/html_supervisor/client/html_supervisor_setup.js":
-      "html_supervisor_setup.js",
-    "./src/plugins/import_meta_hot/client/import_meta_hot.js":
-      "import_meta_hot.js",
+    "./main.js": "main.js",
   },
   baseUrl: "./",
-  sourcemaps: "file",
   minification: false,
   versioning: false,
   assetManifest: false,
+  runtimeCompat: {
+    node: "16.14",
+  },
+  directoryReferenceAllowed: true,
+  urlAnalysis: {
+    // for now ignore all node_modules
+    // ideally later we'll selectively allow some node_modules
+    // to be bundled and move them to "@jsenv/core" devDependencies
+    include: {
+      "**/*": true,
+      "**/node_modules/": false,
+      "**/node_modules/@jsenv/babel-plugins/": true,
+    },
+  },
+  bundling: {
+    js_module: {
+      babelHelpersChunk: false,
+    },
+  },
 })
 
 // "s.js" is used in the build files, it must be compatible as much as possible
@@ -40,6 +51,7 @@ await build({
   },
   baseUrl: "./",
   sourcemaps: "file",
+  sourcemapsSourcesContent: false, // we publish source files
   minification: false,
   versioning: false,
   assetManifest: false,

@@ -9,32 +9,14 @@
  *    It will trigger the http requests, populating the server performances
  */
 
-import {
-  urlToRelativeUrl,
-  resolveUrl,
-  ensureEmptyDirectory,
-} from "@jsenv/filesystem"
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startDevServer } from "@jsenv/core"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost()
 
-const projectDirectoryUrl = new URL("../../../", import.meta.url)
-const directoryRelativeUrl = urlToRelativeUrl(
-  new URL("./", import.meta.url),
-  projectDirectoryUrl,
-)
-const jsenvDirectoryRelativeUrl = `${directoryRelativeUrl}.jsenv/`
-const jsenvDirectoryUrl = resolveUrl(
-  jsenvDirectoryRelativeUrl,
-  projectDirectoryUrl,
-)
-await ensureEmptyDirectory(jsenvDirectoryUrl)
-
 await startDevServer({
-  projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  rootDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "info",
   protocol: "https",
   // http2: false,

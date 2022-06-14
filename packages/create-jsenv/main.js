@@ -9,6 +9,8 @@ import {
   statSync,
   copyFileSync,
   rmSync,
+  readFileSync,
+  writeFileSync,
 } from "node:fs"
 import { basename, relative } from "node:path"
 import { pathToFileURL, fileURLToPath } from "node:url"
@@ -51,9 +53,9 @@ const getParamsFromProcessArgsAndPrompts = async () => {
   const webReact = argv.includes("--web-react")
 
   try {
-    const projectName = directoryUrl
+    const demoDirectoryName = directoryUrl
       ? basename(fileURLToPath(directoryUrl))
-      : "jsenv-project"
+      : "jsenv-demo"
 
     const result = await prompts(
       [
@@ -61,9 +63,10 @@ const getParamsFromProcessArgsAndPrompts = async () => {
           type: directoryUrl ? null : "text",
           name: "directoryUrl",
           message: "directory path:",
-          initial: projectName,
+          initial: demoDirectoryName,
           onState: (state) => {
-            const value = state.value.trim().replace(/\/+$/g, "") || projectName
+            const value =
+              state.value.trim().replace(/\/+$/g, "") || demoDirectoryName
             directoryUrl = new URL(`${value}/`, cwdUrl)
           },
         },
@@ -145,6 +148,33 @@ const createFilesFromTemplate = ({ directoryUrl, overwrite, template }) => {
       directoryUrl,
     )
     copy(fromUrl, toUrl)
+    if (file === "package.json") {
+      const packageJsonFileContent = readFileSync(toUrl, { encoding: "utf8" })
+      const packageJsonObject = JSON.parse(packageJsonFileContent)
+      const visitPackageMappings = (packageMappings) => {
+        if (packageMappings) {
+          Object.keys(packageMappings).forEach((packageName) => {
+            const packageVersion = packageMappings[packageName]
+            if (packageVersion.startsWith("../")) {
+              // resolve it and put the exact version
+              const packageDirectoryUrl = new URL(packageVersion, fromUrl)
+              const packageFileUrl = new URL(
+                "package.json",
+                packageDirectoryUrl,
+              )
+              const packageObject = JSON.parse(
+                readFileSync(packageFileUrl, { encoding: "utf8" }),
+              )
+              packageMappings[packageName] = packageObject.version
+            }
+          })
+        }
+      }
+      visitPackageMappings(packageJsonObject.dependencies)
+      visitPackageMappings(packageJsonObject.devDependencies)
+      visitPackageMappings(packageJsonObject.peerDependencies)
+      writeFileSync(toUrl, JSON.stringify(packageJsonObject, null, "  "))
+    }
   }
 
   console.log(`\nDone. Now run:\n`)

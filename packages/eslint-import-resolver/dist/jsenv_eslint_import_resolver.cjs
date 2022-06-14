@@ -541,6 +541,22 @@ const createPackageImportNotDefinedError = ({
   return error
 };
 
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  process.execArgv.forEach((arg) => {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice(0, "--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  });
+  return packageConditions
+};
+
 /*
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
  * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
@@ -554,7 +570,7 @@ const createPackageImportNotDefinedError = ({
  */
 
 const applyNodeEsmResolution = ({
-  conditions = ["node", "import"],
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
   parentUrl,
   specifier,
   lookupPackageScope = defaultLookupPackageScope,
@@ -622,6 +638,12 @@ const applyPackageSpecifierResolution = ({
   }
   try {
     const urlObject = new URL(specifier);
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier,
+      }
+    }
     return {
       type: "absolute_specifier",
       url: urlObject.href,
@@ -1276,7 +1298,11 @@ const applyLegacySubpathResolution = ({
 
 const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
   for (const condition of conditions) {
-    const resolved = mainLegacyResolvers[condition](packageJson, packageUrl);
+    const conditionResolver = mainLegacyResolvers[condition];
+    if (!conditionResolver) {
+      continue
+    }
+    const resolved = conditionResolver(packageJson, packageUrl);
     if (resolved) {
       return {
         type: resolved.type,
@@ -1448,7 +1474,7 @@ const extensionFromUrl = (url) => {
 
 const applyFileSystemMagicResolution = (
   fileUrl,
-  { magicDirectoryIndex, magicExtensions },
+  { fileStat, magicDirectoryIndex, magicExtensions },
 ) => {
   let lastENOENTError = null;
   const fileStatOrNull = (url) => {
@@ -1462,8 +1488,8 @@ const applyFileSystemMagicResolution = (
       throw e
     }
   };
+  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
 
-  const fileStat = fileStatOrNull(fileUrl);
   if (fileStat && fileStat.isFile()) {
     return {
       found: true,
@@ -2316,6 +2342,10 @@ ${file}
 --- root directory path ---
 ${urlToFileSystemPath(rootDirectoryUrl)}`);
 
+  packageConditions = [
+    ...readCustomConditionsFromProcessArgs(),
+    ...packageConditions,
+  ];
   const browserInPackageConditions = packageConditions.includes("browser");
   const nodeInPackageConditions = packageConditions.includes("node");
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {

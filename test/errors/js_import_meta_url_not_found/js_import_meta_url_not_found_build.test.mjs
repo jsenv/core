@@ -27,6 +27,6 @@ ${urlToFileSystemPath(new URL("./client/main.js", import.meta.url).href)}:1:23
                             ^
   2 |${" "}
 --- plugin name ---
-"jsenv:fetch_file_urls"`
+"jsenv:file_url_fetching"`
   assert({ actual, expected })
 }

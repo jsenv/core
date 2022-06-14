@@ -8,7 +8,7 @@ import {
 import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
 
 export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
-  const url = urlInfo.data.rawUrl || urlInfo.url
+  const url = urlInfo.originalUrl
   const content = urlInfo.content
   const { scenario, referenceUtils } = context
   const htmlAst = parseHtmlString(content, {
@@ -51,6 +51,9 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       })
     },
   })
+  if (actions.length === 0) {
+    return null
+  }
   await Promise.all(actions.map((action) => action()))
   return {
     content: stringifyHtmlAst(htmlAst),

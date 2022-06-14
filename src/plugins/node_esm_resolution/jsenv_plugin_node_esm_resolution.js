@@ -13,12 +13,13 @@ import {
   applyNodeEsmResolution,
   defaultLookupPackageScope,
   defaultReadPackageJson,
+  readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({
   rootDirectoryUrl,
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = ["browser", "import"],
+  runtimeCompat,
+  packageConditions,
   filesInvalidatingCache = ["package.json", "package-lock.json"],
 }) => {
   const packageScopesCache = new Map()
@@ -64,6 +65,7 @@ export const jsenvPluginNodeEsmResolution = ({
 
   return [
     jsenvPluginNodeEsmResolver({
+      runtimeCompat,
       packageConditions,
       lookupPackageScope,
       readPackageJson,
@@ -76,10 +78,18 @@ export const jsenvPluginNodeEsmResolution = ({
 }
 
 const jsenvPluginNodeEsmResolver = ({
+  runtimeCompat,
   packageConditions,
   lookupPackageScope,
   readPackageJson,
 }) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  packageConditions = packageConditions || [
+    ...readCustomConditionsFromProcessArgs(),
+    nodeRuntimeEnabled ? "node" : "browser",
+    "import",
+  ]
   return {
     name: "jsenv:node_esm_resolve",
     appliesDuring: "*",

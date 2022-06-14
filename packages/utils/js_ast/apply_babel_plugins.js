@@ -23,7 +23,7 @@ export const applyBabelPlugins = async ({
     js_classic: "classic",
     [urlInfo.type]: undefined,
   }[urlInfo.type]
-  const url = (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url
+  const url = urlInfo.originalUrl
   const generatedUrl = urlInfo.generatedUrl
   const content = urlInfo.content
 

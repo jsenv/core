@@ -26,6 +26,7 @@ import {
   asUrlUntilPathname,
   normalizeUrl,
   asUrlWithoutSearch,
+  ensurePathnameTrailingSlash,
 } from "@jsenv/utils/urls/url_utils.js"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
@@ -35,10 +36,10 @@ import {
 } from "@jsenv/utils/html_ast/html_ast.js"
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js"
 
+import { createUrlGraph } from "../omega/url_graph.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
-import { createUrlGraph } from "../omega/url_graph.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
 import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
@@ -87,13 +88,28 @@ export const build = async ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
+  baseUrl = "/",
 
+  // default runtimeCompat corresponds to dynamic import
+  // (meaning we can keep <script type="module">)
+  runtimeCompat = {
+    // android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.2",
+  },
   plugins = [],
   sourcemaps = false,
+  sourcemapsSourcesContent,
+  urlAnalysis = {},
   nodeEsmResolution,
   fileSystemMagicResolution,
+  directoryReferenceAllowed,
   injectedGlobals,
-  runtimeCompat,
   transpilation = {},
   bundling = true,
   minification = true,
@@ -113,7 +129,6 @@ export const build = async ({
   buildDirectoryClean = true,
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
-  baseUrl = "/",
   assetManifest = true,
   assetManifestFileRelativeUrl = "asset-manifest.json",
 }) => {
@@ -161,6 +176,7 @@ build ${entryPointKeys.length} entry points`)
       disabled: infoLogsAreDisabled,
     })
     let urlCount = 0
+    const prebuildRedirections = new Map()
     const rawGraphKitchen = createKitchen({
       signal,
       logger,
@@ -168,6 +184,7 @@ build ${entryPointKeys.length} entry points`)
       urlGraph: rawGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsSourcesContent,
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [
@@ -180,13 +197,33 @@ build ${entryPointKeys.length} entry points`)
             prebuildTask.setRightText(urlCount)
           },
         },
+        {
+          appliesDuring: "build",
+          fetchUrlContent: (urlInfo, context) => {
+            if (context.reference.original) {
+              prebuildRedirections.set(
+                context.reference.original.url,
+                context.reference.url,
+              )
+            }
+          },
+          formatUrl: (reference) => {
+            if (!reference.shouldHandle) {
+              return `ignore:${reference.specifier}`
+            }
+            return null
+          },
+        },
         ...getCorePlugins({
           rootDirectoryUrl,
           urlGraph: rawGraph,
           scenario: "build",
+          runtimeCompat,
 
+          urlAnalysis,
           nodeEsmResolution,
           fileSystemMagicResolution,
+          directoryReferenceAllowed,
           injectedGlobals,
           transpilation: {
             ...transpilation,
@@ -229,8 +266,8 @@ build ${entryPointKeys.length} entry points`)
       buildDirectoryUrl,
     })
     const rawUrls = {}
+    const bundleRedirections = {}
     const buildUrls = {}
-    const rawUrlRedirections = {}
     const bundleUrlInfos = {}
     const bundlers = {}
     rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
@@ -320,7 +357,7 @@ build ${entryPointKeys.length} entry points`)
         })
       }
     })
-    const bundleUrlRedirections = {}
+    const bundleInternalRedirections = {}
     await Object.keys(bundlers).reduce(async (previous, type) => {
       await previous
       const bundler = bundlers[type]
@@ -352,6 +389,10 @@ build ${entryPointKeys.length} entry points`)
             type,
             subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
             filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+            originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+            originalContent: rawUrlInfo
+              ? rawUrlInfo.originalContent
+              : undefined,
             ...bundlerGeneratedUrlInfo,
             data: {
               ...(rawUrlInfo ? rawUrlInfo.data : {}),
@@ -362,7 +403,7 @@ build ${entryPointKeys.length} entry points`)
           const buildUrl = buildUrlsGenerator.generate(url, {
             urlInfo: bundleUrlInfo,
           })
-          rawUrlRedirections[url] = buildUrl
+          bundleRedirections[url] = buildUrl
           rawUrls[buildUrl] = url
           bundleUrlInfos[buildUrl] = bundleUrlInfo
           if (buildUrl.includes("?")) {
@@ -373,7 +414,9 @@ build ${entryPointKeys.length} entry points`)
               bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
               buildDirectoryUrl,
             ).href
-            bundleUrlRedirections[urlForBundler] = buildUrl
+            if (urlForBundler !== buildUrl) {
+              bundleInternalRedirections[urlForBundler] = buildUrl
+            }
           }
         })
       } catch (e) {
@@ -383,7 +426,11 @@ build ${entryPointKeys.length} entry points`)
       bundleTask.done()
     }, Promise.resolve())
 
-    const buildUrlRedirections = {}
+    const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
+      rootDirectoryUrl,
+      ...urlAnalysis,
+    })
+    const postBuildRedirections = {}
     const finalGraph = createUrlGraph()
     const optimizeUrlContentHooks =
       rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
@@ -393,38 +440,63 @@ build ${entryPointKeys.length} entry points`)
       urlGraph: finalGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsSourcesContent,
       sourcemapsRelativeSources: !versioning,
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [
-        jsenvPluginUrlAnalysis(),
-        jsenvPluginAsJsClassic({
-          rootDirectoryUrl,
-          systemJsInjection: true,
-        }),
-        jsenvPluginInline({
-          fetchInlineUrls: false,
-        }),
+        urlAnalysisPlugin,
+        jsenvPluginAsJsClassic({ systemJsInjection: true }),
+        jsenvPluginInline({ fetchInlineUrls: false }),
         {
           name: "jsenv:postbuild",
-          appliesDuring: { build: true },
+          appliesDuring: "build",
           resolveUrl: (reference) => {
-            if (reference.specifier[0] === "#") {
-              reference.external = true
+            const performInternalRedirections = (url) => {
+              const prebuildRedirection = prebuildRedirections.get(url)
+              if (prebuildRedirection) {
+                logger.debug(
+                  `\nprebuild redirection\n${url} ->\n${prebuildRedirection}\n`,
+                )
+                url = prebuildRedirection
+              }
+              const bundleRedirection = bundleRedirections[url]
+              if (bundleRedirection) {
+                logger.debug(
+                  `\nbundler redirection\n${url} ->\n${bundleRedirection}\n`,
+                )
+                url = bundleRedirection
+              }
+              const bundleInternalRedirection = bundleInternalRedirections[url]
+              if (bundleInternalRedirection) {
+                logger.debug(
+                  `\nbundler internal redirection\n${url} ->\n${bundleInternalRedirection}\n`,
+                )
+                url = bundleInternalRedirection
+              }
+              return url
             }
-            const urlBeforePotentialRedirect =
-              reference.specifier[0] === "/"
-                ? new URL(reference.specifier.slice(1), buildDirectoryUrl).href
-                : new URL(reference.specifier, reference.parentUrl).href
-            const url =
-              rawUrlRedirections[urlBeforePotentialRedirect] ||
-              urlBeforePotentialRedirect
-            const urlRedirectedByBundle = bundleUrlRedirections[url]
-            if (urlRedirectedByBundle) {
-              return urlRedirectedByBundle
+
+            if (reference.type === "filesystem") {
+              const parentRawUrl = rawUrls[reference.parentUrl]
+              const baseUrl = ensurePathnameTrailingSlash(parentRawUrl)
+              return performInternalRedirections(
+                new URL(reference.specifier, baseUrl).href,
+              )
             }
-            return url
+            if (reference.specifier[0] === "/") {
+              return performInternalRedirections(
+                new URL(reference.specifier.slice(1), buildDirectoryUrl).href,
+              )
+            }
+            return performInternalRedirections(
+              new URL(
+                reference.specifier,
+                reference.baseUrl || reference.parentUrl,
+              ).href,
+            )
           },
+          // redirecting urls into the build directory
           redirectUrl: (reference) => {
             if (!reference.url.startsWith("file:")) {
               return null
@@ -432,11 +504,6 @@ build ${entryPointKeys.length} entry points`)
             // already a build url
             const rawUrl = rawUrls[reference.url]
             if (rawUrl) {
-              return reference.url
-            }
-            // from rollup or postcss
-            const bundleUrlInfo = bundleUrlInfos[reference.url]
-            if (bundleUrlInfo) {
               return reference.url
             }
             // from "js_module_as_js_classic":
@@ -454,9 +521,8 @@ build ${entryPointKeys.length} entry points`)
               }
               let rawUrl
               if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-                // rawUrl = rawUrls[reference.url] || reference.url
                 const originalBuildUrl =
-                  buildUrlRedirections[referenceOriginalUrl]
+                  postBuildRedirections[referenceOriginalUrl]
                 rawUrl = originalBuildUrl
                   ? rawUrls[originalBuildUrl]
                   : reference.url
@@ -478,7 +544,7 @@ build ${entryPointKeys.length} entry points`)
                   filename: reference.filename,
                 },
               })
-              buildUrlRedirections[originalBuildUrl] = buildUrl
+              postBuildRedirections[originalBuildUrl] = buildUrl
               rawUrls[buildUrl] = rawUrl
               return buildUrl
             }
@@ -522,15 +588,17 @@ build ${entryPointKeys.length} entry points`)
               return buildUrl
             }
             const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             // files from root directory but not given to rollup nor postcss
             if (rawUrlInfo) {
               const buildUrl = buildUrlsGenerator.generate(reference.url, {
                 urlInfo: rawUrlInfo,
+                parentUrlInfo,
               })
+              rawUrls[buildUrl] = rawUrlInfo.url
               if (buildUrl.includes("?")) {
                 rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url
               }
-              rawUrls[buildUrl] = rawUrlInfo.url
               return buildUrl
             }
             if (reference.type === "sourcemap_comment") {
@@ -550,12 +618,19 @@ build ${entryPointKeys.length} entry points`)
           },
           formatUrl: (reference) => {
             if (!reference.generatedUrl.startsWith("file:")) {
+              if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
+                return reference.generatedUrl.slice("ignore:".length)
+              }
               return null
             }
             if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
               throw new Error(
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
               )
+            }
+            if (reference.isRessourceHint) {
+              // return the raw url, we will resync at the end
+              return rawUrls[reference.url]
             }
             // remove eventual search params and hash
             const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
@@ -582,23 +657,18 @@ build ${entryPointKeys.length} entry points`)
             return specifier
           },
           fetchUrlContent: async (finalUrlInfo, context) => {
-            if (!finalUrlInfo.url.startsWith("file:")) {
-              return { external: true }
-            }
             const fromBundleOrRawGraph = (url) => {
               const bundleUrlInfo = bundleUrlInfos[url]
               if (bundleUrlInfo) {
+                logger.debug(`fetching from bundle ${url}`)
                 return bundleUrlInfo
               }
               const rawUrl = rawUrls[url] || url
               const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
               if (!rawUrlInfo) {
-                const originalBuildUrl = buildUrlRedirections[url]
-                if (originalBuildUrl) {
-                  return fromBundleOrRawGraph(originalBuildUrl)
-                }
                 throw new Error(`Cannot find url`)
               }
+              logger.debug(`fetching from raw graph ${url}`)
               if (rawUrlInfo.isInline) {
                 // Inline content, such as <script> inside html, is transformed during the previous phase.
                 // If we read the inline content it would be considered as the original content.
@@ -638,7 +708,7 @@ build ${entryPointKeys.length} entry points`)
         },
         {
           name: "jsenv:optimize",
-          appliesDuring: { build: true },
+          appliesDuring: "build",
           finalizeUrlContent: async (urlInfo, context) => {
             if (optimizeUrlContentHooks.length) {
               await rawGraphKitchen.pluginController.callAsyncHooks(
@@ -699,9 +769,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
         baseUrl,
         postBuildEntryUrls,
         sourcemaps,
+        sourcemapsSourcesContent,
         runtimeCompat,
         writeGeneratedFiles,
         rawGraph,
+        urlAnalysisPlugin,
         finalGraph,
         finalGraphKitchen,
         lineBreakNormalization,
@@ -709,10 +781,10 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       })
     }
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (!urlInfo.url.startsWith("file:")) {
+      if (!urlInfo.shouldHandle) {
         return
       }
-      if (urlInfo.external) {
+      if (!urlInfo.url.startsWith("file:")) {
         return
       }
       if (urlInfo.type === "html") {
@@ -734,10 +806,11 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
     })
     await resyncRessourceHints({
+      logger,
       finalGraphKitchen,
       finalGraph,
       rawUrls,
-      buildUrls,
+      postBuildRedirections,
     })
     buildOperation.throwIfAborted()
     const cleanupActions = []
@@ -767,10 +840,13 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
     const buildFileContents = {}
     const buildInlineContents = {}
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (urlInfo.external) {
+      if (!urlInfo.shouldHandle) {
         return
       }
-      if (urlInfo.url.startsWith("data:")) {
+      if (!urlInfo.url.startsWith("file:")) {
+        return
+      }
+      if (urlInfo.type === "directory") {
         return
       }
       const buildRelativeUrl = urlToRelativeUrl(
@@ -901,9 +977,11 @@ const applyUrlVersioning = async ({
   baseUrl,
   postBuildEntryUrls,
   sourcemaps,
+  sourcemapsSourcesContent,
   runtimeCompat,
   writeGeneratedFiles,
   rawGraph,
+  urlAnalysisPlugin,
   finalGraph,
   finalGraphKitchen,
   lineBreakNormalization,
@@ -925,7 +1003,7 @@ const applyUrlVersioning = async ({
       // ignore:
       // - inline files:
       //   they are already taken into account in the file where they appear
-      // - external files
+      // - ignored files:
       //   we don't know their content
       // - unused files without reference
       //   File updated such as style.css -> style.css.js or file.js->file.es5.js
@@ -935,7 +1013,7 @@ const applyUrlVersioning = async ({
       if (urlInfo.isInline) {
         return
       }
-      if (urlInfo.external) {
+      if (!urlInfo.shouldHandle) {
         return
       }
       if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
@@ -958,8 +1036,8 @@ const applyUrlVersioning = async ({
         lineBreakNormalization,
       })
       urlInfo.dependencies.forEach((dependencyUrl) => {
-        // this dependency is inline (data:) or remote (http://, https://)
-        if (!dependencyUrl.startsWith("file:")) {
+        // this dependency is inline
+        if (dependencyUrl.startsWith("data:")) {
           return
         }
         const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
@@ -967,7 +1045,7 @@ const applyUrlVersioning = async ({
           // this content is part of the file, no need to take into account twice
           dependencyUrlInfo.isInline ||
           // this dependency content is not known
-          dependencyUrlInfo.external
+          !dependencyUrlInfo.shouldHandle
         ) {
           return
         }
@@ -1005,11 +1083,12 @@ const applyUrlVersioning = async ({
       urlGraph: finalGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsSourcesContent,
       sourcemapsRelativeSources: true,
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [
-        jsenvPluginUrlAnalysis(),
+        urlAnalysisPlugin,
         jsenvPluginInline({
           fetchInlineUrls: false,
           analyzeConvertedScripts: true, // to be able to version their urls
@@ -1019,18 +1098,44 @@ const applyUrlVersioning = async ({
           name: "jsenv:versioning",
           appliesDuring: { build: true },
           resolveUrl: (reference) => {
-            if (reference.specifier[0] === "#") {
-              reference.external = true
-            }
             const buildUrl = buildUrls[reference.specifier]
             if (buildUrl) {
               return buildUrl
             }
-            const url = new URL(reference.specifier, reference.parentUrl).href
+            const urlObject = new URL(
+              reference.specifier,
+              reference.baseUrl || reference.parentUrl,
+            )
+            const url = urlObject.href
+            // during versioning we revisit the deps
+            // but the code used to enforce trailing slash on directories
+            // is not applied because "jsenv:file_url_resolution" is not used
+            // so here we search if the url with a trailing slash exists
+            if (
+              reference.type === "filesystem" &&
+              !urlObject.pathname.endsWith("/")
+            ) {
+              const urlWithTrailingSlash = `${url}/`
+              const specifier = Object.keys(buildUrls).find(
+                (key) => buildUrls[key] === urlWithTrailingSlash,
+              )
+              if (specifier) {
+                return urlWithTrailingSlash
+              }
+            }
             return url
           },
           formatUrl: (reference) => {
-            if (reference.isInline) {
+            if (!reference.shouldHandle) {
+              if (reference.generatedUrl.startsWith("ignore:")) {
+                return reference.generatedUrl.slice("ignore:".length)
+              }
+              return null
+            }
+            if (reference.isInline || reference.url.startsWith("data:")) {
+              return null
+            }
+            if (reference.isRessourceHint) {
               return null
             }
             // specifier comes from "normalize" hook done a bit earlier in this file
@@ -1039,8 +1144,7 @@ const applyUrlVersioning = async ({
             if (!canUseVersionedUrl(referencedUrlInfo)) {
               return reference.specifier
             }
-            // data:* urls and so on
-            if (!referencedUrlInfo.url.startsWith("file:")) {
+            if (!referencedUrlInfo.shouldHandle) {
               return null
             }
             const versionedUrl = referencedUrlInfo.data.versionedUrl
@@ -1077,9 +1181,6 @@ const applyUrlVersioning = async ({
             return versionedSpecifier
           },
           fetchUrlContent: (versionedUrlInfo) => {
-            if (!versionedUrlInfo.url.startsWith("file:")) {
-              return { external: true }
-            }
             if (versionedUrlInfo.isInline) {
               const rawUrlInfo = rawGraph.getUrlInfo(
                 rawUrls[versionedUrlInfo.url],

@@ -17,6 +17,7 @@ export const jsenvPluginReact = ({
 } = {}) => {
   return [
     jsenvPluginCommonJs({
+      name: "jsenv:react_commonjs",
       logLevel: asJsModuleLogLevel,
       include: {
         "**/node_modules/react/": true,

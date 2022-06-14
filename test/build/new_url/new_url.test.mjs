@@ -12,6 +12,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    writeGeneratedFiles: true,
     ...params,
   })
   const server = await startFileServer({

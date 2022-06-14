@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/node-esm-resolution",
-  "version": "0.0.8",
+  "version": "0.0.10",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,6 +24,6 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node ./test/test.mjs"
+    "test": "node --conditions=development ./test/test.mjs"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "0.0.21",
+  "version": "0.0.23",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,11 +22,11 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node ./scripts/test/test.mjs"
+    "test": "node --conditions=development ./scripts/test/test.mjs"
   },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
-    "@jsenv/utils": "1.8.0",
+    "@jsenv/utils": "1.8.2",
     "@jsenv/url-meta": "6.2.0"
   },
   "devDependencies": {

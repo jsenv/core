@@ -80,6 +80,21 @@ export const setUrlFilename = (url, filename) => {
   return `${origin}${parentPathname}${filename}${search}${hash}`
 }
 
+export const ensurePathnameTrailingSlash = (url) => {
+  const urlObject = new URL(url)
+  const { pathname } = urlObject
+  if (pathname.endsWith("/")) {
+    return url
+  }
+  let { origin } = urlObject
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://"
+  }
+  const { search, hash } = urlObject
+  return `${origin}${pathname}/${search}${hash}`
+}
+
 export const asUrlUntilPathname = (url) => {
   const urlObject = new URL(url)
   let { origin, pathname } = urlObject

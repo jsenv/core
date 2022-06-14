@@ -1,18 +1,26 @@
+import { pathToFileURL } from "node:url"
 import {
   isFileSystemPath,
   normalizeStructuredMetaMap,
-  urlIsInsideOf,
   urlToMeta,
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
+import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
-import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 
-const jsenvBabelPluginDirectoryUrl = new URL(
-  "../../transpilation/babel/",
+const globalThisClientFileUrl = new URL(
+  "../../transpilation/babel/global_this/client/global_this.js",
+  import.meta.url,
+).href
+const newStylesheetClientFileUrl = new URL(
+  "../../transpilation/babel/new_stylesheet/client/new_stylesheet.js",
+  import.meta.url,
+).href
+const regeneratorRuntimeClientFileUrl = new URL(
+  "../../transpilation/babel/regenerator_runtime/client/regenerator_runtime.js",
   import.meta.url,
 ).href
 
@@ -30,6 +38,7 @@ export const bundleJsModule = async ({
     runtimeCompat,
     sourcemaps,
   } = context
+  const { babelHelpersChunk = true, include } = options
   const { jsModuleBundleUrlInfos } = await buildWithRollup({
     signal,
     logger,
@@ -40,7 +49,9 @@ export const bundleJsModule = async ({
 
     runtimeCompat,
     sourcemaps,
-    options,
+
+    include,
+    babelHelpersChunk,
   })
   return jsModuleBundleUrlInfos
 }
@@ -55,7 +66,9 @@ export const buildWithRollup = async ({
 
   runtimeCompat,
   sourcemaps,
-  options,
+
+  include,
+  babelHelpersChunk,
 }) => {
   const resultRef = { current: null }
   try {
@@ -71,7 +84,8 @@ export const buildWithRollup = async ({
 
           runtimeCompat,
           sourcemaps,
-          options,
+          include,
+          babelHelpersChunk,
           resultRef,
         }),
       ],
@@ -79,6 +93,16 @@ export const buildWithRollup = async ({
         input: [],
         onwarn: (warning) => {
           if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return
+          }
+          if (
+            warning.code === "THIS_IS_UNDEFINED" &&
+            pathToFileURL(warning.id).href === globalThisClientFileUrl
+          ) {
+            return
+          }
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
             return
           }
           logger.warn(String(warning))
@@ -104,7 +128,9 @@ const rollupPluginJsenv = ({
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
-  options,
+
+  include,
+  babelHelpersChunk,
 
   resultRef,
 }) => {
@@ -118,10 +144,10 @@ const rollupPluginJsenv = ({
     })
   }
   let importCanBeBundled = () => true
-  if (options.include) {
+  if (include) {
     const bundleIncludeConfig = normalizeStructuredMetaMap(
       {
-        bundle: options.include,
+        bundle: include,
       },
       rootDirectoryUrl,
     )
@@ -152,7 +178,7 @@ const rollupPluginJsenv = ({
           implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
             ? [previousNonEntryPointModuleId]
             : null,
-          preserveSignature: "allow-extension",
+          // preserveSignature: "allow-extension",
         })
         previousNonEntryPointModuleId = id
       })
@@ -224,19 +250,27 @@ const rollupPluginJsenv = ({
           return insideJs ? `js/${name}` : `${name}`
         },
         manualChunks: (id) => {
-          const fileUrl = fileUrlConverter.asFileUrl(id)
-          if (
-            fileUrl.endsWith(
-              "babel-plugin-transform-async-to-promises/helpers.mjs",
-            )
-          ) {
-            return "babel_helpers"
-          }
-          if (babelHelperNameFromUrl(fileUrl)) {
-            return "babel_helpers"
-          }
-          if (urlIsInsideOf(fileUrl, jsenvBabelPluginDirectoryUrl)) {
-            return "babel_helpers"
+          if (babelHelpersChunk) {
+            const fileUrl = fileUrlConverter.asFileUrl(id)
+            if (
+              fileUrl.endsWith(
+                "babel-plugin-transform-async-to-promises/helpers.mjs",
+              )
+            ) {
+              return "babel_helpers"
+            }
+            if (babelHelperNameFromUrl(fileUrl)) {
+              return "babel_helpers"
+            }
+            if (fileUrl === globalThisClientFileUrl) {
+              return "babel_helpers"
+            }
+            if (fileUrl === newStylesheetClientFileUrl) {
+              return "babel_helpers"
+            }
+            if (fileUrl === regeneratorRuntimeClientFileUrl) {
+              return "babel_helpers"
+            }
           }
           return null
         },
@@ -259,6 +293,14 @@ const rollupPluginJsenv = ({
         return { id: url, external: true }
       }
       if (!importCanBeBundled(url)) {
+        return { id: url, external: true }
+      }
+      const urlInfo = urlGraph.getUrlInfo(url)
+      if (!urlInfo) {
+        // happen when excluded by urlAnalysis.include
+        return { id: url, external: true }
+      }
+      if (!urlInfo.shouldHandle) {
         return { id: url, external: true }
       }
       const filePath = fileUrlConverter.asFilePath(url)

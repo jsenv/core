@@ -21,7 +21,7 @@ export const relativeUrlToEmptyCoverage = async (
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [[babelPluginInstrument, { rootDirectoryUrl }]],
       urlInfo: {
-        url: fileUrl,
+        originalUrl: fileUrl,
         content,
       },
     })

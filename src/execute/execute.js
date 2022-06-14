@@ -68,6 +68,7 @@ export const execute = async ({
   }
   if (runtime.needsServer) {
     const urlGraph = createUrlGraph()
+    const runtimeCompat = { [runtime.name]: runtime.version }
     const kitchen = createKitchen({
       signal,
       logger,
@@ -75,6 +76,7 @@ export const execute = async ({
       urlGraph,
       scenario,
       sourcemaps,
+      runtimeCompat,
       writeGeneratedFiles,
       plugins: [
         ...plugins,
@@ -82,6 +84,7 @@ export const execute = async ({
           rootDirectoryUrl,
           urlGraph,
           scenario,
+          runtimeCompat,
 
           htmlSupervisor,
           injectedGlobals,

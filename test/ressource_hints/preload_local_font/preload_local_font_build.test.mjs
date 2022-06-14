@@ -13,6 +13,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     minification: false,
+    writeGeneratedFiles: true,
     ...params,
   })
   const server = await startFileServer({
@@ -49,7 +50,8 @@ await test({
 
 // no support for <script type="module">
 await test({
-  bundling: true,
+  // logLevel: "debug",
+  bundling: false,
   runtimeCompat: {
     chrome: "60",
   },

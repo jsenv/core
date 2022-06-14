@@ -5,7 +5,7 @@ import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const jsMentions = await parseJsUrls({
     js: urlInfo.content,
-    url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+    url: urlInfo.originalUrl,
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
   })
@@ -51,10 +51,11 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       typePropertyNode: jsMention.typePropertyNode,
     })
     actions.push(async () => {
+      const replacement = await referenceUtils.readGeneratedSpecifier(reference)
       magicSource.replace({
         start: jsMention.specifierStart,
         end: jsMention.specifierEnd,
-        replacement: await referenceUtils.readGeneratedSpecifier(reference),
+        replacement,
       })
       if (reference.mutation) {
         reference.mutation(magicSource)

@@ -11,7 +11,7 @@ const actual = {
   url,
 }
 const expected = {
-  type: "absolute_specifier",
+  type: "node_builtin_specifier",
   url: "node:fs",
 }
 assert({ actual, expected })

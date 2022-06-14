@@ -28,6 +28,6 @@ ${urlToFileSystemPath(new URL("./client/style.css", import.meta.url).href)}:2:25
                               ^
   3 | }
 --- plugin name ---
-"jsenv:fetch_file_urls"`
+"jsenv:file_url_fetching"`
   assert({ actual, expected })
 }

@@ -159,6 +159,9 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
       return
     }
     if (typeof pluginEntry === "object" && pluginEntry !== null) {
+      if (!pluginEntry.name) {
+        pluginEntry.name = "anonymous"
+      }
       const { appliesDuring } = pluginEntry
       if (appliesDuring === undefined) {
         console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
@@ -168,9 +171,20 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
         plugins.push(pluginEntry)
         return
       }
+      if (typeof appliesDuring === "string") {
+        if (!["dev", "build", "test"].includes(appliesDuring)) {
+          throw new Error(
+            `"appliesDuring" must be "dev", "test" or "build", got ${appliesDuring}`,
+          )
+        }
+        if (appliesDuring === scenario) {
+          plugins.push(pluginEntry)
+        }
+        return
+      }
       if (typeof appliesDuring !== "object") {
         throw new Error(
-          `"appliesDuring" must be an object or "*", got ${appliesDuring}`,
+          `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
         )
       }
       if (appliesDuring[scenario]) {
@@ -252,8 +266,8 @@ const returnValueAssertions = [
         return { content: valueReturned }
       }
       if (typeof valueReturned === "object") {
-        const { external, content } = valueReturned
-        if (external) {
+        const { shouldHandle, content } = valueReturned
+        if (shouldHandle === false) {
           return undefined
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content)) {

@@ -22,9 +22,10 @@ import {
   createPackagePathNotExportedError,
   createInvalidPackageTargetError,
 } from "./errors.js"
+import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js"
 
 export const applyNodeEsmResolution = ({
-  conditions = ["node", "import"],
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
   parentUrl,
   specifier,
   lookupPackageScope = defaultLookupPackageScope,
@@ -92,6 +93,12 @@ const applyPackageSpecifierResolution = ({
   }
   try {
     const urlObject = new URL(specifier)
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier,
+      }
+    }
     return {
       type: "absolute_specifier",
       url: urlObject.href,
@@ -746,7 +753,11 @@ const applyLegacySubpathResolution = ({
 
 const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
   for (const condition of conditions) {
-    const resolved = mainLegacyResolvers[condition](packageJson, packageUrl)
+    const conditionResolver = mainLegacyResolvers[condition]
+    if (!conditionResolver) {
+      continue
+    }
+    const resolved = conditionResolver(packageJson, packageUrl)
     if (resolved) {
       return {
         type: resolved.type,

@@ -1,19 +1,14 @@
-import { urlIsInsideOf } from "@jsenv/filesystem"
-
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { parseHtmlString } from "@jsenv/utils/html_ast/html_ast.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { jsenvRootDirectoryUrl } from "@jsenv/core/src/jsenv_root_directory_url.js"
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
 
-export const jsenvPluginImportMetaHot = ({ rootDirectoryUrl }) => {
-  const preferSourceFiles =
-    rootDirectoryUrl === jsenvRootDirectoryUrl ||
-    urlIsInsideOf(rootDirectoryUrl, jsenvRootDirectoryUrl)
-  const importMetaHotClientFileUrl = preferSourceFiles
-    ? new URL("./client/import_meta_hot.js", import.meta.url).href
-    : new URL("./dist/import_meta_hot.js", jsenvRootDirectoryUrl).href
+export const jsenvPluginImportMetaHot = () => {
+  const importMetaHotClientFileUrl = new URL(
+    "./client/import_meta_hot.js",
+    import.meta.url,
+  ).href
 
   return {
     name: "jsenv:import_meta_hot",
