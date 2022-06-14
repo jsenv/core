@@ -8,7 +8,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
     const inlineContentInfos = await parseJsInlineContentInfos({
       js: urlInfo.content,
-      url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+      url: urlInfo.originalUrl,
       isJsModule: urlInfo.type === "js_module",
     })
     if (inlineContentInfos.length === 0) {
@@ -83,7 +83,7 @@ const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [babelPluginMetadataInlineContents],
     urlInfo: {
-      url,
+      originalUrl: url,
       type: isJsModule ? "js_module" : "js_classic",
       content: js,
     },

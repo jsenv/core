@@ -1,6 +1,5 @@
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
-import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
@@ -35,7 +34,7 @@ export const jsenvPluginCommonJs = ({
       },
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "cjs_as_js_module",
@@ -57,6 +56,8 @@ export const jsenvPluginCommonJs = ({
         ...urlInfo.data.commonjs,
       })
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         content,

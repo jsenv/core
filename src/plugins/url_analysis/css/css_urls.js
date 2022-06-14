@@ -41,7 +41,7 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
         },
       }),
     ],
-    url: urlInfo.data.rawUrl || urlInfo.url,
+    url: urlInfo.originalUrl,
     content: urlInfo.content,
   })
   await Promise.all(actions.map((action) => action()))

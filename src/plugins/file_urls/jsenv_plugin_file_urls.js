@@ -63,8 +63,8 @@ export const jsenvPluginFileUrls = ({
           if (!pathnameUsesTrailingSlash) {
             urlObject.pathname = `${pathname}/`
           }
+          reference.expectedType = "directory"
           if (directoryReferenceAllowed) {
-            reference.expectedType = "directory"
             const directoryFacadeUrl = urlObject.href
             const directoryUrlRaw = preservesSymlink
               ? directoryFacadeUrl
@@ -91,6 +91,8 @@ export const jsenvPluginFileUrls = ({
         }
         if (filesystemResolution.isDirectory) {
           reference.expectedType = "directory"
+        } else {
+          reference.expectedType = undefined
         }
         const fileFacadeUrl = filesystemResolution.url
         const fileUrlRaw = preservesSymlink

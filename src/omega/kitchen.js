@@ -277,6 +277,7 @@ export const createKitchen = ({
         type,
         subtype,
         contentType = "application/octet-stream",
+        originalUrl,
         originalContent,
         content,
         sourcemap,
@@ -298,7 +299,8 @@ export const createKitchen = ({
           subtype: urlInfo.subtype,
         })
       urlInfo.contentType = contentType
-      // during build urls info are reused and load returns originalContent
+      // during build urls info are reused and load returns originalUrl/originalContent
+      urlInfo.originalUrl = originalUrl || urlInfo.originalUrl
       urlInfo.originalContent =
         originalContent === undefined ? content : originalContent
       urlInfo.content = content
@@ -618,6 +620,44 @@ export const createKitchen = ({
     return [ref, urlInfo]
   }
 
+  const fetchOriginalUrlInfo = async ({
+    urlInfo,
+    context,
+    searchParam,
+    expectedType,
+  }) => {
+    const urlObject = new URL(urlInfo.url)
+    const { searchParams } = urlObject
+    if (!searchParams.has(searchParam)) {
+      return null
+    }
+    searchParams.delete(searchParam)
+    const originalUrl = urlObject.href
+    const originalReference = {
+      ...(context.reference.original || context.reference),
+      expectedType,
+    }
+    originalReference.url = originalUrl
+    const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+      originalReference.url,
+    )
+    if (originalUrlInfo.originalUrl === undefined) {
+      applyReferenceEffectsOnUrlInfo(
+        originalReference,
+        originalUrlInfo,
+        context,
+      )
+    }
+    await context.fetchUrlContent(originalUrlInfo, {
+      reference: originalReference,
+    })
+    if (originalUrlInfo.dependents.size === 0) {
+      context.urlGraph.deleteUrlInfo(originalUrlInfo.url)
+    }
+    return originalUrlInfo
+  }
+  kitchenContext.fetchOriginalUrlInfo = fetchOriginalUrlInfo
+
   return {
     pluginController,
     urlInfoTransformer,
@@ -664,6 +704,8 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.shouldHandle) {
     urlInfo.shouldHandle = true
   }
+  urlInfo.originalUrl = urlInfo.originalUrl || reference.url
+
   Object.assign(urlInfo.data, reference.data)
   Object.assign(urlInfo.timing, reference.timing)
   if (reference.injected) {

@@ -19,7 +19,6 @@ import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
-import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js"
 
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_as_js_classic_html.js"
@@ -92,7 +91,7 @@ const jsenvPluginAsJsClassicConversion = ({
       },
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_js_classic",
@@ -126,6 +125,8 @@ const jsenvPluginAsJsClassicConversion = ({
       })
       urlInfo.data.jsClassicFormat = jsClassicFormat
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_classic",
         contentType: "text/javascript",
         content,
@@ -192,18 +193,21 @@ const convertJsModuleToJsClassic = async ({
     ],
     urlInfo,
   })
+  let sourcemap = urlInfo.sourcemap
+  sourcemap = await composeTwoSourcemaps(sourcemap, map)
   if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
     const magicSource = createMagicSource(code)
     const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
     magicSource.prepend(`${systemjsCode}\n\n`)
-    const { content, sourcemap } = magicSource.toContentAndSourcemap()
+    const magicResult = magicSource.toContentAndSourcemap()
+    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap)
     return {
-      content,
-      sourcemap: await composeTwoSourcemaps(map, sourcemap),
+      content: magicResult.content,
+      sourcemap,
     }
   }
   return {
     content: code,
-    sourcemap: map,
+    sourcemap,
   }
 }

@@ -5,7 +5,7 @@ import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const jsMentions = await parseJsUrls({
     js: urlInfo.content,
-    url: (urlInfo.data && urlInfo.data.rawUrl) || urlInfo.url,
+    url: urlInfo.originalUrl,
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
   })

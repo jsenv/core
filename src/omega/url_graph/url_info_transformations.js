@@ -34,14 +34,14 @@ export const createUrlInfoTransformer = ({
         ))
     if (sourcemap.sources && sourcemap.sources.length > 1) {
       sourcemap.sources = sourcemap.sources.map(
-        (source) => new URL(source, urlInfo.data.rawUrl || urlInfo.url).href,
+        (source) => new URL(source, urlInfo.originalUrl).href,
       )
       if (!wantSourcesContent) {
         sourcemap.sourcesContent = undefined
       }
       return sourcemap
     }
-    sourcemap.sources = [urlInfo.data.rawUrl || urlInfo.url]
+    sourcemap.sources = [urlInfo.originalUrl]
     sourcemap.sourcesContent = [urlInfo.originalContent]
     if (!wantSourcesContent) {
       sourcemap.sourcesContent = undefined
@@ -74,6 +74,7 @@ export const createUrlInfoTransformer = ({
 
     // already loaded during "load" hook (happens during build)
     if (urlInfo.sourcemap) {
+      urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap)
       return
     }
     // check for existing sourcemap for this content
@@ -92,8 +93,9 @@ export const createUrlInfoTransformer = ({
       })
       try {
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference })
-        const sourcemap = JSON.parse(sourcemapUrlInfo.content)
-        urlInfo.sourcemap = normalizeSourcemap(urlInfo, sourcemap)
+        const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content)
+        const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw)
+        urlInfo.sourcemap = sourcemap
       } catch (e) {
         logger.error(`Error while handling existing sourcemap: ${e.message}`)
         return
@@ -146,7 +148,7 @@ export const createUrlInfoTransformer = ({
       if (sourcemapsRelativeSources) {
         sourcemap.sources = sourcemap.sources.map((source) => {
           const sourceRelative = urlToRelativeUrl(source, urlInfo.url)
-          return sourceRelative
+          return sourceRelative || "."
         })
       }
       sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")
