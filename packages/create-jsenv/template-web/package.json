@@ -1,5 +1,5 @@
 {
-  "name": "jsenv-starter",
+  "name": "jsenv-demo-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,9 +11,9 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.17.0",
-    "@jsenv/core": "27.0.0-alpha.60",
+    "@jsenv/core": "27.0.0-alpha.65",
     "@jsenv/eslint-config": "16.0.9",
-    "@jsenv/eslint-import-resolver": "0.1.7",
+    "@jsenv/eslint-import-resolver": "0.1.10",
     "eslint": "8.15.0",
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
