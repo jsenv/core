@@ -8287,7 +8287,7 @@ const jsenvPluginExplorer = ({
         meta
       }));
       let html = String(readFileSync(new URL(htmlClientFileUrl)));
-      html = html.replace("FAVICON_HREF", DataUrl.stringify({
+      html = html.replace("virtual:FAVICON_HREF", DataUrl.stringify({
         contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
         base64Flag: true,
         data: readFileSync(new URL(faviconClientFileUrl)).toString("base64")
