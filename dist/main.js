@@ -1,5 +1,5 @@
 import { parentPort } from "node:worker_threads";
-import { urlToRelativeUrl, normalizeStructuredMetaMap, urlToMeta, registerFileLifecycle, urlIsInsideOf, urlToExtension, urlToFilename, readFileSync as readFileSync$1, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, moveUrl, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, resolveUrl, writeFile, ensureEmptyDirectory, writeDirectory, resolveDirectoryUrl, urlToBasename } from "@jsenv/filesystem";
+import { urlToRelativeUrl, normalizeStructuredMetaMap, urlToMeta, registerFileLifecycle, urlIsInsideOf, urlToFilename, urlToExtension, readFileSync as readFileSync$1, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, moveUrl, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, resolveUrl, writeFile, ensureEmptyDirectory, writeDirectory, resolveDirectoryUrl, urlToBasename } from "@jsenv/filesystem";
 import { createDetailedMessage, createLogger, loggerToLevels } from "@jsenv/logger";
 import { createTaskLog, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
 import { getCallerPosition } from "@jsenv/utils/src/caller_position.js";
@@ -570,12 +570,12 @@ const jsenvPluginUrlAnalysis = ({
       directory: (urlInfo, context) => {
         const originalDirectoryReference = findOriginalDirectoryReference(urlInfo, context);
         const directoryRelativeUrl = urlToRelativeUrl(urlInfo.url, context.rootDirectoryUrl);
-        JSON.parse(urlInfo.content).forEach(directoryEntry => {
+        JSON.parse(urlInfo.content).forEach(directoryEntryName => {
           context.referenceUtils.found({
             type: "filesystem",
             subtype: "directory_entry",
-            specifier: directoryEntry,
-            trace: `"${directoryRelativeUrl}${directoryEntry}" entry in directory referenced by ${originalDirectoryReference.trace}`
+            specifier: directoryEntryName,
+            trace: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace}`
           });
         });
       }
@@ -1210,11 +1210,20 @@ const jsenvPluginFileUrls = ({
       if (context.reference.expectedType === "directory") {
         if (directoryReferenceAllowed) {
           const directoryEntries = readdirSync(urlObject);
+          let filename;
+
+          if (context.reference.type === "filesystem") {
+            const parentUrlInfo = context.urlGraph.getUrlInfo(context.reference.parentUrl);
+            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
+          } else {
+            filename = `${urlToFilename(urlInfo.url)}/`;
+          }
+
           return {
             type: "directory",
             contentType: "application/json",
             content: JSON.stringify(directoryEntries, null, "  "),
-            filename: urlToRelativeUrl(ensurePathnameTrailingSlash(urlInfo.url), context.rootDirectoryUrl)
+            filename
           };
         }
 
@@ -2711,7 +2720,7 @@ export default inlineContent.text`
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
 // the list of possible helpers:
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-const babelHelperClientDirectoryUrl = new URL("./node_modules/@jsenv/babel-plugins/src/babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
+const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
 // into node_modules not depending on "@jsenv/core"
 
 const getBabelHelperFileUrl = babelHelperName => {

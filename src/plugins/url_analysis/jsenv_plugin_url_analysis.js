@@ -75,12 +75,12 @@ export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
           urlInfo.url,
           context.rootDirectoryUrl,
         )
-        JSON.parse(urlInfo.content).forEach((directoryEntry) => {
+        JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
           context.referenceUtils.found({
             type: "filesystem",
             subtype: "directory_entry",
-            specifier: directoryEntry,
-            trace: `"${directoryRelativeUrl}${directoryEntry}" entry in directory referenced by ${originalDirectoryReference.trace}`,
+            specifier: directoryEntryName,
+            trace: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace}`,
           })
         })
       },

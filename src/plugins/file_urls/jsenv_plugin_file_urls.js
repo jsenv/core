@@ -4,6 +4,7 @@ import {
   urlIsInsideOf,
   urlToRelativeUrl,
   urlToExtension,
+  urlToFilename,
 } from "@jsenv/filesystem"
 
 import { applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution"
@@ -152,14 +153,20 @@ export const jsenvPluginFileUrls = ({
         if (context.reference.expectedType === "directory") {
           if (directoryReferenceAllowed) {
             const directoryEntries = readdirSync(urlObject)
+            let filename
+            if (context.reference.type === "filesystem") {
+              const parentUrlInfo = context.urlGraph.getUrlInfo(
+                context.reference.parentUrl,
+              )
+              filename = `${parentUrlInfo.filename}${context.reference.specifier}/`
+            } else {
+              filename = `${urlToFilename(urlInfo.url)}/`
+            }
             return {
               type: "directory",
               contentType: "application/json",
               content: JSON.stringify(directoryEntries, null, "  "),
-              filename: urlToRelativeUrl(
-                ensurePathnameTrailingSlash(urlInfo.url),
-                context.rootDirectoryUrl,
-              ),
+              filename,
             }
           }
           const error = new Error("found a directory on filesystem")
