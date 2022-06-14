@@ -10,7 +10,6 @@ await build({
     "./main.js": "main.js",
   },
   baseUrl: "./",
-  // sourcemaps: "file",
   minification: false,
   versioning: false,
   assetManifest: false,

@@ -13,7 +13,7 @@ import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution";
-import { statSync, readdirSync, readFileSync, realpathSync, existsSync } from "node:fs";
+import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { ensurePathnameTrailingSlash, injectQueryParams, injectQueryParamsIntoSpecifier, normalizeUrl, setUrlFilename, asUrlWithoutSearch, asUrlUntilPathname } from "@jsenv/utils/urls/url_utils.js";
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js";
@@ -1110,13 +1110,6 @@ const jsenvPluginFileUrls = ({
         search,
         hash
       } = urlObject;
-
-      const resolveSymlink = fileUrl => {
-        const realPath = realpathSync(new URL(fileUrl));
-        const realFileUrl = `${pathToFileURL(realPath)}${search}${hash}`;
-        return realFileUrl;
-      };
-
       let {
         pathname
       } = urlObject;
@@ -1125,14 +1118,16 @@ const jsenvPluginFileUrls = ({
       urlObject.hash = ""; // force trailing slash on directories and remove eventual trailing slash on files
 
       if (stat && stat.isDirectory()) {
-        reference.expectedType = "directory";
-
         if (!pathnameUsesTrailingSlash) {
           urlObject.pathname = `${pathname}/`;
         }
 
         if (directoryReferenceAllowed) {
-          return preservesSymlink ? urlObject.href : resolveSymlink(urlObject.href);
+          reference.expectedType = "directory";
+          const directoryFacadeUrl = urlObject.href;
+          const directoryUrlRaw = preservesSymlink ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
+          const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
+          return directoryUrl;
         } // give a chane to magic resolution if enabled
 
       } else if (pathnameUsesTrailingSlash) {
@@ -1151,9 +1146,14 @@ const jsenvPluginFileUrls = ({
         return null;
       }
 
-      const fileUrlRaw = filesystemResolution.url;
+      if (filesystemResolution.isDirectory) {
+        reference.expectedType = "directory";
+      }
+
+      const fileFacadeUrl = filesystemResolution.url;
+      const fileUrlRaw = preservesSymlink ? fileFacadeUrl : resolveSymlink(fileFacadeUrl);
       const fileUrl = `${fileUrlRaw}${search}${hash}`;
-      return preservesSymlink ? fileUrl : resolveSymlink(fileUrl);
+      return fileUrl;
     }
   }, {
     name: "jsenv:filesystem_resolution",
@@ -1228,7 +1228,7 @@ const jsenvPluginFileUrls = ({
         }
 
         const error = new Error("found a directory on filesystem");
-        error.code = "EISDIR";
+        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
         throw error;
       }
 
@@ -1248,6 +1248,10 @@ const jsenvPluginFileUrls = ({
       };
     }
   }];
+};
+
+const resolveSymlink = fileUrl => {
+  return pathToFileURL(realpathSync(new URL(fileUrl))).href;
 };
 
 const jsenvPluginHttpUrls = () => {
@@ -6848,6 +6852,9 @@ const createUrlInfoTransformer = ({
           specifier: sourcemaps === "file" && sourcemapsRelativeSources ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
         });
       }
+    } else if (urlInfo.sourcemapReference) {
+      // in the end we don't use the sourcemap placeholder
+      urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
     }
 
     urlInfo.contentEtag = bufferToEtag(Buffer.from(urlInfo.content));
@@ -6925,9 +6932,9 @@ const createFetchUrlContentError = ({
     });
   }
 
-  if (error.code === "EISDIR") {
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return createFailedToFetchUrlContentError({
-      code: "EISDIR",
+      code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
       reason: `found a directory on filesystem`
     });
   }
@@ -8074,7 +8081,7 @@ const createFileService = ({
         };
       }
 
-      if (code === "EISDIR") {
+      if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
         return serveDirectory(reference.url, {
           headers: {
             accept: "text/html"
@@ -11750,7 +11757,7 @@ const resyncRessourceHints = async ({
         }
 
         if (urlInfo.dependents.size === 0) {
-          logger.warn(`remove ressource hint because "${href}" not used anymore`);
+          logger.info(`remove ressource hint because "${href}" not used anymore`);
           actions.push(() => {
             removeHtmlNode(linkNode);
           });
@@ -12328,12 +12335,12 @@ build ${entryPointKeys.length} entry points`);
               urlInfo: rawUrlInfo,
               parentUrlInfo
             });
+            rawUrls[buildUrl] = rawUrlInfo.url;
 
             if (buildUrl.includes("?")) {
               rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url;
             }
 
-            rawUrls[buildUrl] = rawUrlInfo.url;
             return buildUrl;
           }
 

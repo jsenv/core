@@ -163,6 +163,9 @@ export const createUrlInfoTransformer = ({
               : sourcemapReference.generatedSpecifier,
         })
       }
+    } else if (urlInfo.sourcemapReference) {
+      // in the end we don't use the sourcemap placeholder
+      urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url)
     }
     urlInfo.contentEtag = bufferToEtag(Buffer.from(urlInfo.content))
   }
