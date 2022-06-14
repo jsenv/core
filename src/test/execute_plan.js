@@ -214,7 +214,7 @@ export const executePlan = async (
       // if there is an error during execution npm will mess up the output
       // (happens when npm runs several command in a workspace)
       // so we enable spinner only when !process.exitCode (no error so far)
-      !process.exitCode
+      process.exitCode !== 1
 
     const startMs = Date.now()
     const report = {}

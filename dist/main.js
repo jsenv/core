@@ -21,7 +21,6 @@ import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js";
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js";
 import { DataUrl } from "@jsenv/utils/urls/data_url.js";
 import { transpileWithParcel, minifyWithParcel } from "@jsenv/utils/css_ast/parcel_css.js";
-import { fetchOriginalUrlInfo } from "@jsenv/utils/graph/fetch_original_url_info.js";
 import { createRequire } from "node:module";
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js";
 import babelParser from "@babel/parser";
@@ -58,7 +57,7 @@ import { uneval } from "@jsenv/uneval";
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js";
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
-  const url = urlInfo.data.rawUrl || urlInfo.url;
+  const url = urlInfo.originalUrl;
   const content = urlInfo.content;
   const {
     scenario,
@@ -368,7 +367,7 @@ const parseAndTransformCssUrls = async (urlInfo, context) => {
         });
       }
     })],
-    url: urlInfo.data.rawUrl || urlInfo.url,
+    url: urlInfo.originalUrl,
     content: urlInfo.content
   });
   await Promise.all(actions.map(action => action()));
@@ -409,7 +408,7 @@ const isWebWorkerUrlInfo = urlInfo => {
 const parseAndTransformJsUrls = async (urlInfo, context) => {
   const jsMentions = await parseJsUrls({
     js: urlInfo.content,
-    url: urlInfo.data && urlInfo.data.rawUrl || urlInfo.url,
+    url: urlInfo.originalUrl,
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo)
   });
@@ -1115,24 +1114,26 @@ const jsenvPluginFileUrls = ({
       } = urlObject;
       const pathnameUsesTrailingSlash = pathname.endsWith("/");
       urlObject.search = "";
-      urlObject.hash = ""; // force trailing slash on directories and remove eventual trailing slash on files
+      urlObject.hash = "";
+      const foundADirectory = stat && stat.isDirectory();
+      const foundSomething = stat && !foundADirectory; // force trailing slash on directories
 
-      if (stat && stat.isDirectory()) {
-        if (!pathnameUsesTrailingSlash) {
-          urlObject.pathname = `${pathname}/`;
-        }
+      if (foundADirectory && !pathnameUsesTrailingSlash) {
+        urlObject.pathname = `${pathname}/`;
+      } // otherwise remove trailing slash if any
 
-        if (directoryReferenceAllowed) {
-          reference.expectedType = "directory";
-          const directoryFacadeUrl = urlObject.href;
-          const directoryUrlRaw = preservesSymlink ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
-          const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
-          return directoryUrl;
-        } // give a chane to magic resolution if enabled
 
-      } else if (pathnameUsesTrailingSlash) {
-        // a warning would be great because it's strange to reference a file with a trailing slash
+      if (foundSomething && pathnameUsesTrailingSlash) {
+        // a warning here? (because it's strange to reference a file with a trailing slash)
         urlObject.pathname = pathname.slice(0, -1);
+      }
+
+      if (foundADirectory && directoryReferenceAllowed) {
+        reference.data.foundADirectory = true;
+        const directoryFacadeUrl = urlObject.href;
+        const directoryUrlRaw = preservesSymlink ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
+        const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
+        return directoryUrl;
       }
 
       const url = urlObject.href;
@@ -1143,13 +1144,11 @@ const jsenvPluginFileUrls = ({
       });
 
       if (!filesystemResolution.found) {
+        reference.data.foundADirectory = foundADirectory;
         return null;
       }
 
-      if (filesystemResolution.isDirectory) {
-        reference.expectedType = "directory";
-      }
-
+      reference.data.foundADirectory = filesystemResolution.isDirectory;
       const fileFacadeUrl = filesystemResolution.url;
       const fileUrlRaw = preservesSymlink ? fileFacadeUrl : resolveSymlink(fileFacadeUrl);
       const fileUrl = `${fileUrlRaw}${search}${hash}`;
@@ -1207,7 +1206,7 @@ const jsenvPluginFileUrls = ({
 
       const urlObject = new URL(urlInfo.url);
 
-      if (context.reference.expectedType === "directory") {
+      if (context.reference.data.foundADirectory) {
         if (directoryReferenceAllowed) {
           const directoryEntries = readdirSync(urlObject);
           let filename;
@@ -1439,7 +1438,7 @@ const jsenvPluginJsInlineContent = ({
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
     const inlineContentInfos = await parseJsInlineContentInfos({
       js: urlInfo.content,
-      url: urlInfo.data && urlInfo.data.rawUrl || urlInfo.url,
+      url: urlInfo.originalUrl,
       isJsModule: urlInfo.type === "js_module"
     });
 
@@ -1525,7 +1524,7 @@ const parseJsInlineContentInfos = async ({
   } = await applyBabelPlugins({
     babelPlugins: [babelPluginMetadataInlineContents],
     urlInfo: {
-      url,
+      originalUrl: url,
       type: isJsModule ? "js_module" : "js_classic",
       content: js
     }
@@ -2632,7 +2631,7 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_json_module",
@@ -2645,6 +2644,8 @@ const jsenvPluginAsModules = () => {
 
       const jsonText = JSON.stringify(originalUrlInfo.content.trim());
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         // here we could `export default ${jsonText}`:
@@ -2658,7 +2659,7 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_css_module",
@@ -2676,6 +2677,8 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true
       });
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
@@ -2691,7 +2694,7 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_text_module",
@@ -2709,6 +2712,8 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true
       });
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_module",
         contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
@@ -3184,7 +3189,7 @@ const jsenvPluginAsJsClassicConversion = ({
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await fetchOriginalUrlInfo({
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
         urlInfo,
         context,
         searchParam: "as_js_classic",
@@ -3220,6 +3225,8 @@ const jsenvPluginAsJsClassicConversion = ({
       });
       urlInfo.data.jsClassicFormat = jsClassicFormat;
       return {
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
         type: "js_classic",
         contentType: "text/javascript",
         content,
@@ -3273,6 +3280,8 @@ const convertJsModuleToJsClassic = async ({
     }], babelPluginTransformImportMetaUrl, require$3("@babel/plugin-transform-modules-umd")])],
     urlInfo
   });
+  let sourcemap = urlInfo.sourcemap;
+  sourcemap = await composeTwoSourcemaps(sourcemap, map);
 
   if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
     const magicSource = createMagicSource(code);
@@ -3280,19 +3289,17 @@ const convertJsModuleToJsClassic = async ({
       as: "string"
     });
     magicSource.prepend(`${systemjsCode}\n\n`);
-    const {
-      content,
-      sourcemap
-    } = magicSource.toContentAndSourcemap();
+    const magicResult = magicSource.toContentAndSourcemap();
+    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap);
     return {
-      content,
-      sourcemap: await composeTwoSourcemaps(map, sourcemap)
+      content: magicResult.content,
+      sourcemap
     };
   }
 
   return {
     content: code,
-    sourcemap: map
+    sourcemap
   };
 };
 
@@ -6357,8 +6364,9 @@ const createUrlInfo = url => {
     contentType: "",
     // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
-    filename: "",
+    originalUrl: undefined,
     generatedUrl: null,
+    filename: "",
     isInline: false,
     inlineUrlSite: null,
     shouldHandle: undefined,
@@ -6702,7 +6710,7 @@ const createUrlInfoTransformer = ({
     sourcemapsSourcesContent || urlInfo.isInline || sourcemap.sources && sourcemap.sources.some(source => !source || !source.startsWith("file:"));
 
     if (sourcemap.sources && sourcemap.sources.length > 1) {
-      sourcemap.sources = sourcemap.sources.map(source => new URL(source, urlInfo.data.rawUrl || urlInfo.url).href);
+      sourcemap.sources = sourcemap.sources.map(source => new URL(source, urlInfo.originalUrl).href);
 
       if (!wantSourcesContent) {
         sourcemap.sourcesContent = undefined;
@@ -6711,7 +6719,7 @@ const createUrlInfoTransformer = ({
       return sourcemap;
     }
 
-    sourcemap.sources = [urlInfo.data.rawUrl || urlInfo.url];
+    sourcemap.sources = [urlInfo.originalUrl];
     sourcemap.sourcesContent = [urlInfo.originalContent];
 
     if (!wantSourcesContent) {
@@ -6747,6 +6755,7 @@ const createUrlInfoTransformer = ({
     sourcemapUrlInfo.isInline = sourcemaps === "inline"; // already loaded during "load" hook (happens during build)
 
     if (urlInfo.sourcemap) {
+      urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
       return;
     } // check for existing sourcemap for this content
 
@@ -6775,8 +6784,9 @@ const createUrlInfoTransformer = ({
         await context.cook(sourcemapUrlInfo, {
           reference: sourcemapReference
         });
-        const sourcemap = JSON.parse(sourcemapUrlInfo.content);
-        urlInfo.sourcemap = normalizeSourcemap(urlInfo, sourcemap);
+        const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
+        const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
+        urlInfo.sourcemap = sourcemap;
       } catch (e) {
         logger.error(`Error while handling existing sourcemap: ${e.message}`);
         return;
@@ -6835,7 +6845,7 @@ const createUrlInfoTransformer = ({
       if (sourcemapsRelativeSources) {
         sourcemap.sources = sourcemap.sources.map(source => {
           const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-          return sourceRelative;
+          return sourceRelative || ".";
         });
       }
 
@@ -7300,6 +7310,7 @@ const createKitchen = ({
         type,
         subtype,
         contentType = "application/octet-stream",
+        originalUrl,
         originalContent,
         content,
         sourcemap,
@@ -7314,8 +7325,9 @@ const createKitchen = ({
         type: urlInfo.type,
         subtype: urlInfo.subtype
       });
-      urlInfo.contentType = contentType; // during build urls info are reused and load returns originalContent
+      urlInfo.contentType = contentType; // during build urls info are reused and load returns originalUrl/originalContent
 
+      urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
       urlInfo.originalContent = originalContent === undefined ? content : originalContent;
       urlInfo.content = content;
       urlInfo.sourcemap = sourcemap;
@@ -7638,6 +7650,45 @@ const createKitchen = ({
     return [ref, urlInfo];
   };
 
+  const fetchOriginalUrlInfo = async ({
+    urlInfo,
+    context,
+    searchParam,
+    expectedType
+  }) => {
+    const urlObject = new URL(urlInfo.url);
+    const {
+      searchParams
+    } = urlObject;
+
+    if (!searchParams.has(searchParam)) {
+      return null;
+    }
+
+    searchParams.delete(searchParam);
+    const originalUrl = urlObject.href;
+    const originalReference = { ...(context.reference.original || context.reference),
+      expectedType
+    };
+    originalReference.url = originalUrl;
+    const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(originalReference.url);
+
+    if (originalUrlInfo.originalUrl === undefined) {
+      applyReferenceEffectsOnUrlInfo(originalReference, originalUrlInfo, context);
+    }
+
+    await context.fetchUrlContent(originalUrlInfo, {
+      reference: originalReference
+    });
+
+    if (originalUrlInfo.dependents.size === 0) {
+      context.urlGraph.deleteUrlInfo(originalUrlInfo.url);
+    }
+
+    return originalUrlInfo;
+  };
+
+  kitchenContext.fetchOriginalUrlInfo = fetchOriginalUrlInfo;
   return {
     pluginController,
     urlInfoTransformer,
@@ -7693,6 +7744,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     urlInfo.shouldHandle = true;
   }
 
+  urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
   Object.assign(urlInfo.data, reference.data);
   Object.assign(urlInfo.timing, reference.timing);
 
@@ -9240,7 +9292,7 @@ const executePlan = async (plan, {
     const executionSpinner = !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY && // if there is an error during execution npm will mess up the output
     // (happens when npm runs several command in a workspace)
     // so we enable spinner only when !process.exitCode (no error so far)
-    !process.exitCode;
+    process.exitCode !== 1;
     const startMs = Date.now();
     const report = {};
     let rawOutput = "";
@@ -11853,6 +11905,7 @@ const build = async ({
   },
   plugins = [],
   sourcemaps = false,
+  sourcemapsSourcesContent,
   urlAnalysis = {},
   nodeEsmResolution,
   fileSystemMagicResolution,
@@ -11935,6 +11988,7 @@ build ${entryPointKeys.length} entry points`);
       urlGraph: rawGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsSourcesContent,
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [...plugins, {
@@ -12135,6 +12189,8 @@ build ${entryPointKeys.length} entry points`);
             type,
             subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
             filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+            originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+            originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
             ...bundlerGeneratedUrlInfo,
             data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
               ...bundlerGeneratedUrlInfo.data,
@@ -12180,6 +12236,7 @@ build ${entryPointKeys.length} entry points`);
       urlGraph: finalGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsSourcesContent,
       sourcemapsRelativeSources: !versioning,
       runtimeCompat,
       writeGeneratedFiles,
@@ -12511,6 +12568,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`);
         baseUrl,
         postBuildEntryUrls,
         sourcemaps,
+        sourcemapsSourcesContent,
         runtimeCompat,
         writeGeneratedFiles,
         rawGraph,
@@ -12738,6 +12796,7 @@ const applyUrlVersioning = async ({
   baseUrl,
   postBuildEntryUrls,
   sourcemaps,
+  sourcemapsSourcesContent,
   runtimeCompat,
   writeGeneratedFiles,
   rawGraph,
@@ -12840,6 +12899,7 @@ const applyUrlVersioning = async ({
       urlGraph: finalGraph,
       scenario: "build",
       sourcemaps,
+      sourcemapsSourcesContent,
       sourcemapsRelativeSources: true,
       runtimeCompat,
       writeGeneratedFiles,
