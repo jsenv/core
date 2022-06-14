@@ -10,6 +10,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   protocol: "http",
   keepProcessAlive: false,
+  devServerAutoreload: false,
 })
 const { duration } = serverStartMeasures.stop()
 devServerMetrics["time to start dev server"] = {

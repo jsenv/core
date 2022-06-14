@@ -31,7 +31,14 @@ export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
     name: "jsenv:url_analysis",
     appliesDuring: "*",
     redirectUrl: (reference) => {
-      if (reference.specifier[0] === "#") {
+      if (
+        reference.specifier[0] === "#" &&
+        // For Html, css and in general "#" refer to a ressource in the page
+        // so that urls must be kept intact
+        // However for js import specifiers they have a different meaning and we want
+        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+        reference.type !== "js_import_export"
+      ) {
         reference.shouldHandle = false
         return
       }

@@ -43,7 +43,7 @@ export const initReloadableProcess = async ({
     })
   }
   const logger = createLogger({ logLevel })
-  if (parentPort) {
+  if (enabled && parentPort) {
     enabled = false
     logger.warn(`Cannot make process reloadable as it is a worker`)
   }
