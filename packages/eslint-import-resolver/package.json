@@ -25,7 +25,7 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node ./scripts/test.mjs",
+    "test": "node --conditions=development ./scripts/test.mjs",
     "build": "node  --experimental-import-meta-resolve ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
