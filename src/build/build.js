@@ -588,10 +588,10 @@ build ${entryPointKeys.length} entry points`)
                 urlInfo: rawUrlInfo,
                 parentUrlInfo,
               })
+              rawUrls[buildUrl] = rawUrlInfo.url
               if (buildUrl.includes("?")) {
                 rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url
               }
-              rawUrls[buildUrl] = rawUrlInfo.url
               return buildUrl
             }
             if (reference.type === "sourcemap_comment") {

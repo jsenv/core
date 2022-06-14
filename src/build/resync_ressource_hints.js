@@ -76,7 +76,7 @@ export const resyncRessourceHints = async ({
           return
         }
         if (urlInfo.dependents.size === 0) {
-          logger.warn(
+          logger.info(
             `remove ressource hint because "${href}" not used anymore`,
           )
           actions.push(() => {
