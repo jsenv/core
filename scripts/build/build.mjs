@@ -3,12 +3,6 @@ import { build } from "@jsenv/core"
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
 const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
 
-// pour build jsenv lui-meme comment on va faire?
-// - il faut que le build sache qu'on build pour node et préserve les imports builtin
-// - il faut garder comme externe toutes les deps pour commencer
-// (ensuite on fera une liste de ce qu'on peut bundle)
-// - il faut que jsenv puisse s'éxecuter depuis dist
-
 await build({
   rootDirectoryUrl: jsenvRootDirectoryUrl,
   buildDirectoryUrl: jsenvDistDirectoryUrl,
