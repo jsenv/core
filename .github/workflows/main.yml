@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, macos-10.15, windows-2022]
-        node: [16.13.0]
+        node: [16.14.2]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
     env:
