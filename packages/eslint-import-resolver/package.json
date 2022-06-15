@@ -32,6 +32,7 @@
   "dependencies": {
     "@jsenv/filesystem": "4.0.0",
     "@jsenv/importmap": "1.2.0",
+    "@jsenv/urls": "1.1.0",
     "@jsenv/node-esm-resolution": "0.0.10"
   },
   "devDependencies": {

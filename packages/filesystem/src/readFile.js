@@ -1,12 +1,18 @@
-import { promisify } from "node:util"
 import { readFile as readFileNode } from "node:fs"
 
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
 
-const readFilePromisified = promisify(readFileNode)
 export const readFile = async (value, { as = "buffer" } = {}) => {
   const fileUrl = assertAndNormalizeFileUrl(value)
-  const buffer = await readFilePromisified(new URL(fileUrl))
+  const buffer = await new Promise((resolve, reject) => {
+    readFileNode(new URL(fileUrl), (error, buffer) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(buffer)
+      }
+    })
+  })
   if (as === "buffer") {
     return buffer
   }

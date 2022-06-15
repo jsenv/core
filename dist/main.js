@@ -1,8 +1,8 @@
 import { parentPort } from "node:worker_threads";
-import { urlToRelativeUrl, registerFileLifecycle, urlIsInsideOf, urlToFilename, urlToExtension, readFileSync as readFileSync$1, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, moveUrl, normalizeStructuredMetaMap, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, resolveUrl, writeFile, ensureEmptyDirectory, writeDirectory, resolveDirectoryUrl, urlToBasename } from "@jsenv/filesystem";
+import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
 import { createDetailedMessage, createLogger, loggerToLevels } from "@jsenv/logger";
 import { createTaskLog, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
-import { URL_META, generateInlineContentUrl, ensurePathnameTrailingSlash, DataUrl, injectQueryParams, injectQueryParamsIntoSpecifier, normalizeUrl, stringifyUrlSite, setUrlFilename, getCallerPosition, asUrlWithoutSearch, asUrlUntilPathname } from "@jsenv/urls";
+import { urlToRelativeUrl, URL_META, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, urlToExtension, DataUrl, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename } from "@jsenv/urls";
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
 import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
@@ -8334,19 +8334,18 @@ const jsenvPluginExplorer = ({
         return null;
       }
 
-      const structuredMetaMapRelativeForExplorable = {};
+      const associationsForExplorable = {};
       Object.keys(groups).forEach(groupName => {
         const groupConfig = groups[groupName];
-        structuredMetaMapRelativeForExplorable[groupName] = {
+        associationsForExplorable[groupName] = {
           "**/.jsenv/": false,
           // avoid visting .jsenv directory in jsenv itself
           ...groupConfig
         };
       });
-      const structuredMetaMapForExplorable = normalizeStructuredMetaMap(structuredMetaMapRelativeForExplorable, rootDirectoryUrl);
       const matchingFileResultArray = await collectFiles({
         directoryUrl: rootDirectoryUrl,
-        structuredMetaMap: structuredMetaMapForExplorable,
+        associations: associationsForExplorable,
         predicate: meta => Object.keys(meta).some(group => Boolean(meta[group]))
       });
       const files = matchingFileResultArray.map(({
@@ -8823,13 +8822,12 @@ const generateExecutionSteps = async (plan, {
   signal,
   rootDirectoryUrl
 }) => {
-  const structuredMetaMap = {
-    filePlan: plan
-  };
   const fileResultArray = await collectFiles({
     signal,
     directoryUrl: rootDirectoryUrl,
-    structuredMetaMap,
+    associations: {
+      filePlan: plan
+    },
     predicate: ({
       filePlan
     }) => filePlan
