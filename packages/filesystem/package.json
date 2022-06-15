@@ -1,11 +1,11 @@
 {
-  "name": "@jsenv/urls",
+  "name": "@jsenv/filesystem",
   "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
-    "directory": "packages/urls"
+    "directory": "packages/filesystem"
   },
   "publishConfig": {
     "access": "public"
@@ -30,7 +30,8 @@
     "test": "node --conditions=development ./test.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "3.1.0",
+    "@jsenv/urls": "1.0.0",
+    "@jsenv/abort": "4.1.2",
     "@jsenv/log": "1.6.3"
   }
 }
