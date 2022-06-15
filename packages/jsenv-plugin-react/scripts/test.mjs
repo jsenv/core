@@ -8,6 +8,12 @@ await executeTestPlan({
         runtime: nodeProcess,
       },
     },
+    "test/**/react_build.test.mjs": {
+      node: {
+        runtime: nodeProcess,
+        allocatedMs: 90_000,
+      },
+    },
   },
   failFast: process.argv.includes("--workspace"),
   completedExecutionLogMerging: process.argv.includes("--workspace"),

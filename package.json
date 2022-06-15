@@ -45,7 +45,7 @@
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
-    "test-packages": "npm run test --workspaces --if-present",
+    "test-packages": "npm run test --workspaces --if-present -- --workspace",
     "start_file_server": "node ./scripts/dev/start_file_server.mjs",
     "workspace-versions": "node ./scripts/publish/workspace_versions.mjs",
     "workspace-publish": "node ./scripts/publish/workspace_publish.mjs",

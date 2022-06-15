@@ -1,7 +1,7 @@
 import { executeTestPlan, nodeProcess } from "@jsenv/core"
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("../../", import.meta.url),
+  rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "test/**/*.test.mjs": {
       node: {
@@ -9,5 +9,7 @@ await executeTestPlan({
       },
     },
   },
+  failFast: process.argv.includes("--workspace"),
+  completedExecutionLogMerging: process.argv.includes("--workspace"),
   coverage: process.argv.includes("--coverage"),
 })

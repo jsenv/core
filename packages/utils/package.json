@@ -12,7 +12,7 @@
   },
   "type": "module",
   "scripts": {
-    "test": "node --conditions=development ./test.mjs"
+    "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
     "@babel/parser": "7.17.8",

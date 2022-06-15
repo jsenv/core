@@ -21,7 +21,7 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node --conditions=development ./scripts/test/test.mjs"
+    "test": "node --conditions=development ./scripts/test.mjs"
   },
   "devDependencies": {
     "@jsenv/assert": "2.5.4",

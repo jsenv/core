@@ -27,7 +27,7 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node --conditions=development ./test.mjs"
+    "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
     "@jsenv/urls": "1.1.1",

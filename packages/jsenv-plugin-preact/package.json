@@ -22,7 +22,7 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node --conditions=development ./scripts/test/test.mjs"
+    "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",

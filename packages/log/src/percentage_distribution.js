@@ -39,11 +39,15 @@ export const distributePercentages = (
 
   Object.keys(percentages).forEach((name) => {
     const percentage = percentages[name]
-    const percentageAllocated = setRoundedPrecision(percentage, precision)
+    const percentageAllocated = setRoundedPrecision(percentage, {
+      decimals: precision,
+    })
     remainingPercentage -= percentageAllocated
     percentages[name] = percentageAllocated
   })
   const lastName = numberNames[numberNames.length - 1]
-  percentages[lastName] = setRoundedPrecision(remainingPercentage, precision)
+  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
+    decimals: precision,
+  })
   return percentages
 }
