@@ -1,25 +1,26 @@
 /**
-
-I use trim to avoid writing expected like that:
-
-const expected = `> 1 | const a = true;
-       ^
-  2 | const b = true;`
-
-But instead
-
-const expected = `
-> 1 | const a = true;
-       ^
-  2 | const b = true;`.slice(1)
-
-Which is way more readable
-
-*/
+ * ".slice(1)" is used to be able to write "expected" like that:
+ *
+ * ```js
+ * const expected = `
+ * > 1 | const a = true;
+ *        ^
+ * 2 | const b = true;`.slice(1)
+ * ```
+ *
+ * Because it's more readable than
+ *
+ * ```js
+ * const expected = `> 1 | const a = true;
+ *       ^
+ * 2 | const b = true;`
+ * ```
+ *
+ */
 
 import { assert } from "@jsenv/assert"
 
-import { showSourceLocation } from "@jsenv/utils/urls/url_trace.js"
+import { showSourceLocation } from "@jsenv/urls"
 
 {
   const actual = showSourceLocation({

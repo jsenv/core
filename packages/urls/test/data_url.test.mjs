@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { DataUrl } from "@jsenv/utils/urls/data_url.js"
+import { DataUrl } from "@jsenv/urls"
 
 {
   const actual = DataUrl.parse("data:,")

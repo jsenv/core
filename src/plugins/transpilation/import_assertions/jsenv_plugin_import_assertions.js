@@ -12,7 +12,7 @@
 
 import { urlToFilename } from "@jsenv/filesystem"
 
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/urls"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 
 export const jsenvPluginImportAssertions = () => {

@@ -27,7 +27,7 @@ import {
   normalizeUrl,
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
-} from "@jsenv/utils/urls/url_utils.js"
+} from "@jsenv/urls"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 import {

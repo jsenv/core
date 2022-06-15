@@ -1,4 +1,4 @@
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/urls"
 
 export const jsenvPluginAsJsClassicWorkers = ({
   generateJsClassicFilename,

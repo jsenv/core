@@ -1,4 +1,4 @@
-import { DataUrl } from "@jsenv/utils/urls/data_url.js"
+import { DataUrl } from "@jsenv/urls"
 
 export const jsenvPluginInlineQueryParam = () => {
   return {

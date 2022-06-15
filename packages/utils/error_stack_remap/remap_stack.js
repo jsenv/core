@@ -1,6 +1,6 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { DataUrl } from "@jsenv/utils/urls/data_url.js"
+import { DataUrl } from "@jsenv/urls"
 import { SOURCEMAP } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 
 import { remapCallSite } from "./remap_call_site.js"

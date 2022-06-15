@@ -11,8 +11,10 @@ import {
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
-import { injectQueryParamsIntoSpecifier } from "@jsenv/utils/urls/url_utils.js"
+import {
+  generateInlineContentUrl,
+  injectQueryParamsIntoSpecifier,
+} from "@jsenv/urls"
 
 export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,

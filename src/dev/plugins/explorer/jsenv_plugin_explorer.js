@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { collectFiles, normalizeStructuredMetaMap } from "@jsenv/filesystem"
 
-import { DataUrl } from "@jsenv/utils/urls/data_url.js"
+import { DataUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginExplorer = ({ groups }) => {

@@ -6,10 +6,13 @@ import {
 } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { getCallerPosition } from "@jsenv/utils/src/caller_position.js"
-import { stringifyUrlSite } from "@jsenv/utils/urls/url_trace.js"
+import {
+  getCallerPosition,
+  stringifyUrlSite,
+  normalizeUrl,
+  setUrlFilename,
+} from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
-import { normalizeUrl, setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"

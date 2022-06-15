@@ -1,9 +1,6 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import {
-  startsWithWindowsDriveLetter,
-  windowsFilePathToUrl,
-} from "@jsenv/utils/urls/windows_file_path_utils.js"
+import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "@jsenv/urls"
 
 export const remapCallSite = async (
   callSite,

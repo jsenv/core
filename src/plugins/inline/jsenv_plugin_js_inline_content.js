@@ -2,7 +2,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { generateInlineContentUrl } from "@jsenv/utils/urls/inline_content_url_generator.js"
+import { generateInlineContentUrl } from "@jsenv/urls"
 
 export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {

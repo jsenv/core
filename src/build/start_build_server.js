@@ -30,7 +30,7 @@ import {
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/log"
-import { getCallerPosition } from "@jsenv/utils/src/caller_position.js"
+import { getCallerPosition } from "@jsenv/urls"
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 
 export const startBuildServer = async ({

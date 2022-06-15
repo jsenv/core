@@ -16,7 +16,7 @@ import { readFileSync, urlToFilename } from "@jsenv/filesystem"
 
 import { requireBabelPlugin } from "@jsenv/babel-plugins"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/urls"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 

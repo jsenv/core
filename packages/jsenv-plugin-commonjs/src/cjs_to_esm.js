@@ -8,7 +8,7 @@ import {
   urlToBasename,
 } from "@jsenv/filesystem"
 
-import { setUrlExtension, setUrlFilename } from "@jsenv/utils/urls/url_utils.js"
+import { setUrlExtension, setUrlFilename } from "@jsenv/urls"
 import { commonJsToJsModuleRaw } from "./cjs_to_esm_raw.js"
 import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.js"
 

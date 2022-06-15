@@ -1,6 +1,6 @@
 import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
 
-import { injectQueryParams } from "@jsenv/utils/urls/url_utils.js"
+import { injectQueryParams } from "@jsenv/urls"
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
 export const jsenvPluginCommonJs = ({

@@ -8,7 +8,7 @@ import {
 } from "@jsenv/filesystem"
 
 import { applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution"
-import { ensurePathnameTrailingSlash } from "@jsenv/utils/urls/url_utils.js"
+import { ensurePathnameTrailingSlash } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginFileUrls = ({
