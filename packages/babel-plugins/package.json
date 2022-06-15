@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/babel-plugins",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Set of babel plugins to use with jsenv",
   "license": "MIT",
   "repository": {

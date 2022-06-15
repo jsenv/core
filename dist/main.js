@@ -2724,30 +2724,12 @@ export default inlineContent.text`
   return [asJsonModule, asCssModule, asTextModule];
 };
 
-// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
-// the list of possible helpers:
-// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
-// into node_modules not depending on "@jsenv/core"
+const require$4 = createRequire(import.meta.url);
 
-const getBabelHelperFileUrl = babelHelperName => {
-  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
-  return babelHelperFileUrl;
-};
-const babelHelperNameFromUrl = url => {
-  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
-    return null;
-  }
+const babelPluginPackagePath = require$4.resolve("@jsenv/babel-plugins");
 
-  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
-  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
-  return babelHelperName;
-};
-
-const require$4 = createRequire(import.meta.url); // eslint-disable-next-line import/no-dynamic-require
-
-
-const requireBabelPlugin = name => require$4(name);
+const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
+const requireBabelPlugin = createRequire(babelPluginPackageUrl);
 
 const babelPluginTransformImportMetaUrl = babel => {
   return {
@@ -3497,6 +3479,26 @@ const getFeatureCompat = feature => {
   }
 
   return feature;
+};
+
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
+// the list of possible helpers:
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
+const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
+
+const getBabelHelperFileUrl = babelHelperName => {
+  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
+  return babelHelperFileUrl;
+};
+const babelHelperNameFromUrl = url => {
+  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
+    return null;
+  }
+
+  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
+  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
+  return babelHelperName;
 };
 
 /* eslint-disable camelcase */

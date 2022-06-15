@@ -1,6 +1,5 @@
-import { requireBabelPlugin } from "@jsenv/babel-plugins"
-
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { requireBabelPlugin } from "./babel/require_babel_plugin.js"
 
 export const jsenvPluginTopLevelAwait = () => {
   return {

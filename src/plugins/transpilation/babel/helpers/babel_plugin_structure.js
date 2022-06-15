@@ -1,4 +1,5 @@
-import { getBabelHelperFileUrl, requireBabelPlugin } from "@jsenv/babel-plugins"
+import { getBabelHelperFileUrl } from "@jsenv/babel-plugins"
+import { requireBabelPlugin } from "../require_babel_plugin.js"
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
 
 export const getBaseBabelPluginStructure = ({
