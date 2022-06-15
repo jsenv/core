@@ -1,4 +1,4 @@
-import { urlToFilename } from "@jsenv/filesystem"
+import { urlToFilename } from "./url_to_filename.js"
 
 export const generateInlineContentUrl = ({
   url,

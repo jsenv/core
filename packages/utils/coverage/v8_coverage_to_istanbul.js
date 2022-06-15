@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { Abort } from "@jsenv/abort"
 
 import { require } from "@jsenv/utils/require.js"

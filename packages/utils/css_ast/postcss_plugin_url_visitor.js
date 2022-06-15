@@ -11,7 +11,7 @@ hence sourcemap cannot point the original source location
 
 */
 
-import { fileSystemPathToUrl, resolveUrl } from "@jsenv/filesystem"
+import { fileSystemPathToUrl, resolveUrl } from "@jsenv/urls"
 
 import { require } from "@jsenv/utils/require.js"
 

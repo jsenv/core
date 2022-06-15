@@ -2,8 +2,8 @@ import {
   assertAndNormalizeDirectoryUrl,
   readDirectory,
   readFile,
-  resolveUrl,
 } from "@jsenv/filesystem"
+import { resolveUrl } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/logger"
 import { Abort } from "@jsenv/abort"
 

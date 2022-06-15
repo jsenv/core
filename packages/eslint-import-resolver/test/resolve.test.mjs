@@ -1,9 +1,8 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls"
 import {
   ensureEmptyDirectory,
-  resolveUrl,
   ensureWindowsDriveLetter,
-  urlToFileSystemPath,
   writeFile,
 } from "@jsenv/filesystem"
 

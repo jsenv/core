@@ -8,7 +8,7 @@ import {
   isFileSystemPath,
   urlToExtension,
   urlToFileSystemPath,
-} from "@jsenv/filesystem"
+} from "@jsenv/urls"
 
 import { createJsParseError } from "./js_parse_error.js"
 

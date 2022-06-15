@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/filesystem"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls"
 
 import { require } from "@jsenv/utils/require.js"
 import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_coverage.js"

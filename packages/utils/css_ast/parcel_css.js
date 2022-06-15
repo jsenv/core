@@ -1,5 +1,5 @@
 import { createRequire } from "node:module"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 
 const require = createRequire(import.meta.url)
 

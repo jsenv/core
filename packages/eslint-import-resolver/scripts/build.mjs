@@ -1,5 +1,6 @@
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { writeFile, isFileSystemPath } from "@jsenv/filesystem"
+import { isFileSystemPath } from "@jsenv/urls"
+import { writeFile } from "@jsenv/filesystem"
 
 const esToCjs = async ({ url, map, content }) => {
   const { rollup } = await import("rollup")

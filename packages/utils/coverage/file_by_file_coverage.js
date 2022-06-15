@@ -3,7 +3,7 @@ import {
   fileSystemPathToUrl,
   isFileSystemPath,
   resolveUrl,
-} from "@jsenv/filesystem"
+} from "@jsenv/urls"
 
 export const normalizeFileByFileCoveragePaths = (
   fileByFileCoverage,

@@ -1,4 +1,5 @@
-import { writeFile, urlToFileSystemPath } from "@jsenv/filesystem"
+import { writeFile } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { byteAsFileSize } from "@jsenv/log"
 
 export const generateCoverageJsonFile = async ({

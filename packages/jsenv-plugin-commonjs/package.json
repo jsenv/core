@@ -13,10 +13,10 @@
   "type": "module",
   "main": "./main.js",
   "dependencies": {
-    "@jsenv/filesystem": "3.1.0",
+    "@jsenv/filesystem": "4.0.0",
     "@jsenv/logger": "4.0.1",
     "@jsenv/log": "1.6.3",
-    "@jsenv/urls": "1.0.0",
+    "@jsenv/urls": "1.1.0",
     "@rollup/plugin-commonjs": "22.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "13.3.0",

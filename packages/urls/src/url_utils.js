@@ -1,4 +1,6 @@
-import { urlToOrigin, urlToExtension, urlToRessource } from "@jsenv/filesystem"
+import { urlToOrigin } from "./url_to_origin.js"
+import { urlToExtension } from "./url_to_extension.js"
+import { urlToRessource } from "./url_to_ressource.js"
 
 export const asUrlWithoutSearch = (url) => {
   const urlObject = new URL(url)

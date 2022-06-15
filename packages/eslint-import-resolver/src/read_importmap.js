@@ -1,8 +1,5 @@
-import {
-  urlIsInsideOf,
-  urlToFileSystemPath,
-  readFileSync,
-} from "@jsenv/filesystem"
+import { readFileSync } from "@jsenv/filesystem"
+import { urlIsInsideOf, urlToFileSystemPath } from "@jsenv/urls"
 import { normalizeImportMap } from "@jsenv/importmap"
 
 import { applyUrlResolution } from "./url_resolution.js"

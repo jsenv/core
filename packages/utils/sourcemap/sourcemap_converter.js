@@ -2,7 +2,7 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   urlToFileSystemPath,
-} from "@jsenv/filesystem"
+} from "@jsenv/urls"
 
 export const sourcemapConverter = {
   toFileUrls: (sourcemap) => {

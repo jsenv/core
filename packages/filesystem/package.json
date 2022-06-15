@@ -30,7 +30,7 @@
     "test": "node --conditions=development ./test.mjs"
   },
   "dependencies": {
-    "@jsenv/urls": "1.0.0",
+    "@jsenv/urls": "1.1.0",
     "@jsenv/abort": "4.1.2",
     "@jsenv/log": "1.6.3"
   }

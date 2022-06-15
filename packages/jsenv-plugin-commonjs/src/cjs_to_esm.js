@@ -1,14 +1,17 @@
 import { readFileSync } from "node:fs"
 import {
   assertAndNormalizeDirectoryUrl,
-  urlIsInsideOf,
-  moveUrl,
   ensureWindowsDriveLetter,
-  urlToExtension,
-  urlToBasename,
 } from "@jsenv/filesystem"
 
-import { setUrlExtension, setUrlFilename } from "@jsenv/urls"
+import {
+  setUrlExtension,
+  setUrlFilename,
+  urlIsInsideOf,
+  moveUrl,
+  urlToExtension,
+  urlToBasename,
+} from "@jsenv/urls"
 import { commonJsToJsModuleRaw } from "./cjs_to_esm_raw.js"
 import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.js"
 

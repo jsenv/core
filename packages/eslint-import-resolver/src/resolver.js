@@ -6,10 +6,9 @@ import { createRequire } from "node:module"
 import {
   assertAndNormalizeDirectoryUrl,
   ensureWindowsDriveLetter,
-  urlToFileSystemPath,
-  fileSystemPathToUrl,
   getRealFileSystemUrlSync,
 } from "@jsenv/filesystem"
+import { urlToFileSystemPath, fileSystemPathToUrl } from "@jsenv/urls"
 
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js"
 import {

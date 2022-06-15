@@ -1,4 +1,5 @@
-import { resolveUrl, readFile } from "@jsenv/filesystem"
+import { readFile } from "@jsenv/filesystem"
+import { resolveUrl } from "@jsenv/urls"
 import { Abort } from "@jsenv/abort"
 
 import { require } from "@jsenv/utils/require.js"

@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 
 export const applyPostCss = async ({
   sourcemaps = "comment",
