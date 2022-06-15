@@ -21,6 +21,7 @@
     "@jsenv/log": "1.6.3",
     "@jsenv/logger": "4.0.1",
     "@jsenv/server": "12.6.0",
+    "@jsenv/urls": "1.0.0",
     "@parcel/css": "1.8.1",
     "acorn": "8.7.1",
     "acorn-import-assertions": "1.8.0",

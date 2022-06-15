@@ -1,9 +1,6 @@
-import {
-  normalizeStructuredMetaMap,
-  urlToMeta,
-  fileSystemPathToUrl,
-} from "@jsenv/filesystem"
+import { fileSystemPathToUrl } from "@jsenv/filesystem"
 
+import { URL_META } from "@jsenv/urls"
 import { require } from "@jsenv/utils/require.js"
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
@@ -19,17 +16,12 @@ export const babelPluginInstrument = (
 
   const { types } = api
 
-  const structuredMetaMapForCover = normalizeStructuredMetaMap(
-    {
-      cover: coverageConfig,
-    },
+  const associations = URL_META.resolveAssociations(
+    { cover: coverageConfig },
     rootDirectoryUrl,
   )
   const shouldInstrument = (url) => {
-    return urlToMeta({
-      url,
-      structuredMetaMap: structuredMetaMapForCover,
-    }).cover
+    return URL_META.applyAssociations({ url, associations }).cover
   }
 
   return {

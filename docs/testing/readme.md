@@ -221,7 +221,7 @@ const testPlan = {
 
 ### pattern
 
-_pattern_ is documented in [https://github.com/jsenv/jsenv-url-meta](https://github.com/jsenv/url-meta#common-pattern-example).
+_pattern_ is documented in [packages/urls/docs/url_meta/readme.md](../../packages/urls/docs/url_meta/readme.md).
 
 ### executionName
 

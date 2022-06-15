@@ -1,6 +1,5 @@
-import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
+import { resolveAssociations, getUrlMeta, injectQueryParams } from "@jsenv/urls"
 
-import { injectQueryParams } from "@jsenv/urls"
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
 export const jsenvPluginCommonJs = ({
@@ -8,7 +7,7 @@ export const jsenvPluginCommonJs = ({
   logLevel,
   include,
 }) => {
-  const structuredMetaMap = normalizeStructuredMetaMap(
+  const associations = resolveAssociations(
     {
       commonjs: include,
     },
@@ -20,9 +19,9 @@ export const jsenvPluginCommonJs = ({
     appliesDuring: "*",
     redirectUrl: {
       js_import_export: (reference) => {
-        const { commonjs } = urlToMeta({
+        const { commonjs } = URL_META.applyAssociations({
           url: reference.url,
-          structuredMetaMap,
+          associations,
         })
         if (!commonjs) {
           return null

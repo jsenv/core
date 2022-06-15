@@ -1,13 +1,12 @@
 import {
-  normalizeStructuredMetaMap,
   urlToFileSystemPath,
   ensureEmptyDirectory,
   resolveDirectoryUrl,
-  urlToMeta,
   assertAndNormalizeDirectoryUrl,
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
+import { URL_META } from "@jsenv/urls"
 import { generateCoverageJsonFile } from "@jsenv/utils/coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "@jsenv/utils/coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "@jsenv/utils/coverage/coverage_reporter_text_log.js"
@@ -113,25 +112,22 @@ export const executeTestPlan = async ({
       )
     }
     if (!coverageAndExecutionAllowed) {
-      const structuredMetaMapForExecute = normalizeStructuredMetaMap(
-        {
-          execute: testPlan,
-        },
+      const associationsForExecute = URL_META.resolveAssociations(
+        { execute: testPlan },
         "file:///",
       )
-      const structuredMetaMapForCover = normalizeStructuredMetaMap(
-        {
-          cover: coverageConfig,
-        },
+      const associationsForCover = URL_META.resolveAssociations(
+        { cover: coverageConfig },
         "file:///",
       )
       const patternsMatchingCoverAndExecute = Object.keys(
-        structuredMetaMapForExecute.execute,
+        associationsForExecute.execute,
       ).filter((testPlanPattern) => {
-        return urlToMeta({
+        const { cover } = URL_META.applyAssociations({
           url: testPlanPattern,
-          structuredMetaMap: structuredMetaMapForCover,
-        }).cover
+          associations: associationsForCover,
+        })
+        return cover
       })
       if (patternsMatchingCoverAndExecute.length) {
         // It would be strange, for a given file to be both covered and executed

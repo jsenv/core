@@ -7,14 +7,13 @@ import {
   urlToFileSystemPath,
   writeDirectory,
   ensureEmptyDirectory,
-  normalizeStructuredMetaMap,
-  urlToMeta,
   writeFileSync,
 } from "@jsenv/filesystem"
 import { createDetailedMessage, loggerToLevels } from "@jsenv/logger"
 import { createLog, startSpinner } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
+import { URL_META } from "@jsenv/urls"
 import { babelPluginInstrument } from "@jsenv/utils/coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "@jsenv/utils/coverage/report_to_coverage.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
@@ -231,17 +230,16 @@ export const executePlan = async (
     ).href
 
     if (coverage) {
-      const structuredMetaMapForCover = normalizeStructuredMetaMap(
-        {
-          cover: coverageConfig,
-        },
+      const associations = URL_META.resolveAssociations(
+        { cover: coverageConfig },
         rootDirectoryUrl,
       )
       const urlShouldBeCovered = (url) => {
-        return urlToMeta({
+        const { cover } = URL_META.applyAssociations({
           url: new URL(url, rootDirectoryUrl).href,
-          structuredMetaMap: structuredMetaMapForCover,
-        }).cover
+          associations,
+        })
+        return cover
       }
       runtimeParams.urlShouldBeCovered = urlShouldBeCovered
 

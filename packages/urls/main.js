@@ -23,3 +23,5 @@ export {
   replaceBackSlashesWithSlashes,
 } from "./src/windows_file_path_utils.js"
 export { getCallerPosition } from "./src/caller_position.js"
+
+export { URL_META } from "./src/meta/url_meta.js"

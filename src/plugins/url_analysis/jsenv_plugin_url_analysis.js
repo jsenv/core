@@ -1,9 +1,6 @@
-import {
-  normalizeStructuredMetaMap,
-  urlToMeta,
-  urlToRelativeUrl,
-} from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/filesystem"
 
+import { URL_META } from "@jsenv/urls"
 import { parseAndTransformHtmlUrls } from "./html/html_urls.js"
 import { parseAndTransformCssUrls } from "./css/css_urls.js"
 import { parseAndTransformJsUrls } from "./js/js_urls.js"
@@ -12,18 +9,13 @@ import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls
 export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
   let getIncludeInfo = () => undefined
   if (include) {
-    const includeMetaMap = normalizeStructuredMetaMap(
-      {
-        include,
-      },
+    const associations = URL_META.resolveAssociations(
+      { include },
       rootDirectoryUrl,
     )
     getIncludeInfo = (url) => {
-      const meta = urlToMeta({
-        url,
-        structuredMetaMap: includeMetaMap,
-      })
-      return meta.include
+      const { include } = URL_META.applyAssociations({ url, associations })
+      return include
     }
   }
 

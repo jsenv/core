@@ -2,8 +2,7 @@
  * - https://github.com/vitejs/vite/blob/main/packages/plugin-react/src/index.ts
  */
 
-import { normalizeStructuredMetaMap, urlToMeta } from "@jsenv/url-meta"
-
+import { URL_META } from "@jsenv/urls"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
@@ -44,7 +43,7 @@ const jsenvPluginJsxAndRefresh = ({
     "./**/*.tsx": true,
   },
 }) => {
-  const structuredMetaMap = normalizeStructuredMetaMap(
+  const associations = URL_META.resolveAssociations(
     {
       jsx: jsxInclude,
       refresh: refreshInclude,
@@ -57,7 +56,10 @@ const jsenvPluginJsxAndRefresh = ({
     appliesDuring: "*",
     transformUrlContent: {
       js_module: async (urlInfo, { scenario, referenceUtils }) => {
-        const urlMeta = urlToMeta({ url: urlInfo.url, structuredMetaMap })
+        const urlMeta = URL_META.applyAssociations({
+          url: urlInfo.url,
+          associations,
+        })
         const jsxEnabled = urlMeta.jsx
         const refreshEnabled = scenario === "dev" ? urlMeta.refresh : false
         const babelPlugins = [
