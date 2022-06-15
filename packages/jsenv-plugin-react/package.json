@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "0.0.19",
+  "version": "0.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,7 +33,8 @@
     "react-refresh": "0.13.0"
   },
   "peerDependencies": {
-    "@jsenv/core": "*"
+    "@jsenv/core": "*",
+    "react": "*"
   },
   "devDependencies": {
     "@jsenv/assert": "2.5.4",
