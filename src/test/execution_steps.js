@@ -5,13 +5,10 @@ export const generateExecutionSteps = async (
   plan,
   { signal, rootDirectoryUrl },
 ) => {
-  const structuredMetaMap = {
-    filePlan: plan,
-  }
   const fileResultArray = await collectFiles({
     signal,
     directoryUrl: rootDirectoryUrl,
-    structuredMetaMap,
+    associations: { filePlan: plan },
     predicate: ({ filePlan }) => filePlan,
   })
   const executionSteps = []

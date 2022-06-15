@@ -65,14 +65,8 @@ import { collectFiles } from "@jsenv/filesystem"
 
 const files = await collectFiles({
   directoryUrl: "file:///Users/you/directory",
-  structuredMetaMap: {
-    whatever: {
-      "./**/*.js": 42,
-    },
-  },
-  predicate: (meta) => {
-    return meta.whatever === 42
-  },
+  associations: { whatever: { "./**/*.js": 42 } },
+  predicate: ({ whatever }) => whatever === 42,
 })
 ```
 

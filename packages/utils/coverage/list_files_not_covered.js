@@ -5,13 +5,10 @@ export const listRelativeFileUrlToCover = async ({
   rootDirectoryUrl,
   coverageConfig,
 }) => {
-  const structuredMetaMapForCoverage = {
-    cover: coverageConfig,
-  }
   const matchingFileResultArray = await collectFiles({
     signal,
     directoryUrl: rootDirectoryUrl,
-    structuredMetaMap: structuredMetaMapForCoverage,
+    associations: { cover: coverageConfig },
     predicate: ({ cover }) => cover,
   })
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)

@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { URL_META, DataUrl } from "@jsenv/urls"
+import { DataUrl } from "@jsenv/urls"
 import { collectFiles } from "@jsenv/filesystem"
 
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
@@ -17,7 +17,7 @@ export const jsenvPluginExplorer = ({ groups }) => {
       if (request.ressource !== "/") {
         return null
       }
-      let associationsForExplorable = {}
+      const associationsForExplorable = {}
       Object.keys(groups).forEach((groupName) => {
         const groupConfig = groups[groupName]
         associationsForExplorable[groupName] = {
@@ -25,10 +25,6 @@ export const jsenvPluginExplorer = ({ groups }) => {
           ...groupConfig,
         }
       })
-      associationsForExplorable = URL_META.resolveAssociations(
-        associationsForExplorable,
-        rootDirectoryUrl,
-      )
       const matchingFileResultArray = await collectFiles({
         directoryUrl: rootDirectoryUrl,
         associations: associationsForExplorable,

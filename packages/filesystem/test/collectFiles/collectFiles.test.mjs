@@ -26,14 +26,9 @@ const setup = async () => {
 
 {
   await setup()
-  const structuredMetaMap = {
-    source: {
-      "./**/*.js": true,
-    },
-  }
   const matchingFileResultArray = await collectFiles({
     directoryUrl: tempDirectoryUrl,
-    structuredMetaMap,
+    associations: { source: { "./**/*.js": true } },
     predicate: ({ source }) => source,
   })
   const actual = matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
@@ -44,16 +39,11 @@ const setup = async () => {
 // abort
 {
   await setup()
-  const structuredMetaMap = {
-    source: {
-      "./**/*.js": true,
-    },
-  }
   const abortController = new AbortController()
   const collectFilePromise = collectFiles({
     signal: abortController.signal,
     directoryUrl: tempDirectoryUrl,
-    structuredMetaMap,
+    associations: { source: { "./**/*.js": true } },
     predicate: ({ source }) => source,
   })
   await Promise.resolve()

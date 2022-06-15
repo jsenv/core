@@ -8,15 +8,11 @@ export const listFilesMatching = async ({
   if (typeof patterns !== "object" || patterns === null) {
     throw new TypeError(`patterns must be an object, got ${patterns}`)
   }
-
   const fileDatas = await collectFiles({
     signal,
     directoryUrl,
-    structuredMetaMap: {
-      matches: patterns,
-    },
+    associations: { matches: patterns },
     predicate: ({ matches }) => matches,
   })
-
   return fileDatas.map(({ url }) => url)
 }
