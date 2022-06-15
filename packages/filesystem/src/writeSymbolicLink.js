@@ -1,10 +1,12 @@
 import { promises } from "node:fs"
+import {
+  fileSystemPathToUrl,
+  urlToFileSystemPath,
+  resolveUrl,
+  isFileSystemPath,
+} from "@jsenv/urls"
 
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { fileSystemPathToUrl } from "./fileSystemPathToUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
-import { resolveUrl } from "./resolveUrl.js"
-import { isFileSystemPath } from "./isFileSystemPath.js"
 import { ensureParentDirectories } from "./ensureParentDirectories.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { readSymbolicLink } from "./readSymbolicLink.js"

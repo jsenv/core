@@ -1,4 +1,4 @@
-import { urlToRessource } from "./urlToRessource.js"
+import { urlToRessource } from "./url_to_ressource.js"
 
 export const urlToPathname = (url) => {
   const ressource = urlToRessource(url)

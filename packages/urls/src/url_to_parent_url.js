@@ -1,5 +1,5 @@
-import { urlToOrigin } from "./urlToOrigin.js"
-import { urlToRessource } from "./urlToRessource.js"
+import { urlToOrigin } from "./url_to_origin.js"
+import { urlToRessource } from "./url_to_ressource.js"
 
 export const urlToParentUrl = (url) => {
   const ressource = urlToRessource(url)

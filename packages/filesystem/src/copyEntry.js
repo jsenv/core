@@ -1,14 +1,18 @@
 import { copyFile as copyFileNode } from "node:fs"
 import { Abort } from "@jsenv/abort"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  ensurePathnameTrailingSlash,
+  urlIsInsideOf,
+  urlToFileSystemPath,
+} from "@jsenv/urls"
 
 import { urlTargetsSameFileSystemPath } from "./internal/urlTargetsSameFileSystemPath.js"
 import { statsToType } from "./internal/statsToType.js"
-import { ensureUrlTrailingSlash } from "./internal/ensureUrlTrailingSlash.js"
-import { resolveUrl } from "./resolveUrl.js"
 import { binaryFlagsToPermissions } from "./internal/permissions.js"
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
 import { writeDirectory } from "./writeDirectory.js"
-import { urlToRelativeUrl } from "./urlToRelativeUrl.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { ensureParentDirectories } from "./ensureParentDirectories.js"
 import { writeEntryPermissions } from "./writeEntryPermissions.js"
@@ -16,9 +20,7 @@ import { writeEntryModificationTime } from "./writeEntryModificationTime.js"
 import { readDirectory } from "./readDirectory.js"
 import { readSymbolicLink } from "./readSymbolicLink.js"
 import { writeSymbolicLink } from "./writeSymbolicLink.js"
-import { urlIsInsideOf } from "./urlIsInsideOf.js"
 import { removeEntry } from "./removeEntry.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 
 export const copyEntry = async ({
   signal = new AbortController().signal,
@@ -70,7 +72,7 @@ export const copyEntry = async ({
   }
 
   if (sourceStats.isDirectory()) {
-    toUrl = ensureUrlTrailingSlash(toUrl)
+    toUrl = ensurePathnameTrailingSlash(toUrl)
   }
 
   const copyOperation = Abort.startOperation()
@@ -83,7 +85,7 @@ export const copyEntry = async ({
     } else if (stats.isSymbolicLink()) {
       await visitSymbolicLink(url, stats)
     } else if (stats.isDirectory()) {
-      await visitDirectory(ensureUrlTrailingSlash(url), stats)
+      await visitDirectory(ensurePathnameTrailingSlash(url), stats)
     }
   }
 

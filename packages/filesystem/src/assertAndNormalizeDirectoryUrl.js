@@ -1,6 +1,8 @@
-import { ensureUrlTrailingSlash } from "./internal/ensureUrlTrailingSlash.js"
-import { isFileSystemPath } from "./isFileSystemPath.js"
-import { fileSystemPathToUrl } from "./fileSystemPathToUrl.js"
+import {
+  fileSystemPathToUrl,
+  isFileSystemPath,
+  ensurePathnameTrailingSlash,
+} from "@jsenv/urls"
 
 export const assertAndNormalizeDirectoryUrl = (value) => {
   let urlString
@@ -29,5 +31,5 @@ export const assertAndNormalizeDirectoryUrl = (value) => {
     throw new Error(`directoryUrl must starts with file://, received ${value}`)
   }
 
-  return ensureUrlTrailingSlash(urlString)
+  return ensurePathnameTrailingSlash(urlString)
 }

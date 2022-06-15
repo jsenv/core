@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert"
-import { getCommonPathname } from "./getCommonPathname.js"
+
+import { getCommonPathname } from "@jsenv/urls/src/common_pathname.js"
 
 {
   const actual = getCommonPathname("/a/whatever.js", "/a/whatever.js")

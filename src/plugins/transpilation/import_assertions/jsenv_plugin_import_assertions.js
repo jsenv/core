@@ -10,9 +10,8 @@
  * But for now (as it is simpler) we let the browser throw the error
  */
 
-import { urlToFilename } from "@jsenv/filesystem"
+import { urlToFilename, injectQueryParams } from "@jsenv/urls"
 
-import { injectQueryParams } from "@jsenv/urls"
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js"
 
 export const jsenvPluginImportAssertions = () => {

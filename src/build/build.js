@@ -7,12 +7,20 @@
  */
 
 import {
-  assertAndNormalizeDirectoryUrl,
-  ensureEmptyDirectory,
+  injectQueryParams,
+  setUrlFilename,
+  asUrlUntilPathname,
+  normalizeUrl,
+  asUrlWithoutSearch,
+  ensurePathnameTrailingSlash,
   urlIsInsideOf,
   urlToBasename,
   urlToExtension,
   urlToRelativeUrl,
+} from "@jsenv/urls"
+import {
+  assertAndNormalizeDirectoryUrl,
+  ensureEmptyDirectory,
   writeFile,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
@@ -20,14 +28,6 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels } from "@jsenv/logger"
 
 import { createTaskLog } from "@jsenv/log"
-import {
-  injectQueryParams,
-  setUrlFilename,
-  asUrlUntilPathname,
-  normalizeUrl,
-  asUrlWithoutSearch,
-  ensurePathnameTrailingSlash,
-} from "@jsenv/urls"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 import {

@@ -1,12 +1,12 @@
 import { statSync } from "node:fs"
 import { dirname, basename } from "node:path"
+import { urlToFileSystemPath } from "@jsenv/urls"
 
+import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
 import { guardTooFastSecondCall } from "./internal/guard_second_call.js"
 import { statsToType } from "./internal/statsToType.js"
 import { createWatcher } from "./internal/createWatcher.js"
 import { trackRessources } from "./internal/trackRessources.js"
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 
 export const registerFileLifecycle = (
   source,

@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"

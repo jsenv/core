@@ -1,7 +1,5 @@
 import { readdirSync, realpathSync } from "node:fs"
-
-import { fileSystemPathToUrl } from "./fileSystemPathToUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
+import { fileSystemPathToUrl, urlToFileSystemPath } from "@jsenv/urls"
 
 export const getRealFileSystemUrlSync = (
   fileUrl,

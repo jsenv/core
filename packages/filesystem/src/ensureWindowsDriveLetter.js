@@ -1,4 +1,4 @@
-import { fileSystemPathToUrl } from "./fileSystemPathToUrl.js"
+import { fileSystemPathToUrl } from "@jsenv/urls"
 
 const isWindows = process.platform === "win32"
 const baseUrlFallback = fileSystemPathToUrl(process.cwd())

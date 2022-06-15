@@ -1,18 +1,11 @@
 import { readdirSync, statSync } from "node:fs"
-import {
-  normalizeStructuredMetaMap,
-  urlCanContainsMetaMatching,
-  urlToMeta,
-} from "@jsenv/url-meta"
+import { URL_META, urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
 
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
 import { statsToType } from "./internal/statsToType.js"
 import { guardTooFastSecondCall } from "./internal/guard_second_call.js"
-import { replaceBackSlashesWithSlashes } from "./internal/replaceBackSlashesWithSlashes.js"
 import { createWatcher } from "./internal/createWatcher.js"
 import { trackRessources } from "./internal/trackRessources.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
-import { urlToRelativeUrl } from "./urlToRelativeUrl.js"
 
 const isLinux = process.platform === "linux"
 // linux does not support recursive option
@@ -65,16 +58,16 @@ export const registerDirectoryLifecycle = (
     }
   }
 
-  const structuredMetaMap = normalizeStructuredMetaMap(
+  const associations = URL_META.resolveAssociations(
     { watch: watchPatterns },
     sourceUrl,
   )
   const getWatchPatternValue = ({ url, type }) => {
     if (type === "directory") {
       let firstMeta = false
-      urlCanContainsMetaMatching({
+      URL_META.urlChildMayMatch({
         url: `${url}/`,
-        structuredMetaMap,
+        associations,
         predicate: ({ watch }) => {
           if (watch) {
             firstMeta = watch
@@ -84,11 +77,8 @@ export const registerDirectoryLifecycle = (
       })
       return firstMeta
     }
-    const filesystemEntryMeta = urlToMeta({
-      url,
-      structuredMetaMap,
-    })
-    return filesystemEntryMeta.watch
+    const { watch } = URL_META.applyAssociations({ url, associations })
+    return watch
   }
   const tracker = trackRessources()
   const infoMap = new Map()
@@ -260,7 +250,10 @@ export const registerDirectoryLifecycle = (
         watcher.on("change", (eventType, filename) => {
           handleDirectoryEvent({
             directoryRelativeUrl: entryInfo.relativeUrl,
-            filename: filename ? replaceBackSlashesWithSlashes(filename) : "",
+            filename: filename
+              ? // replace back slashes with slashes
+                filename.replace(/\\/g, "/")
+              : "",
             eventType,
           })
         })
@@ -348,7 +341,7 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename = (path) => {
     }
   }
 
-  const normalizedPath = replaceBackSlashesWithSlashes(path)
+  const normalizedPath = path.replace(/\\/g, "/") // replace back slashes with slashes
   const slashLastIndex = normalizedPath.lastIndexOf("/")
   if (slashLastIndex === -1) {
     return {

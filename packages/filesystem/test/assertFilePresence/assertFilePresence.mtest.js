@@ -1,10 +1,9 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls"
 
 import {
-  resolveUrl,
   ensureEmptyDirectory,
   assertFilePresence,
-  urlToFileSystemPath,
   writeFile,
   writeDirectory,
   writeSymbolicLink,

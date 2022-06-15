@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { urlToPathname } from "@jsenv/filesystem"
+import { urlToPathname } from "@jsenv/urls"
 
 {
   const actual = urlToPathname("http://example.com/dir/file.js?page=1")

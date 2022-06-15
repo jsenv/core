@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { urlToExtension } from "@jsenv/filesystem"
+import { urlToExtension } from "@jsenv/urls"
 
 {
   const actual = urlToExtension("http://example.com/dir/file.js?page=1")

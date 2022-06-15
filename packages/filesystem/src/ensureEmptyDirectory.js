@@ -1,6 +1,6 @@
-import { statsToType } from "./internal/statsToType.js"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
+import { statsToType } from "./internal/statsToType.js"
 import { writeDirectory } from "./writeDirectory.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { removeEntry } from "./removeEntry.js"

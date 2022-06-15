@@ -4,26 +4,22 @@
  */
 
 import { readlink } from "node:fs"
+import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/urls"
 
-import { replaceBackSlashesWithSlashes } from "./internal/replaceBackSlashesWithSlashes.js"
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
-import { fileSystemPathToUrl } from "./fileSystemPathToUrl.js"
-import { isFileSystemPath } from "./isFileSystemPath.js"
 
 export const readSymbolicLink = (url) => {
   const symbolicLinkUrl = assertAndNormalizeFileUrl(url)
-  const symbolicLinkPath = urlToFileSystemPath(symbolicLinkUrl)
 
   return new Promise((resolve, reject) => {
-    readlink(symbolicLinkPath, (error, resolvedPath) => {
+    readlink(new URL(symbolicLinkUrl), (error, resolvedPath) => {
       if (error) {
         reject(error)
       } else {
         resolve(
           isFileSystemPath(resolvedPath)
             ? fileSystemPathToUrl(resolvedPath)
-            : replaceBackSlashesWithSlashes(resolvedPath),
+            : resolvedPath.replace(/\\/g, "/"), // replace back slashes with slashes
         )
       }
     })

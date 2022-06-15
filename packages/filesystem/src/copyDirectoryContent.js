@@ -1,10 +1,9 @@
 import { Abort } from "@jsenv/abort"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls"
 
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
 import { readEntryStat } from "./readEntryStat.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 import { readSymbolicLink } from "./readSymbolicLink.js"
-import { resolveUrl } from "./resolveUrl.js"
 import { readDirectory } from "./readDirectory.js"
 import { copyEntry } from "./copyEntry.js"
 import { urlTargetsSameFileSystemPath } from "./internal/urlTargetsSameFileSystemPath.js"

@@ -1,21 +1,15 @@
 import { Abort } from "@jsenv/abort"
-import {
-  normalizeStructuredMetaMap,
-  urlCanContainsMetaMatching,
-  urlToMeta,
-} from "@jsenv/url-meta"
 
-import { ensureUrlTrailingSlash } from "./internal/ensureUrlTrailingSlash.js"
+import { URL_META, urlToRelativeUrl } from "@jsenv/urls"
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
 import { readDirectory } from "./readDirectory.js"
 import { readEntryStat } from "./readEntryStat.js"
-import { urlToRelativeUrl } from "./urlToRelativeUrl.js"
 import { comparePathnames } from "./comparePathnames.js"
 
 export const collectDirectoryMatchReport = async ({
   signal = new AbortController().signal,
   directoryUrl,
-  structuredMetaMap,
+  associations,
   predicate,
 }) => {
   const matchingArray = []
@@ -25,10 +19,7 @@ export const collectDirectoryMatchReport = async ({
   if (typeof predicate !== "function") {
     throw new TypeError(`predicate must be a function, got ${predicate}`)
   }
-  const structuredMetaMapNormalized = normalizeStructuredMetaMap(
-    structuredMetaMap,
-    rootDirectoryUrl,
-  )
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl)
 
   const collectOperation = Abort.startOperation()
   collectOperation.addAbortSignal(signal)
@@ -63,14 +54,16 @@ export const collectDirectoryMatchReport = async ({
           const subDirectoryUrl = `${directoryChildNodeUrl}/`
 
           if (
-            !urlCanContainsMetaMatching({
+            !URL_META.urlChildMayMatch({
               url: subDirectoryUrl,
-              structuredMetaMap: structuredMetaMapNormalized,
+              associations,
               predicate,
             })
           ) {
             ignoredArray.push({
-              relativeUrl: ensureUrlTrailingSlash(relativeUrl),
+              relativeUrl: relativeUrl.endsWith("/")
+                ? relativeUrl
+                : `${relativeUrl}/`,
               fileStats: directoryChildNodeStats,
             })
 
@@ -82,9 +75,9 @@ export const collectDirectoryMatchReport = async ({
         }
 
         if (directoryChildNodeStats.isFile()) {
-          const meta = urlToMeta({
+          const meta = URL_META.applyAssociations({
             url: directoryChildNodeUrl,
-            structuredMetaMap: structuredMetaMapNormalized,
+            associations,
           })
           if (!predicate(meta)) {
             ignoredArray.push({

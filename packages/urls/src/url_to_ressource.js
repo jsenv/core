@@ -1,4 +1,4 @@
-import { urlToScheme } from "./urlToScheme.js"
+import { urlToScheme } from "./url_to_scheme.js"
 
 export const urlToRessource = (url) => {
   const scheme = urlToScheme(url)

@@ -1,12 +1,10 @@
+import { urlToFileSystemPath, resolveDirectoryUrl, URL_META } from "@jsenv/urls"
 import {
-  urlToFileSystemPath,
   ensureEmptyDirectory,
-  resolveDirectoryUrl,
   assertAndNormalizeDirectoryUrl,
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/logger"
 
-import { URL_META } from "@jsenv/urls"
 import { generateCoverageJsonFile } from "@jsenv/utils/coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "@jsenv/utils/coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "@jsenv/utils/coverage/coverage_reporter_text_log.js"

@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { urlToParentUrl } from "@jsenv/filesystem"
+import { urlToParentUrl } from "@jsenv/urls"
 
 {
   const actual = urlToParentUrl("http://example.com/dir/file.js?page=1")

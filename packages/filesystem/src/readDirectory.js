@@ -1,6 +1,6 @@
-import { readdir } from "fs"
+import { readdir } from "node:fs"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 
 export const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
   const directoryUrl = assertAndNormalizeDirectoryUrl(url)

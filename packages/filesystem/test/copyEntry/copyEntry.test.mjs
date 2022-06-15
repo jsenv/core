@@ -1,8 +1,12 @@
 import { assert } from "@jsenv/assert"
+import {
+  resolveUrl,
+  urlToFileSystemPath,
+  ensurePathnameTrailingSlash,
+} from "@jsenv/urls"
 
 import {
   writeDirectory,
-  resolveUrl,
   ensureEmptyDirectory,
   writeFile,
   copyEntry,
@@ -11,11 +15,9 @@ import {
   writeEntryModificationTime,
   readEntryPermissions,
   readEntryModificationTime,
-  urlToFileSystemPath,
   writeSymbolicLink,
   readSymbolicLink,
 } from "@jsenv/filesystem"
-import { ensureUrlTrailingSlash } from "@jsenv/filesystem/src/internal/ensureUrlTrailingSlash.js"
 import {
   testDirectoryPresence,
   testFilePresence,
@@ -369,7 +371,7 @@ await ensureEmptyDirectory(tempDirectoryUrl)
   await writeSymbolicLink({ from: linkSourceUrl, to: tempDirectoryUrl })
 
   await copyEntry({ from: sourceUrl, to: destinationUrl })
-  const actual = ensureUrlTrailingSlash(
+  const actual = ensurePathnameTrailingSlash(
     await readSymbolicLink(linkDestinationUrl),
   )
   const expected = tempDirectoryUrl

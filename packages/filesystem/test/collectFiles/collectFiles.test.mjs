@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 import { Abort } from "@jsenv/abort"
+import { resolveUrl } from "@jsenv/urls"
 
 import {
   ensureEmptyDirectory,
-  resolveUrl,
   collectFiles,
   writeFile,
 } from "@jsenv/filesystem"

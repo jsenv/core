@@ -1,7 +1,6 @@
 import { promises, constants } from "node:fs"
 
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 
 const { access } = promises
 const {
@@ -21,7 +20,6 @@ export const testEntryPermissions = async (
   } = {},
 ) => {
   const sourceUrl = assertAndNormalizeFileUrl(source)
-  const sourcePath = urlToFileSystemPath(sourceUrl)
   let binaryFlags = 0
 
   // if (visible) binaryFlags |= F_OK
@@ -30,7 +28,7 @@ export const testEntryPermissions = async (
   if (execute) binaryFlags |= X_OK
 
   try {
-    await access(sourcePath, binaryFlags)
+    await access(new URL(sourceUrl), binaryFlags)
     return true
   } catch (error) {
     if (error.code === "ENOENT") {

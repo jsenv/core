@@ -4,9 +4,9 @@
  */
 
 import { lstat, stat } from "node:fs"
+import { urlToFileSystemPath } from "@jsenv/urls"
 
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 import { writeEntryPermissions } from "./writeEntryPermissions.js"
 
 const isWindows = process.platform === "win32"

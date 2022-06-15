@@ -4,10 +4,10 @@
  */
 
 import { promises } from "node:fs"
+import { urlToFileSystemPath } from "@jsenv/urls"
 
 import { binaryFlagsToPermissions } from "./internal/permissions.js"
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 
 const { stat } = promises
 

@@ -1,12 +1,11 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls"
 
 import {
   ensureEmptyDirectory,
-  resolveUrl,
   writeDirectory,
   writeFile,
   copyDirectoryContent,
-  urlToFileSystemPath,
 } from "@jsenv/filesystem"
 import { testFilePresence } from "@jsenv/filesystem/test/testHelpers.js"
 

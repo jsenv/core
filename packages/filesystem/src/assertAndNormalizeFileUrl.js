@@ -1,5 +1,4 @@
-import { isFileSystemPath } from "./isFileSystemPath.js"
-import { fileSystemPathToUrl } from "./fileSystemPathToUrl.js"
+import { fileSystemPathToUrl, isFileSystemPath } from "@jsenv/urls"
 
 export const assertAndNormalizeFileUrl = (value, baseUrl) => {
   let urlString

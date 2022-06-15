@@ -4,11 +4,9 @@ export const isFileSystemPath = (value) => {
       `isFileSystemPath first arg must be a string, got ${value}`,
     )
   }
-
   if (value[0] === "/") {
     return true
   }
-
   return startsWithWindowsDriveLetter(value)
 }
 

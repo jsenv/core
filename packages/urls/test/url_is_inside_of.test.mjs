@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { urlIsInsideOf } from "@jsenv/filesystem"
+import { urlIsInsideOf } from "@jsenv/urls"
 
 // different origins
 {

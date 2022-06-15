@@ -2,11 +2,9 @@ import { chmod } from "node:fs"
 
 import { permissionsToBinaryFlags } from "./internal/permissions.js"
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 
 export const writeEntryPermissions = async (source, permissions) => {
   const sourceUrl = assertAndNormalizeFileUrl(source)
-  const sourcePath = urlToFileSystemPath(sourceUrl)
 
   let binaryFlags
   if (typeof permissions === "object") {
@@ -36,12 +34,8 @@ export const writeEntryPermissions = async (source, permissions) => {
     binaryFlags = permissions
   }
 
-  return chmodNaive(sourcePath, binaryFlags)
-}
-
-const chmodNaive = (fileSystemPath, binaryFlags) => {
   return new Promise((resolve, reject) => {
-    chmod(fileSystemPath, binaryFlags, (error) => {
+    chmod(new URL(sourceUrl), binaryFlags, (error) => {
       if (error) {
         reject(error)
       } else {

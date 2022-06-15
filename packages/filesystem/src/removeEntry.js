@@ -1,12 +1,14 @@
 import { unlink, rmdir, openSync, closeSync } from "node:fs"
 import { Abort } from "@jsenv/abort"
+import {
+  ensurePathnameTrailingSlash,
+  urlToFileSystemPath,
+  resolveUrl,
+} from "@jsenv/urls"
 
-import { ensureUrlTrailingSlash } from "./internal/ensureUrlTrailingSlash.js"
 import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
-import { urlToFileSystemPath } from "./urlToFileSystemPath.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { readDirectory } from "./readDirectory.js"
-import { resolveUrl } from "./resolveUrl.js"
 
 export const removeEntry = async (
   source,
@@ -54,7 +56,7 @@ export const removeEntry = async (
         },
       )
     } else if (sourceStats.isDirectory()) {
-      await removeDirectory(ensureUrlTrailingSlash(sourceUrl), {
+      await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
         signal: removeOperation.signal,
         recursive,
         maxRetries,
