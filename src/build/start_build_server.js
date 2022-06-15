@@ -61,7 +61,7 @@ export const startBuildServer = async ({
   // (because node cluster won't work)
   buildServerAutoreload = typeof process.send !== "function" &&
     !parentPort &&
-    !process.debugPort,
+    !process.env.VSCODE_INSPECTOR_OPTIONS,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })

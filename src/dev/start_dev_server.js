@@ -42,7 +42,7 @@ export const startDevServer = async ({
   // (because node cluster won't work)
   devServerAutoreload = typeof process.send !== "function" &&
     !parentPort &&
-    !process.debugPort,
+    !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./**": true,
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
