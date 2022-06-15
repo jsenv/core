@@ -133,21 +133,24 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
     }
   }
 
-  const queue = []
-  let previousDonePromise = null
-  const dequeue = () => {
-    const next = queue.shift()
-    if (next) {
-      __html_supervisor__.addScriptToExecute(next)
-    } else {
-      const nextDefered = deferQueue.shift()
-      if (nextDefered) {
-        __html_supervisor__.addScriptToExecute(nextDefered)
+  const classicExecutionQueue = createExecutionQueue(performExecution)
+  const deferedExecutionQueue = createExecutionQueue(performExecution)
+  deferedExecutionQueue.waitFor(
+    new Promise((resolve) => {
+      if (
+        document.readyState === "interactive" ||
+        document.readyState === "complete"
+      ) {
+        resolve()
+      } else {
+        document.addEventListener("readystatechange", () => {
+          if (document.readyState === "interactive") {
+            resolve()
+          }
+        })
       }
-    }
-  }
-  const deferQueue = []
-  let previousDeferDonePromise = null
+    }),
+  )
   __html_supervisor__.addScriptToExecute = async (scriptToExecute) => {
     if (scriptToExecute.async) {
       performExecution(scriptToExecute)
@@ -156,46 +159,15 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
     const useDeferQueue =
       scriptToExecute.defer || scriptToExecute.type === "js_module"
     if (useDeferQueue) {
-      if (document.readyState !== "interactive") {
-        deferQueue.push(scriptToExecute)
-        return
+      // defer must wait for classic script to be done
+      const classicExecutionPromise = classicExecutionQueue.getPromise()
+      if (classicExecutionPromise) {
+        deferedExecutionQueue.waitFor(classicExecutionPromise)
       }
-      if (previousDonePromise) {
-        // defer must wait for the regular script to be done
-        deferQueue.push(scriptToExecute)
-        return
-      }
-      if (previousDeferDonePromise) {
-        deferQueue.push(scriptToExecute)
-        return
-      }
-      previousDeferDonePromise = performExecution(scriptToExecute)
-      await previousDeferDonePromise
-      previousDeferDonePromise = null
-      dequeue()
-      return
+      deferedExecutionQueue.executeAsap(scriptToExecute)
+    } else {
+      classicExecutionQueue.executeAsap(scriptToExecute)
     }
-    if (previousDonePromise) {
-      queue.push(scriptToExecute)
-      return
-    }
-    previousDonePromise = performExecution(scriptToExecute)
-    await previousDonePromise
-    previousDonePromise = null
-    dequeue()
-  }
-  if (
-    document.readyState !== "interactive" &&
-    document.readyState !== "complete"
-  ) {
-    document.addEventListener("readystatechange", () => {
-      if (document.readyState === "interactive") {
-        const nextDefered = deferQueue.shift()
-        if (nextDefered) {
-          __html_supervisor__.addScriptToExecute(nextDefered)
-        }
-      }
-    })
   }
 
   __html_supervisor__.collectScriptResults = async () => {
@@ -239,4 +211,44 @@ export const superviseScriptTypeModule = ({ src, isInline }) => {
     isInline,
     execute: () => import(new URL(src, document.location.href).href),
   })
+}
+
+const createExecutionQueue = (execute) => {
+  const scripts = []
+
+  let promiseToWait = null
+  const waitFor = async (promise) => {
+    promiseToWait = promise
+    promiseToWait.then(
+      () => {
+        promiseToWait = null
+        dequeue()
+      },
+      () => {
+        promiseToWait = null
+        dequeue()
+      },
+    )
+  }
+
+  const executeAsap = async (script) => {
+    if (promiseToWait) {
+      scripts.push(script)
+      return
+    }
+    waitFor(execute(script))
+  }
+
+  const dequeue = () => {
+    const scriptWaiting = scripts.shift()
+    if (scriptWaiting) {
+      __html_supervisor__.addScriptToExecute(scriptWaiting)
+    }
+  }
+
+  return {
+    waitFor,
+    executeAsap,
+    getPromise: () => promiseToWait,
+  }
 }
