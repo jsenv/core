@@ -4,7 +4,6 @@
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
 import { urlToFileSystemPath } from "./url_to_filesystem_path.js"
-import { ANSI } from "@jsenv/log"
 
 export const stringifyUrlTrace = (trace) => {
   let string = ""
@@ -83,14 +82,13 @@ export const showSourceLocation = ({
   column,
   numberOfSurroundingLinesToShow = 1,
   lineMaxLength = 120,
-  color = false,
 } = {}) => {
   let mark = (string) => string
   let aside = (string) => string
-  if (color) {
-    mark = (string) => ANSI.color(string, ANSI.RED)
-    aside = (string) => ANSI.color(string, ANSI.GREY)
-  }
+  // if (color) {
+  //   mark = (string) => ANSI.color(string, ANSI.RED)
+  //   aside = (string) => ANSI.color(string, ANSI.GREY)
+  // }
 
   const lines = content.split(/\r?\n/)
   if (line === 0) line = 1

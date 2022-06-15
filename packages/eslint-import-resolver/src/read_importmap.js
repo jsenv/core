@@ -1,5 +1,5 @@
+import { fileURLToPath } from "node:url"
 import { readFileSync } from "@jsenv/filesystem"
-import { urlIsInsideOf, urlToFileSystemPath } from "@jsenv/urls"
 import { normalizeImportMap } from "@jsenv/importmap"
 
 import { applyUrlResolution } from "./url_resolution.js"
@@ -21,12 +21,12 @@ export const readImportmap = ({
     importmapFileRelativeUrl,
     rootDirectoryUrl,
   )
-  if (!urlIsInsideOf(importmapFileUrl, rootDirectoryUrl)) {
+  if (!importmapFileUrl.startsWith(`${rootDirectoryUrl}`)) {
     logger.warn(`import map file is outside root directory.
 --- import map file ---
-${urlToFileSystemPath(importmapFileUrl)}
+${fileURLToPath(importmapFileUrl)}
 --- root directory ---
-${urlToFileSystemPath(rootDirectoryUrl)}`)
+${fileURLToPath(rootDirectoryUrl)}`)
   }
   let importmapFileBuffer
   try {

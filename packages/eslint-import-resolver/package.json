@@ -10,6 +10,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -30,9 +35,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.0.1",
+    "@jsenv/filesystem": "4.0.2",
     "@jsenv/importmap": "1.2.0",
-    "@jsenv/urls": "1.1.1",
     "@jsenv/node-esm-resolution": "0.0.10"
   },
   "devDependencies": {

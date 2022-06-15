@@ -3,12 +3,12 @@
 // https://github.com/olalonde/eslint-import-resolver-babel-root-import
 
 import { createRequire } from "node:module"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import {
   assertAndNormalizeDirectoryUrl,
   ensureWindowsDriveLetter,
   getRealFileSystemUrlSync,
 } from "@jsenv/filesystem"
-import { urlToFileSystemPath, fileSystemPathToUrl } from "@jsenv/urls"
 
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js"
 import {
@@ -48,7 +48,7 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${urlToFileSystemPath(rootDirectoryUrl)}`)
+${fileURLToPath(rootDirectoryUrl)}`)
 
   packageConditions = [
     ...readCustomConditionsFromProcessArgs(),
@@ -64,7 +64,7 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`)
     }
   }
 
-  const importer = String(fileSystemPathToUrl(file))
+  const importer = String(pathToFileURL(file))
   const onUrl = (url) => {
     if (url.startsWith("file:")) {
       url = ensureWindowsDriveLetter(url, importer)
@@ -153,7 +153,7 @@ const handleFileUrl = (
     logger.debug(`-> file not found at ${fileUrl}`)
     return {
       found: false,
-      path: urlToFileSystemPath(fileUrl),
+      path: fileURLToPath(fileUrl),
     }
   }
   fileUrl = fileResolution.url
@@ -163,8 +163,8 @@ const handleFileUrl = (
     // and we would log the warning about case sensitivity
     followLink: false,
   })
-  const filePath = urlToFileSystemPath(fileUrl)
-  const realFilePath = urlToFileSystemPath(realFileUrl)
+  const filePath = fileURLToPath(fileUrl)
+  const realFilePath = fileURLToPath(realFileUrl)
   if (caseSensitive && realFileUrl !== fileUrl) {
     logger.warn(
       `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.

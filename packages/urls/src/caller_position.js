@@ -1,4 +1,5 @@
-import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/urls"
+import { isFileSystemPath } from "./is_filesystem_path.js"
+import { fileSystemPathToUrl } from "./filesystem_path_to_url.js"
 
 export const getCallerPosition = () => {
   const { prepareStackTrace } = Error
