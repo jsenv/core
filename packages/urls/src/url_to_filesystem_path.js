@@ -1,4 +1,4 @@
-import { fileURLToPath } from "url"
+import { fileURLToPath } from "node:url"
 
 export const urlToFileSystemPath = (url) => {
   let urlString = String(url)
