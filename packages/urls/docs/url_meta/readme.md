@@ -63,9 +63,9 @@ All keys in _associations_ must be absolute urls, this can be done with [resolve
 _resolveAssociations_ is a function resolving _associations_ keys that may contain relative urls against an _url_.
 
 ```js
-import { resolveAssociations } from "@jsenv/urls"
+import { URL_META } from "@jsenv/urls"
 
-const associations = resolveAssociations(
+const associations = URL_META.resolveAssociations(
   {
     visible: {
       "**/*/": true,

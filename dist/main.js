@@ -1,8 +1,8 @@
 import { parentPort } from "node:worker_threads";
-import { urlToRelativeUrl, normalizeStructuredMetaMap, urlToMeta, registerFileLifecycle, urlIsInsideOf, urlToFilename, urlToExtension, readFileSync as readFileSync$1, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, moveUrl, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, resolveUrl, writeFile, ensureEmptyDirectory, writeDirectory, resolveDirectoryUrl, urlToBasename } from "@jsenv/filesystem";
+import { urlToRelativeUrl, registerFileLifecycle, urlIsInsideOf, urlToFilename, urlToExtension, readFileSync as readFileSync$1, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, moveUrl, normalizeStructuredMetaMap, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, resolveUrl, writeFile, ensureEmptyDirectory, writeDirectory, resolveDirectoryUrl, urlToBasename } from "@jsenv/filesystem";
 import { createDetailedMessage, createLogger, loggerToLevels } from "@jsenv/logger";
 import { createTaskLog, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
-import { generateInlineContentUrl, ensurePathnameTrailingSlash, DataUrl, injectQueryParams, injectQueryParamsIntoSpecifier, normalizeUrl, stringifyUrlSite, setUrlFilename, getCallerPosition, asUrlWithoutSearch, asUrlUntilPathname } from "@jsenv/urls";
+import { URL_META, generateInlineContentUrl, ensurePathnameTrailingSlash, DataUrl, injectQueryParams, injectQueryParamsIntoSpecifier, normalizeUrl, stringifyUrlSite, setUrlFilename, getCallerPosition, asUrlWithoutSearch, asUrlUntilPathname } from "@jsenv/urls";
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
 import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
@@ -508,16 +508,18 @@ const jsenvPluginUrlAnalysis = ({
   let getIncludeInfo = () => undefined;
 
   if (include) {
-    const includeMetaMap = normalizeStructuredMetaMap({
+    const associations = URL_META.resolveAssociations({
       include
     }, rootDirectoryUrl);
 
     getIncludeInfo = url => {
-      const meta = urlToMeta({
+      const {
+        include
+      } = URL_META.applyAssociations({
         url,
-        structuredMetaMap: includeMetaMap
+        associations
       });
-      return meta.include;
+      return include;
     };
   }
 
@@ -4854,14 +4856,14 @@ const rollupPluginJsenv = ({
   let importCanBeBundled = () => true;
 
   if (include) {
-    const bundleIncludeConfig = normalizeStructuredMetaMap({
+    const associations = URL_META.resolveAssociations({
       bundle: include
     }, rootDirectoryUrl);
 
     importCanBeBundled = url => {
-      return urlToMeta({
+      return URL_META.applyAssociations({
         url,
-        structuredMetaMap: bundleIncludeConfig
+        associations
       }).bundle;
     };
   }
@@ -9302,15 +9304,18 @@ const executePlan = async (plan, {
     const coverageTempDirectoryUrl = new URL(coverageTempDirectoryRelativeUrl, rootDirectoryUrl).href;
 
     if (coverage) {
-      const structuredMetaMapForCover = normalizeStructuredMetaMap({
+      const associations = URL_META.resolveAssociations({
         cover: coverageConfig
       }, rootDirectoryUrl);
 
       const urlShouldBeCovered = url => {
-        return urlToMeta({
+        const {
+          cover
+        } = URL_META.applyAssociations({
           url: new URL(url, rootDirectoryUrl).href,
-          structuredMetaMap: structuredMetaMapForCover
-        }).cover;
+          associations
+        });
+        return cover;
       };
 
       runtimeParams.urlShouldBeCovered = urlShouldBeCovered; // in case runned multiple times, we don't want to keep writing lot of files in this directory
@@ -9773,17 +9778,20 @@ const executeTestPlan = async ({
     }
 
     if (!coverageAndExecutionAllowed) {
-      const structuredMetaMapForExecute = normalizeStructuredMetaMap({
+      const associationsForExecute = URL_META.resolveAssociations({
         execute: testPlan
       }, "file:///");
-      const structuredMetaMapForCover = normalizeStructuredMetaMap({
+      const associationsForCover = URL_META.resolveAssociations({
         cover: coverageConfig
       }, "file:///");
-      const patternsMatchingCoverAndExecute = Object.keys(structuredMetaMapForExecute.execute).filter(testPlanPattern => {
-        return urlToMeta({
+      const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
+        const {
+          cover
+        } = URL_META.applyAssociations({
           url: testPlanPattern,
-          structuredMetaMap: structuredMetaMapForCover
-        }).cover;
+          associations: associationsForCover
+        });
+        return cover;
       });
 
       if (patternsMatchingCoverAndExecute.length) {

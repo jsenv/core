@@ -1,4 +1,4 @@
-import { resolveAssociations, getUrlMeta, injectQueryParams } from "@jsenv/urls"
+import { URL_META, injectQueryParams } from "@jsenv/urls"
 
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
@@ -7,7 +7,7 @@ export const jsenvPluginCommonJs = ({
   logLevel,
   include,
 }) => {
-  const associations = resolveAssociations(
+  const associations = URL_META.resolveAssociations(
     {
       commonjs: include,
     },
