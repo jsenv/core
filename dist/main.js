@@ -8403,7 +8403,7 @@ const startDevServer = async ({
   // - inside a forked child process
   // - inside a worker thread
   // (because node cluster won't work)
-  devServerAutoreload = typeof process.send !== "function" && !parentPort && !process.debugPort,
+  devServerAutoreload = typeof process.send !== "function" && !parentPort && !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./**": true,
     "./**/.*/": false,
@@ -13143,7 +13143,7 @@ const startBuildServer = async ({
   // - inside a forked child process
   // - inside a worker thread
   // (because node cluster won't work)
-  buildServerAutoreload = typeof process.send !== "function" && !parentPort && !process.debugPort,
+  buildServerAutoreload = typeof process.send !== "function" && !parentPort && !process.env.VSCODE_INSPECTOR_OPTIONS,
   cooldownBetweenFileEvents
 }) => {
   const logger = createLogger({
