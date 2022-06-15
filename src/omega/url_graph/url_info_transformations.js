@@ -1,4 +1,5 @@
-import { bufferToEtag, urlToRelativeUrl } from "@jsenv/filesystem"
+import { bufferToEtag } from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/urls"
 
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {

@@ -9,13 +9,10 @@
  *    It will trigger the http requests, populating the server performances
  */
 
-import {
-  urlToRelativeUrl,
-  resolveUrl,
-  ensureEmptyDirectory,
-} from "@jsenv/filesystem"
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer, fetchFileSystem } from "@jsenv/server"
+import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { urlToRelativeUrl, resolveUrl } from "@jsenv/urls"
+import { ensureEmptyDirectory } from "@jsenv/filesystem"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost()

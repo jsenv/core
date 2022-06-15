@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl } from "@jsenv/urls"
 
 import {
   ensureEmptyDirectory,
   removeEntry,
-  resolveUrl,
   writeFile,
   registerFileLifecycle,
   writeEntryModificationTime,

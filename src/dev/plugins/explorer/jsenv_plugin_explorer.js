@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
-import { collectFiles, normalizeStructuredMetaMap } from "@jsenv/filesystem"
+import { URL_META, DataUrl } from "@jsenv/urls"
+import { collectFiles } from "@jsenv/filesystem"
 
-import { DataUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginExplorer = ({ groups }) => {
@@ -17,21 +17,21 @@ export const jsenvPluginExplorer = ({ groups }) => {
       if (request.ressource !== "/") {
         return null
       }
-      const structuredMetaMapRelativeForExplorable = {}
+      let associationsForExplorable = {}
       Object.keys(groups).forEach((groupName) => {
         const groupConfig = groups[groupName]
-        structuredMetaMapRelativeForExplorable[groupName] = {
+        associationsForExplorable[groupName] = {
           "**/.jsenv/": false, // avoid visting .jsenv directory in jsenv itself
           ...groupConfig,
         }
       })
-      const structuredMetaMapForExplorable = normalizeStructuredMetaMap(
-        structuredMetaMapRelativeForExplorable,
+      associationsForExplorable = URL_META.resolveAssociations(
+        associationsForExplorable,
         rootDirectoryUrl,
       )
       const matchingFileResultArray = await collectFiles({
         directoryUrl: rootDirectoryUrl,
-        structuredMetaMap: structuredMetaMapForExplorable,
+        associations: associationsForExplorable,
         predicate: (meta) =>
           Object.keys(meta).some((group) => Boolean(meta[group])),
       })

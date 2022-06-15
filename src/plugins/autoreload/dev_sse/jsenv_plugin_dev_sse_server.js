@@ -1,4 +1,4 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/urls"
 import { createCallbackList } from "@jsenv/abort"
 
 import { createSSEService } from "@jsenv/utils/event_source/sse_service.js"

@@ -6,7 +6,7 @@ import {
   raceProcessTeardownEvents,
   raceCallbacks,
 } from "@jsenv/abort"
-import { moveUrl } from "@jsenv/filesystem"
+import { moveUrl } from "@jsenv/urls"
 
 import { memoize } from "@jsenv/utils/memoize/memoize.js"
 import { filterV8Coverage } from "@jsenv/utils/coverage/v8_coverage_from_directory.js"

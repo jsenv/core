@@ -1,13 +1,12 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls"
 
 import {
   writeDirectory,
   ensureEmptyDirectory,
   writeEntryPermissions,
-  urlToFileSystemPath,
   writeFile,
   writeSymbolicLink,
-  resolveUrl,
 } from "@jsenv/filesystem"
 
 const isWindows = process.platform === "win32"

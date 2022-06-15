@@ -1,6 +1,7 @@
 import cuid from "cuid"
 import { Abort, raceCallbacks } from "@jsenv/abort"
-import { resolveUrl, writeFile } from "@jsenv/filesystem"
+import { resolveUrl } from "@jsenv/urls"
+import { writeFile } from "@jsenv/filesystem"
 
 export const run = async ({
   signal = new AbortController().signal,

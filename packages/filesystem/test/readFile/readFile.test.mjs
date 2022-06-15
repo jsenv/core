@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl } from "@jsenv/urls"
 
-import { readFile, resolveUrl } from "@jsenv/filesystem"
+import { readFile } from "@jsenv/filesystem"
 
 {
   const txtFileUrl = resolveUrl("./file.txt", import.meta.url)

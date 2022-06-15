@@ -1,4 +1,4 @@
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/filesystem"
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls"
 
 import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
 

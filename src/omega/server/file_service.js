@@ -3,7 +3,7 @@ import {
   serveDirectory,
   composeTwoResponses,
 } from "@jsenv/server"
-import { urlIsInsideOf, moveUrl } from "@jsenv/filesystem"
+import { urlIsInsideOf, moveUrl } from "@jsenv/urls"
 
 import { parseUserAgentHeader } from "./user_agent.js"
 

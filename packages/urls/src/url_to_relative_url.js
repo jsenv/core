@@ -1,5 +1,4 @@
-import { getCommonPathname } from "./internal/getCommonPathname.js"
-import { pathnameToParentPathname } from "./internal/pathnameToParentPathname.js"
+import { getCommonPathname } from "./common_pathname.js"
 
 export const urlToRelativeUrl = (url, baseUrl) => {
   const urlObject = new URL(url)
@@ -46,4 +45,12 @@ export const urlToRelativeUrl = (url, baseUrl) => {
 
   const relativeUrl = `${specificPathname}${search}${hash}`
   return relativeUrl
+}
+
+const pathnameToParentPathname = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/")
+  if (slashLastIndex === -1) {
+    return "/"
+  }
+  return pathname.slice(0, slashLastIndex + 1)
 }

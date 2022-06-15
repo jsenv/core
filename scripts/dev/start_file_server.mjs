@@ -1,6 +1,6 @@
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
-import { resolveUrl } from "@jsenv/filesystem"
 import { startServer, fetchFileSystem } from "@jsenv/server"
+import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { resolveUrl } from "@jsenv/urls"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost({

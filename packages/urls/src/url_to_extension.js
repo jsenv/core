@@ -1,4 +1,4 @@
-import { urlToPathname } from "./urlToPathname.js"
+import { urlToPathname } from "./url_to_pathname.js"
 
 export const urlToExtension = (url) => {
   const pathname = urlToPathname(url)

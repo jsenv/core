@@ -1,10 +1,7 @@
 // import { fork } from "child_process"
 import { promises } from "node:fs"
-import {
-  removeEntry,
-  urlToFileSystemPath,
-  readEntryStat,
-} from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
+import { removeEntry, readEntryStat } from "@jsenv/filesystem"
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_filehandle
 const { open } = promises

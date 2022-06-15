@@ -1,4 +1,4 @@
-import { urlToFilename } from "./urlToFilename.js"
+import { urlToFilename } from "./url_to_filename.js"
 
 export const urlToBasename = (url) => {
   const filename = urlToFilename(url)

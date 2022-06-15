@@ -1,6 +1,5 @@
-import { urlToRelativeUrl } from "@jsenv/filesystem"
+import { urlToRelativeUrl, URL_META } from "@jsenv/urls"
 
-import { URL_META } from "@jsenv/urls"
 import { parseAndTransformHtmlUrls } from "./html/html_urls.js"
 import { parseAndTransformCssUrls } from "./css/css_urls.js"
 import { parseAndTransformJsUrls } from "./js/js_urls.js"

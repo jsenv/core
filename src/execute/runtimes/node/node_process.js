@@ -1,5 +1,5 @@
 import { fork } from "node:child_process"
-import { urlToFileSystemPath } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/logger"
 import {
   Abort,

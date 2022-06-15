@@ -1,10 +1,10 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl } from "@jsenv/urls"
 
 import {
   ensureEmptyDirectory,
   writeEntryModificationTime,
   readEntryModificationTime,
-  resolveUrl,
   writeFile,
 } from "@jsenv/filesystem"
 import { toSecondsPrecision } from "@jsenv/filesystem/test/testHelpers.js"

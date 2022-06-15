@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { memoize } from "@jsenv/filesystem"
+import { memoize } from "./memoize.js"
 
 {
   let callCount = 0

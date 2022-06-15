@@ -1,4 +1,4 @@
-import { fileSystemPathToUrl, urlToFileSystemPath } from "@jsenv/filesystem"
+import { fileSystemPathToUrl, urlToFileSystemPath } from "@jsenv/urls"
 
 export const fileUrlConverter = {
   asFilePath: (fileUrl) => {

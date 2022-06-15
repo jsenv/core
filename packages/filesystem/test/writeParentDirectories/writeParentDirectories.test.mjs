@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
+import { resolveUrl } from "@jsenv/urls"
 
 import {
-  resolveUrl,
   writeDirectory,
   ensureEmptyDirectory,
   ensureParentDirectories,

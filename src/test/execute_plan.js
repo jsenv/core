@@ -3,17 +3,16 @@ import { memoryUsage } from "node:process"
 import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
 import cuid from "cuid"
+import { URL_META, urlToFileSystemPath } from "@jsenv/urls"
+import { createDetailedMessage, loggerToLevels } from "@jsenv/logger"
+import { createLog, startSpinner } from "@jsenv/log"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import {
-  urlToFileSystemPath,
   writeDirectory,
   ensureEmptyDirectory,
   writeFileSync,
 } from "@jsenv/filesystem"
-import { createDetailedMessage, loggerToLevels } from "@jsenv/logger"
-import { createLog, startSpinner } from "@jsenv/log"
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
-import { URL_META } from "@jsenv/urls"
 import { babelPluginInstrument } from "@jsenv/utils/coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "@jsenv/utils/coverage/report_to_coverage.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
