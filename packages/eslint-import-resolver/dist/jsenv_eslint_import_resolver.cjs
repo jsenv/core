@@ -3,17 +3,35 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var node_module = require('module');
-var url = require('url');
+var node_url = require('url');
 var node_fs = require('fs');
 require('crypto');
-require('fs');
 require('path');
-var node_util = require('util');
-require('path');
-var node_url = require('url');
 
-const ensureUrlTrailingSlash = (url) => {
-  return url.endsWith("/") ? url : `${url}/`
+const urlToFileSystemPath = (url) => {
+  let urlString = String(url);
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+  const fileSystemPath = node_url.fileURLToPath(urlString);
+  return fileSystemPath
+};
+
+const ensurePathnameTrailingSlash = (url) => {
+  const urlObject = new URL(url);
+  const { pathname } = urlObject;
+  if (pathname.endsWith("/")) {
+    return url
+  }
+  let { origin } = urlObject;
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+  const { search, hash } = urlObject;
+  return `${origin}${pathname}/${search}${hash}`
 };
 
 const isFileSystemPath = (value) => {
@@ -22,11 +40,9 @@ const isFileSystemPath = (value) => {
       `isFileSystemPath first arg must be a string, got ${value}`,
     )
   }
-
   if (value[0] === "/") {
     return true
   }
-
   return startsWithWindowsDriveLetter(value)
 };
 
@@ -42,9 +58,9 @@ const startsWithWindowsDriveLetter = (string) => {
 
 const fileSystemPathToUrl = (value) => {
   if (!isFileSystemPath(value)) {
-    throw new Error(`received an invalid value for fileSystemPath: ${value}`)
+    throw new Error(`value must be a filesystem path, got ${value}`)
   }
-  return String(url.pathToFileURL(value))
+  return String(node_url.pathToFileURL(value))
 };
 
 const assertAndNormalizeDirectoryUrl = (value) => {
@@ -74,7 +90,7 @@ const assertAndNormalizeDirectoryUrl = (value) => {
     throw new Error(`directoryUrl must starts with file://, received ${value}`)
   }
 
-  return ensureUrlTrailingSlash(urlString)
+  return ensurePathnameTrailingSlash(urlString)
 };
 
 const assertAndNormalizeFileUrl = (value, baseUrl) => {
@@ -101,17 +117,6 @@ const assertAndNormalizeFileUrl = (value, baseUrl) => {
   }
 
   return urlString
-};
-
-const urlToFileSystemPath = (url$1) => {
-  let urlString = String(url$1);
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
-  }
-  const fileSystemPath = url.fileURLToPath(urlString);
-  return fileSystemPath
 };
 
 /*
@@ -190,26 +195,6 @@ const extractDriveLetter = (ressource) => {
 
 process.platform === "win32";
 
-const urlIsInsideOf = (url, otherUrl) => {
-  const urlObject = new URL(url);
-  const otherUrlObject = new URL(otherUrl);
-
-  if (urlObject.origin !== otherUrlObject.origin) {
-    return false
-  }
-
-  const urlPathname = urlObject.pathname;
-  const otherUrlPathname = otherUrlObject.pathname;
-  if (urlPathname === otherUrlPathname) {
-    return false
-  }
-
-  const isInside = urlPathname.startsWith(otherUrlPathname);
-  return isInside
-};
-
-process.platform === "win32" ? `file///${process.cwd()[0]}:/` : "file:///";
-
 const getRealFileSystemUrlSync = (
   fileUrl,
   { followLink = true } = {},
@@ -265,8 +250,6 @@ const getRealFileSystemUrlSync = (
   }
 };
 
-node_util.promisify(node_fs.readFile);
-
 const readFileSync = (value, { as = "buffer" } = {}) => {
   const fileUrl = assertAndNormalizeFileUrl(value);
   const buffer = node_fs.readFileSync(new URL(fileUrl));
@@ -285,8 +268,6 @@ const readFileSync = (value, { as = "buffer" } = {}) => {
 };
 
 process.platform === "win32";
-
-/* eslint-disable import/max-dependencies */
 
 process.platform === "linux";
 
@@ -2240,12 +2221,12 @@ const readImportmap = ({
     importmapFileRelativeUrl,
     rootDirectoryUrl,
   );
-  if (!urlIsInsideOf(importmapFileUrl, rootDirectoryUrl)) {
+  if (!importmapFileUrl.startsWith(`${rootDirectoryUrl}`)) {
     logger.warn(`import map file is outside root directory.
 --- import map file ---
-${urlToFileSystemPath(importmapFileUrl)}
+${node_url.fileURLToPath(importmapFileUrl)}
 --- root directory ---
-${urlToFileSystemPath(rootDirectoryUrl)}`);
+${node_url.fileURLToPath(rootDirectoryUrl)}`);
   }
   let importmapFileBuffer;
   try {
@@ -2340,7 +2321,7 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${urlToFileSystemPath(rootDirectoryUrl)}`);
+${node_url.fileURLToPath(rootDirectoryUrl)}`);
 
   packageConditions = [
     ...readCustomConditionsFromProcessArgs(),
@@ -2356,7 +2337,7 @@ ${urlToFileSystemPath(rootDirectoryUrl)}`);
     }
   }
 
-  const importer = String(fileSystemPathToUrl(file));
+  const importer = String(node_url.pathToFileURL(file));
   const onUrl = (url) => {
     if (url.startsWith("file:")) {
       url = ensureWindowsDriveLetter(url, importer);
@@ -2445,7 +2426,7 @@ const handleFileUrl = (
     logger.debug(`-> file not found at ${fileUrl}`);
     return {
       found: false,
-      path: urlToFileSystemPath(fileUrl),
+      path: node_url.fileURLToPath(fileUrl),
     }
   }
   fileUrl = fileResolution.url;
@@ -2455,8 +2436,8 @@ const handleFileUrl = (
     // and we would log the warning about case sensitivity
     followLink: false,
   });
-  const filePath = urlToFileSystemPath(fileUrl);
-  const realFilePath = urlToFileSystemPath(realFileUrl);
+  const filePath = node_url.fileURLToPath(fileUrl);
+  const realFilePath = node_url.fileURLToPath(realFileUrl);
   if (caseSensitive && realFileUrl !== fileUrl) {
     logger.warn(
       `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.
