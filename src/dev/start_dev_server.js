@@ -64,8 +64,7 @@ export const startDevServer = async ({
   },
   plugins = [],
   urlAnalysis = {},
-  htmlSupervisor = true,
-  injectedGlobals,
+  htmlSupervisor = false,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -187,7 +186,6 @@ export const startDevServer = async ({
 
         urlAnalysis,
         htmlSupervisor,
-        injectedGlobals,
         nodeEsmResolution,
         fileSystemMagicResolution,
         transpilation,

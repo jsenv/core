@@ -10,7 +10,6 @@ import { jsenvPluginInline } from "./inline/jsenv_plugin_inline.js"
 import { jsenvPluginHtmlSupervisor } from "./html_supervisor/jsenv_plugin_html_supervisor.js"
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js"
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
-import { jsenvPluginInjectGlobals } from "./inject_globals/jsenv_plugin_inject_globals.js"
 import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js"
 import { jsenvPluginNodeRuntime } from "./node_runtime/jsenv_plugin_node_runtime.js"
 // build only
@@ -32,7 +31,6 @@ export const getCorePlugins = ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
-  injectedGlobals,
   transpilation = true,
   minification = false,
   bundling = false,
@@ -67,7 +65,6 @@ export const getCorePlugins = ({
     }),
     jsenvPluginUrlResolution(),
     jsenvPluginUrlVersion(),
-    jsenvPluginInjectGlobals(injectedGlobals),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
 

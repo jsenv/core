@@ -32,7 +32,6 @@ export const execute = async ({
   plugins = [],
   nodeEsmResolution,
   fileSystemMagicResolution,
-  injectedGlobals,
   transpilation,
   htmlSupervisor = true,
   writeGeneratedFiles = false,
@@ -87,7 +86,6 @@ export const execute = async ({
           runtimeCompat,
 
           htmlSupervisor,
-          injectedGlobals,
           nodeEsmResolution,
           fileSystemMagicResolution,
           transpilation,

@@ -109,7 +109,6 @@ export const build = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
-  injectedGlobals,
   transpilation = {},
   bundling = true,
   minification = true,
@@ -223,7 +222,6 @@ build ${entryPointKeys.length} entry points`)
           nodeEsmResolution,
           fileSystemMagicResolution,
           directoryReferenceAllowed,
-          injectedGlobals,
           transpilation: {
             ...transpilation,
             babelHelpersAsImport: !useExplicitJsClassicConversion,

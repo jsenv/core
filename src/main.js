@@ -24,4 +24,4 @@ export { startBuildServer } from "./build/start_build_server.js"
 
 // advanced
 export { execute } from "./execute/execute.js"
-export { injectGlobals } from "./plugins/inject_globals/jsenv_plugin_inject_globals.js"
+export { jsenvPluginInjectGlobals } from "./plugins/inject_globals/jsenv_plugin_inject_globals.js"

@@ -57,7 +57,6 @@ export const executePlan = async (
     scenario,
     sourcemaps,
     plugins,
-    injectedGlobals,
     nodeEsmResolution,
     fileSystemMagicResolution,
     transpilation,
@@ -144,7 +143,6 @@ export const executePlan = async (
             htmlSupervisor: true,
             nodeEsmResolution,
             fileSystemMagicResolution,
-            injectedGlobals,
             transpilation: {
               ...transpilation,
               getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
