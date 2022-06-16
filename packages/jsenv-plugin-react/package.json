@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,9 +27,9 @@
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.17.3",
     "@babel/plugin-transform-react-jsx-development": "7.16.7",
-    "@jsenv/plugin-commonjs": "0.0.12",
+    "@jsenv/plugin-commonjs": "0.0.13",
     "@jsenv/url-meta": "7.0.0",
-    "@jsenv/utils": "1.8.8",
+    "@jsenv/utils": "1.8.9",
     "react-refresh": "0.13.0"
   },
   "peerDependencies": {
