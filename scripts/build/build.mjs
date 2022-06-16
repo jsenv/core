@@ -7,7 +7,7 @@ await build({
   rootDirectoryUrl: jsenvRootDirectoryUrl,
   buildDirectoryUrl: jsenvDistDirectoryUrl,
   entryPoints: {
-    "./main.js": "main.js",
+    "./src/main.js": "main.js",
   },
   baseUrl: "./",
   minification: false,

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "27.0.0-alpha.72",
+  "version": "27.0.0-alpha.73",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -24,17 +24,16 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./main.js",
+        "development": "./src/main.js",
         "default": "./dist/main.js"
       }
     },
     "./*": "./*"
   },
-  "main": "main.js",
+  "main": "./src/main.js",
   "files": [
     "/dist/",
-    "/src/",
-    "/main.js"
+    "/src/"
   ],
   "workspaces": [
     "./packages/*",
