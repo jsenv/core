@@ -272,24 +272,36 @@ export const createKitchen = ({
         )
         return
       }
-      const {
+      let {
+        content,
+        contentType,
         data,
         type,
         subtype,
-        contentType = "application/octet-stream",
         originalUrl,
         originalContent,
-        content,
         sourcemap,
         filename,
+
+        status = 200,
+        headers = {},
+        body,
       } = fetchUrlContentReturnValue
+      if (status !== 200) {
+        throw new Error(`unexpected status, ${status}`)
+      }
+      if (content === undefined) {
+        content = body
+      }
+      if (contentType === undefined) {
+        contentType = headers["content-type"] || "application/octet-stream"
+      }
+      urlInfo.contentType = contentType
+      urlInfo.headers = headers
       urlInfo.type =
         type ||
         reference.expectedType ||
-        inferUrlInfoType({
-          url: urlInfo.url,
-          contentType,
-        })
+        inferUrlInfoType({ url: urlInfo.url, contentType })
       urlInfo.subtype =
         subtype ||
         reference.expectedSubtype ||
@@ -298,7 +310,6 @@ export const createKitchen = ({
           type: urlInfo.type,
           subtype: urlInfo.subtype,
         })
-      urlInfo.contentType = contentType
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl
       urlInfo.originalContent =

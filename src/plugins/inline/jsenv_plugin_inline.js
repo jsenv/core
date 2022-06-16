@@ -26,10 +26,10 @@ const jsenvPluginInlineUrls = () => {
         return null
       }
       return {
-        contentType: urlInfo.contentType,
         // we want to fetch the original content otherwise we might re-cook
         // content already cooked
         content: urlInfo.originalContent,
+        contentType: urlInfo.contentType,
       }
     },
   }

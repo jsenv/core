@@ -98,14 +98,14 @@ const jsenvPluginAsModules = () => {
       }
       const jsonText = JSON.stringify(originalUrlInfo.content.trim())
       return {
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
         // here we could `export default ${jsonText}`:
         // but js engine are optimized to recognize JSON.parse
         // and use a faster parsing strategy
         content: `export default JSON.parse(${jsonText})`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
       }
     },
   }
@@ -130,10 +130,6 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       })
       return {
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(
           inlineContentClientFileUrl,
         )}
@@ -142,6 +138,10 @@ const jsenvPluginAsModules = () => {
   const stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(inlineContent.text)
   export default stylesheet`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
       }
     },
   }
@@ -166,16 +166,16 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       })
       return {
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(
           inlineContentClientFileUrl,
         )}
   
 const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
 export default inlineContent.text`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent,
       }
     },
   }

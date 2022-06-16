@@ -56,11 +56,11 @@ export const jsenvPluginCommonJs = ({
         ...urlInfo.data.commonjs,
       })
       return {
+        content,
+        contentType: "text/javascript",
+        type: "js_module",
         originalUrl: originalUrlInfo.originalUrl,
         originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
-        content,
         sourcemap,
       }
     },

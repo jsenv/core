@@ -123,11 +123,11 @@ const jsenvPluginAsJsClassicConversion = ({
       })
       urlInfo.data.jsClassicFormat = jsClassicFormat
       return {
+        content,
+        contentType: "text/javascript",
+        type: "js_classic",
         originalUrl: originalUrlInfo.originalUrl,
         originalContent: originalUrlInfo.originalContent,
-        type: "js_classic",
-        contentType: "text/javascript",
-        content,
         sourcemap,
       }
     },

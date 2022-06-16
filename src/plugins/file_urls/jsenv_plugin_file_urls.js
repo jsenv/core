@@ -178,15 +178,11 @@ export const jsenvPluginFileUrls = ({
         }
         const fileBuffer = readFileSync(urlObject)
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
-        if (CONTENT_TYPE.isTextual(contentType)) {
-          return {
-            contentType,
-            content: String(fileBuffer),
-          }
-        }
         return {
+          content: CONTENT_TYPE.isTextual(contentType)
+            ? String(fileBuffer)
+            : fileBuffer,
           contentType,
-          content: fileBuffer,
         }
       },
     },

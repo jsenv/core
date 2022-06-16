@@ -1184,12 +1184,12 @@ const applyUrlVersioning = async ({
               )
               const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
               return {
+                content: versionedUrlInfo.content,
+                contentType: versionedUrlInfo.contentType,
                 originalContent: rawUrlInfo
                   ? rawUrlInfo.originalContent
                   : undefined,
                 sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
-                contentType: versionedUrlInfo.contentType,
-                content: versionedUrlInfo.content,
               }
             }
             return versionedUrlInfo

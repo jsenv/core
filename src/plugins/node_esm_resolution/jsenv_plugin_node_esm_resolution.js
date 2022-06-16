@@ -110,6 +110,8 @@ const jsenvPluginNodeEsmResolver = ({
       if (urlInfo.url.startsWith("file:///@ignore/")) {
         return {
           content: "export default {}",
+          contentType: "text/javascript",
+          type: "js_module",
         }
       }
       return null

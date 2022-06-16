@@ -66,7 +66,7 @@ export const createFileService = ({
         status: 304,
         headers: {
           "cache-control": `private,max-age=0,must-revalidate`,
-          ...urlInfo.responseHeaders,
+          ...urlInfo.headers,
         },
       }
     }
@@ -84,7 +84,6 @@ export const createFileService = ({
         urlInfo.type = null
         urlInfo.subtype = null
         urlInfo.timing = {}
-        urlInfo.responseHeaders = {}
       }
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"],
@@ -100,7 +99,7 @@ export const createFileService = ({
             ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
             : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
       })
-      let { response, contentType, content, contentEtag } = urlInfo
+      let { response } = urlInfo
       if (response) {
         return response
       }
@@ -108,13 +107,13 @@ export const createFileService = ({
         url: reference.url,
         status: 200,
         headers: {
-          "content-type": contentType,
-          "content-length": Buffer.byteLength(content),
+          "content-length": Buffer.byteLength(urlInfo.content),
           "cache-control": `private,max-age=0,must-revalidate`,
-          "eTag": contentEtag,
-          ...urlInfo.responseHeaders,
+          "eTag": urlInfo.contentEtag,
+          ...urlInfo.headers,
+          "content-type": urlInfo.contentType,
         },
-        body: content,
+        body: urlInfo.content,
         timing: urlInfo.timing,
       }
       kitchen.pluginController.callHooks(
