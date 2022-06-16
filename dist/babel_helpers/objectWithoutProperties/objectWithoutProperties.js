@@ -1,4 +1,4 @@
-import objectWithoutPropertiesLoose from "./oose/objectWithoutPropertiesLoose.js";
+import objectWithoutPropertiesLoose from "../objectWithoutPropertiesLoose/objectWithoutPropertiesLoose.js";
 export default ((source, excluded) => {
   if (source === null) return {};
   var target = objectWithoutPropertiesLoose(source, excluded);
