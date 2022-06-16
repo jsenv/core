@@ -1,7 +1,7 @@
 // TODO: test with new Blob call
 
 // rename import to mimic what tersed does
-import { InlineContent as InlineContentRenamed } from "@jsenv/core/inline_content.js"
+import { InlineContent as InlineContentRenamed } from "@jsenv/core/src/inline_content.js"
 
 // prettier-ignore
 export const singleQuoteEscaped =  new InlineContentRenamed('\'', { type: "text/plain" }).text
