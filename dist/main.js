@@ -2,8 +2,9 @@ import { parentPort } from "node:worker_threads";
 import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
 import { createDetailedMessage, createLogger, loggerToLevels } from "@jsenv/logger";
 import { createTaskLog, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
-import { urlToRelativeUrl, URL_META, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, urlToExtension, DataUrl, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename } from "@jsenv/urls";
+import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, urlToExtension, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename } from "@jsenv/urls";
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js";
+import { URL_META } from "@jsenv/url-meta";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
 import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js";
@@ -1787,7 +1788,7 @@ const jsenvPluginDataUrls = () => {
         contentType,
         base64Flag,
         data: urlData
-      } = DataUrl.parse(urlInfo.url);
+      } = DATA_URL.parse(urlInfo.url);
       urlInfo.data.base64Flag = base64Flag;
       return {
         contentType,
@@ -1817,7 +1818,7 @@ const jsenvPluginDataUrls = () => {
           return reference.generatedUrl;
         }
 
-        const specifier = DataUrl.stringify({
+        const specifier = DATA_URL.stringify({
           contentType: urlInfo.contentType,
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.data.base64Flag ? dataToBase64(urlInfo.content) : String(urlInfo.content)
@@ -1883,7 +1884,7 @@ const jsenvPluginInlineQueryParam = () => {
           await context.cook(urlInfo, {
             reference
           });
-          const specifier = DataUrl.stringify({
+          const specifier = DATA_URL.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,
             data: Buffer.from(urlInfo.content).toString("base64")
@@ -8358,7 +8359,7 @@ const jsenvPluginExplorer = ({
         meta
       }));
       let html = String(readFileSync(new URL(htmlClientFileUrl)));
-      html = html.replace("virtual:FAVICON_HREF", DataUrl.stringify({
+      html = html.replace("virtual:FAVICON_HREF", DATA_URL.stringify({
         contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
         base64Flag: true,
         data: readFileSync(new URL(faviconClientFileUrl)).toString("base64")
