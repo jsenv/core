@@ -3,6 +3,30 @@ import { assert } from "@jsenv/assert"
 import { getCommonPathname } from "@jsenv/urls/src/common_pathname.js"
 
 {
+  const actual = getCommonPathname("/ab/file.js", "/a/file.js")
+  const expected = "/"
+  assert({ actual, expected })
+}
+
+{
+  const actual = getCommonPathname("/var", "/var/lib")
+  const expected = "/var"
+  assert({ actual, expected })
+}
+
+{
+  const actual = getCommonPathname("/a/", "/a/file.js")
+  const expected = "/a/"
+  assert({ actual, expected })
+}
+
+{
+  const actual = getCommonPathname("/a/file.js", "/a/")
+  const expected = "/a/"
+  assert({ actual, expected })
+}
+
+{
   const actual = getCommonPathname("/a/whatever.js", "/a/whatever.js")
   const expected = "/a/whatever.js"
   assert({ actual, expected })

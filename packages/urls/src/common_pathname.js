@@ -1,42 +1,32 @@
 export const getCommonPathname = (pathname, otherPathname) => {
-  const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex(
-    pathname,
-    otherPathname,
-  )
-
-  // pathname and otherpathname are exactly the same
-  if (firstDifferentCharacterIndex === -1) {
+  if (pathname === otherPathname) {
     return pathname
   }
-
-  const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1)
-  // the first different char is at firstDifferentCharacterIndex
-  if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
-    return commonString
-  }
-
-  if (otherPathname.charAt(firstDifferentCharacterIndex) === "/") {
-    return commonString
-  }
-
-  const firstDifferentSlashIndex = commonString.lastIndexOf("/")
-  return pathname.slice(0, firstDifferentSlashIndex + 1)
-}
-
-const findFirstDifferentCharacterIndex = (string, otherString) => {
-  const maxCommonLength = Math.min(string.length, otherString.length)
+  let commonPart = ""
+  let commonPathname = ""
   let i = 0
-  while (i < maxCommonLength) {
-    const char = string.charAt(i)
-    const otherChar = otherString.charAt(i)
-    if (char !== otherChar) {
-      return i
+  const length = pathname.length
+  const otherLength = otherPathname.length
+  while (i < pathname.length) {
+    const char = pathname.charAt(i)
+    const otherChar = otherPathname.charAt(i)
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/"
+        commonPathname += commonPart
+        commonPart = ""
+      } else {
+        commonPart += char
+      }
+    } else {
+      return commonPathname
     }
     i++
   }
-  if (string.length === otherString.length) {
-    return -1
+  if (length === otherLength) {
+    commonPathname += commonPart
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart
   }
-  // they differ at maxCommonLength
-  return maxCommonLength
+  return commonPathname
 }
