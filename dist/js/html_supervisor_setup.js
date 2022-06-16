@@ -32,7 +32,10 @@ window.__html_supervisor__ = {
             lastWindowError = e.error
           }
           const cleanup = () => {
-            document.body.removeChild(script)
+            // the execution of the script itself can remove script from the page
+            if (script.parentNode) {
+              script.parentNode.removeChild(script)
+            }
             window.removeEventListener("error", windowErrorCallback)
           }
           window.addEventListener("error", windowErrorCallback)

@@ -2459,78 +2459,6 @@ const babelPluginMetadataImportMetaScenarios = () => {
   };
 };
 
-const jsenvPluginInjectGlobals = (globals = {}) => {
-  if (Object.keys(globals).length === 0) {
-    return [];
-  }
-
-  return {
-    name: "jsenv:inject_globals",
-    appliesDuring: "*",
-    transformUrlContent: {
-      html: injectGlobals,
-      js_classic: injectGlobals,
-      js_module: injectGlobals
-    }
-  };
-};
-const injectGlobals = (urlInfo, globals) => {
-  if (urlInfo.type === "html") {
-    return globalInjectorOnHtmlEntryPoint(urlInfo, globals);
-  }
-
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return globalsInjectorOnJsEntryPoints(urlInfo, globals);
-  }
-
-  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
-};
-
-const globalInjectorOnHtmlEntryPoint = async (urlInfo, globals) => {
-  if (!urlInfo.data.isEntryPoint) {
-    return null;
-  } // ideally we would inject an importmap but browser support is too low
-  // (even worse for worker/service worker)
-  // so for now we inject code into entry points
-
-
-  const htmlAst = parseHtmlString(urlInfo.content, {
-    storeOriginalPositions: false
-  });
-  const clientCode = generateClientCodeForGlobals({
-    globals,
-    isWebWorker: false
-  });
-  injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
-    "tagName": "script",
-    "textContent": clientCode,
-    "injected-by": "jsenv:inject_globals"
-  }));
-  return stringifyHtmlAst(htmlAst);
-};
-
-const globalsInjectorOnJsEntryPoints = async (urlInfo, globals) => {
-  if (!urlInfo.data.isEntryPoint && !urlInfo.data.isWebWorkerEntryPoint) {
-    return null;
-  }
-
-  const clientCode = generateClientCodeForGlobals({
-    globals,
-    isWebWorker: isWebWorkerUrlInfo(urlInfo)
-  });
-  const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(clientCode);
-  return magicSource.toContentAndSourcemap();
-};
-
-const generateClientCodeForGlobals = ({
-  isWebWorker = false,
-  globals
-}) => {
-  const globalName = isWebWorker ? "self" : "window";
-  return `Object.assign(${globalName}, ${JSON.stringify(globals, null, "  ")});`;
-};
-
 const jsenvPluginCssParcel = () => {
   return {
     name: "jsenv:css_parcel",
@@ -6027,7 +5955,6 @@ const getCorePlugins = ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
-  injectedGlobals,
   transpilation = true,
   minification = false,
   bundling = false,
@@ -6057,7 +5984,7 @@ const getCorePlugins = ({
     rootDirectoryUrl,
     runtimeCompat,
     ...nodeEsmResolution
-  }), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginInjectGlobals(injectedGlobals), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
+  }), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     rootDirectoryUrl,
@@ -8396,11 +8323,10 @@ const startDevServer = async ({
   // (because node cluster won't work)
   devServerAutoreload = typeof process.send !== "function" && !parentPort && !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
-    "./**": true,
-    "./**/.*/": false,
+    "./src/": true,
+    "./src/**/.*/": false,
     // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./**/dist/": false,
-    "./**/node_modules/": false
+    "./src/**/node_modules/": false
   },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
@@ -8417,8 +8343,7 @@ const startDevServer = async ({
   },
   plugins = [],
   urlAnalysis = {},
-  htmlSupervisor = true,
-  injectedGlobals,
+  htmlSupervisor = false,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -8577,7 +8502,6 @@ const startDevServer = async ({
       runtimeCompat,
       urlAnalysis,
       htmlSupervisor,
-      injectedGlobals,
       nodeEsmResolution,
       fileSystemMagicResolution,
       transpilation,
@@ -9135,7 +9059,6 @@ const executePlan = async (plan, {
   scenario,
   sourcemaps,
   plugins,
-  injectedGlobals,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -9220,7 +9143,6 @@ const executePlan = async (plan, {
           htmlSupervisor: true,
           nodeEsmResolution,
           fileSystemMagicResolution,
-          injectedGlobals,
           transpilation: { ...transpilation,
             getCustomBabelPlugins: ({
               clientRuntimeCompat
@@ -9738,7 +9660,6 @@ const executeTestPlan = async ({
   coverageSkipFull = false,
   sourcemaps = "inline",
   plugins = [],
-  injectedGlobals,
   nodeEsmResolution,
   fileSystemMagicResolution,
   writeGeneratedFiles = false,
@@ -9819,7 +9740,6 @@ const executeTestPlan = async ({
     scenario: "test",
     sourcemaps,
     plugins,
-    injectedGlobals,
     nodeEsmResolution,
     fileSystemMagicResolution,
     writeGeneratedFiles,
@@ -11899,7 +11819,6 @@ const build = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
-  injectedGlobals,
   transpilation = {},
   bundling = true,
   minification = true,
@@ -11908,11 +11827,10 @@ const build = async ({
   // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
   clientFiles = {
-    "./**": true,
-    "./**/.*/": false,
+    "./src/": true,
+    "./src/**/.*/": false,
     // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./dist/": false,
-    "./**/node_modules/": false
+    "./src/**/node_modules/": false
   },
   cooldownBetweenFileEvents,
   watch = false,
@@ -12012,7 +11930,6 @@ build ${entryPointKeys.length} entry points`);
         nodeEsmResolution,
         fileSystemMagicResolution,
         directoryReferenceAllowed,
-        injectedGlobals,
         transpilation: { ...transpilation,
           babelHelpersAsImport: !useExplicitJsClassicConversion,
           jsModuleAsJsClassic: false
@@ -13307,7 +13224,6 @@ const execute = async ({
   plugins = [],
   nodeEsmResolution,
   fileSystemMagicResolution,
-  injectedGlobals,
   transpilation,
   htmlSupervisor = true,
   writeGeneratedFiles = false,
@@ -13361,7 +13277,6 @@ const execute = async ({
         scenario,
         runtimeCompat,
         htmlSupervisor,
-        injectedGlobals,
         nodeEsmResolution,
         fileSystemMagicResolution,
         transpilation
@@ -13436,4 +13351,81 @@ const execute = async ({
   }
 };
 
-export { build, chromium, chromiumIsolatedTab, defaultCoverageConfig, execute, executeTestPlan, firefox, firefoxIsolatedTab, injectGlobals, nodeProcess, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+const injectGlobals = (urlInfo, globals) => {
+  if (urlInfo.type === "html") {
+    return globalInjectorOnHtml(urlInfo, globals);
+  }
+
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return globalsInjectorOnJs(urlInfo, globals);
+  }
+
+  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+};
+
+const globalInjectorOnHtml = async (urlInfo, globals) => {
+  // ideally we would inject an importmap but browser support is too low
+  // (even worse for worker/service worker)
+  // so for now we inject code into entry points
+  const htmlAst = parseHtmlString(urlInfo.content, {
+    storeOriginalPositions: false
+  });
+  const clientCode = generateClientCodeForGlobals({
+    globals,
+    isWebWorker: false
+  });
+  injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+    "tagName": "script",
+    "textContent": clientCode,
+    "injected-by": "jsenv:inject_globals"
+  }));
+  return stringifyHtmlAst(htmlAst);
+};
+
+const globalsInjectorOnJs = async (urlInfo, globals) => {
+  const clientCode = generateClientCodeForGlobals({
+    globals,
+    isWebWorker: urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker" || urlInfo.subtype === "shared_worker"
+  });
+  const magicSource = createMagicSource(urlInfo.content);
+  magicSource.prepend(clientCode);
+  return magicSource.toContentAndSourcemap();
+};
+
+const generateClientCodeForGlobals = ({
+  isWebWorker = false,
+  globals
+}) => {
+  const globalName = isWebWorker ? "self" : "window";
+  return `Object.assign(${globalName}, ${JSON.stringify(globals, null, "  ")});`;
+};
+
+const jsenvPluginInjectGlobals = urlAssociations => {
+  return {
+    name: "jsenv:inject_globals",
+    appliesDuring: "*",
+    transformUrlContent: async urlInfo => {
+      const url = Object.keys(urlAssociations).find(url => {
+        return url === urlInfo.url;
+      });
+
+      if (!url) {
+        return null;
+      }
+
+      let globals = urlAssociations[url];
+
+      if (typeof globals === "function") {
+        globals = await globals();
+      }
+
+      if (Object.keys(globals).length === 0) {
+        return null;
+      }
+
+      return injectGlobals(urlInfo, globals);
+    }
+  };
+};
+
+export { build, chromium, chromiumIsolatedTab, defaultCoverageConfig, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeProcess, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
