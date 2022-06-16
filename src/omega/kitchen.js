@@ -356,8 +356,7 @@ export const createKitchen = ({
     const { cookDuringCook = cook } = dishContext
     context.cook = (urlInfo, nestedDishContext) => {
       return cookDuringCook(urlInfo, {
-        outDirectoryUrl: dishContext.outDirectoryUrl,
-        clientRuntimeCompat: dishContext.clientRuntimeCompat,
+        ...dishContext,
         ...nestedDishContext,
       })
     }
