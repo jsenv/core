@@ -118,10 +118,9 @@ export const build = async ({
   lineBreakNormalization = process.platform === "win32",
 
   clientFiles = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./dist/": false,
-    "./**/node_modules/": false,
+    "./src/": true,
+    "./src/**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./src/**/node_modules/": false,
   },
   cooldownBetweenFileEvents,
   watch = false,

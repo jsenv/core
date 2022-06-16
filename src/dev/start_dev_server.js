@@ -44,10 +44,9 @@ export const startDevServer = async ({
     !parentPort &&
     !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./**/dist/": false,
-    "./**/node_modules/": false,
+    "./src/": true,
+    "./src/**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
+    "./src/**/node_modules/": false,
   },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
