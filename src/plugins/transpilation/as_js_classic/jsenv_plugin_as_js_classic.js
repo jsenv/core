@@ -11,10 +11,10 @@
  * and prefer to unique identifier based solely on the specifier basename for instance
  */
 
-import { createRequire } from "node:module"
 import { urlToFilename, injectQueryParams } from "@jsenv/urls"
 import { readFileSync } from "@jsenv/filesystem"
 
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
@@ -23,8 +23,6 @@ import { requireBabelPlugin } from "../babel/require_babel_plugin.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_as_js_classic_html.js"
 import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
-
-const require = createRequire(import.meta.url)
 
 export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL(
@@ -171,14 +169,14 @@ const convertJsModuleToJsClassic = async ({
         ? [
             // propposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
-            require("@babel/plugin-proposal-dynamic-import"),
+            requireFromJsenv("@babel/plugin-proposal-dynamic-import"),
             [
               requireBabelPlugin("babel-plugin-transform-async-to-promises"),
               {
                 topLevelAwait: "return",
               },
             ],
-            require("@babel/plugin-transform-modules-systemjs"),
+            requireFromJsenv("@babel/plugin-transform-modules-systemjs"),
           ]
         : [
             [
@@ -188,7 +186,7 @@ const convertJsModuleToJsClassic = async ({
               },
             ],
             babelPluginTransformImportMetaUrl,
-            require("@babel/plugin-transform-modules-umd"),
+            requireFromJsenv("@babel/plugin-transform-modules-umd"),
           ]),
     ],
     urlInfo,

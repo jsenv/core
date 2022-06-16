@@ -1,13 +1,11 @@
-import { createRequire } from "node:module"
-
-const require = createRequire(import.meta.url)
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 // see also https://github.com/sindresorhus/execa/issues/96
 export const killProcessTree = async (
   processId,
   { signal, timeout = 2000 },
 ) => {
-  const pidtree = require("pidtree")
+  const pidtree = requireFromJsenv("pidtree")
 
   let descendantProcessIds
   try {

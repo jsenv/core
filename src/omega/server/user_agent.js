@@ -1,8 +1,5 @@
-import { createRequire } from "node:module"
-
 import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
-
-const require = createRequire(import.meta.url)
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 export const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
   if (userAgent.includes("node-fetch/")) {
@@ -13,7 +10,7 @@ export const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
       runtimeVersion: process.version.slice(1),
     }
   }
-  const UA = require("@financial-times/polyfill-useragent-normaliser")
+  const UA = requireFromJsenv("@financial-times/polyfill-useragent-normaliser")
   const { ua } = new UA(userAgent)
   const { family, major, minor, patch } = ua
   return {

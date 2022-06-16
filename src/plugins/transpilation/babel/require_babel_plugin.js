@@ -1,8 +1,8 @@
 import { createRequire } from "node:module"
 import { pathToFileURL } from "node:url"
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
-const require = createRequire(import.meta.url)
-const babelPluginPackagePath = require.resolve("@jsenv/babel-plugins")
+const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins")
 const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath)
 
 export const requireBabelPlugin = createRequire(babelPluginPackageUrl)
