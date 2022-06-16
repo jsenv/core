@@ -969,7 +969,9 @@ const jsenvPluginNodeEsmResolver = ({
     fetchUrlContent: urlInfo => {
       if (urlInfo.url.startsWith("file:///@ignore/")) {
         return {
-          content: "export default {}"
+          content: "export default {}",
+          contentType: "text/javascript",
+          type: "js_module"
         };
       }
 
@@ -1232,17 +1234,9 @@ const jsenvPluginFileUrls = ({
 
       const fileBuffer = readFileSync(urlObject);
       const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-
-      if (CONTENT_TYPE.isTextual(contentType)) {
-        return {
-          contentType,
-          content: String(fileBuffer)
-        };
-      }
-
       return {
-        contentType,
-        content: fileBuffer
+        content: CONTENT_TYPE.isTextual(contentType) ? String(fileBuffer) : fileBuffer,
+        contentType
       };
     }
   }];
@@ -1791,12 +1785,12 @@ const jsenvPluginDataUrls = () => {
       } = DATA_URL.parse(urlInfo.url);
       urlInfo.data.base64Flag = base64Flag;
       return {
-        contentType,
         content: contentFromUrlData({
           contentType,
           base64Flag,
           urlData
-        })
+        }),
+        contentType
       };
     },
     formatUrl: (reference, context) => {
@@ -1819,7 +1813,7 @@ const jsenvPluginDataUrls = () => {
         }
 
         const specifier = DATA_URL.stringify({
-          contentType: urlInfo.contentType,
+          contentType: urlInfo.headers["content-type"],
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.data.base64Flag ? dataToBase64(urlInfo.content) : String(urlInfo.content)
         });
@@ -1918,10 +1912,10 @@ const jsenvPluginInlineUrls = () => {
       }
 
       return {
-        contentType: urlInfo.contentType,
         // we want to fetch the original content otherwise we might re-cook
         // content already cooked
-        content: urlInfo.originalContent
+        content: urlInfo.originalContent,
+        contentType: urlInfo.contentType
       };
     }
   };
@@ -2571,14 +2565,14 @@ const jsenvPluginAsModules = () => {
 
       const jsonText = JSON.stringify(originalUrlInfo.content.trim());
       return {
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
         // here we could `export default ${jsonText}`:
         // but js engine are optimized to recognize JSON.parse
         // and use a faster parsing strategy
-        content: `export default JSON.parse(${jsonText})`
+        content: `export default JSON.parse(${jsonText})`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent
       };
     }
   };
@@ -2604,16 +2598,16 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true
       });
       return {
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
   
   const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
   const stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(inlineContent.text)
-  export default stylesheet`
+  export default stylesheet`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent
       };
     }
   };
@@ -2639,14 +2633,14 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true
       });
       return {
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
-        type: "js_module",
-        contentType: "text/javascript",
         content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
   
 const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
-export default inlineContent.text`
+export default inlineContent.text`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent
       };
     }
   };
@@ -3130,11 +3124,11 @@ const jsenvPluginAsJsClassicConversion = ({
       });
       urlInfo.data.jsClassicFormat = jsClassicFormat;
       return {
+        content,
+        contentType: "text/javascript",
+        type: "js_classic",
         originalUrl: originalUrlInfo.originalUrl,
         originalContent: originalUrlInfo.originalContent,
-        type: "js_classic",
-        contentType: "text/javascript",
-        content,
         sourcemap
       };
     }
@@ -6295,7 +6289,7 @@ const createUrlInfo = url => {
     sourcemap: null,
     sourcemapReference: null,
     timing: {},
-    responseHeaders: {}
+    headers: {}
   };
 };
 
@@ -6593,14 +6587,15 @@ const returnValueAssertions = [{
     if (typeof valueReturned === "object") {
       const {
         shouldHandle,
-        content
+        content,
+        body
       } = valueReturned;
 
       if (shouldHandle === false) {
         return undefined;
       }
 
-      if (typeof content !== "string" && !Buffer.isBuffer(content)) {
+      if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
         throw new Error(`Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`);
       }
 
@@ -7224,17 +7219,35 @@ const createKitchen = ({
         return;
       }
 
-      const {
+      let {
+        content,
+        contentType,
         data,
         type,
         subtype,
-        contentType = "application/octet-stream",
         originalUrl,
         originalContent,
-        content,
         sourcemap,
-        filename
+        filename,
+        status = 200,
+        headers = {},
+        body
       } = fetchUrlContentReturnValue;
+
+      if (status !== 200) {
+        throw new Error(`unexpected status, ${status}`);
+      }
+
+      if (content === undefined) {
+        content = body;
+      }
+
+      if (contentType === undefined) {
+        contentType = headers["content-type"] || "application/octet-stream";
+      }
+
+      urlInfo.contentType = contentType;
+      urlInfo.headers = headers;
       urlInfo.type = type || reference.expectedType || inferUrlInfoType({
         url: urlInfo.url,
         contentType
@@ -7243,8 +7256,7 @@ const createKitchen = ({
         url: urlInfo.url,
         type: urlInfo.type,
         subtype: urlInfo.subtype
-      });
-      urlInfo.contentType = contentType; // during build urls info are reused and load returns originalUrl/originalContent
+      }); // during build urls info are reused and load returns originalUrl/originalContent
 
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
       urlInfo.originalContent = originalContent === undefined ? content : originalContent;
@@ -7969,7 +7981,7 @@ const createFileService = ({
         status: 304,
         headers: {
           "cache-control": `private,max-age=0,must-revalidate`,
-          ...urlInfo.responseHeaders
+          ...urlInfo.headers
         }
       };
     }
@@ -7984,7 +7996,6 @@ const createFileService = ({
         urlInfo.type = null;
         urlInfo.subtype = null;
         urlInfo.timing = {};
-        urlInfo.responseHeaders = {};
       }
 
       const {
@@ -8000,10 +8011,7 @@ const createFileService = ({
         outDirectoryUrl: scenario === "dev" ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`
       });
       let {
-        response,
-        contentType,
-        content,
-        contentEtag
+        response
       } = urlInfo;
 
       if (response) {
@@ -8014,13 +8022,13 @@ const createFileService = ({
         url: reference.url,
         status: 200,
         headers: {
-          "content-type": contentType,
-          "content-length": Buffer.byteLength(content),
+          "content-length": Buffer.byteLength(urlInfo.content),
           "cache-control": `private,max-age=0,must-revalidate`,
-          "eTag": contentEtag,
-          ...urlInfo.responseHeaders
+          "eTag": urlInfo.contentEtag,
+          ...urlInfo.headers,
+          "content-type": urlInfo.contentType
         },
-        body: content,
+        body: urlInfo.content,
         timing: urlInfo.timing
       };
       kitchen.pluginController.callHooks("augmentResponse", {
@@ -12902,10 +12910,10 @@ const applyUrlVersioning = async ({
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrls[versionedUrlInfo.url]);
             const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url);
             return {
-              originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-              sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined,
+              content: versionedUrlInfo.content,
               contentType: versionedUrlInfo.contentType,
-              content: versionedUrlInfo.content
+              originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+              sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined
             };
           }
 
