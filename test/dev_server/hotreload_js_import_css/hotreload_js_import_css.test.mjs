@@ -22,6 +22,10 @@ const devServer = await startDevServer({
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   cooldownBetweenFileEvents: 250,
+  clientFiles: {
+    "./**": true,
+    "./**/.*/": false,
+  },
 })
 const browser = await chromium.launch({
   headless: true,

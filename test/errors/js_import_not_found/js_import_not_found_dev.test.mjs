@@ -16,6 +16,7 @@ try {
     omegaServerLogLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
+    htmlSupervisor: true,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
     url: `${devServer.origin}/main.html`,

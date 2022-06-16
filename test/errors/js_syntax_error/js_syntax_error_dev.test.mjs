@@ -9,6 +9,7 @@ const test = async (params) => {
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
+    htmlSupervisor: true,
     ...params,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({

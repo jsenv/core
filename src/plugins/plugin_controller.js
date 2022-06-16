@@ -266,11 +266,11 @@ const returnValueAssertions = [
         return { content: valueReturned }
       }
       if (typeof valueReturned === "object") {
-        const { shouldHandle, content } = valueReturned
+        const { shouldHandle, content, body } = valueReturned
         if (shouldHandle === false) {
           return undefined
         }
-        if (typeof content !== "string" && !Buffer.isBuffer(content)) {
+        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
             `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
           )
