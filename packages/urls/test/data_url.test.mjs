@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 
-import { DataUrl } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls"
 
 {
-  const actual = DataUrl.parse("data:,")
+  const actual = DATA_URL.parse("data:,")
   const expected = {
     contentType: "text/plain;charset=US-ASCII",
     base64Flag: false,
@@ -13,7 +13,7 @@ import { DataUrl } from "@jsenv/urls"
 }
 
 {
-  const actual = DataUrl.parse("data:,Hello%2C%20World!")
+  const actual = DATA_URL.parse("data:,Hello%2C%20World!")
   const expected = {
     contentType: "text/plain;charset=US-ASCII",
     base64Flag: false,
@@ -23,7 +23,7 @@ import { DataUrl } from "@jsenv/urls"
 }
 
 {
-  const actual = DataUrl.parse(
+  const actual = DATA_URL.parse(
     "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ%3D%3D",
   )
   const expected = {
@@ -35,7 +35,7 @@ import { DataUrl } from "@jsenv/urls"
 }
 
 {
-  const actual = DataUrl.parse(
+  const actual = DATA_URL.parse(
     "data:text/html,%3Ch1%3EHello%2C%20World!%3C%2Fh1%3E",
   )
   const expected = {
@@ -47,7 +47,7 @@ import { DataUrl } from "@jsenv/urls"
 }
 
 {
-  const actual = DataUrl.parse("data:text/html,<script>alert('hi');</script>")
+  const actual = DATA_URL.parse("data:text/html,<script>alert('hi');</script>")
   const expected = {
     contentType: "text/html",
     base64Flag: false,

@@ -1,4 +1,5 @@
-import { urlToFileSystemPath, resolveDirectoryUrl, URL_META } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
+import { urlToFileSystemPath, resolveDirectoryUrl } from "@jsenv/urls"
 import {
   ensureEmptyDirectory,
   assertAndNormalizeDirectoryUrl,

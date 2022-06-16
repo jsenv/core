@@ -1,4 +1,5 @@
-import { URL_META, injectQueryParams } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
+import { injectQueryParams } from "@jsenv/urls"
 
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 

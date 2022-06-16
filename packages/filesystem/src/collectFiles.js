@@ -1,5 +1,6 @@
 import { Abort } from "@jsenv/abort"
-import { URL_META, urlToRelativeUrl } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
+import { urlToRelativeUrl } from "@jsenv/urls"
 
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
 import { readDirectory } from "./readDirectory.js"

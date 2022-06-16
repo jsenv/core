@@ -1,6 +1,6 @@
 import { createDetailedMessage } from "@jsenv/logger"
 
-import { DataUrl } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls"
 import { SOURCEMAP } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 
 import { remapCallSite } from "./remap_call_site.js"
@@ -65,7 +65,7 @@ export const remapStack = async ({
         let sourcemapString
         if (jsSourcemapUrl.startsWith("data:")) {
           sourcemapUrl = stackTraceFileUrl
-          sourcemapString = DataUrl.parse(jsSourcemapUrl, { as: "string" })
+          sourcemapString = DATA_URL.parse(jsSourcemapUrl, { as: "string" })
         } else {
           sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
             type: "source-map",

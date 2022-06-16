@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { DataUrl } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls"
 import { collectFiles } from "@jsenv/filesystem"
 
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
@@ -38,7 +38,7 @@ export const jsenvPluginExplorer = ({ groups }) => {
       let html = String(readFileSync(new URL(htmlClientFileUrl)))
       html = html.replace(
         "virtual:FAVICON_HREF",
-        DataUrl.stringify({
+        DATA_URL.stringify({
           contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
           base64Flag: true,
           data: readFileSync(new URL(faviconClientFileUrl)).toString("base64"),

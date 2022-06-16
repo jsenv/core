@@ -5,7 +5,7 @@
 
 /* eslint-env browser, node */
 
-export const DataUrl = {
+export const DATA_URL = {
   parse: (string) => {
     const afterDataProtocol = string.slice("data:".length)
     const commaIndex = afterDataProtocol.indexOf(",")

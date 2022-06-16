@@ -1,6 +1,9 @@
-import { fileSystemPathToUrl, URL_META } from "@jsenv/urls"
+import { createRequire } from "node:module"
+import { URL_META } from "@jsenv/url-meta"
+import { fileSystemPathToUrl } from "@jsenv/urls"
 
-import { require } from "@jsenv/utils/require.js"
+const require = createRequire(import.meta.url)
+
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
 export const babelPluginInstrument = (

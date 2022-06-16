@@ -1,5 +1,6 @@
 import { readdirSync, statSync } from "node:fs"
-import { URL_META, urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
 
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
 import { statsToType } from "./internal/statsToType.js"

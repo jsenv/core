@@ -1,4 +1,4 @@
-import { DataUrl } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls"
 
 export const jsenvPluginInlineQueryParam = () => {
   return {
@@ -26,7 +26,7 @@ export const jsenvPluginInlineQueryParam = () => {
         return (async () => {
           const urlInfo = context.urlGraph.getUrlInfo(reference.url)
           await context.cook(urlInfo, { reference })
-          const specifier = DataUrl.stringify({
+          const specifier = DATA_URL.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,
             data: Buffer.from(urlInfo.content).toString("base64"),

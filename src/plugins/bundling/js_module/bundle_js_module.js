@@ -1,5 +1,6 @@
 import { pathToFileURL } from "node:url"
-import { isFileSystemPath, URL_META } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
+import { isFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/logger"
 
 import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"

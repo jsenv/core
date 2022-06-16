@@ -1,4 +1,4 @@
-import { DataUrl } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginDataUrls = () => {
@@ -19,7 +19,7 @@ export const jsenvPluginDataUrls = () => {
         contentType,
         base64Flag,
         data: urlData,
-      } = DataUrl.parse(urlInfo.url)
+      } = DATA_URL.parse(urlInfo.url)
       urlInfo.data.base64Flag = base64Flag
       return {
         contentType,
@@ -39,7 +39,7 @@ export const jsenvPluginDataUrls = () => {
         if (urlInfo.originalContent === urlInfo.content) {
           return reference.generatedUrl
         }
-        const specifier = DataUrl.stringify({
+        const specifier = DATA_URL.stringify({
           contentType: urlInfo.contentType,
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.data.base64Flag
