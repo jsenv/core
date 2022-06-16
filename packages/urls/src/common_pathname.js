@@ -7,9 +7,10 @@ export const getCommonPathname = (pathname, otherPathname) => {
   let i = 0
   const length = pathname.length
   const otherLength = otherPathname.length
-  while (i < pathname.length) {
+  while (i < length) {
     const char = pathname.charAt(i)
     const otherChar = otherPathname.charAt(i)
+    i++
     if (char === otherChar) {
       if (char === "/") {
         commonPart += "/"
@@ -19,9 +20,12 @@ export const getCommonPathname = (pathname, otherPathname) => {
         commonPart += char
       }
     } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/"
+        commonPathname += commonPart
+      }
       return commonPathname
     }
-    i++
   }
   if (length === otherLength) {
     commonPathname += commonPart

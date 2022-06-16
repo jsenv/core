@@ -1,9 +1,5 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveUrl,
-  urlToFileSystemPath,
-  ensurePathnameTrailingSlash,
-} from "@jsenv/urls"
+import { urlToFileSystemPath, ensurePathnameTrailingSlash } from "@jsenv/urls"
 
 import {
   writeDirectory,
@@ -25,13 +21,13 @@ import {
 } from "@jsenv/filesystem/test/testHelpers.js"
 
 const isWindows = process.platform === "win32"
-const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
+const tempDirectoryUrl = new URL("./temp/", import.meta.url).href
 await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy nothing into nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
 
   try {
     await copyEntry({ from: sourceUrl, to: destinationUrl })
@@ -46,8 +42,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into same file
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("source", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("source", tempDirectoryUrl).href
   await writeFile(sourceUrl)
 
   try {
@@ -70,8 +66,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into nothing
 {
-  const sourceUrl = resolveUrl("source/file", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest/file", tempDirectoryUrl)
+  const sourceUrl = new URL("source/file", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest/file", tempDirectoryUrl).href
   const sourceContent = "hello"
   const sourceMtime = toSecondsPrecision(Date.now())
   const sourcePermissions = {
@@ -120,8 +116,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into file and overwrite disabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeFile(sourceUrl)
   await writeFile(destinationUrl)
 
@@ -142,8 +138,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into file and overwrite enabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeFile(sourceUrl, "foo")
   await writeFile(destinationUrl, "bar")
 
@@ -160,8 +156,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into directory
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeFile(sourceUrl, "foo")
   await writeDirectory(destinationUrl)
 
@@ -187,8 +183,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory into file
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeFile(destinationUrl)
 
@@ -210,8 +206,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory into directory and overwrite disabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeDirectory(destinationUrl)
 
@@ -233,8 +229,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory into directory and overwrite enabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeDirectory(destinationUrl)
 
@@ -257,10 +253,10 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory with content into nothing
 {
-  const sourceUrl = resolveUrl("source/", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest/", tempDirectoryUrl)
-  const fileSourceUrl = resolveUrl("file", sourceUrl)
-  const fileDestinationUrl = resolveUrl("file", destinationUrl)
+  const sourceUrl = new URL("source/", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest/", tempDirectoryUrl).href
+  const fileSourceUrl = new URL("file", sourceUrl).href
+  const fileDestinationUrl = new URL("file", destinationUrl).href
   await writeDirectory(sourceUrl)
   await writeFile(fileSourceUrl, "foo")
 
@@ -279,11 +275,11 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory with content into directory with content and overwrite enabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const fileASourceUrl = resolveUrl("source/a.txt", tempDirectoryUrl)
-  const fileADestinationUrl = resolveUrl("dest/a.txt", tempDirectoryUrl)
-  const fileBDestinationUrl = resolveUrl("dest/b.txt", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const fileASourceUrl = new URL("source/a.txt", tempDirectoryUrl).href
+  const fileADestinationUrl = new URL("dest/a.txt", tempDirectoryUrl).href
+  const fileBDestinationUrl = new URL("dest/b.txt", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeFile(fileASourceUrl, "sourceA")
   await writeDirectory(destinationUrl)
@@ -313,10 +309,10 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory with relative link targeting node inside into nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const linkSourceUrl = resolveUrl("source/link", tempDirectoryUrl)
-  const linkDestinationUrl = resolveUrl("dest/link", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const linkSourceUrl = new URL("source/link", tempDirectoryUrl).href
+  const linkDestinationUrl = new URL("dest/link", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeSymbolicLink({ from: linkSourceUrl, to: "./whatever" })
 
@@ -329,10 +325,10 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory with relative link targeting node outside into nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const linkSourceUrl = resolveUrl("source/link", tempDirectoryUrl)
-  const linkDestinationUrl = resolveUrl("dest/link", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const linkSourceUrl = new URL("source/link", tempDirectoryUrl).href
+  const linkDestinationUrl = new URL("dest/link", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeSymbolicLink({ from: linkSourceUrl, to: "../whatever" })
 
@@ -345,12 +341,12 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory with absolute link inside into nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const linkSourceUrl = resolveUrl("source/link", tempDirectoryUrl)
-  const linkDestinationUrl = resolveUrl("dest/link", tempDirectoryUrl)
-  const insideSourceUrl = resolveUrl("source/file", tempDirectoryUrl)
-  const insideDestinationUrl = resolveUrl("dest/file", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const linkSourceUrl = new URL("source/link", tempDirectoryUrl).href
+  const linkDestinationUrl = new URL("dest/link", tempDirectoryUrl).href
+  const insideSourceUrl = new URL("source/file", tempDirectoryUrl).href
+  const insideDestinationUrl = new URL("dest/file", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeSymbolicLink({ from: linkSourceUrl, to: insideSourceUrl })
 
@@ -363,10 +359,10 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy directory with absolute link absolute link outside into nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const linkSourceUrl = resolveUrl("source/link", tempDirectoryUrl)
-  const linkDestinationUrl = resolveUrl("dest/link", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const linkSourceUrl = new URL("source/link", tempDirectoryUrl).href
+  const linkDestinationUrl = new URL("dest/link", tempDirectoryUrl).href
   await writeDirectory(sourceUrl)
   await writeSymbolicLink({ from: linkSourceUrl, to: tempDirectoryUrl })
 
@@ -381,8 +377,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy link into nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeSymbolicLink({ from: sourceUrl, to: "./whatever" })
 
   await copyEntry({ from: sourceUrl, to: destinationUrl })
@@ -400,9 +396,9 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy link to nothing into link to nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const fileUrl = resolveUrl("desttarget", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const fileUrl = new URL("desttarget", tempDirectoryUrl).href
   await writeSymbolicLink({ from: sourceUrl, to: "./sourcetarget" })
   await writeSymbolicLink({ from: destinationUrl, to: "./desttarget" })
 
@@ -423,8 +419,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy link to nothing into link to nothing with followLink disabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeSymbolicLink({ from: sourceUrl, to: "./whatever" })
   await writeSymbolicLink({ from: destinationUrl, to: "./whatever" })
 
@@ -450,8 +446,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy link to nothing into link to nothing with followLink disabled and overwrite enabled
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   const sourceLinkTarget = "./sourcetarget"
   const destinationLinkTarget = "./destinationtarget"
   await writeSymbolicLink({ from: sourceUrl, to: sourceLinkTarget })
@@ -477,9 +473,9 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into link to nothing
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
-  const fileUrl = resolveUrl("file", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
+  const fileUrl = new URL("file", tempDirectoryUrl).href
   await writeFile(sourceUrl, "foo")
   await writeSymbolicLink({ from: destinationUrl, to: "./file" })
 
@@ -500,8 +496,8 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
 // copy file into link to same file
 {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl)
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl)
+  const sourceUrl = new URL("source", tempDirectoryUrl).href
+  const destinationUrl = new URL("dest", tempDirectoryUrl).href
   await writeFile(sourceUrl, "foo")
   await writeSymbolicLink({ from: destinationUrl, to: "./source" })
 

@@ -9,6 +9,12 @@ import { getCommonPathname } from "@jsenv/urls/src/common_pathname.js"
 }
 
 {
+  const actual = getCommonPathname("/source/a.txt", "/source")
+  const expected = "/source/"
+  assert({ actual, expected })
+}
+
+{
   const actual = getCommonPathname("/var", "/var/lib")
   const expected = "/var"
   assert({ actual, expected })

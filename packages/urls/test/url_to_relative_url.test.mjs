@@ -6,6 +6,12 @@ import { urlToRelativeUrl } from "@jsenv/urls"
 // https://github.com/nodejs/node/blob/e12f48ef07e837553ea9c537b08d3e4a44d3fad2/test/parallel/test-path-relative.js
 
 {
+  const actual = urlToRelativeUrl("file:///source/a.txt", "file:///source")
+  const expected = "a.txt"
+  assert({ actual, expected })
+}
+
+{
   const actual = urlToRelativeUrl("file:///file.js", "file://")
   const expected = "file.js"
   assert({ actual, expected })
