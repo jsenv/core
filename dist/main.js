@@ -2725,10 +2725,9 @@ export default inlineContent.text`
   return [asJsonModule, asCssModule, asTextModule];
 };
 
-const require$4 = createRequire(import.meta.url);
+const requireFromJsenv = createRequire(import.meta.url);
 
-const babelPluginPackagePath = require$4.resolve("@jsenv/babel-plugins");
-
+const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins");
 const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
 const requireBabelPlugin = createRequire(babelPluginPackageUrl);
 
@@ -3112,9 +3111,6 @@ const jsenvPluginAsJsClassicWorkers = ({
  * But ideally babel should not generate this in the first place
  * and prefer to unique identifier based solely on the specifier basename for instance
  */
-
-const require$3 = createRequire(import.meta.url);
-
 const jsenvPluginAsJsClassic = ({
   systemJsInjection
 }) => {
@@ -3254,11 +3250,11 @@ const convertJsModuleToJsClassic = async ({
   } = await applyBabelPlugins({
     babelPlugins: [...(jsClassicFormat === "system" ? [// propposal-dynamic-import required with systemjs for babel8:
     // https://github.com/babel/babel/issues/10746
-    require$3("@babel/plugin-proposal-dynamic-import"), [requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), [requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
       topLevelAwait: "return"
-    }], require$3("@babel/plugin-transform-modules-systemjs")] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+    }], requireFromJsenv("@babel/plugin-transform-modules-systemjs")] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
       topLevelAwait: "simple"
-    }], babelPluginTransformImportMetaUrl, require$3("@babel/plugin-transform-modules-umd")])],
+    }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
     urlInfo
   });
   let sourcemap = urlInfo.sourcemap;
@@ -5133,9 +5129,6 @@ const jsenvPluginBundling = bundling => {
   };
 };
 
-const require$2 = createRequire(import.meta.url); // https://github.com/kangax/html-minifier#options-quick-reference
-
-
 const minifyHtml = ({
   htmlUrlInfo,
   options
@@ -5144,11 +5137,9 @@ const minifyHtml = ({
     collapseWhitespace = true,
     removeComments = true
   } = options;
-
   const {
     minify
-  } = require$2("html-minifier");
-
+  } = requireFromJsenv("html-minifier");
   const htmlMinified = minify(htmlUrlInfo.content, {
     collapseWhitespace,
     removeComments
@@ -7965,8 +7956,6 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
-const require$1 = createRequire(import.meta.url);
-
 const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
   if (userAgent.includes("node-fetch/")) {
     // it's not really node and conceptually we can't assume the node version
@@ -7977,8 +7966,7 @@ const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
     };
   }
 
-  const UA = require$1("@financial-times/polyfill-useragent-normaliser");
-
+  const UA = requireFromJsenv("@financial-times/polyfill-useragent-normaliser");
   const {
     ua
   } = new UA(userAgent);
@@ -10693,15 +10681,11 @@ const getDebugInfo = processOptions => {
 //   return typeof process.env.VSCODE_PID === "string"
 // }
 
-const require = createRequire(import.meta.url); // see also https://github.com/sindresorhus/execa/issues/96
-
-
 const killProcessTree = async (processId, {
   signal,
   timeout = 2000
 }) => {
-  const pidtree = require("pidtree");
-
+  const pidtree = requireFromJsenv("pidtree");
   let descendantProcessIds;
 
   try {
