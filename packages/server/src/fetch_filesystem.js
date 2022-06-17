@@ -9,7 +9,6 @@ import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 import {
   isFileSystemPath,
-  urlToFileSystemPath,
   fileSystemPathToUrl,
 } from "@jsenv/server/src/internal/filesystem.js"
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js"
@@ -389,20 +388,23 @@ const getCompressedResponse = async ({ sourceUrl, headers }) => {
 }
 
 const fileUrlToReadableStream = (fileUrl) => {
-  return createReadStream(urlToFileSystemPath(fileUrl), { emitClose: true })
+  return createReadStream(new URL(fileUrl), {
+    emitClose: true,
+    autoClose: true,
+  })
 }
 
 const availableCompressionFormats = {
   br: async (fileReadableStream) => {
-    const { createBrotliCompress } = await import("zlib")
+    const { createBrotliCompress } = await import("node:zlib")
     return fileReadableStream.pipe(createBrotliCompress())
   },
   deflate: async (fileReadableStream) => {
-    const { createDeflate } = await import("zlib")
+    const { createDeflate } = await import("node:zlib")
     return fileReadableStream.pipe(createDeflate())
   },
   gzip: async (fileReadableStream) => {
-    const { createGzip } = await import("zlib")
+    const { createGzip } = await import("node:zlib")
     return fileReadableStream.pipe(createGzip())
   },
 }

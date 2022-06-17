@@ -42,7 +42,9 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
 }
 
 // 404 if file is missing
-{
+// (skipped on windows due to EPERM failing the test)
+// should likely be fixed by something like https://github.com/electron/get/pull/145/files
+if (process.platform !== "win32") {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
   const fileUrl = new URL("./toto", fixturesDirectoryUrl).href
 
@@ -71,8 +73,7 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
 }
 
 // 304 if file not modified (using etag)
-// (skipped on windows due to intermitent EPERM failing the test)
-if (process.platform !== "win32") {
+{
   await ensureEmptyDirectory(fixturesDirectoryUrl)
   const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
@@ -166,8 +167,7 @@ if (process.platform !== "win32") {
 }
 
 // 304 if file not mofified (using mtime)
-// (skipped on windows due to intermitent EPERM failing the test)
-if (process.platform !== "win32") {
+{
   await ensureEmptyDirectory(fixturesDirectoryUrl)
   const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
