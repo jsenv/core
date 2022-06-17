@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, composeServices, fetchUrl } from "@jsenv/server"
+import { startServer, composeServices } from "@jsenv/server"
 
 const { origin } = await startServer({
   logLevel: "warn",

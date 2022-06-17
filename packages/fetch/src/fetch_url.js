@@ -3,8 +3,12 @@
 import { Agent } from "node:https"
 import nodeFetch, { Response } from "node-fetch"
 
-import { fetchFileSystem } from "./fetch_filesystem.js"
-import { isFileHandle, fileHandleToReadableStream } from "./internal/body.js"
+import { DATA_URL } from "@jsenv/urls"
+import { fetchFileSystem } from "@jsenv/server"
+import {
+  isFileHandle,
+  fileHandleToReadableStream,
+} from "@jsenv/server/src/internal/body.js"
 
 export const fetchUrl = async (
   url,
@@ -57,13 +61,13 @@ export const fetchUrl = async (
   }
 
   if (url.startsWith("data:")) {
-    const { mediaType, base64Flag, data } = parseDataUrl(url)
+    const { contentType, base64Flag, data } = DATA_URL.parse(url)
     const body = base64Flag ? Buffer.from(data, "base64") : Buffer.from(data)
     const response = new Response(body, {
       url,
       status: 200,
       headers: {
-        "content-type": mediaType,
+        "content-type": contentType,
       },
     })
     return response
@@ -86,27 +90,4 @@ export const fetchUrl = async (
   })
 
   return response
-}
-
-const parseDataUrl = (dataUrl) => {
-  const afterDataProtocol = dataUrl.slice("data:".length)
-  const commaIndex = afterDataProtocol.indexOf(",")
-  const beforeComma = afterDataProtocol.slice(0, commaIndex)
-
-  let mediaType
-  let base64Flag
-  if (beforeComma.endsWith(`;base64`)) {
-    mediaType = beforeComma.slice(0, -`;base64`.length)
-    base64Flag = true
-  } else {
-    mediaType = beforeComma
-    base64Flag = false
-  }
-
-  const afterComma = afterDataProtocol.slice(commaIndex + 1)
-  return {
-    mediaType: mediaType === "" ? "text/plain;charset=US-ASCII" : mediaType,
-    base64Flag,
-    data: afterComma,
-  }
 }

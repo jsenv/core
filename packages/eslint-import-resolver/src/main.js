@@ -4,4 +4,4 @@
  * Ideally this file should be kept simple to help discovering codebase progressively.
  */
 
-export { interfaceVersion, resolve } from "./src/resolver.js"
+export { interfaceVersion, resolve } from "./resolver.js"

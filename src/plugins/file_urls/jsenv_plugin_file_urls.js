@@ -3,12 +3,14 @@ import { pathToFileURL } from "node:url"
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
-  urlToExtension,
   urlToFilename,
   ensurePathnameTrailingSlash,
 } from "@jsenv/urls"
 
-import { applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution"
+import {
+  applyFileSystemMagicResolution,
+  getExtensionsToTry,
+} from "@jsenv/node-esm-resolution"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 export const jsenvPluginFileUrls = ({
@@ -17,19 +19,6 @@ export const jsenvPluginFileUrls = ({
   preservesSymlink = true,
   directoryReferenceAllowed = false,
 }) => {
-  const getExtensionsToTry = (magicExtensions, importer) => {
-    const extensionsSet = new Set()
-    magicExtensions.forEach((magicExtension) => {
-      if (magicExtension === "inherit") {
-        const importerExtension = urlToExtension(importer)
-        extensionsSet.add(importerExtension)
-      } else {
-        extensionsSet.add(magicExtension)
-      }
-    })
-    return Array.from(extensionsSet.values())
-  }
-
   return [
     {
       name: "jsenv:file_url_resolution",

@@ -1,16 +1,16 @@
 import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/fetch"
 
 import {
   startServer,
   fetchFileSystem,
-  fetchUrl,
   pluginRessourceAliases,
 } from "@jsenv/server"
 
 let ressourceBeforeAlias
 let ressource
 const { origin } = await startServer({
-  logLevel: "warn",
+  logLevel: "error",
   protocol: "http",
   keepProcessAlive: false,
   plugins: {

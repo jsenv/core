@@ -1,10 +1,6 @@
-import { createRequire } from "node:module"
-
-const require = createRequire(import.meta.url)
+import { match } from "./path_to_regexp.js"
 
 export const setupRoutes = (routes) => {
-  const { match } = require("path-to-regexp")
-
   const candidates = Object.keys(routes).map((pathPattern) => {
     const applyPatternMatching = match(pathPattern, {
       decode: decodeURIComponent,

@@ -41,6 +41,8 @@ const eslintConfig = composeEslintConfig(
         },
       },
       "import/extensions": [".js", ".mjs"],
+      // https://github.com/import-js/eslint-plugin-import/issues/1753
+      "import/ignore": ["node_modules/playwright/"],
     },
     rules: jsenvEslintRulesForImport,
   },

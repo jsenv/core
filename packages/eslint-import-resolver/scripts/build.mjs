@@ -49,7 +49,7 @@ const esToCjs = async ({ url, map, content }) => {
   }
 }
 const { content } = await esToCjs({
-  url: new URL("../main.js", import.meta.url).href,
+  url: new URL("../src/main.js", import.meta.url).href,
 })
 await writeFile(
   new URL("../dist/jsenv_eslint_import_resolver.cjs", import.meta.url),

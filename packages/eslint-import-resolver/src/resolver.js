@@ -16,7 +16,8 @@ import {
   applyNodeEsmResolution,
   applyFileSystemMagicResolution,
   readCustomConditionsFromProcessArgs,
-} from "@jsenv/node-esm-resolution/main.js"
+  getExtensionsToTry,
+} from "@jsenv/node-esm-resolution"
 import { createLogger } from "./logger.js"
 import { applyImportmapResolution } from "./importmap_resolution.js"
 import { applyUrlResolution } from "./url_resolution.js"
@@ -35,8 +36,8 @@ export const resolve = (
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
     // one might want to enable this for node_modules but not for project files
-    magicDirectoryIndex = false,
-    magicExtensions = false,
+    magicDirectoryIndex,
+    magicExtensions,
   },
 ) => {
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
@@ -68,7 +69,23 @@ ${fileURLToPath(rootDirectoryUrl)}`)
   const onUrl = (url) => {
     if (url.startsWith("file:")) {
       url = ensureWindowsDriveLetter(url, importer)
+      if (magicDirectoryIndex === undefined) {
+        if (url.includes("/node_modules/")) {
+          magicDirectoryIndex = true
+        } else {
+          magicDirectoryIndex = false
+        }
+      }
+      if (magicExtensions === undefined) {
+        if (url.includes("/node_modules/")) {
+          magicExtensions = ["inherit", ".js"]
+        } else {
+          magicExtensions = false
+        }
+      }
+
       return handleFileUrl(url, {
+        importer,
         logger,
         caseSensitive,
         magicDirectoryIndex,
@@ -91,12 +108,16 @@ ${fileURLToPath(rootDirectoryUrl)}`)
       !nodeInPackageConditions &&
       specifier[0] === "/"
     ) {
-      return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href)
+      return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href, {
+        resolvedBy: "url",
+      })
     }
 
     // data:*, http://*, https://*, file://*
     if (isAbsoluteUrl(specifier)) {
-      return onUrl(specifier)
+      return onUrl(specifier, {
+        resolvedBy: "url",
+      })
     }
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
@@ -106,14 +127,18 @@ ${fileURLToPath(rootDirectoryUrl)}`)
         importer,
       })
       if (urlFromImportmap) {
-        return onUrl(urlFromImportmap)
+        return onUrl(urlFromImportmap, {
+          resolvedBy: "importmap",
+        })
       }
     }
     const moduleSystem = determineModuleSystem(importer, {
       ambiguousExtensions,
     })
     if (moduleSystem === "commonjs") {
-      return onUrl(createRequire(importer).resolve(specifier))
+      return onUrl(createRequire(importer).resolve(specifier), {
+        resolvedBy: "commonjs",
+      })
     }
     if (moduleSystem === "module") {
       const nodeResolution = applyNodeEsmResolution({
@@ -122,11 +147,15 @@ ${fileURLToPath(rootDirectoryUrl)}`)
         specifier,
       })
       if (nodeResolution) {
-        return onUrl(nodeResolution.url)
+        return onUrl(nodeResolution.url, {
+          resolvedBy: "node_esm",
+        })
       }
     }
     if (moduleSystem === "url") {
-      return onUrl(applyUrlResolution(specifier, importer))
+      return onUrl(applyUrlResolution(specifier, importer), {
+        resolvedBy: "url",
+      })
     }
     throw new Error("not found")
   } catch (e) {
@@ -142,12 +171,12 @@ ${e.stack}`)
 
 const handleFileUrl = (
   fileUrl,
-  { logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+  { importer, logger, magicDirectoryIndex, magicExtensions, caseSensitive },
 ) => {
   fileUrl = `file://${new URL(fileUrl).pathname}` // remove query params from url
   const fileResolution = applyFileSystemMagicResolution(fileUrl, {
     magicDirectoryIndex,
-    magicExtensions,
+    magicExtensions: getExtensionsToTry(magicExtensions, importer),
   })
   if (!fileResolution.found) {
     logger.debug(`-> file not found at ${fileUrl}`)

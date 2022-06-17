@@ -1,6 +1,7 @@
 import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem"
+import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, fetchUrl } from "@jsenv/server"
+import { startServer } from "@jsenv/server"
 
 const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href
 

@@ -413,6 +413,15 @@ const urlToFilename = (url) => {
   return filename
 };
 
+const urlToExtension = (url) => {
+  const filename = urlToFilename(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension
+};
+
 const defaultLookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url);
   while (scopeUrl !== "file:///") {
@@ -1521,6 +1530,22 @@ const applyFileSystemMagicResolution = (
   }
 };
 
+const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return []
+  }
+  const extensionsSet = new Set();
+  magicExtensions.forEach((magicExtension) => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension(importer);
+      extensionsSet.add(importerExtension);
+    } else {
+      extensionsSet.add(magicExtension);
+    }
+  });
+  return Array.from(extensionsSet.values())
+};
+
 const LOG_LEVEL_OFF = "off";
 const LOG_LEVEL_DEBUG = "debug";
 const LOG_LEVEL_INFO = "info";
@@ -2308,8 +2333,8 @@ const resolve = (
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
     // one might want to enable this for node_modules but not for project files
-    magicDirectoryIndex = false,
-    magicExtensions = false,
+    magicDirectoryIndex,
+    magicExtensions,
   },
 ) => {
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
@@ -2341,7 +2366,23 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
   const onUrl = (url) => {
     if (url.startsWith("file:")) {
       url = ensureWindowsDriveLetter(url, importer);
+      if (magicDirectoryIndex === undefined) {
+        if (url.includes("/node_modules/")) {
+          magicDirectoryIndex = true;
+        } else {
+          magicDirectoryIndex = false;
+        }
+      }
+      if (magicExtensions === undefined) {
+        if (url.includes("/node_modules/")) {
+          magicExtensions = ["inherit", ".js"];
+        } else {
+          magicExtensions = false;
+        }
+      }
+
       return handleFileUrl(url, {
+        importer,
         logger,
         caseSensitive,
         magicDirectoryIndex,
@@ -2364,12 +2405,16 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       !nodeInPackageConditions &&
       specifier[0] === "/"
     ) {
-      return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href)
+      return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href, {
+        resolvedBy: "url",
+      })
     }
 
     // data:*, http://*, https://*, file://*
     if (isAbsoluteUrl(specifier)) {
-      return onUrl(specifier)
+      return onUrl(specifier, {
+        resolvedBy: "url",
+      })
     }
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
@@ -2379,14 +2424,18 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         importer,
       });
       if (urlFromImportmap) {
-        return onUrl(urlFromImportmap)
+        return onUrl(urlFromImportmap, {
+          resolvedBy: "importmap",
+        })
       }
     }
     const moduleSystem = determineModuleSystem(importer, {
       ambiguousExtensions,
     });
     if (moduleSystem === "commonjs") {
-      return onUrl(node_module.createRequire(importer).resolve(specifier))
+      return onUrl(node_module.createRequire(importer).resolve(specifier), {
+        resolvedBy: "commonjs",
+      })
     }
     if (moduleSystem === "module") {
       const nodeResolution = applyNodeEsmResolution({
@@ -2395,11 +2444,15 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         specifier,
       });
       if (nodeResolution) {
-        return onUrl(nodeResolution.url)
+        return onUrl(nodeResolution.url, {
+          resolvedBy: "node_esm",
+        })
       }
     }
     if (moduleSystem === "url") {
-      return onUrl(applyUrlResolution(specifier, importer))
+      return onUrl(applyUrlResolution(specifier, importer), {
+        resolvedBy: "url",
+      })
     }
     throw new Error("not found")
   } catch (e) {
@@ -2415,12 +2468,12 @@ ${e.stack}`);
 
 const handleFileUrl = (
   fileUrl,
-  { logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+  { importer, logger, magicDirectoryIndex, magicExtensions, caseSensitive },
 ) => {
   fileUrl = `file://${new URL(fileUrl).pathname}`; // remove query params from url
   const fileResolution = applyFileSystemMagicResolution(fileUrl, {
     magicDirectoryIndex,
-    magicExtensions,
+    magicExtensions: getExtensionsToTry(magicExtensions, importer),
   });
   if (!fileResolution.found) {
     logger.debug(`-> file not found at ${fileUrl}`);

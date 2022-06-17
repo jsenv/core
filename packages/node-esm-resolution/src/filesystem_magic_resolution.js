@@ -1,6 +1,6 @@
 import { statSync } from "node:fs"
 
-import { urlToFilename } from "./url_utils.js"
+import { urlToFilename, urlToExtension } from "./url_utils.js"
 
 export const applyFileSystemMagicResolution = (
   fileUrl,
@@ -68,4 +68,20 @@ export const applyFileSystemMagicResolution = (
     url: fileUrl,
     lastENOENTError,
   }
+}
+
+export const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return []
+  }
+  const extensionsSet = new Set()
+  magicExtensions.forEach((magicExtension) => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension(importer)
+      extensionsSet.add(importerExtension)
+    } else {
+      extensionsSet.add(magicExtension)
+    }
+  })
+  return Array.from(extensionsSet.values())
 }

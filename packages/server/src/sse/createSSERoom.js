@@ -1,4 +1,4 @@
-import { createLogger } from "@jsenv/logger"
+import { createLogger } from "@jsenv/log"
 
 import {
   createObservable,

@@ -124,34 +124,3 @@ await startServer({
   },
 })
 ```
-
-## Configuring file response content type
-
-Jsenv uses file extension to decide the _content-type_ response header.
-The default content type mapping exported in [src/jsenvContentTypeMap.js](../../src/jsenvContentTypeMap.js) contains well known content types used in the web.
-It's also possible to override or extend this mapping using _contentTypeMap_ parameter.
-
-```js
-import {
-  startServer,
-  fetchFileSystem,
-  jsenvContentTypeMap,
-} from "@jsenv/server"
-
-await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        contentTypeMap: {
-          ...jsenvContentTypeMap,
-          "application/x-whatever": {
-            extensions: ["whatever", "whatever-2"],
-          },
-        },
-      },
-    )
-  },
-})
-```

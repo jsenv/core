@@ -40,11 +40,9 @@ export { negotiateContentLanguage } from "./content_negotiation/negotiateContent
 export { pluginContentNegotiationCheck } from "./content_negotiation/plugin_content_negotiation_check.js"
 
 // others
-export { fetchUrl } from "./fetch_url.js"
 export { serveDirectory } from "./serve_directory.js"
 export { fromFetchResponse } from "./from_fetch_response.js"
 export { composeTwoResponses } from "./internal/response_composition.js"
 export { pluginRessourceAliases } from "./ressource_aliases/plugin_ressource_aliases.js"
 export { pluginRequestWaitingCheck } from "./plugin_request_waiting_check.js"
 export { findFreePort } from "./internal/listen.js"
-export { urlToContentType } from "./urlToContentType.js"

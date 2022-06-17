@@ -5,6 +5,7 @@
  */
 
 import { createReadStream, statSync, promises } from "node:fs"
+import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 import {
   isFileSystemPath,
@@ -14,10 +15,8 @@ import {
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js"
-import { jsenvContentTypeMap } from "./jsenvContentTypeMap.js"
 import { timeFunction } from "./server_timing/timing_measure.js"
 import { negotiateContentEncoding } from "./content_negotiation/negotiateContentEncoding.js"
-import { urlToContentType } from "./urlToContentType.js"
 import { serveDirectory } from "./serve_directory.js"
 
 const ETAG_MEMORY_MAP = new Map()
@@ -28,7 +27,6 @@ export const fetchFileSystem = async (
     // signal,
     method = "GET",
     headers = {},
-    contentTypeMap = jsenvContentTypeMap,
     etagEnabled = false,
     etagMemory = true,
     etagMemoryMaxSize = 1000,
@@ -155,7 +153,6 @@ export const fetchFileSystem = async (
       const compressedResponse = await getCompressedResponse({
         headers,
         sourceUrl,
-        contentTypeMap,
       })
       if (compressedResponse) {
         response = compressedResponse
@@ -165,7 +162,6 @@ export const fetchFileSystem = async (
       response = await getRawResponse({
         sourceStat,
         sourceUrl,
-        contentTypeMap,
       })
     }
 
@@ -364,11 +360,7 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
   }
 }
 
-const getCompressedResponse = async ({
-  sourceUrl,
-  headers,
-  contentTypeMap,
-}) => {
+const getCompressedResponse = async ({ sourceUrl, headers }) => {
   const acceptedCompressionFormat = negotiateContentEncoding(
     { headers },
     Object.keys(availableCompressionFormats),
@@ -385,7 +377,7 @@ const getCompressedResponse = async ({
   return {
     status: 200,
     headers: {
-      "content-type": urlToContentType(sourceUrl, contentTypeMap),
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
       "content-encoding": acceptedCompressionFormat,
       "vary": "accept-encoding",
     },
@@ -412,11 +404,11 @@ const availableCompressionFormats = {
   },
 }
 
-const getRawResponse = async ({ sourceUrl, sourceStat, contentTypeMap }) => {
+const getRawResponse = async ({ sourceUrl, sourceStat }) => {
   return {
     status: 200,
     headers: {
-      "content-type": urlToContentType(sourceUrl, contentTypeMap),
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
       "content-length": sourceStat.size,
     },
     body: fileUrlToReadableStream(sourceUrl),

@@ -1,7 +1,7 @@
 {
-  "name": "@jsenv/server",
-  "version": "12.7.0",
-  "description": "Write your Node.js server using pure functions",
+  "name": "@jsenv/fetch",
+  "version": "1.0.0",
+  "description": "Unified url fetcher (http, http, file, data)",
   "license": "MIT",
   "author": {
     "name": "dmail",
@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
-    "directory": "packages/server"
+    "directory": "packages/fetch"
   },
   "engines": {
     "node": ">=16.13.0"
@@ -34,12 +34,8 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/abort": "4.2.2",
-    "@jsenv/logger": "4.1.1",
-    "@jsenv/url-meta": "7.0.0"
-  },
-  "devDependencies": {
-    "@jsenv/fetch": "../fetch/",
-    "eventsource": "2.0.2"
+    "@jsenv/urls": "1.2.5",
+    "@jsenv/server": "12.7.0",
+    "node-fetch": "2.6.7"
   }
 }

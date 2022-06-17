@@ -26,7 +26,7 @@ const responseToHeaders = (response) => {
   return headers
 }
 
-export const fetchUrl =
+export const browserFetch =
   typeof window.fetch === "function" &&
   typeof window.AbortController === "function"
     ? fetchNative

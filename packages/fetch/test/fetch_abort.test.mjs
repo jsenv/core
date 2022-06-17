@@ -1,11 +1,13 @@
 import { assert } from "@jsenv/assert"
 
-import { startServer, fetchUrl } from "@jsenv/server"
+import { startServer } from "@jsenv/server"
 import { createObservable } from "@jsenv/server/src/internal/observable.js"
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,
 } from "@jsenv/server/test/test_certificate.js"
+
+import { fetchUrl } from "@jsenv/fetch"
 
 let serverResponsePromise
 const server = await startServer({

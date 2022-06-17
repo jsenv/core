@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-import-resolver",
-  "version": "0.1.17",
+  "version": "0.2.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,7 +18,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./main.js",
+      "import": "./src/main.js",
       "require": "./dist/jsenv_eslint_import_resolver.cjs"
     },
     "./*": "./*"
@@ -26,8 +26,7 @@
   "main": "./dist/jsenv_eslint_import_resolver.cjs",
   "files": [
     "/dist/",
-    "/src/",
-    "/main.js"
+    "/src/"
   ],
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs",
@@ -35,9 +34,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.0.8",
+    "@jsenv/filesystem": "4.0.9",
     "@jsenv/importmap": "1.2.0",
-    "@jsenv/node-esm-resolution": "0.0.10"
+    "@jsenv/node-esm-resolution": "0.1.0"
   },
   "devDependencies": {
     "rollup": "2.70.1"

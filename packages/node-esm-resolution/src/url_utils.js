@@ -54,3 +54,12 @@ export const urlToFilename = (url) => {
       : pathnameBeforeLastSlash.slice(slashLastIndex + 1)
   return filename
 }
+
+export const urlToExtension = (url) => {
+  const filename = urlToFilename(url)
+  const dotLastIndex = filename.lastIndexOf(".")
+  if (dotLastIndex === -1) return ""
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex)
+  return extension
+}

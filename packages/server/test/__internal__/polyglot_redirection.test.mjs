@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/fetch"
 
-import { fetchUrl } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 import { listen } from "@jsenv/server/src/internal/listen.js"
 import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js"

@@ -1,11 +1,7 @@
 import { assert } from "@jsenv/assert"
+import { fetchUrl } from "@jsenv/fetch"
 
-import {
-  startServer,
-  pluginServerTiming,
-  timeFunction,
-  fetchUrl,
-} from "@jsenv/server"
+import { startServer, pluginServerTiming, timeFunction } from "@jsenv/server"
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js"
 
 const { origin } = await startServer({

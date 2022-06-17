@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/utils",
-  "version": "1.8.11",
+  "version": "1.8.12",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,11 +17,11 @@
   "dependencies": {
     "@babel/parser": "7.17.8",
     "@jsenv/abort": "4.2.2",
-    "@jsenv/filesystem": "4.0.8",
+    "@jsenv/filesystem": "4.0.9",
     "@jsenv/log": "2.0.0",
-    "@jsenv/server": "12.6.3",
+    "@jsenv/server": "12.7.0",
     "@jsenv/url-meta": "7.0.0",
-    "@jsenv/urls": "1.2.4",
+    "@jsenv/urls": "1.2.5",
     "@parcel/css": "1.8.1",
     "acorn": "8.7.1",
     "acorn-import-assertions": "1.8.0",
