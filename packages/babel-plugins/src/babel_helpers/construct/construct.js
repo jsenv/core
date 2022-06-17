@@ -13,4 +13,4 @@ function reflectConstruct(Parent, args, Class) {
   return instance
 }
 
-export default isNativeReflectConstruct() ? Reflect.construct : reflectConstruct
+export default isNativeReflectConstruct() ? Reflect.construct.bind() : reflectConstruct
