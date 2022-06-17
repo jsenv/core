@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
 import { chromium } from "playwright"
+import { assert } from "@jsenv/assert"
 
 import { startServer, createSSERoom, fetchFileSystem } from "@jsenv/server"
 

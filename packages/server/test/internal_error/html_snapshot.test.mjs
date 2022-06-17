@@ -11,11 +11,11 @@ with a human eye verification before commiting anything that would change them.
 
 */
 
-import { readFile, resolveUrl, readDirectory } from "@jsenv/filesystem"
+import { readFile, readDirectory } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 const readHtmlFiles = async () => {
-  const htmlFilesDirectory = resolveUrl("./snapshots/", import.meta.url)
+  const htmlFilesDirectory = new URL("./snapshots/", import.meta.url).href
   const htmlFilenames = await readDirectory(htmlFilesDirectory)
 
   const htmlFiles = {}
@@ -25,7 +25,7 @@ const readHtmlFiles = async () => {
   })
   await Promise.all(
     htmlFilenames.map(async (htmlFilename) => {
-      const htmlFileUrl = resolveUrl(htmlFilename, htmlFilesDirectory)
+      const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectory).href
       htmlFiles[htmlFilename] = await readFile(htmlFileUrl)
     }),
   )

@@ -4,7 +4,7 @@ import { startServer, fetchUrl } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 const { origin, stop } = await startServer({
-  logLevel: "warn",
+  logLevel: "off",
   requestToResponse: () => undefined,
 })
 

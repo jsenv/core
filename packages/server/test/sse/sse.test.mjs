@@ -44,7 +44,9 @@ const timeEllapsedPromise = (ms) => {
 
 // a client is notified of events occuring while he is disconnected
 {
-  const room = createSSERoom()
+  const room = createSSERoom({
+    logLevel: "warn",
+  })
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
@@ -224,7 +226,7 @@ const timeEllapsedPromise = (ms) => {
     maxClientAllowed: 1,
   })
   const server = await startServer({
-    logLevel: "warn",
+    logLevel: "off",
     keepProcessAlive: false,
     requestToResponse: (request) => {
       return room.join(request)

@@ -1,8 +1,8 @@
-import { resolveUrl, writeFile, ensureEmptyDirectory } from "@jsenv/filesystem"
+import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem"
 
 import { startServer, fetchUrl } from "@jsenv/server"
 
-const htmlFilesDirectoryUrl = resolveUrl("./snapshots/", import.meta.url)
+const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href
 
 // we need a deterministic stack trace, otherwise
 // test would fail in CI
@@ -30,7 +30,7 @@ const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
       },
     })
     stop()
-    const htmlFileUrl = resolveUrl(htmlFilename, htmlFilesDirectoryUrl)
+    const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl).href
     await writeFile(htmlFileUrl, await response.text())
   }
 }

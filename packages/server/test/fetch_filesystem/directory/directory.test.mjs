@@ -1,10 +1,9 @@
-import { resolveDirectoryUrl, resolveUrl } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { startServer, fetchFileSystem, fetchUrl } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
-const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryUrl = new URL("./", import.meta.url).href
 
 const server = await startServer({
   logLevel: "warn",
@@ -21,8 +20,8 @@ const server = await startServer({
   },
 })
 
-const directoryUrl = resolveDirectoryUrl("./dir", testDirectoryUrl)
-const requestUrl = resolveUrl("/dir/", server.origin)
+const directoryUrl = new URL("./dir/", testDirectoryUrl).href
+const requestUrl = new URL("/dir/", server.origin).href
 const response = await fetchUrl(requestUrl, {
   headers: { accept: "text/html" },
 })

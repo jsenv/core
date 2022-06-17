@@ -86,19 +86,20 @@ if (process.platform !== "win32") {
   const expected = {
     responseBodyAsString: await readFile(
       new URL("./main.html", import.meta.url),
+      { as: "string" },
     ),
     pushedHeaders: [
       {
-        ":scheme": "https",
-        ":authority": "localhost:3679",
-        ":method": "GET",
         ":path": "/script.js",
+        ":method": "GET",
+        ":authority": "localhost:3679",
+        ":scheme": "https",
       },
       {
-        ":scheme": "https",
-        ":authority": "localhost:3679",
-        ":method": "GET",
         ":path": "/style.css",
+        ":method": "GET",
+        ":authority": "localhost:3679",
+        ":scheme": "https",
       },
     ],
   }

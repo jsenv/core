@@ -1,20 +1,16 @@
 import { assert } from "@jsenv/assert"
-import {
-  resolveUrl,
-  writeFile,
-  ensureEmptyDirectory,
-  urlToFileSystemPath,
-} from "@jsenv/filesystem"
+import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 
 import { fetchUrl, startServer } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
-const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
+const tempDirectoryUrl = new URL("./temp/", import.meta.url).href
 
 // fetch text file
 {
   await ensureEmptyDirectory(tempDirectoryUrl)
-  const url = resolveUrl("file.txt", tempDirectoryUrl)
+  const url = new URL("file.txt", tempDirectoryUrl).href
   const fileContent = "hello world"
   await writeFile(url, fileContent)
 
@@ -70,7 +66,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 // fetch file but 404
 {
   await ensureEmptyDirectory(tempDirectoryUrl)
-  const url = resolveUrl("file.txt", tempDirectoryUrl)
+  const url = new URL("file.txt", tempDirectoryUrl).href
 
   const response = await fetchUrl(url, {
     headers: { "cache-control": "no-cache" },

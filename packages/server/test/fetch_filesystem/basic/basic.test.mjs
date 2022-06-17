@@ -1,22 +1,21 @@
 import {
-  resolveUrl,
-  urlToFileSystemPath,
   ensureEmptyDirectory,
   writeFile,
-  writeFileSystemNodeModificationTime,
-  readFileSystemNodeModificationTime,
+  writeEntryModificationTime,
+  readEntryModificationTime,
 } from "@jsenv/filesystem"
+import { urlToFileSystemPath } from "@jsenv/urls"
 import { assert } from "@jsenv/assert"
 
 import { fetchFileSystem } from "@jsenv/server"
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js"
 
-const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
+const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
 
 // 200 on file
 {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
-  const fileUrl = resolveUrl("./file.js", fixturesDirectoryUrl)
+  const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
   await writeFile(fileUrl, fileBuffer)
 
@@ -45,7 +44,7 @@ const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
 // 404 if file is missing
 {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
-  const fileUrl = resolveUrl("./toto", fixturesDirectoryUrl)
+  const fileUrl = new URL("./toto", fixturesDirectoryUrl).href
 
   const actual = await fetchFileSystem(
     new URL("./toto", fixturesDirectoryUrl),
@@ -74,7 +73,7 @@ const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
 // 304 if file not modified (using etag)
 {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
-  const fileUrl = resolveUrl("./file.js", fixturesDirectoryUrl)
+  const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
   const fileBufferModified = Buffer.from(`const a = false`)
 
@@ -168,7 +167,7 @@ const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
 // 304 if file not mofified (using mtime)
 {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
-  const fileUrl = resolveUrl("./file.js", fixturesDirectoryUrl)
+  const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
 
   await writeFile(fileUrl, fileBuffer)
@@ -192,7 +191,7 @@ const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
         "content-type": "application/javascript",
         "content-length": fileBuffer.length,
         "last-modified": new Date(
-          await readFileSystemNodeModificationTime(fileUrl),
+          await readEntryModificationTime(fileUrl),
         ).toUTCString(),
       },
       body: actual.body,
@@ -230,7 +229,7 @@ const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
 
   // modifiy the file content, then third request
   await new Promise((resolve) => setTimeout(resolve, 1500)) // wait more than 1s
-  await writeFileSystemNodeModificationTime(fileUrl, Date.now())
+  await writeEntryModificationTime(fileUrl, Date.now())
 
   const thirdResponse = await fetchFileSystem(
     new URL("./file.js", fixturesDirectoryUrl),
@@ -253,7 +252,7 @@ const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
         "content-type": "application/javascript",
         "content-length": fileBuffer.length,
         "last-modified": new Date(
-          await readFileSystemNodeModificationTime(fileUrl),
+          await readEntryModificationTime(fileUrl),
         ).toUTCString(),
       },
     }

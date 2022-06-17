@@ -52,7 +52,7 @@ const { origin } = await startServer({
 // can be calld without arg, returns 501
 {
   const server = await startServer({
-    logLevel: "warn",
+    logLevel: "off",
   })
   try {
     const response = await fetchUrl(server.origin)

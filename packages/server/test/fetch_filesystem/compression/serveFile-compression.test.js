@@ -1,14 +1,14 @@
 // import { createGunzip } from "zlib"
-import { resolveUrl, ensureEmptyDirectory, writeFile } from "@jsenv/filesystem"
+import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { fetchFileSystem } from "@jsenv/server"
 
-const fixturesDirectoryUrl = resolveUrl("./fixtures/", import.meta.url)
+const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
 
 await ensureEmptyDirectory(fixturesDirectoryUrl)
 {
-  const fileUrl = resolveUrl("./file.js", fixturesDirectoryUrl)
+  const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from("const a = true")
   await writeFile(fileUrl, fileBuffer)
 

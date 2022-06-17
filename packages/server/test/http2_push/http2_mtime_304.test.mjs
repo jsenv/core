@@ -86,16 +86,16 @@ if (process.platform !== "win32") {
     responseBodyAsString: "",
     pushedHeaders: [
       {
-        ":scheme": "https",
-        ":authority": new URL(server.origin).host,
-        ":method": "GET",
         ":path": "/script.js",
+        ":method": "GET",
+        ":authority": new URL(server.origin).host,
+        ":scheme": "https",
       },
       {
-        ":scheme": "https",
-        ":authority": new URL(server.origin).host,
-        ":method": "GET",
         ":path": "/style.css",
+        ":method": "GET",
+        ":authority": new URL(server.origin).host,
+        ":scheme": "https",
       },
     ],
   }
