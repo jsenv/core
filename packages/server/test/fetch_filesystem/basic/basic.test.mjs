@@ -13,7 +13,7 @@ import { bufferToEtag } from "@jsenv/server/src/internal/etag.js"
 const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
 
 // 200 on file
-{
+if (process.platform !== "win32") {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
   const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
@@ -73,7 +73,7 @@ if (process.platform !== "win32") {
 }
 
 // 304 if file not modified (using etag)
-{
+if (process.platform !== "win32") {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
   const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
@@ -167,7 +167,7 @@ if (process.platform !== "win32") {
 }
 
 // 304 if file not mofified (using mtime)
-{
+if (process.platform !== "win32") {
   await ensureEmptyDirectory(fixturesDirectoryUrl)
   const fileUrl = new URL("./file.js", fixturesDirectoryUrl).href
   const fileBuffer = Buffer.from(`const a = true`)
