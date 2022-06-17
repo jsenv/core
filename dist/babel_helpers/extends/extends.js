@@ -13,4 +13,4 @@ function assign(target) {
   return target;
 }
 
-export default Object.assign || assign;
+export default Object.assign ? Object.assign.bind() : assign;
