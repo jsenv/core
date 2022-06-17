@@ -75,7 +75,7 @@
     "@jsenv/node-esm-resolution": "0.1.0",
     "@jsenv/server": "12.7.0",
     "@jsenv/uneval": "1.6.0",
-    "@jsenv/utils": "1.8.12",
+    "@jsenv/utils": "1.9.0",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/urls": "1.2.5",
     "construct-style-sheets-polyfill": "3.1.0",
@@ -111,7 +111,6 @@
     "playwright": "1.22.2",
     "postcss-import": "14.1.0",
     "prettier": "2.7.1",
-    "redux": "4.1.2",
-    "rollup": "2.70.1"
+    "redux": "4.1.2"
   }
 }

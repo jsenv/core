@@ -28,7 +28,7 @@
     "@babel/plugin-transform-react-jsx-development": "7.16.7",
     "@jsenv/plugin-commonjs": "0.0.16",
     "@jsenv/url-meta": "7.0.0",
-    "@jsenv/utils": "1.8.12",
+    "@jsenv/utils": "1.9.0",
     "react-refresh": "0.13.0"
   },
   "peerDependencies": {
