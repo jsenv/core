@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internal server error</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Internal server error</h1>
+    <p>Code inside server has thrown an error.</p>
+    <details>
+      <summary>See internal error details</summary>
+      <pre>Error: test
+    at requestToResponse (file:///Users/d.maillard/Dev/Github/jsenv-server/test/startServer/internal-error/generate-internal-error-html-files.js:45:19)
+    at generateResponseDescription (file:///Users/d.maillard/Dev/Github/jsenv-server/src/startServer.js:456:42)
+    at file:///Users/d.maillard/Dev/Github/jsenv-server/src/startServer.js:302:64
+    at timeFunction (file:///Users/d.maillard/Dev/Github/jsenv-server/src/serverTiming.js:19:23)
+    at Server.requestCallback (file:///Users/d.maillard/Dev/Github/jsenv-server/src/startServer.js:302:17)
+    at Server.emit (events.js:326:22)
+    at parserOnIncoming (_http_server.js:777:12)
+    at HTTPParser.parserOnHeadersComplete (_http_common.js:119:17)</pre>
+    </details>
+  </body>
+</html>
