@@ -13,9 +13,9 @@
     "preact": "10.8.0"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.17.0",
-    "@babel/plugin-syntax-import-assertions": "7.16.7",
-    "@babel/plugin-transform-react-jsx": "7.16.5",
+    "@babel/eslint-parser": "7.18.2",
+    "@babel/plugin-syntax-import-assertions": "7.17.12",
+    "@babel/plugin-transform-react-jsx": "7.17.12",
     "@jsenv/core": "../../../",
     "@jsenv/plugin-preact": "../../jsenv-plugin-preact/",
     "@jsenv/eslint-config": "16.0.9",

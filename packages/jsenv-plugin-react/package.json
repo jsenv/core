@@ -24,7 +24,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@babel/plugin-transform-react-jsx": "7.17.3",
+    "@babel/plugin-transform-react-jsx": "7.17.12",
     "@babel/plugin-transform-react-jsx-development": "7.16.7",
     "@jsenv/plugin-commonjs": "0.0.16",
     "@jsenv/url-meta": "7.0.0",
