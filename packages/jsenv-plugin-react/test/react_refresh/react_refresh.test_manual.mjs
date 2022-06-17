@@ -1,7 +1,7 @@
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startDevServer } from "@jsenv/core"
-import { jsenvPluginReact } from "@jsenv/core/packages/jsenv-plugin-react/main.js"
+import { jsenvPluginReact } from "@jsenv/plugin-react"
 
 const { serverCertificate, serverCertificatePrivateKey } =
   await requestCertificateForLocalhost({

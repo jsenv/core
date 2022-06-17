@@ -25,6 +25,7 @@
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.30.0",
+    "playwright": "1.22.2",
     "prettier": "2.6.2"
   }
 }

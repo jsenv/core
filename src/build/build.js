@@ -116,8 +116,6 @@ export const build = async ({
 
   clientFiles = {
     "./src/": true,
-    "./src/**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./src/**/node_modules/": false,
   },
   cooldownBetweenFileEvents,
   watch = false,

@@ -44,8 +44,7 @@ export const startDevServer = async ({
     !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
-    "./src/**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./src/**/node_modules/": false,
+    "./test/": true,
   },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
@@ -63,7 +62,7 @@ export const startDevServer = async ({
   },
   plugins = [],
   urlAnalysis = {},
-  htmlSupervisor = false,
+  htmlSupervisor = true,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
