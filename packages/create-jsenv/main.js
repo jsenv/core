@@ -51,6 +51,7 @@ const getParamsFromProcessArgsAndPrompts = async () => {
   let directoryUrl = directoryArg ? new URL(`${directoryUrl}/`, cwdUrl) : null
   const webVanilla = argv.includes("--web")
   const webReact = argv.includes("--web-react")
+  const webPreact = argv.includes("--web-preact")
 
   try {
     const demoDirectoryName = directoryUrl
@@ -96,7 +97,7 @@ const getParamsFromProcessArgsAndPrompts = async () => {
           name: "overwriteChecker",
         },
         {
-          type: webVanilla || webReact ? null : "select",
+          type: webVanilla || webReact || webPreact ? null : "select",
           name: "template",
           message: "Select a template:",
           initial: 0,
@@ -108,6 +109,10 @@ const getParamsFromProcessArgsAndPrompts = async () => {
             {
               title: "web-react",
               value: "web-react",
+            },
+            {
+              title: "web-preact",
+              value: "web-preact",
             },
           ],
         },
