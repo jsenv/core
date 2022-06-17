@@ -1,4 +1,4 @@
-import { require } from "@jsenv/utils/require.js"
+import { parse, serialize, parseFragment } from "parse5"
 
 // https://github.com/inikulin/parse5/blob/master/packages/parse5/lib/tree-adapters/default.js
 // eslint-disable-next-line import/no-unresolved
@@ -8,8 +8,7 @@ export const parseHtmlString = (
   htmlString,
   { storeOriginalPositions = true } = {},
 ) => {
-  const parse5 = require("parse5")
-  const htmlAst = parse5.parse(htmlString, { sourceCodeLocationInfo: true })
+  const htmlAst = parse(htmlString, { sourceCodeLocationInfo: true })
   if (storeOriginalPositions) {
     const htmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
     const storedAttribute = getHtmlNodeAttributeByName(
@@ -163,7 +162,6 @@ export const stringifyHtmlAst = (
   htmlAst,
   { removeOriginalPositionAttributes = false } = {},
 ) => {
-  const parse5 = require("parse5")
   if (removeOriginalPositionAttributes) {
     const htmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
     const storedAttribute = getHtmlNodeAttributeByName(
@@ -183,14 +181,13 @@ export const stringifyHtmlAst = (
       })
     }
   }
-  const htmlString = parse5.serialize(htmlAst)
+  const htmlString = serialize(htmlAst)
 
   return htmlString
 }
 
 export const parseSvgString = (svgString) => {
-  const parse5 = require("parse5")
-  const svgAst = parse5.parseFragment(svgString, {
+  const svgAst = parseFragment(svgString, {
     sourceCodeLocationInfo: true,
   })
   return svgAst
@@ -470,8 +467,7 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   const html = `<${tagName} ${stringifyAttributes(
     rest,
   )}>${textContent}</${tagName}>`
-  const parse5 = require("parse5")
-  const fragment = parse5.parseFragment(html)
+  const fragment = parseFragment(html)
   return fragment.childNodes[0]
 }
 

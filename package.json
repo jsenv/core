@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "27.0.0-alpha.80",
+  "version": "27.0.0-alpha.81",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -75,7 +75,7 @@
     "@jsenv/node-esm-resolution": "0.1.0",
     "@jsenv/server": "12.7.0",
     "@jsenv/uneval": "1.6.0",
-    "@jsenv/utils": "1.9.0",
+    "@jsenv/utils": "1.9.1",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/urls": "1.2.5",
     "construct-style-sheets-polyfill": "3.1.0",
