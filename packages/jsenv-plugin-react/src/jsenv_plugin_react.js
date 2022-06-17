@@ -12,7 +12,8 @@ import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_pr
 
 export const jsenvPluginReact = ({
   asJsModuleLogLevel,
-  hotRefreshPatterns,
+  jsxInclude,
+  refreshInclude,
 } = {}) => {
   return [
     jsenvPluginCommonJs({
@@ -28,7 +29,8 @@ export const jsenvPluginReact = ({
     }),
     jsenvPluginReactRefreshPreamble(),
     jsenvPluginJsxAndRefresh({
-      hotRefreshPatterns,
+      jsxInclude,
+      refreshInclude,
     }),
   ]
 }

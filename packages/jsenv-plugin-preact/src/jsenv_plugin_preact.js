@@ -25,7 +25,7 @@ export const jsenvPluginPreact = ({
   },
   hookNamesInclude = {
     "./**/*": true,
-    "./**/node_modules": false,
+    "./**/node_modules/": false,
   },
   preactDevtoolsDuringBuild = false,
 } = {}) => {

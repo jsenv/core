@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,13 +13,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./main.js"
+      "import": "./src/main.js"
     },
     "./*": "./*"
   },
   "files": [
-    "/src/",
-    "/main.js"
+    "/src/"
   ],
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
