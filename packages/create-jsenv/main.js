@@ -98,8 +98,8 @@ const getParamsFromProcessArgsAndPrompts = async () => {
         },
         {
           type: webVanilla || webReact || webPreact ? null : "select",
-          name: "template",
-          message: "Select a template:",
+          name: "demoName",
+          message: "Select a demo:",
           initial: 0,
           choices: [
             {
@@ -132,22 +132,19 @@ const getParamsFromProcessArgsAndPrompts = async () => {
   }
 }
 
-const createFilesFromTemplate = ({ directoryUrl, overwrite, template }) => {
-  console.log(`\n  setup project in ${directoryUrl.href}`)
+const createFilesFromDemo = ({ directoryUrl, overwrite, demoName }) => {
+  console.log(`\n  setup demo in ${directoryUrl.href}`)
   if (overwrite) {
     makeDirectoryEmpty(directoryUrl)
   } else if (!existsSync(directoryUrl)) {
     mkdirSync(directoryUrl, { recursive: true })
   }
 
-  const templateDirectoryUrl = new URL(
-    `./template-${template}/`,
-    import.meta.url,
-  )
-  console.log(`  create files from ${templateDirectoryUrl.href}`)
-  const files = readdirSync(templateDirectoryUrl)
+  const demoDirectoryUrl = new URL(`./demo-${demoName}/`, import.meta.url)
+  console.log(`  create files from ${demoDirectoryUrl.href}`)
+  const files = readdirSync(demoDirectoryUrl)
   for (const file of files) {
-    const fromUrl = new URL(file, templateDirectoryUrl)
+    const fromUrl = new URL(file, demoDirectoryUrl)
     const toUrl = new URL(
       file === "_gitignore" ? ".gitignore" : file,
       directoryUrl,
@@ -192,14 +189,14 @@ const createFilesFromTemplate = ({ directoryUrl, overwrite, template }) => {
   console.log(`npm run dev`)
 }
 
-const { cancelled, directoryUrl, overwrite, template } =
+const { cancelled, directoryUrl, overwrite, demoName } =
   await getParamsFromProcessArgsAndPrompts()
 if (cancelled) {
   console.log(cancelled.message)
 } else {
-  createFilesFromTemplate({
+  createFilesFromDemo({
     directoryUrl,
     overwrite,
-    template,
+    demoName,
   })
 }
