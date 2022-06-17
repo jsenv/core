@@ -14,8 +14,7 @@
   "main": "./main.js",
   "dependencies": {
     "@jsenv/filesystem": "4.0.6",
-    "@jsenv/logger": "4.0.1",
-    "@jsenv/log": "1.6.3",
+    "@jsenv/log": "2.0.0",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/urls": "1.2.3",
     "@rollup/plugin-commonjs": "22.0.0",

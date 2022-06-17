@@ -1,7 +1,8 @@
 import cluster from "node:cluster"
 import { fileURLToPath } from "node:url"
 import { parentPort } from "node:worker_threads"
-import { createLogger } from "@jsenv/logger"
+
+import { createLogger } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 export const isRestartProcess = cluster.isWorker

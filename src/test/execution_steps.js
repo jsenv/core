@@ -1,5 +1,5 @@
 import { collectFiles } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
+import { createDetailedMessage } from "@jsenv/log"
 
 export const generateExecutionSteps = async (
   plan,

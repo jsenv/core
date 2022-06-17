@@ -1,8 +1,7 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
-import { createLogger } from "@jsenv/logger"
-
+import { createLogger } from "@jsenv/log"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"

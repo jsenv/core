@@ -1,6 +1,4 @@
 import { fork } from "node:child_process"
-import { urlToFileSystemPath } from "@jsenv/urls"
-import { createDetailedMessage } from "@jsenv/logger"
 import {
   Abort,
   raceCallbacks,
@@ -8,6 +6,8 @@ import {
 } from "@jsenv/abort"
 import { uneval } from "@jsenv/uneval"
 
+import { urlToFileSystemPath } from "@jsenv/urls"
+import { createDetailedMessage } from "@jsenv/log"
 import { memoize } from "@jsenv/utils/memoize/memoize.js"
 import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"

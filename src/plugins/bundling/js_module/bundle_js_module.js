@@ -1,8 +1,8 @@
 import { pathToFileURL } from "node:url"
+
 import { URL_META } from "@jsenv/url-meta"
 import { isFileSystemPath } from "@jsenv/urls"
-import { createDetailedMessage } from "@jsenv/logger"
-
+import { createDetailedMessage } from "@jsenv/log"
 import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js"

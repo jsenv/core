@@ -7,10 +7,8 @@ import {
   setUrlFilename,
 } from "@jsenv/urls"
 import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/logger"
-
+import { createDetailedMessage } from "@jsenv/log"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
-
 import { createPluginController } from "../plugins/plugin_controller.js"
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"

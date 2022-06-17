@@ -25,9 +25,7 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, loggerToLevels } from "@jsenv/logger"
-
-import { createTaskLog } from "@jsenv/log"
+import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
 import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 import {

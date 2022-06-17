@@ -1,4 +1,4 @@
-import { createDetailedMessage } from "@jsenv/logger"
+import { createDetailedMessage } from "@jsenv/log"
 
 export const composeV8AndIstanbul = (
   v8FileByFileCoverage,

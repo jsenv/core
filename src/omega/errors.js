@@ -1,4 +1,4 @@
-import { createDetailedMessage } from "@jsenv/logger"
+import { createDetailedMessage } from "@jsenv/log"
 
 export const createResolveUrlError = ({
   pluginController,

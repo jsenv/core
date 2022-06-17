@@ -1,6 +1,6 @@
 import { findFreePort } from "@jsenv/server"
-import { createDetailedMessage } from "@jsenv/logger"
 
+import { createDetailedMessage } from "@jsenv/log"
 import { ExecOptions } from "./exec_options.js"
 
 export const createChildExecOptions = async ({

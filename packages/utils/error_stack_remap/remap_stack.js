@@ -1,5 +1,4 @@
-import { createDetailedMessage } from "@jsenv/logger"
-
+import { createDetailedMessage } from "@jsenv/log"
 import { DATA_URL } from "@jsenv/urls"
 import { SOURCEMAP } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 

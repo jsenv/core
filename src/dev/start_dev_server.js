@@ -1,11 +1,10 @@
 import { parentPort } from "node:worker_threads"
+
 import {
   assertAndNormalizeDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
-import { createLogger, loggerToLevels } from "@jsenv/logger"
-
-import { createTaskLog } from "@jsenv/log"
+import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"

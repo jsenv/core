@@ -1,6 +1,5 @@
 import { exec } from "node:child_process"
-import { createDetailedMessage, createLogger } from "@jsenv/logger"
-import { UNICODE } from "@jsenv/log"
+import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/log"
 
 export const executeCommand = (
   command,

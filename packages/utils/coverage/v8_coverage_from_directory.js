@@ -4,7 +4,7 @@ import {
   readFile,
 } from "@jsenv/filesystem"
 import { resolveUrl } from "@jsenv/urls"
-import { createDetailedMessage } from "@jsenv/logger"
+import { createDetailedMessage } from "@jsenv/log"
 import { Abort } from "@jsenv/abort"
 
 export const visitNodeV8Directory = async ({
