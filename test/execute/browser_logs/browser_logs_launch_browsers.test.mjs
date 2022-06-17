@@ -2,8 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import { execute, chromium, firefox, webkit } from "@jsenv/core"
 
-// eslint-disable-next-line import/newline-after-import
-;[
+await [
   // ensure multiline
   chromium,
   firefox,
@@ -41,12 +40,12 @@ import { execute, chromium, firefox, webkit } from "@jsenv/core"
       {
         type: "log",
         text: `foo
-`,
+    `,
       },
       {
         type: "log",
         text: `bar
-`,
+    `,
       },
     ],
   }

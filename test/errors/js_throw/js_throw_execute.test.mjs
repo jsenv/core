@@ -2,8 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import { execute, chromium, firefox, webkit } from "@jsenv/core"
 
-// eslint-disable-next-line import/newline-after-import
-;[
+await [
   // ensure multiline
   chromium,
   firefox,
@@ -55,8 +54,8 @@ import { execute, chromium, firefox, webkit } from "@jsenv/core"
     webkit: () => {
       const expected = `SPECIAL_STRING_UNLIKELY_TO_COLLIDE
     at Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (${server.origin}/trigger_error.js:2:56)
-    at module code (${server.origin}/main.js:2:13)`
+    at reportError (${server.origin}/trigger_error.js:2:18)
+    at unknown (${server.origin}`
       const actual = error.stack.slice(0, expected.length)
       assert({ actual, expected })
     },

@@ -3,8 +3,7 @@ import { assert } from "@jsenv/assert"
 import { execute, chromium, firefox, webkit } from "@jsenv/core"
 
 if (process.platform !== "win32") {
-  // eslint-disable-next-line import/newline-after-import
-  ;[
+  await [
     // ensure multiline
     chromium,
     firefox,
