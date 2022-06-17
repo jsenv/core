@@ -8316,9 +8316,7 @@ const startDevServer = async ({
   devServerAutoreload = typeof process.send !== "function" && !parentPort && !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
-    "./src/**/.*/": false,
-    // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./src/**/node_modules/": false
+    "./test/": true
   },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
@@ -8335,7 +8333,7 @@ const startDevServer = async ({
   },
   plugins = [],
   urlAnalysis = {},
-  htmlSupervisor = false,
+  htmlSupervisor = true,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -11819,10 +11817,7 @@ const build = async ({
   // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
   clientFiles = {
-    "./src/": true,
-    "./src/**/.*/": false,
-    // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./src/**/node_modules/": false
+    "./src/": true
   },
   cooldownBetweenFileEvents,
   watch = false,
