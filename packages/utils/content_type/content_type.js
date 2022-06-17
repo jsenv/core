@@ -75,7 +75,7 @@ export const CONTENT_TYPE = {
 }
 
 const normalizeMediaType = (value) => {
-  if (value === "application/javascript") {
+  if (value === "text/javascript") {
     return "text/javascript"
   }
   return value

@@ -43,7 +43,7 @@ const { origin } = await startServer({
     ressource: "/src/deep/file.js",
     status: 200,
     headers: {
-      "content-type": "application/javascript",
+      "content-type": "text/javascript",
     },
   }
   assert({ actual, expected })
@@ -83,7 +83,7 @@ const { origin } = await startServer({
     ressourceBeforeAlias: "/diuei.js",
     status: 200,
     headers: {
-      "content-type": "application/javascript",
+      "content-type": "text/javascript",
     },
   }
   assert({ actual, expected })

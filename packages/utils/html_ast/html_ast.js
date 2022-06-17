@@ -453,7 +453,7 @@ export const parseScriptNode = (scriptNode) => {
   }
   if (
     typeAttribute.value === "text/javascript" ||
-    typeAttribute.value === "application/javascript"
+    typeAttribute.value === "text/javascript"
   ) {
     return "classic"
   }

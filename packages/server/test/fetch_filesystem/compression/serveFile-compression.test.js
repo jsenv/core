@@ -32,7 +32,7 @@ await ensureEmptyDirectory(fixturesDirectoryUrl)
     status: 200,
     headers: {
       "cache-control": "no-store",
-      "content-type": "application/javascript",
+      "content-type": "text/javascript",
       "content-encoding": "gzip",
       "vary": "accept-encoding",
     },

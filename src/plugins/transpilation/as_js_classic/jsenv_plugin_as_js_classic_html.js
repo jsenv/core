@@ -190,7 +190,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                 specifierLine: line - 1,
                 specifierColumn: column,
                 specifier: inlineScriptUrl,
-                contentType: "application/javascript",
+                contentType: "text/javascript",
                 content: textNode.value,
               })
               const [, newUrlInfo] = await getReferenceAsJsClassic(

@@ -71,12 +71,12 @@ import { negotiateContentType } from "@jsenv/server"
   const actual = negotiateContentType(
     {
       headers: {
-        accept: "text/plain, application/javascript",
+        accept: "text/plain, text/javascript",
       },
     },
-    ["application/javascript"],
+    ["text/javascript"],
   )
-  const expected = "application/javascript"
+  const expected = "text/javascript"
   assert({ actual, expected })
 }
 
@@ -84,7 +84,7 @@ import { negotiateContentType } from "@jsenv/server"
   const actual = negotiateContentType(
     {
       headers: {
-        accept: "text/plain, application/javascript",
+        accept: "text/plain, text/javascript",
       },
     },
     ["application/pdf"],
@@ -100,9 +100,9 @@ import { negotiateContentType } from "@jsenv/server"
         accept: "text/plain, */*",
       },
     },
-    ["application/javascript"],
+    ["text/javascript"],
   )
-  const expected = "application/javascript"
+  const expected = "text/javascript"
   assert({ actual, expected })
 }
 
@@ -113,8 +113,8 @@ import { negotiateContentType } from "@jsenv/server"
         accept: "text/plain, */*;q=0.1",
       },
     },
-    ["application/javascript"],
+    ["text/javascript"],
   )
-  const expected = "application/javascript"
+  const expected = "text/javascript"
   assert({ actual, expected })
 }

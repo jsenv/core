@@ -1,7 +1,7 @@
 import { parentPort } from "node:worker_threads";
 import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
 import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
-import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, urlToExtension, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename } from "@jsenv/urls";
+import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename, urlToExtension } from "@jsenv/urls";
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js";
 import { URL_META } from "@jsenv/url-meta";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
@@ -11,7 +11,7 @@ import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js";
 import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js";
 import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
-import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution } from "@jsenv/node-esm-resolution";
+import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
 import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js";
@@ -1066,19 +1066,6 @@ const jsenvPluginFileUrls = ({
   preservesSymlink = true,
   directoryReferenceAllowed = false
 }) => {
-  const getExtensionsToTry = (magicExtensions, importer) => {
-    const extensionsSet = new Set();
-    magicExtensions.forEach(magicExtension => {
-      if (magicExtension === "inherit") {
-        const importerExtension = urlToExtension(importer);
-        extensionsSet.add(importerExtension);
-      } else {
-        extensionsSet.add(magicExtension);
-      }
-    });
-    return Array.from(extensionsSet.values());
-  };
-
   return [{
     name: "jsenv:file_url_resolution",
     appliesDuring: "*",
@@ -2870,7 +2857,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 specifierLine: line - 1,
                 specifierColumn: column,
                 specifier: inlineScriptUrl,
-                contentType: "application/javascript",
+                contentType: "text/javascript",
                 content: textNode.value
               });
               const [, newUrlInfo] = await getReferenceAsJsClassic(inlineReference, {

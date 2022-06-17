@@ -28,7 +28,7 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
     statusMessage: undefined,
     headers: {
       "cache-control": "no-store",
-      "content-type": "application/javascript",
+      "content-type": "text/javascript",
       "content-length": fileBuffer.length,
     },
     body: actual.body,
@@ -96,7 +96,7 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
-        "content-type": "application/javascript",
+        "content-type": "text/javascript",
         "content-length": fileBuffer.length,
         "etag": bufferToEtag(fileBuffer),
       },
@@ -155,7 +155,7 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
-        "content-type": "application/javascript",
+        "content-type": "text/javascript",
         "content-length": fileBufferModified.length,
         "etag": bufferToEtag(fileBufferModified),
       },
@@ -188,7 +188,7 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
-        "content-type": "application/javascript",
+        "content-type": "text/javascript",
         "content-length": fileBuffer.length,
         "last-modified": new Date(
           await readEntryModificationTime(fileUrl),
@@ -249,7 +249,7 @@ const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
-        "content-type": "application/javascript",
+        "content-type": "text/javascript",
         "content-length": fileBuffer.length,
         "last-modified": new Date(
           await readEntryModificationTime(fileUrl),

@@ -35,7 +35,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     {
       headers: {
         "access-control-allow-headers": "c, a",
-        "content-type": "application/javascript",
+        "content-type": "text/javascript",
       },
     },
   )
@@ -45,7 +45,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     statusMessage: undefined,
     headers: {
       "access-control-allow-headers": "a, b, c",
-      "content-type": "application/javascript",
+      "content-type": "text/javascript",
     },
     body: undefined,
     bodyEncoding: undefined,

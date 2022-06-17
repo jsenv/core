@@ -17,22 +17,22 @@ const test = ({ content, contentType, lineBreakNormalization }) => {
   const actual = {
     unixStringWithoutNormalization: test({
       content: `console.log(42);\n`,
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: false,
     }),
     windowsStringWithoutNormalization: test({
       content: `console.log(42);\r\n`,
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: false,
     }),
     unixStringWithNormalization: test({
       content: `console.log(42);\n`,
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: true,
     }),
     windowsStringWithNormalization: test({
       content: `console.log(42);\r\n`,
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: true,
     }),
   }
@@ -49,22 +49,22 @@ const test = ({ content, contentType, lineBreakNormalization }) => {
   const actual = {
     unixBufferWithoutNormalization: test({
       content: Buffer.from(`console.log(42);\n`),
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: false,
     }),
     windowsBufferWithoutNormalization: test({
       content: Buffer.from(`console.log(42);\r\n`),
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: false,
     }),
     unixBufferWithNormalization: test({
       content: Buffer.from(`console.log(42);\n`),
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: true,
     }),
     windowsBufferWithNormalization: test({
       content: Buffer.from(`console.log(42);\r\n`),
-      contentType: "application/javascript",
+      contentType: "text/javascript",
       lineBreakNormalization: true,
     }),
   }
