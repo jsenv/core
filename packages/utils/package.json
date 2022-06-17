@@ -27,11 +27,11 @@
     "acorn-import-assertions": "1.8.0",
     "acorn-walk": "8.2.0",
     "ansi-to-html": "0.7.2",
-    "magic-string": "0.26.1",
+    "magic-string": "0.26.2",
     "parse5": "6.0.1",
     "postcss": "8.4.12",
     "postcss-value-parser": "4.2.0",
     "rollup": "2.70.1",
-    "source-map": "0.7.3"
+    "source-map": "0.7.4"
   }
 }
