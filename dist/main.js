@@ -1,7 +1,6 @@
 import { parentPort } from "node:worker_threads";
 import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
-import { createDetailedMessage, createLogger, loggerToLevels } from "@jsenv/logger";
-import { createTaskLog, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
+import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
 import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, urlToExtension, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename } from "@jsenv/urls";
 import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js";
 import { URL_META } from "@jsenv/url-meta";
@@ -7311,9 +7310,7 @@ const createKitchen = ({
     } = dishContext;
 
     context.cook = (urlInfo, nestedDishContext) => {
-      return cookDuringCook(urlInfo, {
-        outDirectoryUrl: dishContext.outDirectoryUrl,
-        clientRuntimeCompat: dishContext.clientRuntimeCompat,
+      return cookDuringCook(urlInfo, { ...dishContext,
         ...nestedDishContext
       });
     };
