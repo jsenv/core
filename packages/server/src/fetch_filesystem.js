@@ -4,7 +4,7 @@
  * It is meant to be used inside "requestToResponse"
  */
 
-import { createReadStream, statSync, promises } from "node:fs"
+import { createReadStream, statSync, readFile } from "node:fs"
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
 
 import {
@@ -18,8 +18,6 @@ import { convertFileSystemErrorToResponseProperties } from "./internal/convertFi
 import { timeFunction } from "./server_timing/timing_measure.js"
 import { negotiateContentEncoding } from "./content_negotiation/negotiateContentEncoding.js"
 import { serveDirectory } from "./serve_directory.js"
-
-const ETAG_MEMORY_MAP = new Map()
 
 export const fetchFileSystem = async (
   filesystemUrl,
@@ -95,13 +93,11 @@ export const fetchFileSystem = async (
     }
   }
 
-  let sourceUrl = `file://${new URL(urlString).pathname}`
-  const sourceFilesystemPath = urlToFileSystemPath(filesystemUrl)
-
+  const sourceUrl = `file://${new URL(urlString).pathname}`
   try {
     const [readStatTiming, sourceStat] = await timeFunction(
       "file service>read file stat",
-      () => statSync(sourceFilesystemPath),
+      () => statSync(new URL(sourceUrl)),
     )
     if (sourceStat.isDirectory()) {
       if (canReadDirectory) {
@@ -283,6 +279,7 @@ const getEtagResponse = async ({
   }
 }
 
+const ETAG_MEMORY_MAP = new Map()
 const computeEtag = async ({
   etagMemory,
   etagMemoryMaxSize,
@@ -298,9 +295,15 @@ const computeEtag = async ({
       return etagMemoryEntry.eTag
     }
   }
-  const fileContentAsBuffer = await promises.readFile(
-    urlToFileSystemPath(sourceUrl),
-  )
+  const fileContentAsBuffer = await new Promise((resolve, reject) => {
+    readFile(new URL(sourceUrl), (error, buffer) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(buffer)
+      }
+    })
+  })
   const eTag = bufferToEtag(fileContentAsBuffer)
   if (etagMemory) {
     if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
