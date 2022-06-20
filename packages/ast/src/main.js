@@ -1,55 +1,5 @@
-/*
- * TODO: organize into groups such as:
- * - HTML_AST
- *   - parse
- *   - stringify
- *   - removeAttributeByName
- *   - removeAttribute
- *   - setAttributes
- * - JS_AST
- *   - applyBabelPlugins
- *   - parseWithAcorn
- *   - injectImport
- *
- */
-
 // html
-export {
-  parseHtmlString,
-  parseSvgString,
-  stringifyHtmlAst,
-  htmlNodePosition,
-  findNode,
-  findNodes,
-  findNodeByTagName,
-  findHtmlNodeById,
-  findAllNodeByTagName,
-  findFirstImportMapNode,
-  getHtmlNodeAttributeByName,
-  getHtmlNodeTextNode,
-  setHtmlNodeGeneratedText,
-  setHtmlNodeText,
-  removeHtmlNodeText,
-  removeHtmlNode,
-  findHtmlNode,
-  htmlNodeIsScriptModule,
-  htmlNodeIsScriptImportmap,
-  parseHtmlAstRessources,
-  parseLinkNode,
-  parseScriptNode,
-  createHtmlNode,
-  injectScriptAsEarlyAsPossible,
-  removeHtmlNodeAttributeByName,
-  removeHtmlNodeAttribute,
-  assignHtmlNodeAttributes,
-  visitHtmlAst,
-} from "./html/html_ast.js"
-export { htmlAttributeSrcSet } from "./html/html_attribute_src_set.js"
-export {
-  inlineScript,
-  inlineLinkStylesheet,
-  inlineImg,
-} from "./html/html_inlining.js"
+export { HTML_AST } from "./html/html_ast.js"
 
 // css
 export { applyPostCss } from "./css/apply_post_css.js"
