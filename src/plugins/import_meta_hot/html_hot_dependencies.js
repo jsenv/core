@@ -1,8 +1,4 @@
-import {
-  getHtmlNodeAttributeByName,
-  parseLinkNode,
-  htmlAttributeSrcSet,
-} from "@jsenv/ast"
+import { getHtmlNodeAttribute, analyzeLinkNode, parseSrcSet } from "@jsenv/ast"
 
 // Some "smart" default applied to decide what should hot reload / fullreload:
 // By default:
@@ -28,8 +24,7 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
   }
 
   const visitUrlSpecifierAttribute = ({ node, attributeName, hotAccepted }) => {
-    const attribute = getHtmlNodeAttributeByName(node, attributeName)
-    const value = attribute ? attribute.value : undefined
+    const value = getHtmlNodeAttribute(node, attributeName)
     if (value) {
       onSpecifier({
         specifier: value,
@@ -70,10 +65,9 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
       })
     }
     if (nodeNamesWithSrcset.includes(node.nodeName)) {
-      const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset")
-      const srcset = srcsetAttribute ? srcsetAttribute.value : undefined
+      const srcset = getHtmlNodeAttribute(node, "srcset")
       if (srcset) {
-        const srcCandidates = htmlAttributeSrcSet.parse(srcset)
+        const srcCandidates = parseSrcSet(srcset)
         srcCandidates.forEach((srcCandidate) => {
           onSpecifier({
             node,
@@ -112,12 +106,12 @@ const nodeNamesWithSrcset = ["img", "source"]
 
 const getNodeContext = (node) => {
   const context = {}
-  const hotAcceptAttribute = getHtmlNodeAttributeByName(node, "hot-accept")
-  if (hotAcceptAttribute) {
+  const hotAccept = getHtmlNodeAttribute(node, "hot-accept")
+  if (hotAccept !== undefined) {
     context.hotAccepted = true
   }
-  const hotDeclineAttribute = getHtmlNodeAttributeByName(node, "hot-decline")
-  if (hotDeclineAttribute) {
+  const hotDecline = getHtmlNodeAttribute(node, "hot-decline")
+  if (hotDecline !== undefined) {
     context.hotAccepted = false
   }
   return context
@@ -125,7 +119,7 @@ const getNodeContext = (node) => {
 
 const htmlNodeCanHotReload = (node) => {
   if (node.nodeName === "link") {
-    const { isStylesheet, isRessourceHint, rel } = parseLinkNode(node)
+    const { isStylesheet, isRessourceHint, rel } = analyzeLinkNode(node)
     if (isStylesheet) {
       // stylesheets can be hot replaced by default
       return true

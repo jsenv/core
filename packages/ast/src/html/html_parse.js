@@ -2,14 +2,14 @@ import { parse, serialize, parseFragment } from "parse5"
 
 import {
   storeHtmlNodePosition,
-  storeHtmlAttributePosition,
-} from "./html_position.js"
+  storeHtmlNodeAttributePosition,
+} from "./html_node_position.js"
 import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
 } from "./html_node_attributes.js"
 import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js"
-import { getHtmlNodeText } from "./html_text_node.js"
+import { getHtmlNodeText } from "./html_node_text.js"
 
 export const parseHtmlString = (
   htmlString,
@@ -24,21 +24,15 @@ export const parseHtmlString = (
     const stored = getHtmlNodeAttribute(htmlNode, "original-position-stored")
     if (stored === undefined) {
       visitHtmlNodes(htmlAst, {
-        "script": (node) => {
-          const htmlNodeText = getHtmlNodeText(node)
-          if (htmlNodeText !== undefined) {
-            storeHtmlNodePosition(node)
-          }
-        },
-        "style": (node) => {
-          const htmlNodeText = getHtmlNodeText(node)
-          if (htmlNodeText !== undefined) {
-            storeHtmlNodePosition(node)
-          }
-        },
         "*": (node) => {
-          storeHtmlAttributePosition(node, "src")
-          storeHtmlAttributePosition(node, "href")
+          if (node.nodeName === "script" || node.nodeName === "style") {
+            const htmlNodeText = getHtmlNodeText(node)
+            if (htmlNodeText !== undefined) {
+              storeHtmlNodePosition(node)
+            }
+          }
+          storeHtmlNodeAttributePosition(node, "src")
+          storeHtmlNodeAttributePosition(node, "href")
         },
       })
       setHtmlNodeAttributes(htmlNode, {

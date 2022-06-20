@@ -2,7 +2,7 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
 } from "./html_node_attributes.js"
-import { setHtmlNodeText } from "./html_text_node.js"
+import { setHtmlNodeText } from "./html_node_text.js"
 
 export const inlineScriptNode = (script, textContent) => {
   const src = getHtmlNodeAttribute(script, "src")

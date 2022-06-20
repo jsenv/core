@@ -43,7 +43,7 @@
     }
     System.register = (deps, declare) => {
       if (!document.currentScript) {
-        throw new Error("unexpected call")
+        throw new Error("unexpected call to System.register (document.currentScript is undefined)")
       }
       if (document.currentScript.__s__) {
         registerRegistry[document.currentScript.src] = [deps, declare]
@@ -169,7 +169,7 @@
 
     System.register = async (deps, declare) => {
       System.register = () => {
-        throw new Error("unexpected call")
+        throw new Error("unexpected call to System.register (called outside url instantiation)")
       }
       const url = self.location.href
       registerRegistry[url] = [deps, declare]

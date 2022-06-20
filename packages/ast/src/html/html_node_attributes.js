@@ -7,10 +7,10 @@ export const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
   if (typeof attributesToAssign !== "object") {
     throw new TypeError(`attributesToAssign must be an object`)
   }
+  const { attrs } = htmlNode
+  if (!attrs) return
   Object.keys(attributesToAssign).forEach((key) => {
-    const existingAttributeIndex = htmlNode.attrs.findIndex(
-      ({ name }) => name === key,
-    )
+    const existingAttributeIndex = attrs.findIndex(({ name }) => name === key)
     const value = attributesToAssign[key]
     // remove no-op
     if (existingAttributeIndex === -1 && value === undefined) {
@@ -18,7 +18,7 @@ export const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
     }
     // add
     if (existingAttributeIndex === -1 && value !== undefined) {
-      htmlNode.attrs.push({
+      attrs.push({
         name: key,
         value,
       })
@@ -26,11 +26,11 @@ export const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
     }
     // remove
     if (value === undefined) {
-      htmlNode.attrs.splice(existingAttributeIndex, 1)
+      attrs.splice(existingAttributeIndex, 1)
       return
     }
     // update
-    htmlNode.attrs[existingAttributeIndex].value = value
+    attrs[existingAttributeIndex].value = value
   })
 }
 

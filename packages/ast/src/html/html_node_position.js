@@ -17,11 +17,39 @@ export const storeHtmlNodePosition = (node) => {
     return false
   }
   const { startLine, startCol, endLine, endCol } = sourceCodeLocation
-  getHtmlNodeAttribute(node, {
+  setHtmlNodeAttributes(node, {
     [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
   })
   return true
 }
+export const storeHtmlNodeAttributePosition = (node, attributeName) => {
+  const { sourceCodeLocation } = node
+  if (!sourceCodeLocation) {
+    return false
+  }
+  const attributeValue = getHtmlNodeAttribute(node, attributeName)
+  if (attributeValue === undefined) {
+    return false
+  }
+  const attributeLocation = sourceCodeLocation.attrs[attributeName]
+  if (!attributeLocation) {
+    return false
+  }
+  const originalPositionAttributeName = `original-${attributeName}-position`
+  const originalPosition = getHtmlNodeAttribute(
+    node,
+    originalPositionAttributeName,
+  )
+  if (originalPosition !== undefined) {
+    return true
+  }
+  const { startLine, startCol, endLine, endCol } = attributeLocation
+  setHtmlNodeAttributes(node, {
+    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
+  })
+  return true
+}
+
 export const getHtmlNodePosition = (node, { preferOriginal = false } = {}) => {
   const position = {}
   const { sourceCodeLocation } = node
@@ -56,35 +84,7 @@ export const getHtmlNodePosition = (node, { preferOriginal = false } = {}) => {
   }
   return position
 }
-
-export const storeHtmlAttributePosition = (node, attributeName) => {
-  const { sourceCodeLocation } = node
-  if (!sourceCodeLocation) {
-    return false
-  }
-  const attributeValue = getHtmlNodeAttribute(node, attributeName)
-  if (attributeValue === undefined) {
-    return false
-  }
-  const attributeLocation = sourceCodeLocation.attrs[attributeName]
-  if (!attributeLocation) {
-    return false
-  }
-  const originalPositionAttributeName = `original-${attributeName}-position`
-  const originalPosition = getHtmlNodeAttribute(
-    node,
-    originalPositionAttributeName,
-  )
-  if (originalPosition !== undefined) {
-    return true
-  }
-  const { startLine, startCol, endLine, endCol } = attributeLocation
-  setHtmlNodeAttributes(node, {
-    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
-  })
-  return true
-}
-export const getHtmlAttributePosition = (node, attributeName) => {
+export const getHtmlNodeAttributePosition = (node, attributeName) => {
   const position = {}
   const { sourceCodeLocation } = node
   if (sourceCodeLocation) {

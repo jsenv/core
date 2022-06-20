@@ -1,5 +1,3 @@
-import { setHtmlNodeAttributes } from "./html_node_attributes.js"
-
 export const getHtmlNodeText = (htmlNode) => {
   const textNode = getTextNode(htmlNode)
   return textNode ? textNode.value : undefined
@@ -31,25 +29,4 @@ export const setHtmlNodeText = (htmlNode, textContent) => {
     }
     htmlNode.childNodes.splice(0, 0, newTextNode)
   }
-}
-
-export const setHtmlNodeGeneratedText = (
-  node,
-  {
-    generatedText,
-    generatedBy,
-    generatedFromSrc,
-    generatedFromHref,
-    generatedFromInlineContent,
-  } = {},
-) => {
-  setHtmlNodeText(node, generatedText)
-  setHtmlNodeAttributes(node, {
-    "generated-by": generatedBy,
-    ...(generatedFromSrc ? { "generated-from-src": generatedFromSrc } : {}),
-    ...(generatedFromHref ? { "generated-from-href": generatedFromHref } : {}),
-    ...(generatedFromInlineContent
-      ? { "generated-from-inline-content": "" }
-      : {}),
-  })
 }

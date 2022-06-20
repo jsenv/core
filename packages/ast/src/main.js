@@ -11,8 +11,7 @@ export {
   getHtmlNodeText,
   removeHtmlNodeText,
   setHtmlNodeText,
-  setHtmlNodeGeneratedText,
-} from "./html/html_text_node.js"
+} from "./html/html_node_text.js"
 export { parseSrcSet, stringifySrcSet } from "./html/html_src_set.js"
 export {
   getHtmlNodeAttribute,
@@ -30,8 +29,8 @@ export {
 } from "./html/html_inlining.js"
 export {
   getHtmlNodePosition,
-  getHtmlAttributePosition,
-} from "./html/html_position.js"
+  getHtmlNodeAttributePosition,
+} from "./html/html_node_position.js"
 
 // css
 export { applyPostCss } from "./css/apply_post_css.js"

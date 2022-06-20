@@ -2,13 +2,12 @@ import { getHtmlNodeAttribute } from "./html_node_attributes.js"
 
 export const visitHtmlNodes = (htmlAst, visitors) => {
   const visitNode = (node) => {
-    const visitor = visitors[node.nodeType] || visitors["*"]
-    if (!visitor) {
-      return
-    }
-    const callbackReturnValue = visitor(node)
-    if (callbackReturnValue === "stop") {
-      return
+    const visitor = visitors[node.nodeName] || visitors["*"]
+    if (visitor) {
+      const callbackReturnValue = visitor(node)
+      if (callbackReturnValue === "stop") {
+        return
+      }
     }
     const { childNodes } = node
     if (childNodes) {
