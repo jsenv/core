@@ -6742,7 +6742,7 @@ const createUrlInfoTransformer = ({
 
     if (sources) {
       sources = sources.map(source => {
-        if (isFileSystemPath(source)) {
+        if (source && isFileSystemPath(source)) {
           return String(pathToFileURL(source));
         }
 
