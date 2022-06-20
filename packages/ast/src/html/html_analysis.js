@@ -2,10 +2,7 @@ import { getHtmlNodeAttribute } from "./html_node_attributes.js"
 
 export const analyzeScriptNode = (scriptNode) => {
   const type = getHtmlNodeAttribute(scriptNode, "type")
-  if (!type === undefined) {
-    return "classic"
-  }
-  if (type === "text/javascript" || type === "text/javascript") {
+  if (type === undefined || type === "text/javascript") {
     return "classic"
   }
   if (type === "module") {

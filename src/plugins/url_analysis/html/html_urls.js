@@ -189,14 +189,15 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     // style: () => {},
     script: (node) => {
       const type = getHtmlNodeAttribute(node, "type")
+      const expectedType = {
+        "undefined": "js_classic",
+        "text/javascript": "js_classic",
+        "module": "js_module",
+        "importmap": "importmap",
+      }[type]
       visitAttributeAsUrlSpecifier({
         type: "script_src",
-        expectedType: {
-          "undefined": "js_classic",
-          "text/javascript": "js_classic",
-          "module": "js_module",
-          "importmap": "importmap",
-        }[type],
+        expectedType,
         node,
         attributeName: "src",
       })
