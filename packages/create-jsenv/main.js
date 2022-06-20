@@ -47,27 +47,66 @@ const cwdUrl = `${pathToFileURL(process.cwd())}/`
 
 const getParamsFromProcessArgsAndPrompts = async () => {
   const argv = process.argv.slice(2)
-  const directoryArg = argv[0] ? argv[0].trim() : ""
-  let directoryUrl = directoryArg ? new URL(`${directoryUrl}/`, cwdUrl) : null
-  const webVanilla = argv.includes("--web")
-  const webReact = argv.includes("--web-react")
-  const webPreact = argv.includes("--web-preact")
+  const firstArg = argv[0]
+  const directoryArg = firstArg && !firstArg.includes("--") ? firstArg : null
+  let directoryUrl = directoryArg ? new URL(`${directoryArg}/`, cwdUrl) : null
+  let demoName = argv.includes("--web")
+    ? "web"
+    : argv.includes("--web-react")
+    ? "web-react"
+    : argv.includes("--web-preact")
+    ? "web-preact"
+    : argv.includes("--node-package")
+    ? "node-package"
+    : ""
+  let overwrite = false
 
   try {
-    const demoDirectoryName = directoryUrl
-      ? basename(fileURLToPath(directoryUrl))
-      : "jsenv-demo"
-
-    const result = await prompts(
+    await prompts(
       [
+        {
+          type: demoName ? null : "select",
+          name: "demoName",
+          message: "Select a demo:",
+          initial: 0,
+          choices: [
+            {
+              title: "web",
+              value: "web",
+            },
+            {
+              title: "web-react",
+              value: "web-react",
+            },
+            {
+              title: "web-preact",
+              value: "web-preact",
+            },
+            {
+              title: "node-package",
+              value: "node-package",
+            },
+          ],
+          onState: (state) => {
+            demoName = state.value
+          },
+        },
         {
           type: directoryUrl ? null : "text",
           name: "directoryUrl",
           message: "directory path:",
-          initial: demoDirectoryName,
+          initial: () => {
+            const demoDirectoryName = directoryUrl
+              ? basename(fileURLToPath(directoryUrl))
+              : `jsenv-demo-${demoName}`
+            return demoDirectoryName
+          },
           onState: (state) => {
             const value =
-              state.value.trim().replace(/\/+$/g, "") || demoDirectoryName
+              state.value.trim().replace(/\/+$/g, "") ||
+              (directoryUrl
+                ? basename(fileURLToPath(directoryUrl))
+                : `jsenv-demo-${demoName}`)
             directoryUrl = new URL(`${value}/`, cwdUrl)
           },
         },
@@ -86,6 +125,9 @@ const getParamsFromProcessArgsAndPrompts = async () => {
                 : `Target directory "${fileURLToPath(directoryUrl)}"`
             return `${directoryLabel} is not empty. Remove existing files and continue?`
           },
+          onState: (value) => {
+            overwrite = value
+          },
         },
         {
           type: (_, { overwrite } = {}) => {
@@ -96,26 +138,6 @@ const getParamsFromProcessArgsAndPrompts = async () => {
           },
           name: "overwriteChecker",
         },
-        {
-          type: webVanilla || webReact || webPreact ? null : "select",
-          name: "demoName",
-          message: "Select a demo:",
-          initial: 0,
-          choices: [
-            {
-              title: "web",
-              value: "web",
-            },
-            {
-              title: "web-react",
-              value: "web-react",
-            },
-            {
-              title: "web-preact",
-              value: "web-preact",
-            },
-          ],
-        },
       ],
       {
         onCancel: () => {
@@ -124,8 +146,9 @@ const getParamsFromProcessArgsAndPrompts = async () => {
       },
     )
     return {
-      ...result,
+      demoName,
       directoryUrl,
+      overwrite,
     }
   } catch (cancelled) {
     return { cancelled }

@@ -1,0 +1,23 @@
+{
+  "name": "jsenv-demo-node-package",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/main.js"
+  },
+  "scripts": {
+    "test": "node ./scripts/test.mjs",
+    "performance": "node --expose-gc ./scripts/performance.mjs --log"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "7.18.2",
+    "@jsenv/core": "27.0.0-alpha.83",
+    "@jsenv/eslint-config": "16.0.9",
+    "@jsenv/eslint-import-resolver": "0.2.0",
+    "@jsenv/performance-impact": "2.2.11",
+    "eslint": "8.17.0",
+    "eslint-plugin-import": "2.26.0",
+    "prettier": "2.7.1"
+  }
+}
