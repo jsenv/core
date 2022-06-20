@@ -1,10 +1,10 @@
+import { createMagicSource } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const injectGlobals = (urlInfo, globals) => {
   if (urlInfo.type === "html") {

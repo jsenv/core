@@ -1,7 +1,7 @@
-import { createDetailedMessage } from "@jsenv/log"
 import { DATA_URL } from "@jsenv/urls"
-import { SOURCEMAP } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 
+import { SOURCEMAP } from "../sourcemap_comment.js"
+import { createDetailedMessage } from "./detailed_message.js"
 import { remapCallSite } from "./remap_call_site.js"
 
 export const remapStack = async ({

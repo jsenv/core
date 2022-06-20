@@ -7,8 +7,8 @@
  * - global
  */
 
+import { createMagicSource } from "@jsenv/sourcemap"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const jsenvPluginCommonJsGlobals = () => {
   const transformCommonJsGlobals = async (urlInfo, { scenario }) => {

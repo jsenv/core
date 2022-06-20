@@ -11,6 +11,9 @@
     "access": "public"
   },
   "type": "module",
+  "exports": {
+    ".": "./src/main.js"
+  },
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
   },

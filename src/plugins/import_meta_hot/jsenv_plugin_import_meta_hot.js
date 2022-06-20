@@ -1,4 +1,4 @@
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { createMagicSource } from "@jsenv/sourcemap"
 import { parseHtmlString } from "@jsenv/utils/html_ast/html_ast.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"

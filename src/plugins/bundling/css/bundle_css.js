@@ -6,9 +6,9 @@
  *   It can be quite challenging, see "bundle_sourcemap.js"
  */
 
+import { createMagicSource } from "@jsenv/sourcemap"
 import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js"
 import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js"
 
 // Do not use until https://github.com/parcel-bundler/parcel-css/issues/181

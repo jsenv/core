@@ -1,12 +1,11 @@
 import { bufferToEtag } from "@jsenv/filesystem"
 import { urlToRelativeUrl } from "@jsenv/urls"
-
-import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 import {
+  composeTwoSourcemaps,
   SOURCEMAP,
-  sourcemapToBase64Url,
-  generateSourcemapUrl,
-} from "@jsenv/utils/sourcemap/sourcemap_utils.js"
+  generateSourcemapFileUrl,
+  generateSourcemapDataUrl,
+} from "@jsenv/sourcemap"
 
 export const createUrlInfoTransformer = ({
   logger,
@@ -65,7 +64,9 @@ export const createUrlInfoTransformer = ({
     // when jsenv is done cooking the file
     //   during build it's urlInfo.url to be inside the build
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
-    urlInfo.sourcemapGeneratedUrl = generateSourcemapUrl(urlInfo.generatedUrl)
+    urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(
+      urlInfo.generatedUrl,
+    )
     const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
       urlInfo,
       specifier: urlInfo.sourcemapGeneratedUrl,
@@ -154,7 +155,8 @@ export const createUrlInfoTransformer = ({
       }
       sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")
       if (sourcemaps === "inline") {
-        sourcemapReference.generatedSpecifier = sourcemapToBase64Url(sourcemap)
+        sourcemapReference.generatedSpecifier =
+          generateSourcemapDataUrl(sourcemap)
       }
       if (sourcemaps === "file" || sourcemaps === "inline") {
         urlInfo.content = SOURCEMAP.writeComment({

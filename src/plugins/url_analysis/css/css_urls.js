@@ -2,7 +2,7 @@
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
 
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+import { createMagicSource } from "@jsenv/sourcemap"
 import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js"
 import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js"
 

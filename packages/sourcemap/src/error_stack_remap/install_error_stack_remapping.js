@@ -1,5 +1,4 @@
-import { createDetailedMessage } from "@jsenv/log"
-
+import { createDetailedMessage } from "./detailed_message.js"
 import { remapStack } from "./remap_stack.js"
 import { stringifyStack } from "./stringify_stack.js"
 

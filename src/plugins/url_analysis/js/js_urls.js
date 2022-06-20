@@ -1,5 +1,6 @@
+import { createMagicSource } from "@jsenv/sourcemap"
 import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {

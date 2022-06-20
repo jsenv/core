@@ -1,12 +1,12 @@
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 
+import { createMagicSource } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/utils/html_ast/html_ast.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 import { GRAPH } from "./graph_utils.js"
 

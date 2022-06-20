@@ -13,11 +13,9 @@
 
 import { urlToFilename, injectQueryParams } from "@jsenv/urls"
 import { readFileSync } from "@jsenv/filesystem"
-
+import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
-import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-import { composeTwoSourcemaps } from "@jsenv/utils/sourcemap/sourcemap_composition_v3.js"
 
 import { requireBabelPlugin } from "../babel/require_babel_plugin.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"

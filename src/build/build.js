@@ -26,8 +26,8 @@ import {
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
+import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
-import { generateSourcemapUrl } from "@jsenv/utils/sourcemap/sourcemap_utils.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -596,7 +596,7 @@ build ${entryPointKeys.length} entry points`)
             }
             if (reference.type === "sourcemap_comment") {
               // inherit parent build url
-              return generateSourcemapUrl(reference.parentUrl)
+              return generateSourcemapFileUrl(reference.parentUrl)
             }
             // files generated during the final graph:
             // - sourcemaps
