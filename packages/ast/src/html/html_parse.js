@@ -1,13 +1,13 @@
 import { parse, serialize, parseFragment } from "parse5"
 
 import {
-  storeHtmlNodePosition,
-  storeHtmlNodeAttributePosition,
-} from "./html_node_position.js"
-import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
 } from "./html_node_attributes.js"
+import {
+  storeHtmlNodePosition,
+  storeHtmlNodeAttributePosition,
+} from "./html_node_position.js"
 import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js"
 import { getHtmlNodeText } from "./html_node_text.js"
 
