@@ -34,12 +34,13 @@ export const createReloadableWorker = (workerFileUrl, options = {}) => {
     worker.once("error", (error) => {
       console.error(error)
     })
-    worker.once("exit", () => {
-      worker = null
-    })
     await new Promise((resolve) => {
       worker.once("online", resolve)
     })
+    worker.once("exit", () => {
+      worker = null
+    })
+    return worker
   }
 
   const reload = async () => {

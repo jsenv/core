@@ -75,12 +75,13 @@ const createReloadableWorker = (workerFileUrl, options = {}) => {
     worker.once("error", error => {
       console.error(error);
     });
-    worker.once("exit", () => {
-      worker = null;
-    });
     await new Promise(resolve => {
       worker.once("online", resolve);
     });
+    worker.once("exit", () => {
+      worker = null;
+    });
+    return worker;
   };
 
   const reload = async () => {
@@ -8521,7 +8522,12 @@ const startDevServer = async ({
       stopWatchingDevServerFiles();
       reloadableWorker.terminate();
     });
-    await reloadableWorker.load();
+    const worker = await reloadableWorker.load();
+
+    if (!keepProcessAlive) {
+      worker.unref();
+    }
+
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
@@ -13803,6 +13809,7 @@ const startBuildServer = async ({
   ip,
   port = 9779,
   services = {},
+  keepProcessAlive = true,
   rootDirectoryUrl,
   buildDirectoryUrl,
   mainBuildFileUrl = "/index.html",
@@ -13892,7 +13899,12 @@ const startBuildServer = async ({
       stopWatchingBuildServerFiles();
       reloadableWorker.terminate();
     });
-    await reloadableWorker.load();
+    const worker = await reloadableWorker.load();
+
+    if (!keepProcessAlive) {
+      worker.unref();
+    }
+
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {

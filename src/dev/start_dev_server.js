@@ -128,7 +128,11 @@ export const startDevServer = async ({
       stopWatchingDevServerFiles()
       reloadableWorker.terminate()
     })
-    await reloadableWorker.load()
+
+    const worker = await reloadableWorker.load()
+    if (!keepProcessAlive) {
+      worker.unref()
+    }
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {

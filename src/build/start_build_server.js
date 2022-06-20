@@ -46,6 +46,7 @@ export const startBuildServer = async ({
   ip,
   port = 9779,
   services = {},
+  keepProcessAlive = true,
 
   rootDirectoryUrl,
   buildDirectoryUrl,
@@ -117,7 +118,10 @@ export const startBuildServer = async ({
       stopWatchingBuildServerFiles()
       reloadableWorker.terminate()
     })
-    await reloadableWorker.load()
+    const worker = await reloadableWorker.load()
+    if (!keepProcessAlive) {
+      worker.unref()
+    }
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
