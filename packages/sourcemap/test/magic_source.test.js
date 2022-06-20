@@ -1,4 +1,4 @@
-import { createMagicSource } from "./magic_source.js"
+import { createMagicSource } from "@jsenv/sourcemap"
 
 const content = `import { inferContextFrom, createUrlContext } from "../url_context.js";
 // toto

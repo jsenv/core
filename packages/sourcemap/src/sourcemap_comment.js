@@ -20,17 +20,6 @@ export const SOURCEMAP = {
   },
 }
 
-export const generateSourcemapUrl = (url) => {
-  const urlObject = new URL(url)
-  let { origin, pathname, search, hash } = urlObject
-  // origin is "null" for "file://" urls with Node.js
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://"
-  }
-  const sourcemapUrl = `${origin}${pathname}.map${search}${hash}`
-  return sourcemapUrl
-}
-
 const parseJavaScriptSourcemapComment = (javaScriptSource) => {
   let sourceMappingUrl
   replaceSourceMappingUrl(
@@ -134,11 +123,6 @@ const cssSourceMappingUrlCommentRegExp =
 const writeJavaScriptSourceMappingURL = (value) =>
   `${"//#"} sourceMappingURL=${value}`
 const writeCssSourceMappingUrl = (value) => `/*# sourceMappingURL=${value} */`
-
-export const sourcemapToBase64Url = (sourcemap) => {
-  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64")
-  return `data:application/json;charset=utf-8;base64,${asBase64}`
-}
 
 const replaceSourceMappingUrl = (source, regexp, callback) => {
   let lastSourceMappingUrl

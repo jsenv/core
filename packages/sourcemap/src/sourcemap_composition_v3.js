@@ -2,11 +2,9 @@
  * https://github.com/mozilla/source-map#sourcemapgenerator
  */
 
-import { createRequire } from "node:module"
+import { requireSourcemap } from "./require_sourcemap.js"
 
-const require = createRequire(import.meta.url)
-const { SourceMapConsumer, SourceMapGenerator } = require("source-map")
-// consider using https://github.com/7rulnik/source-map-js
+const { SourceMapConsumer, SourceMapGenerator } = requireSourcemap()
 
 export const composeTwoSourcemaps = async (firstSourcemap, secondSourcemap) => {
   if (!firstSourcemap && !secondSourcemap) {
