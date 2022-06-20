@@ -1,7 +1,7 @@
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { createCallbackList } from "@jsenv/abort"
 
-import { createSSEService } from "@jsenv/utils/event_source/sse_service.js"
+import { createSSEService } from "@jsenv/core/src/helpers/event_source/sse_service.js"
 
 export const jsenvPluginDevSSEServer = ({
   rootDirectoryUrl,

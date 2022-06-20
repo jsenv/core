@@ -1,7 +1,7 @@
-import { timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
-import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
-import { createCallbackList, createCallbackListNotifiedOnce, Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
-import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
+import { createSSERoom, timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
+import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, readFile, readDirectory, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
+import { createCallbackListNotifiedOnce, createCallbackList, Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
+import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, byteAsFileSize, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages } from "@jsenv/log";
 import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename, urlToExtension } from "@jsenv/urls";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
@@ -27,25 +27,17 @@ import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js";
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js";
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js";
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js";
-import { createSSEService } from "@jsenv/utils/event_source/sse_service.js";
 import { SOURCEMAP, generateSourcemapUrl, sourcemapToBase64Url } from "@jsenv/utils/sourcemap/sourcemap_utils.js";
 import { validateResponseIntegrity } from "@jsenv/integrity";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js";
-import { generateCoverageJsonFile } from "@jsenv/utils/coverage/coverage_reporter_json_file.js";
-import { generateCoverageHtmlDirectory } from "@jsenv/utils/coverage/coverage_reporter_html_directory.js";
-import { generateCoverageTextLog } from "@jsenv/utils/coverage/coverage_reporter_text_log.js";
 import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
-import { babelPluginInstrument } from "@jsenv/utils/coverage/babel_plugin_instrument.js";
-import { reportToCoverage } from "@jsenv/utils/coverage/report_to_coverage.js";
 import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
 import { memoize } from "@jsenv/utils/memoize/memoize.js";
-import { filterV8Coverage } from "@jsenv/utils/coverage/v8_coverage_from_directory.js";
-import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/utils/coverage/istanbul_coverage_composition.js";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_special_chars.js";
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
@@ -5689,6 +5681,60 @@ const jsenvPluginDevSSEClient = () => {
   };
 };
 
+const createSSEService = ({
+  serverEventCallbackList
+}) => {
+  const destroyCallbackList = createCallbackListNotifiedOnce();
+  const cache = [];
+  const sseRoomLimit = 100;
+
+  const getOrCreateSSERoom = request => {
+    const htmlFileRelativeUrl = request.ressource.slice(1);
+    const cacheEntry = cache.find(cacheEntryCandidate => cacheEntryCandidate.htmlFileRelativeUrl === htmlFileRelativeUrl);
+
+    if (cacheEntry) {
+      return cacheEntry.sseRoom;
+    }
+
+    const sseRoom = createSSERoom({
+      retryDuration: 2000,
+      historyLength: 100,
+      welcomeEventEnabled: true,
+      effect: () => {
+        return serverEventCallbackList.add(event => {
+          sseRoom.sendEvent(event);
+        });
+      }
+    });
+    const removeSSECleanupCallback = destroyCallbackList.add(() => {
+      removeSSECleanupCallback();
+      sseRoom.close();
+    });
+    cache.push({
+      htmlFileRelativeUrl,
+      sseRoom,
+      cleanup: () => {
+        removeSSECleanupCallback();
+        sseRoom.close();
+      }
+    });
+
+    if (cache.length >= sseRoomLimit) {
+      const firstCacheEntry = cache.shift();
+      firstCacheEntry.cleanup();
+    }
+
+    return sseRoom;
+  };
+
+  return {
+    getOrCreateSSERoom,
+    destroy: () => {
+      destroyCallbackList.notify();
+    }
+  };
+};
+
 const jsenvPluginDevSSEServer = ({
   rootDirectoryUrl,
   urlGraph,
@@ -8365,7 +8411,11 @@ const startDevServer = async ({
     "./jsenv.config.mjs": true
   },
   devServerMainFile = getCallerPosition().url,
-  devServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
+  // force disable server autoreload when this code is executed:
+  // - inside a forked child process
+  // - debugged by vscode
+  // otherwise we get net:ERR_CONNECTION_REFUSED
+  devServerAutoreload = typeof process.send !== "function" && !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
     "./test/": true
@@ -8594,6 +8644,679 @@ const startDevServer = async ({
     }
   };
 };
+
+const generateCoverageJsonFile = async ({
+  coverage,
+  coverageJsonFileUrl,
+  coverageJsonFileLog,
+  logger
+}) => {
+  const coverageAsText = JSON.stringify(coverage, null, "  ");
+
+  if (coverageJsonFileLog) {
+    logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(Buffer.byteLength(coverageAsText))})`);
+  }
+
+  await writeFile(coverageJsonFileUrl, coverageAsText);
+};
+
+const istanbulCoverageMapFromCoverage = coverage => {
+  const {
+    createCoverageMap
+  } = requireFromJsenv("istanbul-lib-coverage");
+  const coverageAdjusted = {};
+  Object.keys(coverage).forEach(key => {
+    coverageAdjusted[key.slice(2)] = { ...coverage[key],
+      path: key.slice(2)
+    };
+  });
+  const coverageMap = createCoverageMap(coverageAdjusted);
+  return coverageMap;
+};
+
+const generateCoverageHtmlDirectory = async (coverage, {
+  rootDirectoryUrl,
+  coverageHtmlDirectoryRelativeUrl,
+  coverageSkipEmpty,
+  coverageSkipFull
+}) => {
+  const libReport = requireFromJsenv("istanbul-lib-report");
+  const reports = requireFromJsenv("istanbul-reports");
+  const context = libReport.createContext({
+    dir: urlToFileSystemPath(rootDirectoryUrl),
+    coverageMap: istanbulCoverageMapFromCoverage(coverage),
+    sourceFinder: path => {
+      return readFileSync(urlToFileSystemPath(resolveUrl(path, rootDirectoryUrl)), "utf8");
+    }
+  });
+  const report = reports.create("html", {
+    skipEmpty: coverageSkipEmpty,
+    skipFull: coverageSkipFull,
+    subdir: coverageHtmlDirectoryRelativeUrl
+  });
+  report.execute(context);
+};
+
+const generateCoverageTextLog = (coverage, {
+  coverageSkipEmpty,
+  coverageSkipFull
+}) => {
+  const libReport = requireFromJsenv("istanbul-lib-report");
+  const reports = requireFromJsenv("istanbul-reports");
+  const context = libReport.createContext({
+    coverageMap: istanbulCoverageMapFromCoverage(coverage)
+  });
+  const report = reports.create("text", {
+    skipEmpty: coverageSkipEmpty,
+    skipFull: coverageSkipFull
+  });
+  report.execute(context);
+};
+
+const babelPluginInstrument = (api, {
+  rootDirectoryUrl,
+  useInlineSourceMaps = false,
+  coverageConfig = {
+    "./**/*": true
+  }
+}) => {
+  const {
+    programVisitor
+  } = requireFromJsenv("istanbul-lib-instrument");
+  const {
+    types
+  } = api;
+  const associations = URL_META.resolveAssociations({
+    cover: coverageConfig
+  }, rootDirectoryUrl);
+
+  const shouldInstrument = url => {
+    return URL_META.applyAssociations({
+      url,
+      associations
+    }).cover;
+  };
+
+  return {
+    name: "transform-instrument",
+    visitor: {
+      Program: {
+        enter(path) {
+          const {
+            file
+          } = this;
+          const {
+            opts
+          } = file;
+
+          if (!opts.sourceFileName) {
+            console.warn(`cannot instrument file when "sourceFileName" option is not set`);
+            return;
+          }
+
+          const fileUrl = fileSystemPathToUrl(opts.sourceFileName);
+
+          if (!shouldInstrument(fileUrl)) {
+            return;
+          }
+
+          this.__dv__ = null;
+          let inputSourceMap;
+
+          if (useInlineSourceMaps) {
+            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
+            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
+          } else {
+            inputSourceMap = opts.inputSourceMap;
+          }
+
+          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
+            coverageVariable: "__coverage__",
+            inputSourceMap
+          });
+
+          this.__dv__.enter(path);
+        },
+
+        exit(path) {
+          if (!this.__dv__) {
+            return;
+          }
+
+          const object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
+
+
+          this.file.metadata.coverage = object.fileCoverage;
+        }
+
+      }
+    }
+  };
+};
+
+const visitNodeV8Directory = async ({
+  logger,
+  signal,
+  NODE_V8_COVERAGE,
+  onV8Coverage,
+  maxMsWaitingForNodeToWriteCoverageFile = 2000
+}) => {
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  const tryReadDirectory = async () => {
+    const dirContent = await readDirectory(NODE_V8_COVERAGE);
+
+    if (dirContent.length > 0) {
+      return dirContent;
+    }
+
+    logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`);
+    return dirContent;
+  };
+
+  try {
+    operation.throwIfAborted();
+    const dirContent = await tryReadDirectory();
+    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE);
+    await dirContent.reduce(async (previous, dirEntry) => {
+      operation.throwIfAborted();
+      await previous;
+      const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl);
+
+      const tryReadJsonFile = async (timeSpentTrying = 0) => {
+        const fileContent = await readFile(dirEntryUrl, {
+          as: "string"
+        });
+
+        if (fileContent === "") {
+          if (timeSpentTrying < 400) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return tryReadJsonFile(timeSpentTrying + 200);
+          }
+
+          console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`);
+          return null;
+        }
+
+        try {
+          const fileAsJson = JSON.parse(fileContent);
+          return fileAsJson;
+        } catch (e) {
+          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return tryReadJsonFile(timeSpentTrying + 200);
+          }
+
+          console.warn(createDetailedMessage(`Error while reading coverage file`, {
+            "error stack": e.stack,
+            "file": dirEntryUrl
+          }));
+          return null;
+        }
+      };
+
+      const fileContent = await tryReadJsonFile();
+
+      if (fileContent) {
+        onV8Coverage(fileContent);
+      }
+    }, Promise.resolve());
+  } finally {
+    await operation.end();
+  }
+};
+const filterV8Coverage = (v8Coverage, {
+  urlShouldBeCovered
+}) => {
+  const v8CoverageFiltered = { ...v8Coverage,
+    result: v8Coverage.result.filter(fileReport => urlShouldBeCovered(fileReport.url))
+  };
+  return v8CoverageFiltered;
+};
+
+const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
+  if (secondV8Coverage.result.length === 0) {
+    return firstV8Coverage;
+  } // eslint-disable-next-line import/no-unresolved
+
+
+  const {
+    mergeProcessCovs
+  } = requireFromJsenv("@c88/v8-coverage"); // "mergeProcessCovs" do not preserves source-map-cache during the merge
+  // so we store sourcemap cache now
+
+  const sourceMapCache = {};
+
+  const visit = coverageReport => {
+    if (coverageReport["source-map-cache"]) {
+      Object.assign(sourceMapCache, coverageReport["source-map-cache"]);
+    }
+  };
+
+  visit(firstV8Coverage);
+  visit(secondV8Coverage);
+  const v8Coverage = mergeProcessCovs([firstV8Coverage, secondV8Coverage]);
+  v8Coverage["source-map-cache"] = sourceMapCache;
+  return v8Coverage;
+};
+
+const composeTwoFileByFileIstanbulCoverages = (firstFileByFileIstanbulCoverage, secondFileByFileIstanbulCoverage) => {
+  const fileByFileIstanbulCoverage = {};
+  Object.keys(firstFileByFileIstanbulCoverage).forEach(key => {
+    fileByFileIstanbulCoverage[key] = firstFileByFileIstanbulCoverage[key];
+  });
+  Object.keys(secondFileByFileIstanbulCoverage).forEach(key => {
+    const firstCoverage = firstFileByFileIstanbulCoverage[key];
+    const secondCoverage = secondFileByFileIstanbulCoverage[key];
+    fileByFileIstanbulCoverage[key] = firstCoverage ? merge(firstCoverage, secondCoverage) : secondCoverage;
+  });
+  return fileByFileIstanbulCoverage;
+};
+
+const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
+  const {
+    createFileCoverage
+  } = requireFromJsenv("istanbul-lib-coverage");
+  const istanbulFileCoverageObject = createFileCoverage(firstIstanbulCoverage);
+  istanbulFileCoverageObject.merge(secondIstanbulCoverage);
+  const istanbulCoverage = istanbulFileCoverageObject.toJSON();
+  return istanbulCoverage;
+};
+
+const v8CoverageToIstanbul = async (v8Coverage, {
+  signal
+}) => {
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  try {
+    const v8ToIstanbul = requireFromJsenv("v8-to-istanbul");
+    const sourcemapCache = v8Coverage["source-map-cache"];
+    let istanbulCoverageComposed = null;
+    await v8Coverage.result.reduce(async (previous, fileV8Coverage) => {
+      operation.throwIfAborted();
+      await previous;
+      const {
+        source
+      } = fileV8Coverage;
+      let sources; // when v8 coverage comes from playwright (chromium) v8Coverage.source is set
+
+      if (typeof source === "string") {
+        sources = {
+          source
+        };
+      } // when v8 coverage comes from Node.js, the source can be read from sourcemapCache
+      else if (sourcemapCache) {
+        sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourcemapCache);
+      }
+
+      const path = urlToFileSystemPath(fileV8Coverage.url);
+      const converter = v8ToIstanbul(path, // wrapperLength is undefined we don't need it
+      // https://github.com/istanbuljs/v8-to-istanbul/blob/2b54bc97c5edf8a37b39a171ec29134ba9bfd532/lib/v8-to-istanbul.js#L27
+      undefined, sources);
+      await converter.load();
+      converter.applyCoverage(fileV8Coverage.functions);
+      const istanbulCoverage = converter.toIstanbul();
+      istanbulCoverageComposed = istanbulCoverageComposed ? composeTwoFileByFileIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage) : istanbulCoverage;
+    }, Promise.resolve());
+
+    if (!istanbulCoverageComposed) {
+      return {};
+    }
+
+    istanbulCoverageComposed = markAsConvertedFromV8(istanbulCoverageComposed);
+    return istanbulCoverageComposed;
+  } finally {
+    await operation.end();
+  }
+};
+
+const markAsConvertedFromV8 = fileByFileCoverage => {
+  const fileByFileMarked = {};
+  Object.keys(fileByFileCoverage).forEach(key => {
+    const fileCoverage = fileByFileCoverage[key];
+    fileByFileMarked[key] = { ...fileCoverage,
+      fromV8: true
+    };
+  });
+  return fileByFileMarked;
+};
+
+const sourcesFromSourceMapCache = (url, sourceMapCache) => {
+  const sourceMapAndLineLengths = sourceMapCache[url];
+
+  if (!sourceMapAndLineLengths) {
+    return {};
+  }
+
+  const {
+    data,
+    lineLengths
+  } = sourceMapAndLineLengths; // See: https://github.com/nodejs/node/pull/34305
+
+  if (!data) {
+    return undefined;
+  }
+
+  const sources = {
+    sourcemap: data,
+    ...(lineLengths ? {
+      source: sourcesFromLineLengths(lineLengths)
+    } : {})
+  };
+  return sources;
+};
+
+const sourcesFromLineLengths = lineLengths => {
+  let source = "";
+  lineLengths.forEach(length => {
+    source += `${"".padEnd(length, ".")}\n`;
+  });
+  return source;
+};
+
+const composeV8AndIstanbul = (v8FileByFileCoverage, istanbulFileByFileCoverage, {
+  coverageV8ConflictWarning
+}) => {
+  const fileByFileCoverage = {};
+  const v8Files = Object.keys(v8FileByFileCoverage);
+  const istanbulFiles = Object.keys(istanbulFileByFileCoverage);
+  v8Files.forEach(key => {
+    fileByFileCoverage[key] = v8FileByFileCoverage[key];
+  });
+  istanbulFiles.forEach(key => {
+    const v8Coverage = v8FileByFileCoverage[key];
+
+    if (v8Coverage) {
+      if (coverageV8ConflictWarning) {
+        console.warn(createDetailedMessage(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
+          details: `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
+          suggestion: "You can disable this warning with coverageV8ConflictWarning: false"
+        }));
+      }
+
+      fileByFileCoverage[key] = v8Coverage;
+    } else {
+      fileByFileCoverage[key] = istanbulFileByFileCoverage[key];
+    }
+  });
+  return fileByFileCoverage;
+};
+
+const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) => {
+  const fileByFileNormalized = {};
+  Object.keys(fileByFileCoverage).forEach(key => {
+    const fileCoverage = fileByFileCoverage[key];
+    const {
+      path
+    } = fileCoverage;
+    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : resolveUrl(path, rootDirectoryUrl);
+    const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+    fileByFileNormalized[`./${relativeUrl}`] = { ...fileCoverage,
+      path: `./${relativeUrl}`
+    };
+  });
+  return fileByFileNormalized;
+};
+
+const listRelativeFileUrlToCover = async ({
+  signal,
+  rootDirectoryUrl,
+  coverageConfig
+}) => {
+  const matchingFileResultArray = await collectFiles({
+    signal,
+    directoryUrl: rootDirectoryUrl,
+    associations: {
+      cover: coverageConfig
+    },
+    predicate: ({
+      cover
+    }) => cover
+  });
+  return matchingFileResultArray.map(({
+    relativeUrl
+  }) => relativeUrl);
+};
+
+const relativeUrlToEmptyCoverage = async (relativeUrl, {
+  signal,
+  rootDirectoryUrl
+}) => {
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  try {
+    const fileUrl = resolveUrl(relativeUrl, rootDirectoryUrl);
+    const content = await readFile(fileUrl, {
+      as: "string"
+    });
+    operation.throwIfAborted();
+    const {
+      metadata
+    } = await applyBabelPlugins({
+      babelPlugins: [[babelPluginInstrument, {
+        rootDirectoryUrl
+      }]],
+      urlInfo: {
+        originalUrl: fileUrl,
+        content
+      }
+    });
+    const {
+      coverage
+    } = metadata;
+
+    if (!coverage) {
+      throw new Error(`missing coverage for file`);
+    } // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
+
+
+    Object.keys(coverage.s).forEach(function (key) {
+      coverage.s[key] = 0;
+    });
+    return coverage;
+  } catch (e) {
+    if (e && e.code === "PARSE_ERROR") {
+      // return an empty coverage for that file when
+      // it contains a syntax error
+      return createEmptyCoverage(relativeUrl);
+    }
+
+    throw e;
+  } finally {
+    await operation.end();
+  }
+};
+
+const createEmptyCoverage = relativeUrl => {
+  const {
+    createFileCoverage
+  } = requireFromJsenv("istanbul-lib-coverage");
+  return createFileCoverage(relativeUrl).toJSON();
+};
+
+const getMissingFileByFileCoverage = async ({
+  signal,
+  rootDirectoryUrl,
+  coverageConfig,
+  fileByFileCoverage
+}) => {
+  const relativeUrlsToCover = await listRelativeFileUrlToCover({
+    signal,
+    rootDirectoryUrl,
+    coverageConfig
+  });
+  const relativeUrlsMissing = relativeUrlsToCover.filter(relativeUrlToCover => Object.keys(fileByFileCoverage).every(key => {
+    return key !== `./${relativeUrlToCover}`;
+  }));
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+  const missingFileByFileCoverage = {};
+  await relativeUrlsMissing.reduce(async (previous, relativeUrlMissing) => {
+    operation.throwIfAborted();
+    await previous;
+    await operation.withSignal(async signal => {
+      const emptyCoverage = await relativeUrlToEmptyCoverage(relativeUrlMissing, {
+        signal,
+        rootDirectoryUrl
+      });
+      missingFileByFileCoverage[`./${relativeUrlMissing}`] = emptyCoverage;
+    });
+  }, Promise.resolve());
+  return missingFileByFileCoverage;
+};
+
+const reportToCoverage = async (report, {
+  signal,
+  logger,
+  rootDirectoryUrl,
+  coverageConfig,
+  coverageIncludeMissing,
+  urlShouldBeCovered,
+  coverageForceIstanbul,
+  coverageV8ConflictWarning
+}) => {
+  // collect v8 and istanbul coverage from executions
+  let {
+    v8Coverage,
+    fileByFileIstanbulCoverage
+  } = await getCoverageFromReport({
+    signal,
+    report,
+    onMissing: ({
+      file,
+      executionResult,
+      executionName
+    }) => {
+      // several reasons not to have coverage here:
+      // 1. the file we executed did not import an instrumented file.
+      // - a test file without import
+      // - a test file importing only file excluded from coverage
+      // - a coverDescription badly configured so that we don't realize
+      // a file should be covered
+      // 2. the file we wanted to executed timedout
+      // - infinite loop
+      // - too extensive operation
+      // - a badly configured or too low allocatedMs for that execution.
+      // 3. the file we wanted to execute contains syntax-error
+      // in any scenario we are fine because
+      // coverDescription will generate empty coverage for files
+      // that were suppose to be coverage but were not.
+      if (executionResult.status === "completed" && executionResult.runtimeName !== "node" && !process.env.NODE_V8_COVERAGE) {
+        logger.warn(`No execution.coverageFileUrl from execution named "${executionName}" of ${file}`);
+      }
+    }
+  });
+
+  if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
+    await visitNodeV8Directory({
+      logger,
+      signal,
+      NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
+      onV8Coverage: nodeV8Coverage => {
+        const nodeV8CoverageLight = filterV8Coverage(nodeV8Coverage, {
+          urlShouldBeCovered
+        });
+        v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight) : nodeV8CoverageLight;
+      }
+    });
+  } // try to merge v8 with istanbul, if any
+
+
+  let fileByFileCoverage;
+
+  if (v8Coverage) {
+    let v8FileByFileCoverage = await v8CoverageToIstanbul(v8Coverage, {
+      signal
+    });
+    v8FileByFileCoverage = normalizeFileByFileCoveragePaths(v8FileByFileCoverage, rootDirectoryUrl);
+
+    if (fileByFileIstanbulCoverage) {
+      fileByFileIstanbulCoverage = normalizeFileByFileCoveragePaths(fileByFileIstanbulCoverage, rootDirectoryUrl);
+      fileByFileCoverage = composeV8AndIstanbul(v8FileByFileCoverage, fileByFileIstanbulCoverage, {
+        coverageV8ConflictWarning
+      });
+    } else {
+      fileByFileCoverage = v8FileByFileCoverage;
+    }
+  } // get istanbul only
+  else if (fileByFileIstanbulCoverage) {
+    fileByFileCoverage = normalizeFileByFileCoveragePaths(fileByFileIstanbulCoverage, rootDirectoryUrl);
+  } // no coverage found in execution (or zero file where executed)
+  else {
+    fileByFileCoverage = {};
+  } // now add coverage for file not covered
+
+
+  if (coverageIncludeMissing) {
+    const missingFileByFileCoverage = await getMissingFileByFileCoverage({
+      signal,
+      rootDirectoryUrl,
+      coverageConfig,
+      fileByFileCoverage
+    });
+    Object.assign(fileByFileCoverage, normalizeFileByFileCoveragePaths(missingFileByFileCoverage, rootDirectoryUrl));
+  }
+
+  return fileByFileCoverage;
+};
+
+const getCoverageFromReport = async ({
+  signal,
+  report,
+  onMissing
+}) => {
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  try {
+    let v8Coverage;
+    let fileByFileIstanbulCoverage; // collect v8 and istanbul coverage from executions
+
+    await Object.keys(report).reduce(async (previous, file) => {
+      operation.throwIfAborted();
+      await previous;
+      const executionResultForFile = report[file];
+      await Object.keys(executionResultForFile).reduce(async (previous, executionName) => {
+        operation.throwIfAborted();
+        await previous;
+        const executionResultForFileOnRuntime = executionResultForFile[executionName];
+        const {
+          coverageFileUrl
+        } = executionResultForFileOnRuntime;
+
+        if (!coverageFileUrl) {
+          onMissing({
+            executionName,
+            file,
+            executionResult: executionResultForFileOnRuntime
+          });
+          return;
+        }
+
+        const executionCoverage = await readFile(coverageFileUrl, {
+          as: "json"
+        });
+
+        if (isV8Coverage(executionCoverage)) {
+          v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, executionCoverage) : executionCoverage;
+        } else {
+          fileByFileIstanbulCoverage = fileByFileIstanbulCoverage ? composeTwoFileByFileIstanbulCoverages(fileByFileIstanbulCoverage, executionCoverage) : executionCoverage;
+        }
+      }, Promise.resolve());
+    }, Promise.resolve());
+    return {
+      v8Coverage,
+      fileByFileIstanbulCoverage
+    };
+  } finally {
+    await operation.end();
+  }
+};
+
+const isV8Coverage = coverage => Boolean(coverage.result);
 
 const run = async ({
   signal = new AbortController().signal,
@@ -13088,7 +13811,11 @@ const startBuildServer = async ({
     "./jsenv.config.mjs": true
   },
   buildServerMainFile = getCallerPosition().url,
-  buildServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
+  // force disable server autoreload when this code is executed:
+  // - inside a forked child process
+  // - debugged by vscode
+  // otherwise we get net:ERR_CONNECTION_REFUSED
+  buildServerAutoreload = typeof process.send !== "function" && !process.env.VSCODE_INSPECTOR_OPTIONS,
   cooldownBetweenFileEvents
 }) => {
   const logger = createLogger({

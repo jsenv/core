@@ -1,4 +1,4 @@
-import { createEventSourceConnection } from "@jsenv/utils/event_source/event_source.js"
+import { createEventSourceConnection } from "@jsenv/core/src/helpers/event_source/event_source.js"
 import { urlHotMetas } from "../../../import_meta_hot/client/import_meta_hot.js"
 import {
   isAutoreloadEnabled,
