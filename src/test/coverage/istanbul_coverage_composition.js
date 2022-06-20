@@ -1,4 +1,4 @@
-import { require } from "@jsenv/utils/require.js"
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 export const composeTwoFileByFileIstanbulCoverages = (
   firstFileByFileIstanbulCoverage,
@@ -20,7 +20,7 @@ export const composeTwoFileByFileIstanbulCoverages = (
 }
 
 const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
-  const { createFileCoverage } = require("istanbul-lib-coverage")
+  const { createFileCoverage } = requireFromJsenv("istanbul-lib-coverage")
   const istanbulFileCoverageObject = createFileCoverage(firstIstanbulCoverage)
   istanbulFileCoverageObject.merge(secondIstanbulCoverage)
   const istanbulCoverage = istanbulFileCoverageObject.toJSON()

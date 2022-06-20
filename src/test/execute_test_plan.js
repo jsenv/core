@@ -6,9 +6,9 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
-import { generateCoverageJsonFile } from "@jsenv/utils/coverage/coverage_reporter_json_file.js"
-import { generateCoverageHtmlDirectory } from "@jsenv/utils/coverage/coverage_reporter_html_directory.js"
-import { generateCoverageTextLog } from "@jsenv/utils/coverage/coverage_reporter_text_log.js"
+import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
+import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
+import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
 import { executePlan } from "./execute_plan.js"
 
 export const defaultCoverageConfig = {

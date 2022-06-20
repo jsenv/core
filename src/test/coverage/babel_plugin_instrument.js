@@ -1,8 +1,7 @@
-import { createRequire } from "node:module"
 import { URL_META } from "@jsenv/url-meta"
 import { fileSystemPathToUrl } from "@jsenv/urls"
 
-const require = createRequire(import.meta.url)
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
@@ -14,7 +13,7 @@ export const babelPluginInstrument = (
     coverageConfig = { "./**/*": true },
   },
 ) => {
-  const { programVisitor } = require("istanbul-lib-instrument")
+  const { programVisitor } = requireFromJsenv("istanbul-lib-instrument")
 
   const { types } = api
 

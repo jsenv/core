@@ -1,7 +1,7 @@
-import { require } from "@jsenv/utils/require.js"
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 export const istanbulCoverageMapFromCoverage = (coverage) => {
-  const { createCoverageMap } = require("istanbul-lib-coverage")
+  const { createCoverageMap } = requireFromJsenv("istanbul-lib-coverage")
 
   const coverageAdjusted = {}
   Object.keys(coverage).forEach((key) => {

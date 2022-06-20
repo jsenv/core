@@ -1,8 +1,7 @@
 import { urlToFileSystemPath } from "@jsenv/urls"
 import { Abort } from "@jsenv/abort"
 
-import { require } from "@jsenv/utils/require.js"
-
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js"
 
 export const v8CoverageToIstanbul = async (v8Coverage, { signal }) => {
@@ -10,7 +9,7 @@ export const v8CoverageToIstanbul = async (v8Coverage, { signal }) => {
   operation.addAbortSignal(signal)
 
   try {
-    const v8ToIstanbul = require("v8-to-istanbul")
+    const v8ToIstanbul = requireFromJsenv("v8-to-istanbul")
     const sourcemapCache = v8Coverage["source-map-cache"]
     let istanbulCoverageComposed = null
 

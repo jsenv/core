@@ -19,8 +19,8 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem"
 
-import { babelPluginInstrument } from "@jsenv/utils/coverage/babel_plugin_instrument.js"
-import { reportToCoverage } from "@jsenv/utils/coverage/report_to_coverage.js"
+import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
+import { reportToCoverage } from "./coverage/report_to_coverage.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
