@@ -36,7 +36,12 @@ export const startDevServer = async ({
     "./jsenv.config.mjs": true,
   },
   devServerMainFile = getCallerPosition().url,
-  devServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
+  // force disable server autoreload when this code is executed:
+  // - inside a forked child process
+  // - debugged by vscode
+  // otherwise we get net:ERR_CONNECTION_REFUSED
+  devServerAutoreload = typeof process.send !== "function" &&
+    !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
     "./test/": true,

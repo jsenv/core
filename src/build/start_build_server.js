@@ -55,7 +55,12 @@ export const startBuildServer = async ({
     "./jsenv.config.mjs": true,
   },
   buildServerMainFile = getCallerPosition().url,
-  buildServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
+  // force disable server autoreload when this code is executed:
+  // - inside a forked child process
+  // - debugged by vscode
+  // otherwise we get net:ERR_CONNECTION_REFUSED
+  buildServerAutoreload = typeof process.send !== "function" &&
+    !process.env.VSCODE_INSPECTOR_OPTIONS,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })
