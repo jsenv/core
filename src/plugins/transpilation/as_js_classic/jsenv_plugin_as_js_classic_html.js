@@ -14,7 +14,7 @@ import {
   setHtmlNodeGeneratedText,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,

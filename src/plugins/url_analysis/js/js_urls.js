@@ -1,5 +1,5 @@
 import { createMagicSource } from "@jsenv/sourcemap"
-import { parseJsUrls } from "@jsenv/utils/src/js_ast/parse_js_urls.js"
+import { parseJsUrls } from "@jsenv/ast"
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 

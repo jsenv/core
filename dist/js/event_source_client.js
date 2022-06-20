@@ -1,5 +1,5 @@
 import { urlHotMetas } from "./import_meta_hot.js";
-import { htmlAttributeSrcSet } from "@jsenv/utils/src/html_ast/html_attribute_src_set.js";
+import { htmlAttributeSrcSet } from "@jsenv/ast/src/html/html_attribute_src_set.js";
 
 /* eslint-env browser */
 const createEventSourceConnection = (eventSourceUrl, events = {}, {

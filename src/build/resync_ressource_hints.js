@@ -11,7 +11,7 @@ import {
   stringifyHtmlAst,
   getHtmlNodeAttributeByName,
   removeHtmlNode,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 import { GRAPH } from "./graph_utils.js"
 

@@ -8,7 +8,7 @@ import {
   parseScriptNode,
   setHtmlNodeGeneratedText,
   getHtmlNodeAttributeByName,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
+} from "@jsenv/ast"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {

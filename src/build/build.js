@@ -27,11 +27,8 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
+import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast"
 import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js"
-import {
-  parseHtmlString,
-  stringifyHtmlAst,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
 
 import { sortByDependencies } from "../omega/url_graph/sort_by_dependencies.js"
 import { createUrlGraph } from "../omega/url_graph.js"

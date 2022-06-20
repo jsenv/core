@@ -1,4 +1,4 @@
-import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/ast"
 
 import { requireBabelPlugin } from "./babel/require_babel_plugin.js"
 

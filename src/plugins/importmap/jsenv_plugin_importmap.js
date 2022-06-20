@@ -33,7 +33,7 @@ import {
   setHtmlNodeGeneratedText,
   getHtmlNodeTextNode,
   removeHtmlNode,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 export const jsenvPluginImportmap = () => {
   let finalImportmap = null

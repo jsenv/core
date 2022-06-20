@@ -4,8 +4,8 @@ import {
   getHtmlNodeAttributeByName,
   htmlNodePosition,
   visitHtmlAst,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
-import { htmlAttributeSrcSet } from "@jsenv/utils/src/html_ast/html_attribute_src_set.js"
+  htmlAttributeSrcSet,
+} from "@jsenv/ast"
 
 export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl

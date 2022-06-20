@@ -5,13 +5,13 @@
 
 import { URL_META } from "@jsenv/url-meta"
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
-import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js"
 import {
+  applyBabelPlugins,
   parseHtmlString,
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 export const jsenvPluginPreact = ({
   jsxInclude = {

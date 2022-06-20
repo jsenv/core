@@ -4,7 +4,7 @@ import {
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
-} from "@jsenv/utils/src/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 export const injectGlobals = (urlInfo, globals) => {
   if (urlInfo.type === "html") {

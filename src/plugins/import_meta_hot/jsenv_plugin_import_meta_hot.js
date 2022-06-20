@@ -1,6 +1,5 @@
 import { createMagicSource } from "@jsenv/sourcemap"
-import { parseHtmlString } from "@jsenv/utils/src/html_ast/html_ast.js"
-import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js"
+import { parseHtmlString, applyBabelPlugins } from "@jsenv/ast"
 
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"

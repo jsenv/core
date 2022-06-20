@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url"
-import { injectImport } from "@jsenv/utils/src/js_ast/babel_utils.js"
+import { injectImport } from "@jsenv/ast"
 
 export const babelPluginNewStylesheetAsJsenvImport = (
   babel,

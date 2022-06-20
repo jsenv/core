@@ -66,6 +66,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "2.0.1",
     "@jsenv/abort": "4.2.2",
+    "@jsenv/ast": "1.0.0",
     "@jsenv/babel-plugins": "1.0.5",
     "@jsenv/filesystem": "4.0.9",
     "@jsenv/importmap": "1.2.0",
