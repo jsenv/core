@@ -186,12 +186,10 @@ export const jsenvPluginAsJsClassicHtml = ({
                 inlineReference,
                 { cookIt: true },
               )
-              setHtmlNodeAttributes(moduleScriptNode, {
-                type: undefined,
-              })
               setHtmlNodeText(moduleScriptNode, newUrlInfo.content)
               setHtmlNodeAttributes(moduleScriptNode, {
-                generatedBy: "jsenv:as_js_classic_html",
+                "type": undefined,
+                "generated-by": "jsenv:as_js_classic_html",
               })
             })
           }

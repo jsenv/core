@@ -57,7 +57,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             })
             setHtmlNodeText(node, inlineStyleUrlInfo.content)
             setHtmlNodeAttributes(node, {
-              generatedBy: "jsenv:html_inline_content",
+              "generated-by": "jsenv:html_inline_content",
             })
           })
         }
@@ -133,7 +133,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             })
             setHtmlNodeText(node, inlineScriptUrlInfo.content)
             setHtmlNodeAttributes(node, {
-              generatedBy: "jsenv:html_inline_content",
+              "generated-by": "jsenv:html_inline_content",
             })
           })
         }
