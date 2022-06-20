@@ -13,7 +13,6 @@
  * we want to be in the user shoes and we should not alter build files.
  */
 
-import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -22,15 +21,17 @@ import {
   pluginCORS,
   fetchFileSystem,
   composeServices,
+  findFreePort,
 } from "@jsenv/server"
-
 import {
   assertAndNormalizeDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
-import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
+
+import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 
 export const startBuildServer = async ({
   signal = new AbortController().signal,
@@ -54,38 +55,36 @@ export const startBuildServer = async ({
     "./jsenv.config.mjs": true,
   },
   buildServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - inside a worker thread
-  // (because node cluster won't work)
-  buildServerAutoreload = typeof process.send !== "function" &&
-    !parentPort &&
-    !process.env.VSCODE_INSPECTOR_OPTIONS,
+  buildServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
 
-  const reloadableProcess = await initReloadableProcess({
-    signal,
-    handleSIGINT,
-    ...(buildServerAutoreload
-      ? {
-          enabled: true,
-          logLevel: "info",
-          fileToRestart: buildServerMainFile,
-        }
-      : {
-          enabled: false,
-        }),
-  })
-  if (reloadableProcess.isPrimary) {
+  const operation = Abort.startOperation()
+  operation.addAbortSignal(signal)
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        abort,
+      )
+    })
+  }
+  if (port === 0) {
+    port = await findFreePort(port, { signal: operation.signal })
+  }
+
+  const reloadableWorker = createReloadableWorker(buildServerMainFile)
+  if (buildServerAutoreload && reloadableWorker.isPrimary) {
     const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
       if (buildServerAutoreload) {
         logger.info(`file ${event} ${url} -> restarting server...`)
-        reloadableProcess.reload()
+        reloadableWorker.reload()
       }
     }
     const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
@@ -109,19 +108,19 @@ export const startBuildServer = async ({
         },
       },
     )
-    signal.addEventListener("abort", () => {
+    operation.addAbortCallback(() => {
       stopWatchingBuildServerFiles()
+      reloadableWorker.terminate()
     })
+    await reloadableWorker.load()
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
         stopWatchingBuildServerFiles()
-
-        reloadableProcess.stop()
+        reloadableWorker.terminate()
       },
     }
   }
-  signal = reloadableProcess.signal
 
   const startBuildServerTask = createTaskLog("start build server", {
     disabled: !loggerToLevels(logger).info,
@@ -170,7 +169,6 @@ export const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
-
   return {
     origin: server.origin,
     stop: () => {

@@ -1,12 +1,13 @@
-import { parentPort } from "node:worker_threads"
-
+import { findFreePort } from "@jsenv/server"
 import {
   assertAndNormalizeDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
-import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js"
+
+import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
@@ -17,7 +18,7 @@ import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
-  handleSIGINT,
+  handleSIGINT = true,
   logLevel = "info",
   omegaServerLogLevel = "warn",
   port = 3456,
@@ -35,13 +36,7 @@ export const startDevServer = async ({
     "./jsenv.config.mjs": true,
   },
   devServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - inside a worker thread
-  // (because node cluster won't work)
-  devServerAutoreload = typeof process.send !== "function" &&
-    !parentPort &&
-    !process.env.VSCODE_INSPECTOR_OPTIONS,
+  devServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
     "./test/": true,
@@ -80,28 +75,30 @@ export const startDevServer = async ({
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
-  const reloadableProcess = await initReloadableProcess({
-    signal,
-    handleSIGINT,
-    ...(devServerAutoreload
-      ? {
-          enabled: true,
-          logLevel: "warn",
-          fileToRestart: devServerMainFile,
-        }
-      : {
-          enabled: false,
-        }),
-  })
-  if (reloadableProcess.isPrimary) {
+  const operation = Abort.startOperation()
+  operation.addAbortSignal(signal)
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        abort,
+      )
+    })
+  }
+  if (port === 0) {
+    port = await findFreePort(port, { signal: operation.signal })
+  }
+
+  const reloadableWorker = createReloadableWorker(devServerMainFile)
+  if (devServerAutoreload && reloadableWorker.isPrimary) {
     const devServerFileChangeCallback = ({ relativeUrl, event }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href
-      if (devServerAutoreload) {
-        logger.info(`file ${event} ${url} -> restarting server...`)
-        reloadableProcess.reload()
-      }
+      logger.info(`file ${event} ${url} -> restarting server...`)
+      reloadableWorker.reload()
     }
-    const unregisterDevServerFilesWatcher = registerDirectoryLifecycle(
+    const stopWatchingDevServerFiles = registerDirectoryLifecycle(
       rootDirectoryUrl,
       {
         watchPatterns: {
@@ -122,14 +119,16 @@ export const startDevServer = async ({
         },
       },
     )
-    signal.addEventListener("abort", () => {
-      unregisterDevServerFilesWatcher()
+    operation.addAbortCallback(() => {
+      stopWatchingDevServerFiles()
+      reloadableWorker.terminate()
     })
+    await reloadableWorker.load()
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
-        unregisterDevServerFilesWatcher()
-        reloadableProcess.stop()
+        stopWatchingDevServerFiles()
+        reloadableWorker.terminate()
       },
     }
   }

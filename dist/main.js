@@ -1,8 +1,10 @@
-import { parentPort } from "node:worker_threads";
+import { timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
 import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
+import { createCallbackList, createCallbackListNotifiedOnce, Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
 import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages, byteAsFileSize } from "@jsenv/log";
 import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename, urlToExtension } from "@jsenv/urls";
-import { initReloadableProcess } from "@jsenv/utils/process_reload/process_reload.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { workerData, Worker } from "node:worker_threads";
 import { URL_META } from "@jsenv/url-meta";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
 import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
@@ -13,7 +15,6 @@ import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
 import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js";
 import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js";
 import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js";
@@ -26,9 +27,7 @@ import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js";
 import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js";
 import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js";
 import { sourcemapConverter } from "@jsenv/utils/sourcemap/sourcemap_converter.js";
-import { createCallbackList, createCallbackListNotifiedOnce, Abort, raceCallbacks, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createSSEService } from "@jsenv/utils/event_source/sse_service.js";
-import { timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
 import { SOURCEMAP, generateSourcemapUrl, sourcemapToBase64Url } from "@jsenv/utils/sourcemap/sourcemap_utils.js";
 import { validateResponseIntegrity } from "@jsenv/integrity";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
@@ -51,6 +50,59 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_spec
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
 import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js";
+
+const createReloadableWorker = (workerFileUrl, options = {}) => {
+  const workerFilePath = fileURLToPath(workerFileUrl);
+  const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
+  let worker;
+
+  const terminate = async () => {
+    if (worker) {
+      let _worker = worker;
+      worker = null;
+      const exitPromise = new Promise(resolve => {
+        _worker.once("exit", resolve);
+      });
+
+      _worker.terminate();
+
+      await exitPromise;
+    }
+  };
+
+  const load = async () => {
+    if (!isPrimary) {
+      throw new Error(`worker can be loaded from primary file only`);
+    }
+
+    worker = new Worker(workerFilePath, { ...options,
+      workerData: { ...options.workerData,
+        workerFilePath
+      }
+    });
+    worker.once("error", error => {
+      console.error(error);
+    });
+    worker.once("exit", () => {
+      worker = null;
+    });
+    await new Promise(resolve => {
+      worker.once("online", resolve);
+    });
+  };
+
+  const reload = async () => {
+    await terminate();
+    await load();
+  };
+
+  return {
+    isPrimary,
+    load,
+    reload,
+    terminate
+  };
+};
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
@@ -8295,7 +8347,7 @@ const jsenvPluginExplorer = ({
 
 const startDevServer = async ({
   signal = new AbortController().signal,
-  handleSIGINT,
+  handleSIGINT = true,
   logLevel = "info",
   omegaServerLogLevel = "warn",
   port = 3456,
@@ -8313,11 +8365,7 @@ const startDevServer = async ({
     "./jsenv.config.mjs": true
   },
   devServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - inside a worker thread
-  // (because node cluster won't work)
-  devServerAutoreload = typeof process.send !== "function" && !parentPort && !process.env.VSCODE_INSPECTOR_OPTIONS,
+  devServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
     "./test/": true
@@ -8357,32 +8405,36 @@ const startDevServer = async ({
     logLevel
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  const reloadableProcess = await initReloadableProcess({
-    signal,
-    handleSIGINT,
-    ...(devServerAutoreload ? {
-      enabled: true,
-      logLevel: "warn",
-      fileToRestart: devServerMainFile
-    } : {
-      enabled: false
-    })
-  });
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
 
-  if (reloadableProcess.isPrimary) {
+  if (handleSIGINT) {
+    operation.addAbortSource(abort => {
+      return raceProcessTeardownEvents({
+        SIGINT: true
+      }, abort);
+    });
+  }
+
+  if (port === 0) {
+    port = await findFreePort(port, {
+      signal: operation.signal
+    });
+  }
+
+  const reloadableWorker = createReloadableWorker(devServerMainFile);
+
+  if (devServerAutoreload && reloadableWorker.isPrimary) {
     const devServerFileChangeCallback = ({
       relativeUrl,
       event
     }) => {
       const url = new URL(relativeUrl, rootDirectoryUrl).href;
-
-      if (devServerAutoreload) {
-        logger.info(`file ${event} ${url} -> restarting server...`);
-        reloadableProcess.reload();
-      }
+      logger.info(`file ${event} ${url} -> restarting server...`);
+      reloadableWorker.reload();
     };
 
-    const unregisterDevServerFilesWatcher = registerDirectoryLifecycle(rootDirectoryUrl, {
+    const stopWatchingDevServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
       watchPatterns: {
         [devServerMainFile]: true,
         ...devServerFiles
@@ -8415,14 +8467,16 @@ const startDevServer = async ({
         });
       }
     });
-    signal.addEventListener("abort", () => {
-      unregisterDevServerFilesWatcher();
+    operation.addAbortCallback(() => {
+      stopWatchingDevServerFiles();
+      reloadableWorker.terminate();
     });
+    await reloadableWorker.load();
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
-        unregisterDevServerFilesWatcher();
-        reloadableProcess.stop();
+        stopWatchingDevServerFiles();
+        reloadableWorker.terminate();
       }
     };
   }
@@ -13034,11 +13088,7 @@ const startBuildServer = async ({
     "./jsenv.config.mjs": true
   },
   buildServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - inside a worker thread
-  // (because node cluster won't work)
-  buildServerAutoreload = typeof process.send !== "function" && !parentPort && !process.env.VSCODE_INSPECTOR_OPTIONS,
+  buildServerAutoreload = !process.env.VSCODE_INSPECTOR_OPTIONS,
   cooldownBetweenFileEvents
 }) => {
   const logger = createLogger({
@@ -13046,19 +13096,26 @@ const startBuildServer = async ({
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
-  const reloadableProcess = await initReloadableProcess({
-    signal,
-    handleSIGINT,
-    ...(buildServerAutoreload ? {
-      enabled: true,
-      logLevel: "info",
-      fileToRestart: buildServerMainFile
-    } : {
-      enabled: false
-    })
-  });
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
 
-  if (reloadableProcess.isPrimary) {
+  if (handleSIGINT) {
+    operation.addAbortSource(abort => {
+      return raceProcessTeardownEvents({
+        SIGINT: true
+      }, abort);
+    });
+  }
+
+  if (port === 0) {
+    port = await findFreePort(port, {
+      signal: operation.signal
+    });
+  }
+
+  const reloadableWorker = createReloadableWorker(buildServerMainFile);
+
+  if (buildServerAutoreload && reloadableWorker.isPrimary) {
     const buildServerFileChangeCallback = ({
       relativeUrl,
       event
@@ -13067,7 +13124,7 @@ const startBuildServer = async ({
 
       if (buildServerAutoreload) {
         logger.info(`file ${event} ${url} -> restarting server...`);
-        reloadableProcess.reload();
+        reloadableWorker.reload();
       }
     };
 
@@ -13104,19 +13161,20 @@ const startBuildServer = async ({
         });
       }
     });
-    signal.addEventListener("abort", () => {
+    operation.addAbortCallback(() => {
       stopWatchingBuildServerFiles();
+      reloadableWorker.terminate();
     });
+    await reloadableWorker.load();
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
         stopWatchingBuildServerFiles();
-        reloadableProcess.stop();
+        reloadableWorker.terminate();
       }
     };
   }
 
-  signal = reloadableProcess.signal;
   const startBuildServerTask = createTaskLog("start build server", {
     disabled: !loggerToLevels(logger).info
   });
