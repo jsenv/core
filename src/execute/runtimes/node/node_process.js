@@ -5,10 +5,10 @@ import {
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 import { uneval } from "@jsenv/uneval"
-
 import { urlToFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/log"
-import { memoize } from "@jsenv/utils/memoize/memoize.js"
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
+
 import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"
 import { killProcessTree } from "./kill_process_tree.js"

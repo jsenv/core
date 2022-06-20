@@ -22,19 +22,18 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap"
-
+import { generateInlineContentUrl } from "@jsenv/urls"
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  findNode,
-  getHtmlNodeAttributeByName,
-  htmlNodePosition,
-  removeHtmlNodeAttributeByName,
-  setHtmlNodeGeneratedText,
-  getHtmlNodeTextNode,
+  findHtmlNode,
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+  getHtmlNodePosition,
+  getHtmlNodeText,
+  setHtmlNodeText,
   removeHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import { generateInlineContentUrl } from "@jsenv/urls"
+} from "@jsenv/ast"
 
 export const jsenvPluginImportmap = () => {
   let finalImportmap = null
@@ -93,12 +92,12 @@ export const jsenvPluginImportmap = () => {
     transformUrlContent: {
       html: async (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
-        const importmap = findNode(htmlAst, (node) => {
+        const importmap = findHtmlNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
             return false
           }
-          const typeAttribute = getHtmlNodeAttributeByName(node, "type")
-          if (!typeAttribute || typeAttribute.value !== "importmap") {
+          const type = getHtmlNodeAttribute(node, "type")
+          if (type === undefined || type !== "importmap") {
             return false
           }
           return true
@@ -109,7 +108,7 @@ export const jsenvPluginImportmap = () => {
         }
         const handleInlineImportmap = async (importmap, textNode) => {
           const { line, column, lineEnd, columnEnd, isOriginal } =
-            htmlNodePosition.readNodePosition(importmap, {
+            getHtmlNodePosition(importmap, {
               preferOriginal: true,
             })
           const inlineImportmapUrl = generateInlineContentUrl({
@@ -133,9 +132,9 @@ export const jsenvPluginImportmap = () => {
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference,
           })
-          setHtmlNodeGeneratedText(importmap, {
-            generatedText: inlineImportmapUrlInfo.content,
-            generatedBy: "jsenv:importmap",
+          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content)
+          setHtmlNodeAttributes(importmap, {
+            "generated-by": "jsenv:importmap",
           })
           onHtmlImportmapParsed(
             JSON.parse(inlineImportmapUrlInfo.content),
@@ -160,15 +159,15 @@ export const jsenvPluginImportmap = () => {
             JSON.parse(importmapUrlInfo.content),
             htmlUrlInfo.url,
           )
-          removeHtmlNodeAttributeByName(importmap, "src")
-          setHtmlNodeGeneratedText(importmap, {
-            generatedText: importmapUrlInfo.content,
-            generatedBy: "jsenv:importmap",
-            generatedFromSrc: src,
+          setHtmlNodeText(importmap, importmapUrlInfo.content)
+          setHtmlNodeAttributes(importmap, {
+            "src": undefined,
+            "generated-by": "jsenv:importmap",
+            "generated-from-src": src,
           })
 
           const { line, column, lineEnd, columnEnd, isOriginal } =
-            htmlNodePosition.readNodePosition(importmap, {
+            getHtmlNodePosition(importmap, {
               preferOriginal: true,
             })
           const inlineImportmapUrl = generateInlineContentUrl({
@@ -189,14 +188,13 @@ export const jsenvPluginImportmap = () => {
           })
         }
 
-        const srcAttribute = getHtmlNodeAttributeByName(importmap, "src")
-        const src = srcAttribute ? srcAttribute.value : undefined
+        const src = getHtmlNodeAttribute(importmap, "src")
         if (src) {
           await handleImportmapWithSrc(importmap, src)
         } else {
-          const textNode = getHtmlNodeTextNode(importmap)
-          if (textNode) {
-            await handleInlineImportmap(importmap, textNode)
+          const htmlNodeText = getHtmlNodeText(importmap)
+          if (htmlNodeText) {
+            await handleInlineImportmap(importmap, htmlNodeText)
           }
         }
         // once this plugin knows the importmap, it will use it

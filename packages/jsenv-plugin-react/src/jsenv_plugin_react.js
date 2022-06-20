@@ -5,7 +5,7 @@
 import { URL_META } from "@jsenv/url-meta"
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/ast"
 
 import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_preamble.js"
 

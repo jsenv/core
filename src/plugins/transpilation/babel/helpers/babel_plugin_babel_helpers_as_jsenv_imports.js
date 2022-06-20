@@ -1,10 +1,9 @@
 import { pathToFileURL } from "node:url"
-
-import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js"
+import { injectImport } from "@jsenv/ast"
 import {
   getBabelHelperFileUrl,
   babelHelperNameFromUrl,
-} from "@jsenv/babel-plugins/main.js"
+} from "@jsenv/babel-plugins"
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1

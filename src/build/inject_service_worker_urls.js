@@ -1,5 +1,5 @@
 import { createMagicSource } from "@jsenv/sourcemap"
-import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
+import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js"
 
 import { GRAPH } from "./graph_utils.js"
 

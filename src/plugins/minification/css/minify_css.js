@@ -1,4 +1,4 @@
-import { minifyWithParcel } from "@jsenv/utils/css_ast/parcel_css.js"
+import { minifyWithParcel } from "@jsenv/ast"
 
 export const minifyCss = ({ cssUrlInfo, context }) => {
   const { code, map } = minifyWithParcel(cssUrlInfo, context)

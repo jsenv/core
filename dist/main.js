@@ -6,39 +6,31 @@ import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { URL_META } from "@jsenv/url-meta";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
-import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
+import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectImport, applyRollupPlugins, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js";
-import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js";
-import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
 import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js";
-import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js";
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js";
-import { transpileWithParcel, minifyWithParcel } from "@jsenv/utils/css_ast/parcel_css.js";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
-import { findHighestVersion } from "@jsenv/utils/semantic_versioning/highest_version.js";
-import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js";
-import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js";
-import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js";
+import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js";
 import { validateResponseIntegrity } from "@jsenv/integrity";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js";
+import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js";
 import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
 import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
-import { memoize } from "@jsenv/utils/memoize/memoize.js";
-import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_special_chars.js";
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
-import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js";
+import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js";
+import { setHtmlNodeAttributes as setHtmlNodeAttributes$1 } from "@jsenv/core/packages/ast/src/main.js";
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
@@ -116,9 +108,14 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       column,
       originalLine,
       originalColumn,
-      specifier,
-      attribute
+      node,
+      attributeName,
+      specifier
     }) => {
+      const {
+        crossorigin,
+        integrity
+      } = readFetchMetas(node);
       const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
       const [reference] = referenceUtils.found({
         type,
@@ -128,10 +125,14 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         specifier,
         specifierLine: line,
         specifierColumn: column,
-        isRessourceHint
+        isRessourceHint,
+        crossorigin,
+        integrity
       });
       actions.push(async () => {
-        attribute.value = await referenceUtils.readGeneratedSpecifier(reference);
+        setHtmlNodeAttributes(node, {
+          [attributeName]: await referenceUtils.readGeneratedSpecifier(reference)
+        });
       });
     }
   });
@@ -145,6 +146,24 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     content: stringifyHtmlAst(htmlAst)
   };
 };
+const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
+const integrityCompatibleTagNames = ["script", "link", "img", "source"];
+
+const readFetchMetas = node => {
+  const meta = {};
+
+  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
+    const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
+    meta.crossorigin = crossorigin;
+  }
+
+  if (integrityCompatibleTagNames.includes(node.nodeName)) {
+    const integrity = getHtmlNodeAttribute(node, "integrity");
+    meta.integrity = integrity;
+  }
+
+  return meta;
+};
 
 const visitHtmlUrls = ({
   url,
@@ -156,18 +175,18 @@ const visitHtmlUrls = ({
     subtype,
     expectedType,
     node,
-    attribute,
+    attributeName,
     specifier
   }) => {
-    const generatedFromInlineContent = Boolean(getHtmlNodeAttributeByName(node, "generated-from-inline-content"));
+    const generatedFromInlineContent = getHtmlNodeAttribute(node, "generated-from-inline-content") !== undefined;
     let position;
 
     if (generatedFromInlineContent) {
       // when generated from inline content,
       // line, column is not "src" nor "generated-from-src" but "original-position"
-      position = htmlNodePosition.readNodePosition(node);
+      position = getHtmlNodePosition(node);
     } else {
-      position = htmlNodePosition.readAttributePosition(node, attribute.name);
+      position = getHtmlNodeAttributePosition(node, attributeName);
     }
 
     const {
@@ -183,19 +202,68 @@ const visitHtmlUrls = ({
       column,
       // originalLine, originalColumn
       specifier,
-      attribute,
-      // injected:Boolean(getHtmlNodeAttributeByName(node, "injected-by"))
-      // srcGeneratedFromInlineContent
-      ...readFetchMetas(node)
+      node,
+      attributeName
     });
   };
 
-  const visitors = {
+  const visitAttributeAsUrlSpecifier = ({
+    node,
+    attributeName,
+    ...rest
+  }) => {
+    const value = getHtmlNodeAttribute(node, attributeName);
+
+    if (value) {
+      const generatedBy = getHtmlNodeAttribute(node, "generated-by");
+
+      if (generatedBy !== undefined) {
+        // during build the importmap is inlined
+        // and shoud not be considered as a dependency anymore
+        return;
+      }
+
+      addDependency({ ...rest,
+        node,
+        attributeName,
+        specifier: attributeName === "generated-from-src" || attributeName === "generated-from-href" ? new URL(value, url).href : value
+      });
+    } else if (attributeName === "src") {
+      visitAttributeAsUrlSpecifier({ ...rest,
+        node,
+        attributeName: "generated-from-src"
+      });
+    } else if (attributeName === "href") {
+      visitAttributeAsUrlSpecifier({ ...rest,
+        node,
+        attributeName: "generated-from-href"
+      });
+    }
+  };
+
+  const visitSrcset = ({
+    type,
+    node
+  }) => {
+    const srcset = getHtmlNodeAttribute(node, "srcset");
+
+    if (srcset) {
+      const srcCandidates = parseSrcSet(srcset);
+      srcCandidates.forEach(srcCandidate => {
+        addDependency({
+          type,
+          node,
+          attributeName: "srcset",
+          specifier: srcCandidate.specifier
+        });
+      });
+    }
+  };
+
+  visitHtmlNodes(htmlAst, {
     link: node => {
-      const relAttribute = getHtmlNodeAttributeByName(node, "rel");
-      const rel = relAttribute ? relAttribute.value : undefined;
-      const typeAttribute = getHtmlNodeAttributeByName(node, "type");
-      const type = typeAttribute ? typeAttribute.value : undefined;
+      const rel = getHtmlNodeAttribute(node, "rel");
+      const type = getHtmlNodeAttribute(node, "type");
       visitAttributeAsUrlSpecifier({
         type: "link_href",
         subtype: rel,
@@ -211,15 +279,16 @@ const visitHtmlUrls = ({
     },
     // style: () => {},
     script: node => {
-      const typeAttributeNode = getHtmlNodeAttributeByName(node, "type");
+      const type = getHtmlNodeAttribute(node, "type");
+      const expectedType = {
+        "undefined": "js_classic",
+        "text/javascript": "js_classic",
+        "module": "js_module",
+        "importmap": "importmap"
+      }[type];
       visitAttributeAsUrlSpecifier({
         type: "script_src",
-        expectedType: {
-          "undefined": "js_classic",
-          "text/javascript": "js_classic",
-          "module": "js_module",
-          "importmap": "importmap"
-        }[typeAttributeNode ? typeAttributeNode.value : undefined],
+        expectedType,
         node,
         attributeName: "src"
       });
@@ -275,100 +344,7 @@ const visitHtmlUrls = ({
         attributeName: "href"
       });
     }
-  };
-
-  const visitAttributeAsUrlSpecifier = ({
-    type,
-    subtype,
-    expectedType,
-    node,
-    attributeName
-  }) => {
-    const attribute = getHtmlNodeAttributeByName(node, attributeName);
-    const value = attribute ? attribute.value : undefined;
-
-    if (value) {
-      const generatedBy = getHtmlNodeAttributeByName(node, "generated-by");
-
-      if (generatedBy) {
-        // during build the importmap is inlined
-        // and shoud not be considered as a dependency anymore
-        return;
-      }
-
-      addDependency({
-        type,
-        subtype,
-        expectedType,
-        node,
-        attribute,
-        specifier: attributeName === "generated-from-src" || attributeName === "generated-from-href" ? new URL(value, url).href : value
-      });
-    } else if (attributeName === "src") {
-      visitAttributeAsUrlSpecifier({
-        type,
-        subtype,
-        expectedType,
-        node,
-        attributeName: "generated-from-src"
-      });
-    } else if (attributeName === "href") {
-      visitAttributeAsUrlSpecifier({
-        type,
-        subtype,
-        expectedType,
-        node,
-        attributeName: "generated-from-href"
-      });
-    }
-  };
-
-  const visitSrcset = ({
-    type,
-    node
-  }) => {
-    const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset");
-    const srcset = srcsetAttribute ? srcsetAttribute.value : undefined;
-
-    if (srcset) {
-      const srcCandidates = htmlAttributeSrcSet.parse(srcset);
-      srcCandidates.forEach(srcCandidate => {
-        addDependency({
-          type,
-          node,
-          attribute: srcsetAttribute,
-          specifier: srcCandidate.specifier
-        });
-      });
-    }
-  };
-
-  visitHtmlAst(htmlAst, node => {
-    const visitor = visitors[node.nodeName];
-
-    if (visitor) {
-      visitor(node);
-    }
   });
-};
-
-const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
-const integrityCompatibleTagNames = ["script", "link", "img", "source"];
-
-const readFetchMetas = node => {
-  const meta = {};
-
-  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
-    const crossoriginAttribute = getHtmlNodeAttributeByName(node, "crossorigin");
-    meta.crossorigin = crossoriginAttribute ? crossoriginAttribute.value : undefined;
-  }
-
-  if (integrityCompatibleTagNames.includes(node.nodeName)) {
-    const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity");
-    meta.integrity = integrityAttribute ? integrityAttribute.value : undefined;
-  }
-
-  return meta;
 };
 
 /*
@@ -746,14 +722,14 @@ const jsenvPluginImportmap = () => {
     transformUrlContent: {
       html: async (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const importmap = findNode(htmlAst, node => {
+        const importmap = findHtmlNode(htmlAst, node => {
           if (node.nodeName !== "script") {
             return false;
           }
 
-          const typeAttribute = getHtmlNodeAttributeByName(node, "type");
+          const type = getHtmlNodeAttribute(node, "type");
 
-          if (!typeAttribute || typeAttribute.value !== "importmap") {
+          if (type === undefined || type !== "importmap") {
             return false;
           }
 
@@ -772,7 +748,7 @@ const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
             isOriginal
-          } = htmlNodePosition.readNodePosition(importmap, {
+          } = getHtmlNodePosition(importmap, {
             preferOriginal: true
           });
           const inlineImportmapUrl = generateInlineContentUrl({
@@ -795,9 +771,9 @@ const jsenvPluginImportmap = () => {
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference
           });
-          setHtmlNodeGeneratedText(importmap, {
-            generatedText: inlineImportmapUrlInfo.content,
-            generatedBy: "jsenv:importmap"
+          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
+          setHtmlNodeAttributes(importmap, {
+            "generated-by": "jsenv:importmap"
           });
           onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), htmlUrlInfo.url);
         };
@@ -814,11 +790,11 @@ const jsenvPluginImportmap = () => {
             reference: importmapReference
           });
           onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), htmlUrlInfo.url);
-          removeHtmlNodeAttributeByName(importmap, "src");
-          setHtmlNodeGeneratedText(importmap, {
-            generatedText: importmapUrlInfo.content,
-            generatedBy: "jsenv:importmap",
-            generatedFromSrc: src
+          setHtmlNodeText(importmap, importmapUrlInfo.content);
+          setHtmlNodeAttributes(importmap, {
+            "src": undefined,
+            "generated-by": "jsenv:importmap",
+            "generated-from-src": src
           });
           const {
             line,
@@ -826,7 +802,7 @@ const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
             isOriginal
-          } = htmlNodePosition.readNodePosition(importmap, {
+          } = getHtmlNodePosition(importmap, {
             preferOriginal: true
           });
           const inlineImportmapUrl = generateInlineContentUrl({
@@ -847,16 +823,15 @@ const jsenvPluginImportmap = () => {
           });
         };
 
-        const srcAttribute = getHtmlNodeAttributeByName(importmap, "src");
-        const src = srcAttribute ? srcAttribute.value : undefined;
+        const src = getHtmlNodeAttribute(importmap, "src");
 
         if (src) {
           await handleImportmapWithSrc(importmap, src);
         } else {
-          const textNode = getHtmlNodeTextNode(importmap);
+          const htmlNodeText = getHtmlNodeText(importmap);
 
-          if (textNode) {
-            await handleInlineImportmap(importmap, textNode);
+          if (htmlNodeText) {
+            await handleInlineImportmap(importmap, htmlNodeText);
           }
         } // once this plugin knows the importmap, it will use it
         // to map imports. These import specifiers will be normalized
@@ -1299,13 +1274,9 @@ const jsenvPluginHtmlInlineContent = ({
         const actions = [];
 
         const handleInlineStyle = node => {
-          if (node.nodeName !== "style") {
-            return;
-          }
+          const htmlNodeText = getHtmlNodeText(node);
 
-          const textNode = getHtmlNodeTextNode(node);
-
-          if (!textNode) {
+          if (!htmlNodeText) {
             return;
           }
 
@@ -1316,7 +1287,7 @@ const jsenvPluginHtmlInlineContent = ({
               lineEnd,
               columnEnd,
               isOriginal
-            } = htmlNodePosition.readNodePosition(node, {
+            } = getHtmlNodePosition(node, {
               preferOriginal: true
             });
             const inlineStyleUrl = generateInlineContentUrl({
@@ -1338,55 +1309,47 @@ const jsenvPluginHtmlInlineContent = ({
               specifierColumn: column,
               specifier: inlineStyleUrl,
               contentType: "text/css",
-              content: textNode.value
+              content: htmlNodeText
             });
             await context.cook(inlineStyleUrlInfo, {
               reference: inlineStyleReference
             });
-            setHtmlNodeGeneratedText(node, {
-              generatedText: inlineStyleUrlInfo.content,
-              generatedBy: "jsenv:html_inline_content"
+            setHtmlNodeText(node, inlineStyleUrlInfo.content);
+            setHtmlNodeAttributes(node, {
+              "generated-by": "jsenv:html_inline_content"
             });
           });
         };
 
         const handleInlineScript = node => {
-          if (node.nodeName !== "script") {
-            return;
-          }
+          const htmlNodeText = getHtmlNodeText(node);
 
-          const textNode = getHtmlNodeTextNode(node);
-
-          if (!textNode) {
+          if (!htmlNodeText) {
             return;
           } // If the inline script was already handled by an other plugin, ignore it
           // - we want to preserve inline scripts generated by html supervisor during dev
           // - we want to avoid cooking twice a script during build
 
 
-          const generatedBy = getHtmlNodeAttributeByName(node, "generated-by");
+          const generatedBy = getHtmlNodeAttribute(node, "generated-by");
 
-          if (generatedBy) {
-            if (generatedBy.value === "jsenv:as_js_classic_html") {
-              if (!analyzeConvertedScripts) {
-                return;
-              }
-            }
+          if (generatedBy === "jsenv:as_js_classic_html" && !analyzeConvertedScripts) {
+            return;
+          }
 
-            if (generatedBy.value === "jsenv:html_supervisor") {
-              return;
-            }
+          if (generatedBy === "jsenv:html_supervisor") {
+            return;
           }
 
           actions.push(async () => {
-            const scriptCategory = parseScriptNode(node);
+            const scriptCategory = analyzeScriptNode(node);
             const {
               line,
               column,
               lineEnd,
               columnEnd,
               isOriginal
-            } = htmlNodePosition.readNodePosition(node, {
+            } = getHtmlNodePosition(node, {
               preferOriginal: true
             }); // from MDN about [type] attribute:
             // "Any other value: The embedded content is treated as a data block
@@ -1422,21 +1385,25 @@ const jsenvPluginHtmlInlineContent = ({
               isOriginalPosition: isOriginal,
               specifier: inlineScriptUrl,
               contentType,
-              content: textNode.value
+              content: htmlNodeText
             });
             await context.cook(inlineScriptUrlInfo, {
               reference: inlineScriptReference
             });
-            setHtmlNodeGeneratedText(node, {
-              generatedText: inlineScriptUrlInfo.content,
-              generatedBy: "jsenv:html_inline_content"
+            setHtmlNodeText(node, inlineScriptUrlInfo.content);
+            setHtmlNodeAttributes(node, {
+              "generated-by": "jsenv:html_inline_content"
             });
           });
         };
 
-        visitHtmlAst(htmlAst, node => {
-          handleInlineStyle(node);
-          handleInlineScript(node);
+        visitHtmlNodes(htmlAst, {
+          style: node => {
+            handleInlineStyle(node);
+          },
+          script: node => {
+            handleInlineScript(node);
+          }
         });
 
         if (actions.length === 0) {
@@ -1976,15 +1943,15 @@ const jsenvPluginHtmlSupervisor = ({
         const htmlAst = parseHtmlString(content);
         const scriptsToSupervise = [];
 
-        const handleInlineScript = (node, textNode) => {
-          const scriptCategory = parseScriptNode(node);
+        const handleInlineScript = (node, htmlNodeText) => {
+          const scriptCategory = analyzeScriptNode(node);
           const {
             line,
             column,
             lineEnd,
             columnEnd,
             isOriginal
-          } = htmlNodePosition.readNodePosition(node, {
+          } = getHtmlNodePosition(node, {
             preferOriginal: true
           });
           let inlineScriptUrl = generateInlineContentUrl({
@@ -2006,7 +1973,7 @@ const jsenvPluginHtmlSupervisor = ({
             specifierColumn: column,
             specifier: inlineScriptUrl,
             contentType: "text/javascript",
-            content: textNode.value
+            content: htmlNodeText
           });
           removeHtmlNodeText(node);
           scriptsToSupervise.push({
@@ -2017,21 +1984,19 @@ const jsenvPluginHtmlSupervisor = ({
           });
         };
 
-        const handleScriptWithSrc = (node, srcAttribute) => {
-          const scriptCategory = parseScriptNode(node);
-          const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity");
-          const integrity = integrityAttribute ? integrityAttribute.value : undefined;
-          const crossoriginAttribute = getHtmlNodeAttributeByName(node, "crossorigin");
-          const crossorigin = crossoriginAttribute ? crossoriginAttribute.value : undefined;
-          const deferAttribute = getHtmlNodeAttributeByName(node, "crossorigin");
-          const defer = deferAttribute ? deferAttribute.value : undefined;
-          const asyncAttribute = getHtmlNodeAttributeByName(node, "crossorigin");
-          const async = asyncAttribute ? asyncAttribute.value : undefined;
-          removeHtmlNodeAttributeByName(node, "src");
+        const handleScriptWithSrc = (node, src) => {
+          const scriptCategory = analyzeScriptNode(node);
+          const integrity = getHtmlNodeAttribute(node, "integrity");
+          const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
+          const defer = getHtmlNodeAttribute(node, "defer") !== undefined;
+          const async = getHtmlNodeAttribute(node, "async") !== undefined;
+          setHtmlNodeAttributes(node, {
+            src: undefined
+          });
           scriptsToSupervise.push({
             node,
             type: scriptCategory,
-            src: srcAttribute.value,
+            src,
             defer,
             async,
             integrity,
@@ -2039,41 +2004,39 @@ const jsenvPluginHtmlSupervisor = ({
           });
         };
 
-        visitHtmlAst(htmlAst, node => {
-          if (node.nodeName !== "script") {
-            return;
-          }
+        visitHtmlNodes(htmlAst, {
+          script: node => {
+            const scriptCategory = analyzeScriptNode(node);
 
-          const scriptCategory = parseScriptNode(node);
+            if (scriptCategory !== "classic" && scriptCategory !== "module") {
+              return;
+            }
 
-          if (scriptCategory !== "classic" && scriptCategory !== "module") {
-            return;
-          }
+            const injectedBy = getHtmlNodeAttribute(node, "injected-by");
 
-          const injectedByAttribute = getHtmlNodeAttributeByName(node, "injected-by");
+            if (injectedBy !== undefined) {
+              return;
+            }
 
-          if (injectedByAttribute) {
-            return;
-          }
+            const noHtmlSupervisor = getHtmlNodeAttribute(node, "no-html-supervisor");
 
-          const noHtmlSupervisor = getHtmlNodeAttributeByName(node, "no-html-supervisor");
+            if (noHtmlSupervisor !== undefined) {
+              return;
+            }
 
-          if (noHtmlSupervisor) {
-            return;
-          }
+            const htmlNodeText = getHtmlNodeText(node);
 
-          const textNode = getHtmlNodeTextNode(node);
+            if (htmlNodeText) {
+              handleInlineScript(node, htmlNodeText);
+              return;
+            }
 
-          if (textNode) {
-            handleInlineScript(node, textNode);
-            return;
-          }
+            const src = getHtmlNodeAttribute(node, "src");
 
-          const srcAttribute = getHtmlNodeAttributeByName(node, "src");
-
-          if (srcAttribute) {
-            handleScriptWithSrc(node, srcAttribute);
-            return;
+            if (src) {
+              handleScriptWithSrc(node, src);
+              return;
+            }
           }
         });
         const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
@@ -2081,7 +2044,7 @@ const jsenvPluginHtmlSupervisor = ({
           expectedType: "js_module",
           specifier: htmlSupervisorInstallerFileUrl
         });
-        injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           "tagName": "script",
           "type": "module",
           "textContent": `
@@ -2097,7 +2060,7 @@ const jsenvPluginHtmlSupervisor = ({
           expectedType: "js_classic",
           specifier: htmlSupervisorSetupFileUrl
         });
-        injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           "tagName": "script",
           "src": htmlSupervisorSetupFileReference.generatedSpecifier,
           "injected-by": "jsenv:html_supervisor"
@@ -2112,20 +2075,24 @@ const jsenvPluginHtmlSupervisor = ({
           integrity,
           crossorigin
         }) => {
-          setHtmlNodeGeneratedText(node, {
-            generatedText: generateCodeToSuperviseScript({
-              type,
-              src,
-              isInline,
-              defer,
-              async,
-              integrity,
-              crossorigin,
-              htmlSupervisorInstallerSpecifier: htmlSupervisorInstallerFileReference.generatedSpecifier
-            }),
-            generatedBy: "jsenv:html_supervisor",
-            generatedFromSrc: src,
-            generatedFromInlineContent: isInline
+          setHtmlNodeText(node, generateCodeToSuperviseScript({
+            type,
+            src,
+            isInline,
+            defer,
+            async,
+            integrity,
+            crossorigin,
+            htmlSupervisorInstallerSpecifier: htmlSupervisorInstallerFileReference.generatedSpecifier
+          }));
+          setHtmlNodeAttributes(node, {
+            "generated-by": "jsenv:html_supervisor",
+            ...(src ? {
+              "generated-from-src": src
+            } : {}),
+            ...(isInline ? {
+              "generated-from-inline-content": ""
+            } : {})
           });
         });
         const htmlModified = stringifyHtmlAst(htmlAst);
@@ -2740,12 +2707,7 @@ const jsenvPluginAsJsClassicHtml = ({
         const classicScriptNodes = [];
 
         const visitLinkNodes = node => {
-          if (node.nodeName !== "link") {
-            return;
-          }
-
-          const relAttribute = getHtmlNodeAttributeByName(node, "rel");
-          const rel = relAttribute ? relAttribute.value : undefined;
+          const rel = getHtmlNodeAttribute(node, "rel");
 
           if (rel === "modulepreload") {
             modulePreloadNodes.push(node);
@@ -2753,8 +2715,7 @@ const jsenvPluginAsJsClassicHtml = ({
           }
 
           if (rel === "preload") {
-            const asAttribute = getHtmlNodeAttributeByName(node, "as");
-            const asValue = asAttribute ? asAttribute.value : undefined;
+            const asValue = getHtmlNodeAttribute(node, "as");
 
             if (asValue === "script") {
               preloadAsScriptNodes.push(node);
@@ -2765,12 +2726,7 @@ const jsenvPluginAsJsClassicHtml = ({
         };
 
         const visitScriptNodes = node => {
-          if (node.nodeName !== "script") {
-            return;
-          }
-
-          const typeAttribute = getHtmlNodeAttributeByName(node, "type");
-          const type = typeAttribute ? typeAttribute.value : undefined;
+          const type = getHtmlNodeAttribute(node, "type");
 
           if (type === "module") {
             moduleScriptNodes.push(node);
@@ -2783,9 +2739,13 @@ const jsenvPluginAsJsClassicHtml = ({
           }
         };
 
-        visitHtmlAst(htmlAst, node => {
-          visitLinkNodes(node);
-          visitScriptNodes(node);
+        visitHtmlNodes(htmlAst, {
+          link: node => {
+            visitLinkNodes(node);
+          },
+          script: node => {
+            visitScriptNodes(node);
+          }
         });
         const actions = [];
         const jsModuleUrls = [];
@@ -2827,10 +2787,10 @@ const jsenvPluginAsJsClassicHtml = ({
         };
 
         classicScriptNodes.forEach(classicScriptNode => {
-          const srcAttribute = getHtmlNodeAttributeByName(classicScriptNode, "src");
+          const src = getHtmlNodeAttribute(classicScriptNode, "src");
 
-          if (srcAttribute) {
-            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === srcAttribute.value && ref.type === "script_src");
+          if (src !== undefined) {
+            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === src && ref.type === "script_src");
             const urlObject = new URL(reference.url);
 
             if (urlObject.searchParams.has("as_js_classic")) {
@@ -2849,10 +2809,10 @@ const jsenvPluginAsJsClassicHtml = ({
           }
         });
         moduleScriptNodes.forEach(moduleScriptNode => {
-          const srcAttribute = getHtmlNodeAttributeByName(moduleScriptNode, "src");
+          const src = getHtmlNodeAttribute(moduleScriptNode, "src");
 
-          if (srcAttribute) {
-            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === srcAttribute.value && ref.type === "script_src" && ref.expectedType === "js_module");
+          if (src !== undefined) {
+            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === src && ref.type === "script_src" && ref.expectedType === "js_module");
             jsModuleUrls.push(reference.url);
 
             if (shouldTransformScriptTypeModule) {
@@ -2860,8 +2820,10 @@ const jsenvPluginAsJsClassicHtml = ({
                 const [newReference] = await getReferenceAsJsClassic(reference, {
                   cookIt: true
                 });
-                removeHtmlNodeAttributeByName(moduleScriptNode, "type");
-                srcAttribute.value = newReference.generatedSpecifier;
+                setHtmlNodeAttributes(moduleScriptNode, {
+                  type: undefined,
+                  src: newReference.generatedSpecifier
+                });
               });
             }
 
@@ -2869,7 +2831,7 @@ const jsenvPluginAsJsClassicHtml = ({
           }
 
           if (shouldTransformScriptTypeModule) {
-            const textNode = getHtmlNodeTextNode(moduleScriptNode);
+            const htmlNodeText = getHtmlNodeText(moduleScriptNode);
             actions.push(async () => {
               const {
                 line,
@@ -2877,7 +2839,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 lineEnd,
                 columnEnd,
                 isOriginal
-              } = htmlNodePosition.readNodePosition(moduleScriptNode, {
+              } = getHtmlNodePosition(moduleScriptNode, {
                 preferOriginal: true
               });
               let inlineScriptUrl = generateInlineContentUrl({
@@ -2900,15 +2862,15 @@ const jsenvPluginAsJsClassicHtml = ({
                 specifierColumn: column,
                 specifier: inlineScriptUrl,
                 contentType: "text/javascript",
-                content: textNode.value
+                content: htmlNodeText
               });
               const [, newUrlInfo] = await getReferenceAsJsClassic(inlineReference, {
                 cookIt: true
               });
-              removeHtmlNodeAttributeByName(moduleScriptNode, "type");
-              setHtmlNodeGeneratedText(moduleScriptNode, {
-                generatedText: newUrlInfo.content,
-                generatedBy: "jsenv:as_js_classic_html"
+              setHtmlNodeText(moduleScriptNode, newUrlInfo.content);
+              setHtmlNodeAttributes(moduleScriptNode, {
+                "type": undefined,
+                "generated-by": "jsenv:as_js_classic_html"
               });
             });
           }
@@ -2916,8 +2878,7 @@ const jsenvPluginAsJsClassicHtml = ({
 
         if (shouldTransformScriptTypeModule) {
           preloadAsScriptNodes.forEach(preloadAsScriptNode => {
-            const hrefAttribute = getHtmlNodeAttributeByName(preloadAsScriptNode, "href");
-            const href = hrefAttribute.value;
+            const href = getHtmlNodeAttribute(preloadAsScriptNode, "href");
             const reference = urlInfo.references.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === undefined);
             const expectedScriptType = jsModuleUrls.includes(reference.url) ? "module" : "classic";
 
@@ -2932,16 +2893,15 @@ const jsenvPluginAsJsClassicHtml = ({
                   [newReference] = await getReferenceAsJsClassic(reference);
                 }
 
-                assignHtmlNodeAttributes(preloadAsScriptNode, {
-                  href: newReference.generatedSpecifier
+                setHtmlNodeAttributes(preloadAsScriptNode, {
+                  href: newReference.generatedSpecifier,
+                  crossorigin: undefined
                 });
-                removeHtmlNodeAttributeByName(preloadAsScriptNode, "crossorigin");
               });
             }
           });
           modulePreloadNodes.forEach(modulePreloadNode => {
-            const hrefAttribute = getHtmlNodeAttributeByName(modulePreloadNode, "href");
-            const href = hrefAttribute.value;
+            const href = getHtmlNodeAttribute(modulePreloadNode, "href");
             const reference = urlInfo.references.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === "js_module");
             actions.push(async () => {
               let newReference;
@@ -2952,7 +2912,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 [newReference] = await getReferenceAsJsClassic(reference);
               }
 
-              assignHtmlNodeAttributes(modulePreloadNode, {
+              setHtmlNodeAttributes(modulePreloadNode, {
                 rel: "preload",
                 as: "script",
                 href: newReference.generatedSpecifier
@@ -2976,7 +2936,7 @@ const jsenvPluginAsJsClassicHtml = ({
               expectedType: "js_classic",
               specifier: systemJsClientFileUrl
             });
-            injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+            injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
               "tagName": "script",
               "src": systemJsReference.generatedSpecifier,
               "injected-by": "jsenv:as_js_classic_html"
@@ -4501,6 +4461,39 @@ const jsenvPluginNodeRuntime = ({
   };
 };
 
+const sortByDependencies = nodes => {
+  const visited = [];
+  const sorted = [];
+  const circular = [];
+
+  const visit = url => {
+    const isSorted = sorted.includes(url);
+
+    if (isSorted) {
+      return;
+    }
+
+    const isVisited = visited.includes(url);
+
+    if (isVisited) {
+      circular.push(url);
+      sorted.push(url);
+    } else {
+      visited.push(url);
+      nodes[url].dependencies.forEach(dependencyUrl => {
+        visit(dependencyUrl);
+      });
+      sorted.push(url);
+    }
+  };
+
+  Object.keys(nodes).forEach(url => {
+    visit(url);
+  });
+  sorted.circular = circular;
+  return sorted;
+};
+
 /*
  * Each @import found in css is replaced by the file content
  * - There is no need to worry about urls (such as background-image: url())
@@ -5250,8 +5243,7 @@ const collectHotDataFromHtmlAst = htmlAst => {
     attributeName,
     hotAccepted
   }) => {
-    const attribute = getHtmlNodeAttributeByName(node, attributeName);
-    const value = attribute ? attribute.value : undefined;
+    const value = getHtmlNodeAttribute(node, attributeName);
 
     if (value) {
       onSpecifier({
@@ -5298,11 +5290,10 @@ const collectHotDataFromHtmlAst = htmlAst => {
     }
 
     if (nodeNamesWithSrcset.includes(node.nodeName)) {
-      const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset");
-      const srcset = srcsetAttribute ? srcsetAttribute.value : undefined;
+      const srcset = getHtmlNodeAttribute(node, "srcset");
 
       if (srcset) {
-        const srcCandidates = htmlAttributeSrcSet.parse(srcset);
+        const srcCandidates = parseSrcSet(srcset);
         srcCandidates.forEach(srcCandidate => {
           onSpecifier({
             node,
@@ -5343,15 +5334,15 @@ const nodeNamesWithSrcset = ["img", "source"];
 
 const getNodeContext = node => {
   const context = {};
-  const hotAcceptAttribute = getHtmlNodeAttributeByName(node, "hot-accept");
+  const hotAccept = getHtmlNodeAttribute(node, "hot-accept");
 
-  if (hotAcceptAttribute) {
+  if (hotAccept !== undefined) {
     context.hotAccepted = true;
   }
 
-  const hotDeclineAttribute = getHtmlNodeAttributeByName(node, "hot-decline");
+  const hotDecline = getHtmlNodeAttribute(node, "hot-decline");
 
-  if (hotDeclineAttribute) {
+  if (hotDecline !== undefined) {
     context.hotAccepted = false;
   }
 
@@ -5364,7 +5355,7 @@ const htmlNodeCanHotReload = node => {
       isStylesheet,
       isRessourceHint,
       rel
-    } = parseLinkNode(node);
+    } = analyzeLinkNode(node);
 
     if (isStylesheet) {
       // stylesheets can be hot replaced by default
@@ -5664,7 +5655,7 @@ const jsenvPluginDevSSEClient = () => {
           expectedType: "js_module",
           specifier: eventSourceClientFileUrl
         });
-        injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           "tagName": "script",
           "type": "module",
           "src": eventSourceClientReference.generatedSpecifier,
@@ -6704,13 +6695,27 @@ const createUrlInfoTransformer = ({
   const sourcemapsEnabled = sourcemaps === "inline" || sourcemaps === "file" || sourcemaps === "programmatic";
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
+    let {
+      sources
+    } = sourcemap;
+
+    if (sources) {
+      sources = sources.map(source => {
+        if (source && isFileSystemPath(source)) {
+          return String(pathToFileURL(source));
+        }
+
+        return source;
+      });
+    }
+
     const wantSourcesContent = // for inline content (<script> insdide html)
     // chrome won't be able to fetch the file as it does not exists
     // so sourcemap must contain sources
-    sourcemapsSourcesContent || urlInfo.isInline || sourcemap.sources && sourcemap.sources.some(source => !source || !source.startsWith("file:"));
+    sourcemapsSourcesContent || urlInfo.isInline || sources && sources.some(source => !source || !source.startsWith("file:"));
 
-    if (sourcemap.sources && sourcemap.sources.length > 1) {
-      sourcemap.sources = sourcemap.sources.map(source => new URL(source, urlInfo.originalUrl).href);
+    if (sources && sources.length > 1) {
+      sourcemap.sources = sources.map(source => new URL(source, urlInfo.originalUrl).href);
 
       if (!wantSourcesContent) {
         sourcemap.sourcesContent = undefined;
@@ -9054,7 +9059,7 @@ const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) 
     const {
       path
     } = fileCoverage;
-    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : resolveUrl(path, rootDirectoryUrl);
+    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : new URL(path, rootDirectoryUrl).href;
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
     fileByFileNormalized[`./${relativeUrl}`] = { ...fileCoverage,
       path: `./${relativeUrl}`
@@ -12320,7 +12325,7 @@ const injectors = {
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false
     });
-    injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       "tagName": "script",
       "textContent": generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window"
@@ -12448,15 +12453,12 @@ const resyncRessourceHints = async ({
       });
       const actions = [];
 
-      const visitLinkWithHref = (linkNode, hrefAttribute) => {
-        const href = hrefAttribute.value;
-
+      const visitLinkWithHref = (linkNode, href) => {
         if (!href || href.startsWith("data:")) {
           return;
         }
 
-        const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel");
-        const rel = relAttribute ? relAttribute.value : undefined;
+        const rel = getHtmlNodeAttribute(linkNode, "rel");
         const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
 
         if (!isRessourceHint) {
@@ -12500,22 +12502,20 @@ const resyncRessourceHints = async ({
         }
 
         actions.push(() => {
-          hrefAttribute.value = urlInfo.data.buildUrlSpecifier;
+          setHtmlNodeAttributes$1(linkNode, {
+            href: urlInfo.data.buildUrlSpecifier
+          });
         });
       };
 
-      visitHtmlAst(htmlAst, node => {
-        if (node.nodeName !== "link") {
-          return;
+      visitHtmlNodes(htmlAst, {
+        link: node => {
+          const href = getHtmlNodeAttribute(node, "href");
+
+          if (href !== undefined) {
+            visitLinkWithHref(node, href);
+          }
         }
-
-        const hrefAttribute = getHtmlNodeAttributeByName(node, "href");
-
-        if (!hrefAttribute) {
-          return;
-        }
-
-        visitLinkWithHref(node, hrefAttribute);
       });
 
       if (actions.length) {
@@ -14159,7 +14159,7 @@ const globalInjectorOnHtml = async (urlInfo, globals) => {
     globals,
     isWebWorker: false
   });
-  injectScriptAsEarlyAsPossible(htmlAst, createHtmlNode({
+  injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
     "tagName": "script",
     "textContent": clientCode,
     "injected-by": "jsenv:inject_globals"

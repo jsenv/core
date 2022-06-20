@@ -6,12 +6,11 @@ import {
   urlToFilename,
   ensurePathnameTrailingSlash,
 } from "@jsenv/urls"
-
 import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution"
-import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 export const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],

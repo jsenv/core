@@ -1,6 +1,5 @@
 import { pathToFileURL } from "node:url"
-
-import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js"
+import { injectImport } from "@jsenv/ast"
 
 export const babelPluginRegeneratorRuntimeAsJsenvImport = (
   babel,

@@ -3,10 +3,10 @@
 import { createMagicSource } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
-  injectScriptAsEarlyAsPossible,
+  injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
-} from "@jsenv/utils/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 import { GRAPH } from "./graph_utils.js"
 
@@ -57,7 +57,7 @@ const injectors = {
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false,
     })
-    injectScriptAsEarlyAsPossible(
+    injectScriptNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
         "tagName": "script",

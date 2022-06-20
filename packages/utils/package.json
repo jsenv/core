@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/utils",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -11,22 +11,11 @@
     "access": "public"
   },
   "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
   },
-  "dependencies": {
-    "@babel/parser": "7.18.5",
-    "@jsenv/filesystem": "4.0.9",
-    "@jsenv/log": "2.0.0",
-    "@jsenv/urls": "1.2.5",
-    "@parcel/css": "1.10.1",
-    "acorn": "8.7.1",
-    "acorn-import-assertions": "1.8.0",
-    "acorn-walk": "8.2.0",
-    "ansi-to-html": "0.7.2",
-    "parse5": "7.0.0",
-    "postcss": "8.4.14",
-    "postcss-value-parser": "4.2.0",
-    "rollup": "2.75.6"
-  }
+  "dependencies": {}
 }

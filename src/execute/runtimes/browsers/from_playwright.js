@@ -8,8 +8,8 @@ import {
   raceCallbacks,
 } from "@jsenv/abort"
 import { moveUrl } from "@jsenv/urls"
-import { memoize } from "@jsenv/utils/memoize/memoize.js"
-import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_special_chars.js"
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
+import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage_from_directory.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"

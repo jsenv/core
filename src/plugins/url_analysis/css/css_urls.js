@@ -3,8 +3,7 @@
  */
 
 import { createMagicSource } from "@jsenv/sourcemap"
-import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js"
-import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js"
+import { applyPostCss, postCssPluginUrlVisitor } from "@jsenv/ast"
 
 export const parseAndTransformCssUrls = async (urlInfo, context) => {
   const actions = []

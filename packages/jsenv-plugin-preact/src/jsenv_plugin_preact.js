@@ -4,14 +4,14 @@
  */
 
 import { URL_META } from "@jsenv/url-meta"
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
 import {
+  applyBabelPlugins,
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptAsEarlyAsPossible,
+  injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 export const jsenvPluginPreact = ({
   jsxInclude = {
@@ -66,7 +66,7 @@ export const jsenvPluginPreact = ({
               ? "preact/debug"
               : "preact/devtools",
         })
-        injectScriptAsEarlyAsPossible(
+        injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",

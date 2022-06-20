@@ -1,20 +1,19 @@
 import {
-  getHtmlNodeAttributeByName,
-  getHtmlNodeTextNode,
-  parseHtmlString,
-  removeHtmlNodeAttributeByName,
-  assignHtmlNodeAttributes,
-  stringifyHtmlAst,
-  visitHtmlAst,
-  htmlNodePosition,
-  setHtmlNodeGeneratedText,
-  injectScriptAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import {
   generateInlineContentUrl,
   injectQueryParamsIntoSpecifier,
 } from "@jsenv/urls"
+import {
+  parseHtmlString,
+  visitHtmlNodes,
+  stringifyHtmlAst,
+  getHtmlNodeAttribute,
+  getHtmlNodeText,
+  getHtmlNodePosition,
+  setHtmlNodeAttributes,
+  setHtmlNodeText,
+  injectScriptNodeAsEarlyAsPossible,
+  createHtmlNode,
+} from "@jsenv/ast"
 
 export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
@@ -35,18 +34,13 @@ export const jsenvPluginAsJsClassicHtml = ({
         const moduleScriptNodes = []
         const classicScriptNodes = []
         const visitLinkNodes = (node) => {
-          if (node.nodeName !== "link") {
-            return
-          }
-          const relAttribute = getHtmlNodeAttributeByName(node, "rel")
-          const rel = relAttribute ? relAttribute.value : undefined
+          const rel = getHtmlNodeAttribute(node, "rel")
           if (rel === "modulepreload") {
             modulePreloadNodes.push(node)
             return
           }
           if (rel === "preload") {
-            const asAttribute = getHtmlNodeAttributeByName(node, "as")
-            const asValue = asAttribute ? asAttribute.value : undefined
+            const asValue = getHtmlNodeAttribute(node, "as")
             if (asValue === "script") {
               preloadAsScriptNodes.push(node)
             }
@@ -54,11 +48,7 @@ export const jsenvPluginAsJsClassicHtml = ({
           }
         }
         const visitScriptNodes = (node) => {
-          if (node.nodeName !== "script") {
-            return
-          }
-          const typeAttribute = getHtmlNodeAttributeByName(node, "type")
-          const type = typeAttribute ? typeAttribute.value : undefined
+          const type = getHtmlNodeAttribute(node, "type")
           if (type === "module") {
             moduleScriptNodes.push(node)
             return
@@ -68,9 +58,13 @@ export const jsenvPluginAsJsClassicHtml = ({
             return
           }
         }
-        visitHtmlAst(htmlAst, (node) => {
-          visitLinkNodes(node)
-          visitScriptNodes(node)
+        visitHtmlNodes(htmlAst, {
+          link: (node) => {
+            visitLinkNodes(node)
+          },
+          script: (node) => {
+            visitScriptNodes(node)
+          },
         })
 
         const actions = []
@@ -113,15 +107,11 @@ export const jsenvPluginAsJsClassicHtml = ({
         }
 
         classicScriptNodes.forEach((classicScriptNode) => {
-          const srcAttribute = getHtmlNodeAttributeByName(
-            classicScriptNode,
-            "src",
-          )
-          if (srcAttribute) {
+          const src = getHtmlNodeAttribute(classicScriptNode, "src")
+          if (src !== undefined) {
             const reference = urlInfo.references.find(
               (ref) =>
-                ref.generatedSpecifier === srcAttribute.value &&
-                ref.type === "script_src",
+                ref.generatedSpecifier === src && ref.type === "script_src",
             )
             const urlObject = new URL(reference.url)
             if (urlObject.searchParams.has("as_js_classic")) {
@@ -138,14 +128,11 @@ export const jsenvPluginAsJsClassicHtml = ({
           }
         })
         moduleScriptNodes.forEach((moduleScriptNode) => {
-          const srcAttribute = getHtmlNodeAttributeByName(
-            moduleScriptNode,
-            "src",
-          )
-          if (srcAttribute) {
+          const src = getHtmlNodeAttribute(moduleScriptNode, "src")
+          if (src !== undefined) {
             const reference = urlInfo.references.find(
               (ref) =>
-                ref.generatedSpecifier === srcAttribute.value &&
+                ref.generatedSpecifier === src &&
                 ref.type === "script_src" &&
                 ref.expectedType === "js_module",
             )
@@ -158,17 +145,19 @@ export const jsenvPluginAsJsClassicHtml = ({
                     cookIt: true,
                   },
                 )
-                removeHtmlNodeAttributeByName(moduleScriptNode, "type")
-                srcAttribute.value = newReference.generatedSpecifier
+                setHtmlNodeAttributes(moduleScriptNode, {
+                  type: undefined,
+                  src: newReference.generatedSpecifier,
+                })
               })
             }
             return
           }
           if (shouldTransformScriptTypeModule) {
-            const textNode = getHtmlNodeTextNode(moduleScriptNode)
+            const htmlNodeText = getHtmlNodeText(moduleScriptNode)
             actions.push(async () => {
               const { line, column, lineEnd, columnEnd, isOriginal } =
-                htmlNodePosition.readNodePosition(moduleScriptNode, {
+                getHtmlNodePosition(moduleScriptNode, {
                   preferOriginal: true,
                 })
               let inlineScriptUrl = generateInlineContentUrl({
@@ -191,27 +180,23 @@ export const jsenvPluginAsJsClassicHtml = ({
                 specifierColumn: column,
                 specifier: inlineScriptUrl,
                 contentType: "text/javascript",
-                content: textNode.value,
+                content: htmlNodeText,
               })
               const [, newUrlInfo] = await getReferenceAsJsClassic(
                 inlineReference,
                 { cookIt: true },
               )
-              removeHtmlNodeAttributeByName(moduleScriptNode, "type")
-              setHtmlNodeGeneratedText(moduleScriptNode, {
-                generatedText: newUrlInfo.content,
-                generatedBy: "jsenv:as_js_classic_html",
+              setHtmlNodeText(moduleScriptNode, newUrlInfo.content)
+              setHtmlNodeAttributes(moduleScriptNode, {
+                "type": undefined,
+                "generated-by": "jsenv:as_js_classic_html",
               })
             })
           }
         })
         if (shouldTransformScriptTypeModule) {
           preloadAsScriptNodes.forEach((preloadAsScriptNode) => {
-            const hrefAttribute = getHtmlNodeAttributeByName(
-              preloadAsScriptNode,
-              "href",
-            )
-            const href = hrefAttribute.value
+            const href = getHtmlNodeAttribute(preloadAsScriptNode, "href")
             const reference = urlInfo.references.find(
               (ref) =>
                 ref.generatedSpecifier === href &&
@@ -233,22 +218,15 @@ export const jsenvPluginAsJsClassicHtml = ({
                   // but it's unlikely to happen and people should use "modulepreload" in that case anyway
                   ;[newReference] = await getReferenceAsJsClassic(reference)
                 }
-                assignHtmlNodeAttributes(preloadAsScriptNode, {
+                setHtmlNodeAttributes(preloadAsScriptNode, {
                   href: newReference.generatedSpecifier,
+                  crossorigin: undefined,
                 })
-                removeHtmlNodeAttributeByName(
-                  preloadAsScriptNode,
-                  "crossorigin",
-                )
               })
             }
           })
           modulePreloadNodes.forEach((modulePreloadNode) => {
-            const hrefAttribute = getHtmlNodeAttributeByName(
-              modulePreloadNode,
-              "href",
-            )
-            const href = hrefAttribute.value
+            const href = getHtmlNodeAttribute(modulePreloadNode, "href")
             const reference = urlInfo.references.find(
               (ref) =>
                 ref.generatedSpecifier === href &&
@@ -262,7 +240,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               } else {
                 ;[newReference] = await getReferenceAsJsClassic(reference)
               }
-              assignHtmlNodeAttributes(modulePreloadNode, {
+              setHtmlNodeAttributes(modulePreloadNode, {
                 rel: "preload",
                 as: "script",
                 href: newReference.generatedSpecifier,
@@ -287,7 +265,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               expectedType: "js_classic",
               specifier: systemJsClientFileUrl,
             })
-            injectScriptAsEarlyAsPossible(
+            injectScriptNodeAsEarlyAsPossible(
               htmlAst,
               createHtmlNode({
                 "tagName": "script",

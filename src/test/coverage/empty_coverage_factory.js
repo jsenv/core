@@ -1,7 +1,7 @@
 import { readFile } from "@jsenv/filesystem"
 import { resolveUrl } from "@jsenv/urls"
 import { Abort } from "@jsenv/abort"
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/ast"
 
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 import { babelPluginInstrument } from "./babel_plugin_instrument.js"

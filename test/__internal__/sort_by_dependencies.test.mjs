@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { sortByDependencies } from "./sort_by_dependencies.js"
+import { sortByDependencies } from "@jsenv/core/src/omega/url_graph/sort_by_dependencies.js"
 
 // when both have dependencies, but one depends an an other, the other must come first
 {

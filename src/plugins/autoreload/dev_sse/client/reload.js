@@ -1,4 +1,7 @@
-import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
+import {
+  parseSrcSet,
+  stringifySrcSet,
+} from "@jsenv/ast/src/html/html_src_set.js"
 
 import { injectQuery, compareTwoUrlPaths } from "./url_helpers.js"
 
@@ -57,7 +60,7 @@ export const reloadDOMNodesUsingUrl = (urlToReload) => {
     visitNodeAttributeAsUrl(img, "src")
     const srcset = img.srcset
     if (srcset) {
-      const srcCandidates = htmlAttributeSrcSet.parse(srcset)
+      const srcCandidates = parseSrcSet(srcset)
       srcCandidates.forEach((srcCandidate) => {
         const url = new URL(srcCandidate.specifier, `${window.location.href}`)
         if (shouldReloadUrl(url)) {
@@ -65,7 +68,7 @@ export const reloadDOMNodesUsingUrl = (urlToReload) => {
         }
       })
       mutations.push(() => {
-        img.srcset = htmlAttributeSrcSet.stringify(srcCandidates)
+        img.srcset = stringifySrcSet(srcCandidates)
       })
     }
   })

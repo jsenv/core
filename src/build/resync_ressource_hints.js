@@ -7,11 +7,12 @@
 
 import {
   parseHtmlString,
-  visitHtmlAst,
-  stringifyHtmlAst,
-  getHtmlNodeAttributeByName,
+  visitHtmlNodes,
+  getHtmlNodeAttribute,
   removeHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
+  stringifyHtmlAst,
+} from "@jsenv/ast"
+import { setHtmlNodeAttributes } from "@jsenv/core/packages/ast/src/main.js"
 
 import { GRAPH } from "./graph_utils.js"
 
@@ -32,13 +33,11 @@ export const resyncRessourceHints = async ({
         storeOriginalPositions: false,
       })
       const actions = []
-      const visitLinkWithHref = (linkNode, hrefAttribute) => {
-        const href = hrefAttribute.value
+      const visitLinkWithHref = (linkNode, href) => {
         if (!href || href.startsWith("data:")) {
           return
         }
-        const relAttribute = getHtmlNodeAttributeByName(linkNode, "rel")
-        const rel = relAttribute ? relAttribute.value : undefined
+        const rel = getHtmlNodeAttribute(linkNode, "rel")
         const isRessourceHint = [
           "preconnect",
           "dns-prefetch",
@@ -85,18 +84,18 @@ export const resyncRessourceHints = async ({
           return
         }
         actions.push(() => {
-          hrefAttribute.value = urlInfo.data.buildUrlSpecifier
+          setHtmlNodeAttributes(linkNode, {
+            href: urlInfo.data.buildUrlSpecifier,
+          })
         })
       }
-      visitHtmlAst(htmlAst, (node) => {
-        if (node.nodeName !== "link") {
-          return
-        }
-        const hrefAttribute = getHtmlNodeAttributeByName(node, "href")
-        if (!hrefAttribute) {
-          return
-        }
-        visitLinkWithHref(node, hrefAttribute)
+      visitHtmlNodes(htmlAst, {
+        link: (node) => {
+          const href = getHtmlNodeAttribute(node, "href")
+          if (href !== undefined) {
+            visitLinkWithHref(node, href)
+          }
+        },
       })
       if (actions.length) {
         actions.forEach((action) => action())

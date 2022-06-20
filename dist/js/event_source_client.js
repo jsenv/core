@@ -1,5 +1,5 @@
 import { urlHotMetas } from "./import_meta_hot.js";
-import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
+import { parseSrcSet, stringifySrcSet } from "@jsenv/ast/src/html/html_src_set.js";
 
 /* eslint-env browser */
 const createEventSourceConnection = (eventSourceUrl, events = {}, {
@@ -301,7 +301,7 @@ const reloadDOMNodesUsingUrl = urlToReload => {
     const srcset = img.srcset;
 
     if (srcset) {
-      const srcCandidates = htmlAttributeSrcSet.parse(srcset);
+      const srcCandidates = parseSrcSet(srcset);
       srcCandidates.forEach(srcCandidate => {
         const url = new URL(srcCandidate.specifier, `${window.location.href}`);
 
@@ -312,7 +312,7 @@ const reloadDOMNodesUsingUrl = urlToReload => {
         }
       });
       mutations.push(() => {
-        img.srcset = htmlAttributeSrcSet.stringify(srcCandidates);
+        img.srcset = stringifySrcSet(srcCandidates);
       });
     }
   });

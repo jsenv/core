@@ -7,17 +7,17 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  visitHtmlAst,
-  getHtmlNodeAttributeByName,
-  removeHtmlNodeAttributeByName,
-  parseScriptNode,
-  injectScriptAsEarlyAsPossible,
+  visitHtmlNodes,
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+  analyzeScriptNode,
+  injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
-  htmlNodePosition,
-  getHtmlNodeTextNode,
+  getHtmlNodePosition,
+  getHtmlNodeText,
   removeHtmlNodeText,
-  setHtmlNodeGeneratedText,
-} from "@jsenv/utils/html_ast/html_ast.js"
+  setHtmlNodeText,
+} from "@jsenv/ast"
 import { generateInlineContentUrl } from "@jsenv/urls"
 
 export const jsenvPluginHtmlSupervisor = ({
@@ -45,10 +45,10 @@ export const jsenvPluginHtmlSupervisor = ({
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
 
-        const handleInlineScript = (node, textNode) => {
-          const scriptCategory = parseScriptNode(node)
+        const handleInlineScript = (node, htmlNodeText) => {
+          const scriptCategory = analyzeScriptNode(node)
           const { line, column, lineEnd, columnEnd, isOriginal } =
-            htmlNodePosition.readNodePosition(node, {
+            getHtmlNodePosition(node, {
               preferOriginal: true,
             })
           let inlineScriptUrl = generateInlineContentUrl({
@@ -69,7 +69,7 @@ export const jsenvPluginHtmlSupervisor = ({
             specifierColumn: column,
             specifier: inlineScriptUrl,
             contentType: "text/javascript",
-            content: textNode.value,
+            content: htmlNodeText,
           })
           removeHtmlNodeText(node)
           scriptsToSupervise.push({
@@ -79,76 +79,61 @@ export const jsenvPluginHtmlSupervisor = ({
             src: inlineScriptReference.generatedSpecifier,
           })
         }
-        const handleScriptWithSrc = (node, srcAttribute) => {
-          const scriptCategory = parseScriptNode(node)
-          const integrityAttribute = getHtmlNodeAttributeByName(
-            node,
-            "integrity",
-          )
-          const integrity = integrityAttribute
-            ? integrityAttribute.value
-            : undefined
-          const crossoriginAttribute = getHtmlNodeAttributeByName(
-            node,
-            "crossorigin",
-          )
-          const crossorigin = crossoriginAttribute
-            ? crossoriginAttribute.value
-            : undefined
-          const deferAttribute = getHtmlNodeAttributeByName(node, "crossorigin")
-          const defer = deferAttribute ? deferAttribute.value : undefined
-          const asyncAttribute = getHtmlNodeAttributeByName(node, "crossorigin")
-          const async = asyncAttribute ? asyncAttribute.value : undefined
-          removeHtmlNodeAttributeByName(node, "src")
+        const handleScriptWithSrc = (node, src) => {
+          const scriptCategory = analyzeScriptNode(node)
+          const integrity = getHtmlNodeAttribute(node, "integrity")
+          const crossorigin =
+            getHtmlNodeAttribute(node, "crossorigin") !== undefined
+          const defer = getHtmlNodeAttribute(node, "defer") !== undefined
+          const async = getHtmlNodeAttribute(node, "async") !== undefined
+          setHtmlNodeAttributes(node, {
+            src: undefined,
+          })
           scriptsToSupervise.push({
             node,
             type: scriptCategory,
-            src: srcAttribute.value,
+            src,
             defer,
             async,
             integrity,
             crossorigin,
           })
         }
-        visitHtmlAst(htmlAst, (node) => {
-          if (node.nodeName !== "script") {
-            return
-          }
-          const scriptCategory = parseScriptNode(node)
-          if (scriptCategory !== "classic" && scriptCategory !== "module") {
-            return
-          }
-          const injectedByAttribute = getHtmlNodeAttributeByName(
-            node,
-            "injected-by",
-          )
-          if (injectedByAttribute) {
-            return
-          }
-          const noHtmlSupervisor = getHtmlNodeAttributeByName(
-            node,
-            "no-html-supervisor",
-          )
-          if (noHtmlSupervisor) {
-            return
-          }
-          const textNode = getHtmlNodeTextNode(node)
-          if (textNode) {
-            handleInlineScript(node, textNode)
-            return
-          }
-          const srcAttribute = getHtmlNodeAttributeByName(node, "src")
-          if (srcAttribute) {
-            handleScriptWithSrc(node, srcAttribute)
-            return
-          }
+        visitHtmlNodes(htmlAst, {
+          script: (node) => {
+            const scriptCategory = analyzeScriptNode(node)
+            if (scriptCategory !== "classic" && scriptCategory !== "module") {
+              return
+            }
+            const injectedBy = getHtmlNodeAttribute(node, "injected-by")
+            if (injectedBy !== undefined) {
+              return
+            }
+            const noHtmlSupervisor = getHtmlNodeAttribute(
+              node,
+              "no-html-supervisor",
+            )
+            if (noHtmlSupervisor !== undefined) {
+              return
+            }
+            const htmlNodeText = getHtmlNodeText(node)
+            if (htmlNodeText) {
+              handleInlineScript(node, htmlNodeText)
+              return
+            }
+            const src = getHtmlNodeAttribute(node, "src")
+            if (src) {
+              handleScriptWithSrc(node, src)
+              return
+            }
+          },
         })
         const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
           type: "js_import_export",
           expectedType: "js_module",
           specifier: htmlSupervisorInstallerFileUrl,
         })
-        injectScriptAsEarlyAsPossible(
+        injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",
@@ -173,7 +158,7 @@ export const jsenvPluginHtmlSupervisor = ({
           expectedType: "js_classic",
           specifier: htmlSupervisorSetupFileUrl,
         })
-        injectScriptAsEarlyAsPossible(
+        injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",
@@ -192,8 +177,9 @@ export const jsenvPluginHtmlSupervisor = ({
             integrity,
             crossorigin,
           }) => {
-            setHtmlNodeGeneratedText(node, {
-              generatedText: generateCodeToSuperviseScript({
+            setHtmlNodeText(
+              node,
+              generateCodeToSuperviseScript({
                 type,
                 src,
                 isInline,
@@ -204,9 +190,11 @@ export const jsenvPluginHtmlSupervisor = ({
                 htmlSupervisorInstallerSpecifier:
                   htmlSupervisorInstallerFileReference.generatedSpecifier,
               }),
-              generatedBy: "jsenv:html_supervisor",
-              generatedFromSrc: src,
-              generatedFromInlineContent: isInline,
+            )
+            setHtmlNodeAttributes(node, {
+              "generated-by": "jsenv:html_supervisor",
+              ...(src ? { "generated-from-src": src } : {}),
+              ...(isInline ? { "generated-from-inline-content": "" } : {}),
             })
           },
         )

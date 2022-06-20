@@ -1,9 +1,9 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptAsEarlyAsPossible,
+  injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
+} from "@jsenv/ast"
 
 export const jsenvPluginToolbar = ({ logs = false } = {}) => {
   const toolbarInjectorClientFileUrl = new URL(
@@ -36,7 +36,7 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,
         })
-        injectScriptAsEarlyAsPossible(
+        injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",

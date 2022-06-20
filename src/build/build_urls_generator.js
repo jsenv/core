@@ -1,6 +1,5 @@
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls"
-
-import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
+import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js"
 
 export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   const cache = {}

@@ -1,11 +1,13 @@
 import {
   parseHtmlString,
+  visitHtmlNodes,
+  getHtmlNodeAttribute,
+  getHtmlNodePosition,
+  setHtmlNodeAttributes,
+  getHtmlNodeAttributePosition,
+  parseSrcSet,
   stringifyHtmlAst,
-  getHtmlNodeAttributeByName,
-  htmlNodePosition,
-  visitHtmlAst,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
+} from "@jsenv/ast"
 
 export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl
@@ -26,9 +28,12 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       column,
       originalLine,
       originalColumn,
+      node,
+      attributeName,
       specifier,
-      attribute,
     }) => {
+      const { crossorigin, integrity } = readFetchMetas(node)
+
       const isRessourceHint = [
         "preconnect",
         "dns-prefetch",
@@ -45,9 +50,15 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         specifierLine: line,
         specifierColumn: column,
         isRessourceHint,
+        crossorigin,
+        integrity,
       })
       actions.push(async () => {
-        attribute.value = await referenceUtils.readGeneratedSpecifier(reference)
+        setHtmlNodeAttributes(node, {
+          [attributeName]: await referenceUtils.readGeneratedSpecifier(
+            reference,
+          ),
+        })
       })
     },
   })
@@ -60,25 +71,39 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   }
 }
 
+const crossOriginCompatibleTagNames = ["script", "link", "img", "source"]
+const integrityCompatibleTagNames = ["script", "link", "img", "source"]
+const readFetchMetas = (node) => {
+  const meta = {}
+  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
+    const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined
+    meta.crossorigin = crossorigin
+  }
+  if (integrityCompatibleTagNames.includes(node.nodeName)) {
+    const integrity = getHtmlNodeAttribute(node, "integrity")
+    meta.integrity = integrity
+  }
+  return meta
+}
+
 const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
   const addDependency = ({
     type,
     subtype,
     expectedType,
     node,
-    attribute,
+    attributeName,
     specifier,
   }) => {
-    const generatedFromInlineContent = Boolean(
-      getHtmlNodeAttributeByName(node, "generated-from-inline-content"),
-    )
+    const generatedFromInlineContent =
+      getHtmlNodeAttribute(node, "generated-from-inline-content") !== undefined
     let position
     if (generatedFromInlineContent) {
       // when generated from inline content,
       // line, column is not "src" nor "generated-from-src" but "original-position"
-      position = htmlNodePosition.readNodePosition(node)
+      position = getHtmlNodePosition(node)
     } else {
-      position = htmlNodePosition.readAttributePosition(node, attribute.name)
+      position = getHtmlNodeAttributePosition(node, attributeName)
     }
     const {
       line,
@@ -93,18 +118,61 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       column,
       // originalLine, originalColumn
       specifier,
-      attribute,
-      // injected:Boolean(getHtmlNodeAttributeByName(node, "injected-by"))
-      // srcGeneratedFromInlineContent
-      ...readFetchMetas(node),
+      node,
+      attributeName,
     })
   }
-  const visitors = {
+  const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
+    const value = getHtmlNodeAttribute(node, attributeName)
+    if (value) {
+      const generatedBy = getHtmlNodeAttribute(node, "generated-by")
+      if (generatedBy !== undefined) {
+        // during build the importmap is inlined
+        // and shoud not be considered as a dependency anymore
+        return
+      }
+      addDependency({
+        ...rest,
+        node,
+        attributeName,
+        specifier:
+          attributeName === "generated-from-src" ||
+          attributeName === "generated-from-href"
+            ? new URL(value, url).href
+            : value,
+      })
+    } else if (attributeName === "src") {
+      visitAttributeAsUrlSpecifier({
+        ...rest,
+        node,
+        attributeName: "generated-from-src",
+      })
+    } else if (attributeName === "href") {
+      visitAttributeAsUrlSpecifier({
+        ...rest,
+        node,
+        attributeName: "generated-from-href",
+      })
+    }
+  }
+  const visitSrcset = ({ type, node }) => {
+    const srcset = getHtmlNodeAttribute(node, "srcset")
+    if (srcset) {
+      const srcCandidates = parseSrcSet(srcset)
+      srcCandidates.forEach((srcCandidate) => {
+        addDependency({
+          type,
+          node,
+          attributeName: "srcset",
+          specifier: srcCandidate.specifier,
+        })
+      })
+    }
+  }
+  visitHtmlNodes(htmlAst, {
     link: (node) => {
-      const relAttribute = getHtmlNodeAttributeByName(node, "rel")
-      const rel = relAttribute ? relAttribute.value : undefined
-      const typeAttribute = getHtmlNodeAttributeByName(node, "type")
-      const type = typeAttribute ? typeAttribute.value : undefined
+      const rel = getHtmlNodeAttribute(node, "rel")
+      const type = getHtmlNodeAttribute(node, "type")
       visitAttributeAsUrlSpecifier({
         type: "link_href",
         subtype: rel,
@@ -120,15 +188,16 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     },
     // style: () => {},
     script: (node) => {
-      const typeAttributeNode = getHtmlNodeAttributeByName(node, "type")
+      const type = getHtmlNodeAttribute(node, "type")
+      const expectedType = {
+        "undefined": "js_classic",
+        "text/javascript": "js_classic",
+        "module": "js_module",
+        "importmap": "importmap",
+      }[type]
       visitAttributeAsUrlSpecifier({
         type: "script_src",
-        expectedType: {
-          "undefined": "js_classic",
-          "text/javascript": "js_classic",
-          "module": "js_module",
-          "importmap": "importmap",
-        }[typeAttributeNode ? typeAttributeNode.value : undefined],
+        expectedType,
         node,
         attributeName: "src",
       })
@@ -184,89 +253,5 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         attributeName: "href",
       })
     },
-  }
-  const visitAttributeAsUrlSpecifier = ({
-    type,
-    subtype,
-    expectedType,
-    node,
-    attributeName,
-  }) => {
-    const attribute = getHtmlNodeAttributeByName(node, attributeName)
-    const value = attribute ? attribute.value : undefined
-    if (value) {
-      const generatedBy = getHtmlNodeAttributeByName(node, "generated-by")
-      if (generatedBy) {
-        // during build the importmap is inlined
-        // and shoud not be considered as a dependency anymore
-        return
-      }
-      addDependency({
-        type,
-        subtype,
-        expectedType,
-        node,
-        attribute,
-        specifier:
-          attributeName === "generated-from-src" ||
-          attributeName === "generated-from-href"
-            ? new URL(value, url).href
-            : value,
-      })
-    } else if (attributeName === "src") {
-      visitAttributeAsUrlSpecifier({
-        type,
-        subtype,
-        expectedType,
-        node,
-        attributeName: "generated-from-src",
-      })
-    } else if (attributeName === "href") {
-      visitAttributeAsUrlSpecifier({
-        type,
-        subtype,
-        expectedType,
-        node,
-        attributeName: "generated-from-href",
-      })
-    }
-  }
-  const visitSrcset = ({ type, node }) => {
-    const srcsetAttribute = getHtmlNodeAttributeByName(node, "srcset")
-    const srcset = srcsetAttribute ? srcsetAttribute.value : undefined
-    if (srcset) {
-      const srcCandidates = htmlAttributeSrcSet.parse(srcset)
-      srcCandidates.forEach((srcCandidate) => {
-        addDependency({
-          type,
-          node,
-          attribute: srcsetAttribute,
-          specifier: srcCandidate.specifier,
-        })
-      })
-    }
-  }
-  visitHtmlAst(htmlAst, (node) => {
-    const visitor = visitors[node.nodeName]
-    if (visitor) {
-      visitor(node)
-    }
   })
-}
-
-const crossOriginCompatibleTagNames = ["script", "link", "img", "source"]
-const integrityCompatibleTagNames = ["script", "link", "img", "source"]
-const readFetchMetas = (node) => {
-  const meta = {}
-  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
-    const crossoriginAttribute = getHtmlNodeAttributeByName(node, "crossorigin")
-    meta.crossorigin = crossoriginAttribute
-      ? crossoriginAttribute.value
-      : undefined
-  }
-  if (integrityCompatibleTagNames.includes(node.nodeName)) {
-    const integrityAttribute = getHtmlNodeAttributeByName(node, "integrity")
-    meta.integrity = integrityAttribute ? integrityAttribute.value : undefined
-  }
-  return meta
 }
