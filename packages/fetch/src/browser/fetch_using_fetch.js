@@ -1,6 +1,7 @@
-import { fetchUsingXHR } from "./fetch_using_xhr.js"
-
-const fetchNative = async (url, { mode = "cors", ...options } = {}) => {
+export const fetchUsingFetch = async (
+  url,
+  { mode = "cors", ...options } = {},
+) => {
   const response = await window.fetch(url, {
     mode,
     ...options,
@@ -25,9 +26,3 @@ const responseToHeaders = (response) => {
   })
   return headers
 }
-
-export const browserFetch =
-  typeof window.fetch === "function" &&
-  typeof window.AbortController === "function"
-    ? fetchNative
-    : fetchUsingXHR

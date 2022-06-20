@@ -99,8 +99,8 @@ const eslintConfig = composeEslintConfig(
           "**/**/*.html",
           "dev_exploring/**/*.js",
           "**/client/**/*.js",
+          "**/browser/**/*.js",
           "**/babel_helpers/**/*.js",
-          "**/browser_utils/**/*.js",
           "test/dev_server/**/*.js",
         ],
         env: {

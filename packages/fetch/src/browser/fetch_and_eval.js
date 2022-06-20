@@ -1,7 +1,7 @@
-import { browserFetch } from "./fetch_browser.js"
+import { fetchUrl } from "./fetch_url_browser.js"
 
 export const fetchAndEval = async (url) => {
-  const response = await browserFetch(url)
+  const response = await fetchUrl(url)
 
   if (response.status >= 200 && response.status <= 299) {
     const text = await response.text()
