@@ -1,42 +1,40 @@
 import {
-  getAttributeByName,
-  setAttributes,
-  removeAttribute,
-  removeAttributeByName,
-} from "./html_attributes.js"
-import { writeTextNode } from "./html_text_node.js"
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html_node_attributes.js"
+import { setHtmlNodeText } from "./html_text_node.js"
 
-export const inlineScript = (script, textContent) => {
-  const srcAttribute = getAttributeByName(script, "src")
-  setAttributes(script, {
-    "generated-from-src": srcAttribute.value,
+export const inlineScriptNode = (script, textContent) => {
+  const src = getHtmlNodeAttribute(script, "src")
+  setHtmlNodeAttributes(script, {
+    "generated-from-src": src,
+    "src": undefined,
+    "crossorigin": undefined,
+    "integrity": undefined,
   })
-  removeAttribute(script, srcAttribute)
-  removeAttributeByName(script, "crossorigin")
-  removeAttributeByName(script, "integrity")
-  writeTextNode(script, textContent)
+  setHtmlNodeText(script, textContent)
 }
 
-export const inlineLinkStylesheet = (link, textContent) => {
-  const hrefAttribute = getAttributeByName(link, "href")
-  setAttributes(link, {
-    "generated-from-href": hrefAttribute.value,
+export const inlineLinkStylesheetNode = (link, textContent) => {
+  const href = getHtmlNodeAttribute(link, "href")
+  setHtmlNodeAttributes(link, {
+    "generated-from-href": href,
+    "href": undefined,
+    "rel": undefined,
+    "type": undefined,
+    "as": undefined,
+    "crossorigin": undefined,
+    "integrity": undefined,
   })
-  removeAttribute(link, hrefAttribute)
-  removeAttributeByName(link, "rel")
-  removeAttributeByName(link, "type")
-  removeAttributeByName(link, "as")
-  removeAttributeByName(link, "crossorigin")
-  removeAttributeByName(link, "integrity")
   link.nodeName = "style"
   link.tagName = "style"
-  writeTextNode(link, textContent)
+  setHtmlNodeText(link, textContent)
 }
 
-export const inlineImg = (img, contentAsBase64) => {
-  const srcAttribute = getAttributeByName(img, "src")
-  setAttributes(img, {
-    "generated-from-src": srcAttribute.value,
+export const inlineImgNode = (img, contentAsBase64) => {
+  const src = getHtmlNodeAttribute(img, "src")
+  setHtmlNodeAttributes(img, {
+    "generated-from-src": src,
     "src": contentAsBase64,
   })
 }

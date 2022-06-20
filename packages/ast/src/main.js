@@ -1,5 +1,37 @@
 // html
-export { HTML_AST } from "./html/html_ast.js"
+export {
+  parseHtmlString,
+  stringifyHtmlAst,
+  parseSvgString,
+  stringifySvgAst,
+} from "./html/html_parse.js"
+export { visitHtmlNodes, findHtmlNode } from "./html/html_search.js"
+export { analyzeScriptNode, analyzeLinkNode } from "./html/html_analysis.js"
+export {
+  getHtmlNodeText,
+  removeHtmlNodeText,
+  setHtmlNodeText,
+  setHtmlNodeGeneratedText,
+} from "./html/html_text_node.js"
+export { parseSrcSet, stringifySrcSet } from "./html/html_src_set.js"
+export {
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html/html_node_attributes.js"
+export {
+  removeHtmlNode,
+  createHtmlNode,
+  injectScriptNodeAsEarlyAsPossible,
+} from "./html/html_node.js"
+export {
+  inlineScriptNode,
+  inlineLinkStylesheetNode,
+  inlineImgNode,
+} from "./html/html_inlining.js"
+export {
+  getHtmlNodePosition,
+  getHtmlAttributePosition,
+} from "./html/html_position.js"
 
 // css
 export { applyPostCss } from "./css/apply_post_css.js"

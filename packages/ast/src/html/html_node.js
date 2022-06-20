@@ -1,15 +1,18 @@
 import { parseFragment } from "parse5"
 
-import { getAttributeByName, setAttributes } from "./html_attributes.js"
-import { findNode } from "./html_search.js"
+import {
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html_node_attributes.js"
+import { findHtmlNode } from "./html_search.js"
 import { analyzeScriptNode } from "./html_analysis.js"
 
-export const removeNode = (htmlNode) => {
+export const removeHtmlNode = (htmlNode) => {
   const { childNodes } = htmlNode.parentNode
   childNodes.splice(childNodes.indexOf(htmlNode), 1)
 }
 
-export const createNode = ({ tagName, textContent = "", ...rest }) => {
+export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   const html = `<${tagName} ${stringifyAttributes(
     rest,
   )}>${textContent}</${tagName}>`
@@ -17,14 +20,16 @@ export const createNode = ({ tagName, textContent = "", ...rest }) => {
   return fragment.childNodes[0]
 }
 
-export const injectScriptAsEarlyAsPossible = (htmlAst, scriptNode) => {
-  const injectedByAttribute = getAttributeByName(scriptNode, "injected-by")
-  if (!injectedByAttribute) {
-    setAttributes(scriptNode, { "injected-by": "jsenv" })
+export const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode) => {
+  const injectedBy = getHtmlNodeAttribute(scriptNode, "injected-by")
+  if (injectedBy === undefined) {
+    setHtmlNodeAttributes(scriptNode, {
+      "injected-by": "jsenv",
+    })
   }
   const isModule = analyzeScriptNode(scriptNode) === "module"
   if (isModule) {
-    const firstImportmapScript = findNode(htmlAst, (node) => {
+    const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
       if (node.nodeName !== "script") return false
       return analyzeScriptNode(node) === "importmap"
     })

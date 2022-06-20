@@ -1,12 +1,15 @@
-import { getAttributeByName, setAttributes } from "./html_attributes.js"
+import {
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html_node_attributes.js"
 
-export const storeNodePosition = (node) => {
+export const storeHtmlNodePosition = (node) => {
   const originalPositionAttributeName = `original-position`
-  const originalPositionAttribute = getAttributeByName(
+  const originalPosition = getHtmlNodeAttribute(
     node,
     originalPositionAttributeName,
   )
-  if (originalPositionAttribute) {
+  if (originalPosition !== undefined) {
     return true
   }
   const { sourceCodeLocation } = node
@@ -14,12 +17,12 @@ export const storeNodePosition = (node) => {
     return false
   }
   const { startLine, startCol, endLine, endCol } = sourceCodeLocation
-  setAttributes(node, {
+  getHtmlNodeAttribute(node, {
     [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
   })
   return true
 }
-export const getNodePosition = (node, { preferOriginal = false } = {}) => {
+export const getHtmlNodePosition = (node, { preferOriginal = false } = {}) => {
   const position = {}
   const { sourceCodeLocation } = node
   if (sourceCodeLocation) {
@@ -31,38 +34,36 @@ export const getNodePosition = (node, { preferOriginal = false } = {}) => {
       columnEnd: endCol,
     })
   }
-  const originalPositionAttribute = getAttributeByName(
-    node,
-    "original-position",
-  )
-  if (originalPositionAttribute) {
-    const [start, end] = originalPositionAttribute.value.split(";")
-    const [originalLine, originalColumn] = start.split(":")
-    const [originalLineEnd, originalColumnEnd] = end.split(":")
-    Object.assign(position, {
-      originalLine: parseInt(originalLine),
-      originalColumn: parseInt(originalColumn),
-      originalLineEnd: parseInt(originalLineEnd),
-      originalColumnEnd: parseInt(originalColumnEnd),
-    })
-    if (preferOriginal) {
-      position.line = position.originalLine
-      position.column = position.originalColumn
-      position.lineEnd = position.originalLineEnd
-      position.columnEnd = position.originalColumnEnd
-      position.isOriginal = true
-    }
+  const originalPosition = getHtmlNodeAttribute(node, "original-position")
+  if (originalPosition === undefined) {
+    return position
+  }
+  const [start, end] = originalPosition.split(";")
+  const [originalLine, originalColumn] = start.split(":")
+  const [originalLineEnd, originalColumnEnd] = end.split(":")
+  Object.assign(position, {
+    originalLine: parseInt(originalLine),
+    originalColumn: parseInt(originalColumn),
+    originalLineEnd: parseInt(originalLineEnd),
+    originalColumnEnd: parseInt(originalColumnEnd),
+  })
+  if (preferOriginal) {
+    position.line = position.originalLine
+    position.column = position.originalColumn
+    position.lineEnd = position.originalLineEnd
+    position.columnEnd = position.originalColumnEnd
+    position.isOriginal = true
   }
   return position
 }
 
-export const storeAttributePosition = (node, attributeName) => {
+export const storeHtmlAttributePosition = (node, attributeName) => {
   const { sourceCodeLocation } = node
   if (!sourceCodeLocation) {
     return false
   }
-  const attribute = getAttributeByName(node, attributeName)
-  if (!attribute) {
+  const attributeValue = getHtmlNodeAttribute(node, attributeName)
+  if (attributeValue === undefined) {
     return false
   }
   const attributeLocation = sourceCodeLocation.attrs[attributeName]
@@ -70,20 +71,20 @@ export const storeAttributePosition = (node, attributeName) => {
     return false
   }
   const originalPositionAttributeName = `original-${attributeName}-position`
-  const originalPositionAttribute = getAttributeByName(
+  const originalPosition = getHtmlNodeAttribute(
     node,
     originalPositionAttributeName,
   )
-  if (originalPositionAttribute) {
+  if (originalPosition !== undefined) {
     return true
   }
   const { startLine, startCol, endLine, endCol } = attributeLocation
-  setAttributes(node, {
+  setHtmlNodeAttributes(node, {
     [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`,
   })
   return true
 }
-export const getAttributePosition = (node, attributeName) => {
+export const getHtmlAttributePosition = (node, attributeName) => {
   const position = {}
   const { sourceCodeLocation } = node
   if (sourceCodeLocation) {
@@ -101,20 +102,21 @@ export const getAttributePosition = (node, attributeName) => {
       : attributeName === "generated-from-href"
       ? "original-href-position"
       : `original-${attributeName}-position`
-  const originalPositionAttribute = getAttributeByName(
+  const originalPosition = getHtmlNodeAttribute(
     node,
     originalPositionAttributeName,
   )
-  if (originalPositionAttribute) {
-    const [start, end] = originalPositionAttribute.value.split(";")
-    const [originalLine, originalColumn] = start.split(":")
-    const [originalLineEnd, originalColumnEnd] = end.split(":")
-    Object.assign(position, {
-      originalLine: parseInt(originalLine),
-      originalColumn: parseInt(originalColumn),
-      originalLineEnd: parseInt(originalLineEnd),
-      originalColumnEnd: parseInt(originalColumnEnd),
-    })
+  if (originalPosition === undefined) {
+    return position
   }
+  const [start, end] = originalPosition.split(";")
+  const [originalLine, originalColumn] = start.split(":")
+  const [originalLineEnd, originalColumnEnd] = end.split(":")
+  Object.assign(position, {
+    originalLine: parseInt(originalLine),
+    originalColumn: parseInt(originalColumn),
+    originalLineEnd: parseInt(originalLineEnd),
+    originalColumnEnd: parseInt(originalColumnEnd),
+  })
   return position
 }

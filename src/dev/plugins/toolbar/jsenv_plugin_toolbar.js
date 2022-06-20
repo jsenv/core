@@ -1,7 +1,7 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptAsEarlyAsPossible,
+  injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
 
@@ -36,7 +36,7 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,
         })
-        injectScriptAsEarlyAsPossible(
+        injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",

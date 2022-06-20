@@ -1,28 +1,24 @@
-import { getAttributeByName } from "./html_attributes.js"
+import { getHtmlNodeAttribute } from "./html_node_attributes.js"
 
 export const analyzeScriptNode = (scriptNode) => {
-  const typeAttribute = getAttributeByName(scriptNode, "type")
-  if (!typeAttribute) {
+  const type = getHtmlNodeAttribute(scriptNode, "type")
+  if (!type === undefined) {
     return "classic"
   }
-  if (
-    typeAttribute.value === "text/javascript" ||
-    typeAttribute.value === "text/javascript"
-  ) {
+  if (type === "text/javascript" || type === "text/javascript") {
     return "classic"
   }
-  if (typeAttribute.value === "module") {
+  if (type === "module") {
     return "module"
   }
-  if (typeAttribute.value === "importmap") {
+  if (type === "importmap") {
     return "importmap"
   }
-  return typeAttribute.value
+  return type
 }
 
 export const analyzeLinkNode = (linkNode) => {
-  const relAttr = getAttributeByName(linkNode, "rel")
-  const rel = relAttr ? relAttr.value : undefined
+  const rel = getHtmlNodeAttribute(linkNode, "rel")
   if (rel === "stylesheet") {
     return {
       isStylesheet: true,

@@ -1,8 +1,12 @@
-import { getAttributeByName } from "./html_attributes.js"
+import { getHtmlNodeAttribute } from "./html_node_attributes.js"
 
-export const visitNodes = (htmlAst, callback) => {
+export const visitHtmlNodes = (htmlAst, visitors) => {
   const visitNode = (node) => {
-    const callbackReturnValue = callback(node)
+    const visitor = visitors[node.nodeType] || visitors["*"]
+    if (!visitor) {
+      return
+    }
+    const callbackReturnValue = visitor(node)
     if (callbackReturnValue === "stop") {
       return
     }
@@ -17,45 +21,45 @@ export const visitNodes = (htmlAst, callback) => {
   visitNode(htmlAst)
 }
 
-export const findNode = (htmlAst, predicate) => {
+export const findHtmlNode = (htmlAst, predicate) => {
   let nodeMatching = null
-  visitNodes(htmlAst, (node) => {
-    if (predicate(node)) {
-      nodeMatching = node
-      return "stop"
-    }
-    return null
+  visitHtmlNodes(htmlAst, {
+    "*": (node) => {
+      if (predicate(node)) {
+        nodeMatching = node
+        return "stop"
+      }
+      return null
+    },
   })
   return nodeMatching
 }
 
-export const findChildNode = (htmlNode, predicate) => {
+export const findHtmlChildNode = (htmlNode, predicate) => {
   const { childNodes = [] } = htmlNode
   return childNodes.find(predicate)
 }
 
-export const findNodeByTagName = (htmlAst, tagName) => {
-  return findNode(htmlAst, (node) => node.nodeName === tagName)
-}
-
-export const findNodeById = (htmlAst, id) => {
-  return findNode(htmlAst, (node) => {
-    const idAttribute = getAttributeByName(node, "id")
-    return idAttribute && idAttribute.value === id
-  })
-}
-
-export const findNodes = (htmlAst, predicate) => {
+export const findHtmlNodes = (htmlAst, predicate) => {
   const nodes = []
-  visitNodes(htmlAst, (node) => {
-    if (predicate(node)) {
-      nodes.push(node)
-    }
-    return null
+  visitHtmlNodes(htmlAst, {
+    "*": (node) => {
+      if (predicate(node)) {
+        nodes.push(node)
+      }
+      return null
+    },
   })
   return nodes
 }
 
-export const findAllNodeByTagName = (htmlAst, tagName) => {
-  return findNodes(htmlAst, (node) => node.nodeName === tagName)
+export const findHtmlNodeByTagName = (htmlAst, tagName) => {
+  return findHtmlNode(htmlAst, (node) => node.nodeName === tagName)
+}
+
+export const findHtmlNodeById = (htmlAst, id) => {
+  return findHtmlNode(htmlAst, (node) => {
+    const idCandidate = getHtmlNodeAttribute(node, "id")
+    return idCandidate === id
+  })
 }

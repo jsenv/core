@@ -1,20 +1,25 @@
-import { setAttributes } from "./html_attributes.js"
+import { setHtmlNodeAttributes } from "./html_node_attributes.js"
 
-export const getTextNode = (htmlNode) => {
-  const firstChild = htmlNode.childNodes[0]
-  return firstChild && firstChild.nodeName === "#text" ? firstChild : null
+export const getHtmlNodeText = (htmlNode) => {
+  const textNode = getTextNode(htmlNode)
+  return textNode ? textNode.value : undefined
 }
 
-export const removeTextNode = (htmlNode) => {
+const getTextNode = (htmlNode) => {
+  const firstChild = htmlNode.childNodes[0]
+  const textNode =
+    firstChild && firstChild.nodeName === "#text" ? firstChild : null
+  return textNode
+}
+
+export const removeHtmlNodeText = (htmlNode) => {
   const textNode = getTextNode(htmlNode)
   if (textNode) {
     htmlNode.childNodes = []
   }
 }
 
-export const readTextNode = (textNode) => textNode.value
-
-export const writeTextNode = (htmlNode, textContent) => {
+export const setHtmlNodeText = (htmlNode, textContent) => {
   const textNode = getTextNode(htmlNode)
   if (textNode) {
     textNode.value = textContent
@@ -28,7 +33,7 @@ export const writeTextNode = (htmlNode, textContent) => {
   }
 }
 
-export const writeGeneratedTextNode = (
+export const setHtmlNodeGeneratedText = (
   node,
   {
     generatedText,
@@ -38,8 +43,8 @@ export const writeGeneratedTextNode = (
     generatedFromInlineContent,
   } = {},
 ) => {
-  writeTextNode(node, generatedText)
-  setAttributes(node, {
+  setHtmlNodeText(node, generatedText)
+  setHtmlNodeAttributes(node, {
     "generated-by": generatedBy,
     ...(generatedFromSrc ? { "generated-from-src": generatedFromSrc } : {}),
     ...(generatedFromHref ? { "generated-from-href": generatedFromHref } : {}),

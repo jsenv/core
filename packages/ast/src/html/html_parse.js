@@ -1,43 +1,89 @@
 import { parse, serialize, parseFragment } from "parse5"
 
-import { storeNodePosition, storeAttributePosition } from "./html_position.js"
 import {
-  getAttributeByName,
-  removeAttributeByName,
-  setAttributes,
-} from "./html_attributes.js"
-import { findChildNode, visitNodes } from "./html_search.js"
-import { getTextNode } from "./html_text_node.js"
+  storeHtmlNodePosition,
+  storeHtmlAttributePosition,
+} from "./html_position.js"
+import {
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html_node_attributes.js"
+import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js"
+import { getHtmlNodeText } from "./html_text_node.js"
 
-export const parseString = (
+export const parseHtmlString = (
   htmlString,
   { storeOriginalPositions = true } = {},
 ) => {
   const htmlAst = parse(htmlString, { sourceCodeLocationInfo: true })
   if (storeOriginalPositions) {
-    const htmlNode = findChildNode(htmlAst, (node) => node.nodeName === "html")
-    const storedAttribute = getAttributeByName(
-      htmlNode,
-      "original-position-stored",
+    const htmlNode = findHtmlChildNode(
+      htmlAst,
+      (node) => node.nodeName === "html",
     )
-    if (!storedAttribute) {
-      visitNodes(htmlAst, (node) => {
-        if (node.nodeName === "script" || node.nodeName === "style") {
-          const textNode = getTextNode(node)
-          if (textNode) {
-            storeNodePosition(node)
-            return
+    const stored = getHtmlNodeAttribute(htmlNode, "original-position-stored")
+    if (stored === undefined) {
+      visitHtmlNodes(htmlAst, {
+        "script": (node) => {
+          const htmlNodeText = getHtmlNodeText(node)
+          if (htmlNodeText !== undefined) {
+            storeHtmlNodePosition(node)
           }
-        }
-        storeAttributePosition(node, "src")
-        storeAttributePosition(node, "href")
+        },
+        "style": (node) => {
+          const htmlNodeText = getHtmlNodeText(node)
+          if (htmlNodeText !== undefined) {
+            storeHtmlNodePosition(node)
+          }
+        },
+        "*": (node) => {
+          storeHtmlAttributePosition(node, "src")
+          storeHtmlAttributePosition(node, "href")
+        },
       })
-      setAttributes(htmlNode, {
+      setHtmlNodeAttributes(htmlNode, {
         "original-position-stored": "",
       })
     }
   }
   return htmlAst
+}
+
+export const stringifyHtmlAst = (
+  htmlAst,
+  { removeOriginalPositionAttributes = false } = {},
+) => {
+  if (removeOriginalPositionAttributes) {
+    const htmlNode = findHtmlChildNode(
+      htmlAst,
+      (node) => node.nodeName === "html",
+    )
+    const storedAttribute = getHtmlNodeAttribute(
+      htmlNode,
+      "original-position-stored",
+    )
+    if (storedAttribute !== undefined) {
+      setHtmlNodeAttributes(htmlNode, {
+        "original-position-stored": undefined,
+      })
+      visitHtmlNodes(htmlAst, {
+        "*": (node) => {
+          setHtmlNodeAttributes(node, {
+            "original-position": undefined,
+            "original-src-position": undefined,
+            "original-href-position": undefined,
+            "injected-by": undefined,
+            "generated-by": undefined,
+            "generated-from-src": undefined,
+            "generated-from-href": undefined,
+          })
+        },
+      })
+    }
+  }
+  const htmlString = serialize(htmlAst)
+
+  return htmlString
 }
 
 export const parseSvgString = (svgString) => {
@@ -46,31 +92,4 @@ export const parseSvgString = (svgString) => {
   })
   return svgAst
 }
-
-export const stringifyAst = (
-  htmlAst,
-  { removeOriginalPositionAttributes = false } = {},
-) => {
-  if (removeOriginalPositionAttributes) {
-    const htmlNode = findChildNode(htmlAst, (node) => node.nodeName === "html")
-    const storedAttribute = getAttributeByName(
-      htmlNode,
-      "original-position-stored",
-    )
-    if (storedAttribute) {
-      removeAttributeByName(htmlNode, "original-position-stored")
-      visitNodes(htmlAst, (node) => {
-        removeAttributeByName(node, "original-position")
-        removeAttributeByName(node, "original-src-position")
-        removeAttributeByName(node, "original-href-position")
-        removeAttributeByName(node, "injected-by")
-        removeAttributeByName(node, "generated-by")
-        removeAttributeByName(node, "generated-from-src")
-        removeAttributeByName(node, "generated-from-href")
-      })
-    }
-  }
-  const htmlString = serialize(htmlAst)
-
-  return htmlString
-}
+export const stringifySvgAst = stringifyHtmlAst

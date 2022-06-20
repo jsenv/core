@@ -1,4 +1,4 @@
-export const parseSrcset = (srcset) => {
+export const parseSrcSet = (srcset) => {
   const srcCandidates = []
   srcset.split(",").forEach((set) => {
     const [specifier, descriptor] = set.trim().split(" ")
