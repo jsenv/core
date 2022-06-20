@@ -1,4 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/urls"
+import { fileURLToPath } from "node:url"
 
 export const applyPostCss = async ({
   sourcemaps = "comment",
@@ -15,8 +15,8 @@ export const applyPostCss = async ({
     const cssFileUrl = urlToFileUrl(url)
     const result = await postcss(plugins).process(content, {
       collectUrls: true,
-      from: urlToFileSystemPath(cssFileUrl),
-      to: urlToFileSystemPath(cssFileUrl),
+      from: fileURLToPath(cssFileUrl),
+      to: fileURLToPath(cssFileUrl),
       map: {
         annotation: sourcemaps === "file",
         inline: sourcemaps === "inline",

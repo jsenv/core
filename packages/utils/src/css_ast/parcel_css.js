@@ -1,5 +1,5 @@
 import { createRequire } from "node:module"
-import { urlToFileSystemPath } from "@jsenv/urls"
+import { fileURLToPath } from "node:url"
 
 const require = createRequire(import.meta.url)
 
@@ -7,7 +7,7 @@ export const transpileWithParcel = (urlInfo, context) => {
   const css = require("@parcel/css")
   const targets = runtimeCompatToTargets(context.runtimeCompat)
   const { code, map } = css.transform({
-    filename: urlToFileSystemPath(urlInfo.originalUrl),
+    filename: fileURLToPath(urlInfo.originalUrl),
     code: Buffer.from(urlInfo.content),
     targets,
     minify: false,
@@ -19,7 +19,7 @@ export const minifyWithParcel = (urlInfo, context) => {
   const css = require("@parcel/css")
   const targets = runtimeCompatToTargets(context.runtimeCompat)
   const { code, map } = css.transform({
-    filename: urlToFileSystemPath(urlInfo.originalUrl),
+    filename: fileURLToPath(urlInfo.originalUrl),
     code: Buffer.from(urlInfo.content),
     targets,
     minify: true,
@@ -31,7 +31,7 @@ export const bundleWithParcel = (urlInfo, context) => {
   const targets = runtimeCompatToTargets(context.runtimeCompat)
   const css = require("@parcel/css")
   const { code, map } = css.bundle({
-    filename: urlToFileSystemPath(urlInfo.originalUrl),
+    filename: fileURLToPath(urlInfo.originalUrl),
     targets,
     minify: false,
   })

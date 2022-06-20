@@ -1,4 +1,4 @@
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js"
 
 import { RUNTIME_COMPAT } from "@jsenv/core/src/omega/compat/runtime_compat.js"
 import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js"

@@ -1,4 +1,4 @@
-import { require } from "@jsenv/utils/require.js"
+import { require } from "@jsenv/utils/src/require.js"
 
 // https://github.com/rburns/ansi-to-html/blob/master/src/ansi_to_html.js
 // https://github.com/drudru/ansi_up/blob/master/ansi_up.js

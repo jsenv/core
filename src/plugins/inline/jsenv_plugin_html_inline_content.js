@@ -1,3 +1,4 @@
+import { generateInlineContentUrl } from "@jsenv/urls"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -7,9 +8,8 @@ import {
   parseScriptNode,
   setHtmlNodeGeneratedText,
   getHtmlNodeAttributeByName,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import { generateInlineContentUrl } from "@jsenv/urls"
-import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
+} from "@jsenv/utils/src/html_ast/html_ast.js"
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
   return {

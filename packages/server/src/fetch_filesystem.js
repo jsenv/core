@@ -5,13 +5,13 @@
  */
 
 import { createReadStream, statSync, readFile } from "node:fs"
-import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js"
-
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
 } from "@jsenv/server/src/internal/filesystem.js"
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js"
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
+
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js"
 import { timeFunction } from "./server_timing/timing_measure.js"

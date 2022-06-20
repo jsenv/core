@@ -17,7 +17,7 @@ import {
   getHtmlNodeTextNode,
   removeHtmlNodeText,
   setHtmlNodeGeneratedText,
-} from "@jsenv/utils/html_ast/html_ast.js"
+} from "@jsenv/utils/src/html_ast/html_ast.js"
 import { generateInlineContentUrl } from "@jsenv/urls"
 
 export const jsenvPluginHtmlSupervisor = ({

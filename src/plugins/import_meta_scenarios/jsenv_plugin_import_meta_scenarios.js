@@ -10,7 +10,7 @@
  */
 
 import { createMagicSource } from "@jsenv/sourcemap"
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
+import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js"
 
 export const jsenvPluginImportMetaScenarios = () => {
   return {

@@ -1,5 +1,6 @@
+import { pathToFileURL } from "node:url"
 import { bufferToEtag } from "@jsenv/filesystem"
-import { urlToRelativeUrl } from "@jsenv/urls"
+import { urlToRelativeUrl, isFileSystemPath } from "@jsenv/urls"
 import {
   composeTwoSourcemaps,
   SOURCEMAP,
@@ -22,18 +23,25 @@ export const createUrlInfoTransformer = ({
     sourcemaps === "programmatic"
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
+    let { sources } = sourcemap
+    if (sources) {
+      sources = sources.map((source) => {
+        if (source && isFileSystemPath(source)) {
+          return String(pathToFileURL(source))
+        }
+        return source
+      })
+    }
     const wantSourcesContent =
       // for inline content (<script> insdide html)
       // chrome won't be able to fetch the file as it does not exists
       // so sourcemap must contain sources
       sourcemapsSourcesContent ||
       urlInfo.isInline ||
-      (sourcemap.sources &&
-        sourcemap.sources.some(
-          (source) => !source || !source.startsWith("file:"),
-        ))
-    if (sourcemap.sources && sourcemap.sources.length > 1) {
-      sourcemap.sources = sourcemap.sources.map(
+      (sources &&
+        sources.some((source) => !source || !source.startsWith("file:")))
+    if (sources && sources.length > 1) {
+      sourcemap.sources = sources.map(
         (source) => new URL(source, urlInfo.originalUrl).href,
       )
       if (!wantSourcesContent) {

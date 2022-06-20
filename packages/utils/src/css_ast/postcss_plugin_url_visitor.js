@@ -11,9 +11,8 @@ hence sourcemap cannot point the original source location
 
 */
 
-import { fileSystemPathToUrl, resolveUrl } from "@jsenv/urls"
-
-import { require } from "@jsenv/utils/require.js"
+import { pathToFileURL } from "node:url"
+import { require } from "@jsenv/utils/src/require.js"
 
 export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
   const parseCssValue = require("postcss-value-parser")
@@ -23,7 +22,7 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
     postcssPlugin: "url_visitor",
     prepare: (result) => {
       const { from } = result.opts
-      const fromUrl = fileSystemPathToUrl(from)
+      const fromUrl = String(pathToFileURL(from))
       const mutations = []
       return {
         AtRule: {
@@ -83,7 +82,7 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
             }
 
             const specifier = url
-            url = resolveUrl(specifier, fromUrl)
+            url = new URL(specifier, fromUrl).href
             if (url === fromUrl) {
               atImportNode.warn(
                 result,
@@ -149,7 +148,7 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 return
               }
               const specifier = url
-              url = resolveUrl(specifier, fileSystemPathToUrl(from))
+              url = new URL(specifier, pathToFileURL(from))
 
               const declarationNodeStart = declarationNode.source.start.offset
               const afterDeclarationNode =

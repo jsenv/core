@@ -2,7 +2,6 @@ import {
   urlToRelativeUrl,
   fileSystemPathToUrl,
   isFileSystemPath,
-  resolveUrl,
 } from "@jsenv/urls"
 
 export const normalizeFileByFileCoveragePaths = (
@@ -15,7 +14,7 @@ export const normalizeFileByFileCoveragePaths = (
     const { path } = fileCoverage
     const url = isFileSystemPath(path)
       ? fileSystemPathToUrl(path)
-      : resolveUrl(path, rootDirectoryUrl)
+      : new URL(path, rootDirectoryUrl).href
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
     fileByFileNormalized[`./${relativeUrl}`] = {
       ...fileCoverage,

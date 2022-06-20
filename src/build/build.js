@@ -27,13 +27,13 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
-import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js"
+import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js"
+} from "@jsenv/utils/src/html_ast/html_ast.js"
 
+import { sortByDependencies } from "../omega/url_graph/sort_by_dependencies.js"
 import { createUrlGraph } from "../omega/url_graph.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"

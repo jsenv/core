@@ -1,4 +1,4 @@
-import { require } from "@jsenv/utils/require.js"
+import { require } from "@jsenv/utils/src/require.js"
 
 export const generateExpressionAst = (expression, options) => {
   const { parseExpression } = require("@babel/parser")

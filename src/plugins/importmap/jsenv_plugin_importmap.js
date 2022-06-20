@@ -22,7 +22,7 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap"
-
+import { generateInlineContentUrl } from "@jsenv/urls"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -33,8 +33,7 @@ import {
   setHtmlNodeGeneratedText,
   getHtmlNodeTextNode,
   removeHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import { generateInlineContentUrl } from "@jsenv/urls"
+} from "@jsenv/utils/src/html_ast/html_ast.js"
 
 export const jsenvPluginImportmap = () => {
   let finalImportmap = null

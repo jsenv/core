@@ -1,8 +1,8 @@
 import {
   getHtmlNodeAttributeByName,
   parseLinkNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
-import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js"
+} from "@jsenv/utils/src/html_ast/html_ast.js"
+import { htmlAttributeSrcSet } from "@jsenv/utils/src/html_ast/html_attribute_src_set.js"
 
 // Some "smart" default applied to decide what should hot reload / fullreload:
 // By default:

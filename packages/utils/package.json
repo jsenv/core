@@ -11,14 +11,14 @@
     "access": "public"
   },
   "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
     "@babel/parser": "7.18.5",
-    "@jsenv/filesystem": "4.0.9",
-    "@jsenv/log": "2.0.0",
-    "@jsenv/urls": "1.2.5",
     "@parcel/css": "1.10.1",
     "acorn": "8.7.1",
     "acorn-import-assertions": "1.8.0",

@@ -1,4 +1,5 @@
-import { findHighestVersion } from "@jsenv/utils/semantic_versioning/highest_version.js"
+import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js"
+
 import { featureCompats } from "./features_compats.js"
 
 export const RUNTIME_COMPAT = {

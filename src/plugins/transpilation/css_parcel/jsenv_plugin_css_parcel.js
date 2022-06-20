@@ -1,4 +1,4 @@
-import { transpileWithParcel } from "@jsenv/utils/css_ast/parcel_css.js"
+import { transpileWithParcel } from "@jsenv/utils/src/css_ast/parcel_css.js"
 
 // https://github.com/parcel-bundler/parcel-css
 export const jsenvPluginCssParcel = () => {

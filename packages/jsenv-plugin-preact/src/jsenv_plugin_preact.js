@@ -4,14 +4,14 @@
  */
 
 import { URL_META } from "@jsenv/url-meta"
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js"
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
+import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js"
 import {
   parseHtmlString,
   stringifyHtmlAst,
   injectScriptAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/utils/html_ast/html_ast.js"
+} from "@jsenv/utils/src/html_ast/html_ast.js"
 
 export const jsenvPluginPreact = ({
   jsxInclude = {

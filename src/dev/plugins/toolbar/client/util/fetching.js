@@ -1,4 +1,4 @@
-import { memoize } from "@jsenv/utils/memoize/memoize.js"
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 const fetchPolyfill = async (...args) => {
   const { fetchUsingXHR } = await loadPolyfill()

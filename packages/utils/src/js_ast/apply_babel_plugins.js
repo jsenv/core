@@ -3,12 +3,7 @@
  * - https://astexplorer.net/
  * - https://bvaughn.github.io/babel-repl
  */
-import {
-  fileSystemPathToUrl,
-  isFileSystemPath,
-  urlToExtension,
-  urlToFileSystemPath,
-} from "@jsenv/urls"
+import { fileURLToPath } from "node:url"
 
 import { createJsParseError } from "./js_parse_error.js"
 
@@ -32,7 +27,7 @@ export const applyBabelPlugins = async ({
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core")
   const sourceFileName = url.startsWith("file:")
-    ? urlToFileSystemPath(url)
+    ? fileURLToPath(url)
     : undefined
   options = {
     ast: false,
@@ -41,7 +36,7 @@ export const applyBabelPlugins = async ({
     sourceFileName,
     filename: generatedUrl
       ? generatedUrl.startsWith("file:")
-        ? urlToFileSystemPath(url)
+        ? fileURLToPath(url)
         : undefined
       : sourceFileName,
     configFile: false,
@@ -61,9 +56,7 @@ export const applyBabelPlugins = async ({
         "classProperties",
         "classPrivateProperties",
         "classPrivateMethods",
-        ...([".ts", ".tsx"].includes(urlToExtension(url))
-          ? ["typescript"]
-          : []),
+        ...(useTypeScriptExtension(url) ? ["typescript"] : []),
         ...(options.parserPlugins || []),
       ].filter(Boolean),
     },
@@ -76,10 +69,10 @@ export const applyBabelPlugins = async ({
   try {
     if (ast) {
       const result = await transformFromAstAsync(ast, content, options)
-      return normalizeBabelReturnValue(result)
+      return result
     }
     const result = await transformAsync(content, options)
-    return normalizeBabelReturnValue(result)
+    return result
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createJsParseError({
@@ -95,16 +88,9 @@ export const applyBabelPlugins = async ({
   }
 }
 
-const normalizeBabelReturnValue = (babelReturnValue) => {
-  const { map } = babelReturnValue
-  if (map) {
-    map.sources.forEach((source, index) => {
-      if (isFileSystemPath(source)) {
-        map.sources[index] = fileSystemPathToUrl(source)
-      }
-    })
-  }
-  return babelReturnValue
+const useTypeScriptExtension = (url) => {
+  const { pathname } = new URL(url)
+  return pathname.endsWith(".ts") || pathname.endsWith(".tsx")
 }
 
 // const pattern = [

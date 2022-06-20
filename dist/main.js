@@ -6,39 +6,38 @@ import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { URL_META } from "@jsenv/url-meta";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/html_ast/html_ast.js";
-import { htmlAttributeSrcSet } from "@jsenv/utils/html_ast/html_attribute_src_set.js";
+import { parseHtmlString, stringifyHtmlAst, visitHtmlAst, getHtmlNodeAttributeByName, htmlNodePosition, findNode, getHtmlNodeTextNode, removeHtmlNode, setHtmlNodeGeneratedText, removeHtmlNodeAttributeByName, parseScriptNode, injectScriptAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, assignHtmlNodeAttributes, parseLinkNode } from "@jsenv/utils/src/html_ast/html_ast.js";
+import { htmlAttributeSrcSet } from "@jsenv/utils/src/html_ast/html_attribute_src_set.js";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { applyPostCss } from "@jsenv/utils/css_ast/apply_post_css.js";
-import { postCssPluginUrlVisitor } from "@jsenv/utils/css_ast/postcss_plugin_url_visitor.js";
-import { parseJsUrls } from "@jsenv/utils/js_ast/parse_js_urls.js";
+import { applyPostCss } from "@jsenv/utils/src/css_ast/apply_post_css.js";
+import { postCssPluginUrlVisitor } from "@jsenv/utils/src/css_ast/postcss_plugin_url_visitor.js";
+import { parseJsUrls } from "@jsenv/utils/src/js_ast/parse_js_urls.js";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
 import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { CONTENT_TYPE } from "@jsenv/utils/content_type/content_type.js";
-import { JS_QUOTES } from "@jsenv/utils/string/js_quotes.js";
-import { applyBabelPlugins } from "@jsenv/utils/js_ast/apply_babel_plugins.js";
-import { transpileWithParcel, minifyWithParcel } from "@jsenv/utils/css_ast/parcel_css.js";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
+import { applyBabelPlugins } from "@jsenv/utils/src/js_ast/apply_babel_plugins.js";
+import { transpileWithParcel, minifyWithParcel } from "@jsenv/utils/src/css_ast/parcel_css.js";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
-import { findHighestVersion } from "@jsenv/utils/semantic_versioning/highest_version.js";
-import { injectImport } from "@jsenv/utils/js_ast/babel_utils.js";
-import { sortByDependencies } from "@jsenv/utils/graph/sort_by_dependencies.js";
-import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js";
+import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js";
+import { injectImport } from "@jsenv/utils/src/js_ast/babel_utils.js";
+import { applyRollupPlugins } from "@jsenv/utils/src/js_ast/apply_rollup_plugins.js";
 import { validateResponseIntegrity } from "@jsenv/integrity";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js";
+import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js";
 import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
 import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
-import { memoize } from "@jsenv/utils/memoize/memoize.js";
-import { escapeRegexpSpecialChars } from "@jsenv/utils/string/escape_regexp_special_chars.js";
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
-import { createVersionGenerator } from "@jsenv/utils/versioning/version_generator.js";
+import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js";
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
@@ -4501,6 +4500,39 @@ const jsenvPluginNodeRuntime = ({
   };
 };
 
+const sortByDependencies = nodes => {
+  const visited = [];
+  const sorted = [];
+  const circular = [];
+
+  const visit = url => {
+    const isSorted = sorted.includes(url);
+
+    if (isSorted) {
+      return;
+    }
+
+    const isVisited = visited.includes(url);
+
+    if (isVisited) {
+      circular.push(url);
+      sorted.push(url);
+    } else {
+      visited.push(url);
+      nodes[url].dependencies.forEach(dependencyUrl => {
+        visit(dependencyUrl);
+      });
+      sorted.push(url);
+    }
+  };
+
+  Object.keys(nodes).forEach(url => {
+    visit(url);
+  });
+  sorted.circular = circular;
+  return sorted;
+};
+
 /*
  * Each @import found in css is replaced by the file content
  * - There is no need to worry about urls (such as background-image: url())
@@ -6704,13 +6736,27 @@ const createUrlInfoTransformer = ({
   const sourcemapsEnabled = sourcemaps === "inline" || sourcemaps === "file" || sourcemaps === "programmatic";
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
+    let {
+      sources
+    } = sourcemap;
+
+    if (sources) {
+      sources = sources.map(source => {
+        if (isFileSystemPath(source)) {
+          return String(pathToFileURL(source));
+        }
+
+        return source;
+      });
+    }
+
     const wantSourcesContent = // for inline content (<script> insdide html)
     // chrome won't be able to fetch the file as it does not exists
     // so sourcemap must contain sources
-    sourcemapsSourcesContent || urlInfo.isInline || sourcemap.sources && sourcemap.sources.some(source => !source || !source.startsWith("file:"));
+    sourcemapsSourcesContent || urlInfo.isInline || sources && sources.some(source => !source || !source.startsWith("file:"));
 
-    if (sourcemap.sources && sourcemap.sources.length > 1) {
-      sourcemap.sources = sourcemap.sources.map(source => new URL(source, urlInfo.originalUrl).href);
+    if (sources && sources.length > 1) {
+      sourcemap.sources = sources.map(source => new URL(source, urlInfo.originalUrl).href);
 
       if (!wantSourcesContent) {
         sourcemap.sourcesContent = undefined;
@@ -9054,7 +9100,7 @@ const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) 
     const {
       path
     } = fileCoverage;
-    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : resolveUrl(path, rootDirectoryUrl);
+    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : new URL(path, rootDirectoryUrl).href;
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
     fileByFileNormalized[`./${relativeUrl}`] = { ...fileCoverage,
       path: `./${relativeUrl}`

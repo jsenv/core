@@ -1,4 +1,5 @@
-import { memoizeByFirstArgument } from "@jsenv/utils/memoize/memoize_by_first_argument.js"
+import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js"
+
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 export const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {

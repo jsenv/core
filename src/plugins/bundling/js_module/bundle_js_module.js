@@ -5,7 +5,7 @@ import { isFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/log"
 import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { sourcemapConverter } from "@jsenv/sourcemap"
-import { applyRollupPlugins } from "@jsenv/utils/js_ast/apply_rollup_plugins.js"
+import { applyRollupPlugins } from "@jsenv/utils/src/js_ast/apply_rollup_plugins.js"
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 
 const globalThisClientFileUrl = new URL(
