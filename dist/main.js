@@ -1,35 +1,564 @@
 import { createSSERoom, timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
 import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, readFile, readDirectory, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
-import { createCallbackListNotifiedOnce, createCallbackList, Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
 import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, byteAsFileSize, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages } from "@jsenv/log";
 import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename, urlToExtension } from "@jsenv/urls";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { URL_META } from "@jsenv/url-meta";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { parse, serialize, parseFragment } from "parse5";
+import { p as parseSrcSet } from "./js/html_src_set.js";
+import { createRequire } from "node:module";
+import { ancestor } from "acorn-walk";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
 import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
-import { createRequire } from "node:module";
+import { extname } from "node:path";
 import babelParser from "@babel/parser";
-import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js";
 import { validateResponseIntegrity } from "@jsenv/integrity";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js";
 import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
 import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
-import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
-import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
 import { createHash } from "node:crypto";
+
+/*
+ * See callback_race.md
+ */
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach(clean => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach(candidateName => {
+    const register = raceDescription[candidateName];
+    const returnValue = register(data => {
+      if (status !== "racing") {
+        return;
+      }
+
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data
+      });
+    });
+
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+  return cancel;
+};
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+  const callbackListOnce = {};
+
+  const add = callback => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "add",
+        status
+      });
+      return removeNoop$1;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning$1();
+      return removeNoop$1;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        } // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "call",
+        status
+      });
+      return [];
+    }
+
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified"; // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+
+    callbacks = null;
+    currentCallbackIndex = -1;
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({
+  action,
+  status
+}) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
+      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+      detail: `Code is potentially executed when it should not`
+    });
+  } else {
+    console.warn(`"${action}" should not happen when callback list is ${status}`);
+  }
+};
+
+const emitCallbackDuplicationWarning$1 = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop$1 = () => {};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+const Abort = {
+  isAbortError: error => {
+    return error.name === "AbortError";
+  },
+  startOperation: () => {
+    return createOperation();
+  },
+  throwIfAborted: signal => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  }
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController(); // const abortOperation = (value) => abortController.abort(value)
+
+  const operationSignal = operationAbortController.signal; // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expected
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  }; // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+
+
+  const addAbortCallback = callback => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = callback => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({
+    abortAfterEnd = false
+  } = {}) => {
+    await Promise.all(endCallbackList.notify()); // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (signal, {
+    onAbort = callbackNoop,
+    onRemove = callbackNoop
+  } = {}) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks({
+      operation_abort: cb => {
+        return addAbortCallback(cb);
+      },
+      operation_end: cb => {
+        return addEndCallback(cb);
+      },
+      child_abort: cb => {
+        return addEventListener(signal, "abort", cb);
+      }
+    }, winner => {
+      const raceEffects = {
+        // Both "operation_abort" and "operation_end"
+        // means we don't care anymore if the child aborts.
+        // So we can:
+        // - remove "abort" event listener on child (done by raceCallback)
+        // - remove abort callback on operation (done by raceCallback)
+        // - remove end callback on operation (done by raceCallback)
+        // - call any custom cancel function
+        operation_abort: () => {
+          applyAbortEffects();
+          applyRemoveEffects();
+        },
+        operation_end: () => {
+          // Exists to
+          // - remove abort callback on operation
+          // - remove "abort" event listener on child
+          // - call any custom cancel function
+          applyRemoveEffects();
+        },
+        child_abort: () => {
+          applyAbortEffects();
+          operationAbortController.abort();
+        }
+      };
+      raceEffects[winner.name](winner.value);
+    });
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = abortSourceCallback => {
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+
+    if (operationSignal.aborted) {
+      return {
+        signal: abortSourceSignal,
+        remove: callbackNoop
+      };
+    }
+
+    const returnValue = abortSourceCallback(value => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        removeAbortSource();
+      }
+    });
+    return {
+      signal: abortSourceSignal,
+      remove: removeAbortSignal
+    };
+  };
+
+  const timeout = ms => {
+    return addAbortSource(abort => {
+      const timeoutId = setTimeout(abort, ms); // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const withSignal = async asyncCallback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = callback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    timeout,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const createCallbackList = () => {
+  let callbacks = [];
+
+  const add = callback => {
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    const values = callbacks.slice().map(callback => {
+      return callback(param);
+    });
+    return values;
+  };
+
+  return {
+    add,
+    notify
+  };
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
+  }, callback);
+};
+const SIGHUP_CALLBACK = {
+  SIGHUP: cb => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  }
+};
+const SIGTERM_CALLBACK = {
+  SIGTERM: cb => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  }
+};
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: cb => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  }
+};
+const EXIT_CALLBACK = {
+  exit: cb => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  }
+};
+const SIGINT_CALLBACK = {
+  SIGINT: cb => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  }
+};
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
@@ -83,6 +612,1739 @@ const createReloadableWorker = (workerFileUrl, options = {}) => {
     reload,
     terminate
   };
+};
+
+const getHtmlNodeAttribute = (htmlNode, attributeName) => {
+  const attribute = getHtmlAttributeByName(htmlNode, attributeName);
+  return attribute ? attribute.value || "" : undefined;
+};
+const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
+  if (typeof attributesToAssign !== "object") {
+    throw new TypeError(`attributesToAssign must be an object`);
+  }
+
+  const {
+    attrs
+  } = htmlNode;
+  if (!attrs) return;
+  Object.keys(attributesToAssign).forEach(key => {
+    const existingAttributeIndex = attrs.findIndex(({
+      name
+    }) => name === key);
+    const value = attributesToAssign[key]; // remove no-op
+
+    if (existingAttributeIndex === -1 && value === undefined) {
+      return;
+    } // add
+
+
+    if (existingAttributeIndex === -1 && value !== undefined) {
+      attrs.push({
+        name: key,
+        value
+      });
+      return;
+    } // remove
+
+
+    if (value === undefined) {
+      attrs.splice(existingAttributeIndex, 1);
+      return;
+    } // update
+
+
+    attrs[existingAttributeIndex].value = value;
+  });
+};
+
+const getHtmlAttributeByName = (htmlNode, attributeName) => {
+  const attrs = htmlNode.attrs;
+  const attribute = attrs ? attrs.find(attr => attr.name === attributeName) : null;
+  return attribute;
+};
+
+const storeHtmlNodePosition = node => {
+  const originalPositionAttributeName = `original-position`;
+  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
+
+  if (originalPosition !== undefined) {
+    return true;
+  }
+
+  const {
+    sourceCodeLocation
+  } = node;
+
+  if (!sourceCodeLocation) {
+    return false;
+  }
+
+  const {
+    startLine,
+    startCol,
+    endLine,
+    endCol
+  } = sourceCodeLocation;
+  setHtmlNodeAttributes(node, {
+    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`
+  });
+  return true;
+};
+const storeHtmlNodeAttributePosition = (node, attributeName) => {
+  const {
+    sourceCodeLocation
+  } = node;
+
+  if (!sourceCodeLocation) {
+    return false;
+  }
+
+  const attributeValue = getHtmlNodeAttribute(node, attributeName);
+
+  if (attributeValue === undefined) {
+    return false;
+  }
+
+  const attributeLocation = sourceCodeLocation.attrs[attributeName];
+
+  if (!attributeLocation) {
+    return false;
+  }
+
+  const originalPositionAttributeName = `original-${attributeName}-position`;
+  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
+
+  if (originalPosition !== undefined) {
+    return true;
+  }
+
+  const {
+    startLine,
+    startCol,
+    endLine,
+    endCol
+  } = attributeLocation;
+  setHtmlNodeAttributes(node, {
+    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`
+  });
+  return true;
+};
+const getHtmlNodePosition = (node, {
+  preferOriginal = false
+} = {}) => {
+  const position = {};
+  const {
+    sourceCodeLocation
+  } = node;
+
+  if (sourceCodeLocation) {
+    const {
+      startLine,
+      startCol,
+      endLine,
+      endCol
+    } = sourceCodeLocation;
+    Object.assign(position, {
+      line: startLine,
+      lineEnd: endLine,
+      column: startCol,
+      columnEnd: endCol
+    });
+  }
+
+  const originalPosition = getHtmlNodeAttribute(node, "original-position");
+
+  if (originalPosition === undefined) {
+    return position;
+  }
+
+  const [start, end] = originalPosition.split(";");
+  const [originalLine, originalColumn] = start.split(":");
+  const [originalLineEnd, originalColumnEnd] = end.split(":");
+  Object.assign(position, {
+    originalLine: parseInt(originalLine),
+    originalColumn: parseInt(originalColumn),
+    originalLineEnd: parseInt(originalLineEnd),
+    originalColumnEnd: parseInt(originalColumnEnd)
+  });
+
+  if (preferOriginal) {
+    position.line = position.originalLine;
+    position.column = position.originalColumn;
+    position.lineEnd = position.originalLineEnd;
+    position.columnEnd = position.originalColumnEnd;
+    position.isOriginal = true;
+  }
+
+  return position;
+};
+const getHtmlNodeAttributePosition = (node, attributeName) => {
+  const position = {};
+  const {
+    sourceCodeLocation
+  } = node;
+
+  if (sourceCodeLocation) {
+    const attributeLocation = sourceCodeLocation.attrs[attributeName];
+
+    if (attributeLocation) {
+      Object.assign(position, {
+        line: attributeLocation.startLine,
+        column: attributeLocation.startCol
+      });
+    }
+  }
+
+  const originalPositionAttributeName = attributeName === "generated-from-src" ? "original-src-position" : attributeName === "generated-from-href" ? "original-href-position" : `original-${attributeName}-position`;
+  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
+
+  if (originalPosition === undefined) {
+    return position;
+  }
+
+  const [start, end] = originalPosition.split(";");
+  const [originalLine, originalColumn] = start.split(":");
+  const [originalLineEnd, originalColumnEnd] = end.split(":");
+  Object.assign(position, {
+    originalLine: parseInt(originalLine),
+    originalColumn: parseInt(originalColumn),
+    originalLineEnd: parseInt(originalLineEnd),
+    originalColumnEnd: parseInt(originalColumnEnd)
+  });
+  return position;
+};
+
+const visitHtmlNodes = (htmlAst, visitors) => {
+  const visitNode = node => {
+    const visitor = visitors[node.nodeName] || visitors["*"];
+
+    if (visitor) {
+      const callbackReturnValue = visitor(node);
+
+      if (callbackReturnValue === "stop") {
+        return;
+      }
+    }
+
+    const {
+      childNodes
+    } = node;
+
+    if (childNodes) {
+      let i = 0;
+
+      while (i < childNodes.length) {
+        visitNode(childNodes[i++]);
+      }
+    }
+  };
+
+  visitNode(htmlAst);
+};
+const findHtmlNode = (htmlAst, predicate) => {
+  let nodeMatching = null;
+  visitHtmlNodes(htmlAst, {
+    "*": node => {
+      if (predicate(node)) {
+        nodeMatching = node;
+        return "stop";
+      }
+
+      return null;
+    }
+  });
+  return nodeMatching;
+};
+const findHtmlChildNode = (htmlNode, predicate) => {
+  const {
+    childNodes = []
+  } = htmlNode;
+  return childNodes.find(predicate);
+};
+
+const getHtmlNodeText = htmlNode => {
+  const textNode = getTextNode(htmlNode);
+  return textNode ? textNode.value : undefined;
+};
+
+const getTextNode = htmlNode => {
+  const firstChild = htmlNode.childNodes[0];
+  const textNode = firstChild && firstChild.nodeName === "#text" ? firstChild : null;
+  return textNode;
+};
+
+const removeHtmlNodeText = htmlNode => {
+  const textNode = getTextNode(htmlNode);
+
+  if (textNode) {
+    htmlNode.childNodes = [];
+  }
+};
+const setHtmlNodeText = (htmlNode, textContent) => {
+  const textNode = getTextNode(htmlNode);
+
+  if (textNode) {
+    textNode.value = textContent;
+  } else {
+    const newTextNode = {
+      nodeName: "#text",
+      value: textContent,
+      parentNode: htmlNode
+    };
+    htmlNode.childNodes.splice(0, 0, newTextNode);
+  }
+};
+
+const parseHtmlString = (htmlString, {
+  storeOriginalPositions = true
+} = {}) => {
+  const htmlAst = parse(htmlString, {
+    sourceCodeLocationInfo: true
+  });
+
+  if (storeOriginalPositions) {
+    const htmlNode = findHtmlChildNode(htmlAst, node => node.nodeName === "html");
+    const stored = getHtmlNodeAttribute(htmlNode, "original-position-stored");
+
+    if (stored === undefined) {
+      visitHtmlNodes(htmlAst, {
+        "*": node => {
+          if (node.nodeName === "script" || node.nodeName === "style") {
+            const htmlNodeText = getHtmlNodeText(node);
+
+            if (htmlNodeText !== undefined) {
+              storeHtmlNodePosition(node);
+            }
+          }
+
+          storeHtmlNodeAttributePosition(node, "src");
+          storeHtmlNodeAttributePosition(node, "href");
+        }
+      });
+      setHtmlNodeAttributes(htmlNode, {
+        "original-position-stored": ""
+      });
+    }
+  }
+
+  return htmlAst;
+};
+const stringifyHtmlAst = (htmlAst, {
+  removeOriginalPositionAttributes = false
+} = {}) => {
+  if (removeOriginalPositionAttributes) {
+    const htmlNode = findHtmlChildNode(htmlAst, node => node.nodeName === "html");
+    const storedAttribute = getHtmlNodeAttribute(htmlNode, "original-position-stored");
+
+    if (storedAttribute !== undefined) {
+      setHtmlNodeAttributes(htmlNode, {
+        "original-position-stored": undefined
+      });
+      visitHtmlNodes(htmlAst, {
+        "*": node => {
+          setHtmlNodeAttributes(node, {
+            "original-position": undefined,
+            "original-src-position": undefined,
+            "original-href-position": undefined,
+            "injected-by": undefined,
+            "generated-by": undefined,
+            "generated-from-src": undefined,
+            "generated-from-href": undefined
+          });
+        }
+      });
+    }
+  }
+
+  const htmlString = serialize(htmlAst);
+  return htmlString;
+};
+
+const analyzeScriptNode = scriptNode => {
+  const type = getHtmlNodeAttribute(scriptNode, "type");
+
+  if (type === undefined || type === "text/javascript") {
+    return "classic";
+  }
+
+  if (type === "module") {
+    return "module";
+  }
+
+  if (type === "importmap") {
+    return "importmap";
+  }
+
+  return type;
+};
+const analyzeLinkNode = linkNode => {
+  const rel = getHtmlNodeAttribute(linkNode, "rel");
+
+  if (rel === "stylesheet") {
+    return {
+      isStylesheet: true
+    };
+  }
+
+  const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
+  return {
+    isRessourceHint,
+    rel
+  };
+};
+
+const removeHtmlNode = htmlNode => {
+  const {
+    childNodes
+  } = htmlNode.parentNode;
+  childNodes.splice(childNodes.indexOf(htmlNode), 1);
+};
+const createHtmlNode = ({
+  tagName,
+  textContent = "",
+  ...rest
+}) => {
+  const html = `<${tagName} ${stringifyAttributes(rest)}>${textContent}</${tagName}>`;
+  const fragment = parseFragment(html);
+  return fragment.childNodes[0];
+};
+const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode) => {
+  const injectedBy = getHtmlNodeAttribute(scriptNode, "injected-by");
+
+  if (injectedBy === undefined) {
+    setHtmlNodeAttributes(scriptNode, {
+      "injected-by": "jsenv"
+    });
+  }
+
+  const isModule = analyzeScriptNode(scriptNode) === "module";
+
+  if (isModule) {
+    const firstImportmapScript = findHtmlNode(htmlAst, node => {
+      if (node.nodeName !== "script") return false;
+      return analyzeScriptNode(node) === "importmap";
+    });
+
+    if (firstImportmapScript) {
+      return insertAfter(scriptNode, firstImportmapScript.parentNode, firstImportmapScript);
+    }
+  }
+
+  const headNode = findChild(htmlAst, node => node.nodeName === "html").childNodes[0];
+  const firstHeadScript = findChild(headNode, node => {
+    return node.nodeName === "script";
+  });
+  return insertBefore(scriptNode, headNode, firstHeadScript);
+};
+
+const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
+  const {
+    childNodes = []
+  } = futureParentNode;
+  const futureIndex = futureNextSibling ? childNodes.indexOf(futureNextSibling) : 0;
+  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
+};
+
+const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
+  const {
+    childNodes = []
+  } = futureParentNode;
+  const futureIndex = futurePrevSibling ? childNodes.indexOf(futurePrevSibling) + 1 : childNodes.length;
+  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
+};
+
+const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
+  const {
+    childNodes = []
+  } = futureParentNode;
+  const previousSiblings = childNodes.slice(0, futureIndex);
+  const nextSiblings = childNodes.slice(futureIndex);
+  const futureChildNodes = [];
+  const previousSibling = previousSiblings[0];
+
+  if (previousSibling) {
+    futureChildNodes.push(...previousSiblings);
+  }
+
+  if (!previousSibling || previousSibling.nodeName !== "#text") {
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: "\n    ",
+      parentNode: futureParentNode
+    });
+  }
+
+  futureChildNodes.push(nodeToInsert);
+  const nextSibling = nextSiblings[0];
+
+  if (!nextSibling || nextSibling.nodeName !== "#text") {
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: "\n    ",
+      parentNode: futureParentNode
+    });
+  }
+
+  if (nextSibling) {
+    futureChildNodes.push(...nextSiblings);
+  }
+
+  futureParentNode.childNodes = futureChildNodes;
+};
+
+const findChild = ({
+  childNodes = []
+}, predicate) => childNodes.find(predicate);
+
+const stringifyAttributes = object => {
+  return Object.keys(object).map(key => `${key}=${valueToHtmlAttributeValue(object[key])}`).join(" ");
+};
+
+const valueToHtmlAttributeValue = value => {
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+
+  return `"${JSON.stringify(value)}"`;
+};
+
+const applyPostCss = async ({
+  sourcemaps = "comment",
+  plugins,
+  // https://github.com/postcss/postcss#options
+  options = {},
+  url,
+  map,
+  content
+}) => {
+  const {
+    default: postcss
+  } = await import("postcss");
+
+  try {
+    const cssFileUrl = urlToFileUrl(url);
+    const result = await postcss(plugins).process(content, {
+      collectUrls: true,
+      from: fileURLToPath(cssFileUrl),
+      to: fileURLToPath(cssFileUrl),
+      map: {
+        annotation: sourcemaps === "file",
+        inline: sourcemaps === "inline",
+        // https://postcss.org/api/#sourcemapoptions
+        ...(map ? {
+          prev: JSON.stringify(map)
+        } : {})
+      },
+      ...options
+    });
+    return {
+      postCssMessages: result.messages,
+      map: result.map.toJSON(),
+      content: result.css
+    };
+  } catch (error) {
+    if (error.name === "CssSyntaxError") {
+      console.error(String(error));
+      throw error;
+    }
+
+    throw error;
+  }
+}; // the goal of this function is to take an url that is likely an http url
+// info a file:// url
+// for instance http://example.com/dir/file.js
+// must becomes file:///dir/file.js
+// but in windows it must be file://C:/dir/file.js
+
+const filesystemRootUrl = process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///";
+
+const urlToFileUrl = url => {
+  const urlString = String(url);
+
+  if (urlString.startsWith("file:")) {
+    return urlString;
+  }
+
+  const origin = new URL(url).origin;
+  const afterOrigin = urlString.slice(origin.length);
+  return new URL(afterOrigin, filesystemRootUrl).href;
+};
+
+const require$1 = createRequire(import.meta.url);
+
+const transpileWithParcel = (urlInfo, context) => {
+  const css = require$1("@parcel/css");
+
+  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const {
+    code,
+    map
+  } = css.transform({
+    filename: fileURLToPath(urlInfo.originalUrl),
+    code: Buffer.from(urlInfo.content),
+    targets,
+    minify: false
+  });
+  return {
+    code,
+    map
+  };
+};
+const minifyWithParcel = (urlInfo, context) => {
+  const css = require$1("@parcel/css");
+
+  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const {
+    code,
+    map
+  } = css.transform({
+    filename: fileURLToPath(urlInfo.originalUrl),
+    code: Buffer.from(urlInfo.content),
+    targets,
+    minify: true
+  });
+  return {
+    code,
+    map
+  };
+};
+
+const runtimeCompatToTargets = runtimeCompat => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach(runtimeName => {
+    const version = runtimeCompat[runtimeName];
+
+    if (version) {
+      targets[runtimeName] = versionToBits(version);
+    }
+  });
+  return targets;
+};
+
+const versionToBits = version => {
+  const [major, minor = 0, patch = 0] = version.split("-")[0].split(".").map(v => parseInt(v, 10));
+  return major << 16 | minor << 8 | patch;
+};
+
+const require = createRequire(import.meta.url);
+
+/**
+
+https://github.com/postcss/postcss/blob/master/docs/writing-a-plugin.md
+https://github.com/postcss/postcss/blob/master/docs/guidelines/plugin.md
+https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont-show-js-stack-for-csssyntaxerror
+
+In case css sourcemap contains no%20source
+This is because of https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/map-generator.js#L231
+and it indicates a node has been replaced without passing source
+hence sourcemap cannot point the original source location
+
+*/
+const postCssPluginUrlVisitor = ({
+  urlVisitor = () => null
+}) => {
+  const parseCssValue = require("postcss-value-parser");
+
+  const stringifyCssNodes = parseCssValue.stringify;
+  return {
+    postcssPlugin: "url_visitor",
+    prepare: result => {
+      const {
+        from
+      } = result.opts;
+      const fromUrl = String(pathToFileURL(from));
+      const mutations = [];
+      return {
+        AtRule: {
+          import: (atImportNode, {
+            AtRule
+          }) => {
+            if (atImportNode.parent.type !== "root") {
+              atImportNode.warn(result, "`@import` should be top level");
+              return;
+            }
+
+            if (atImportNode.nodes) {
+              atImportNode.warn(result, "`@import` was not terminated correctly");
+              return;
+            }
+
+            const parsed = parseCssValue(atImportNode.params);
+            let [urlNode] = parsed.nodes;
+
+            if (!urlNode || urlNode.type !== "string" && urlNode.type !== "function") {
+              atImportNode.warn(result, `No URL in \`${atImportNode.toString()}\``);
+              return;
+            }
+
+            let url = "";
+
+            if (urlNode.type === "string") {
+              url = urlNode.value;
+            } else if (urlNode.type === "function") {
+              // Invalid function
+              if (!/^url$/i.test(urlNode.value)) {
+                atImportNode.warn(result, `Invalid \`url\` function in \`${atImportNode.toString()}\``);
+                return;
+              }
+
+              const firstNode = urlNode.nodes[0];
+
+              if (firstNode && firstNode.type === "string") {
+                urlNode = firstNode;
+                url = urlNode.value;
+              } else {
+                urlNode = urlNode.nodes;
+                url = stringifyCssNodes(urlNode.nodes);
+              }
+            }
+
+            url = url.trim();
+
+            if (url.length === 0) {
+              atImportNode.warn(result, `Empty URL in \`${atImportNode.toString()}\``);
+              return;
+            }
+
+            const specifier = url;
+            url = new URL(specifier, fromUrl).href;
+
+            if (url === fromUrl) {
+              atImportNode.warn(result, `\`@import\` loop in \`${atImportNode.toString()}\``);
+              return;
+            }
+
+            const atRuleStart = atImportNode.source.start.offset;
+            const atRuleEnd = atImportNode.source.end.offset + 1; // for the ";"
+
+            const atRuleRaw = atImportNode.source.input.css.slice(atRuleStart, atRuleEnd);
+            const specifierIndex = atRuleRaw.indexOf(atImportNode.params);
+            const specifierStart = atRuleStart + specifierIndex;
+            const specifierEnd = specifierStart + atImportNode.params.length;
+            const specifierLine = atImportNode.source.start.line;
+            const specifierColumn = atImportNode.source.start.column + specifierIndex;
+            urlVisitor({
+              declarationNode: atImportNode,
+              type: "@import",
+              atRuleStart,
+              atRuleEnd,
+              specifier,
+              specifierLine,
+              specifierColumn,
+              specifierStart,
+              specifierEnd,
+              replace: newUrlSpecifier => {
+                if (newUrlSpecifier === urlNode.value) {
+                  return;
+                }
+
+                urlNode.value = newUrlSpecifier;
+                const newParams = parsed.toString();
+                const newAtImportRule = new AtRule({
+                  name: "import",
+                  params: newParams,
+                  source: atImportNode.source
+                });
+                atImportNode.replaceWith(newAtImportRule);
+              }
+            });
+          }
+        },
+        Declaration: declarationNode => {
+          const parsed = parseCssValue(declarationNode.value);
+          const urlMutations = [];
+          walkUrls(parsed, {
+            stringifyCssNodes,
+            visitor: ({
+              url,
+              urlNode
+            }) => {
+              // Empty URL
+              if (!urlNode || url.length === 0) {
+                declarationNode.warn(result, `Empty URL in \`${declarationNode.toString()}\``);
+                return;
+              } // Skip Data URI
+
+
+              if (isDataUrl(url)) {
+                return;
+              }
+
+              const specifier = url;
+              url = new URL(specifier, pathToFileURL(from));
+              const declarationNodeStart = declarationNode.source.start.offset;
+              const afterDeclarationNode = declarationNode.source.input.css.slice(declarationNodeStart);
+              const valueIndex = afterDeclarationNode.indexOf(declarationNode.value);
+              const valueStart = declarationNodeStart + valueIndex;
+              const specifierStart = valueStart + urlNode.sourceIndex;
+              const specifierEnd = specifierStart + (urlNode.type === "word" ? urlNode.value.length : urlNode.value.length + 2); // the quotes
+              // value raw
+              // declarationNode.source.input.css.slice(valueStart)
+              // specifier raw
+              // declarationNode.source.input.css.slice(specifierStart, specifierEnd)
+
+              const specifierLine = declarationNode.source.start.line;
+              const specifierColumn = declarationNode.source.start.column + (specifierStart - declarationNodeStart);
+              urlVisitor({
+                declarationNode,
+                type: "url",
+                specifier,
+                specifierLine,
+                specifierColumn,
+                specifierStart,
+                specifierEnd,
+                replace: newUrlSpecifier => {
+                  urlMutations.push(() => {
+                    // the specifier desires to be inside double quotes
+                    if (newUrlSpecifier[0] === `"`) {
+                      urlNode.type = "word";
+                      urlNode.value = newUrlSpecifier;
+                      return;
+                    } // the specifier desires to be inside simple quotes
+
+
+                    if (newUrlSpecifier[0] === `'`) {
+                      urlNode.type = "word";
+                      urlNode.value = newUrlSpecifier;
+                      return;
+                    } // the specifier desired to be just a word
+                    // for the "word" type so that newUrlSpecifier can opt-out of being between quotes
+                    // useful to inject __v__ calls for css inside js
+
+
+                    urlNode.type = "word";
+                    urlNode.value = newUrlSpecifier;
+                  });
+                }
+              });
+            }
+          });
+
+          if (urlMutations.length) {
+            mutations.push(() => {
+              urlMutations.forEach(urlMutation => {
+                urlMutation();
+              });
+              declarationNode.value = parsed.toString();
+            });
+          }
+        },
+        OnceExit: () => {
+          mutations.forEach(mutation => {
+            mutation();
+          });
+        }
+      };
+    }
+  };
+};
+postCssPluginUrlVisitor.postcss = true;
+
+const walkUrls = (parsed, {
+  stringifyCssNodes,
+  visitor
+}) => {
+  parsed.walk(node => {
+    // https://github.com/andyjansson/postcss-functions
+    if (isUrlFunctionNode(node)) {
+      const {
+        nodes
+      } = node;
+      const [urlNode] = nodes;
+      const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes);
+      visitor({
+        url: url.trim(),
+        urlNode
+      });
+      return;
+    }
+
+    if (isImageSetFunctionNode(node)) {
+      Array.from(node.nodes).forEach(childNode => {
+        if (childNode.type === "string") {
+          visitor({
+            url: childNode.value.trim(),
+            urlNode: childNode
+          });
+          return;
+        }
+
+        if (isUrlFunctionNode(node)) {
+          const {
+            nodes
+          } = childNode;
+          const [urlNode] = nodes;
+          const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes);
+          visitor({
+            url: url.trim(),
+            urlNode
+          });
+          return;
+        }
+      });
+    }
+  });
+};
+
+const isUrlFunctionNode = node => {
+  return node.type === "function" && /^url$/i.test(node.value);
+};
+
+const isImageSetFunctionNode = node => {
+  return node.type === "function" && /^(?:-webkit-)?image-set$/i.test(node.value);
+};
+
+const isDataUrl = url => {
+  return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(url);
+};
+
+const createJsParseError = ({
+  message,
+  reasonCode,
+  url,
+  line,
+  column
+}) => {
+  const parseError = new Error(message);
+  parseError.reasonCode = reasonCode;
+  parseError.code = "PARSE_ERROR";
+  parseError.url = url;
+  parseError.line = line;
+  parseError.column = column;
+  return parseError;
+};
+
+/*
+ * Useful when writin a babel plugin:
+ * - https://astexplorer.net/
+ * - https://bvaughn.github.io/babel-repl
+ */
+const applyBabelPlugins = async ({
+  babelPlugins,
+  urlInfo,
+  ast,
+  options = {}
+}) => {
+  const sourceType = {
+    js_module: "module",
+    js_classic: "classic",
+    [urlInfo.type]: undefined
+  }[urlInfo.type];
+  const url = urlInfo.originalUrl;
+  const generatedUrl = urlInfo.generatedUrl;
+  const content = urlInfo.content;
+
+  if (babelPlugins.length === 0) {
+    return {
+      code: content
+    };
+  }
+
+  const {
+    transformAsync,
+    transformFromAstAsync
+  } = await import("@babel/core");
+  const sourceFileName = url.startsWith("file:") ? fileURLToPath(url) : undefined;
+  options = {
+    ast: false,
+    // https://babeljs.io/docs/en/options#source-map-options
+    sourceMaps: true,
+    sourceFileName,
+    filename: generatedUrl ? generatedUrl.startsWith("file:") ? fileURLToPath(url) : undefined : sourceFileName,
+    configFile: false,
+    babelrc: false,
+    highlightCode: false,
+    // consider using startColumn and startLine for inline scripts?
+    // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
+    parserOpts: {
+      sourceType,
+      // allowAwaitOutsideFunction: true,
+      plugins: [// "importMeta",
+      // "topLevelAwait",
+      "dynamicImport", "importAssertions", "jsx", "classProperties", "classPrivateProperties", "classPrivateMethods", ...(useTypeScriptExtension(url) ? ["typescript"] : []), ...(options.parserPlugins || [])].filter(Boolean)
+    },
+    generatorOpts: {
+      compact: false
+    },
+    plugins: babelPlugins,
+    ...options
+  };
+
+  try {
+    if (ast) {
+      const result = await transformFromAstAsync(ast, content, options);
+      return result;
+    }
+
+    const result = await transformAsync(content, options);
+    return result;
+  } catch (error) {
+    if (error && error.code === "BABEL_PARSE_ERROR") {
+      throw createJsParseError({
+        message: error.message,
+        reasonCode: error.reasonCode,
+        content,
+        url,
+        line: error.loc.line,
+        column: error.loc.column
+      });
+    }
+
+    throw error;
+  }
+};
+
+const useTypeScriptExtension = url => {
+  const {
+    pathname
+  } = new URL(url);
+  return pathname.endsWith(".ts") || pathname.endsWith(".tsx");
+}; // const pattern = [
+//   "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+//   "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))",
+// ].join("|")
+// const ansiRegex = new RegExp(pattern, "g")
+
+const injectJsImport = ({
+  programPath,
+  namespace,
+  name,
+  from,
+  nameHint,
+  sideEffect
+}) => {
+  const {
+    addNamespace,
+    addDefault,
+    addNamed,
+    addSideEffect
+  } = require("@babel/helper-module-imports");
+
+  if (namespace) {
+    return addNamespace(programPath, from, {
+      nameHint
+    });
+  }
+
+  if (name) {
+    return addNamed(programPath, name, from);
+  }
+
+  if (sideEffect) {
+    return addSideEffect(programPath, from);
+  }
+
+  return addDefault(programPath, from, {
+    nameHint
+  });
+};
+
+let AcornParser;
+
+let _getLineInfo;
+
+const parseJsWithAcorn = async ({
+  js,
+  url,
+  isJsModule
+}) => {
+  await initAcornParser();
+
+  try {
+    // https://github.com/acornjs/acorn/tree/master/acorn#interface
+    const jsAst = AcornParser.parse(js, {
+      locations: true,
+      allowAwaitOutsideFunction: true,
+      sourceType: isJsModule ? "module" : "script",
+      ecmaVersion: 2022
+    });
+    return jsAst;
+  } catch (e) {
+    if (e && e.name === "SyntaxError") {
+      const {
+        line,
+        column
+      } = _getLineInfo(js, e.raisedAt);
+
+      throw createJsParseError({
+        message: e.message,
+        url,
+        line,
+        column
+      });
+    }
+
+    throw e;
+  }
+};
+
+const initAcornParser = async () => {
+  if (AcornParser) {
+    return;
+  }
+
+  const {
+    Parser,
+    getLineInfo
+  } = await import("acorn");
+  const {
+    importAssertions
+  } = await import("acorn-import-assertions");
+  AcornParser = Parser.extend(importAssertions);
+  _getLineInfo = getLineInfo;
+};
+
+const getTypePropertyNode$1 = node => {
+  if (node.type !== "ObjectExpression") {
+    return null;
+  }
+
+  const {
+    properties
+  } = node;
+  return properties.find(property => {
+    return property.type === "Property" && property.key.type === "Identifier" && property.key.name === "type";
+  });
+};
+const isStringLiteralNode = node => {
+  return node.type === "Literal" && typeof node.value === "string";
+};
+
+const analyzeImportDeclaration = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+  const assertionInfo = extractImportAssertionsInfo(node);
+  onUrl({
+    type: "js_import_export",
+    subtype: "import_static",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column,
+    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
+    ...assertionInfo
+  });
+};
+const analyzeImportExpression = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+
+  if (!isStringLiteralNode(specifierNode)) {
+    return;
+  }
+
+  const assertionInfo = extractImportAssertionsInfo(node);
+  onUrl({
+    type: "js_import_export",
+    subtype: "import_dynamic",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column,
+    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
+    ...assertionInfo
+  });
+};
+const analyzeExportNamedDeclaration = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+
+  if (!specifierNode) {
+    // This export has no "source", so it's probably
+    // a local variable or function, e.g.
+    // export { varName }
+    // export const constName = ...
+    // export function funcName() {}
+    return;
+  }
+
+  onUrl({
+    type: "js_import_export",
+    subtype: "export_named",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column
+  });
+};
+const analyzeExportAllDeclaration = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+  onUrl({
+    type: "js_import_export",
+    subtype: "export_all",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column
+  });
+};
+
+const extractImportAssertionsInfo = node => {
+  if (node.type === "ImportDeclaration") {
+    // static import
+    const {
+      assertions
+    } = node;
+
+    if (!assertions) {
+      return null;
+    }
+
+    if (assertions.length === 0) {
+      return null;
+    }
+
+    const typeAssertionNode = assertions.find(assertion => assertion.key.name === "type");
+
+    if (!typeAssertionNode) {
+      return null;
+    }
+
+    const typeNode = typeAssertionNode.value;
+
+    if (!isStringLiteralNode(typeNode)) {
+      return null;
+    }
+
+    return {
+      assertNode: typeAssertionNode,
+      assert: {
+        type: typeNode.value
+      }
+    };
+  } // dynamic import
+
+
+  const args = node.arguments;
+
+  if (!args) {
+    // acorn keeps node.arguments undefined for dynamic import without a second argument
+    return null;
+  }
+
+  const firstArgNode = args[0];
+
+  if (!firstArgNode) {
+    return null;
+  }
+
+  const {
+    properties
+  } = firstArgNode;
+  const assertProperty = properties.find(property => {
+    return property.key.name === "assert";
+  });
+
+  if (!assertProperty) {
+    return null;
+  }
+
+  const assertValueNode = assertProperty.value;
+
+  if (assertValueNode.type !== "ObjectExpression") {
+    return null;
+  }
+
+  const assertValueProperties = assertValueNode.properties;
+  const typePropertyNode = assertValueProperties.find(property => {
+    return property.key.name === "type";
+  });
+
+  if (!typePropertyNode) {
+    return null;
+  }
+
+  const typePropertyValue = typePropertyNode.value;
+
+  if (!isStringLiteralNode(typePropertyValue)) {
+    return null;
+  }
+
+  return {
+    assertNode: firstArgNode,
+    assert: {
+      type: typePropertyValue.value
+    }
+  };
+};
+
+const isNewUrlCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "URL";
+};
+const analyzeNewUrlCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  if (node.arguments.length === 1) {
+    const firstArgNode = node.arguments[0];
+    const urlType = analyzeUrlNodeType(firstArgNode, {
+      isJsModule
+    });
+
+    if (urlType === "StringLiteral") {
+      const specifierNode = firstArgNode;
+      onUrl({
+        type: "js_url_specifier",
+        subtype: "new_url_first_arg",
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column
+      });
+    }
+
+    return;
+  }
+
+  if (node.arguments.length === 2) {
+    const firstArgNode = node.arguments[0];
+    const secondArgNode = node.arguments[1];
+    const baseUrlType = analyzeUrlNodeType(secondArgNode, {
+      isJsModule
+    });
+
+    if (baseUrlType) {
+      // we can understand the second argument
+      const urlType = analyzeUrlNodeType(firstArgNode, {
+        isJsModule
+      });
+
+      if (urlType === "StringLiteral") {
+        // we can understand the first argument
+        const specifierNode = firstArgNode;
+        onUrl({
+          type: "js_url_specifier",
+          subtype: "new_url_first_arg",
+          specifier: specifierNode.value,
+          specifierStart: specifierNode.start,
+          specifierEnd: specifierNode.end,
+          specifierLine: specifierNode.loc.start.line,
+          specifierColumn: specifierNode.loc.start.column,
+          baseUrlType,
+          baseUrl: baseUrlType === "StringLiteral" ? secondArgNode.value : undefined
+        });
+      }
+
+      if (baseUrlType === "StringLiteral") {
+        const specifierNode = secondArgNode;
+        onUrl({
+          type: "js_url_specifier",
+          subtype: "new_url_second_arg",
+          specifier: specifierNode.value,
+          specifierStart: specifierNode.start,
+          specifierEnd: specifierNode.end,
+          specifierLine: specifierNode.loc.start.line,
+          specifierColumn: specifierNode.loc.start.column
+        });
+      }
+    }
+  }
+};
+
+const analyzeUrlNodeType = (secondArgNode, {
+  isJsModule
+}) => {
+  if (isStringLiteralNode(secondArgNode)) {
+    return "StringLiteral";
+  }
+
+  if (isImportMetaUrl(secondArgNode)) {
+    return "import.meta.url";
+  }
+
+  if (isWindowOrigin(secondArgNode)) {
+    return "window.origin";
+  }
+
+  if (!isJsModule && isContextMetaUrlFromSystemJs(secondArgNode)) {
+    return "context.meta.url";
+  }
+
+  if (!isJsModule && isDocumentCurrentScriptSrc(secondArgNode)) {
+    return "document.currentScript.src";
+  }
+
+  return null;
+};
+
+const isImportMetaUrl = node => {
+  return node.type === "MemberExpression" && node.object.type === "MetaProperty" && node.property.type === "Identifier" && node.property.name === "url";
+};
+
+const isWindowOrigin = node => {
+  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "window" && node.property.type === "Identifier" && node.property.name === "origin";
+};
+
+const isContextMetaUrlFromSystemJs = node => {
+  return node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.object.object.type === "Identifier" && // because of minification we can't assume _context.
+  // so anything matching "*.meta.url" (in the context of new URL())
+  // will be assumed to be the equivalent to "import.meta.url"
+  // node.object.object.name === "_context" &&
+  node.object.property.type === "Identifier" && node.object.property.name === "meta" && node.property.type === "Identifier" && node.property.name === "url";
+};
+
+const isDocumentCurrentScriptSrc = node => {
+  return node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.object.object.type === "Identifier" && node.object.object.name === "document" && node.object.property.type === "Identifier" && node.object.property.name === "currentScript" && node.property.type === "Identifier" && node.property.name === "src";
+};
+
+const isNewWorkerCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "Worker";
+};
+const analyzeNewWorkerCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  analyzeWorkerCallArguments(node, {
+    isJsModule,
+    onUrl,
+    referenceSubtype: "new_worker_first_arg",
+    expectedSubtype: "worker"
+  });
+};
+const isNewSharedWorkerCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "SharedWorker";
+};
+const analyzeNewSharedWorkerCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  analyzeWorkerCallArguments(node, {
+    isJsModule,
+    onUrl,
+    referenceSubtype: "new_shared_worker_first_arg",
+    expectedSubtype: "shared_worker"
+  });
+};
+const isServiceWorkerRegisterCall = node => {
+  if (node.type !== "CallExpression") {
+    return false;
+  }
+
+  const callee = node.callee;
+
+  if (callee.type === "MemberExpression" && callee.property.type === "Identifier" && callee.property.name === "register") {
+    const parentObject = callee.object;
+
+    if (parentObject.type === "MemberExpression") {
+      const parentProperty = parentObject.property;
+
+      if (parentProperty.type === "Identifier" && parentProperty.name === "serviceWorker") {
+        const grandParentObject = parentObject.object;
+
+        if (grandParentObject.type === "MemberExpression") {
+          // window.navigator.serviceWorker.register
+          const grandParentProperty = grandParentObject.property;
+
+          if (grandParentProperty.type === "Identifier" && grandParentProperty.name === "navigator") {
+            const ancestorObject = grandParentObject.object;
+
+            if (ancestorObject.type === "Identifier" && ancestorObject.name === "window") {
+              return true;
+            }
+          }
+        }
+
+        if (grandParentObject.type === "Identifier") {
+          // navigator.serviceWorker.register
+          if (grandParentObject.name === "navigator") {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+};
+const analyzeServiceWorkerRegisterCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  analyzeWorkerCallArguments(node, {
+    isJsModule,
+    onUrl,
+    referenceSubtype: "service_worker_register_first_arg",
+    expectedSubtype: "service_worker"
+  });
+};
+
+const analyzeWorkerCallArguments = (node, {
+  isJsModule,
+  onUrl,
+  referenceSubtype,
+  expectedSubtype
+}) => {
+  let expectedType = "js_classic";
+  let typePropertyNode;
+  const secondArgNode = node.arguments[1];
+
+  if (secondArgNode) {
+    typePropertyNode = getTypePropertyNode$1(secondArgNode);
+
+    if (typePropertyNode) {
+      const typePropertyValueNode = typePropertyNode.value;
+
+      if (isStringLiteralNode(typePropertyValueNode)) {
+        const typePropertyValue = typePropertyValueNode.value;
+
+        if (typePropertyValue === "module") {
+          expectedType = "js_module";
+        }
+      }
+    }
+  }
+
+  const firstArgNode = node.arguments[0];
+
+  if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode;
+    onUrl({
+      type: "js_url_specifier",
+      subtype: referenceSubtype,
+      expectedType,
+      expectedSubtype,
+      typePropertyNode,
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column
+    });
+    return;
+  }
+
+  if (isNewUrlCall(firstArgNode)) {
+    analyzeNewUrlCall(firstArgNode, {
+      isJsModule,
+      onUrl: mention => {
+        Object.assign(mention, {
+          expectedType,
+          expectedSubtype,
+          typePropertyNode
+        });
+        onUrl(mention);
+      }
+    });
+  }
+};
+
+const isImportScriptsCall = node => {
+  const callee = node.callee;
+
+  if (callee.type === "Identifier" && callee.name === "importScripts") {
+    return true;
+  }
+
+  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "self" && callee.property.type === "Identifier" && callee.property.name === "importScripts";
+};
+const analyzeImportScriptCalls = (node, {
+  onUrl
+}) => {
+  node.arguments.forEach(arg => {
+    if (isStringLiteralNode(arg)) {
+      const specifierNode = arg;
+      onUrl({
+        type: "js_url_specifier",
+        subtype: "self_import_scripts_arg",
+        expectedType: "js_classic",
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column
+      });
+    }
+  });
+};
+
+const isSystemRegisterCall = node => {
+  const callee = node.callee;
+  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "System" && callee.property.type === "Identifier" && callee.property.name === "register";
+};
+const analyzeSystemRegisterCall = (node, {
+  onUrl
+}) => {
+  const firstArgNode = node.arguments[0];
+
+  if (firstArgNode.type === "ArrayExpression") {
+    analyzeSystemRegisterDeps(firstArgNode, {
+      onUrl
+    });
+    return;
+  }
+
+  if (isStringLiteralNode(firstArgNode)) {
+    const secondArgNode = node.arguments[1];
+
+    if (secondArgNode.type === "ArrayExpression") {
+      analyzeSystemRegisterDeps(secondArgNode, {
+        onUrl
+      });
+      return;
+    }
+  }
+};
+
+const analyzeSystemRegisterDeps = (node, {
+  onUrl
+}) => {
+  const elements = node.elements;
+  elements.forEach(element => {
+    if (isStringLiteralNode(element)) {
+      const specifierNode = element;
+      onUrl({
+        type: "js_url_specifier",
+        subtype: "system_register_arg",
+        expectedType: "js_classic",
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column
+      });
+    }
+  });
+};
+
+const isSystemImportCall = node => {
+  const callee = node.callee;
+  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && // because of minification we can't assume _context.
+  // so anything matching "*.import()"
+  // will be assumed to be the equivalent to "import()"
+  // callee.object.name === "_context" &&
+  callee.property.type === "Identifier" && callee.property.name === "import";
+};
+const analyzeSystemImportCall = (node, {
+  onUrl
+}) => {
+  const firstArgNode = node.arguments[0];
+
+  if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode;
+    onUrl({
+      type: "js_url_specifier",
+      subtype: "system_import_arg",
+      expectedType: "js_classic",
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column
+    });
+  }
+};
+
+const parseJsUrls = async ({
+  js,
+  url,
+  isJsModule = false,
+  isWebWorker = false
+} = {}) => {
+  const jsUrls = [];
+  const jsAst = await parseJsWithAcorn({
+    js,
+    url,
+    isJsModule
+  });
+
+  const onUrl = jsUrl => {
+    jsUrls.push(jsUrl);
+  };
+
+  ancestor(jsAst, {
+    ImportDeclaration: node => {
+      analyzeImportDeclaration(node, {
+        onUrl
+      });
+    },
+    ImportExpression: node => {
+      analyzeImportExpression(node, {
+        onUrl
+      });
+    },
+    ExportNamedDeclaration: node => {
+      analyzeExportNamedDeclaration(node, {
+        onUrl
+      });
+    },
+    ExportAllDeclaration: node => {
+      analyzeExportAllDeclaration(node, {
+        onUrl
+      });
+    },
+    CallExpression: node => {
+      if (isServiceWorkerRegisterCall(node)) {
+        analyzeServiceWorkerRegisterCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+
+      if (isWebWorker && isImportScriptsCall(node)) {
+        analyzeImportScriptCalls(node, {
+          onUrl
+        });
+        return;
+      }
+
+      if (!isJsModule && isSystemRegisterCall(node)) {
+        analyzeSystemRegisterCall(node, {
+          onUrl
+        });
+        return;
+      }
+
+      if (!isJsModule && isSystemImportCall(node)) {
+        analyzeSystemImportCall(node, {
+          onUrl
+        });
+        return;
+      }
+    },
+    NewExpression: (node, ancestors) => {
+      if (isNewWorkerCall(node)) {
+        analyzeNewWorkerCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+
+      if (isNewSharedWorkerCall(node)) {
+        analyzeNewSharedWorkerCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+
+      if (isNewUrlCall(node)) {
+        const parent = ancestors[ancestors.length - 2];
+
+        if (parent && (isNewWorkerCall(parent) || isNewSharedWorkerCall(parent) || isServiceWorkerRegisterCall(parent))) {
+          return;
+        }
+
+        analyzeNewUrlCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+    }
+  });
+  return jsUrls;
 };
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
@@ -1077,6 +3339,199 @@ const jsenvPluginUrlVersion = () => {
   };
 };
 
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json"],
+    isTextual: true
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"]
+  },
+  "application/xml": {
+    extensions: ["xml"]
+  },
+  "application/x-gzip": {
+    extensions: ["gz"]
+  },
+  "application/wasm": {
+    extensions: ["wasm"]
+  },
+  "application/zip": {
+    extensions: ["zip"]
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"]
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"]
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"]
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"]
+  },
+  "audio/webm": {
+    extensions: ["weba"]
+  },
+  "audio/x-wav": {
+    extensions: ["wav"]
+  },
+  "font/ttf": {
+    extensions: ["ttf"]
+  },
+  "font/woff": {
+    extensions: ["woff"]
+  },
+  "font/woff2": {
+    extensions: ["woff2"]
+  },
+  "image/png": {
+    extensions: ["png"]
+  },
+  "image/gif": {
+    extensions: ["gif"]
+  },
+  "image/jpeg": {
+    extensions: ["jpg"]
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true
+  },
+  "text/plain": {
+    extensions: ["txt"]
+  },
+  "text/html": {
+    extensions: ["html"]
+  },
+  "text/css": {
+    extensions: ["css"]
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
+  },
+  "text/x-sass": {
+    extensions: ["sass"]
+  },
+  "text/x-scss": {
+    extensions: ["scss"]
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"]
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"]
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
+  },
+  "video/ogg": {
+    extensions: ["ogv"]
+  },
+  "video/webm": {
+    extensions: ["webm"]
+  }
+};
+
+const CONTENT_TYPE = {
+  parse: string => {
+    const [mediaType, charset] = string.split(";");
+    return {
+      mediaType: normalizeMediaType(mediaType),
+      charset
+    };
+  },
+  stringify: ({
+    mediaType,
+    charset
+  }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+
+    return mediaType;
+  },
+  asMediaType: value => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+
+    return null;
+  },
+  isJson: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return mediaType === "application/json" || /^application\/\w+\+json$/.test(mediaType);
+  },
+  isTextual: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    } // catch things like application/manifest+json, application/importmap+json
+
+
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+
+    return false;
+  },
+  isBinary: value => !CONTENT_TYPE.isTextual(value),
+  asFileExtension: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+  fromUrlExtension: url => {
+    const {
+      pathname
+    } = new URL(url);
+    const extensionWithDot = extname(pathname);
+
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find(mediaType => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension);
+    });
+    return mediaTypeFound || "application/octet-stream";
+  }
+};
+
+const normalizeMediaType = value => {
+  if (value === "text/javascript") {
+    return "text/javascript";
+  }
+
+  return value;
+};
+
 const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -1419,6 +3874,133 @@ const jsenvPluginHtmlInlineContent = ({
       }
     }
   };
+};
+
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+
+  while (i--) {
+    const previousChar = string[i];
+
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+
+    break;
+  }
+
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const JS_QUOTES = {
+  pickBest: (string, {
+    canUseTemplateString,
+    defaultQuote = DOUBLE
+  } = {}) => {
+    // check default first, once tested do no re-test it
+    if (!string.includes(defaultQuote)) {
+      return defaultQuote;
+    }
+
+    if (defaultQuote !== DOUBLE && !string.includes(DOUBLE)) {
+      return DOUBLE;
+    }
+
+    if (defaultQuote !== SINGLE && !string.includes(SINGLE)) {
+      return SINGLE;
+    }
+
+    if (canUseTemplateString && defaultQuote !== BACKTICK && !string.includes(BACKTICK)) {
+      return BACKTICK;
+    }
+
+    return defaultQuote;
+  },
+  escapeSpecialChars: (string, {
+    quote = "pickBest",
+    canUseTemplateString,
+    defaultQuote,
+    allowEscapeForVersioning = false
+  }) => {
+    quote = quote === "pickBest" ? JS_QUOTES.pickBest(string, {
+      canUseTemplateString,
+      defaultQuote
+    }) : quote;
+    const replacements = JS_QUOTE_REPLACEMENTS[quote];
+    let result = "";
+    let last = 0;
+    let i = 0;
+
+    while (i < string.length) {
+      const char = string[i];
+      i++;
+      if (isEscaped(i - 1, string)) continue;
+      const replacement = replacements[char];
+
+      if (replacement) {
+        if (allowEscapeForVersioning && char === quote && string.slice(i, i + 6) === "+__v__") {
+          let isVersioningConcatenation = false;
+          let j = i + 6; // start after the +
+
+          while (j < string.length) {
+            const lookAheadChar = string[j];
+            j++;
+
+            if (lookAheadChar === "+" && string[j] === quote && !isEscaped(j - 1, string)) {
+              isVersioningConcatenation = true;
+              break;
+            }
+          }
+
+          if (isVersioningConcatenation) {
+            // it's a concatenation
+            // skip until the end of concatenation (the second +)
+            // and resume from there
+            i = j + 1;
+            continue;
+          }
+        }
+
+        if (last === i - 1) {
+          result += replacement;
+        } else {
+          result += `${string.slice(last, i - 1)}${replacement}`;
+        }
+
+        last = i;
+      }
+    }
+
+    if (last !== string.length) {
+      result += string.slice(last);
+    }
+
+    return `${quote}${result}${quote}`;
+  }
+};
+const DOUBLE = `"`;
+const SINGLE = `'`;
+const BACKTICK = "`";
+const lineEndingEscapes = {
+  "\n": "\\n",
+  "\r": "\\r",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029"
+};
+const JS_QUOTE_REPLACEMENTS = {
+  [DOUBLE]: {
+    '"': '\\"',
+    ...lineEndingEscapes
+  },
+  [SINGLE]: {
+    "'": "\\'",
+    ...lineEndingEscapes
+  },
+  [BACKTICK]: {
+    "`": "\\`",
+    "$": "\\$"
+  }
 };
 
 const jsenvPluginJsInlineContent = ({
@@ -3189,6 +5771,102 @@ const convertJsModuleToJsClassic = async ({
     content: code,
     sourcemap
   };
+};
+
+const versionFromValue = value => {
+  if (typeof value === "number") {
+    return numberToVersion(value);
+  }
+
+  if (typeof value === "string") {
+    return stringToVersion(value);
+  }
+
+  throw new TypeError(`version must be a number or a string, got ${value}`);
+};
+
+const numberToVersion = number => {
+  return {
+    major: number,
+    minor: 0,
+    patch: 0
+  };
+};
+
+const stringToVersion = string => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
+    return {
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0
+    };
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0
+  };
+};
+
+const compareTwoVersions = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue(versionA);
+  const semanticVersionB = versionFromValue(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+
+  if (majorDiff > 0) {
+    return majorDiff;
+  }
+
+  if (majorDiff < 0) {
+    return majorDiff;
+  }
+
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+
+  if (minorDiff > 0) {
+    return minorDiff;
+  }
+
+  if (minorDiff < 0) {
+    return minorDiff;
+  }
+
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+
+  if (patchDiff > 0) {
+    return patchDiff;
+  }
+
+  if (patchDiff < 0) {
+    return patchDiff;
+  }
+
+  return 0;
+};
+
+const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
+};
+
+const findHighestVersion = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow(highestVersion, value)) {
+      return value;
+    }
+
+    return highestVersion;
+  });
 };
 
 const featureCompats = {
@@ -8007,6 +10685,28 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
+const memoizeByFirstArgument = compute => {
+  const urlCache = new Map();
+
+  const fnWithMemoization = (url, ...args) => {
+    const valueFromCache = urlCache.get(url);
+
+    if (valueFromCache) {
+      return valueFromCache;
+    }
+
+    const value = compute(url, ...args);
+    urlCache.set(url, value);
+    return value;
+  };
+
+  fnWithMemoization.forget = () => {
+    urlCache.clear();
+  };
+
+  return fnWithMemoization;
+};
+
 const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
   if (userAgent.includes("node-fetch/")) {
     // it's not really node and conceptually we can't assume the node version
@@ -10604,6 +13304,80 @@ const executeTestPlan = async ({
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage
   };
+};
+
+const memoize = compute => {
+  let memoized = false;
+  let memoizedValue;
+
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+
+
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
+
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
+    return value;
+  };
+
+  return fnWithMemoization;
+};
+
+const escapeChars = (string, replacements) => {
+  const charsToEscape = Object.keys(replacements);
+  let result = "";
+  let last = 0;
+  let i = 0;
+
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+
+    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
+      if (last === i - 1) {
+        result += replacements[char];
+      } else {
+        result += `${string.slice(last, i - 1)}${replacements[char]}`;
+      }
+
+      last = i;
+    }
+  }
+
+  if (last !== string.length) {
+    result += string.slice(last);
+  }
+
+  return result;
+};
+
+const escapeRegexpSpecialChars = string => {
+  return escapeChars(String(string), {
+    "/": "\\/",
+    "^": "\\^",
+    "\\": "\\\\",
+    "[": "\\[",
+    "]": "\\]",
+    "(": "\\(",
+    ")": "\\)",
+    "{": "\\{",
+    "}": "\\}",
+    "?": "\\?",
+    "+": "\\+",
+    "*": "\\*",
+    ".": "\\.",
+    "|": "\\|",
+    "$": "\\$"
+  });
 };
 
 const createRuntimeFromPlaywright = ({

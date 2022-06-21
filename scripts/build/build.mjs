@@ -24,7 +24,10 @@ await build({
     include: {
       "**/*": true,
       "**/node_modules/": false,
+      "**/node_modules/@jsenv/abort/": true,
+      "**/node_modules/@jsenv/ast/": true,
       "**/node_modules/@jsenv/babel-plugins/": true,
+      "**/node_modules/@jsenv/utils/": true,
     },
   },
   bundling: {
