@@ -1,20 +1,19 @@
 import { createSSERoom, timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
-import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, readFile, readDirectory, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
+import crypto, { createHash } from "node:crypto";
+import { dirname, basename, extname } from "node:path";
 import { createSupportsColor } from "supports-color";
 import isUnicodeSupported from "is-unicode-supported";
 import stringWidth from "string-width";
 import ansiEscapes from "ansi-escapes";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { parse, serialize, parseFragment } from "parse5";
 import { p as parseSrcSet } from "./js/html_src_set.js";
 import { createRequire } from "node:module";
 import { ancestor } from "acorn-walk";
-import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { existsSync, readFileSync, statSync, realpathSync, readdirSync } from "node:fs";
-import { extname } from "node:path";
+import MagicString from "magic-string";
 import babelParser from "@babel/parser";
-import crypto, { createHash } from "node:crypto";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
@@ -24,6 +23,983 @@ import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
 import { fork } from "node:child_process";
 import { u as uneval } from "./js/uneval.js";
+
+/*
+ * data:[<mediatype>][;base64],<data>
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
+ */
+
+/* eslint-env browser, node */
+const DATA_URL = {
+  parse: string => {
+    const afterDataProtocol = string.slice("data:".length);
+    const commaIndex = afterDataProtocol.indexOf(",");
+    const beforeComma = afterDataProtocol.slice(0, commaIndex);
+    let contentType;
+    let base64Flag;
+
+    if (beforeComma.endsWith(`;base64`)) {
+      contentType = beforeComma.slice(0, -`;base64`.length);
+      base64Flag = true;
+    } else {
+      contentType = beforeComma;
+      base64Flag = false;
+    }
+
+    contentType = contentType === "" ? "text/plain;charset=US-ASCII" : contentType;
+    const afterComma = afterDataProtocol.slice(commaIndex + 1);
+    return {
+      contentType,
+      base64Flag,
+      data: afterComma
+    };
+  },
+  stringify: ({
+    contentType,
+    base64Flag = true,
+    data
+  }) => {
+    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
+      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
+      if (data.length === 0) {
+        return `data:,`;
+      }
+
+      if (base64Flag) {
+        return `data:;base64,${data}`;
+      }
+
+      return `data:,${data}`;
+    }
+
+    if (base64Flag) {
+      return `data:${contentType};base64,${data}`;
+    }
+
+    return `data:${contentType},${data}`;
+  }
+};
+
+const urlToScheme$1 = url => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+
+  if (colonIndex === -1) {
+    return "";
+  }
+
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
+const urlToRessource$1 = url => {
+  const scheme = urlToScheme$1(url);
+
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+
+const urlToPathname$1 = url => {
+  const ressource = urlToRessource$1(url);
+  const pathname = ressourceToPathname$1(ressource);
+  return pathname;
+};
+
+const ressourceToPathname$1 = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+
+  if (searchSeparatorIndex > -1) {
+    return ressource.slice(0, searchSeparatorIndex);
+  }
+
+  const hashIndex = ressource.indexOf("#");
+
+  if (hashIndex > -1) {
+    return ressource.slice(0, hashIndex);
+  }
+
+  return ressource;
+};
+
+const urlToFilename$1 = url => {
+  const pathname = urlToPathname$1(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const generateInlineContentUrl = ({
+  url,
+  extension,
+  line,
+  column,
+  lineEnd,
+  columnEnd
+}) => {
+  const generatedName = line === lineEnd ? `L${line}C${column}-L${lineEnd}C${columnEnd}` : `L${line}-L${lineEnd}`;
+  const filenameRaw = urlToFilename$1(url);
+  const filename = `${filenameRaw}@${generatedName}${extension}`; // ideally we should keep query params from url
+  // maybe we could use a custom scheme like "inline:"
+
+  const inlineContentUrl = new URL(filename, url).href;
+  return inlineContentUrl;
+};
+
+const urlToFileSystemPath = url => {
+  let urlString = String(url);
+
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+
+  const fileSystemPath = fileURLToPath(urlString);
+  return fileSystemPath;
+};
+
+// consider switching to https://babeljs.io/docs/en/babel-code-frame
+const stringifyUrlSite = ({
+  url,
+  line,
+  column,
+  content
+}, {
+  showCodeFrame = true,
+  numberOfSurroundingLinesToShow,
+  lineMaxLength,
+  color
+} = {}) => {
+  let string = `${humanizeUrl(url)}`;
+
+  if (typeof line === "number") {
+    string += `:${line}`;
+
+    if (typeof column === "number") {
+      string += `:${column}`;
+    }
+  }
+
+  if (!showCodeFrame || typeof line !== "number" || !content) {
+    return string;
+  }
+
+  const sourceLoc = showSourceLocation({
+    content,
+    line,
+    column,
+    numberOfSurroundingLinesToShow,
+    lineMaxLength,
+    color
+  });
+  return `${string}
+${sourceLoc}`;
+};
+const humanizeUrl = url => {
+  if (url.startsWith("file://")) {
+    // we prefer file system path because vscode reliably make them clickable
+    // and sometimes it won't for file:// urls
+    return urlToFileSystemPath(url);
+  }
+
+  return url;
+};
+const showSourceLocation = ({
+  content,
+  line,
+  column,
+  numberOfSurroundingLinesToShow = 1,
+  lineMaxLength = 120
+} = {}) => {
+  let mark = string => string;
+
+  let aside = string => string; // if (color) {
+  //   mark = (string) => ANSI.color(string, ANSI.RED)
+  //   aside = (string) => ANSI.color(string, ANSI.GREY)
+  // }
+
+
+  const lines = content.split(/\r?\n/);
+  if (line === 0) line = 1;
+  let lineRange = {
+    start: line - 1,
+    end: line
+  };
+  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = lineRangeWithinLines(lineRange, lines);
+  const linesToShow = lines.slice(lineRange.start, lineRange.end);
+  const endLineNumber = lineRange.end;
+  const lineNumberMaxWidth = String(endLineNumber).length;
+  if (column === 0) column = 1;
+  const columnRange = {};
+
+  if (column === undefined) {
+    columnRange.start = 0;
+    columnRange.end = lineMaxLength;
+  } else if (column > lineMaxLength) {
+    columnRange.start = column - Math.floor(lineMaxLength / 2);
+    columnRange.end = column + Math.ceil(lineMaxLength / 2);
+  } else {
+    columnRange.start = 0;
+    columnRange.end = lineMaxLength;
+  }
+
+  return linesToShow.map((lineSource, index) => {
+    const lineNumber = lineRange.start + index + 1;
+    const isMainLine = lineNumber === line;
+    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
+    const lineNumberWidth = String(lineNumber).length; // ensure if line moves from 7,8,9 to 10 the display is still great
+
+    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
+    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
+    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
+
+    if (isMainLine) {
+      if (column === undefined) {
+        return `${mark(">")} ${lineFormatted}`;
+      }
+
+      const spacing = stringToSpaces(`${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`);
+      return `${mark(">")} ${lineFormatted}
+  ${spacing}${mark("^")}`;
+    }
+
+    return `  ${lineFormatted}`;
+  }).join(`
+`);
+};
+
+const applyColumnRange = ({
+  start,
+  end
+}, line) => {
+  if (typeof start !== "number") {
+    throw new TypeError(`start must be a number, received ${start}`);
+  }
+
+  if (typeof end !== "number") {
+    throw new TypeError(`end must be a number, received ${end}`);
+  }
+
+  if (end < start) {
+    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`);
+  }
+
+  const prefix = "…";
+  const suffix = "…";
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+
+  let result = "";
+
+  while (from < to) {
+    result += line[from];
+    from++;
+  }
+
+  if (result.length === 0) {
+    return "";
+  }
+
+  if (startTruncated && endTruncated) {
+    return `${prefix}${result}${suffix}`;
+  }
+
+  if (startTruncated) {
+    return `${prefix}${result}`;
+  }
+
+  if (endTruncated) {
+    return `${result}${suffix}`;
+  }
+
+  return result;
+};
+
+const stringToSpaces = string => string.replace(/[^\t]/g, " "); // const getLineRangeLength = ({ start, end }) => end - start
+
+
+const moveLineRangeUp = ({
+  start,
+  end
+}, number) => {
+  return {
+    start: start - number,
+    end
+  };
+};
+
+const moveLineRangeDown = ({
+  start,
+  end
+}, number) => {
+  return {
+    start,
+    end: end + number
+  };
+};
+
+const lineRangeWithinLines = ({
+  start,
+  end
+}, lines) => {
+  return {
+    start: start < 0 ? 0 : start,
+    end: end > lines.length ? lines.length : end
+  };
+};
+
+const urlToExtension$1 = url => {
+  const pathname = urlToPathname$1(url);
+  return pathnameToExtension$1(pathname);
+};
+
+const pathnameToExtension$1 = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  const extension = pathname.slice(dotLastIndex);
+  return extension;
+};
+
+const asUrlWithoutSearch = url => {
+  const urlObject = new URL(url);
+  urlObject.search = "";
+  return urlObject.href;
+};
+const isValidUrl$1 = url => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}; // normalize url search params:
+// Using URLSearchParams to alter the url search params
+// can result into "file:///file.css?css_module"
+// becoming "file:///file.css?css_module="
+// we want to get rid of the "=" and consider it's the same url
+
+const normalizeUrl = url => {
+  if (url.includes("?")) {
+    // disable on data urls (would mess up base64 encoding)
+    if (url.startsWith("data:")) {
+      return url;
+    }
+
+    return url.replace(/[=](?=&|$)/g, "");
+  }
+
+  return url;
+};
+const injectQueryParamsIntoSpecifier = (specifier, params) => {
+  if (isValidUrl$1(specifier)) {
+    return injectQueryParams(specifier, params);
+  }
+
+  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
+  const searchParams = new URLSearchParams(afterQuestion);
+  Object.keys(params).forEach(key => {
+    searchParams.set(key, params[key]);
+  });
+  const paramsString = searchParams.toString();
+
+  if (paramsString) {
+    return `${beforeQuestion}?${paramsString}`;
+  }
+
+  return specifier;
+};
+const injectQueryParams = (url, params) => {
+  const urlObject = new URL(url);
+  Object.keys(params).forEach(key => {
+    urlObject.searchParams.set(key, params[key]);
+  });
+  const urlWithParams = urlObject.href;
+  return urlWithParams;
+};
+const setUrlFilename = (url, filename) => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    search,
+    hash
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const parentPathname = new URL("./", urlObject).pathname;
+  return `${origin}${parentPathname}${filename}${search}${hash}`;
+};
+const ensurePathnameTrailingSlash = url => {
+  const urlObject = new URL(url);
+  const {
+    pathname
+  } = urlObject;
+
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+
+  let {
+    origin
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const {
+    search,
+    hash
+  } = urlObject;
+  return `${origin}${pathname}/${search}${hash}`;
+};
+const asUrlUntilPathname = url => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    pathname
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const urlUntilPathname = `${origin}${pathname}`;
+  return urlUntilPathname;
+};
+
+const isFileSystemPath = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl = value => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+
+  return String(pathToFileURL(value));
+};
+
+const getCallerPosition = () => {
+  const {
+    prepareStackTrace
+  } = Error;
+
+  Error.prepareStackTrace = (error, stack) => {
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+
+  const {
+    stack
+  } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
+  return {
+    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
+    line: callerCallsite.getLineNumber(),
+    column: callerCallsite.getColumnNumber()
+  };
+};
+
+const resolveUrl$1 = (specifier, baseUrl) => {
+  if (typeof baseUrl === "undefined") {
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
+  }
+
+  return String(new URL(specifier, baseUrl));
+};
+
+const resolveDirectoryUrl = (specifier, baseUrl) => {
+  const url = resolveUrl$1(specifier, baseUrl);
+  return ensurePathnameTrailingSlash(url);
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  if (pathname === otherPathname) {
+    return pathname;
+  }
+
+  let commonPart = "";
+  let commonPathname = "";
+  let i = 0;
+  const length = pathname.length;
+  const otherLength = otherPathname.length;
+
+  while (i < length) {
+    const char = pathname.charAt(i);
+    const otherChar = otherPathname.charAt(i);
+    i++;
+
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/";
+        commonPathname += commonPart;
+        commonPart = "";
+      } else {
+        commonPart += char;
+      }
+    } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/";
+        commonPathname += commonPart;
+      }
+
+      return commonPathname;
+    }
+  }
+
+  if (length === otherLength) {
+    commonPathname += commonPart;
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart;
+  }
+
+  return commonPathname;
+};
+
+const urlToRelativeUrl = (url, baseUrl) => {
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
+
+  if (urlObject.protocol !== baseUrlObject.protocol) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
+  }
+
+  const {
+    pathname,
+    hash,
+    search
+  } = urlObject;
+
+  if (pathname === "/") {
+    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlRessourceWithoutLeadingSlash;
+  }
+
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+
+  if (!commonPathname) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+
+  if (baseSpecificPathname.includes("/")) {
+    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
+  }
+
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return relativeUrl;
+};
+
+const pathnameToParentPathname$1 = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const moveUrl = ({
+  url,
+  from,
+  to,
+  preferAbsolute = false
+}) => {
+  let relativeUrl = urlToRelativeUrl(url, from);
+
+  if (relativeUrl.slice(0, 2) === "//") {
+    // restore the protocol
+    relativeUrl = new URL(relativeUrl, url).href;
+  }
+
+  const absoluteUrl = new URL(relativeUrl, to).href;
+
+  if (preferAbsolute) {
+    return absoluteUrl;
+  }
+
+  return urlToRelativeUrl(absoluteUrl, to);
+};
+
+const urlIsInsideOf = (url, otherUrl) => {
+  const urlObject = new URL(url);
+  const otherUrlObject = new URL(otherUrl);
+
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false;
+  }
+
+  const urlPathname = urlObject.pathname;
+  const otherUrlPathname = otherUrlObject.pathname;
+
+  if (urlPathname === otherUrlPathname) {
+    return false;
+  }
+
+  const isInside = urlPathname.startsWith(otherUrlPathname);
+  return isInside;
+};
+
+const urlToBasename = url => {
+  const filename = urlToFilename$1(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  const basename = dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
+  return basename;
+};
+
+const assertAndNormalizeDirectoryUrl = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensurePathnameTrailingSlash(urlString);
+};
+
+const assertAndNormalizeFileUrl = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const statsToType = stats => {
+  if (stats.isFile()) return "file";
+  if (stats.isDirectory()) return "directory";
+  if (stats.isSymbolicLink()) return "symbolic-link";
+  if (stats.isFIFO()) return "fifo";
+  if (stats.isSocket()) return "socket";
+  if (stats.isCharacterDevice()) return "character-device";
+  if (stats.isBlockDevice()) return "block-device";
+  return undefined;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH = 1;
+const permissionsToBinaryFlags = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR;
+  if (owner.write) binaryFlags |= S_IWUSR;
+  if (owner.execute) binaryFlags |= S_IXUSR;
+  if (group.read) binaryFlags |= S_IRGRP;
+  if (group.write) binaryFlags |= S_IWGRP;
+  if (group.execute) binaryFlags |= S_IXGRP;
+  if (others.read) binaryFlags |= S_IROTH;
+  if (others.write) binaryFlags |= S_IWOTH;
+  if (others.execute) binaryFlags |= S_IXOTH;
+  return binaryFlags;
+};
+
+const writeEntryPermissions = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault("read", "owner", permissions),
+        write: getPermissionOrComputeDefault("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault("read", "group", permissions),
+        write: getPermissionOrComputeDefault("write", "group", permissions),
+        execute: getPermissionOrComputeDefault("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault("read", "others", permissions),
+        write: getPermissionOrComputeDefault("write", "others", permissions),
+        execute: getPermissionOrComputeDefault("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return new Promise((resolve, reject) => {
+    chmod(new URL(sourceUrl), binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+const actionLevels = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels[action];
+    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+const isWindows$2 = process.platform === "win32";
+const readEntryStat = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$2 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
+
+        try {
+          // unfortunately it means we mutate the permissions
+          // without being able to restore them to the previous value
+          // (because reading current permission would also throw)
+          await writeEntryPermissions(sourceUrl, 0o666);
+          const stats = await readStat(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              console.error(`still got EPERM after stats on ${sourcePath}`);
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          console.error(`error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`);
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? stat : lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+/*
+ * - Buffer documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/buffer.html
+ * - eTag documentation on MDN
+ *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+ */
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
 
 /*
  * See callback_race.md
@@ -555,6 +1531,1796 @@ const SIGINT_CALLBACK = {
     return () => {
       process.removeListener("SIGINT", cb);
     };
+  }
+};
+
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
+  }
+
+  if (!hasScheme$1(value)) {
+    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
+  }
+};
+const isPlainObject = value => {
+  if (value === null) {
+    return false;
+  }
+
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+};
+
+const isWindowsPathnameSpecifier = specifier => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+
+const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
+
+const resolveAssociations = (associations, baseUrl) => {
+  assertUrlLike(baseUrl, "baseUrl");
+  const associationsResolved = {};
+  Object.keys(associations).forEach(key => {
+    const valueMap = associations[key];
+    const valueMapResolved = {};
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+      valueMapResolved[patternResolved] = value;
+    });
+    associationsResolved[key] = valueMapResolved;
+  });
+  return associationsResolved;
+};
+
+const normalizeUrlPattern = (urlPattern, baseUrl) => {
+  // starts with a scheme
+  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
+    return urlPattern;
+  }
+
+  return String(new URL(urlPattern, baseUrl));
+};
+
+const asFlatAssociations = associations => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(`associations must be a plain object, got ${associations}`);
+  }
+
+  const flatAssociations = {};
+  Object.keys(associations).forEach(key => {
+    const valueMap = associations[key];
+
+    if (!isPlainObject(valueMap)) {
+      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
+    }
+
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const previousValue = flatAssociations[pattern];
+      flatAssociations[pattern] = previousValue ? { ...previousValue,
+        [key]: value
+      } : {
+        [key]: value
+      };
+    });
+  });
+  return flatAssociations;
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+/** @module jsenv_url_meta **/
+
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+
+const applyPatternMatching = ({
+  url,
+  pattern
+}) => {
+  assertUrlLike(pattern, "pattern");
+  assertUrlLike(url, "url");
+  const {
+    matched,
+    patternIndex,
+    index,
+    groups
+  } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  groups.forEach(group => {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  });
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = count => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+
+  const consumeString = count => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+
+  const matchOne = () => {
+    // pattern consumed and string consumed
+    if (remainingPattern === "" && remainingString === "") {
+      return true; // string fully matched pattern
+    } // pattern consumed, string not consumed
+
+
+    if (remainingPattern === "" && remainingString !== "") {
+      return false; // fails because string longer than expected
+    } // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+
+
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+
+      if (remainingPattern === "*") {
+        groups.push({
+          string: ""
+        });
+      }
+
+      return false; // fail because string shorter than expected
+    } // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+
+
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({
+          string: consumeRemainingString()
+        });
+        return true;
+      }
+
+      return false;
+    } // fast path trailing '**'
+
+
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    } // pattern leading **
+
+
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+      } // pattern ending with ** always match remaining string
+
+
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+
+      if (remainingPattern === "") {
+        // matches everything except '/'
+        const slashIndex = remainingString.indexOf("/");
+
+        if (slashIndex === -1) {
+          groups.push({
+            string: consumeRemainingString()
+          });
+          return true;
+        }
+
+        groups.push({
+          string: consumeString(slashIndex)
+        });
+        return false;
+      } // the next char must not the one expected by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+
+
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({
+          string: ""
+        });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+
+    return undefined;
+  };
+
+  iterate();
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups
+  };
+};
+
+const skipUntilMatch = ({
+  pattern,
+  string,
+  canSkipSlash
+}) => {
+  let index = 0;
+  let remainingString = string;
+  let longestMatchRange = null;
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
+        }
+      };
+    }
+
+    const matchAttemptIndex = matchAttempt.index;
+    const matchRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: matchAttemptIndex,
+      groups: matchAttempt.groups
+    };
+
+    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
+      longestMatchRange = matchRange;
+    }
+
+    const nextIndex = matchAttemptIndex + 1;
+    const canSkip = nextIndex < remainingString.length && (canSkipSlash || remainingString[0] !== "/");
+
+    if (canSkip) {
+      // search against the next unattempted string
+      index += nextIndex;
+      remainingString = remainingString.slice(nextIndex);
+      return tryToMatch();
+    }
+
+    return {
+      matched: false,
+      patternIndex: longestMatchRange.patternIndex,
+      index: longestMatchRange.index + longestMatchRange.length,
+      groups: longestMatchRange.groups,
+      group: {
+        string: string.slice(0, longestMatchRange.index)
+      }
+    };
+  };
+
+  return tryToMatch();
+};
+
+const applyAssociations = ({
+  url,
+  associations
+}) => {
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+    const {
+      matched
+    } = applyPatternMatching({
+      pattern,
+      url
+    });
+
+    if (matched) {
+      const value = flatAssociations[pattern];
+
+      if (isPlainObject(previousValue) && isPlainObject(value)) {
+        return { ...previousValue,
+          ...value
+        };
+      }
+
+      return value;
+    }
+
+    return previousValue;
+  }, {});
+};
+
+const applyAliases = ({
+  url,
+  aliases
+}) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find(key => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url
+    });
+
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+
+    return false;
+  });
+
+  if (!aliasMatchingKey) {
+    return url;
+  }
+
+  const {
+    matchGroups
+  } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  const newUrl = parts.reduce((previous, value, index) => {
+    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
+  }, "");
+  return newUrl;
+};
+
+const urlChildMayMatch = ({
+  url,
+  associations,
+  predicate
+}) => {
+  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
+
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  const flatAssociations = asFlatAssociations(associations); // for full match we must create an object to allow pattern to override previous ones
+
+  let fullMatchMeta = {};
+  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+
+  const partialMatchMetaArray = [];
+  Object.keys(flatAssociations).forEach(pattern => {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url
+    });
+
+    if (matchResult.matched) {
+      someFullMatch = true;
+
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = { ...fullMatchMeta,
+          ...value
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  });
+
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+
+  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  urlChildMayMatch,
+  applyPatternMatching,
+  applyAliases
+};
+
+const readDirectory = async (url, {
+  emfileMaxWait = 1000
+} = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
+  const directoryPath = urlToFileSystemPath(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = () => {
+    return readdirNaive(directoryPath, {
+      handleTooManyFilesOpenedError: async error => {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw error;
+        }
+
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(attempt());
+          }, attemptCount);
+        });
+      }
+    });
+  };
+
+  return attempt();
+};
+
+const readdirNaive = (directoryPath, {
+  handleTooManyFilesOpenedError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    readdir(directoryPath, (error, names) => {
+      if (error) {
+        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
+          resolve(handleTooManyFilesOpenedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(names);
+      }
+    });
+  });
+};
+
+const comparePathnames = (leftPathame, rightPathname) => {
+  const leftPartArray = leftPathame.split("/");
+  const rightPartArray = rightPathname.split("/");
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+
+  while (i < maxLength) {
+    const leftPartExists = (i in leftPartArray);
+    const rightPartExists = (i in rightPartArray); // longer comes first
+
+    if (!leftPartExists) {
+      return +1;
+    }
+
+    if (!rightPartExists) {
+      return -1;
+    }
+
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
+
+    if (leftPartIsLast && !rightPartIsLast) {
+      return +1;
+    }
+
+    if (!leftPartIsLast && rightPartIsLast) {
+      return -1;
+    }
+
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++; // local comparison comes first
+
+    const comparison = leftPart.localeCompare(rightPart);
+
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+
+  if (leftLength < rightLength) {
+    return +1;
+  }
+
+  if (leftLength > rightLength) {
+    return -1;
+  }
+
+  return 0;
+};
+
+const collectFiles = async ({
+  signal = new AbortController().signal,
+  directoryUrl,
+  associations,
+  predicate
+}) => {
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
+  const collectOperation = Abort.startOperation();
+  collectOperation.addAbortSignal(signal);
+  const matchingFileResultArray = [];
+
+  const visitDirectory = async directoryUrl => {
+    collectOperation.throwIfAborted();
+    const directoryItems = await readDirectory(directoryUrl);
+    await Promise.all(directoryItems.map(async directoryItem => {
+      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
+      collectOperation.throwIfAborted();
+      const directoryChildNodeStats = await readEntryStat(directoryChildNodeUrl, {
+        // we ignore symlink because recursively traversed
+        // so symlinked file will be discovered.
+        // Moreover if they lead outside of directoryPath it can become a problem
+        // like infinite recursion of whatever.
+        // that we could handle using an object of pathname already seen but it will be useless
+        // because directoryPath is recursively traversed
+        followLink: false
+      });
+
+      if (directoryChildNodeStats.isDirectory()) {
+        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
+
+        if (!URL_META.urlChildMayMatch({
+          url: subDirectoryUrl,
+          associations,
+          predicate
+        })) {
+          return;
+        }
+
+        await visitDirectory(subDirectoryUrl);
+        return;
+      }
+
+      if (directoryChildNodeStats.isFile()) {
+        const meta = URL_META.applyAssociations({
+          url: directoryChildNodeUrl,
+          associations
+        });
+        if (!predicate(meta)) return;
+        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
+        matchingFileResultArray.push({
+          url: new URL(relativeUrl, rootDirectoryUrl).href,
+          relativeUrl,
+          meta,
+          fileStats: directoryChildNodeStats
+        });
+        return;
+      }
+    }));
+  };
+
+  try {
+    await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
+    // to perform operation in the same order they appear in the filesystem.
+    // It also allow to get a predictable return value.
+    // For that reason we sort matchingFileResultArray
+
+    matchingFileResultArray.sort((leftFile, rightFile) => {
+      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
+    });
+    return matchingFileResultArray;
+  } finally {
+    await collectOperation.end();
+  }
+};
+
+const {
+  mkdir
+} = promises;
+const writeDirectory = async (destination, {
+  recursive = true,
+  allowUseless = false
+} = {}) => {
+  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationStats = await readEntryStat(destinationUrl, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (destinationStats) {
+    if (destinationStats.isDirectory()) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`directory already exists at ${destinationPath}`);
+    }
+
+    const destinationType = statsToType(destinationStats);
+    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
+  }
+
+  try {
+    await mkdir(destinationPath, {
+      recursive
+    });
+  } catch (error) {
+    if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const removeEntry = async (source, {
+  signal = new AbortController().signal,
+  allowUseless = false,
+  recursive = false,
+  maxRetries = 3,
+  retryDelay = 100,
+  onlyContent = false
+} = {}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const removeOperation = Abort.startOperation();
+  removeOperation.addAbortSignal(signal);
+
+  try {
+    removeOperation.throwIfAborted();
+    const sourceStats = await readEntryStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    });
+
+    if (!sourceStats) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+    } // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+    // other libraries ignore them, let's do the same.
+
+
+    if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
+        maxRetries,
+        retryDelay
+      });
+    } else if (sourceStats.isDirectory()) {
+      await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
+        signal: removeOperation.signal,
+        recursive,
+        maxRetries,
+        retryDelay,
+        onlyContent
+      });
+    }
+  } finally {
+    await removeOperation.end();
+  }
+};
+
+const removeNonDirectory = (sourceUrl, {
+  maxRetries,
+  retryDelay
+}) => {
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  let retryCount = 0;
+
+  const attempt = () => {
+    return unlinkNaive(sourcePath, { ...(retryCount >= maxRetries ? {} : {
+        handleTemporaryError: async () => {
+          retryCount++;
+          return new Promise(resolve => {
+            setTimeout(() => {
+              resolve(attempt());
+            }, retryCount * retryDelay);
+          });
+        }
+      })
+    });
+  };
+
+  return attempt();
+};
+
+const unlinkNaive = (sourcePath, {
+  handleTemporaryError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    unlink(sourcePath, error => {
+      if (error) {
+        if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
+          resolve(handleTemporaryError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const removeDirectory = async (rootDirectoryUrl, {
+  signal,
+  maxRetries,
+  retryDelay,
+  recursive,
+  onlyContent
+}) => {
+  const removeDirectoryOperation = Abort.startOperation();
+  removeDirectoryOperation.addAbortSignal(signal);
+
+  const visit = async sourceUrl => {
+    removeDirectoryOperation.throwIfAborted();
+    const sourceStats = await readEntryStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    }); // file/directory not found
+
+    if (sourceStats === null) {
+      return;
+    }
+
+    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await visitFile(sourceUrl);
+    } else if (sourceStats.isSymbolicLink()) {
+      await visitSymbolicLink(sourceUrl);
+    } else if (sourceStats.isDirectory()) {
+      await visitDirectory(`${sourceUrl}/`);
+    }
+  };
+
+  const visitDirectory = async directoryUrl => {
+    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const optionsFromRecursive = recursive ? {
+      handleNotEmptyError: async () => {
+        await removeDirectoryContent(directoryUrl);
+        await visitDirectory(directoryUrl);
+      }
+    } : {};
+    removeDirectoryOperation.throwIfAborted();
+    await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive,
+      // Workaround for https://github.com/joyent/node/issues/4337
+      ...(process.platform === "win32" ? {
+        handlePermissionError: async error => {
+          console.error(`trying to fix windows EPERM after readir on ${directoryPath}`);
+          let openOrCloseError;
+
+          try {
+            const fd = openSync(directoryPath);
+            closeSync(fd);
+          } catch (e) {
+            openOrCloseError = e;
+          }
+
+          if (openOrCloseError) {
+            if (openOrCloseError.code === "ENOENT") {
+              return;
+            }
+
+            console.error(`error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`);
+            throw error;
+          }
+
+          await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive
+          });
+        }
+      } : {})
+    });
+  };
+
+  const removeDirectoryContent = async directoryUrl => {
+    removeDirectoryOperation.throwIfAborted();
+    const names = await readDirectory(directoryUrl);
+    await Promise.all(names.map(async name => {
+      const url = resolveUrl$1(name, directoryUrl);
+      await visit(url);
+    }));
+  };
+
+  const visitFile = async fileUrl => {
+    await removeNonDirectory(fileUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  const visitSymbolicLink = async symbolicLinkUrl => {
+    await removeNonDirectory(symbolicLinkUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  try {
+    if (onlyContent) {
+      await removeDirectoryContent(rootDirectoryUrl);
+    } else {
+      await visitDirectory(rootDirectoryUrl);
+    }
+  } finally {
+    await removeDirectoryOperation.end();
+  }
+};
+
+const removeDirectoryNaive = (directoryPath, {
+  handleNotEmptyError = null,
+  handlePermissionError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    rmdir(directoryPath, (error, lstatObject) => {
+      if (error) {
+        if (handlePermissionError && error.code === "EPERM") {
+          resolve(handlePermissionError(error));
+        } else if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleNotEmptyError && ( // linux os
+        error.code === "ENOTEMPTY" || // SunOS
+        error.code === "EEXIST")) {
+          resolve(handleNotEmptyError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(lstatObject);
+      }
+    });
+  });
+};
+
+const ensureEmptyDirectory = async source => {
+  const stats = await readEntryStat(source, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (stats === null) {
+    // if there is nothing, create a directory
+    return writeDirectory(source, {
+      allowUseless: true
+    });
+  }
+
+  if (stats.isDirectory()) {
+    // if there is a directory remove its content and done
+    return removeEntry(source, {
+      allowUseless: true,
+      recursive: true,
+      onlyContent: true
+    });
+  }
+
+  const sourceType = statsToType(stats);
+  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
+  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
+};
+
+const ensureParentDirectories = async destination => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationParentPath = dirname(destinationPath);
+  return writeDirectory(destinationParentPath, {
+    recursive: true,
+    allowUseless: true
+  });
+};
+
+const isWindows$1 = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
+  }
+
+  if (!isWindows$1) {
+    return url;
+  }
+
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+
+  const afterProtocol = url.slice("file://".length); // we still have the windows drive letter
+
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  } // drive letter was lost, restore it
+
+
+  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
+  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
+
+  if (!driveLetter) {
+    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+
+const extractDriveLetter = ressource => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
+    return ressource[1];
+  }
+
+  return null;
+};
+
+process.platform === "win32";
+
+const readFile = async (value, {
+  as = "buffer"
+} = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(fileUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+
+  if (as === "buffer") {
+    return buffer;
+  }
+
+  if (as === "string") {
+    return buffer.toString();
+  }
+
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+
+  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+};
+
+const readFileSync = (value, {
+  as = "buffer"
+} = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = readFileSync$1(new URL(fileUrl));
+
+  if (as === "buffer") {
+    return buffer;
+  }
+
+  if (as === "string") {
+    return buffer.toString();
+  }
+
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+
+  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+};
+
+const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
+  const previousCallMsMap = new Map();
+  return fileEvent => {
+    const {
+      relativeUrl
+    } = fileEvent;
+    const previousCallMs = previousCallMsMap.get(relativeUrl);
+    const nowMs = Date.now();
+
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMsMap.delete(relativeUrl);
+        return;
+      }
+    }
+
+    previousCallMsMap.set(relativeUrl, nowMs);
+    callback(fileEvent);
+  };
+};
+
+const isWindows = process.platform === "win32";
+const createWatcher = (sourcePath, options) => {
+  const watcher = watch(sourcePath, options);
+
+  if (isWindows) {
+    watcher.on("error", async error => {
+      // https://github.com/joyent/node/issues/4337
+      if (error.code === "EPERM") {
+        try {
+          const fd = openSync(sourcePath, "r");
+          closeSync(fd);
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return;
+          }
+
+          console.error(`error while fixing windows eperm: ${e.stack}`);
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    });
+  }
+
+  return watcher;
+};
+
+const trackRessources = () => {
+  const callbackArray = [];
+
+  const registerCleanupCallback = callback => {
+    if (typeof callback !== "function") throw new TypeError(`callback must be a function
+callback: ${callback}`);
+    callbackArray.push(callback);
+    return () => {
+      const index = callbackArray.indexOf(callback);
+      if (index > -1) callbackArray.splice(index, 1);
+    };
+  };
+
+  const cleanup = async reason => {
+    const localCallbackArray = callbackArray.slice();
+    await Promise.all(localCallbackArray.map(callback => callback(reason)));
+  };
+
+  return {
+    registerCleanupCallback,
+    cleanup
+  };
+};
+
+const isLinux = process.platform === "linux"; // linux does not support recursive option
+
+const fsWatchSupportsRecursive = !isLinux;
+const registerDirectoryLifecycle = (source, {
+  debug = false,
+  added,
+  updated,
+  removed,
+  watchPatterns = {
+    "./**/*": true
+  },
+  notifyExistent = false,
+  keepProcessAlive = true,
+  recursive = false,
+  // filesystem might dispatch more events than expected
+  // Code can use "cooldownBetweenFileEvents" to prevent that
+  // BUT it is UNADVISED to rely on this as explained later (search for "is lying" in this file)
+  // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios
+  // like unit tests
+  cooldownBetweenFileEvents = 0
+}) => {
+  const sourceUrl = assertAndNormalizeDirectoryUrl(source);
+
+  if (!undefinedOrFunction$1(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+
+  if (!undefinedOrFunction$1(updated)) {
+    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
+  }
+
+  if (!undefinedOrFunction$1(removed)) {
+    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
+  }
+
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+    }
+
+    if (updated) {
+      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+    }
+
+    if (removed) {
+      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const associations = URL_META.resolveAssociations({
+    watch: watchPatterns
+  }, sourceUrl);
+
+  const getWatchPatternValue = ({
+    url,
+    type
+  }) => {
+    if (type === "directory") {
+      let firstMeta = false;
+      URL_META.urlChildMayMatch({
+        url: `${url}/`,
+        associations,
+        predicate: ({
+          watch
+        }) => {
+          if (watch) {
+            firstMeta = watch;
+          }
+
+          return watch;
+        }
+      });
+      return firstMeta;
+    }
+
+    const {
+      watch
+    } = URL_META.applyAssociations({
+      url,
+      associations
+    });
+    return watch;
+  };
+
+  const tracker = trackRessources();
+  const infoMap = new Map();
+
+  const readEntryInfo = url => {
+    try {
+      const relativeUrl = urlToRelativeUrl(url, source);
+      const previousInfo = infoMap.get(relativeUrl);
+      const stats = statSync(new URL(url));
+      const type = statsToType(stats);
+      const patternValue = previousInfo ? previousInfo.patternValue : getWatchPatternValue({
+        url,
+        type
+      });
+      return {
+        previousInfo,
+        url,
+        relativeUrl,
+        type,
+        atimeMs: stats.atimeMs,
+        mtimeMs: stats.mtimeMs,
+        patternValue
+      };
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return null;
+      }
+
+      throw e;
+    }
+  };
+
+  const handleDirectoryEvent = ({
+    directoryRelativeUrl,
+    filename,
+    eventType
+  }) => {
+    if (filename) {
+      if (directoryRelativeUrl) {
+        handleChange(`${directoryRelativeUrl}/${filename}`);
+        return;
+      }
+
+      handleChange(`${filename}`);
+      return;
+    }
+
+    if (eventType === "rename") {
+      if (!removed && !added) {
+        return;
+      } // we might receive `rename` without filename
+      // in that case we try to find ourselves which file was removed.
+
+
+      let relativeUrlCandidateArray = Array.from(infoMap.keys());
+
+      if (recursive && !fsWatchSupportsRecursive) {
+        relativeUrlCandidateArray = relativeUrlCandidateArray.filter(relativeUrlCandidate => {
+          if (!directoryRelativeUrl) {
+            // ensure entry is top level
+            if (relativeUrlCandidate.includes("/")) {
+              return false;
+            }
+
+            return true;
+          } // entry not inside this directory
+
+
+          if (!relativeUrlCandidate.startsWith(directoryRelativeUrl)) {
+            return false;
+          }
+
+          const afterDirectory = relativeUrlCandidate.slice(directoryRelativeUrl.length + 1); // deep inside this directory
+
+          if (afterDirectory.includes("/")) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      const removedEntryRelativeUrl = relativeUrlCandidateArray.find(relativeUrlCandidate => {
+        try {
+          statSync(new URL(relativeUrlCandidate, sourceUrl));
+          return false;
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return true;
+          }
+
+          throw e;
+        }
+      });
+
+      if (removedEntryRelativeUrl) {
+        handleEntryLost(infoMap.get(removedEntryRelativeUrl));
+      }
+    }
+  };
+
+  const handleChange = relativeUrl => {
+    const entryUrl = new URL(relativeUrl, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
+
+    if (!entryInfo) {
+      const previousEntryInfo = infoMap.get(relativeUrl);
+
+      if (!previousEntryInfo) {
+        // on MacOS it's possible to receive a "rename" event for
+        // a file that does not exists...
+        return;
+      }
+
+      if (debug) {
+        console.debug(`"${relativeUrl}" removed`);
+      }
+
+      handleEntryLost(previousEntryInfo);
+      return;
+    }
+
+    const {
+      previousInfo
+    } = entryInfo;
+
+    if (!previousInfo) {
+      if (debug) {
+        console.debug(`"${relativeUrl}" added`);
+      }
+
+      handleEntryFound(entryInfo);
+      return;
+    }
+
+    if (entryInfo.type !== previousInfo.type) {
+      // it existed and was replaced by something else
+      // we don't handle this as an update. We rather say the ressource
+      // is lost and something else is found (call removed() then added())
+      handleEntryLost(previousInfo);
+      handleEntryFound(entryInfo);
+      return;
+    }
+
+    if (entryInfo.type === "directory") {
+      // a directory cannot really be updated in way that matters for us
+      // filesystem is trying to tell us the directory content have changed
+      // but we don't care about that
+      // we'll already be notified about what has changed
+      return;
+    } // something has changed at this relativeUrl (the file existed and was not deleted)
+    // it's possible to get there without a real update
+    // (file content is the same and file mtime is the same).
+    // In short filesystem is sometimes "lying"
+    // Not trying to guard against that because:
+    // - hurt perfs a lot
+    // - it happens very rarely
+    // - it's not really a concern in practice
+    // - filesystem did not send an event out of nowhere:
+    //   something occured but we don't know exactly what
+    // maybe we should exclude some stuff as done in
+    // https://github.com/paulmillr/chokidar/blob/b2c4f249b6cfa98c703f0066fb4a56ccd83128b5/lib/nodefs-handler.js#L366
+
+
+    if (debug) {
+      console.debug(`"${relativeUrl}" modified`);
+    }
+
+    handleEntryUpdated(entryInfo);
+  };
+
+  const handleEntryFound = (entryInfo, {
+    notify = true
+  } = {}) => {
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
+
+    if (entryInfo.type === "directory") {
+      const directoryUrl = `${entryInfo.url}/`;
+      readdirSync(new URL(directoryUrl)).forEach(entryName => {
+        const childEntryUrl = new URL(entryName, directoryUrl).href;
+        const childEntryInfo = readEntryInfo(childEntryUrl);
+
+        if (childEntryInfo && childEntryInfo.patternValue) {
+          handleEntryFound(childEntryInfo, {
+            notify
+          });
+        }
+      }); // we must watch manually every directory we find
+
+      if (!fsWatchSupportsRecursive) {
+        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
+          persistent: keepProcessAlive
+        });
+        tracker.registerCleanupCallback(() => {
+          watcher.close();
+        });
+        watcher.on("change", (eventType, filename) => {
+          handleDirectoryEvent({
+            directoryRelativeUrl: entryInfo.relativeUrl,
+            filename: filename ? // replace back slashes with slashes
+            filename.replace(/\\/g, "/") : "",
+            eventType
+          });
+        });
+      }
+    }
+
+    if (added && entryInfo.patternValue && notify) {
+      added({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs
+      });
+    }
+  };
+
+  const handleEntryLost = entryInfo => {
+    infoMap.delete(entryInfo.relativeUrl);
+
+    if (removed && entryInfo.patternValue) {
+      removed({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs
+      });
+    }
+  };
+
+  const handleEntryUpdated = entryInfo => {
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
+
+    if (updated && entryInfo.patternValue) {
+      updated({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs,
+        previousMtime: entryInfo.previousInfo.mtimeMs
+      });
+    }
+  };
+
+  readdirSync(new URL(sourceUrl)).forEach(entry => {
+    const entryUrl = new URL(entry, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
+
+    if (entryInfo && entryInfo.patternValue) {
+      handleEntryFound(entryInfo, {
+        notify: notifyExistent
+      });
+    }
+  });
+
+  if (debug) {
+    const relativeUrls = Array.from(infoMap.keys());
+
+    if (relativeUrls.length === 0) {
+      console.debug(`No file found`);
+    } else {
+      console.debug(`${relativeUrls.length} file found: 
+${relativeUrls.join("\n")}`);
+    }
+  }
+
+  const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+    recursive: recursive && fsWatchSupportsRecursive,
+    persistent: keepProcessAlive
+  });
+  tracker.registerCleanupCallback(() => {
+    watcher.close();
+  });
+  watcher.on("change", (eventType, fileSystemPath) => {
+    handleDirectoryEvent({ ...fileSystemPathToDirectoryRelativeUrlAndFilename(fileSystemPath),
+      eventType
+    });
+  });
+  return tracker.cleanup;
+};
+
+const undefinedOrFunction$1 = value => {
+  return typeof value === "undefined" || typeof value === "function";
+};
+
+const fileSystemPathToDirectoryRelativeUrlAndFilename = path => {
+  if (!path) {
+    return {
+      directoryRelativeUrl: "",
+      filename: ""
+    };
+  }
+
+  const normalizedPath = path.replace(/\\/g, "/"); // replace back slashes with slashes
+
+  const slashLastIndex = normalizedPath.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return {
+      directoryRelativeUrl: "",
+      filename: normalizedPath
+    };
+  }
+
+  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex);
+  const filename = normalizedPath.slice(slashLastIndex + 1);
+  return {
+    directoryRelativeUrl,
+    filename
+  };
+};
+
+const registerFileLifecycle = (source, {
+  added,
+  updated,
+  removed,
+  notifyExistent = false,
+  keepProcessAlive = true,
+  cooldownBetweenFileEvents = 0
+}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  if (!undefinedOrFunction(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+
+  if (!undefinedOrFunction(updated)) {
+    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
+  }
+
+  if (!undefinedOrFunction(removed)) {
+    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
+  }
+
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+    }
+
+    if (updated) {
+      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+    }
+
+    if (removed) {
+      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const tracker = trackRessources();
+
+  const handleFileFound = ({
+    existent
+  }) => {
+    const fileMutationStopWatching = watchFileMutation(sourceUrl, {
+      updated,
+      removed: () => {
+        fileMutationStopTracking();
+        watchFileAdded();
+
+        if (removed) {
+          removed();
+        }
+      },
+      keepProcessAlive
+    });
+    const fileMutationStopTracking = tracker.registerCleanupCallback(fileMutationStopWatching);
+
+    if (added) {
+      if (existent) {
+        if (notifyExistent) {
+          added({
+            existent: true
+          });
+        }
+      } else {
+        added({});
+      }
+    }
+  };
+
+  const watchFileAdded = () => {
+    const fileCreationStopWatching = watchFileCreation(sourceUrl, () => {
+      fileCreationgStopTracking();
+      handleFileFound({
+        existent: false
+      });
+    }, keepProcessAlive);
+    const fileCreationgStopTracking = tracker.registerCleanupCallback(fileCreationStopWatching);
+  };
+
+  const sourceType = entryToTypeOrNull(sourceUrl);
+
+  if (sourceType === null) {
+    if (added) {
+      watchFileAdded();
+    } else {
+      throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`);
+    }
+  } else if (sourceType === "file") {
+    handleFileFound({
+      existent: true
+    });
+  } else {
+    throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, type found instead`);
+  }
+
+  return tracker.cleanup;
+};
+
+const entryToTypeOrNull = url => {
+  try {
+    const stats = statSync(new URL(url));
+    return statsToType(stats);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+
+    throw e;
+  }
+};
+
+const undefinedOrFunction = value => typeof value === "undefined" || typeof value === "function";
+
+const watchFileCreation = (source, callback, keepProcessAlive) => {
+  const sourcePath = urlToFileSystemPath(source);
+  const sourceFilename = basename(sourcePath);
+  const directoryPath = dirname(sourcePath);
+  let directoryWatcher = createWatcher(directoryPath, {
+    persistent: keepProcessAlive
+  });
+  directoryWatcher.on("change", (eventType, filename) => {
+    if (filename && filename !== sourceFilename) return;
+    const type = entryToTypeOrNull(source); // ignore if something else with that name gets created
+    // we are only interested into files
+
+    if (type !== "file") return;
+    directoryWatcher.close();
+    directoryWatcher = undefined;
+    callback();
+  });
+  return () => {
+    if (directoryWatcher) {
+      directoryWatcher.close();
+    }
+  };
+};
+
+const watchFileMutation = (sourceUrl, {
+  updated,
+  removed,
+  keepProcessAlive
+}) => {
+  let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+    persistent: keepProcessAlive
+  });
+  watcher.on("change", () => {
+    const sourceType = entryToTypeOrNull(sourceUrl);
+
+    if (sourceType === null) {
+      watcher.close();
+      watcher = undefined;
+
+      if (removed) {
+        removed();
+      }
+    } else if (sourceType === "file") {
+      if (updated) {
+        updated();
+      }
+    }
+  });
+  return () => {
+    if (watcher) {
+      watcher.close();
+    }
+  };
+};
+
+const writeFile = async (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+
+  try {
+    await writeFileNaive(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await ensureParentDirectories(destinationUrl);
+      await writeFileNaive(destinationUrlObject, content);
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const writeFileNaive = (urlObject, content) => {
+  return new Promise((resolve, reject) => {
+    writeFile$1(urlObject, content, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const writeFileSync = (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+
+  try {
+    writeFileSync$1(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      mkdirSync(new URL("./", destinationUrlObject), {
+        recursive: true
+      });
+      writeFileSync$1(destinationUrlObject, content);
+      return;
+    }
+
+    throw error;
   }
 };
 
@@ -1277,702 +4043,6 @@ const createTaskLog = (label, {
   };
 };
 
-/*
- * data:[<mediatype>][;base64],<data>
- * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
- */
-
-/* eslint-env browser, node */
-const DATA_URL = {
-  parse: string => {
-    const afterDataProtocol = string.slice("data:".length);
-    const commaIndex = afterDataProtocol.indexOf(",");
-    const beforeComma = afterDataProtocol.slice(0, commaIndex);
-    let contentType;
-    let base64Flag;
-
-    if (beforeComma.endsWith(`;base64`)) {
-      contentType = beforeComma.slice(0, -`;base64`.length);
-      base64Flag = true;
-    } else {
-      contentType = beforeComma;
-      base64Flag = false;
-    }
-
-    contentType = contentType === "" ? "text/plain;charset=US-ASCII" : contentType;
-    const afterComma = afterDataProtocol.slice(commaIndex + 1);
-    return {
-      contentType,
-      base64Flag,
-      data: afterComma
-    };
-  },
-  stringify: ({
-    contentType,
-    base64Flag = true,
-    data
-  }) => {
-    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
-      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
-      if (data.length === 0) {
-        return `data:,`;
-      }
-
-      if (base64Flag) {
-        return `data:;base64,${data}`;
-      }
-
-      return `data:,${data}`;
-    }
-
-    if (base64Flag) {
-      return `data:${contentType};base64,${data}`;
-    }
-
-    return `data:${contentType},${data}`;
-  }
-};
-
-const urlToScheme$1 = url => {
-  const urlString = String(url);
-  const colonIndex = urlString.indexOf(":");
-
-  if (colonIndex === -1) {
-    return "";
-  }
-
-  const scheme = urlString.slice(0, colonIndex);
-  return scheme;
-};
-
-const urlToRessource$1 = url => {
-  const scheme = urlToScheme$1(url);
-
-  if (scheme === "file") {
-    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
-    return urlAsStringWithoutFileProtocol;
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = String(url).slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
-    return urlAsStringWithoutOrigin;
-  }
-
-  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
-  return urlAsStringWithoutProtocol;
-};
-
-const urlToPathname$1 = url => {
-  const ressource = urlToRessource$1(url);
-  const pathname = ressourceToPathname$1(ressource);
-  return pathname;
-};
-
-const ressourceToPathname$1 = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-
-  if (searchSeparatorIndex > -1) {
-    return ressource.slice(0, searchSeparatorIndex);
-  }
-
-  const hashIndex = ressource.indexOf("#");
-
-  if (hashIndex > -1) {
-    return ressource.slice(0, hashIndex);
-  }
-
-  return ressource;
-};
-
-const urlToFilename$1 = url => {
-  const pathname = urlToPathname$1(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const generateInlineContentUrl = ({
-  url,
-  extension,
-  line,
-  column,
-  lineEnd,
-  columnEnd
-}) => {
-  const generatedName = line === lineEnd ? `L${line}C${column}-L${lineEnd}C${columnEnd}` : `L${line}-L${lineEnd}`;
-  const filenameRaw = urlToFilename$1(url);
-  const filename = `${filenameRaw}@${generatedName}${extension}`; // ideally we should keep query params from url
-  // maybe we could use a custom scheme like "inline:"
-
-  const inlineContentUrl = new URL(filename, url).href;
-  return inlineContentUrl;
-};
-
-const urlToFileSystemPath = url => {
-  let urlString = String(url);
-
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
-  }
-
-  const fileSystemPath = fileURLToPath(urlString);
-  return fileSystemPath;
-};
-
-// consider switching to https://babeljs.io/docs/en/babel-code-frame
-const stringifyUrlSite = ({
-  url,
-  line,
-  column,
-  content
-}, {
-  showCodeFrame = true,
-  numberOfSurroundingLinesToShow,
-  lineMaxLength,
-  color
-} = {}) => {
-  let string = `${humanizeUrl(url)}`;
-
-  if (typeof line === "number") {
-    string += `:${line}`;
-
-    if (typeof column === "number") {
-      string += `:${column}`;
-    }
-  }
-
-  if (!showCodeFrame || typeof line !== "number" || !content) {
-    return string;
-  }
-
-  const sourceLoc = showSourceLocation({
-    content,
-    line,
-    column,
-    numberOfSurroundingLinesToShow,
-    lineMaxLength,
-    color
-  });
-  return `${string}
-${sourceLoc}`;
-};
-const humanizeUrl = url => {
-  if (url.startsWith("file://")) {
-    // we prefer file system path because vscode reliably make them clickable
-    // and sometimes it won't for file:// urls
-    return urlToFileSystemPath(url);
-  }
-
-  return url;
-};
-const showSourceLocation = ({
-  content,
-  line,
-  column,
-  numberOfSurroundingLinesToShow = 1,
-  lineMaxLength = 120
-} = {}) => {
-  let mark = string => string;
-
-  let aside = string => string; // if (color) {
-  //   mark = (string) => ANSI.color(string, ANSI.RED)
-  //   aside = (string) => ANSI.color(string, ANSI.GREY)
-  // }
-
-
-  const lines = content.split(/\r?\n/);
-  if (line === 0) line = 1;
-  let lineRange = {
-    start: line - 1,
-    end: line
-  };
-  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = lineRangeWithinLines(lineRange, lines);
-  const linesToShow = lines.slice(lineRange.start, lineRange.end);
-  const endLineNumber = lineRange.end;
-  const lineNumberMaxWidth = String(endLineNumber).length;
-  if (column === 0) column = 1;
-  const columnRange = {};
-
-  if (column === undefined) {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  } else if (column > lineMaxLength) {
-    columnRange.start = column - Math.floor(lineMaxLength / 2);
-    columnRange.end = column + Math.ceil(lineMaxLength / 2);
-  } else {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  }
-
-  return linesToShow.map((lineSource, index) => {
-    const lineNumber = lineRange.start + index + 1;
-    const isMainLine = lineNumber === line;
-    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
-    const lineNumberWidth = String(lineNumber).length; // ensure if line moves from 7,8,9 to 10 the display is still great
-
-    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
-    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
-    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
-
-    if (isMainLine) {
-      if (column === undefined) {
-        return `${mark(">")} ${lineFormatted}`;
-      }
-
-      const spacing = stringToSpaces(`${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`);
-      return `${mark(">")} ${lineFormatted}
-  ${spacing}${mark("^")}`;
-    }
-
-    return `  ${lineFormatted}`;
-  }).join(`
-`);
-};
-
-const applyColumnRange = ({
-  start,
-  end
-}, line) => {
-  if (typeof start !== "number") {
-    throw new TypeError(`start must be a number, received ${start}`);
-  }
-
-  if (typeof end !== "number") {
-    throw new TypeError(`end must be a number, received ${end}`);
-  }
-
-  if (end < start) {
-    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`);
-  }
-
-  const prefix = "…";
-  const suffix = "…";
-  const lastIndex = line.length;
-
-  if (line.length === 0) {
-    // don't show any ellipsis if the line is empty
-    // because it's not truncated in that case
-    return "";
-  }
-
-  const startTruncated = start > 0;
-  const endTruncated = lastIndex > end;
-  let from = startTruncated ? start + prefix.length : start;
-  let to = endTruncated ? end - suffix.length : end;
-  if (to > lastIndex) to = lastIndex;
-
-  if (start >= lastIndex || from === to) {
-    return "";
-  }
-
-  let result = "";
-
-  while (from < to) {
-    result += line[from];
-    from++;
-  }
-
-  if (result.length === 0) {
-    return "";
-  }
-
-  if (startTruncated && endTruncated) {
-    return `${prefix}${result}${suffix}`;
-  }
-
-  if (startTruncated) {
-    return `${prefix}${result}`;
-  }
-
-  if (endTruncated) {
-    return `${result}${suffix}`;
-  }
-
-  return result;
-};
-
-const stringToSpaces = string => string.replace(/[^\t]/g, " "); // const getLineRangeLength = ({ start, end }) => end - start
-
-
-const moveLineRangeUp = ({
-  start,
-  end
-}, number) => {
-  return {
-    start: start - number,
-    end
-  };
-};
-
-const moveLineRangeDown = ({
-  start,
-  end
-}, number) => {
-  return {
-    start,
-    end: end + number
-  };
-};
-
-const lineRangeWithinLines = ({
-  start,
-  end
-}, lines) => {
-  return {
-    start: start < 0 ? 0 : start,
-    end: end > lines.length ? lines.length : end
-  };
-};
-
-const urlToExtension$1 = url => {
-  const pathname = urlToPathname$1(url);
-  return pathnameToExtension$1(pathname);
-};
-
-const pathnameToExtension$1 = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-  const extension = pathname.slice(dotLastIndex);
-  return extension;
-};
-
-const asUrlWithoutSearch = url => {
-  const urlObject = new URL(url);
-  urlObject.search = "";
-  return urlObject.href;
-};
-const isValidUrl$1 = url => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}; // normalize url search params:
-// Using URLSearchParams to alter the url search params
-// can result into "file:///file.css?css_module"
-// becoming "file:///file.css?css_module="
-// we want to get rid of the "=" and consider it's the same url
-
-const normalizeUrl = url => {
-  if (url.includes("?")) {
-    // disable on data urls (would mess up base64 encoding)
-    if (url.startsWith("data:")) {
-      return url;
-    }
-
-    return url.replace(/[=](?=&|$)/g, "");
-  }
-
-  return url;
-};
-const injectQueryParamsIntoSpecifier = (specifier, params) => {
-  if (isValidUrl$1(specifier)) {
-    return injectQueryParams(specifier, params);
-  }
-
-  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
-  const searchParams = new URLSearchParams(afterQuestion);
-  Object.keys(params).forEach(key => {
-    searchParams.set(key, params[key]);
-  });
-  const paramsString = searchParams.toString();
-
-  if (paramsString) {
-    return `${beforeQuestion}?${paramsString}`;
-  }
-
-  return specifier;
-};
-const injectQueryParams = (url, params) => {
-  const urlObject = new URL(url);
-  Object.keys(params).forEach(key => {
-    urlObject.searchParams.set(key, params[key]);
-  });
-  const urlWithParams = urlObject.href;
-  return urlWithParams;
-};
-const setUrlFilename = (url, filename) => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    search,
-    hash
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const parentPathname = new URL("./", urlObject).pathname;
-  return `${origin}${parentPathname}${filename}${search}${hash}`;
-};
-const ensurePathnameTrailingSlash = url => {
-  const urlObject = new URL(url);
-  const {
-    pathname
-  } = urlObject;
-
-  if (pathname.endsWith("/")) {
-    return url;
-  }
-
-  let {
-    origin
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const {
-    search,
-    hash
-  } = urlObject;
-  return `${origin}${pathname}/${search}${hash}`;
-};
-const asUrlUntilPathname = url => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    pathname
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const urlUntilPathname = `${origin}${pathname}`;
-  return urlUntilPathname;
-};
-
-const isFileSystemPath = value => {
-  if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
-  }
-
-  if (value[0] === "/") {
-    return true;
-  }
-
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl = value => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-
-  return String(pathToFileURL(value));
-};
-
-const getCallerPosition = () => {
-  const {
-    prepareStackTrace
-  } = Error;
-
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    return stack;
-  };
-
-  const {
-    stack
-  } = new Error();
-  const callerCallsite = stack[2];
-  const fileName = callerCallsite.getFileName();
-  return {
-    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber()
-  };
-};
-
-const resolveUrl$1 = (specifier, baseUrl) => {
-  if (typeof baseUrl === "undefined") {
-    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
-  }
-
-  return String(new URL(specifier, baseUrl));
-};
-
-const resolveDirectoryUrl = (specifier, baseUrl) => {
-  const url = resolveUrl$1(specifier, baseUrl);
-  return ensurePathnameTrailingSlash(url);
-};
-
-const getCommonPathname = (pathname, otherPathname) => {
-  if (pathname === otherPathname) {
-    return pathname;
-  }
-
-  let commonPart = "";
-  let commonPathname = "";
-  let i = 0;
-  const length = pathname.length;
-  const otherLength = otherPathname.length;
-
-  while (i < length) {
-    const char = pathname.charAt(i);
-    const otherChar = otherPathname.charAt(i);
-    i++;
-
-    if (char === otherChar) {
-      if (char === "/") {
-        commonPart += "/";
-        commonPathname += commonPart;
-        commonPart = "";
-      } else {
-        commonPart += char;
-      }
-    } else {
-      if (char === "/" && i - 1 === otherLength) {
-        commonPart += "/";
-        commonPathname += commonPart;
-      }
-
-      return commonPathname;
-    }
-  }
-
-  if (length === otherLength) {
-    commonPathname += commonPart;
-  } else if (otherPathname.charAt(i) === "/") {
-    commonPathname += commonPart;
-  }
-
-  return commonPathname;
-};
-
-const urlToRelativeUrl = (url, baseUrl) => {
-  const urlObject = new URL(url);
-  const baseUrlObject = new URL(baseUrl);
-
-  if (urlObject.protocol !== baseUrlObject.protocol) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-
-  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
-    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
-    return afterUrlScheme;
-  }
-
-  const {
-    pathname,
-    hash,
-    search
-  } = urlObject;
-
-  if (pathname === "/") {
-    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
-    return baseUrlRessourceWithoutLeadingSlash;
-  }
-
-  const basePathname = baseUrlObject.pathname;
-  const commonPathname = getCommonPathname(pathname, basePathname);
-
-  if (!commonPathname) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-
-  const specificPathname = pathname.slice(commonPathname.length);
-  const baseSpecificPathname = basePathname.slice(commonPathname.length);
-
-  if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
-    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
-    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
-    return relativeUrl;
-  }
-
-  const relativeUrl = `${specificPathname}${search}${hash}`;
-  return relativeUrl;
-};
-
-const pathnameToParentPathname$1 = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return "/";
-  }
-
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-const moveUrl = ({
-  url,
-  from,
-  to,
-  preferAbsolute = false
-}) => {
-  let relativeUrl = urlToRelativeUrl(url, from);
-
-  if (relativeUrl.slice(0, 2) === "//") {
-    // restore the protocol
-    relativeUrl = new URL(relativeUrl, url).href;
-  }
-
-  const absoluteUrl = new URL(relativeUrl, to).href;
-
-  if (preferAbsolute) {
-    return absoluteUrl;
-  }
-
-  return urlToRelativeUrl(absoluteUrl, to);
-};
-
-const urlIsInsideOf = (url, otherUrl) => {
-  const urlObject = new URL(url);
-  const otherUrlObject = new URL(otherUrl);
-
-  if (urlObject.origin !== otherUrlObject.origin) {
-    return false;
-  }
-
-  const urlPathname = urlObject.pathname;
-  const otherUrlPathname = otherUrlObject.pathname;
-
-  if (urlPathname === otherUrlPathname) {
-    return false;
-  }
-
-  const isInside = urlPathname.startsWith(otherUrlPathname);
-  return isInside;
-};
-
-const urlToBasename = url => {
-  const filename = urlToFilename$1(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  const basename = dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
-  return basename;
-};
-
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
   const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
@@ -2025,515 +4095,6 @@ const createReloadableWorker = (workerFileUrl, options = {}) => {
     reload,
     terminate
   };
-};
-
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
-  }
-
-  if (!hasScheme$1(value)) {
-    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
-  }
-};
-const isPlainObject = value => {
-  if (value === null) {
-    return false;
-  }
-
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  return false;
-};
-
-const isWindowsPathnameSpecifier = specifier => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-
-const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
-
-const resolveAssociations = (associations, baseUrl) => {
-  assertUrlLike(baseUrl, "baseUrl");
-  const associationsResolved = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-    const valueMapResolved = {};
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
-      valueMapResolved[patternResolved] = value;
-    });
-    associationsResolved[key] = valueMapResolved;
-  });
-  return associationsResolved;
-};
-
-const normalizeUrlPattern = (urlPattern, baseUrl) => {
-  // starts with a scheme
-  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
-    return urlPattern;
-  }
-
-  return String(new URL(urlPattern, baseUrl));
-};
-
-const asFlatAssociations = associations => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(`associations must be a plain object, got ${associations}`);
-  }
-
-  const flatAssociations = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-
-    if (!isPlainObject(valueMap)) {
-      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
-    }
-
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const previousValue = flatAssociations[pattern];
-      flatAssociations[pattern] = previousValue ? { ...previousValue,
-        [key]: value
-      } : {
-        [key]: value
-      };
-    });
-  });
-  return flatAssociations;
-};
-
-/*
- * Link to things doing pattern matching:
- * https://git-scm.com/docs/gitignore
- * https://github.com/kaelzhang/node-ignore
- */
-/** @module jsenv_url_meta **/
-
-/**
- * An object representing the result of applying a pattern to an url
- * @typedef {Object} MatchResult
- * @property {boolean} matched Indicates if url matched pattern
- * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
- * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
- * @property {Array} matchGroups Array of strings captured during pattern matching
- */
-
-/**
- * Apply a pattern to an url
- * @param {Object} applyPatternMatchingParams
- * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
- * @param {string} applyPatternMatchingParams.url a string representing an url
- * @return {MatchResult}
- */
-
-const applyPatternMatching = ({
-  url,
-  pattern
-}) => {
-  assertUrlLike(pattern, "pattern");
-  assertUrlLike(url, "url");
-  const {
-    matched,
-    patternIndex,
-    index,
-    groups
-  } = applyMatching(pattern, url);
-  const matchGroups = [];
-  let groupIndex = 0;
-  groups.forEach(group => {
-    if (group.name) {
-      matchGroups[group.name] = group.string;
-    } else {
-      matchGroups[groupIndex] = group.string;
-      groupIndex++;
-    }
-  });
-  return {
-    matched,
-    patternIndex,
-    urlIndex: index,
-    matchGroups
-  };
-};
-
-const applyMatching = (pattern, string) => {
-  const groups = [];
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string;
-  let restoreIndexes = true;
-
-  const consumePattern = count => {
-    const subpattern = remainingPattern.slice(0, count);
-    remainingPattern = remainingPattern.slice(count);
-    patternIndex += count;
-    return subpattern;
-  };
-
-  const consumeString = count => {
-    const substring = remainingString.slice(0, count);
-    remainingString = remainingString.slice(count);
-    index += count;
-    return substring;
-  };
-
-  const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
-  };
-
-  let matched;
-
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
-
-  const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    } // pattern consumed, string not consumed
-
-
-    if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expected
-    } // -- from this point pattern is not consumed --
-    // string consumed, pattern not consumed
-
-
-    if (remainingString === "") {
-      if (remainingPattern === "**") {
-        // trailing "**" is optional
-        consumePattern(2);
-        return true;
-      }
-
-      if (remainingPattern === "*") {
-        groups.push({
-          string: ""
-        });
-      }
-
-      return false; // fail because string shorter than expected
-    } // -- from this point pattern and string are not consumed --
-    // fast path trailing slash
-
-
-    if (remainingPattern === "/") {
-      if (remainingString[0] === "/") {
-        // trailing slash match remaining
-        consumePattern(1);
-        groups.push({
-          string: consumeRemainingString()
-        });
-        return true;
-      }
-
-      return false;
-    } // fast path trailing '**'
-
-
-    if (remainingPattern === "**") {
-      consumePattern(2);
-      consumeRemainingString();
-      return true;
-    } // pattern leading **
-
-
-    if (remainingPattern.slice(0, 2) === "**") {
-      consumePattern(2); // consumes "**"
-
-      if (remainingPattern[0] === "/") {
-        consumePattern(1); // consumes "/"
-      } // pattern ending with ** always match remaining string
-
-
-      if (remainingPattern === "") {
-        consumeRemainingString();
-        return true;
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: true
-      });
-      groups.push(...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeRemainingString();
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-
-    if (remainingPattern[0] === "*") {
-      consumePattern(1); // consumes "*"
-
-      if (remainingPattern === "") {
-        // matches everything except '/'
-        const slashIndex = remainingString.indexOf("/");
-
-        if (slashIndex === -1) {
-          groups.push({
-            string: consumeRemainingString()
-          });
-          return true;
-        }
-
-        groups.push({
-          string: consumeString(slashIndex)
-        });
-        return false;
-      } // the next char must not the one expected by remainingPattern[0]
-      // because * is greedy and expect to skip at least one char
-
-
-      if (remainingPattern[0] === remainingString[0]) {
-        groups.push({
-          string: ""
-        });
-        patternIndex = patternIndex - 1;
-        return false;
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: false
-      });
-      groups.push(skipResult.group, ...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeString(skipResult.index);
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-
-    if (remainingPattern[0] !== remainingString[0]) {
-      return false;
-    }
-
-    return undefined;
-  };
-
-  iterate();
-  return {
-    matched,
-    patternIndex,
-    index,
-    groups
-  };
-};
-
-const skipUntilMatch = ({
-  pattern,
-  string,
-  canSkipSlash
-}) => {
-  let index = 0;
-  let remainingString = string;
-  let longestMatchRange = null;
-
-  const tryToMatch = () => {
-    const matchAttempt = applyMatching(pattern, remainingString);
-
-    if (matchAttempt.matched) {
-      return {
-        matched: true,
-        patternIndex: matchAttempt.patternIndex,
-        index: index + matchAttempt.index,
-        groups: matchAttempt.groups,
-        group: {
-          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
-        }
-      };
-    }
-
-    const matchAttemptIndex = matchAttempt.index;
-    const matchRange = {
-      patternIndex: matchAttempt.patternIndex,
-      index,
-      length: matchAttemptIndex,
-      groups: matchAttempt.groups
-    };
-
-    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
-      longestMatchRange = matchRange;
-    }
-
-    const nextIndex = matchAttemptIndex + 1;
-    const canSkip = nextIndex < remainingString.length && (canSkipSlash || remainingString[0] !== "/");
-
-    if (canSkip) {
-      // search against the next unattempted string
-      index += nextIndex;
-      remainingString = remainingString.slice(nextIndex);
-      return tryToMatch();
-    }
-
-    return {
-      matched: false,
-      patternIndex: longestMatchRange.patternIndex,
-      index: longestMatchRange.index + longestMatchRange.length,
-      groups: longestMatchRange.groups,
-      group: {
-        string: string.slice(0, longestMatchRange.index)
-      }
-    };
-  };
-
-  return tryToMatch();
-};
-
-const applyAssociations = ({
-  url,
-  associations
-}) => {
-  assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
-    const {
-      matched
-    } = applyPatternMatching({
-      pattern,
-      url
-    });
-
-    if (matched) {
-      const value = flatAssociations[pattern];
-
-      if (isPlainObject(previousValue) && isPlainObject(value)) {
-        return { ...previousValue,
-          ...value
-        };
-      }
-
-      return value;
-    }
-
-    return previousValue;
-  }, {});
-};
-
-const applyAliases = ({
-  url,
-  aliases
-}) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find(key => {
-    const aliasMatchResult = applyPatternMatching({
-      pattern: key,
-      url
-    });
-
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
-    }
-
-    return false;
-  });
-
-  if (!aliasMatchingKey) {
-    return url;
-  }
-
-  const {
-    matchGroups
-  } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
-  }, "");
-  return newUrl;
-};
-
-const urlChildMayMatch = ({
-  url,
-  associations,
-  predicate
-}) => {
-  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
-
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  const flatAssociations = asFlatAssociations(associations); // for full match we must create an object to allow pattern to override previous ones
-
-  let fullMatchMeta = {};
-  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-
-  const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach(pattern => {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
-      url
-    });
-
-    if (matchResult.matched) {
-      someFullMatch = true;
-
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = { ...fullMatchMeta,
-          ...value
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  });
-
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-
-  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
-};
-
-const URL_META = {
-  resolveAssociations,
-  applyAssociations,
-  urlChildMayMatch,
-  applyPatternMatching,
-  applyAliases
 };
 
 const getHtmlNodeAttribute = (htmlNode, attributeName) => {
@@ -3092,10 +4653,10 @@ const urlToFileUrl = url => {
   return new URL(afterOrigin, filesystemRootUrl).href;
 };
 
-const require$1 = createRequire(import.meta.url);
+const require$2 = createRequire(import.meta.url);
 
 const transpileWithParcel = (urlInfo, context) => {
-  const css = require$1("@parcel/css");
+  const css = require$2("@parcel/css");
 
   const targets = runtimeCompatToTargets(context.runtimeCompat);
   const {
@@ -3113,7 +4674,7 @@ const transpileWithParcel = (urlInfo, context) => {
   };
 };
 const minifyWithParcel = (urlInfo, context) => {
-  const css = require$1("@parcel/css");
+  const css = require$2("@parcel/css");
 
   const targets = runtimeCompatToTargets(context.runtimeCompat);
   const {
@@ -3148,7 +4709,7 @@ const versionToBits = version => {
   return major << 16 | minor << 8 | patch;
 };
 
-const require = createRequire(import.meta.url);
+const require$1 = createRequire(import.meta.url);
 
 /**
 
@@ -3165,7 +4726,7 @@ hence sourcemap cannot point the original source location
 const postCssPluginUrlVisitor = ({
   urlVisitor = () => null
 }) => {
-  const parseCssValue = require("postcss-value-parser");
+  const parseCssValue = require$1("postcss-value-parser");
 
   const stringifyCssNodes = parseCssValue.stringify;
   return {
@@ -3540,7 +5101,7 @@ const injectJsImport = ({
     addDefault,
     addNamed,
     addSideEffect
-  } = require("@babel/helper-module-imports");
+  } = require$1("@babel/helper-module-imports");
 
   if (namespace) {
     return addNamespace(programPath, from, {
@@ -4528,6 +6089,334 @@ const visitHtmlUrls = ({
       });
     }
   });
+};
+
+const createMagicSource = content => {
+  if (content === undefined) {
+    throw new Error("content missing");
+  }
+
+  const mutations = [];
+  return {
+    prepend: string => {
+      mutations.push(magicString => {
+        magicString.prepend(string);
+      });
+    },
+    append: string => {
+      mutations.push(magicString => {
+        magicString.append(string);
+      });
+    },
+    replace: ({
+      start,
+      end,
+      replacement
+    }) => {
+      mutations.push(magicString => {
+        magicString.overwrite(start, end, replacement);
+      });
+    },
+    remove: ({
+      start,
+      end
+    }) => {
+      mutations.push(magicString => {
+        magicString.remove(start, end);
+      });
+    },
+    toContentAndSourcemap: ({
+      source
+    } = {}) => {
+      if (mutations.length === 0) {
+        return {
+          content,
+          sourcemap: null
+        };
+      }
+
+      const magicString = new MagicString(content);
+      mutations.forEach(mutation => {
+        mutation(magicString);
+      });
+      const code = magicString.toString();
+      const map = magicString.generateMap({
+        hires: true,
+        includeContent: true,
+        source
+      });
+      return {
+        content: code,
+        sourcemap: map
+      };
+    }
+  };
+};
+
+const require = createRequire(import.meta.url); // consider using https://github.com/7rulnik/source-map-js
+
+
+const requireSourcemap = () => {
+  const namespace = require("source-map");
+
+  return namespace;
+};
+
+/*
+ * https://github.com/mozilla/source-map#sourcemapgenerator
+ */
+const {
+  SourceMapConsumer,
+  SourceMapGenerator
+} = requireSourcemap();
+const composeTwoSourcemaps = async (firstSourcemap, secondSourcemap) => {
+  if (!firstSourcemap && !secondSourcemap) {
+    return null;
+  }
+
+  if (!firstSourcemap) {
+    return secondSourcemap;
+  }
+
+  if (!secondSourcemap) {
+    return firstSourcemap;
+  }
+
+  const sourcemapGenerator = new SourceMapGenerator();
+  const firstSourcemapConsumer = await new SourceMapConsumer(firstSourcemap);
+  const secondSourcemapConsumer = await new SourceMapConsumer(secondSourcemap);
+  const firstMappings = readMappings(firstSourcemapConsumer);
+  firstMappings.forEach(mapping => {
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const secondMappings = readMappings(secondSourcemapConsumer);
+  secondMappings.forEach(mapping => {
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const sourcemap = sourcemapGenerator.toJSON();
+  const sources = [];
+  const sourcesContent = [];
+  const firstSourcesContent = firstSourcemap.sourcesContent;
+  const secondSourcesContent = secondSourcemap.sourcesContent;
+  sourcemap.sources.forEach(source => {
+    sources.push(source);
+
+    if (secondSourcesContent) {
+      const secondSourceIndex = secondSourcemap.sources.indexOf(source);
+
+      if (secondSourceIndex > -1) {
+        sourcesContent.push(secondSourcesContent[secondSourceIndex]);
+        return;
+      }
+    }
+
+    if (firstSourcesContent) {
+      const firstSourceIndex = firstSourcemap.sources.indexOf(source);
+
+      if (firstSourceIndex > -1) {
+        sourcesContent.push(firstSourcesContent[firstSourceIndex]);
+        return;
+      }
+    }
+
+    sourcesContent.push(null);
+  });
+  sourcemap.sources = sources;
+  sourcemap.sourcesContent = sourcesContent;
+  return sourcemap;
+};
+
+const readMappings = consumer => {
+  const mappings = [];
+  consumer.eachMapping(({
+    originalColumn,
+    originalLine,
+    generatedColumn,
+    generatedLine,
+    source,
+    name
+  }) => {
+    mappings.push({
+      original: typeof originalColumn === "number" ? {
+        column: originalColumn,
+        line: originalLine
+      } : undefined,
+      generated: {
+        column: generatedColumn,
+        line: generatedLine
+      },
+      source: typeof originalColumn === "number" ? source : undefined,
+      name
+    });
+  });
+  return mappings;
+};
+
+const sourcemapConverter = {
+  toFileUrls: sourcemap => {
+    return { ...sourcemap,
+      sources: sourcemap.sources.map(source => {
+        return isFileSystemPath(source) ? fileSystemPathToUrl(source) : source;
+      })
+    };
+  },
+  toFilePaths: sourcemap => {
+    return { ...sourcemap,
+      sources: sourcemap.sources.map(source => {
+        return urlToFileSystemPath(source);
+      })
+    };
+  }
+};
+
+const generateSourcemapFileUrl = url => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    pathname,
+    search,
+    hash
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const sourcemapUrl = `${origin}${pathname}.map${search}${hash}`;
+  return sourcemapUrl;
+};
+const generateSourcemapDataUrl = sourcemap => {
+  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
+  return `data:application/json;charset=utf-8;base64,${asBase64}`;
+};
+
+const SOURCEMAP = {
+  enabledOnContentType: contentType => {
+    return ["text/javascript", "text/css"].includes(contentType);
+  },
+  readComment: ({
+    contentType,
+    content
+  }) => {
+    const read = {
+      "text/javascript": parseJavaScriptSourcemapComment,
+      "text/css": parseCssSourcemapComment
+    }[contentType];
+    return read ? read(content) : null;
+  },
+  writeComment: ({
+    contentType,
+    content,
+    specifier
+  }) => {
+    const write = {
+      "text/javascript": setJavaScriptSourceMappingUrl,
+      "text/css": setCssSourceMappingUrl
+    }[contentType];
+    return write ? write(content, specifier) : content;
+  }
+};
+
+const parseJavaScriptSourcemapComment = javaScriptSource => {
+  let sourceMappingUrl;
+  replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, value => {
+    sourceMappingUrl = value;
+  });
+
+  if (!sourceMappingUrl) {
+    return null;
+  }
+
+  return {
+    type: "sourcemap_comment",
+    subtype: "js",
+    // we assume it's on last line
+    line: javaScriptSource.split(/\r?\n/).length,
+    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl
+  };
+};
+
+const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
+  let replaced;
+  const sourceAfterReplace = replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, () => {
+    replaced = true;
+    return sourceMappingFileUrl ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl) : "";
+  });
+
+  if (replaced) {
+    return sourceAfterReplace;
+  }
+
+  return sourceMappingFileUrl ? `${javaScriptSource}
+${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}
+` : javaScriptSource;
+};
+
+const parseCssSourcemapComment = cssSource => {
+  let sourceMappingUrl;
+  replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, value => {
+    sourceMappingUrl = value;
+  });
+
+  if (!sourceMappingUrl) {
+    return null;
+  }
+
+  return {
+    type: "sourcemap_comment",
+    subtype: "css",
+    // we assume it's on last line
+    line: cssSource.split(/\r?\n/).length - 1,
+    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//*#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl
+  };
+};
+
+const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
+  let replaced;
+  const sourceAfterReplace = replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, () => {
+    replaced = true;
+    return sourceMappingFileUrl ? writeCssSourceMappingUrl(sourceMappingFileUrl) : "";
+  });
+
+  if (replaced) {
+    return sourceAfterReplace;
+  }
+
+  return sourceMappingFileUrl ? `${cssSource}
+${writeCssSourceMappingUrl(sourceMappingFileUrl)}
+` : cssSource;
+};
+
+const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
+const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g; // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
+
+const writeJavaScriptSourceMappingURL = value => `${"//#"} sourceMappingURL=${value}`;
+
+const writeCssSourceMappingUrl = value => `/*# sourceMappingURL=${value} */`;
+
+const replaceSourceMappingUrl = (source, regexp, callback) => {
+  let lastSourceMappingUrl;
+  let matchSourceMappingUrl;
+
+  while (matchSourceMappingUrl = regexp.exec(source)) {
+    lastSourceMappingUrl = matchSourceMappingUrl;
+  }
+
+  if (lastSourceMappingUrl) {
+    const index = lastSourceMappingUrl.index;
+    const before = source.slice(0, index);
+    const after = source.slice(index);
+    const mappedAfter = after.replace(regexp, (match, firstGroup) => {
+      return callback(firstGroup);
+    });
+    return `${before}${mappedAfter}`;
+  }
+
+  return source;
 };
 
 /*
@@ -5837,7 +7726,7 @@ const defaultLookupPackageScope = url => {
 
 const defaultReadPackageJson = packageUrl => {
   const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
+  const buffer = readFileSync$1(packageJsonUrl);
   const string = String(buffer);
 
   try {
@@ -6855,7 +8744,7 @@ const mainLegacyResolvers = {
     }
 
     const browserMainUrlObject = new URL(browserMain, packageUrl);
-    const content = readFileSync(browserMainUrlObject, "utf-8");
+    const content = readFileSync$1(browserMainUrlObject, "utf-8");
 
     if (/typeof exports\s*==/.test(content) && /typeof module\s*==/.test(content) || /module\.exports\s*=/.test(content)) {
       return {
@@ -7559,7 +9448,7 @@ const jsenvPluginFileUrls = ({
         throw error;
       }
 
-      const fileBuffer = readFileSync(urlObject);
+      const fileBuffer = readFileSync$1(urlObject);
       const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
       return {
         content: CONTENT_TYPE.isTextual(contentType) ? String(fileBuffer) : fileBuffer,
@@ -9624,7 +11513,7 @@ const convertJsModuleToJsClassic = async ({
 
   if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
     const magicSource = createMagicSource(code);
-    const systemjsCode = readFileSync$1(systemJsClientFileUrl, {
+    const systemjsCode = readFileSync(systemJsClientFileUrl, {
       as: "string"
     });
     magicSource.prepend(`${systemjsCode}\n\n`);
@@ -15095,11 +16984,11 @@ const jsenvPluginExplorer = ({
         relativeUrl,
         meta
       }));
-      let html = String(readFileSync(new URL(htmlClientFileUrl)));
+      let html = String(readFileSync$1(new URL(htmlClientFileUrl)));
       html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
         contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
         base64Flag: true,
-        data: readFileSync(new URL(faviconClientFileUrl)).toString("base64")
+        data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
       }));
       html = html.replace("SERVER_PARAMS", JSON.stringify({
         rootDirectoryUrl,
@@ -15419,7 +17308,7 @@ const generateCoverageHtmlDirectory = async (coverage, {
     dir: urlToFileSystemPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
     sourceFinder: path => {
-      return readFileSync(urlToFileSystemPath(resolveUrl$1(path, rootDirectoryUrl)), "utf8");
+      return readFileSync$1(urlToFileSystemPath(resolveUrl$1(path, rootDirectoryUrl)), "utf8");
     }
   });
   const report = reports.create("html", {
