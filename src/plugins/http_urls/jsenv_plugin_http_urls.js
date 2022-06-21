@@ -2,11 +2,15 @@ export const jsenvPluginHttpUrls = () => {
   return {
     name: "jsenv:http_urls",
     appliesDuring: "*",
-    // fetchUrlContent: (urlInfo) => {
-    //   if (urlInfo.url.startsWith("http") || urlInfo.url.startsWith("https")) {
-    //     return { shouldHandle: false }
-    //   }
-    //   return null
-    // },
+    redirectUrl: (reference) => {
+      if (
+        reference.url.startsWith("http:") ||
+        reference.url.startsWith("https:")
+      ) {
+        reference.shouldHandle = false
+      }
+      // TODO: according to some pattern matching jsenv could be allowed
+      // to fetch and transform http urls
+    },
   }
 }

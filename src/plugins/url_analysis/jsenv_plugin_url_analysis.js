@@ -6,7 +6,11 @@ import { parseAndTransformCssUrls } from "./css/css_urls.js"
 import { parseAndTransformJsUrls } from "./js/js_urls.js"
 import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js"
 
-export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
+export const jsenvPluginUrlAnalysis = ({
+  rootDirectoryUrl,
+  include,
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+}) => {
   let getIncludeInfo = () => undefined
   if (include) {
     const associations = URL_META.resolveAssociations(
@@ -43,11 +47,11 @@ export const jsenvPluginUrlAnalysis = ({ rootDirectoryUrl, include }) => {
         reference.shouldHandle = false
         return
       }
-      if (reference.url.startsWith("data:")) {
-        reference.shouldHandle = true
-        return
-      }
-      if (reference.url.startsWith("file:")) {
+      const { protocol } = new URL(reference.url)
+      const protocolIsSupported = supportedProtocols.some(
+        (supportedProtocol) => protocol === supportedProtocol,
+      )
+      if (protocolIsSupported) {
         reference.shouldHandle = true
         return
       }
