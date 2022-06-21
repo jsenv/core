@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,10 +13,10 @@
   "type": "module",
   "main": "./main.js",
   "dependencies": {
-    "@jsenv/filesystem": "4.0.9",
-    "@jsenv/log": "2.0.0",
+    "@jsenv/filesystem": "4.0.10",
+    "@jsenv/log": "2.0.1",
     "@jsenv/url-meta": "7.0.0",
-    "@jsenv/urls": "1.2.5",
+    "@jsenv/urls": "1.2.6",
     "@rollup/plugin-commonjs": "22.0.0",
     "@rollup/plugin-json": "4.1.0",
     "@rollup/plugin-node-resolve": "13.3.0",

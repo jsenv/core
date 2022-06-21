@@ -1,5 +1,5 @@
 import v8 from "node:v8";
-import { uneval } from "@jsenv/uneval";
+import { u as uneval } from "./uneval.js";
 import { performance, PerformanceObserver } from "node:perf_hooks";
 
 const startObservingPerformances = () => {

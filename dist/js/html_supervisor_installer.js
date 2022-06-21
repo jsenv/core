@@ -1,4 +1,4 @@
-import { uneval } from "@jsenv/uneval";
+import { u as uneval } from "./uneval.js";
 
 const unevalException = value => {
   if (value && value.hasOwnProperty("toString")) {

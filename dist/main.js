@@ -1,35 +1,8513 @@
-import { createSSERoom, timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
-import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, readFile, readDirectory, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
-import { createCallbackListNotifiedOnce, createCallbackList, Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
-import { createDetailedMessage, createLogger, createTaskLog, loggerToLevels, byteAsFileSize, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages } from "@jsenv/log";
-import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash, urlIsInsideOf, urlToFilename, DATA_URL, injectQueryParams, injectQueryParamsIntoSpecifier, fileSystemPathToUrl, urlToFileSystemPath, isFileSystemPath, normalizeUrl, stringifyUrlSite, setUrlFilename, moveUrl, getCallerPosition, resolveUrl, resolveDirectoryUrl, asUrlWithoutSearch, asUrlUntilPathname, urlToBasename, urlToExtension } from "@jsenv/urls";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import http from "node:http";
+import cluster from "node:cluster";
+import process$1, { memoryUsage } from "node:process";
+import os, { networkInterfaces } from "node:os";
+import tty from "node:tty";
+import stringWidth from "string-width";
+import net, { createServer } from "node:net";
+import { Readable, Stream, Writable } from "node:stream";
+import { Http2ServerResponse } from "node:http2";
+import { createReadStream, readdirSync, statSync, readFile as readFile$1, chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
+import { performance } from "node:perf_hooks";
+import { extname, dirname, basename } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import crypto, { createHash } from "node:crypto";
 import { workerData, Worker } from "node:worker_threads";
-import { URL_META } from "@jsenv/url-meta";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
-import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
-import { statSync, realpathSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
-import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js";
-import { validateResponseIntegrity } from "@jsenv/integrity";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js";
-import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
 import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
-import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
-import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { fork } from "node:child_process";
-import { uneval } from "@jsenv/uneval";
-import { createHash } from "node:crypto";
+import { u as uneval } from "./js/uneval.js";
+
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({
+  logLevel = LOG_LEVEL_INFO
+} = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      debug,
+      info,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      debug: debugDisabled,
+      info,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled
+    };
+  }
+
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+const disabledMethods = {
+  debug: debugDisabled,
+  info: infoDisabled,
+  warn: warnDisabled,
+  error: errorDisabled
+};
+const loggerIsMethodEnabled = (logger, methodName) => {
+  return logger[methodName] !== disabledMethods[methodName];
+};
+const loggerToLevels = logger => {
+  return {
+    debug: loggerIsMethodEnabled(logger, "debug"),
+    info: loggerIsMethodEnabled(logger, "info"),
+    warn: loggerIsMethodEnabled(logger, "warn"),
+    error: loggerIsMethodEnabled(logger, "error")
+  };
+};
+
+function hasFlag(flag, argv = process$1.argv) {
+  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
+  const position = argv.indexOf(prefix + flag);
+  const terminatorPosition = argv.indexOf('--');
+  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+
+const {
+  env
+} = process$1;
+let flagForceColor;
+
+if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
+  flagForceColor = 0;
+} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
+  flagForceColor = 1;
+}
+
+function envForceColor() {
+  if ('FORCE_COLOR' in env) {
+    if (env.FORCE_COLOR === 'true') {
+      return 1;
+    }
+
+    if (env.FORCE_COLOR === 'false') {
+      return 0;
+    }
+
+    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+  }
+}
+
+function translateLevel(level) {
+  if (level === 0) {
+    return false;
+  }
+
+  return {
+    level,
+    hasBasic: true,
+    has256: level >= 2,
+    has16m: level >= 3
+  };
+}
+
+function _supportsColor(haveStream, {
+  streamIsTTY,
+  sniffFlags = true
+} = {}) {
+  const noFlagForceColor = envForceColor();
+
+  if (noFlagForceColor !== undefined) {
+    flagForceColor = noFlagForceColor;
+  }
+
+  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+  if (forceColor === 0) {
+    return 0;
+  }
+
+  if (sniffFlags) {
+    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
+      return 3;
+    }
+
+    if (hasFlag('color=256')) {
+      return 2;
+    }
+  }
+
+  if (haveStream && !streamIsTTY && forceColor === undefined) {
+    return 0;
+  }
+
+  const min = forceColor || 0;
+
+  if (env.TERM === 'dumb') {
+    return min;
+  }
+
+  if (process$1.platform === 'win32') {
+    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
+    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+    const osRelease = os.release().split('.');
+
+    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10_586) {
+      return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+    }
+
+    return 1;
+  }
+
+  if ('CI' in env) {
+    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'GITHUB_ACTIONS', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+      return 1;
+    }
+
+    return min;
+  }
+
+  if ('TEAMCITY_VERSION' in env) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+  } // Check for Azure DevOps pipelines
+
+
+  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+    return 1;
+  }
+
+  if (env.COLORTERM === 'truecolor') {
+    return 3;
+  }
+
+  if ('TERM_PROGRAM' in env) {
+    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+    switch (env.TERM_PROGRAM) {
+      case 'iTerm.app':
+        return version >= 3 ? 3 : 2;
+
+      case 'Apple_Terminal':
+        return 2;
+      // No default
+    }
+  }
+
+  if (/-256(color)?$/i.test(env.TERM)) {
+    return 2;
+  }
+
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+    return 1;
+  }
+
+  if ('COLORTERM' in env) {
+    return 1;
+  }
+
+  return min;
+}
+
+function createSupportsColor(stream, options = {}) {
+  const level = _supportsColor(stream, {
+    streamIsTTY: stream && stream.isTTY,
+    ...options
+  });
+
+  return translateLevel(level);
+}
+({
+  stdout: createSupportsColor({
+    isTTY: tty.isatty(1)
+  }),
+  stderr: createSupportsColor({
+    isTTY: tty.isatty(2)
+  })
+});
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+let canUseColors = processSupportsBasicColor; // GitHub workflow does support ANSI but "supports-color" returns false
+// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+
+if (process.env.GITHUB_WORKFLOW) {
+  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+  if (process.env.FORCE_COLOR !== "false") {
+    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+    // that colors are not supported. Let it have priority
+    canUseColors = true;
+  }
+} // https://github.com/Marak/colors.js/blob/master/lib/styles.js
+
+
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[33m";
+const BLUE = "\x1b[34m";
+const MAGENTA = "\x1b[35m";
+const GREY = "\x1b[90m";
+const RESET = "\x1b[0m";
+const setANSIColor = canUseColors ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}` : text => text;
+const ANSI = {
+  supported: canUseColors,
+  RED,
+  GREEN,
+  YELLOW,
+  BLUE,
+  MAGENTA,
+  GREY,
+  RESET,
+  color: setANSIColor
+};
+
+function isUnicodeSupported() {
+  if (process$1.platform !== 'win32') {
+    return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+  }
+
+  return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) // Windows Terminal
+  || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+  || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+// see also https://github.com/sindresorhus/figures
+const canUseUnicode = isUnicodeSupported();
+const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
+const OK_RAW = canUseUnicode ? `✔` : `√`;
+const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
+const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
+const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
+const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+
+const OK = ANSI.color(OK_RAW, ANSI.GREEN);
+const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
+const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
+const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
+const UNICODE = {
+  COMMAND,
+  OK,
+  FAILURE,
+  INFO,
+  WARNING,
+  COMMAND_RAW,
+  OK_RAW,
+  FAILURE_RAW,
+  INFO_RAW,
+  WARNING_RAW,
+  supported: canUseUnicode
+};
+
+const createDetailedMessage$1 = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${Array.isArray(value) ? value.join(`
+`) : value}`;
+  });
+  return string;
+};
+
+const getPrecision = number => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
+const setRoundedPrecision = (number, {
+  decimals = 1,
+  decimalsWhenSmall = decimals
+} = {}) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round
+  });
+};
+
+const setDecimalsPrecision = (number, {
+  transform,
+  decimals,
+  // max decimals for number in [-Infinity, -1[]1, Infinity]
+  decimalsWhenSmall // max decimals for number in [-1,1]
+
+} = {}) => {
+  if (number === 0) {
+    return 0;
+  }
+
+  let numberCandidate = Math.abs(number);
+
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+}; // https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const msAsEllapsedTime = ms => {
+  if (ms < 1000) {
+    return "0 second";
+  }
+
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+
+  if (!remaining) {
+    return formatEllapsedUnit(primary);
+  }
+
+  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
+};
+
+const formatEllapsedUnit = unit => {
+  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`;
+  }
+
+  return `${count} ${unit.name}s`;
+};
+
+const msAsDuration = ms => {
+  // ignore ms below meaningfulMs so that:
+  // msAsDuration(0.5) -> "0 second"
+  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return "0 second";
+  }
+
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+
+  if (!remaining) {
+    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
+  }
+
+  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(remaining, 0)}`;
+};
+
+const formatDurationUnit = (unit, decimals) => {
+  const count = setRoundedPrecision(unit.count, {
+    decimals
+  });
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`;
+  }
+
+  return `${count} ${unit.name}s`;
+};
+
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000
+};
+
+const parseMs = ms => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex(unitName => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+
+    return false;
+  });
+
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  }
+
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName]; // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  } // - 1 year and 1 month is great
+
+
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount
+    }
+  };
+};
+
+const byteAsFileSize = metricValue => {
+  return formatBytes(metricValue);
+};
+const byteAsMemoryUsage = metricValue => {
+  return formatBytes(metricValue, {
+    fixedDecimals: true
+  });
+};
+
+const formatBytes = (number, {
+  fixedDecimals = false
+} = {}) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+
+  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  const decimals = unitName === "B" ? 0 : 1;
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals
+  });
+
+  if (fixedDecimals) {
+    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  }
+
+  return `${unitNumberRounded} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const distributePercentages = (namedNumbers, {
+  maxPrecisionHint = 2
+} = {}) => {
+  const numberNames = Object.keys(namedNumbers);
+
+  if (numberNames.length === 0) {
+    return {};
+  }
+
+  if (numberNames.length === 1) {
+    const firstNumberName = numberNames[0];
+    return {
+      [firstNumberName]: "100 %"
+    };
+  }
+
+  const numbers = numberNames.map(name => namedNumbers[name]);
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const ratios = numbers.map(number => number / total);
+  const percentages = {};
+  ratios.pop();
+  ratios.forEach((ratio, index) => {
+    const percentage = ratio * 100;
+    percentages[numberNames[index]] = percentage;
+  });
+  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
+  let precision = 0;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+
+    if (percentage < lowestPercentage) {
+      // check the amout of meaningful decimals
+      // and that what we will use
+      const percentageRounded = setRoundedPrecision(percentage);
+      const percentagePrecision = getPrecision(percentageRounded);
+
+      if (percentagePrecision > precision) {
+        precision = percentagePrecision;
+      }
+    }
+  });
+  let remainingPercentage = 100;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+    const percentageAllocated = setRoundedPrecision(percentage, {
+      decimals: precision
+    });
+    remainingPercentage -= percentageAllocated;
+    percentages[name] = percentageAllocated;
+  });
+  const lastName = numberNames[numberNames.length - 1];
+  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
+    decimals: precision
+  });
+  return percentages;
+};
+
+const ESC = '\u001B[';
+const OSC = '\u001B]';
+const BEL = '\u0007';
+const SEP = ';';
+const isTerminalApp = process.env.TERM_PROGRAM === 'Apple_Terminal';
+const ansiEscapes = {};
+
+ansiEscapes.cursorTo = (x, y) => {
+  if (typeof x !== 'number') {
+    throw new TypeError('The `x` argument is required');
+  }
+
+  if (typeof y !== 'number') {
+    return ESC + (x + 1) + 'G';
+  }
+
+  return ESC + (y + 1) + ';' + (x + 1) + 'H';
+};
+
+ansiEscapes.cursorMove = (x, y) => {
+  if (typeof x !== 'number') {
+    throw new TypeError('The `x` argument is required');
+  }
+
+  let returnValue = '';
+
+  if (x < 0) {
+    returnValue += ESC + -x + 'D';
+  } else if (x > 0) {
+    returnValue += ESC + x + 'C';
+  }
+
+  if (y < 0) {
+    returnValue += ESC + -y + 'A';
+  } else if (y > 0) {
+    returnValue += ESC + y + 'B';
+  }
+
+  return returnValue;
+};
+
+ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
+
+ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
+
+ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
+
+ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
+
+ansiEscapes.cursorLeft = ESC + 'G';
+ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
+ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
+ansiEscapes.cursorGetPosition = ESC + '6n';
+ansiEscapes.cursorNextLine = ESC + 'E';
+ansiEscapes.cursorPrevLine = ESC + 'F';
+ansiEscapes.cursorHide = ESC + '?25l';
+ansiEscapes.cursorShow = ESC + '?25h';
+
+ansiEscapes.eraseLines = count => {
+  let clear = '';
+
+  for (let i = 0; i < count; i++) {
+    clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+  }
+
+  if (count) {
+    clear += ansiEscapes.cursorLeft;
+  }
+
+  return clear;
+};
+
+ansiEscapes.eraseEndLine = ESC + 'K';
+ansiEscapes.eraseStartLine = ESC + '1K';
+ansiEscapes.eraseLine = ESC + '2K';
+ansiEscapes.eraseDown = ESC + 'J';
+ansiEscapes.eraseUp = ESC + '1J';
+ansiEscapes.eraseScreen = ESC + '2J';
+ansiEscapes.scrollUp = ESC + 'S';
+ansiEscapes.scrollDown = ESC + 'T';
+ansiEscapes.clearScreen = '\u001Bc';
+ansiEscapes.clearTerminal = process.platform === 'win32' ? `${ansiEscapes.eraseScreen}${ESC}0f` : // 1. Erases the screen (Only done in case `2` is not supported)
+// 2. Erases the whole screen including scrollback buffer
+// 3. Moves cursor to the top-left position
+// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+`${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+ansiEscapes.beep = BEL;
+
+ansiEscapes.link = (text, url) => {
+  return [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
+};
+
+ansiEscapes.image = (buffer, options = {}) => {
+  let returnValue = `${OSC}1337;File=inline=1`;
+
+  if (options.width) {
+    returnValue += `;width=${options.width}`;
+  }
+
+  if (options.height) {
+    returnValue += `;height=${options.height}`;
+  }
+
+  if (options.preserveAspectRatio === false) {
+    returnValue += ';preserveAspectRatio=0';
+  }
+
+  return returnValue + ':' + buffer.toString('base64') + BEL;
+};
+
+ansiEscapes.iTerm = {
+  setCwd: (cwd = process.cwd()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+  annotation: (message, options = {}) => {
+    let returnValue = `${OSC}1337;`;
+    const hasX = typeof options.x !== 'undefined';
+    const hasY = typeof options.y !== 'undefined';
+
+    if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
+      throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
+    }
+
+    message = message.replace(/\|/g, '');
+    returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
+
+    if (options.length > 0) {
+      returnValue += (hasX ? [message, options.length, options.x, options.y] : [options.length, message]).join('|');
+    } else {
+      returnValue += message;
+    }
+
+    return returnValue + BEL;
+  }
+};
+
+/*
+ *
+ */
+// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
+const spyStreamOutput = stream => {
+  const originalWrite = stream.write;
+  let output = "";
+  let installed = true;
+
+  stream.write = function (...args
+  /* chunk, encoding, callback */
+  ) {
+    output += args;
+    return originalWrite.call(stream, ...args);
+  };
+
+  const uninstall = () => {
+    if (!installed) {
+      return;
+    }
+
+    stream.write = originalWrite;
+    installed = false;
+  };
+
+  return () => {
+    uninstall();
+    return output;
+  };
+};
+
+/*
+ * see also https://github.com/vadimdemedes/ink
+ */
+const createLog = ({
+  stream = process.stdout,
+  newLine = "after"
+} = {}) => {
+  const {
+    columns = 80,
+    rows = 24
+  } = stream;
+  let lastOutput = "";
+  let clearAttemptResult;
+  let streamOutputSpy = noopStreamSpy;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    logLines.forEach(logLine => {
+      const width = stringWidth(logLine);
+      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
+    });
+
+    if (visualLineCount > rows) {
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return ansiEscapes.eraseLines(visualLineCount);
+  };
+
+  const spyStream = () => {
+    if (stream === process.stdout) {
+      const stdoutSpy = spyStreamOutput(process.stdout);
+      const stderrSpy = spyStreamOutput(process.stderr);
+      return () => {
+        return stdoutSpy() + stderrSpy();
+      };
+    }
+
+    return spyStreamOutput(stream);
+  };
+
+  const doWrite = string => {
+    string = addNewLines(string, newLine);
+    stream.write(string);
+    lastOutput = string;
+    clearAttemptResult = undefined; // We don't want to clear logs written by other code,
+    // it makes output unreadable and might erase precious information
+    // To detect this we put a spy on the stream.
+    // The spy is required only if we actually wrote something in the stream
+    // otherwise tryToClear() won't do a thing so spy is useless
+
+    streamOutputSpy = string ? spyStream() : noopStreamSpy;
+  };
+
+  const write = (string, outputFromOutside = streamOutputSpy()) => {
+    if (!lastOutput) {
+      doWrite(string);
+      return;
+    }
+
+    if (outputFromOutside) {
+      // something else than this code has written in the stream
+      // so we just write without clearing (append instead of replacing)
+      doWrite(string);
+    } else {
+      doWrite(`${getErasePreviousOutput()}${string}`);
+    }
+  };
+
+  const dynamicWrite = callback => {
+    const outputFromOutside = streamOutputSpy();
+    const string = callback({
+      outputFromOutside
+    });
+    return write(string, outputFromOutside);
+  };
+
+  const destroy = () => {
+    if (streamOutputSpy) {
+      streamOutputSpy(); // this uninstalls the spy
+
+      streamOutputSpy = null;
+      lastOutput = "";
+    }
+  };
+
+  return {
+    write,
+    dynamicWrite,
+    destroy
+  };
+};
+
+const noopStreamSpy = () => ""; // could be inlined but vscode do not correctly
+// expand/collapse template strings, so I put it at the bottom
+
+
+const addNewLines = (string, newLine) => {
+  if (newLine === "before") {
+    return `
+${string}`;
+  }
+
+  if (newLine === "after") {
+    return `${string}
+`;
+  }
+
+  if (newLine === "around") {
+    return `
+${string}
+`;
+  }
+
+  return string;
+};
+
+const startSpinner = ({
+  log,
+  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  fps = 20,
+  keepProcessAlive = false,
+  stopOnWriteFromOutside = true,
+  text = "",
+  update = text => text,
+  effect = () => {}
+}) => {
+  let frameIndex = 0;
+  let interval;
+  const spinner = {
+    text
+  };
+
+  const render = () => {
+    spinner.text = update(spinner.text);
+    return `${frames[frameIndex]} ${spinner.text}`;
+  };
+
+  const cleanup = effect() || (() => {});
+
+  log.write(render());
+
+  if (process.stdout.isTTY) {
+    interval = setInterval(() => {
+      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+      log.dynamicWrite(({
+        outputFromOutside
+      }) => {
+        if (outputFromOutside && stopOnWriteFromOutside) {
+          stop();
+          return "";
+        }
+
+        return render();
+      });
+    }, 1000 / fps);
+
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+  }
+
+  const stop = text => {
+    if (text) log.write(text);
+    cleanup();
+    clearInterval(interval);
+    interval = null;
+    log = null;
+  };
+
+  spinner.stop = stop;
+  return spinner;
+};
+
+const createTaskLog = (label, {
+  disabled = false,
+  stopOnWriteFromOutside
+} = {}) => {
+  if (disabled) {
+    return {
+      setRightText: () => {},
+      done: () => {},
+      happen: () => {},
+      fail: () => {}
+    };
+  }
+
+  const startMs = Date.now();
+  const taskSpinner = startSpinner({
+    log: createLog(),
+    text: label,
+    stopOnWriteFromOutside
+  });
+  return {
+    setRightText: value => {
+      taskSpinner.text = `${label} ${value}`;
+    },
+    done: () => {
+      const msEllapsed = Date.now() - startMs;
+      taskSpinner.stop(`${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`);
+    },
+    happen: message => {
+      taskSpinner.stop(`${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`);
+    },
+    fail: (message = `failed to ${label}`) => {
+      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
+    }
+  };
+};
+
+/*
+ * See callback_race.md
+ */
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach(clean => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach(candidateName => {
+    const register = raceDescription[candidateName];
+    const returnValue = register(data => {
+      if (status !== "racing") {
+        return;
+      }
+
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data
+      });
+    });
+
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+  return cancel;
+};
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+  const callbackListOnce = {};
+
+  const add = callback => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "add",
+        status
+      });
+      return removeNoop$1;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning$1();
+      return removeNoop$1;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        } // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "call",
+        status
+      });
+      return [];
+    }
+
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified"; // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+
+    callbacks = null;
+    currentCallbackIndex = -1;
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({
+  action,
+  status
+}) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
+      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+      detail: `Code is potentially executed when it should not`
+    });
+  } else {
+    console.warn(`"${action}" should not happen when callback list is ${status}`);
+  }
+};
+
+const emitCallbackDuplicationWarning$1 = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop$1 = () => {};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+const Abort = {
+  isAbortError: error => {
+    return error.name === "AbortError";
+  },
+  startOperation: () => {
+    return createOperation();
+  },
+  throwIfAborted: signal => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  }
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController(); // const abortOperation = (value) => abortController.abort(value)
+
+  const operationSignal = operationAbortController.signal; // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expected
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  }; // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+
+
+  const addAbortCallback = callback => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = callback => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({
+    abortAfterEnd = false
+  } = {}) => {
+    await Promise.all(endCallbackList.notify()); // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (signal, {
+    onAbort = callbackNoop,
+    onRemove = callbackNoop
+  } = {}) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks({
+      operation_abort: cb => {
+        return addAbortCallback(cb);
+      },
+      operation_end: cb => {
+        return addEndCallback(cb);
+      },
+      child_abort: cb => {
+        return addEventListener(signal, "abort", cb);
+      }
+    }, winner => {
+      const raceEffects = {
+        // Both "operation_abort" and "operation_end"
+        // means we don't care anymore if the child aborts.
+        // So we can:
+        // - remove "abort" event listener on child (done by raceCallback)
+        // - remove abort callback on operation (done by raceCallback)
+        // - remove end callback on operation (done by raceCallback)
+        // - call any custom cancel function
+        operation_abort: () => {
+          applyAbortEffects();
+          applyRemoveEffects();
+        },
+        operation_end: () => {
+          // Exists to
+          // - remove abort callback on operation
+          // - remove "abort" event listener on child
+          // - call any custom cancel function
+          applyRemoveEffects();
+        },
+        child_abort: () => {
+          applyAbortEffects();
+          operationAbortController.abort();
+        }
+      };
+      raceEffects[winner.name](winner.value);
+    });
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = abortSourceCallback => {
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+
+    if (operationSignal.aborted) {
+      return {
+        signal: abortSourceSignal,
+        remove: callbackNoop
+      };
+    }
+
+    const returnValue = abortSourceCallback(value => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        removeAbortSource();
+      }
+    });
+    return {
+      signal: abortSourceSignal,
+      remove: removeAbortSignal
+    };
+  };
+
+  const timeout = ms => {
+    return addAbortSource(abort => {
+      const timeoutId = setTimeout(abort, ms); // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const withSignal = async asyncCallback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = callback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    timeout,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const createCallbackList = () => {
+  let callbacks = [];
+
+  const add = callback => {
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    const values = callbacks.slice().map(callback => {
+      return callback(param);
+    });
+    return values;
+  };
+
+  return {
+    add,
+    notify
+  };
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
+  }, callback);
+};
+const SIGHUP_CALLBACK = {
+  SIGHUP: cb => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  }
+};
+const SIGTERM_CALLBACK = {
+  SIGTERM: cb => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  }
+};
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: cb => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  }
+};
+const EXIT_CALLBACK = {
+  exit: cb => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  }
+};
+const SIGINT_CALLBACK = {
+  SIGINT: cb => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  }
+};
+
+const memoize = compute => {
+  let memoized = false;
+  let memoizedValue;
+
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+
+
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
+
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
+    return value;
+  };
+
+  return fnWithMemoization;
+};
+
+const listenEvent = (objectWithEventEmitter, eventName, callback, {
+  once = false
+} = {}) => {
+  if (once) {
+    objectWithEventEmitter.once(eventName, callback);
+  } else {
+    objectWithEventEmitter.addListener(eventName, callback);
+  }
+
+  return () => {
+    objectWithEventEmitter.removeListener(eventName, callback);
+  };
+};
+
+/**
+
+https://stackoverflow.com/a/42019773/2634179
+
+*/
+const createPolyglotServer = async ({
+  http2 = false,
+  http1Allowed = true,
+  certificate,
+  privateKey
+}) => {
+  const httpServer = http.createServer();
+  const tlsServer = await createSecureServer({
+    certificate,
+    privateKey,
+    http2,
+    http1Allowed
+  });
+  const netServer = net.createServer({
+    allowHalfOpen: false
+  });
+  listenEvent(netServer, "connection", socket => {
+    detectSocketProtocol(socket, protocol => {
+      if (protocol === "http") {
+        httpServer.emit("connection", socket);
+        return;
+      }
+
+      if (protocol === "tls") {
+        tlsServer.emit("connection", socket);
+        return;
+      }
+
+      const response = [`HTTP/1.1 400 Bad Request`, `Content-Length: 0`, "", ""].join("\r\n");
+      socket.write(response);
+      socket.end();
+      socket.destroy();
+      netServer.emit("clientError", new Error("protocol error, Neither http, nor tls"), socket);
+    });
+  });
+  netServer._httpServer = httpServer;
+  netServer._tlsServer = tlsServer;
+  return netServer;
+}; // The async part is just to lazyly import "http2" or "https"
+// so that these module are parsed only if used.
+
+const createSecureServer = async ({
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed
+}) => {
+  if (http2) {
+    const {
+      createSecureServer
+    } = await import("node:http2");
+    return createSecureServer({
+      cert: certificate,
+      key: privateKey,
+      allowHTTP1: http1Allowed
+    });
+  }
+
+  const {
+    createServer
+  } = await import("node:https");
+  return createServer({
+    cert: certificate,
+    key: privateKey
+  });
+};
+
+const detectSocketProtocol = (socket, protocolDetectedCallback) => {
+  let removeOnceReadableListener = () => {};
+
+  const tryToRead = () => {
+    const buffer = socket.read(1);
+
+    if (buffer === null) {
+      removeOnceReadableListener = socket.once("readable", tryToRead);
+      return;
+    }
+
+    const firstByte = buffer[0];
+    socket.unshift(buffer);
+
+    if (firstByte === 22) {
+      protocolDetectedCallback("tls");
+      return;
+    }
+
+    if (firstByte > 32 && firstByte < 127) {
+      protocolDetectedCallback("http");
+      return;
+    }
+
+    protocolDetectedCallback(null);
+  };
+
+  tryToRead();
+  return () => {
+    removeOnceReadableListener();
+  };
+};
+
+const trackServerPendingConnections = (nodeServer, {
+  http2
+}) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingConnections(nodeServer);
+  }
+
+  return trackHttp1ServerPendingConnections(nodeServer);
+}; // const trackHttp2ServerPendingSessions = () => {}
+
+const trackHttp1ServerPendingConnections = nodeServer => {
+  const pendingConnections = new Set();
+  const removeConnectionListener = listenEvent(nodeServer, "connection", connection => {
+    pendingConnections.add(connection);
+    listenEvent(connection, "close", () => {
+      pendingConnections.delete(connection);
+    }, {
+      once: true
+    });
+  });
+
+  const stop = async reason => {
+    removeConnectionListener();
+    const pendingConnectionsArray = Array.from(pendingConnections);
+    pendingConnections.clear();
+    await Promise.all(pendingConnectionsArray.map(async pendingConnection => {
+      await destroyConnection(pendingConnection, reason);
+    }));
+  };
+
+  return {
+    stop
+  };
+};
+
+const destroyConnection = (connection, reason) => {
+  return new Promise((resolve, reject) => {
+    connection.destroy(reason, error => {
+      if (error) {
+        if (error === reason || error.code === "ENOTCONN") {
+          resolve();
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+}; // export const trackServerPendingStreams = (nodeServer) => {
+//   const pendingClients = new Set()
+//   const streamListener = (http2Stream, headers, flags) => {
+//     const client = { http2Stream, headers, flags }
+//     pendingClients.add(client)
+//     http2Stream.on("close", () => {
+//       pendingClients.delete(client)
+//     })
+//   }
+//   nodeServer.on("stream", streamListener)
+//   const stop = ({
+//     status,
+//     // reason
+//   }) => {
+//     nodeServer.removeListener("stream", streamListener)
+//     return Promise.all(
+//       Array.from(pendingClients).map(({ http2Stream }) => {
+//         if (http2Stream.sentHeaders === false) {
+//           http2Stream.respond({ ":status": status }, { endStream: true })
+//         }
+//         return new Promise((resolve, reject) => {
+//           if (http2Stream.closed) {
+//             resolve()
+//           } else {
+//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
+//               if (error) {
+//                 reject(error)
+//               } else {
+//                 resolve()
+//               }
+//             })
+//           }
+//         })
+//       }),
+//     )
+//   }
+//   return { stop }
+// }
+// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
+//   const pendingSessions = new Set()
+//   const sessionListener = (session) => {
+//     session.on("close", () => {
+//       pendingSessions.delete(session)
+//     })
+//     session.on("error", onSessionError)
+//     pendingSessions.add(session)
+//   }
+//   nodeServer.on("session", sessionListener)
+//   const stop = async (reason) => {
+//     nodeServer.removeListener("session", sessionListener)
+//     await Promise.all(
+//       Array.from(pendingSessions).map((pendingSession) => {
+//         return new Promise((resolve, reject) => {
+//           pendingSession.close((error) => {
+//             if (error) {
+//               if (error === reason || error.code === "ENOTCONN") {
+//                 resolve()
+//               } else {
+//                 reject(error)
+//               }
+//             } else {
+//               resolve()
+//             }
+//           })
+//         })
+//       }),
+//     )
+//   }
+//   return { stop }
+// }
+
+const listenRequest = (nodeServer, requestCallback) => {
+  if (nodeServer._httpServer) {
+    const removeHttpRequestListener = listenEvent(nodeServer._httpServer, "request", requestCallback);
+    const removeTlsRequestListener = listenEvent(nodeServer._tlsServer, "request", requestCallback);
+    return () => {
+      removeHttpRequestListener();
+      removeTlsRequestListener();
+    };
+  }
+
+  return listenEvent(nodeServer, "request", requestCallback);
+};
+
+const trackServerPendingRequests = (nodeServer, {
+  http2
+}) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingRequests(nodeServer);
+  }
+
+  return trackHttp1ServerPendingRequests(nodeServer);
+};
+
+const trackHttp1ServerPendingRequests = nodeServer => {
+  const pendingClients = new Set();
+  const removeRequestListener = listenRequest(nodeServer, (nodeRequest, nodeResponse) => {
+    const client = {
+      nodeRequest,
+      nodeResponse
+    };
+    pendingClients.add(client);
+    nodeResponse.once("close", () => {
+      pendingClients.delete(client);
+    });
+  });
+
+  const stop = async ({
+    status,
+    reason
+  }) => {
+    removeRequestListener();
+    const pendingClientsArray = Array.from(pendingClients);
+    pendingClients.clear();
+    await Promise.all(pendingClientsArray.map(({
+      nodeResponse
+    }) => {
+      if (nodeResponse.headersSent === false) {
+        nodeResponse.writeHead(status, String(reason));
+      } // http2
+
+
+      if (nodeResponse.close) {
+        return new Promise((resolve, reject) => {
+          if (nodeResponse.closed) {
+            resolve();
+          } else {
+            nodeResponse.close(error => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          }
+        });
+      } // http
+
+
+      return new Promise(resolve => {
+        if (nodeResponse.destroyed) {
+          resolve();
+        } else {
+          nodeResponse.once("close", () => {
+            resolve();
+          });
+          nodeResponse.destroy();
+        }
+      });
+    }));
+  };
+
+  return {
+    stop
+  };
+};
+
+if ("observable" in Symbol === false) {
+  Symbol.observable = Symbol.for("observable");
+}
+
+const createObservable = producer => {
+  if (typeof producer !== "function") {
+    throw new TypeError(`producer must be a function, got ${producer}`);
+  }
+
+  const observable = {
+    [Symbol.observable]: () => observable,
+    subscribe: ({
+      next = () => {},
+      error = value => {
+        throw value;
+      },
+      complete = () => {}
+    }) => {
+      let cleanup = () => {};
+
+      const subscription = {
+        closed: false,
+        unsubscribe: () => {
+          subscription.closed = true;
+          cleanup();
+        }
+      };
+      const producerReturnValue = producer({
+        next: value => {
+          if (subscription.closed) return;
+          next(value);
+        },
+        error: value => {
+          if (subscription.closed) return;
+          error(value);
+        },
+        complete: () => {
+          if (subscription.closed) return;
+          complete();
+        }
+      });
+
+      if (typeof producerReturnValue === "function") {
+        cleanup = producerReturnValue;
+      }
+
+      return subscription;
+    }
+  };
+  return observable;
+};
+const isObservable = value => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "object" || typeof value === "function") {
+    return Symbol.observable in value;
+  }
+
+  return false;
+};
+const observableFromValue = value => {
+  if (isObservable(value)) {
+    return value;
+  }
+
+  return createObservable(({
+    next,
+    complete
+  }) => {
+    next(value);
+    const timer = setTimeout(() => {
+      complete();
+    });
+    return () => {
+      clearTimeout(timer);
+    };
+  });
+};
+const createCompositeProducer = ({
+  cleanup = () => {}
+} = {}) => {
+  const observables = new Set();
+  const observers = new Set();
+
+  const addObservable = observable => {
+    if (observables.has(observable)) {
+      return false;
+    }
+
+    observables.add(observable);
+    observers.forEach(observer => {
+      observer.observe(observable);
+    });
+    return true;
+  };
+
+  const removeObservable = observable => {
+    if (!observables.has(observable)) {
+      return false;
+    }
+
+    observables.delete(observable);
+    observers.forEach(observer => {
+      observer.unobserve(observable);
+    });
+    return true;
+  };
+
+  const producer = ({
+    next = () => {},
+    complete = () => {},
+    error = () => {}
+  }) => {
+    let completeCount = 0;
+
+    const checkComplete = () => {
+      if (completeCount === observables.size) {
+        complete();
+      }
+    };
+
+    const subscriptions = new Map();
+
+    const observe = observable => {
+      const subscription = observable.subscribe({
+        next: value => {
+          next(value);
+        },
+        error: value => {
+          error(value);
+        },
+        complete: () => {
+          subscriptions.delete(observable);
+          completeCount++;
+          checkComplete();
+        }
+      });
+      subscriptions.set(observable, subscription);
+    };
+
+    const unobserve = observable => {
+      const subscription = subscriptions.get(observable);
+
+      if (!subscription) {
+        return;
+      }
+
+      subscription.unsubscribe();
+      subscriptions.delete(observable);
+      checkComplete();
+    };
+
+    const observer = {
+      observe,
+      unobserve
+    };
+    observers.add(observer);
+    observables.forEach(observable => {
+      observe(observable);
+    });
+    return () => {
+      observers.delete(observer);
+      subscriptions.forEach(subscription => {
+        subscription.unsubscribe();
+      });
+      subscriptions.clear();
+      cleanup();
+    };
+  };
+
+  producer.addObservable = addObservable;
+  producer.removeObservable = removeObservable;
+  return producer;
+};
+
+// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
+const readableStreamLifetimeInSeconds = 120;
+const nodeStreamToObservable = nodeStream => {
+  const observable = createObservable(({
+    next,
+    error,
+    complete
+  }) => {
+    if (nodeStream.isPaused()) {
+      nodeStream.resume();
+    } else if (nodeStream.complete) {
+      complete();
+      return null;
+    }
+
+    const cleanup = () => {
+      nodeStream.removeListener("data", next);
+      nodeStream.removeListener("error", error);
+      nodeStream.removeListener("end", complete);
+      nodeStream.removeListener("close", cleanup);
+      nodeStream.destroy();
+    }; // should we do nodeStream.resume() in case the stream was paused ?
+
+
+    nodeStream.once("error", error);
+    nodeStream.on("data", data => {
+      next(data);
+    });
+    nodeStream.once("close", () => {
+      cleanup();
+    });
+    nodeStream.once("end", () => {
+      complete();
+    });
+    return cleanup;
+  });
+
+  if (nodeStream instanceof Readable) {
+    // safe measure, ensure the readable stream gets
+    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
+    const timeout = setTimeout(() => {
+      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release ressources`, {
+        CODE: "READABLE_STREAM_TIMEOUT",
+        // url is for http client request
+        detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`
+      });
+      nodeStream.destroy();
+    }, readableStreamLifetimeInSeconds * 1000);
+    observable.timeout = timeout;
+    onceReadableStreamUsedOrClosed(nodeStream, () => {
+      clearTimeout(timeout);
+    });
+  }
+
+  return observable;
+};
+
+const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
+  const dataOrCloseCallback = () => {
+    readableStream.removeListener("data", dataOrCloseCallback);
+    readableStream.removeListener("close", dataOrCloseCallback);
+    callback();
+  };
+
+  readableStream.on("data", dataOrCloseCallback);
+  readableStream.once("close", dataOrCloseCallback);
+};
+
+const normalizeHeaderName = headerName => {
+  headerName = String(headerName);
+
+  if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
+    throw new TypeError("Invalid character in header field name");
+  }
+
+  return headerName.toLowerCase();
+};
+
+const normalizeHeaderValue = headerValue => {
+  return String(headerValue);
+};
+
+/*
+https://developer.mozilla.org/en-US/docs/Web/API/Headers
+https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+*/
+const headersFromObject = headersObject => {
+  const headers = {};
+  Object.keys(headersObject).forEach(headerName => {
+    if (headerName[0] === ":") {
+      // exclude http2 headers
+      return;
+    }
+
+    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(headersObject[headerName]);
+  });
+  return headers;
+};
+
+const fromNodeRequest = (nodeRequest, {
+  serverOrigin,
+  signal
+}) => {
+  const headers = headersFromObject(nodeRequest.headers);
+  const body = nodeStreamToObservable(nodeRequest);
+  let requestOrigin;
+
+  if (nodeRequest.authority) {
+    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.authority}` : `http://${nodeRequest.authority}`;
+  } else if (nodeRequest.headers.host) {
+    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.headers.host}` : `http://${nodeRequest.headers.host}`;
+  } else {
+    requestOrigin = serverOrigin;
+  }
+
+  return Object.freeze({
+    signal,
+    http2: Boolean(nodeRequest.stream),
+    origin: requestOrigin,
+    ...getPropertiesFromRessource({
+      ressource: nodeRequest.url,
+      baseUrl: requestOrigin
+    }),
+    method: nodeRequest.method,
+    headers,
+    body
+  });
+};
+const applyRedirectionToRequest = (request, {
+  ressource,
+  pathname,
+  ...rest
+}) => {
+  return { ...request,
+    ...(ressource ? getPropertiesFromRessource({
+      ressource,
+      baseUrl: request.url
+    }) : pathname ? getPropertiesFromPathname({
+      pathname,
+      baseUrl: request.url
+    }) : {}),
+    ...rest
+  };
+};
+
+const getPropertiesFromRessource = ({
+  ressource,
+  baseUrl
+}) => {
+  const urlObject = new URL(ressource, baseUrl);
+  let pathname = urlObject.pathname;
+  return {
+    url: String(urlObject),
+    pathname,
+    ressource
+  };
+};
+
+const getPropertiesFromPathname = ({
+  pathname,
+  baseUrl
+}) => {
+  return getPropertiesFromRessource({
+    ressource: `${pathname}${new URL(baseUrl).search}`,
+    baseUrl
+  });
+};
+
+const createPushRequest = (request, {
+  signal,
+  pathname,
+  method
+}) => {
+  const pushRequest = Object.freeze({ ...request,
+    parent: request,
+    signal,
+    http2: true,
+    ...(pathname ? getPropertiesFromPathname({
+      pathname,
+      baseUrl: request.url
+    }) : {}),
+    method: method || request.method,
+    headers: getHeadersInheritedByPushRequest(request),
+    body: undefined
+  });
+  return pushRequest;
+};
+
+const getHeadersInheritedByPushRequest = request => {
+  const headersInherited = { ...request.headers
+  }; // mtime sent by the client in request headers concerns the main request
+  // Time remains valid for request to other ressources so we keep it
+  // in child requests
+  // delete childHeaders["if-modified-since"]
+  // eTag sent by the client in request headers concerns the main request
+  // A request made to an other ressource must not inherit the eTag
+
+  delete headersInherited["if-none-match"];
+  return headersInherited;
+};
+
+const normalizeBodyMethods = body => {
+  if (isObservable(body)) {
+    return {
+      asObservable: () => body,
+      destroy: () => {}
+    };
+  }
+
+  if (isFileHandle(body)) {
+    return {
+      asObservable: () => fileHandleToObservable(body),
+      destroy: () => {
+        body.close();
+      }
+    };
+  }
+
+  if (isNodeStream(body)) {
+    return {
+      asObservable: () => nodeStreamToObservable(body),
+      destroy: () => {
+        body.destroy();
+      }
+    };
+  }
+
+  return {
+    asObservable: () => observableFromValue(body),
+    destroy: () => {}
+  };
+};
+const isFileHandle = value => {
+  return value && value.constructor && value.constructor.name === "FileHandle";
+};
+const fileHandleToReadableStream = fileHandle => {
+  const fileReadableStream = typeof fileHandle.createReadStream === "function" ? fileHandle.createReadStream() : createReadStream("/toto", // is it ok to pass a fake path like this?
+  {
+    fd: fileHandle.fd,
+    emitClose: true // autoClose: true
+
+  }); // I suppose it's required only when doing fs.createReadStream()
+  // and not fileHandle.createReadStream()
+  // fileReadableStream.on("end", () => {
+  //   fileHandle.close()
+  // })
+
+  return fileReadableStream;
+};
+
+const fileHandleToObservable = fileHandle => {
+  return nodeStreamToObservable(fileHandleToReadableStream(fileHandle));
+};
+
+const isNodeStream = value => {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (value instanceof Stream || value instanceof Writable || value instanceof Readable) {
+    return true;
+  }
+
+  return false;
+};
+
+const populateNodeResponse = async (responseStream, {
+  status,
+  statusText,
+  headers,
+  body,
+  bodyEncoding
+}, {
+  signal,
+  ignoreBody,
+  onAbort,
+  onError,
+  onHeadersSent,
+  onEnd
+} = {}) => {
+  body = await body;
+  const bodyMethods = normalizeBodyMethods(body);
+
+  if (signal.aborted) {
+    bodyMethods.destroy();
+    responseStream.destroy();
+    onAbort();
+    return;
+  }
+
+  writeHead(responseStream, {
+    status,
+    statusText,
+    headers,
+    onHeadersSent
+  });
+
+  if (!body) {
+    onEnd();
+    responseStream.end();
+    return;
+  }
+
+  if (ignoreBody) {
+    onEnd();
+    bodyMethods.destroy();
+    responseStream.end();
+    return;
+  }
+
+  if (bodyEncoding) {
+    responseStream.setEncoding(bodyEncoding);
+  }
+
+  await new Promise(resolve => {
+    const observable = bodyMethods.asObservable();
+    const subscription = observable.subscribe({
+      next: data => {
+        try {
+          responseStream.write(data);
+        } catch (e) {
+          // Something inside Node.js sometimes puts stream
+          // in a state where .write() throw despites nodeResponse.destroyed
+          // being undefined and "close" event not being emitted.
+          // I have tested if we are the one calling destroy
+          // (I have commented every .destroy() call)
+          // but issue still occurs
+          // For the record it's "hard" to reproduce but can be by running
+          // a lot of tests against a browser in the context of @jsenv/core testing
+          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+            return;
+          }
+
+          responseStream.emit("error", e);
+        }
+      },
+      error: value => {
+        responseStream.emit("error", value);
+      },
+      complete: () => {
+        responseStream.end();
+      }
+    });
+    raceCallbacks({
+      abort: cb => {
+        signal.addEventListener("abort", cb);
+        return () => {
+          signal.removeEventListener("abort", cb);
+        };
+      },
+      error: cb => {
+        responseStream.on("error", cb);
+        return () => {
+          responseStream.removeListener("error", cb);
+        };
+      },
+      close: cb => {
+        responseStream.on("close", cb);
+        return () => {
+          responseStream.removeListener("close", cb);
+        };
+      },
+      finish: cb => {
+        responseStream.on("finish", cb);
+        return () => {
+          responseStream.removeListener("finish", cb);
+        };
+      }
+    }, winner => {
+      const raceEffects = {
+        abort: () => {
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onAbort();
+          resolve();
+        },
+        error: error => {
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onError(error);
+          resolve();
+        },
+        close: () => {
+          // close body in case nodeResponse is prematurely closed
+          // while body is writing
+          // it may happen in case of server sent event
+          // where body is kept open to write to client
+          // and the browser is reloaded or closed for instance
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onAbort();
+          resolve();
+        },
+        finish: () => {
+          onEnd();
+          resolve();
+        }
+      };
+      raceEffects[winner.name](winner.data);
+    });
+  });
+};
+
+const writeHead = (responseStream, {
+  status,
+  statusText,
+  headers,
+  onHeadersSent
+}) => {
+  const responseIsHttp2ServerResponse = responseStream instanceof Http2ServerResponse;
+  const responseIsServerHttp2Stream = responseStream.constructor.name === "ServerHttp2Stream";
+  let nodeHeaders = headersToNodeHeaders(headers, {
+    // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L112
+    ignoreConnectionHeader: responseIsHttp2ServerResponse || responseIsServerHttp2Stream
+  });
+
+  if (statusText === undefined) {
+    statusText = statusTextFromStatus(status);
+  }
+
+  if (responseIsServerHttp2Stream) {
+    nodeHeaders = { ...nodeHeaders,
+      ":status": status
+    };
+    responseStream.respond(nodeHeaders);
+    onHeadersSent({
+      nodeHeaders,
+      status,
+      statusText
+    });
+    return;
+  } // nodejs strange signature for writeHead force this
+  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
+
+
+  if ( // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
+  responseIsHttp2ServerResponse) {
+    responseStream.writeHead(status, nodeHeaders);
+    onHeadersSent({
+      nodeHeaders,
+      status,
+      statusText
+    });
+    return;
+  }
+
+  responseStream.writeHead(status, statusText, nodeHeaders);
+  onHeadersSent({
+    nodeHeaders,
+    status,
+    statusText
+  });
+};
+
+const statusTextFromStatus = status => http.STATUS_CODES[status] || "not specified";
+
+const headersToNodeHeaders = (headers, {
+  ignoreConnectionHeader
+}) => {
+  const nodeHeaders = {};
+  Object.keys(headers).forEach(name => {
+    if (name === "connection" && ignoreConnectionHeader) return;
+    const nodeHeaderName = name in mapping ? mapping[name] : name;
+    nodeHeaders[nodeHeaderName] = headers[name];
+  });
+  return nodeHeaders;
+};
+
+const mapping = {// "content-type": "Content-Type",
+  // "last-modified": "Last-Modified",
+};
+
+// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
+const close = "\x1b[0m";
+const red = "\x1b[31m";
+const green = "\x1b[32m";
+const yellow = "\x1b[33m"; // const blue = "\x1b[34m"
+
+const magenta = "\x1b[35m";
+const cyan = "\x1b[36m"; // const white = "\x1b[37m"
+
+const colorizeResponseStatus = status => {
+  const statusType = statusToType(status);
+  if (statusType === "information") return `${cyan}${status}${close}`;
+  if (statusType === "success") return `${green}${status}${close}`;
+  if (statusType === "redirection") return `${magenta}${status}${close}`;
+  if (statusType === "client_error") return `${yellow}${status}${close}`;
+  if (statusType === "server_error") return `${red}${status}${close}`;
+  return status;
+}; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+const statusToType = status => {
+  if (statusIsInformation(status)) return "information";
+  if (statusIsSuccess(status)) return "success";
+  if (statusIsRedirection(status)) return "redirection";
+  if (statusIsClientError(status)) return "client_error";
+  if (statusIsServerError(status)) return "server_error";
+  return "unknown";
+};
+
+const statusIsInformation = status => status >= 100 && status < 200;
+
+const statusIsSuccess = status => status >= 200 && status < 300;
+
+const statusIsRedirection = status => status >= 300 && status < 400;
+
+const statusIsClientError = status => status >= 400 && status < 500;
+
+const statusIsServerError = status => status >= 500 && status < 600;
+
+const getServerOrigins = ({
+  protocol,
+  ip,
+  port
+}) => {
+  const isInternalIp = ip === "127.0.0.1";
+  const internalOrigin = createServerOrigin({
+    protocol,
+    hostname: "localhost",
+    port
+  });
+
+  if (isInternalIp) {
+    return {
+      internal: internalOrigin
+    };
+  }
+
+  const isAnyIp = !ip || ip === "::" || ip === "0.0.0.0";
+  return {
+    internal: internalOrigin,
+    external: createServerOrigin({
+      protocol,
+      hostname: isAnyIp ? getExternalIp() : ip,
+      port
+    })
+  };
+};
+
+const createServerOrigin = ({
+  protocol,
+  hostname,
+  port
+}) => {
+  const url = new URL("https://127.0.0.1:80");
+  url.protocol = protocol;
+  url.hostname = hostname;
+  url.port = port;
+  return url.origin;
+};
+
+const getExternalIp = () => {
+  const networkInterfaceMap = networkInterfaces();
+  let internalIPV4NetworkAddress;
+  Object.keys(networkInterfaceMap).find(key => {
+    const networkAddressArray = networkInterfaceMap[key];
+    return networkAddressArray.find(networkAddress => {
+      if (networkAddress.internal) return false;
+      if (networkAddress.family !== "IPv4") return false;
+      internalIPV4NetworkAddress = networkAddress;
+      return true;
+    });
+  });
+  return internalIPV4NetworkAddress ? internalIPV4NetworkAddress.address : null;
+};
+
+const listen = async ({
+  signal = new AbortController().signal,
+  server,
+  port,
+  portHint,
+  ip
+}) => {
+  const listeningOperation = Abort.startOperation();
+
+  try {
+    listeningOperation.addAbortSignal(signal);
+
+    if (portHint) {
+      listeningOperation.throwIfAborted();
+      port = await findFreePort(portHint, {
+        signal: listeningOperation.signal,
+        ip
+      });
+    }
+
+    listeningOperation.throwIfAborted();
+    port = await startListening({
+      server,
+      port,
+      ip
+    });
+    listeningOperation.addAbortCallback(() => stopListening(server));
+    listeningOperation.throwIfAborted();
+    return port;
+  } finally {
+    await listeningOperation.end();
+  }
+};
+
+const findFreePort = async (initialPort = 1, {
+  signal = new AbortController().signal,
+  ip = "127.0.0.1",
+  min = 1,
+  max = 65534,
+  next = port => port + 1
+} = {}) => {
+  const findFreePortOperation = Abort.startOperation();
+
+  try {
+    findFreePortOperation.addAbortSignal(signal);
+    findFreePortOperation.throwIfAborted();
+
+    const testUntil = async (port, ip) => {
+      findFreePortOperation.throwIfAborted();
+      const free = await portIsFree(port, ip);
+
+      if (free) {
+        return port;
+      }
+
+      const nextPort = next(port);
+
+      if (nextPort > max) {
+        throw new Error(`${ip} has no available port between ${min} and ${max}`);
+      }
+
+      return testUntil(nextPort, ip);
+    };
+
+    const freePort = await testUntil(initialPort, ip);
+    return freePort;
+  } finally {
+    await findFreePortOperation.end();
+  }
+};
+
+const portIsFree = async (port, ip) => {
+  const server = createServer();
+
+  try {
+    await startListening({
+      server,
+      port,
+      ip
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return false;
+    }
+
+    if (error && error.code === "EACCES") {
+      return false;
+    }
+
+    throw error;
+  }
+
+  await stopListening(server);
+  return true;
+};
+
+const startListening = ({
+  server,
+  port,
+  ip
+}) => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("listening", () => {
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      resolve(server.address().port);
+    });
+    server.listen(port, ip);
+  });
+};
+
+const stopListening = server => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+}; // unit test exports
+
+const composeTwoObjects = (firstObject, secondObject, {
+  keysComposition,
+  strict = false,
+  forceLowerCase = false
+} = {}) => {
+  if (forceLowerCase) {
+    return applyCompositionForcingLowerCase(firstObject, secondObject, {
+      keysComposition,
+      strict
+    });
+  }
+
+  return applyCaseSensitiveComposition(firstObject, secondObject, {
+    keysComposition,
+    strict
+  });
+};
+
+const applyCaseSensitiveComposition = (firstObject, secondObject, {
+  keysComposition,
+  strict
+}) => {
+  if (strict) {
+    const composed = {};
+    Object.keys(keysComposition).forEach(key => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: keyExistsIn(key, firstObject) ? key : null,
+        secondKey: keyExistsIn(key, secondObject) ? key : null
+      });
+    });
+    return composed;
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach(key => {
+    composed[key] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach(key => {
+    composed[key] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key,
+      firstKey: keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(key, secondObject) ? key : null
+    });
+  });
+  return composed;
+};
+
+const applyCompositionForcingLowerCase = (firstObject, secondObject, {
+  keysComposition,
+  strict
+}) => {
+  if (strict) {
+    const firstObjectKeyMapping = {};
+    Object.keys(firstObject).forEach(key => {
+      firstObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    const secondObjectKeyMapping = {};
+    Object.keys(secondObject).forEach(key => {
+      secondObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    Object.keys(keysComposition).forEach(key => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: firstObjectKeyMapping[key] || null,
+        secondKey: secondObjectKeyMapping[key] || null
+      });
+    });
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach(key => {
+    composed[key.toLowerCase()] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach(key => {
+    const keyLowercased = key.toLowerCase();
+    composed[key.toLowerCase()] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key: keyLowercased,
+      firstKey: keyExistsIn(keyLowercased, firstObject) ? keyLowercased : keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(keyLowercased, secondObject) ? keyLowercased : keyExistsIn(key, secondObject) ? key : null
+    });
+  });
+  return composed;
+};
+
+const composeValueAtKey = ({
+  firstObject,
+  secondObject,
+  firstKey,
+  secondKey,
+  key,
+  keysComposition
+}) => {
+  if (!firstKey) {
+    return secondObject[secondKey];
+  }
+
+  if (!secondKey) {
+    return firstObject[firstKey];
+  }
+
+  const keyForCustomComposition = keyExistsIn(key, keysComposition) ? key : null;
+
+  if (!keyForCustomComposition) {
+    return secondObject[secondKey];
+  }
+
+  const composeTwoValues = keysComposition[keyForCustomComposition];
+  return composeTwoValues(firstObject[firstKey], secondObject[secondKey]);
+};
+
+const keyExistsIn = (key, object) => {
+  return Object.prototype.hasOwnProperty.call(object, key);
+};
+
+const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  return composeTwoObjects(firstHeaders, secondHeaders, {
+    keysComposition: HEADER_NAMES_COMPOSITION,
+    forceLowerCase: true
+  });
+};
+
+const composeHeaderValues = (value, nextValue) => {
+  const headerValues = value.split(", ");
+  nextValue.split(", ").forEach(value => {
+    if (!headerValues.includes(value)) {
+      headerValues.push(value);
+    }
+  });
+  return headerValues.join(", ");
+};
+
+const HEADER_NAMES_COMPOSITION = {
+  "accept": composeHeaderValues,
+  "accept-charset": composeHeaderValues,
+  "accept-language": composeHeaderValues,
+  "access-control-allow-headers": composeHeaderValues,
+  "access-control-allow-methods": composeHeaderValues,
+  "access-control-allow-origin": composeHeaderValues,
+  // https://www.w3.org/TR/server-timing/
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
+  "server-timing": composeHeaderValues,
+  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
+  "vary": composeHeaderValues
+};
+
+const composeTwoResponses = (firstResponse, secondResponse) => {
+  return composeTwoObjects(firstResponse, secondResponse, {
+    keysComposition: RESPONSE_KEYS_COMPOSITION,
+    strict: true
+  });
+};
+const RESPONSE_KEYS_COMPOSITION = {
+  status: (prevStatus, status) => status,
+  statusText: (prevStatusText, statusText) => statusText,
+  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
+  headers: composeTwoHeaders,
+  body: (prevBody, body) => body,
+  bodyEncoding: (prevEncoding, encoding) => encoding,
+  timing: (prevTiming, timing) => {
+    return { ...prevTiming,
+      ...timing
+    };
+  }
+};
+
+const listenServerConnectionError = (nodeServer, connectionErrorCallback, {
+  ignoreErrorAfterConnectionIsDestroyed = true
+} = {}) => {
+  const cleanupSet = new Set();
+  const removeConnectionListener = listenEvent(nodeServer, "connection", socket => {
+    const removeSocketErrorListener = listenEvent(socket, "error", error => {
+      if (ignoreErrorAfterConnectionIsDestroyed && socket.destroyed) {
+        return;
+      }
+
+      connectionErrorCallback(error, socket);
+    });
+    const removeOnceSocketCloseListener = listenEvent(socket, "close", () => {
+      removeSocketErrorListener();
+      cleanupSet.delete(cleanup);
+    }, {
+      once: true
+    });
+
+    const cleanup = () => {
+      removeSocketErrorListener();
+      removeOnceSocketCloseListener();
+    };
+
+    cleanupSet.add(cleanup);
+  });
+  return () => {
+    removeConnectionListener();
+    cleanupSet.forEach(cleanup => {
+      cleanup();
+    });
+    cleanupSet.clear();
+  };
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+const parseMultipleHeader = (multipleHeaderString, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach(value => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return;
+    }
+
+    const properties = parseHeaderProperties(valueParts.slice(1), {
+      validateProperty
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const properties = headerProperties.reduce((previous, valuePart) => {
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = {
+      name: propertyName,
+      value: propertyValue
+    };
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return previous;
+    }
+
+    return { ...previous,
+      [property.name]: property.value
+    };
+  }, {});
+  return properties;
+};
+
+const parseHeaderPropertyValue = headerPropertyValueString => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
+
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (multipleHeader, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  return Object.keys(multipleHeader).filter(name => {
+    const headerProperties = multipleHeader[name];
+
+    if (!headerProperties) {
+      return false;
+    }
+
+    if (typeof headerProperties !== "object") {
+      return false;
+    }
+
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(name => {
+    const headerProperties = multipleHeader[name];
+    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
+      validateProperty
+    });
+
+    if (headerPropertiesString.length) {
+      return `${name};${headerPropertiesString}`;
+    }
+
+    return name;
+  }).join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const headerPropertiesString = Object.keys(headerProperties).map(name => {
+    const property = {
+      name,
+      value: headerProperties[name]
+    };
+    return property;
+  }).filter(property => {
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(stringifyHeaderProperty).join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({
+  name,
+  value
+}) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+
+  return `${name}=${value}`;
+};
+
+const applyContentNegotiation = ({
+  availables,
+  accepteds,
+  getAcceptanceScore
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+    let acceptedIndex = 0;
+
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+      const score = getAcceptanceScore(accepted, available);
+
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+
+  return availableWithHighestScore;
+};
+
+const negotiateContentType = (request, availableContentTypes) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptHeader = headers.accept;
+
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return applyContentNegotiation({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore
+  });
+};
+
+const parseAcceptHeader = acceptHeader => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach(key => {
+    const {
+      q = 1
+    } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = ({
+  value,
+  quality
+}, availableContentType) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const decomposeContentType = fullType => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const applyDefaultErrorToResponse = (serverInternalError, {
+  request,
+  sendErrorDetails = false
+}) => {
+  const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
+
+  if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+    return serverInternalError.asResponse();
+  }
+
+  const dataToSend = serverInternalErrorIsAPrimitive ? {
+    code: "VALUE_THROWED",
+    value: serverInternalError
+  } : {
+    code: serverInternalError.code || "UNKNOWN_ERROR",
+    ...(sendErrorDetails ? {
+      stack: serverInternalError.stack,
+      ...serverInternalError
+    } : {})
+  };
+  const availableContentTypes = {
+    "text/html": () => {
+      const renderHtmlForErrorWithoutDetails = () => {
+        return `<p>Details not available: to enable them server must be started with sendErrorDetails: true.</p>`;
+      };
+
+      const renderHtmlForErrorWithDetails = () => {
+        if (serverInternalErrorIsAPrimitive) {
+          return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
+        }
+
+        return `<pre>${serverInternalError.stack}</pre>`;
+      };
+
+      const body = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internal server error</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Internal server error</h1>
+    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
+    <details>
+      <summary>See internal error details</summary>
+      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
+    </details>
+  </body>
+</html>`;
+      return {
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(body)
+        },
+        body
+      };
+    },
+    "application/json": () => {
+      const body = JSON.stringify(dataToSend);
+      return {
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body)
+        },
+        body
+      };
+    }
+  };
+  const bestContentType = negotiateContentType(request, Object.keys(availableContentTypes));
+  return availableContentTypes[bestContentType || "application/json"]();
+};
+
+const createReason = reasonString => {
+  return {
+    toString: () => reasonString
+  };
+};
+
+const STOP_REASON_INTERNAL_ERROR = createReason("Internal error");
+const STOP_REASON_PROCESS_SIGHUP = createReason("process SIGHUP");
+const STOP_REASON_PROCESS_SIGTERM = createReason("process SIGTERM");
+const STOP_REASON_PROCESS_SIGINT = createReason("process SIGINT");
+const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
+const STOP_REASON_PROCESS_EXIT = createReason("process exit");
+const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
+
+const startServer = async ({
+  signal = new AbortController().signal,
+  logLevel,
+  startLog = true,
+  serverName = "server",
+  protocol = "http",
+  http2 = false,
+  http1Allowed = true,
+  redirectHttpToHttps,
+  allowHttpRequestOnHttps = false,
+  listenAnyIp = false,
+  ip = listenAnyIp ? undefined : "127.0.0.1",
+  port = 0,
+  // assign a random available port
+  portHint,
+  privateKey,
+  certificate,
+  // when inside a worker, we should not try to stop server on SIGINT
+  // otherwise it can create an EPIPE error while primary process tries
+  // to kill the server
+  stopOnSIGINT = !cluster.isWorker,
+  // auto close the server when the process exits
+  stopOnExit = true,
+  // auto close when requestToResponse throw an error
+  stopOnInternalError = false,
+  keepProcessAlive = true,
+  requestToResponse = () => null,
+  plugins = {},
+  sendErrorDetails = false,
+  errorToResponse = () => null,
+  onListenStart = () => {},
+  onListenEnd = () => {},
+  onStop = () => {},
+  nagle = true
+} = {}) => {
+  if (protocol !== "http" && protocol !== "https") {
+    throw new Error(`protocol must be http or https, got ${protocol}`);
+  }
+
+  if (protocol === "https") {
+    if (!certificate) {
+      throw new Error(`missing certificate for https server`);
+    }
+
+    if (!privateKey) {
+      throw new Error(`missing privateKey for https server`);
+    }
+  }
+
+  if (http2 && protocol !== "https") {
+    throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
+  }
+
+  const logger = createLogger({
+    logLevel
+  });
+
+  if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
+    redirectHttpToHttps = true;
+  }
+
+  if (redirectHttpToHttps && protocol === "http") {
+    logger.warn(`redirectHttpToHttps ignored because protocol is http`);
+    redirectHttpToHttps = false;
+  }
+
+  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
+    logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
+    redirectHttpToHttps = false;
+  }
+
+  if (allowHttpRequestOnHttps && protocol === "http") {
+    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
+    allowHttpRequestOnHttps = false;
+  }
+
+  const processTeardownEvents = {
+    SIGHUP: stopOnExit,
+    SIGTERM: stopOnExit,
+    SIGINT: stopOnSIGINT,
+    beforeExit: stopOnExit,
+    exit: stopOnExit
+  };
+  let status = "starting";
+  let nodeServer;
+  const startServerOperation = Abort.startOperation();
+
+  try {
+    startServerOperation.addAbortSignal(signal);
+    startServerOperation.addAbortSource(abort => {
+      return raceProcessTeardownEvents(processTeardownEvents, ({
+        name
+      }) => {
+        logger.info(`process teardown (${name}) -> aborting start server`);
+        abort();
+      });
+    });
+    startServerOperation.throwIfAborted();
+    nodeServer = await createNodeServer({
+      protocol,
+      redirectHttpToHttps,
+      allowHttpRequestOnHttps,
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed
+    });
+    startServerOperation.throwIfAborted(); // https://nodejs.org/api/net.html#net_server_unref
+
+    if (!keepProcessAlive) {
+      nodeServer.unref();
+    }
+
+    onListenStart();
+    port = await listen({
+      signal: startServerOperation.signal,
+      server: nodeServer,
+      port,
+      portHint,
+      ip
+    });
+    onListenEnd(port);
+    startServerOperation.addAbortCallback(async () => {
+      await stopListening(nodeServer);
+    });
+    startServerOperation.throwIfAborted();
+  } finally {
+    await startServerOperation.end();
+  } // now the server is started (listening) it cannot be aborted anymore
+  // (otherwise an AbortError is thrown to the code calling "startServer")
+  // we can proceed to create a stop function to stop it gacefully
+  // and add a request handler
+
+
+  const stopCallbackList = createCallbackListNotifiedOnce();
+  stopCallbackList.add(({
+    reason
+  }) => {
+    logger.info(`${serverName} stopping server (reason: ${reason})`);
+  });
+  stopCallbackList.add(onStop);
+  stopCallbackList.add(async () => {
+    await stopListening(nodeServer);
+  });
+  let stoppedResolve;
+  const stoppedPromise = new Promise(resolve => {
+    stoppedResolve = resolve;
+  });
+  const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+    status = "stopping";
+    await Promise.all(stopCallbackList.notify({
+      reason
+    }));
+    status = "stopped";
+    stoppedResolve(reason);
+  });
+  const cancelProcessTeardownRace = raceProcessTeardownEvents(processTeardownEvents, winner => {
+    stop(PROCESS_TEARDOWN_EVENTS_MAP[winner.name]);
+  });
+  stopCallbackList.add(cancelProcessTeardownRace);
+
+  const onError = error => {
+    if (status === "stopping" && error.code === "ECONNRESET") {
+      return;
+    }
+
+    throw error;
+  };
+
+  status = "opened";
+  const serverOrigins = getServerOrigins({
+    protocol,
+    ip,
+    port
+  });
+  const serverOrigin = serverOrigins.internal;
+  const removeConnectionErrorListener = listenServerConnectionError(nodeServer, onError);
+  stopCallbackList.add(removeConnectionErrorListener);
+  const connectionsTracker = trackServerPendingConnections(nodeServer, {
+    http2
+  }); // opened connection must be shutdown before the close event is emitted
+
+  stopCallbackList.add(connectionsTracker.stop);
+  const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
+    http2
+  }); // ensure pending requests got a response from the server
+
+  stopCallbackList.add(reason => {
+    pendingRequestsTracker.stop({
+      status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
+      reason
+    });
+  });
+
+  const requestCallback = async (nodeRequest, nodeResponse) => {
+    // pause the stream to let a chance to "requestToResponse"
+    // to call "requestRequestBody". Without this the request body readable stream
+    // might be closed when we'll try to attach "data" and "end" listeners to it
+    nodeRequest.pause();
+
+    if (!nagle) {
+      nodeRequest.connection.setNoDelay(true);
+    }
+
+    if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
+      nodeResponse.writeHead(301, {
+        location: `${serverOrigin}${nodeRequest.url}`
+      });
+      nodeResponse.end();
+      return;
+    }
+
+    const receiveRequestOperation = Abort.startOperation();
+    receiveRequestOperation.addAbortSource(abort => {
+      const closeEventCallback = () => {
+        if (nodeRequest.complete) {
+          receiveRequestOperation.end();
+        } else {
+          nodeResponse.destroy();
+          abort();
+        }
+      };
+
+      nodeRequest.once("close", closeEventCallback);
+      return () => {
+        nodeRequest.removeListener("close", closeEventCallback);
+      };
+    });
+    receiveRequestOperation.addAbortSource(abort => {
+      return stopCallbackList.add(abort);
+    });
+    const sendResponseOperation = Abort.startOperation();
+    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
+    sendResponseOperation.addAbortSource(abort => {
+      return stopCallbackList.add(abort);
+    });
+    const request = fromNodeRequest(nodeRequest, {
+      serverOrigin,
+      signal: receiveRequestOperation.signal
+    }); // Handling request is asynchronous, we buffer logs for that request
+    // until we know what happens with that request
+    // It delays logs until we know of the request will be handled
+    // but it's mandatory to make logs readable.
+
+    const rootRequestNode = {
+      logs: [],
+      children: []
+    };
+
+    const addRequestLog = (node, {
+      type,
+      value
+    }) => {
+      node.logs.push({
+        type,
+        value
+      });
+    };
+
+    const onRequestHandled = node => {
+      if (node !== rootRequestNode) {
+        // keep buffering until root request write logs for everyone
+        return;
+      }
+
+      const prefixLines = (string, prefix) => {
+        return string.replace(/^(?!\s*$)/gm, prefix);
+      };
+
+      const writeLog = ({
+        type,
+        value
+      }, {
+        someLogIsError,
+        someLogIsWarn,
+        depth
+      }) => {
+        if (depth > 0) {
+          value = prefixLines(value, "  ".repeat(depth));
+        }
+
+        if (type === "info") {
+          if (someLogIsError) {
+            type = "error";
+          } else if (someLogIsWarn) {
+            type = "warn";
+          }
+        }
+
+        logger[type](value);
+      };
+
+      const visitRequestNodeToLog = (requestNode, depth) => {
+        let someLogIsError = false;
+        let someLogIsWarn = false;
+        requestNode.logs.forEach(log => {
+          if (log.type === "error") {
+            someLogIsError = true;
+          }
+
+          if (log.type === "warn") {
+            someLogIsWarn = true;
+          }
+        });
+        const firstLog = requestNode.logs.shift();
+        const lastLog = requestNode.logs.pop();
+        const middleLogs = requestNode.logs;
+        writeLog(firstLog, {
+          someLogIsError,
+          someLogIsWarn,
+          depth
+        });
+        middleLogs.forEach(log => {
+          writeLog(log, {
+            someLogIsError,
+            someLogIsWarn,
+            depth
+          });
+        });
+        requestNode.children.forEach(child => {
+          visitRequestNodeToLog(child, depth + 1);
+        });
+
+        if (lastLog) {
+          writeLog(lastLog, {
+            someLogIsError,
+            someLogIsWarn,
+            depth: depth + 1
+          });
+        }
+      };
+
+      visitRequestNodeToLog(rootRequestNode, 0);
+    };
+
+    nodeRequest.on("error", error => {
+      if (error.message === "aborted") {
+        addRequestLog(rootRequestNode, {
+          type: "debug",
+          value: createDetailedMessage$1(`request aborted by client`, {
+            "error message": error.message
+          })
+        });
+      } else {
+        // I'm not sure this can happen but it's here in case
+        addRequestLog(rootRequestNode, {
+          type: "error",
+          value: createDetailedMessage$1(`"error" event emitted on request`, {
+            "error stack": error.stack
+          })
+        });
+      }
+    });
+
+    const pushResponse = async ({
+      path,
+      method
+    }, {
+      requestNode
+    }) => {
+      const http2Stream = nodeResponse.stream; // being able to push a stream is nice to have
+      // so when it fails it's not critical
+
+      const onPushStreamError = e => {
+        addRequestLog(requestNode, {
+          type: "error",
+          value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.ressource}`, {
+            "error stack": e.stack
+          })
+        });
+      }; // not aborted, let's try to push a stream into that response
+      // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
+
+
+      let pushStream;
+
+      try {
+        pushStream = await new Promise((resolve, reject) => {
+          http2Stream.pushStream({
+            ":path": path,
+            ...(method ? {
+              ":method": method
+            } : {})
+          }, async (error, pushStream // headers
+          ) => {
+            if (error) {
+              reject(error);
+            }
+
+            resolve(pushStream);
+          });
+        });
+      } catch (e) {
+        onPushStreamError(e);
+        return;
+      }
+
+      const abortController = new AbortController(); // It's possible to get NGHTTP2_REFUSED_STREAM errors here
+      // https://github.com/nodejs/node/issues/20824
+
+      const pushErrorCallback = error => {
+        onPushStreamError(error);
+        abortController.abort();
+      };
+
+      pushStream.on("error", pushErrorCallback);
+      sendResponseOperation.addEndCallback(() => {
+        pushStream.removeListener("error", onPushStreamError);
+      });
+      await sendResponseOperation.withSignal(async signal => {
+        const pushResponseOperation = Abort.startOperation();
+        pushResponseOperation.addAbortSignal(signal);
+        pushResponseOperation.addAbortSignal(abortController.signal);
+        const pushRequest = createPushRequest(request, {
+          signal: pushResponseOperation.signal,
+          pathname: path,
+          method
+        });
+
+        try {
+          const responseProperties = await handleRequest(pushRequest, {
+            requestNode
+          });
+
+          if (!abortController.signal.aborted) {
+            if (pushStream.destroyed) {
+              abortController.abort();
+            } else if (!http2Stream.pushAllowed) {
+              abortController.abort();
+            } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
+              const responseLength = responseProperties.headers["content-length"] || 0;
+              const {
+                effectiveRecvDataLength,
+                remoteWindowSize
+              } = http2Stream.session.state;
+
+              if (effectiveRecvDataLength + responseLength > remoteWindowSize) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `Aborting stream to prevent exceeding remoteWindowSize`
+                });
+                abortController.abort();
+              }
+            }
+          }
+
+          await sendResponse({
+            signal: pushResponseOperation.signal,
+            request: pushRequest,
+            requestNode,
+            responseStream: pushStream,
+            responseProperties
+          });
+        } finally {
+          await pushResponseOperation.end();
+        }
+      });
+    };
+
+    const handleRequest = async (request, {
+      requestNode
+    }) => {
+      addRequestLog(requestNode, {
+        type: "info",
+        value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
+      });
+
+      const warn = value => {
+        addRequestLog(requestNode, {
+          type: "warn",
+          value
+        });
+      };
+
+      const requestPlugins = [];
+      let responseFromShortcircuit;
+
+      const shortcircuitResponse = value => {
+        responseFromShortcircuit = value;
+      };
+
+      const redirectRequest = requestRedirection => {
+        request = applyRedirectionToRequest(request, requestRedirection);
+      };
+
+      Object.keys(plugins).forEach(pluginName => {
+        const {
+          onRequest
+        } = plugins[pluginName];
+
+        if (onRequest) {
+          const returnValue = onRequest(request, {
+            warn,
+            logger,
+            shortcircuitResponse,
+            redirectRequest
+          });
+
+          if (returnValue) {
+            requestPlugins.push({
+              pluginName,
+              ...returnValue
+            });
+          }
+        }
+      });
+      const result = responseFromShortcircuit ? {
+        returnValue: responseFromShortcircuit
+      } : await generateResponseDescription({
+        requestToResponse,
+        request,
+        pushResponse: async ({
+          path,
+          method
+        }) => {
+          if (typeof path !== "string" || path[0] !== "/") {
+            addRequestLog(requestNode, {
+              type: "warn",
+              value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
+            });
+            return;
+          }
+
+          if (!request.http2) {
+            addRequestLog(requestNode, {
+              type: "warn",
+              value: `response push ignored because request is not http2`
+            });
+            return;
+          }
+
+          const canPushStream = testCanPushStream(nodeResponse.stream);
+
+          if (!canPushStream.can) {
+            addRequestLog(requestNode, {
+              type: "debug",
+              value: `response push ignored because ${canPushStream.reason}`
+            });
+            return;
+          }
+
+          let prevented = false;
+
+          const prevent = () => {
+            prevented = true;
+          };
+
+          const preventedByPlugin = requestPlugins.find(requestPlugin => {
+            const {
+              onPushResponse
+            } = requestPlugin;
+
+            if (!onPushResponse) {
+              return false;
+            }
+
+            onPushResponse({
+              path,
+              method
+            }, {
+              prevent
+            });
+            return prevented;
+          });
+
+          if (prevented) {
+            addRequestLog(requestNode, {
+              type: "debug",
+              value: `response push prevented by "${preventedByPlugin.pluginName}" plugin`
+            });
+            return;
+          }
+
+          const requestChildNode = {
+            logs: [],
+            children: []
+          };
+          requestNode.children.push(requestChildNode);
+          await pushResponse({
+            path,
+            method
+          }, {
+            requestNode: requestChildNode,
+            parentHttp2Stream: nodeResponse.stream
+          });
+        }
+      });
+      const {
+        aborted
+      } = result;
+
+      if (aborted) {
+        return ABORTED_RESPONSE_PROPERTIES;
+      }
+
+      const readResponseProperties = async () => {
+        const {
+          error
+        } = result; // internal error, create 500 response
+
+        if (error) {
+          if ( // stopOnInternalError stops server only if requestToResponse generated
+          // a non controlled error (internal error).
+          // if requestToResponse gracefully produced a 500 response (it did not throw)
+          // then we can assume we are still in control of what we are doing
+          stopOnInternalError) {
+            // il faudrais pouvoir stop que les autres response ?
+            stop(STOP_REASON_INTERNAL_ERROR);
+          }
+
+          const responseDescriptionFromError = (await errorToResponse(error, {
+            request,
+            sendErrorDetails
+          })) || (await applyDefaultErrorToResponse(error, {
+            request,
+            sendErrorDetails
+          }));
+          addRequestLog(requestNode, {
+            type: "error",
+            value: createDetailedMessage$1(`internal error while handling request`, {
+              "error stack": error.stack
+            })
+          });
+          return composeTwoResponses({
+            status: 500,
+            statusText: "Internal Server Error",
+            headers: {
+              // ensure error are not cached
+              "cache-control": "no-store",
+              "content-type": "text/plain"
+            }
+          }, responseDescriptionFromError);
+        }
+
+        const {
+          status = 501,
+          statusText,
+          statusMessage,
+          headers = {},
+          body,
+          ...rest
+        } = result.returnValue || {};
+        const responseProperties = {
+          status,
+          statusText,
+          statusMessage,
+          headers,
+          body,
+          ...rest
+        };
+        return responseProperties;
+      };
+
+      let responseProperties = await readResponseProperties(); // call every plugin "onResponse" hook
+
+      requestPlugins.forEach(requestPlugin => {
+        const {
+          onResponse
+        } = requestPlugin;
+
+        if (onResponse) {
+          const returnValue = onResponse(responseProperties);
+
+          if (returnValue) {
+            responseProperties = composeTwoResponses(responseProperties, returnValue);
+          }
+        }
+      });
+
+      if (request.method !== "HEAD" && responseProperties.headers["content-length"] > 0 && !responseProperties.body) {
+        addRequestLog(requestNode, {
+          type: "warn",
+          value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`
+        });
+      }
+
+      return responseProperties;
+    };
+
+    const sendResponse = async ({
+      signal,
+      request,
+      requestNode,
+      responseStream,
+      responseProperties
+    }) => {
+      // When "pushResponse" is called and the parent response has no body
+      // the parent response is immediatly ended. It means child responses (pushed streams)
+      // won't get a chance to be pushed.
+      // To let a chance to pushed streams we wait a little before sending the response
+      const ignoreBody = request.method === "HEAD";
+      const bodyIsEmpty = !responseProperties.body || ignoreBody;
+
+      if (bodyIsEmpty && requestNode.children.length > 0) {
+        await new Promise(resolve => setTimeout(resolve));
+      }
+
+      await populateNodeResponse(responseStream, responseProperties, {
+        signal,
+        ignoreBody,
+        onAbort: () => {
+          addRequestLog(requestNode, {
+            type: "info",
+            value: `response aborted`
+          });
+          onRequestHandled(requestNode);
+        },
+        onError: error => {
+          addRequestLog(requestNode, {
+            type: "error",
+            value: createDetailedMessage$1(`An error occured while sending response`, {
+              "error stack": error.stack
+            })
+          });
+          onRequestHandled(requestNode);
+        },
+        onHeadersSent: ({
+          status,
+          statusText
+        }) => {
+          const statusType = statusToType(status);
+          addRequestLog(requestNode, {
+            type: {
+              information: "info",
+              success: "info",
+              redirection: "info",
+              client_error: "warn",
+              server_error: "error"
+            }[statusType],
+            value: `${colorizeResponseStatus(status)} ${responseProperties.statusMessage || statusText}`
+          });
+        },
+        onEnd: () => {
+          onRequestHandled(requestNode);
+        }
+      });
+    };
+
+    try {
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      }
+
+      const responseProperties = await handleRequest(request, {
+        requestNode: rootRequestNode
+      });
+      nodeRequest.resume();
+
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      } // the node request readable stream is never closed because
+      // the response headers contains "connection: keep-alive"
+      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+
+
+      if (responseProperties.headers.connection === "keep-alive") {
+        clearTimeout(request.body.timeout);
+      }
+
+      await sendResponse({
+        signal: sendResponseOperation.signal,
+        request,
+        requestNode: rootRequestNode,
+        responseStream: nodeResponse,
+        responseProperties
+      });
+    } finally {
+      await sendResponseOperation.end();
+    }
+  };
+
+  const removeRequestListener = listenRequest(nodeServer, requestCallback); // ensure we don't try to handle new requests while server is stopping
+
+  stopCallbackList.add(removeRequestListener);
+
+  if (startLog) {
+    logger.info(`${serverName} started at ${serverOrigin} (${serverOrigins.external})`);
+  }
+
+  const addEffect = callback => {
+    const cleanup = callback();
+
+    if (typeof cleanup === "function") {
+      stopCallbackList.add(cleanup);
+    }
+  };
+
+  return {
+    getStatus: () => status,
+    origin: serverOrigin,
+    origins: serverOrigins,
+    nodeServer,
+    stop,
+    stoppedPromise,
+    addEffect
+  };
+};
+
+const createNodeServer = async ({
+  protocol,
+  redirectHttpToHttps,
+  allowHttpRequestOnHttps,
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed
+}) => {
+  if (protocol === "http") {
+    return http.createServer();
+  }
+
+  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
+    return createPolyglotServer({
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed
+    });
+  }
+
+  const {
+    createServer
+  } = await import("node:https");
+  return createServer({
+    cert: certificate,
+    key: privateKey
+  });
+};
+
+const generateResponseDescription = async ({
+  requestToResponse,
+  request,
+  pushResponse
+}) => {
+  try {
+    const returnValue = await requestToResponse(request, {
+      pushResponse
+    });
+    return {
+      returnValue
+    };
+  } catch (error) {
+    if (error.name === "AbortError" && request.signal.aborted) {
+      return {
+        aborted: true
+      };
+    }
+
+    return {
+      error
+    };
+  }
+};
+
+const testCanPushStream = http2Stream => {
+  if (!http2Stream.pushAllowed) {
+    return {
+      can: false,
+      reason: `stream.pushAllowed is false`
+    };
+  } // See https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#http2sessionstate
+  // And https://github.com/google/node-h2-auto-push/blob/67a36c04cbbd6da7b066a4e8d361c593d38853a4/src/index.ts#L100-L106
+
+
+  const {
+    remoteWindowSize
+  } = http2Stream.session.state;
+
+  if (remoteWindowSize === 0) {
+    return {
+      can: false,
+      reason: `no more remoteWindowSize`
+    };
+  }
+
+  return {
+    can: true
+  };
+};
+
+const ABORTED_RESPONSE_PROPERTIES = {};
+const PROCESS_TEARDOWN_EVENTS_MAP = {
+  SIGHUP: STOP_REASON_PROCESS_SIGHUP,
+  SIGTERM: STOP_REASON_PROCESS_SIGTERM,
+  SIGINT: STOP_REASON_PROCESS_SIGINT,
+  beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
+  exit: STOP_REASON_PROCESS_EXIT
+};
+
+const timeStart = name => {
+  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
+  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
+  const startTimestamp = performance.now();
+
+  const timeEnd = () => {
+    const endTimestamp = performance.now();
+    const timing = {
+      [name]: endTimestamp - startTimestamp
+    };
+    return timing;
+  };
+
+  return timeEnd;
+};
+const timeFunction = (name, fn) => {
+  const timeEnd = timeStart(name);
+  const returnValue = fn();
+
+  if (returnValue && typeof returnValue.then === "function") {
+    return returnValue.then(value => {
+      return [timeEnd(), value];
+    });
+  }
+
+  return [timeEnd(), returnValue];
+};
+
+const composeServices = namedServices => {
+  return async (request, {
+    pushResponse
+  }) => {
+    const redirectRequest = requestRedirection => {
+      request = applyRedirectionToRequest(request, requestRedirection);
+    };
+
+    const servicesTiming = {};
+    const response = await firstOperationMatching({
+      array: Object.keys(namedServices).map(serviceName => {
+        return {
+          serviceName,
+          serviceFn: namedServices[serviceName]
+        };
+      }),
+      start: async ({
+        serviceName,
+        serviceFn
+      }) => {
+        const [serviceTiming, value] = await timeFunction(serviceName, () => serviceFn(request, {
+          pushResponse,
+          redirectRequest
+        }));
+        Object.assign(servicesTiming, serviceTiming);
+        return value;
+      },
+      predicate: returnValue => {
+        if (returnValue === null || typeof returnValue !== "object") {
+          return false;
+        }
+
+        return true;
+      }
+    });
+
+    if (response) {
+      return composeTwoResponses({
+        timing: servicesTiming
+      }, response);
+    }
+
+    return null;
+  };
+};
+
+const firstOperationMatching = ({
+  array,
+  start,
+  predicate
+}) => {
+  return new Promise((resolve, reject) => {
+    const visit = index => {
+      if (index >= array.length) {
+        return resolve();
+      }
+
+      const input = array[index];
+      const returnValue = start(input);
+      return Promise.resolve(returnValue).then(output => {
+        if (predicate(output)) {
+          return resolve(output);
+        }
+
+        return visit(index + 1);
+      }, reject);
+    };
+
+    visit(0);
+  });
+};
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json"],
+    isTextual: true
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"]
+  },
+  "application/xml": {
+    extensions: ["xml"]
+  },
+  "application/x-gzip": {
+    extensions: ["gz"]
+  },
+  "application/wasm": {
+    extensions: ["wasm"]
+  },
+  "application/zip": {
+    extensions: ["zip"]
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"]
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"]
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"]
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"]
+  },
+  "audio/webm": {
+    extensions: ["weba"]
+  },
+  "audio/x-wav": {
+    extensions: ["wav"]
+  },
+  "font/ttf": {
+    extensions: ["ttf"]
+  },
+  "font/woff": {
+    extensions: ["woff"]
+  },
+  "font/woff2": {
+    extensions: ["woff2"]
+  },
+  "image/png": {
+    extensions: ["png"]
+  },
+  "image/gif": {
+    extensions: ["gif"]
+  },
+  "image/jpeg": {
+    extensions: ["jpg"]
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true
+  },
+  "text/plain": {
+    extensions: ["txt"]
+  },
+  "text/html": {
+    extensions: ["html"]
+  },
+  "text/css": {
+    extensions: ["css"]
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
+  },
+  "text/x-sass": {
+    extensions: ["sass"]
+  },
+  "text/x-scss": {
+    extensions: ["scss"]
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"]
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"]
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
+  },
+  "video/ogg": {
+    extensions: ["ogv"]
+  },
+  "video/webm": {
+    extensions: ["webm"]
+  }
+};
+
+const CONTENT_TYPE = {
+  parse: string => {
+    const [mediaType, charset] = string.split(";");
+    return {
+      mediaType: normalizeMediaType(mediaType),
+      charset
+    };
+  },
+  stringify: ({
+    mediaType,
+    charset
+  }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+
+    return mediaType;
+  },
+  asMediaType: value => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+
+    return null;
+  },
+  isJson: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return mediaType === "application/json" || /^application\/\w+\+json$/.test(mediaType);
+  },
+  isTextual: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    } // catch things like application/manifest+json, application/importmap+json
+
+
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+
+    return false;
+  },
+  isBinary: value => !CONTENT_TYPE.isTextual(value),
+  asFileExtension: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+  fromUrlExtension: url => {
+    const {
+      pathname
+    } = new URL(url);
+    const extensionWithDot = extname(pathname);
+
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find(mediaType => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension);
+    });
+    return mediaTypeFound || "application/octet-stream";
+  }
+};
+
+const normalizeMediaType = value => {
+  if (value === "text/javascript") {
+    return "text/javascript";
+  }
+
+  return value;
+};
+
+const isFileSystemPath$1 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$1 = value => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(pathToFileURL(value));
+};
+
+const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag$1 = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT$1;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const convertFileSystemErrorToResponseProperties = error => {
+  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
+  if (isErrorWithCode(error, "EACCES")) {
+    return {
+      status: 403,
+      statusText: `EACCES: No permission to read file at ${error.path}`
+    };
+  }
+
+  if (isErrorWithCode(error, "EPERM")) {
+    return {
+      status: 403,
+      statusText: `EPERM: No permission to read file at ${error.path}`
+    };
+  }
+
+  if (isErrorWithCode(error, "ENOENT")) {
+    return {
+      status: 404,
+      statusText: `ENOENT: File not found at ${error.path}`
+    };
+  } // file access may be temporarily blocked
+  // (by an antivirus scanning it because recently modified for instance)
+
+
+  if (isErrorWithCode(error, "EBUSY")) {
+    return {
+      status: 503,
+      statusText: `EBUSY: File is busy ${error.path}`,
+      headers: {
+        "retry-after": 0.01 // retry in 10ms
+
+      }
+    };
+  } // emfile means there is too many files currently opened
+
+
+  if (isErrorWithCode(error, "EMFILE")) {
+    return {
+      status: 503,
+      statusText: "EMFILE: too many file opened",
+      headers: {
+        "retry-after": 0.1 // retry in 100ms
+
+      }
+    };
+  }
+
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      statusText: `EISDIR: Unexpected directory operation at ${error.path}`
+    };
+  }
+
+  return null;
+};
+
+const isErrorWithCode = (error, code) => {
+  return typeof error === "object" && error.code === code;
+};
+
+const negotiateContentEncoding = (request, availableEncodings) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptEncodingHeader = headers["accept-encoding"];
+
+  if (!requestAcceptEncodingHeader) {
+    return null;
+  }
+
+  const encodingsAccepted = parseAcceptEncodingHeader(requestAcceptEncodingHeader);
+  return applyContentNegotiation({
+    accepteds: encodingsAccepted,
+    availables: availableEncodings,
+    getAcceptanceScore: getEncodingAcceptanceScore
+  });
+};
+
+const parseAcceptEncodingHeader = acceptEncodingHeaderString => {
+  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const encodingsAccepted = [];
+  Object.keys(acceptEncodingHeader).forEach(key => {
+    const {
+      q = 1
+    } = acceptEncodingHeader[key];
+    const value = key;
+    encodingsAccepted.push({
+      value,
+      quality: q
+    });
+  });
+  encodingsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return encodingsAccepted;
+};
+
+const getEncodingAcceptanceScore = ({
+  value,
+  quality
+}, availableEncoding) => {
+  if (value === "*") {
+    return quality;
+  } // normalize br to brotli
+
+
+  if (value === "br") value = "brotli";
+  if (availableEncoding === "br") availableEncoding = "brotli";
+
+  if (value === availableEncoding) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const serveDirectory = (url, {
+  headers = {},
+  rootDirectoryUrl
+} = {}) => {
+  url = String(url);
+  url = url[url.length - 1] === "/" ? url : `${url}/`;
+  const directoryContentArray = readdirSync(new URL(url));
+  const responseProducers = {
+    "application/json": () => {
+      const directoryContentJson = JSON.stringify(directoryContentArray);
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": directoryContentJson.length
+        },
+        body: directoryContentJson
+      };
+    },
+    "text/html": () => {
+      const directoryAsHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Directory explorer</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Content of directory ${url}</h1>
+    <ul>
+      ${directoryContentArray.map(filename => {
+        const fileUrl = String(new URL(filename, url));
+        const fileUrlRelativeToServer = fileUrl.slice(String(rootDirectoryUrl).length);
+        return `<li>
+        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+      </li>`;
+      }).join(`
+      `)}
+    </ul>
+  </body>
+</html>`;
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(directoryAsHtml)
+        },
+        body: directoryAsHtml
+      };
+    }
+  };
+  const bestContentType = negotiateContentType({
+    headers
+  }, Object.keys(responseProducers));
+  return responseProducers[bestContentType || "application/json"]();
+};
+
+/*
+ * This function returns response properties in a plain object like
+ * { status: 200, body: "Hello world" }.
+ * It is meant to be used inside "requestToResponse"
+ */
+const fetchFileSystem = async (filesystemUrl, {
+  // signal,
+  method = "GET",
+  headers = {},
+  etagEnabled = false,
+  etagMemory = true,
+  etagMemoryMaxSize = 1000,
+  mtimeEnabled = false,
+  compressionEnabled = false,
+  compressionSizeThreshold = 1024,
+  cacheControl = etagEnabled || mtimeEnabled ? "private,max-age=0,must-revalidate" : "no-store",
+  canReadDirectory = false,
+  rootDirectoryUrl //  = `${pathToFileURL(process.cwd())}/`,
+
+} = {}) => {
+  const urlString = asUrlString(filesystemUrl);
+
+  if (!urlString) {
+    return create500Response(`fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    return create500Response(`fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`);
+  }
+
+  if (rootDirectoryUrl) {
+    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
+
+    if (!rootDirectoryUrlString) {
+      return create500Response(`rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`);
+    }
+
+    if (!rootDirectoryUrlString.endsWith("/")) {
+      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
+    }
+
+    if (!urlString.startsWith(rootDirectoryUrlString)) {
+      return create500Response(`fetchFileSystem url must be inside root directory, got ${urlString}`);
+    }
+
+    rootDirectoryUrl = rootDirectoryUrlString;
+  } // here you might be tempted to add || cacheControl === 'no-cache'
+  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+
+
+  if (cacheControl === "no-store") {
+    if (etagEnabled) {
+      console.warn(`cannot enable etag when cache-control is ${cacheControl}`);
+      etagEnabled = false;
+    }
+
+    if (mtimeEnabled) {
+      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`);
+      mtimeEnabled = false;
+    }
+  }
+
+  if (etagEnabled && mtimeEnabled) {
+    console.warn(`cannot enable both etag and mtime, mtime disabled in favor of etag.`);
+    mtimeEnabled = false;
+  }
+
+  if (method !== "GET" && method !== "HEAD") {
+    return {
+      status: 501
+    };
+  }
+
+  const sourceUrl = `file://${new URL(urlString).pathname}`;
+
+  try {
+    const [readStatTiming, sourceStat] = await timeFunction("file service>read file stat", () => statSync(new URL(sourceUrl)));
+
+    if (sourceStat.isDirectory()) {
+      if (canReadDirectory) {
+        return serveDirectory(urlString, {
+          headers,
+          canReadDirectory,
+          rootDirectoryUrl
+        });
+      }
+
+      return {
+        status: 403,
+        statusText: "not allowed to read directory"
+      };
+    } // not a file, give up
+
+
+    if (!sourceStat.isFile()) {
+      return {
+        status: 404,
+        timing: readStatTiming
+      };
+    }
+
+    const clientCacheResponse = await getClientCacheResponse({
+      headers,
+      etagEnabled,
+      etagMemory,
+      etagMemoryMaxSize,
+      mtimeEnabled,
+      sourceStat,
+      sourceUrl
+    }); // send 304 (redirect response to client cache)
+    // because the response body does not have to be transmitted
+
+    if (clientCacheResponse.status === 304) {
+      return composeTwoResponses({
+        timing: readStatTiming,
+        headers: { ...(cacheControl ? {
+            "cache-control": cacheControl
+          } : {})
+        }
+      }, clientCacheResponse);
+    }
+
+    let response;
+
+    if (compressionEnabled && sourceStat.size >= compressionSizeThreshold) {
+      const compressedResponse = await getCompressedResponse({
+        headers,
+        sourceUrl
+      });
+
+      if (compressedResponse) {
+        response = compressedResponse;
+      }
+    }
+
+    if (!response) {
+      response = await getRawResponse({
+        sourceStat,
+        sourceUrl
+      });
+    }
+
+    const intermediateResponse = composeTwoResponses({
+      timing: readStatTiming,
+      headers: { ...(cacheControl ? {
+          "cache-control": cacheControl
+        } : {}) // even if client cache is disabled, server can still
+        // send his own cache control but client should just ignore it
+        // and keep sending cache-control: 'no-store'
+        // if not, uncomment the line below to preserve client
+        // desire to ignore cache
+        // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
+
+      }
+    }, response);
+    return composeTwoResponses(intermediateResponse, clientCacheResponse);
+  } catch (e) {
+    return composeTwoResponses({
+      headers: { ...(cacheControl ? {
+          "cache-control": cacheControl
+        } : {})
+      }
+    }, convertFileSystemErrorToResponseProperties(e) || {});
+  }
+};
+
+const create500Response = message => {
+  return {
+    status: 500,
+    headers: {
+      "content-type": "text/plain",
+      "content-length": Buffer.byteLength(message)
+    },
+    body: message
+  };
+};
+
+const getClientCacheResponse = async ({
+  headers,
+  etagEnabled,
+  etagMemory,
+  etagMemoryMaxSize,
+  mtimeEnabled,
+  sourceStat,
+  sourceUrl
+}) => {
+  // here you might be tempted to add || headers["cache-control"] === "no-cache"
+  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+  if (headers["cache-control"] === "no-store" || // let's disable it on no-cache too
+  headers["cache-control"] === "no-cache") {
+    return {
+      status: 200
+    };
+  }
+
+  if (etagEnabled) {
+    return getEtagResponse({
+      headers,
+      etagMemory,
+      etagMemoryMaxSize,
+      sourceStat,
+      sourceUrl
+    });
+  }
+
+  if (mtimeEnabled) {
+    return getMtimeResponse({
+      headers,
+      sourceStat
+    });
+  }
+
+  return {
+    status: 200
+  };
+};
+
+const getEtagResponse = async ({
+  headers,
+  etagMemory,
+  etagMemoryMaxSize,
+  sourceUrl,
+  sourceStat
+}) => {
+  const [computeEtagTiming, fileContentEtag] = await timeFunction("file service>generate file etag", () => computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    sourceUrl,
+    sourceStat
+  }));
+  const requestHasIfNoneMatchHeader = ("if-none-match" in headers);
+
+  if (requestHasIfNoneMatchHeader && headers["if-none-match"] === fileContentEtag) {
+    return {
+      status: 304,
+      timing: computeEtagTiming
+    };
+  }
+
+  return {
+    status: 200,
+    headers: {
+      etag: fileContentEtag
+    },
+    timing: computeEtagTiming
+  };
+};
+
+const ETAG_MEMORY_MAP = new Map();
+
+const computeEtag = async ({
+  etagMemory,
+  etagMemoryMaxSize,
+  sourceUrl,
+  sourceStat
+}) => {
+  if (etagMemory) {
+    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl);
+
+    if (etagMemoryEntry && fileStatAreTheSame(etagMemoryEntry.sourceStat, sourceStat)) {
+      return etagMemoryEntry.eTag;
+    }
+  }
+
+  const fileContentAsBuffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(sourceUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+  const eTag = bufferToEtag$1(fileContentAsBuffer);
+
+  if (etagMemory) {
+    if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
+      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
+      ETAG_MEMORY_MAP.delete(firstKey);
+    }
+
+    ETAG_MEMORY_MAP.set(sourceUrl, {
+      sourceStat,
+      eTag
+    });
+  }
+
+  return eTag;
+}; // https://nodejs.org/api/fs.html#fs_class_fs_stats
+
+
+const fileStatAreTheSame = (leftFileStat, rightFileStat) => {
+  return fileStatKeysToCompare.every(keyToCompare => {
+    const leftValue = leftFileStat[keyToCompare];
+    const rightValue = rightFileStat[keyToCompare];
+    return leftValue === rightValue;
+  });
+};
+
+const fileStatKeysToCompare = [// mtime the the most likely to change, check it first
+"mtimeMs", "size", "ctimeMs", "ino", "mode", "uid", "gid", "blksize"];
+
+const getMtimeResponse = async ({
+  headers,
+  sourceStat
+}) => {
+  if ("if-modified-since" in headers) {
+    let cachedModificationDate;
+
+    try {
+      cachedModificationDate = new Date(headers["if-modified-since"]);
+    } catch (e) {
+      return {
+        status: 400,
+        statusText: "if-modified-since header is not a valid date"
+      };
+    }
+
+    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
+
+    if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
+      return {
+        status: 304
+      };
+    }
+  }
+
+  return {
+    status: 200,
+    headers: {
+      "last-modified": dateToUTCString(sourceStat.mtime)
+    }
+  };
+};
+
+const getCompressedResponse = async ({
+  sourceUrl,
+  headers
+}) => {
+  const acceptedCompressionFormat = negotiateContentEncoding({
+    headers
+  }, Object.keys(availableCompressionFormats));
+
+  if (!acceptedCompressionFormat) {
+    return null;
+  }
+
+  const fileReadableStream = fileUrlToReadableStream(sourceUrl);
+  const body = await availableCompressionFormats[acceptedCompressionFormat](fileReadableStream);
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-encoding": acceptedCompressionFormat,
+      "vary": "accept-encoding"
+    },
+    body
+  };
+};
+
+const fileUrlToReadableStream = fileUrl => {
+  return createReadStream(new URL(fileUrl), {
+    emitClose: true,
+    autoClose: true
+  });
+};
+
+const availableCompressionFormats = {
+  br: async fileReadableStream => {
+    const {
+      createBrotliCompress
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createBrotliCompress());
+  },
+  deflate: async fileReadableStream => {
+    const {
+      createDeflate
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createDeflate());
+  },
+  gzip: async fileReadableStream => {
+    const {
+      createGzip
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createGzip());
+  }
+};
+
+const getRawResponse = async ({
+  sourceUrl,
+  sourceStat
+}) => {
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-length": sourceStat.size
+    },
+    body: fileUrlToReadableStream(sourceUrl)
+  };
+}; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
+
+
+const dateToUTCString = date => date.toUTCString();
+
+const dateToSecondsPrecision = date => {
+  const dateWithSecondsPrecision = new Date(date);
+  dateWithSecondsPrecision.setMilliseconds(0);
+  return dateWithSecondsPrecision;
+};
+
+const asUrlString = value => {
+  if (value instanceof URL) {
+    return value.href;
+  }
+
+  if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      return fileSystemPathToUrl$1(value);
+    }
+
+    try {
+      const urlObject = new URL(value);
+      return String(urlObject);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
+const pluginCORS = ({
+  accessControlAllowedOrigins = [],
+  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
+  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
+  accessControlAllowRequestOrigin = false,
+  accessControlAllowRequestMethod = false,
+  accessControlAllowRequestHeaders = false,
+  accessControlAllowCredentials = false,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin
+} = {}) => {
+  // TODO: we should check access control params to throw or warn if we find strange values
+  const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
+
+  if (!corsEnabled) {
+    return {
+      cors: {}
+    };
+  }
+
+  return {
+    cors: {
+      onServerParams: ({
+        plugins
+      }) => {
+        if (timingAllowOrigin === undefined && plugins.server_timings) {
+          timingAllowOrigin = true;
+        }
+      },
+      onRequest: (request, {
+        shortcircuitResponse
+      }) => {
+        if (request.method === "OPTIONS") {
+          // when request method is "OPTIONS" we must return a 200 without body
+          // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
+          shortcircuitResponse({
+            status: 200,
+            headers: {
+              "content-length": 0
+            }
+          });
+        }
+
+        if (request.parent) {
+          return null;
+        }
+
+        return {
+          onResponse: () => {
+            const accessControlHeaders = generateAccessControlHeaders({
+              request,
+              accessControlAllowedOrigins,
+              accessControlAllowRequestOrigin,
+              accessControlAllowedMethods,
+              accessControlAllowRequestMethod,
+              accessControlAllowedHeaders,
+              accessControlAllowRequestHeaders,
+              accessControlAllowCredentials,
+              accessControlMaxAge,
+              timingAllowOrigin
+            });
+            return {
+              headers: accessControlHeaders
+            };
+          }
+        };
+      }
+    }
+  };
+}; // https://www.w3.org/TR/cors/
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+
+const generateAccessControlHeaders = ({
+  request: {
+    headers
+  },
+  accessControlAllowedOrigins,
+  accessControlAllowRequestOrigin,
+  accessControlAllowedMethods,
+  accessControlAllowRequestMethod,
+  accessControlAllowedHeaders,
+  accessControlAllowRequestHeaders,
+  accessControlAllowCredentials,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin
+} = {}) => {
+  const vary = [];
+  const allowedOriginArray = [...accessControlAllowedOrigins];
+
+  if (accessControlAllowRequestOrigin) {
+    if ("origin" in headers && headers.origin !== "null") {
+      allowedOriginArray.push(headers.origin);
+      vary.push("origin");
+    } else if ("referer" in headers) {
+      allowedOriginArray.push(new URL(headers.referer).origin);
+      vary.push("referer");
+    } else {
+      allowedOriginArray.push("*");
+    }
+  }
+
+  const allowedMethodArray = [...accessControlAllowedMethods];
+
+  if (accessControlAllowRequestMethod && "access-control-request-method" in headers) {
+    const requestMethodName = headers["access-control-request-method"];
+
+    if (!allowedMethodArray.includes(requestMethodName)) {
+      allowedMethodArray.push(requestMethodName);
+      vary.push("access-control-request-method");
+    }
+  }
+
+  const allowedHeaderArray = [...accessControlAllowedHeaders];
+
+  if (accessControlAllowRequestHeaders && "access-control-request-headers" in headers) {
+    const requestHeaderNameArray = headers["access-control-request-headers"].split(", ");
+    requestHeaderNameArray.forEach(headerName => {
+      const headerNameLowerCase = headerName.toLowerCase();
+
+      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
+        allowedHeaderArray.push(headerNameLowerCase);
+
+        if (!vary.includes("access-control-request-headers")) {
+          vary.push("access-control-request-headers");
+        }
+      }
+    });
+  }
+
+  return {
+    "access-control-allow-origin": allowedOriginArray.join(", "),
+    "access-control-allow-methods": allowedMethodArray.join(", "),
+    "access-control-allow-headers": allowedHeaderArray.join(", "),
+    ...(accessControlAllowCredentials ? {
+      "access-control-allow-credentials": true
+    } : {}),
+    "access-control-max-age": accessControlMaxAge,
+    ...(timingAllowOrigin ? {
+      "timing-allow-origin": allowedOriginArray.join(", ")
+    } : {}),
+    ...(vary.length ? {
+      vary: vary.join(", ")
+    } : {})
+  };
+};
+
+// because in chrome dev tools they are shown in alphabetic order
+// also we should manipulate a timing object instead of a header to facilitate
+// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
+// so response can return a new timing object
+// yes it's awful, feel free to PR with a better approach :)
+
+const timingToServerTimingResponseHeaders = timing => {
+  const serverTimingHeader = {};
+  Object.keys(timing).forEach((key, index) => {
+    const name = letters[index] || "zz";
+    serverTimingHeader[name] = {
+      desc: key,
+      dur: timing[key]
+    };
+  });
+  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
+  return {
+    "server-timing": serverTimingHeaderString
+  };
+};
+const stringifyServerTimingHeader = serverTimingHeader => {
+  return stringifyMultipleHeader(serverTimingHeader, {
+    validateName: validateServerTimingName
+  });
+}; // (),/:;<=>?@[\]{}" Don't allowed
+// Minimal length is one symbol
+// Digits, alphabet characters,
+// and !#$%&'*+-.^_`|~ are allowed
+// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
+// https://tools.ietf.org/html/rfc7230#section-3.2.6
+
+const validateServerTimingName = name => {
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+
+  if (!valid) {
+    console.warn(`server timing contains invalid symbols`);
+    return false;
+  }
+
+  return true;
+};
+
+const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+
+// https://www.w3.org/TR/server-timing/
+const pluginServerTiming = () => {
+  return {
+    server_timing: {
+      onRequest: () => {
+        const requestStartEvent = performance.now();
+        return {
+          onResponse: response => {
+            const responseEndEvent = performance.now();
+            const timeToCreateResponse = responseEndEvent - requestStartEvent;
+            const serverTiming = { ...response.timing,
+              "time to start responding": timeToCreateResponse
+            };
+            return {
+              headers: timingToServerTimingResponseHeaders(serverTiming)
+            };
+          }
+        };
+      }
+    }
+  };
+};
+
+const createSSERoom = ({
+  logLevel,
+  effect = () => {},
+  // do not keep process alive because of rooms, something else must keep it alive
+  keepProcessAlive = false,
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1 * 1000,
+  maxClientAllowed = 100,
+  // max 100 clients accepted
+  computeEventId = (event, lastEventId) => lastEventId + 1,
+  welcomeEventEnabled = false,
+  welcomeEventPublic = false // decides if welcome event are sent to other clients
+
+} = {}) => {
+  const logger = createLogger({
+    logLevel
+  });
+  const room = {};
+  const clients = new Set();
+  const eventHistory = createEventHistory(historyLength); // what about previousEventId that keeps growing ?
+  // we could add some limit
+  // one limit could be that an event older than 24h is deleted
+
+  let previousEventId = 0;
+  let opened = false;
+  let interval;
+  let cleanupEffect = CLEANUP_NOOP;
+
+  const join = request => {
+    // should we ensure a given request can join a room only once?
+    const lastKnownId = request.headers["last-event-id"] || new URL(request.ressource, request.origin).searchParams.get("last-event-id");
+
+    if (clients.size >= maxClientAllowed) {
+      return {
+        status: 503
+      };
+    }
+
+    if (!opened) {
+      return {
+        status: 204
+      };
+    }
+
+    const sseRoomObservable = createObservable(({
+      next,
+      complete
+    }) => {
+      const client = {
+        next,
+        complete
+      };
+
+      if (clients.size === 0) {
+        const effectReturnValue = effect();
+
+        if (typeof effectReturnValue === "function") {
+          cleanupEffect = effectReturnValue;
+        } else {
+          cleanupEffect = CLEANUP_NOOP;
+        }
+      }
+
+      clients.add(client);
+      logger.debug(`A client has joined. Number of client in room: ${clients.size}`);
+
+      if (lastKnownId !== undefined) {
+        const previousEvents = getAllEventSince(lastKnownId);
+        const eventMissedCount = previousEvents.length;
+
+        if (eventMissedCount > 0) {
+          logger.info(`send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`);
+          previousEvents.forEach(previousEvent => {
+            next(stringifySourceEvent(previousEvent));
+          });
+        }
+      }
+
+      if (welcomeEventEnabled) {
+        const welcomeEvent = {
+          retry: retryDuration,
+          type: "welcome",
+          data: new Date().toLocaleTimeString()
+        };
+        addEventToHistory(welcomeEvent); // send to everyone
+
+        if (welcomeEventPublic) {
+          write(stringifySourceEvent(welcomeEvent));
+        } // send only to this client
+        else {
+          next(stringifySourceEvent(welcomeEvent));
+        }
+      } else {
+        const firstEvent = {
+          retry: retryDuration,
+          type: "comment",
+          data: new Date().toLocaleTimeString()
+        };
+        next(stringifySourceEvent(firstEvent));
+      }
+
+      return () => {
+        clients.delete(client);
+
+        if (clients.size === 0) {
+          cleanupEffect();
+          cleanupEffect = CLEANUP_NOOP;
+        }
+
+        logger.debug(`A client left. Number of client in room: ${clients.size}`);
+      };
+    });
+    const requestSSEObservable = connectRequestAndRoom(request, room, sseRoomObservable);
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-store",
+        "connection": "keep-alive"
+      },
+      body: requestSSEObservable
+    };
+  };
+
+  const leave = request => {
+    disconnectRequestFromRoom(request, room);
+  };
+
+  const addEventToHistory = event => {
+    if (typeof event.id === "undefined") {
+      event.id = computeEventId(event, previousEventId);
+    }
+
+    previousEventId = event.id;
+    eventHistory.add(event);
+  };
+
+  const sendEvent = event => {
+    if (event.type !== "comment") {
+      addEventToHistory(event);
+    }
+
+    logger.debug(`send "${event.type}" event to ${clients.size} client in the room`);
+    write(stringifySourceEvent(event));
+  };
+
+  const getAllEventSince = id => {
+    const events = eventHistory.since(id);
+
+    if (welcomeEventEnabled && !welcomeEventPublic) {
+      return events.filter(event => event.type !== "welcome");
+    }
+
+    return events;
+  };
+
+  const write = data => {
+    clients.forEach(client => {
+      client.next(data);
+    });
+  };
+
+  const keepAlive = () => {
+    // maybe that, when an event occurs, we can delay the keep alive event
+    logger.debug(`send keep alive event, number of client listening event source: ${clients.size}`);
+    sendEvent({
+      type: "comment",
+      data: new Date().toLocaleTimeString()
+    });
+  };
+
+  const open = () => {
+    if (opened) return;
+    opened = true;
+    interval = setInterval(keepAlive, keepaliveDuration);
+
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+  };
+
+  const close = () => {
+    if (!opened) return;
+    logger.debug(`closing room, number of client in the room: ${clients.size}`);
+    clients.forEach(client => client.complete());
+    clients.clear();
+    clearInterval(interval);
+    eventHistory.reset();
+    opened = false;
+  };
+
+  open();
+  Object.assign(room, {
+    // main api:
+    // - ability to sendEvent to clients in the room
+    // - ability to join the room
+    // - ability to leave the room
+    sendEvent,
+    join,
+    leave,
+    // should rarely be necessary, get information about the room
+    getAllEventSince,
+    getRoomClientCount: () => clients.size,
+    // should rarely be used
+    close,
+    open
+  });
+  return room;
+};
+
+const CLEANUP_NOOP = () => {};
+
+const requestMap = new Map();
+
+const connectRequestAndRoom = (request, room, roomObservable) => {
+  let sseProducer;
+  let roomObservableMap;
+  const requestInfo = requestMap.get(request);
+
+  if (requestInfo) {
+    sseProducer = requestInfo.sseProducer;
+    roomObservableMap = requestInfo.roomObservableMap;
+  } else {
+    sseProducer = createCompositeProducer({
+      cleanup: () => {
+        requestMap.delete(request);
+      }
+    });
+    roomObservableMap = new Map();
+    requestMap.set(request, {
+      sseProducer,
+      roomObservableMap
+    });
+  }
+
+  roomObservableMap.set(room, roomObservable);
+  sseProducer.addObservable(roomObservable);
+  return createObservable(sseProducer);
+};
+
+const disconnectRequestFromRoom = (request, room) => {
+  const requestInfo = requestMap.get(request);
+
+  if (!requestInfo) {
+    return;
+  }
+
+  const {
+    sseProducer,
+    roomObservableMap
+  } = requestInfo;
+  const roomObservable = roomObservableMap.get(room);
+  roomObservableMap.delete(room);
+  sseProducer.removeObservable(roomObservable);
+}; // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
+// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
+// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
+// http://html5doctor.com/server-sent-events/
+
+
+const stringifySourceEvent = ({
+  data,
+  type = "message",
+  id,
+  retry
+}) => {
+  let string = "";
+
+  if (id !== undefined) {
+    string += `id:${id}\n`;
+  }
+
+  if (retry) {
+    string += `retry:${retry}\n`;
+  }
+
+  if (type !== "message") {
+    string += `event:${type}\n`;
+  }
+
+  string += `data:${data}\n\n`;
+  return string;
+};
+
+const createEventHistory = limit => {
+  const events = [];
+
+  const add = data => {
+    events.push(data);
+
+    if (events.length >= limit) {
+      events.shift();
+    }
+  };
+
+  const since = id => {
+    const index = events.findIndex(event => String(event.id) === id);
+    return index === -1 ? [] : events.slice(index + 1);
+  };
+
+  const reset = () => {
+    events.length = 0;
+  };
+
+  return {
+    add,
+    since,
+    reset
+  };
+};
+
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
+  }
+
+  if (!hasScheme$1(value)) {
+    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
+  }
+};
+const isPlainObject = value => {
+  if (value === null) {
+    return false;
+  }
+
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+};
+
+const isWindowsPathnameSpecifier = specifier => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+
+const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
+
+const resolveAssociations = (associations, baseUrl) => {
+  assertUrlLike(baseUrl, "baseUrl");
+  const associationsResolved = {};
+  Object.keys(associations).forEach(key => {
+    const valueMap = associations[key];
+    const valueMapResolved = {};
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+      valueMapResolved[patternResolved] = value;
+    });
+    associationsResolved[key] = valueMapResolved;
+  });
+  return associationsResolved;
+};
+
+const normalizeUrlPattern = (urlPattern, baseUrl) => {
+  // starts with a scheme
+  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
+    return urlPattern;
+  }
+
+  return String(new URL(urlPattern, baseUrl));
+};
+
+const asFlatAssociations = associations => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(`associations must be a plain object, got ${associations}`);
+  }
+
+  const flatAssociations = {};
+  Object.keys(associations).forEach(key => {
+    const valueMap = associations[key];
+
+    if (!isPlainObject(valueMap)) {
+      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
+    }
+
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const previousValue = flatAssociations[pattern];
+      flatAssociations[pattern] = previousValue ? { ...previousValue,
+        [key]: value
+      } : {
+        [key]: value
+      };
+    });
+  });
+  return flatAssociations;
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+/** @module jsenv_url_meta **/
+
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+
+const applyPatternMatching = ({
+  url,
+  pattern
+}) => {
+  assertUrlLike(pattern, "pattern");
+  assertUrlLike(url, "url");
+  const {
+    matched,
+    patternIndex,
+    index,
+    groups
+  } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  groups.forEach(group => {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  });
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = count => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+
+  const consumeString = count => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+
+  const matchOne = () => {
+    // pattern consumed and string consumed
+    if (remainingPattern === "" && remainingString === "") {
+      return true; // string fully matched pattern
+    } // pattern consumed, string not consumed
+
+
+    if (remainingPattern === "" && remainingString !== "") {
+      return false; // fails because string longer than expected
+    } // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+
+
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+
+      if (remainingPattern === "*") {
+        groups.push({
+          string: ""
+        });
+      }
+
+      return false; // fail because string shorter than expected
+    } // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+
+
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({
+          string: consumeRemainingString()
+        });
+        return true;
+      }
+
+      return false;
+    } // fast path trailing '**'
+
+
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    } // pattern leading **
+
+
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+      } // pattern ending with ** always match remaining string
+
+
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+
+      if (remainingPattern === "") {
+        // matches everything except '/'
+        const slashIndex = remainingString.indexOf("/");
+
+        if (slashIndex === -1) {
+          groups.push({
+            string: consumeRemainingString()
+          });
+          return true;
+        }
+
+        groups.push({
+          string: consumeString(slashIndex)
+        });
+        return false;
+      } // the next char must not the one expected by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+
+
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({
+          string: ""
+        });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+
+    return undefined;
+  };
+
+  iterate();
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups
+  };
+};
+
+const skipUntilMatch = ({
+  pattern,
+  string,
+  canSkipSlash
+}) => {
+  let index = 0;
+  let remainingString = string;
+  let longestMatchRange = null;
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
+        }
+      };
+    }
+
+    const matchAttemptIndex = matchAttempt.index;
+    const matchRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: matchAttemptIndex,
+      groups: matchAttempt.groups
+    };
+
+    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
+      longestMatchRange = matchRange;
+    }
+
+    const nextIndex = matchAttemptIndex + 1;
+    const canSkip = nextIndex < remainingString.length && (canSkipSlash || remainingString[0] !== "/");
+
+    if (canSkip) {
+      // search against the next unattempted string
+      index += nextIndex;
+      remainingString = remainingString.slice(nextIndex);
+      return tryToMatch();
+    }
+
+    return {
+      matched: false,
+      patternIndex: longestMatchRange.patternIndex,
+      index: longestMatchRange.index + longestMatchRange.length,
+      groups: longestMatchRange.groups,
+      group: {
+        string: string.slice(0, longestMatchRange.index)
+      }
+    };
+  };
+
+  return tryToMatch();
+};
+
+const applyAssociations = ({
+  url,
+  associations
+}) => {
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+    const {
+      matched
+    } = applyPatternMatching({
+      pattern,
+      url
+    });
+
+    if (matched) {
+      const value = flatAssociations[pattern];
+
+      if (isPlainObject(previousValue) && isPlainObject(value)) {
+        return { ...previousValue,
+          ...value
+        };
+      }
+
+      return value;
+    }
+
+    return previousValue;
+  }, {});
+};
+
+const applyAliases = ({
+  url,
+  aliases
+}) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find(key => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url
+    });
+
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+
+    return false;
+  });
+
+  if (!aliasMatchingKey) {
+    return url;
+  }
+
+  const {
+    matchGroups
+  } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  const newUrl = parts.reduce((previous, value, index) => {
+    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
+  }, "");
+  return newUrl;
+};
+
+const urlChildMayMatch = ({
+  url,
+  associations,
+  predicate
+}) => {
+  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
+
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  const flatAssociations = asFlatAssociations(associations); // for full match we must create an object to allow pattern to override previous ones
+
+  let fullMatchMeta = {};
+  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+
+  const partialMatchMetaArray = [];
+  Object.keys(flatAssociations).forEach(pattern => {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url
+    });
+
+    if (matchResult.matched) {
+      someFullMatch = true;
+
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = { ...fullMatchMeta,
+          ...value
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  });
+
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+
+  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  urlChildMayMatch,
+  applyPatternMatching,
+  applyAliases
+};
+
+const pluginRequestWaitingCheck = ({
+  requestWaitingMs = 20000,
+  requestWaitingCallback = ({
+    request,
+    logger,
+    requestWaitingMs
+  }) => {
+    logger.warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
+      "request url": `${request.origin}${request.ressource}`,
+      "request headers": JSON.stringify(request.headers, null, "  ")
+    }));
+  }
+} = {}) => {
+  return {
+    plugin_request_waiting_check: {
+      onRequest: (request, {
+        logger
+      }) => {
+        const timeout = setTimeout(() => requestWaitingCallback({
+          request,
+          logger,
+          requestWaitingMs
+        }), requestWaitingMs);
+        return {
+          onResponse: () => {
+            clearTimeout(timeout);
+          }
+        };
+      }
+    }
+  };
+};
+
+/*
+ * data:[<mediatype>][;base64],<data>
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
+ */
+
+/* eslint-env browser, node */
+const DATA_URL = {
+  parse: string => {
+    const afterDataProtocol = string.slice("data:".length);
+    const commaIndex = afterDataProtocol.indexOf(",");
+    const beforeComma = afterDataProtocol.slice(0, commaIndex);
+    let contentType;
+    let base64Flag;
+
+    if (beforeComma.endsWith(`;base64`)) {
+      contentType = beforeComma.slice(0, -`;base64`.length);
+      base64Flag = true;
+    } else {
+      contentType = beforeComma;
+      base64Flag = false;
+    }
+
+    contentType = contentType === "" ? "text/plain;charset=US-ASCII" : contentType;
+    const afterComma = afterDataProtocol.slice(commaIndex + 1);
+    return {
+      contentType,
+      base64Flag,
+      data: afterComma
+    };
+  },
+  stringify: ({
+    contentType,
+    base64Flag = true,
+    data
+  }) => {
+    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
+      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
+      if (data.length === 0) {
+        return `data:,`;
+      }
+
+      if (base64Flag) {
+        return `data:;base64,${data}`;
+      }
+
+      return `data:,${data}`;
+    }
+
+    if (base64Flag) {
+      return `data:${contentType};base64,${data}`;
+    }
+
+    return `data:${contentType},${data}`;
+  }
+};
+
+const urlToScheme$1 = url => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+
+  if (colonIndex === -1) {
+    return "";
+  }
+
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
+const urlToRessource$1 = url => {
+  const scheme = urlToScheme$1(url);
+
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+
+const urlToPathname$1 = url => {
+  const ressource = urlToRessource$1(url);
+  const pathname = ressourceToPathname$1(ressource);
+  return pathname;
+};
+
+const ressourceToPathname$1 = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+
+  if (searchSeparatorIndex > -1) {
+    return ressource.slice(0, searchSeparatorIndex);
+  }
+
+  const hashIndex = ressource.indexOf("#");
+
+  if (hashIndex > -1) {
+    return ressource.slice(0, hashIndex);
+  }
+
+  return ressource;
+};
+
+const urlToFilename$1 = url => {
+  const pathname = urlToPathname$1(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const generateInlineContentUrl = ({
+  url,
+  extension,
+  line,
+  column,
+  lineEnd,
+  columnEnd
+}) => {
+  const generatedName = line === lineEnd ? `L${line}C${column}-L${lineEnd}C${columnEnd}` : `L${line}-L${lineEnd}`;
+  const filenameRaw = urlToFilename$1(url);
+  const filename = `${filenameRaw}@${generatedName}${extension}`; // ideally we should keep query params from url
+  // maybe we could use a custom scheme like "inline:"
+
+  const inlineContentUrl = new URL(filename, url).href;
+  return inlineContentUrl;
+};
+
+const urlToFileSystemPath = url => {
+  let urlString = String(url);
+
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+
+  const fileSystemPath = fileURLToPath(urlString);
+  return fileSystemPath;
+};
+
+// consider switching to https://babeljs.io/docs/en/babel-code-frame
+const stringifyUrlSite = ({
+  url,
+  line,
+  column,
+  content
+}, {
+  showCodeFrame = true,
+  numberOfSurroundingLinesToShow,
+  lineMaxLength,
+  color
+} = {}) => {
+  let string = `${humanizeUrl(url)}`;
+
+  if (typeof line === "number") {
+    string += `:${line}`;
+
+    if (typeof column === "number") {
+      string += `:${column}`;
+    }
+  }
+
+  if (!showCodeFrame || typeof line !== "number" || !content) {
+    return string;
+  }
+
+  const sourceLoc = showSourceLocation({
+    content,
+    line,
+    column,
+    numberOfSurroundingLinesToShow,
+    lineMaxLength,
+    color
+  });
+  return `${string}
+${sourceLoc}`;
+};
+const humanizeUrl = url => {
+  if (url.startsWith("file://")) {
+    // we prefer file system path because vscode reliably make them clickable
+    // and sometimes it won't for file:// urls
+    return urlToFileSystemPath(url);
+  }
+
+  return url;
+};
+const showSourceLocation = ({
+  content,
+  line,
+  column,
+  numberOfSurroundingLinesToShow = 1,
+  lineMaxLength = 120
+} = {}) => {
+  let mark = string => string;
+
+  let aside = string => string; // if (color) {
+  //   mark = (string) => ANSI.color(string, ANSI.RED)
+  //   aside = (string) => ANSI.color(string, ANSI.GREY)
+  // }
+
+
+  const lines = content.split(/\r?\n/);
+  if (line === 0) line = 1;
+  let lineRange = {
+    start: line - 1,
+    end: line
+  };
+  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = lineRangeWithinLines(lineRange, lines);
+  const linesToShow = lines.slice(lineRange.start, lineRange.end);
+  const endLineNumber = lineRange.end;
+  const lineNumberMaxWidth = String(endLineNumber).length;
+  if (column === 0) column = 1;
+  const columnRange = {};
+
+  if (column === undefined) {
+    columnRange.start = 0;
+    columnRange.end = lineMaxLength;
+  } else if (column > lineMaxLength) {
+    columnRange.start = column - Math.floor(lineMaxLength / 2);
+    columnRange.end = column + Math.ceil(lineMaxLength / 2);
+  } else {
+    columnRange.start = 0;
+    columnRange.end = lineMaxLength;
+  }
+
+  return linesToShow.map((lineSource, index) => {
+    const lineNumber = lineRange.start + index + 1;
+    const isMainLine = lineNumber === line;
+    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
+    const lineNumberWidth = String(lineNumber).length; // ensure if line moves from 7,8,9 to 10 the display is still great
+
+    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
+    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
+    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
+
+    if (isMainLine) {
+      if (column === undefined) {
+        return `${mark(">")} ${lineFormatted}`;
+      }
+
+      const spacing = stringToSpaces(`${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`);
+      return `${mark(">")} ${lineFormatted}
+  ${spacing}${mark("^")}`;
+    }
+
+    return `  ${lineFormatted}`;
+  }).join(`
+`);
+};
+
+const applyColumnRange = ({
+  start,
+  end
+}, line) => {
+  if (typeof start !== "number") {
+    throw new TypeError(`start must be a number, received ${start}`);
+  }
+
+  if (typeof end !== "number") {
+    throw new TypeError(`end must be a number, received ${end}`);
+  }
+
+  if (end < start) {
+    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`);
+  }
+
+  const prefix = "…";
+  const suffix = "…";
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+
+  let result = "";
+
+  while (from < to) {
+    result += line[from];
+    from++;
+  }
+
+  if (result.length === 0) {
+    return "";
+  }
+
+  if (startTruncated && endTruncated) {
+    return `${prefix}${result}${suffix}`;
+  }
+
+  if (startTruncated) {
+    return `${prefix}${result}`;
+  }
+
+  if (endTruncated) {
+    return `${result}${suffix}`;
+  }
+
+  return result;
+};
+
+const stringToSpaces = string => string.replace(/[^\t]/g, " "); // const getLineRangeLength = ({ start, end }) => end - start
+
+
+const moveLineRangeUp = ({
+  start,
+  end
+}, number) => {
+  return {
+    start: start - number,
+    end
+  };
+};
+
+const moveLineRangeDown = ({
+  start,
+  end
+}, number) => {
+  return {
+    start,
+    end: end + number
+  };
+};
+
+const lineRangeWithinLines = ({
+  start,
+  end
+}, lines) => {
+  return {
+    start: start < 0 ? 0 : start,
+    end: end > lines.length ? lines.length : end
+  };
+};
+
+const urlToExtension$1 = url => {
+  const pathname = urlToPathname$1(url);
+  return pathnameToExtension$1(pathname);
+};
+
+const pathnameToExtension$1 = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  const extension = pathname.slice(dotLastIndex);
+  return extension;
+};
+
+const asUrlWithoutSearch = url => {
+  const urlObject = new URL(url);
+  urlObject.search = "";
+  return urlObject.href;
+};
+const isValidUrl$1 = url => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}; // normalize url search params:
+// Using URLSearchParams to alter the url search params
+// can result into "file:///file.css?css_module"
+// becoming "file:///file.css?css_module="
+// we want to get rid of the "=" and consider it's the same url
+
+const normalizeUrl = url => {
+  if (url.includes("?")) {
+    // disable on data urls (would mess up base64 encoding)
+    if (url.startsWith("data:")) {
+      return url;
+    }
+
+    return url.replace(/[=](?=&|$)/g, "");
+  }
+
+  return url;
+};
+const injectQueryParamsIntoSpecifier = (specifier, params) => {
+  if (isValidUrl$1(specifier)) {
+    return injectQueryParams(specifier, params);
+  }
+
+  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
+  const searchParams = new URLSearchParams(afterQuestion);
+  Object.keys(params).forEach(key => {
+    searchParams.set(key, params[key]);
+  });
+  const paramsString = searchParams.toString();
+
+  if (paramsString) {
+    return `${beforeQuestion}?${paramsString}`;
+  }
+
+  return specifier;
+};
+const injectQueryParams = (url, params) => {
+  const urlObject = new URL(url);
+  Object.keys(params).forEach(key => {
+    urlObject.searchParams.set(key, params[key]);
+  });
+  const urlWithParams = urlObject.href;
+  return urlWithParams;
+};
+const setUrlFilename = (url, filename) => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    search,
+    hash
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const parentPathname = new URL("./", urlObject).pathname;
+  return `${origin}${parentPathname}${filename}${search}${hash}`;
+};
+const ensurePathnameTrailingSlash = url => {
+  const urlObject = new URL(url);
+  const {
+    pathname
+  } = urlObject;
+
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+
+  let {
+    origin
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const {
+    search,
+    hash
+  } = urlObject;
+  return `${origin}${pathname}/${search}${hash}`;
+};
+const asUrlUntilPathname = url => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    pathname
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const urlUntilPathname = `${origin}${pathname}`;
+  return urlUntilPathname;
+};
+
+const isFileSystemPath = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl = value => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+
+  return String(pathToFileURL(value));
+};
+
+const getCallerPosition = () => {
+  const {
+    prepareStackTrace
+  } = Error;
+
+  Error.prepareStackTrace = (error, stack) => {
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+
+  const {
+    stack
+  } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
+  return {
+    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
+    line: callerCallsite.getLineNumber(),
+    column: callerCallsite.getColumnNumber()
+  };
+};
+
+const resolveUrl$1 = (specifier, baseUrl) => {
+  if (typeof baseUrl === "undefined") {
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
+  }
+
+  return String(new URL(specifier, baseUrl));
+};
+
+const resolveDirectoryUrl = (specifier, baseUrl) => {
+  const url = resolveUrl$1(specifier, baseUrl);
+  return ensurePathnameTrailingSlash(url);
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  if (pathname === otherPathname) {
+    return pathname;
+  }
+
+  let commonPart = "";
+  let commonPathname = "";
+  let i = 0;
+  const length = pathname.length;
+  const otherLength = otherPathname.length;
+
+  while (i < length) {
+    const char = pathname.charAt(i);
+    const otherChar = otherPathname.charAt(i);
+    i++;
+
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/";
+        commonPathname += commonPart;
+        commonPart = "";
+      } else {
+        commonPart += char;
+      }
+    } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/";
+        commonPathname += commonPart;
+      }
+
+      return commonPathname;
+    }
+  }
+
+  if (length === otherLength) {
+    commonPathname += commonPart;
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart;
+  }
+
+  return commonPathname;
+};
+
+const urlToRelativeUrl = (url, baseUrl) => {
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
+
+  if (urlObject.protocol !== baseUrlObject.protocol) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
+  }
+
+  const {
+    pathname,
+    hash,
+    search
+  } = urlObject;
+
+  if (pathname === "/") {
+    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlRessourceWithoutLeadingSlash;
+  }
+
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+
+  if (!commonPathname) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+
+  if (baseSpecificPathname.includes("/")) {
+    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
+  }
+
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return relativeUrl;
+};
+
+const pathnameToParentPathname$1 = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const moveUrl = ({
+  url,
+  from,
+  to,
+  preferAbsolute = false
+}) => {
+  let relativeUrl = urlToRelativeUrl(url, from);
+
+  if (relativeUrl.slice(0, 2) === "//") {
+    // restore the protocol
+    relativeUrl = new URL(relativeUrl, url).href;
+  }
+
+  const absoluteUrl = new URL(relativeUrl, to).href;
+
+  if (preferAbsolute) {
+    return absoluteUrl;
+  }
+
+  return urlToRelativeUrl(absoluteUrl, to);
+};
+
+const urlIsInsideOf = (url, otherUrl) => {
+  const urlObject = new URL(url);
+  const otherUrlObject = new URL(otherUrl);
+
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false;
+  }
+
+  const urlPathname = urlObject.pathname;
+  const otherUrlPathname = otherUrlObject.pathname;
+
+  if (urlPathname === otherUrlPathname) {
+    return false;
+  }
+
+  const isInside = urlPathname.startsWith(otherUrlPathname);
+  return isInside;
+};
+
+const urlToBasename = url => {
+  const filename = urlToFilename$1(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  const basename = dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
+  return basename;
+};
+
+const assertAndNormalizeDirectoryUrl = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensurePathnameTrailingSlash(urlString);
+};
+
+const assertAndNormalizeFileUrl = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const statsToType = stats => {
+  if (stats.isFile()) return "file";
+  if (stats.isDirectory()) return "directory";
+  if (stats.isSymbolicLink()) return "symbolic-link";
+  if (stats.isFIFO()) return "fifo";
+  if (stats.isSocket()) return "socket";
+  if (stats.isCharacterDevice()) return "character-device";
+  if (stats.isBlockDevice()) return "block-device";
+  return undefined;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH = 1;
+const permissionsToBinaryFlags = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR;
+  if (owner.write) binaryFlags |= S_IWUSR;
+  if (owner.execute) binaryFlags |= S_IXUSR;
+  if (group.read) binaryFlags |= S_IRGRP;
+  if (group.write) binaryFlags |= S_IWGRP;
+  if (group.execute) binaryFlags |= S_IXGRP;
+  if (others.read) binaryFlags |= S_IROTH;
+  if (others.write) binaryFlags |= S_IWOTH;
+  if (others.execute) binaryFlags |= S_IXOTH;
+  return binaryFlags;
+};
+
+const writeEntryPermissions = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault("read", "owner", permissions),
+        write: getPermissionOrComputeDefault("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault("read", "group", permissions),
+        write: getPermissionOrComputeDefault("write", "group", permissions),
+        execute: getPermissionOrComputeDefault("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault("read", "others", permissions),
+        write: getPermissionOrComputeDefault("write", "others", permissions),
+        execute: getPermissionOrComputeDefault("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return new Promise((resolve, reject) => {
+    chmod(new URL(sourceUrl), binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+const actionLevels = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels[action];
+    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+const isWindows$2 = process.platform === "win32";
+const readEntryStat = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$2 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
+
+        try {
+          // unfortunately it means we mutate the permissions
+          // without being able to restore them to the previous value
+          // (because reading current permission would also throw)
+          await writeEntryPermissions(sourceUrl, 0o666);
+          const stats = await readStat(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              console.error(`still got EPERM after stats on ${sourcePath}`);
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          console.error(`error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`);
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? stat : lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+/*
+ * - Buffer documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/buffer.html
+ * - eTag documentation on MDN
+ *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+ */
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const readDirectory = async (url, {
+  emfileMaxWait = 1000
+} = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
+  const directoryPath = urlToFileSystemPath(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = () => {
+    return readdirNaive(directoryPath, {
+      handleTooManyFilesOpenedError: async error => {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw error;
+        }
+
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(attempt());
+          }, attemptCount);
+        });
+      }
+    });
+  };
+
+  return attempt();
+};
+
+const readdirNaive = (directoryPath, {
+  handleTooManyFilesOpenedError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    readdir(directoryPath, (error, names) => {
+      if (error) {
+        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
+          resolve(handleTooManyFilesOpenedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(names);
+      }
+    });
+  });
+};
+
+const comparePathnames = (leftPathame, rightPathname) => {
+  const leftPartArray = leftPathame.split("/");
+  const rightPartArray = rightPathname.split("/");
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+
+  while (i < maxLength) {
+    const leftPartExists = (i in leftPartArray);
+    const rightPartExists = (i in rightPartArray); // longer comes first
+
+    if (!leftPartExists) {
+      return +1;
+    }
+
+    if (!rightPartExists) {
+      return -1;
+    }
+
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
+
+    if (leftPartIsLast && !rightPartIsLast) {
+      return +1;
+    }
+
+    if (!leftPartIsLast && rightPartIsLast) {
+      return -1;
+    }
+
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++; // local comparison comes first
+
+    const comparison = leftPart.localeCompare(rightPart);
+
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+
+  if (leftLength < rightLength) {
+    return +1;
+  }
+
+  if (leftLength > rightLength) {
+    return -1;
+  }
+
+  return 0;
+};
+
+const collectFiles = async ({
+  signal = new AbortController().signal,
+  directoryUrl,
+  associations,
+  predicate
+}) => {
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
+  const collectOperation = Abort.startOperation();
+  collectOperation.addAbortSignal(signal);
+  const matchingFileResultArray = [];
+
+  const visitDirectory = async directoryUrl => {
+    collectOperation.throwIfAborted();
+    const directoryItems = await readDirectory(directoryUrl);
+    await Promise.all(directoryItems.map(async directoryItem => {
+      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
+      collectOperation.throwIfAborted();
+      const directoryChildNodeStats = await readEntryStat(directoryChildNodeUrl, {
+        // we ignore symlink because recursively traversed
+        // so symlinked file will be discovered.
+        // Moreover if they lead outside of directoryPath it can become a problem
+        // like infinite recursion of whatever.
+        // that we could handle using an object of pathname already seen but it will be useless
+        // because directoryPath is recursively traversed
+        followLink: false
+      });
+
+      if (directoryChildNodeStats.isDirectory()) {
+        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
+
+        if (!URL_META.urlChildMayMatch({
+          url: subDirectoryUrl,
+          associations,
+          predicate
+        })) {
+          return;
+        }
+
+        await visitDirectory(subDirectoryUrl);
+        return;
+      }
+
+      if (directoryChildNodeStats.isFile()) {
+        const meta = URL_META.applyAssociations({
+          url: directoryChildNodeUrl,
+          associations
+        });
+        if (!predicate(meta)) return;
+        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
+        matchingFileResultArray.push({
+          url: new URL(relativeUrl, rootDirectoryUrl).href,
+          relativeUrl,
+          meta,
+          fileStats: directoryChildNodeStats
+        });
+        return;
+      }
+    }));
+  };
+
+  try {
+    await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
+    // to perform operation in the same order they appear in the filesystem.
+    // It also allow to get a predictable return value.
+    // For that reason we sort matchingFileResultArray
+
+    matchingFileResultArray.sort((leftFile, rightFile) => {
+      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
+    });
+    return matchingFileResultArray;
+  } finally {
+    await collectOperation.end();
+  }
+};
+
+const {
+  mkdir
+} = promises;
+const writeDirectory = async (destination, {
+  recursive = true,
+  allowUseless = false
+} = {}) => {
+  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationStats = await readEntryStat(destinationUrl, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (destinationStats) {
+    if (destinationStats.isDirectory()) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`directory already exists at ${destinationPath}`);
+    }
+
+    const destinationType = statsToType(destinationStats);
+    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
+  }
+
+  try {
+    await mkdir(destinationPath, {
+      recursive
+    });
+  } catch (error) {
+    if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const removeEntry = async (source, {
+  signal = new AbortController().signal,
+  allowUseless = false,
+  recursive = false,
+  maxRetries = 3,
+  retryDelay = 100,
+  onlyContent = false
+} = {}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const removeOperation = Abort.startOperation();
+  removeOperation.addAbortSignal(signal);
+
+  try {
+    removeOperation.throwIfAborted();
+    const sourceStats = await readEntryStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    });
+
+    if (!sourceStats) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+    } // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+    // other libraries ignore them, let's do the same.
+
+
+    if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
+        maxRetries,
+        retryDelay
+      });
+    } else if (sourceStats.isDirectory()) {
+      await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
+        signal: removeOperation.signal,
+        recursive,
+        maxRetries,
+        retryDelay,
+        onlyContent
+      });
+    }
+  } finally {
+    await removeOperation.end();
+  }
+};
+
+const removeNonDirectory = (sourceUrl, {
+  maxRetries,
+  retryDelay
+}) => {
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  let retryCount = 0;
+
+  const attempt = () => {
+    return unlinkNaive(sourcePath, { ...(retryCount >= maxRetries ? {} : {
+        handleTemporaryError: async () => {
+          retryCount++;
+          return new Promise(resolve => {
+            setTimeout(() => {
+              resolve(attempt());
+            }, retryCount * retryDelay);
+          });
+        }
+      })
+    });
+  };
+
+  return attempt();
+};
+
+const unlinkNaive = (sourcePath, {
+  handleTemporaryError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    unlink(sourcePath, error => {
+      if (error) {
+        if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
+          resolve(handleTemporaryError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const removeDirectory = async (rootDirectoryUrl, {
+  signal,
+  maxRetries,
+  retryDelay,
+  recursive,
+  onlyContent
+}) => {
+  const removeDirectoryOperation = Abort.startOperation();
+  removeDirectoryOperation.addAbortSignal(signal);
+
+  const visit = async sourceUrl => {
+    removeDirectoryOperation.throwIfAborted();
+    const sourceStats = await readEntryStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    }); // file/directory not found
+
+    if (sourceStats === null) {
+      return;
+    }
+
+    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await visitFile(sourceUrl);
+    } else if (sourceStats.isSymbolicLink()) {
+      await visitSymbolicLink(sourceUrl);
+    } else if (sourceStats.isDirectory()) {
+      await visitDirectory(`${sourceUrl}/`);
+    }
+  };
+
+  const visitDirectory = async directoryUrl => {
+    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const optionsFromRecursive = recursive ? {
+      handleNotEmptyError: async () => {
+        await removeDirectoryContent(directoryUrl);
+        await visitDirectory(directoryUrl);
+      }
+    } : {};
+    removeDirectoryOperation.throwIfAborted();
+    await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive,
+      // Workaround for https://github.com/joyent/node/issues/4337
+      ...(process.platform === "win32" ? {
+        handlePermissionError: async error => {
+          console.error(`trying to fix windows EPERM after readir on ${directoryPath}`);
+          let openOrCloseError;
+
+          try {
+            const fd = openSync(directoryPath);
+            closeSync(fd);
+          } catch (e) {
+            openOrCloseError = e;
+          }
+
+          if (openOrCloseError) {
+            if (openOrCloseError.code === "ENOENT") {
+              return;
+            }
+
+            console.error(`error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`);
+            throw error;
+          }
+
+          await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive
+          });
+        }
+      } : {})
+    });
+  };
+
+  const removeDirectoryContent = async directoryUrl => {
+    removeDirectoryOperation.throwIfAborted();
+    const names = await readDirectory(directoryUrl);
+    await Promise.all(names.map(async name => {
+      const url = resolveUrl$1(name, directoryUrl);
+      await visit(url);
+    }));
+  };
+
+  const visitFile = async fileUrl => {
+    await removeNonDirectory(fileUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  const visitSymbolicLink = async symbolicLinkUrl => {
+    await removeNonDirectory(symbolicLinkUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  try {
+    if (onlyContent) {
+      await removeDirectoryContent(rootDirectoryUrl);
+    } else {
+      await visitDirectory(rootDirectoryUrl);
+    }
+  } finally {
+    await removeDirectoryOperation.end();
+  }
+};
+
+const removeDirectoryNaive = (directoryPath, {
+  handleNotEmptyError = null,
+  handlePermissionError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    rmdir(directoryPath, (error, lstatObject) => {
+      if (error) {
+        if (handlePermissionError && error.code === "EPERM") {
+          resolve(handlePermissionError(error));
+        } else if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleNotEmptyError && ( // linux os
+        error.code === "ENOTEMPTY" || // SunOS
+        error.code === "EEXIST")) {
+          resolve(handleNotEmptyError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(lstatObject);
+      }
+    });
+  });
+};
+
+const ensureEmptyDirectory = async source => {
+  const stats = await readEntryStat(source, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (stats === null) {
+    // if there is nothing, create a directory
+    return writeDirectory(source, {
+      allowUseless: true
+    });
+  }
+
+  if (stats.isDirectory()) {
+    // if there is a directory remove its content and done
+    return removeEntry(source, {
+      allowUseless: true,
+      recursive: true,
+      onlyContent: true
+    });
+  }
+
+  const sourceType = statsToType(stats);
+  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
+  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
+};
+
+const ensureParentDirectories = async destination => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationParentPath = dirname(destinationPath);
+  return writeDirectory(destinationParentPath, {
+    recursive: true,
+    allowUseless: true
+  });
+};
+
+const isWindows$1 = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
+  }
+
+  if (!isWindows$1) {
+    return url;
+  }
+
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+
+  const afterProtocol = url.slice("file://".length); // we still have the windows drive letter
+
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  } // drive letter was lost, restore it
+
+
+  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
+  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
+
+  if (!driveLetter) {
+    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+
+const extractDriveLetter = ressource => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
+    return ressource[1];
+  }
+
+  return null;
+};
+
+process.platform === "win32";
+
+const readFile = async (value, {
+  as = "buffer"
+} = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(fileUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+
+  if (as === "buffer") {
+    return buffer;
+  }
+
+  if (as === "string") {
+    return buffer.toString();
+  }
+
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+
+  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+};
+
+const readFileSync = (value, {
+  as = "buffer"
+} = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = readFileSync$1(new URL(fileUrl));
+
+  if (as === "buffer") {
+    return buffer;
+  }
+
+  if (as === "string") {
+    return buffer.toString();
+  }
+
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+
+  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+};
+
+const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
+  const previousCallMsMap = new Map();
+  return fileEvent => {
+    const {
+      relativeUrl
+    } = fileEvent;
+    const previousCallMs = previousCallMsMap.get(relativeUrl);
+    const nowMs = Date.now();
+
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMsMap.delete(relativeUrl);
+        return;
+      }
+    }
+
+    previousCallMsMap.set(relativeUrl, nowMs);
+    callback(fileEvent);
+  };
+};
+
+const isWindows = process.platform === "win32";
+const createWatcher = (sourcePath, options) => {
+  const watcher = watch(sourcePath, options);
+
+  if (isWindows) {
+    watcher.on("error", async error => {
+      // https://github.com/joyent/node/issues/4337
+      if (error.code === "EPERM") {
+        try {
+          const fd = openSync(sourcePath, "r");
+          closeSync(fd);
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return;
+          }
+
+          console.error(`error while fixing windows eperm: ${e.stack}`);
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    });
+  }
+
+  return watcher;
+};
+
+const trackRessources = () => {
+  const callbackArray = [];
+
+  const registerCleanupCallback = callback => {
+    if (typeof callback !== "function") throw new TypeError(`callback must be a function
+callback: ${callback}`);
+    callbackArray.push(callback);
+    return () => {
+      const index = callbackArray.indexOf(callback);
+      if (index > -1) callbackArray.splice(index, 1);
+    };
+  };
+
+  const cleanup = async reason => {
+    const localCallbackArray = callbackArray.slice();
+    await Promise.all(localCallbackArray.map(callback => callback(reason)));
+  };
+
+  return {
+    registerCleanupCallback,
+    cleanup
+  };
+};
+
+const isLinux = process.platform === "linux"; // linux does not support recursive option
+
+const fsWatchSupportsRecursive = !isLinux;
+const registerDirectoryLifecycle = (source, {
+  debug = false,
+  added,
+  updated,
+  removed,
+  watchPatterns = {
+    "./**/*": true
+  },
+  notifyExistent = false,
+  keepProcessAlive = true,
+  recursive = false,
+  // filesystem might dispatch more events than expected
+  // Code can use "cooldownBetweenFileEvents" to prevent that
+  // BUT it is UNADVISED to rely on this as explained later (search for "is lying" in this file)
+  // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios
+  // like unit tests
+  cooldownBetweenFileEvents = 0
+}) => {
+  const sourceUrl = assertAndNormalizeDirectoryUrl(source);
+
+  if (!undefinedOrFunction$1(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+
+  if (!undefinedOrFunction$1(updated)) {
+    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
+  }
+
+  if (!undefinedOrFunction$1(removed)) {
+    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
+  }
+
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+    }
+
+    if (updated) {
+      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+    }
+
+    if (removed) {
+      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const associations = URL_META.resolveAssociations({
+    watch: watchPatterns
+  }, sourceUrl);
+
+  const getWatchPatternValue = ({
+    url,
+    type
+  }) => {
+    if (type === "directory") {
+      let firstMeta = false;
+      URL_META.urlChildMayMatch({
+        url: `${url}/`,
+        associations,
+        predicate: ({
+          watch
+        }) => {
+          if (watch) {
+            firstMeta = watch;
+          }
+
+          return watch;
+        }
+      });
+      return firstMeta;
+    }
+
+    const {
+      watch
+    } = URL_META.applyAssociations({
+      url,
+      associations
+    });
+    return watch;
+  };
+
+  const tracker = trackRessources();
+  const infoMap = new Map();
+
+  const readEntryInfo = url => {
+    try {
+      const relativeUrl = urlToRelativeUrl(url, source);
+      const previousInfo = infoMap.get(relativeUrl);
+      const stats = statSync(new URL(url));
+      const type = statsToType(stats);
+      const patternValue = previousInfo ? previousInfo.patternValue : getWatchPatternValue({
+        url,
+        type
+      });
+      return {
+        previousInfo,
+        url,
+        relativeUrl,
+        type,
+        atimeMs: stats.atimeMs,
+        mtimeMs: stats.mtimeMs,
+        patternValue
+      };
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return null;
+      }
+
+      throw e;
+    }
+  };
+
+  const handleDirectoryEvent = ({
+    directoryRelativeUrl,
+    filename,
+    eventType
+  }) => {
+    if (filename) {
+      if (directoryRelativeUrl) {
+        handleChange(`${directoryRelativeUrl}/${filename}`);
+        return;
+      }
+
+      handleChange(`${filename}`);
+      return;
+    }
+
+    if (eventType === "rename") {
+      if (!removed && !added) {
+        return;
+      } // we might receive `rename` without filename
+      // in that case we try to find ourselves which file was removed.
+
+
+      let relativeUrlCandidateArray = Array.from(infoMap.keys());
+
+      if (recursive && !fsWatchSupportsRecursive) {
+        relativeUrlCandidateArray = relativeUrlCandidateArray.filter(relativeUrlCandidate => {
+          if (!directoryRelativeUrl) {
+            // ensure entry is top level
+            if (relativeUrlCandidate.includes("/")) {
+              return false;
+            }
+
+            return true;
+          } // entry not inside this directory
+
+
+          if (!relativeUrlCandidate.startsWith(directoryRelativeUrl)) {
+            return false;
+          }
+
+          const afterDirectory = relativeUrlCandidate.slice(directoryRelativeUrl.length + 1); // deep inside this directory
+
+          if (afterDirectory.includes("/")) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      const removedEntryRelativeUrl = relativeUrlCandidateArray.find(relativeUrlCandidate => {
+        try {
+          statSync(new URL(relativeUrlCandidate, sourceUrl));
+          return false;
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return true;
+          }
+
+          throw e;
+        }
+      });
+
+      if (removedEntryRelativeUrl) {
+        handleEntryLost(infoMap.get(removedEntryRelativeUrl));
+      }
+    }
+  };
+
+  const handleChange = relativeUrl => {
+    const entryUrl = new URL(relativeUrl, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
+
+    if (!entryInfo) {
+      const previousEntryInfo = infoMap.get(relativeUrl);
+
+      if (!previousEntryInfo) {
+        // on MacOS it's possible to receive a "rename" event for
+        // a file that does not exists...
+        return;
+      }
+
+      if (debug) {
+        console.debug(`"${relativeUrl}" removed`);
+      }
+
+      handleEntryLost(previousEntryInfo);
+      return;
+    }
+
+    const {
+      previousInfo
+    } = entryInfo;
+
+    if (!previousInfo) {
+      if (debug) {
+        console.debug(`"${relativeUrl}" added`);
+      }
+
+      handleEntryFound(entryInfo);
+      return;
+    }
+
+    if (entryInfo.type !== previousInfo.type) {
+      // it existed and was replaced by something else
+      // we don't handle this as an update. We rather say the ressource
+      // is lost and something else is found (call removed() then added())
+      handleEntryLost(previousInfo);
+      handleEntryFound(entryInfo);
+      return;
+    }
+
+    if (entryInfo.type === "directory") {
+      // a directory cannot really be updated in way that matters for us
+      // filesystem is trying to tell us the directory content have changed
+      // but we don't care about that
+      // we'll already be notified about what has changed
+      return;
+    } // something has changed at this relativeUrl (the file existed and was not deleted)
+    // it's possible to get there without a real update
+    // (file content is the same and file mtime is the same).
+    // In short filesystem is sometimes "lying"
+    // Not trying to guard against that because:
+    // - hurt perfs a lot
+    // - it happens very rarely
+    // - it's not really a concern in practice
+    // - filesystem did not send an event out of nowhere:
+    //   something occured but we don't know exactly what
+    // maybe we should exclude some stuff as done in
+    // https://github.com/paulmillr/chokidar/blob/b2c4f249b6cfa98c703f0066fb4a56ccd83128b5/lib/nodefs-handler.js#L366
+
+
+    if (debug) {
+      console.debug(`"${relativeUrl}" modified`);
+    }
+
+    handleEntryUpdated(entryInfo);
+  };
+
+  const handleEntryFound = (entryInfo, {
+    notify = true
+  } = {}) => {
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
+
+    if (entryInfo.type === "directory") {
+      const directoryUrl = `${entryInfo.url}/`;
+      readdirSync(new URL(directoryUrl)).forEach(entryName => {
+        const childEntryUrl = new URL(entryName, directoryUrl).href;
+        const childEntryInfo = readEntryInfo(childEntryUrl);
+
+        if (childEntryInfo && childEntryInfo.patternValue) {
+          handleEntryFound(childEntryInfo, {
+            notify
+          });
+        }
+      }); // we must watch manually every directory we find
+
+      if (!fsWatchSupportsRecursive) {
+        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
+          persistent: keepProcessAlive
+        });
+        tracker.registerCleanupCallback(() => {
+          watcher.close();
+        });
+        watcher.on("change", (eventType, filename) => {
+          handleDirectoryEvent({
+            directoryRelativeUrl: entryInfo.relativeUrl,
+            filename: filename ? // replace back slashes with slashes
+            filename.replace(/\\/g, "/") : "",
+            eventType
+          });
+        });
+      }
+    }
+
+    if (added && entryInfo.patternValue && notify) {
+      added({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs
+      });
+    }
+  };
+
+  const handleEntryLost = entryInfo => {
+    infoMap.delete(entryInfo.relativeUrl);
+
+    if (removed && entryInfo.patternValue) {
+      removed({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs
+      });
+    }
+  };
+
+  const handleEntryUpdated = entryInfo => {
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
+
+    if (updated && entryInfo.patternValue) {
+      updated({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs,
+        previousMtime: entryInfo.previousInfo.mtimeMs
+      });
+    }
+  };
+
+  readdirSync(new URL(sourceUrl)).forEach(entry => {
+    const entryUrl = new URL(entry, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
+
+    if (entryInfo && entryInfo.patternValue) {
+      handleEntryFound(entryInfo, {
+        notify: notifyExistent
+      });
+    }
+  });
+
+  if (debug) {
+    const relativeUrls = Array.from(infoMap.keys());
+
+    if (relativeUrls.length === 0) {
+      console.debug(`No file found`);
+    } else {
+      console.debug(`${relativeUrls.length} file found: 
+${relativeUrls.join("\n")}`);
+    }
+  }
+
+  const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+    recursive: recursive && fsWatchSupportsRecursive,
+    persistent: keepProcessAlive
+  });
+  tracker.registerCleanupCallback(() => {
+    watcher.close();
+  });
+  watcher.on("change", (eventType, fileSystemPath) => {
+    handleDirectoryEvent({ ...fileSystemPathToDirectoryRelativeUrlAndFilename(fileSystemPath),
+      eventType
+    });
+  });
+  return tracker.cleanup;
+};
+
+const undefinedOrFunction$1 = value => {
+  return typeof value === "undefined" || typeof value === "function";
+};
+
+const fileSystemPathToDirectoryRelativeUrlAndFilename = path => {
+  if (!path) {
+    return {
+      directoryRelativeUrl: "",
+      filename: ""
+    };
+  }
+
+  const normalizedPath = path.replace(/\\/g, "/"); // replace back slashes with slashes
+
+  const slashLastIndex = normalizedPath.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return {
+      directoryRelativeUrl: "",
+      filename: normalizedPath
+    };
+  }
+
+  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex);
+  const filename = normalizedPath.slice(slashLastIndex + 1);
+  return {
+    directoryRelativeUrl,
+    filename
+  };
+};
+
+const registerFileLifecycle = (source, {
+  added,
+  updated,
+  removed,
+  notifyExistent = false,
+  keepProcessAlive = true,
+  cooldownBetweenFileEvents = 0
+}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  if (!undefinedOrFunction(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+
+  if (!undefinedOrFunction(updated)) {
+    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
+  }
+
+  if (!undefinedOrFunction(removed)) {
+    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
+  }
+
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+    }
+
+    if (updated) {
+      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+    }
+
+    if (removed) {
+      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const tracker = trackRessources();
+
+  const handleFileFound = ({
+    existent
+  }) => {
+    const fileMutationStopWatching = watchFileMutation(sourceUrl, {
+      updated,
+      removed: () => {
+        fileMutationStopTracking();
+        watchFileAdded();
+
+        if (removed) {
+          removed();
+        }
+      },
+      keepProcessAlive
+    });
+    const fileMutationStopTracking = tracker.registerCleanupCallback(fileMutationStopWatching);
+
+    if (added) {
+      if (existent) {
+        if (notifyExistent) {
+          added({
+            existent: true
+          });
+        }
+      } else {
+        added({});
+      }
+    }
+  };
+
+  const watchFileAdded = () => {
+    const fileCreationStopWatching = watchFileCreation(sourceUrl, () => {
+      fileCreationgStopTracking();
+      handleFileFound({
+        existent: false
+      });
+    }, keepProcessAlive);
+    const fileCreationgStopTracking = tracker.registerCleanupCallback(fileCreationStopWatching);
+  };
+
+  const sourceType = entryToTypeOrNull(sourceUrl);
+
+  if (sourceType === null) {
+    if (added) {
+      watchFileAdded();
+    } else {
+      throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`);
+    }
+  } else if (sourceType === "file") {
+    handleFileFound({
+      existent: true
+    });
+  } else {
+    throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, type found instead`);
+  }
+
+  return tracker.cleanup;
+};
+
+const entryToTypeOrNull = url => {
+  try {
+    const stats = statSync(new URL(url));
+    return statsToType(stats);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+
+    throw e;
+  }
+};
+
+const undefinedOrFunction = value => typeof value === "undefined" || typeof value === "function";
+
+const watchFileCreation = (source, callback, keepProcessAlive) => {
+  const sourcePath = urlToFileSystemPath(source);
+  const sourceFilename = basename(sourcePath);
+  const directoryPath = dirname(sourcePath);
+  let directoryWatcher = createWatcher(directoryPath, {
+    persistent: keepProcessAlive
+  });
+  directoryWatcher.on("change", (eventType, filename) => {
+    if (filename && filename !== sourceFilename) return;
+    const type = entryToTypeOrNull(source); // ignore if something else with that name gets created
+    // we are only interested into files
+
+    if (type !== "file") return;
+    directoryWatcher.close();
+    directoryWatcher = undefined;
+    callback();
+  });
+  return () => {
+    if (directoryWatcher) {
+      directoryWatcher.close();
+    }
+  };
+};
+
+const watchFileMutation = (sourceUrl, {
+  updated,
+  removed,
+  keepProcessAlive
+}) => {
+  let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+    persistent: keepProcessAlive
+  });
+  watcher.on("change", () => {
+    const sourceType = entryToTypeOrNull(sourceUrl);
+
+    if (sourceType === null) {
+      watcher.close();
+      watcher = undefined;
+
+      if (removed) {
+        removed();
+      }
+    } else if (sourceType === "file") {
+      if (updated) {
+        updated();
+      }
+    }
+  });
+  return () => {
+    if (watcher) {
+      watcher.close();
+    }
+  };
+};
+
+const writeFile = async (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+
+  try {
+    await writeFileNaive(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await ensureParentDirectories(destinationUrl);
+      await writeFileNaive(destinationUrlObject, content);
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const writeFileNaive = (urlObject, content) => {
+  return new Promise((resolve, reject) => {
+    writeFile$1(urlObject, content, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const writeFileSync = (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+
+  try {
+    writeFileSync$1(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      mkdirSync(new URL("./", destinationUrlObject), {
+        recursive: true
+      });
+      writeFileSync$1(destinationUrlObject, content);
+      return;
+    }
+
+    throw error;
+  }
+};
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
@@ -545,6 +9023,10 @@ const jsenvPluginUrlAnalysis = ({
     name: "jsenv:url_analysis",
     appliesDuring: "*",
     redirectUrl: reference => {
+      if (reference.shouldHandle !== undefined) {
+        return;
+      }
+
       if (reference.specifier[0] === "#" && // For Html, css and in general "#" refer to a ressource in the page
       // so that urls must be kept intact
       // However for js import specifiers they have a different meaning and we want
@@ -639,6 +9121,682 @@ const jsenvPluginLeadingSlash = () => {
       return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
     }
   };
+};
+
+// duplicated from @jsenv/log to avoid the dependency
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+    --- ${key} ---
+    ${Array.isArray(value) ? value.join(`
+    `) : value}`;
+  });
+  return string;
+};
+
+const assertImportMap = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
+const hasScheme = string => {
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+
+const urlToScheme = urlString => {
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) return "";
+  return urlString.slice(0, colonIndex);
+};
+
+const urlToPathname = urlString => {
+  return ressourceToPathname(urlToRessource(urlString));
+};
+
+const urlToRessource = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return urlString.slice("file://".length);
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex);
+  }
+
+  return urlString.slice(scheme.length + 1);
+};
+
+const ressourceToPathname = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
+};
+
+const urlToOrigin = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return "file://";
+  }
+
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+    if (pathnameSlashIndex === -1) return urlString;
+    return urlString.slice(0, pathnameSlashIndex);
+  }
+
+  return urlString.slice(0, scheme.length + 1);
+};
+
+const pathnameToParentPathname = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+const resolveUrl = (specifier, baseUrl) => {
+  if (baseUrl) {
+    if (typeof baseUrl !== "string") {
+      throw new TypeError(writeBaseUrlMustBeAString({
+        baseUrl,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(baseUrl)) {
+      throw new Error(writeBaseUrlMustBeAbsolute({
+        baseUrl,
+        specifier
+      }));
+    }
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  if (!baseUrl) {
+    throw new Error(writeBaseUrlRequired({
+      baseUrl,
+      specifier
+    }));
+  } // scheme relative
+
+
+  if (specifier.slice(0, 2) === "//") {
+    return `${urlToScheme(baseUrl)}:${specifier}`;
+  } // origin relative
+
+
+  if (specifier[0] === "/") {
+    return `${urlToOrigin(baseUrl)}${specifier}`;
+  }
+
+  const baseOrigin = urlToOrigin(baseUrl);
+  const basePathname = urlToPathname(baseUrl);
+
+  if (specifier === ".") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}`;
+  } // pathname relative inside
+
+
+  if (specifier.slice(0, 2) === "./") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`;
+  } // pathname relative outside
+
+
+  if (specifier.slice(0, 3) === "../") {
+    let unresolvedPathname = specifier;
+    const importerFolders = basePathname.split("/");
+    importerFolders.pop();
+
+    while (unresolvedPathname.slice(0, 3) === "../") {
+      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
+      // we just ignore '../'
+
+      if (importerFolders.length) {
+        importerFolders.pop();
+      }
+    }
+
+    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
+    return `${baseOrigin}${resolvedPathname}`;
+  } // bare
+
+
+  if (basePathname === "") {
+    return `${baseOrigin}/${specifier}`;
+  }
+
+  if (basePathname[basePathname.length] === "/") {
+    return `${baseOrigin}${basePathname}${specifier}`;
+  }
+
+  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`;
+};
+
+const writeBaseUrlMustBeAString = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlMustBeAbsolute = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be absolute.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlRequired = ({
+  baseUrl,
+  specifier
+}) => `baseUrl required to resolve relative specifier.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const tryUrlResolution = (string, url) => {
+  const result = resolveUrl(string, url);
+  return hasScheme(result) ? result : null;
+};
+
+const resolveSpecifier = (specifier, importer) => {
+  if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    return resolveUrl(specifier, importer);
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  return null;
+};
+
+const applyImportMap = ({
+  importMap,
+  specifier,
+  importer,
+  createBareSpecifierError = ({
+    specifier,
+    importer
+  }) => {
+    return new Error(createDetailedMessage(`Unmapped bare specifier.`, {
+      specifier,
+      importer
+    }));
+  },
+  onImportMapping = () => {}
+}) => {
+  assertImportMap(importMap);
+
+  if (typeof specifier !== "string") {
+    throw new TypeError(createDetailedMessage("specifier must be a string.", {
+      specifier,
+      importer
+    }));
+  }
+
+  if (importer) {
+    if (typeof importer !== "string") {
+      throw new TypeError(createDetailedMessage("importer must be a string.", {
+        importer,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(importer)) {
+      throw new Error(createDetailedMessage(`importer must be an absolute url.`, {
+        importer,
+        specifier
+      }));
+    }
+  }
+
+  const specifierUrl = resolveSpecifier(specifier, importer);
+  const specifierNormalized = specifierUrl || specifier;
+  const {
+    scopes
+  } = importMap;
+
+  if (scopes && importer) {
+    const scopeSpecifierMatching = Object.keys(scopes).find(scopeSpecifier => {
+      return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
+    });
+
+    if (scopeSpecifierMatching) {
+      const scopeMappings = scopes[scopeSpecifierMatching];
+      const mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
+
+      if (mappingFromScopes !== null) {
+        return mappingFromScopes;
+      }
+    }
+  }
+
+  const {
+    imports
+  } = importMap;
+
+  if (imports) {
+    const mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
+
+    if (mappingFromImports !== null) {
+      return mappingFromImports;
+    }
+  }
+
+  if (specifierUrl) {
+    return specifierUrl;
+  }
+
+  throw createBareSpecifierError({
+    specifier,
+    importer
+  });
+};
+
+const applyMappings = (mappings, specifierNormalized, scope, onImportMapping) => {
+  const specifierCandidates = Object.keys(mappings);
+  let i = 0;
+
+  while (i < specifierCandidates.length) {
+    const specifierCandidate = specifierCandidates[i];
+    i++;
+
+    if (specifierCandidate === specifierNormalized) {
+      const address = mappings[specifierCandidate];
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: address
+      });
+      return address;
+    }
+
+    if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+      const address = mappings[specifierCandidate];
+      const afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
+      const addressFinal = tryUrlResolution(afterSpecifier, address);
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: addressFinal
+      });
+      return addressFinal;
+    }
+  }
+
+  return null;
+};
+
+const specifierIsPrefixOf = (specifierHref, href) => {
+  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+};
+
+// https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
+const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
+  assertImportMap(leftImportMap);
+  assertImportMap(rightImportMap);
+  const importMap = {};
+  const leftImports = leftImportMap.imports;
+  const rightImports = rightImportMap.imports;
+  const leftHasImports = Boolean(leftImports);
+  const rightHasImports = Boolean(rightImports);
+
+  if (leftHasImports && rightHasImports) {
+    importMap.imports = composeTwoMappings(leftImports, rightImports);
+  } else if (leftHasImports) {
+    importMap.imports = { ...leftImports
+    };
+  } else if (rightHasImports) {
+    importMap.imports = { ...rightImports
+    };
+  }
+
+  const leftScopes = leftImportMap.scopes;
+  const rightScopes = rightImportMap.scopes;
+  const leftHasScopes = Boolean(leftScopes);
+  const rightHasScopes = Boolean(rightScopes);
+
+  if (leftHasScopes && rightHasScopes) {
+    importMap.scopes = composeTwoScopes(leftScopes, rightScopes, importMap.imports || {});
+  } else if (leftHasScopes) {
+    importMap.scopes = { ...leftScopes
+    };
+  } else if (rightHasScopes) {
+    importMap.scopes = { ...rightScopes
+    };
+  }
+
+  return importMap;
+};
+
+const composeTwoMappings = (leftMappings, rightMappings) => {
+  const mappings = {};
+  Object.keys(leftMappings).forEach(leftSpecifier => {
+    if (objectHasKey(rightMappings, leftSpecifier)) {
+      // will be overidden
+      return;
+    }
+
+    const leftAddress = leftMappings[leftSpecifier];
+    const rightSpecifier = Object.keys(rightMappings).find(rightSpecifier => {
+      return compareAddressAndSpecifier(leftAddress, rightSpecifier);
+    });
+    mappings[leftSpecifier] = rightSpecifier ? rightMappings[rightSpecifier] : leftAddress;
+  });
+  Object.keys(rightMappings).forEach(rightSpecifier => {
+    mappings[rightSpecifier] = rightMappings[rightSpecifier];
+  });
+  return mappings;
+};
+
+const objectHasKey = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+
+const compareAddressAndSpecifier = (address, specifier) => {
+  const addressUrl = resolveUrl(address, "file:///");
+  const specifierUrl = resolveUrl(specifier, "file:///");
+  return addressUrl === specifierUrl;
+};
+
+const composeTwoScopes = (leftScopes, rightScopes, imports) => {
+  const scopes = {};
+  Object.keys(leftScopes).forEach(leftScopeKey => {
+    if (objectHasKey(rightScopes, leftScopeKey)) {
+      // will be merged
+      scopes[leftScopeKey] = leftScopes[leftScopeKey];
+      return;
+    }
+
+    const topLevelSpecifier = Object.keys(imports).find(topLevelSpecifierCandidate => {
+      return compareAddressAndSpecifier(leftScopeKey, topLevelSpecifierCandidate);
+    });
+
+    if (topLevelSpecifier) {
+      scopes[imports[topLevelSpecifier]] = leftScopes[leftScopeKey];
+    } else {
+      scopes[leftScopeKey] = leftScopes[leftScopeKey];
+    }
+  });
+  Object.keys(rightScopes).forEach(rightScopeKey => {
+    if (objectHasKey(scopes, rightScopeKey)) {
+      scopes[rightScopeKey] = composeTwoMappings(scopes[rightScopeKey], rightScopes[rightScopeKey]);
+    } else {
+      scopes[rightScopeKey] = { ...rightScopes[rightScopeKey]
+      };
+    }
+  });
+  return scopes;
+};
+
+const sortImports = imports => {
+  const mappingsSorted = {};
+  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
+    mappingsSorted[name] = imports[name];
+  });
+  return mappingsSorted;
+};
+const sortScopes = scopes => {
+  const scopesSorted = {};
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeSpecifier => {
+    scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
+  });
+  return scopesSorted;
+};
+
+const compareLengthOrLocaleCompare = (a, b) => {
+  return b.length - a.length || a.localeCompare(b);
+};
+
+const normalizeImportMap = (importMap, baseUrl) => {
+  assertImportMap(importMap);
+
+  if (!isStringOrUrl(baseUrl)) {
+    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
+      baseUrl
+    }));
+  }
+
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
+    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
+  };
+};
+
+const isStringOrUrl = value => {
+  if (typeof value === "string") {
+    return true;
+  }
+
+  if (typeof URL === "function" && value instanceof URL) {
+    return true;
+  }
+
+  return false;
+};
+
+const normalizeMappings = (mappings, baseUrl) => {
+  const mappingsNormalized = {};
+  Object.keys(mappings).forEach(specifier => {
+    const address = mappings[specifier];
+
+    if (typeof address !== "string") {
+      console.warn(formulateAddressMustBeAString({
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+    const addressUrl = tryUrlResolution(address, baseUrl);
+
+    if (addressUrl === null) {
+      console.warn(formulateAdressResolutionFailed({
+        address,
+        baseUrl,
+        specifier
+      }));
+      return;
+    }
+
+    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+      console.warn(formulateAddressUrlRequiresTrailingSlash({
+        addressUrl,
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    mappingsNormalized[specifierResolved] = addressUrl;
+  });
+  return sortImports(mappingsNormalized);
+};
+
+const normalizeScopes = (scopes, baseUrl) => {
+  const scopesNormalized = {};
+  Object.keys(scopes).forEach(scopeSpecifier => {
+    const scopeMappings = scopes[scopeSpecifier];
+    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
+
+    if (scopeUrl === null) {
+      console.warn(formulateScopeResolutionFailed({
+        scope: scopeSpecifier,
+        baseUrl
+      }));
+      return;
+    }
+
+    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
+  return sortScopes(scopesNormalized);
+};
+
+const formulateBaseUrlMustBeStringOrUrl = ({
+  baseUrl
+}) => `baseUrl must be a string or an url.
+--- base url ---
+${baseUrl}`;
+
+const formulateAddressMustBeAString = ({
+  specifier,
+  address
+}) => `Address must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateAdressResolutionFailed = ({
+  address,
+  baseUrl,
+  specifier
+}) => `Address url resolution failed.
+--- address ---
+${address}
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const formulateAddressUrlRequiresTrailingSlash = ({
+  addressURL,
+  address,
+  specifier
+}) => `Address must end with /.
+--- address url ---
+${addressURL}
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateScopeResolutionFailed = ({
+  scope,
+  baseUrl
+}) => `Scope url resolution failed.
+--- scope ---
+${scope}
+--- base url ---
+${baseUrl}`;
+
+const pathnameToExtension = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  return pathname.slice(dotLastIndex);
+};
+
+const resolveImport = ({
+  specifier,
+  importer,
+  importMap,
+  defaultExtension = false,
+  createBareSpecifierError,
+  onImportMapping = () => {}
+}) => {
+  let url;
+
+  if (importMap) {
+    url = applyImportMap({
+      importMap,
+      specifier,
+      importer,
+      createBareSpecifierError,
+      onImportMapping
+    });
+  } else {
+    url = resolveUrl(specifier, importer);
+  }
+
+  if (defaultExtension) {
+    url = applyDefaultExtension({
+      url,
+      importer,
+      defaultExtension
+    });
+  }
+
+  return url;
+};
+
+const applyDefaultExtension = ({
+  url,
+  importer,
+  defaultExtension
+}) => {
+  if (urlToPathname(url).endsWith("/")) {
+    return url;
+  }
+
+  if (typeof defaultExtension === "string") {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "") {
+      return `${url}${defaultExtension}`;
+    }
+
+    return url;
+  }
+
+  if (defaultExtension === true) {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "" && importer) {
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`;
+    }
+  }
+
+  return url;
 };
 
 /*
@@ -741,7 +9899,7 @@ const jsenvPluginImportmap = () => {
           return null;
         }
 
-        const handleInlineImportmap = async (importmap, textNode) => {
+        const handleInlineImportmap = async (importmap, htmlNodeText) => {
           const {
             line,
             column,
@@ -766,7 +9924,7 @@ const jsenvPluginImportmap = () => {
             specifierColumn: column,
             specifier: inlineImportmapUrl,
             contentType: "application/importmap+json",
-            content: textNode.value
+            content: htmlNodeText
           });
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference
@@ -881,6 +10039,1277 @@ const jsenvPluginUrlResolution = () => {
       "webmanifest_icon_src": urlResolver
     }
   };
+};
+
+const isSpecifierForNodeBuiltin = specifier => {
+  return specifier.startsWith("node:") || NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier);
+};
+const NODE_BUILTIN_MODULE_SPECIFIERS = ["assert", "assert/strict", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "stream/promises", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
+"global"];
+
+const asDirectoryUrl = url => {
+  const {
+    pathname
+  } = new URL(url);
+
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+
+  return new URL("./", url).href;
+};
+const getParentUrl = url => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const ressource = url.slice("file://".length);
+    const slashLastIndex = ressource.lastIndexOf("/");
+
+    if (slashLastIndex === -1) {
+      return url;
+    }
+
+    const lastCharIndex = ressource.length - 1;
+
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = ressource.lastIndexOf("/", slashLastIndex - 1);
+
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+
+      return `file://${ressource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+
+    return `file://${ressource.slice(0, slashLastIndex + 1)}`;
+  }
+
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+const isValidUrl = url => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const urlToFilename = url => {
+  const {
+    pathname
+  } = new URL(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+const urlToExtension = url => {
+  const filename = urlToFilename(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const defaultLookupPackageScope = url => {
+  let scopeUrl = asDirectoryUrl(url);
+
+  while (scopeUrl !== "file:///") {
+    if (scopeUrl.endsWith("node_modules/")) {
+      return null;
+    }
+
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
+
+    if (existsSync(packageJsonUrlObject)) {
+      return scopeUrl;
+    }
+
+    scopeUrl = getParentUrl(scopeUrl);
+  }
+
+  return null;
+};
+
+const defaultReadPackageJson = packageUrl => {
+  const packageJsonUrl = new URL("package.json", packageUrl);
+  const buffer = readFileSync$1(packageJsonUrl);
+  const string = String(buffer);
+
+  try {
+    return JSON.parse(string);
+  } catch (e) {
+    throw new Error(`Invalid package configuration`);
+  }
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
+const createInvalidModuleSpecifierError = ({
+  specifier,
+  parentUrl,
+  reason
+}) => {
+  const error = new Error(`Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(parentUrl)}`);
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error;
+};
+const createInvalidPackageTargetError = ({
+  parentUrl,
+  packageUrl,
+  target,
+  key,
+  isImport,
+  reason
+}) => {
+  let message;
+
+  if (key === ".") {
+    message = `Invalid "exports" main target defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  } else {
+    message = `Invalid "${isImport ? "imports" : "exports"}" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  }
+
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error;
+};
+const createPackagePathNotExportedError = ({
+  subpath,
+  parentUrl,
+  packageUrl
+}) => {
+  let message;
+
+  if (subpath === ".") {
+    message = `No "exports" main defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
+  } else {
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
+  }
+
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error;
+};
+const createModuleNotFoundError = ({
+  specifier,
+  parentUrl
+}) => {
+  const error = new Error(`Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`);
+  error.code = "MODULE_NOT_FOUND";
+  return error;
+};
+const createPackageImportNotDefinedError = ({
+  specifier,
+  packageUrl,
+  parentUrl
+}) => {
+  const error = new Error(`Package import specifier "${specifier}" is not defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`);
+  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
+  return error;
+};
+
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  process.execArgv.forEach(arg => {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice(0, "--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  });
+  return packageConditions;
+};
+
+/*
+ * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
+ * deviations from the spec:
+ * - take into account "browser", "module" and "jsnext"
+ * - the check for isDirectory -> throw is delayed is descoped to the caller
+ * - the call to real path ->
+ *   delayed to the caller so that we can decide to
+ *   maintain symlink as facade url when it's outside project directory
+ *   or use the real path when inside
+ */
+const applyNodeEsmResolution = ({
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
+  parentUrl,
+  specifier,
+  lookupPackageScope = defaultLookupPackageScope,
+  readPackageJson = defaultReadPackageJson
+}) => {
+  const resolution = applyPackageSpecifierResolution({
+    conditions,
+    parentUrl: String(parentUrl),
+    specifier,
+    lookupPackageScope,
+    readPackageJson
+  });
+  const {
+    url
+  } = resolution;
+
+  if (url.startsWith("file:")) {
+    if (url.includes("%2F") || url.includes("%5C")) {
+      throw createInvalidModuleSpecifierError({
+        specifier,
+        parentUrl,
+        reason: `must not include encoded "/" or "\\" characters`
+      });
+    }
+
+    return resolution;
+  }
+
+  return resolution;
+};
+
+const applyPackageSpecifierResolution = ({
+  conditions,
+  parentUrl,
+  specifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  // relative specifier
+  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    if (specifier[0] !== "/") {
+      const browserFieldResolution = applyBrowserFieldResolution({
+        conditions,
+        parentUrl,
+        specifier,
+        lookupPackageScope,
+        readPackageJson
+      });
+
+      if (browserFieldResolution) {
+        return browserFieldResolution;
+      }
+    }
+
+    return {
+      type: "relative_specifier",
+      url: new URL(specifier, parentUrl).href
+    };
+  }
+
+  if (specifier[0] === "#") {
+    return applyPackageImportsResolution({
+      conditions,
+      parentUrl,
+      specifier,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  try {
+    const urlObject = new URL(specifier);
+
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier
+      };
+    }
+
+    return {
+      type: "absolute_specifier",
+      url: urlObject.href
+    };
+  } catch (e) {
+    // bare specifier
+    const browserFieldResolution = applyBrowserFieldResolution({
+      conditions,
+      parentUrl,
+      packageSpecifier: specifier,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (browserFieldResolution) {
+      return browserFieldResolution;
+    }
+
+    return applyPackageResolve({
+      conditions,
+      parentUrl,
+      packageSpecifier: specifier,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+};
+
+const applyBrowserFieldResolution = ({
+  conditions,
+  parentUrl,
+  packageSpecifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  const browserCondition = conditions.includes("browser");
+
+  if (!browserCondition) {
+    return null;
+  }
+
+  const packageUrl = lookupPackageScope(parentUrl);
+
+  if (!packageUrl) {
+    return null;
+  }
+
+  const packageJson = readPackageJson(packageUrl);
+
+  if (!packageJson) {
+    return null;
+  }
+
+  const {
+    browser
+  } = packageJson;
+
+  if (!browser) {
+    return null;
+  }
+
+  if (typeof browser !== "object") {
+    return null;
+  }
+
+  let url;
+
+  if (packageSpecifier.startsWith(".")) {
+    const packageSpecifierUrl = new URL(packageSpecifier, parentUrl).href;
+    const packageSpecifierRelativeUrl = packageSpecifierUrl.slice(packageUrl.length);
+    const packageSpecifierRelativeNotation = `./${packageSpecifierRelativeUrl}`;
+    const browserMapping = browser[packageSpecifierRelativeNotation];
+
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${packageSpecifierUrl.slice("file:///")}`;
+    }
+  } else {
+    const browserMapping = browser[packageSpecifier];
+
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${packageSpecifier}`;
+    }
+  }
+
+  if (url) {
+    return {
+      type: "browser",
+      packageUrl,
+      packageJson,
+      url
+    };
+  }
+
+  return null;
+};
+
+const applyPackageImportsResolution = ({
+  conditions,
+  parentUrl,
+  specifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (!specifier.startsWith("#")) {
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "internal imports must start with #"
+    });
+  }
+
+  if (specifier === "#" || specifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "not a valid internal imports specifier name"
+    });
+  }
+
+  const packageUrl = lookupPackageScope(parentUrl);
+
+  if (packageUrl !== null) {
+    const packageJson = readPackageJson(packageUrl);
+    const {
+      imports
+    } = packageJson;
+
+    if (imports !== null && typeof imports === "object") {
+      const resolved = applyPackageImportsExportsResolution({
+        conditions,
+        parentUrl,
+        packageUrl,
+        packageJson,
+        matchObject: imports,
+        matchKey: specifier,
+        isImports: true,
+        lookupPackageScope,
+        readPackageJson
+      });
+
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  throw createPackageImportNotDefinedError({
+    specifier,
+    packageUrl,
+    parentUrl
+  });
+};
+
+const applyPackageResolve = ({
+  conditions,
+  parentUrl,
+  packageSpecifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (packageSpecifier === "") {
+    throw new Error("invalid module specifier");
+  }
+
+  if (conditions.includes("node") && isSpecifierForNodeBuiltin(packageSpecifier)) {
+    return {
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`
+    };
+  }
+
+  const {
+    packageName,
+    packageSubpath
+  } = parsePackageSpecifier(packageSpecifier);
+
+  if (packageName[0] === "." || packageName.includes("\\") || packageName.includes("%")) {
+    throw createInvalidModuleSpecifierError({
+      specifier: packageName,
+      parentUrl,
+      reason: `is not a valid package name`
+    });
+  }
+
+  if (packageSubpath.endsWith("/")) {
+    throw new Error("invalid module specifier");
+  }
+
+  const selfResolution = applyPackageSelfResolution({
+    conditions,
+    parentUrl,
+    packageName,
+    packageSubpath,
+    lookupPackageScope,
+    readPackageJson
+  });
+
+  if (selfResolution) {
+    return selfResolution;
+  }
+
+  let currentUrl = parentUrl;
+
+  while (currentUrl !== "file:///") {
+    const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
+
+    if (!existsSync(new URL(packageUrl))) {
+      currentUrl = getParentUrl(currentUrl);
+      continue;
+    }
+
+    const packageJson = readPackageJson(packageUrl);
+
+    if (packageJson !== null) {
+      const {
+        exports
+      } = packageJson;
+
+      if (exports !== null && exports !== undefined) {
+        return applyPackageExportsResolution({
+          conditions,
+          parentUrl,
+          packageUrl,
+          packageJson,
+          packageSubpath,
+          exports,
+          lookupPackageScope,
+          readPackageJson
+        });
+      }
+    }
+
+    return applyLegacySubpathResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      packageSubpath,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  throw createModuleNotFoundError({
+    specifier: packageName,
+    parentUrl
+  });
+};
+
+const applyPackageSelfResolution = ({
+  conditions,
+  parentUrl,
+  packageName,
+  packageSubpath,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  const packageUrl = lookupPackageScope(parentUrl);
+
+  if (!packageUrl) {
+    return undefined;
+  }
+
+  const packageJson = readPackageJson(packageUrl);
+
+  if (!packageJson) {
+    return undefined;
+  }
+
+  if (packageJson.name !== packageName) {
+    return undefined;
+  }
+
+  const {
+    exports
+  } = packageJson;
+
+  if (!exports) {
+    const subpathResolution = applyLegacySubpathResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      packageSubpath,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (subpathResolution && subpathResolution.type !== "subpath") {
+      return subpathResolution;
+    }
+
+    return undefined;
+  }
+
+  return applyPackageExportsResolution({
+    conditions,
+    parentUrl,
+    packageUrl,
+    packageJson,
+    packageSubpath,
+    exports,
+    lookupPackageScope,
+    readPackageJson
+  });
+}; // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
+
+
+const applyPackageExportsResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  packageSubpath,
+  exports,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  const exportsInfo = readExports({
+    exports,
+    packageUrl
+  });
+
+  if (packageSubpath === ".") {
+    const mainExport = applyMainExportResolution({
+      exports,
+      exportsInfo
+    });
+
+    if (!mainExport) {
+      throw createPackagePathNotExportedError({
+        subpath: packageSubpath,
+        parentUrl,
+        packageUrl
+      });
+    }
+
+    const resolved = applyPackageTargetResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      key: ".",
+      target: mainExport,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (resolved) {
+      return resolved;
+    }
+
+    throw createPackagePathNotExportedError({
+      subpath: packageSubpath,
+      parentUrl,
+      packageUrl
+    });
+  }
+
+  if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
+    const resolved = applyPackageImportsExportsResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      matchObject: exports,
+      matchKey: packageSubpath,
+      isImports: false,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  throw createPackagePathNotExportedError({
+    subpath: packageSubpath,
+    parentUrl,
+    packageUrl
+  });
+};
+
+const applyPackageImportsExportsResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  matchObject,
+  matchKey,
+  isImports,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
+    const target = matchObject[matchKey];
+    return applyPackageTargetResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      key: matchKey,
+      target,
+      internal: isImports,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  const expansionKeys = Object.keys(matchObject).filter(key => key.split("*").length === 2).sort(comparePatternKeys);
+
+  for (const expansionKey of expansionKeys) {
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
+
+    if (patternTrailer.length > 0) {
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
+    }
+
+    const target = matchObject[expansionKey];
+    const subpath = matchKey.slice(patternBase.length, matchKey.length - patternTrailer.length);
+    return applyPackageTargetResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      key: matchKey,
+      target,
+      subpath,
+      pattern: true,
+      internal: isImports,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  return null;
+};
+
+const applyPackageTargetResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  key,
+  target,
+  subpath = "",
+  pattern = false,
+  internal = false,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (typeof target === "string") {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
+      throw new Error("invalid module specifier");
+    }
+
+    if (target.startsWith("./")) {
+      const targetUrl = new URL(target, packageUrl).href;
+
+      if (!targetUrl.startsWith(packageUrl)) {
+        throw createInvalidPackageTargetError({
+          parentUrl,
+          packageUrl,
+          target,
+          key,
+          isImport: internal,
+          reason: `target must be inside package`
+        });
+      }
+
+      return {
+        type: internal ? "imports_subpath" : "exports_subpath",
+        packageUrl,
+        packageJson,
+        url: pattern ? targetUrl.replaceAll("*", subpath) : new URL(subpath, targetUrl).href
+      };
+    }
+
+    if (!internal || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError({
+        parentUrl,
+        packageUrl,
+        target,
+        key,
+        isImport: internal,
+        reason: `target must starst with "./"`
+      });
+    }
+
+    return applyPackageResolve({
+      conditions,
+      parentUrl: packageUrl,
+      packageSpecifier: pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
+      return null;
+    }
+
+    let lastResult;
+    let i = 0;
+
+    while (i < target.length) {
+      const targetValue = target[i];
+      i++;
+
+      try {
+        const resolved = applyPackageTargetResolution({
+          conditions,
+          parentUrl,
+          packageUrl,
+          packageJson,
+          key: `${key}[${i}]`,
+          target: targetValue,
+          subpath,
+          pattern,
+          internal,
+          lookupPackageScope,
+          readPackageJson
+        });
+
+        if (resolved) {
+          return resolved;
+        }
+
+        lastResult = resolved;
+      } catch (e) {
+        if (e.code === "INVALID_PACKAGE_TARGET") {
+          continue;
+        }
+
+        lastResult = e;
+      }
+    }
+
+    if (lastResult) {
+      throw lastResult;
+    }
+
+    return null;
+  }
+
+  if (target === null) {
+    return null;
+  }
+
+  if (typeof target === "object") {
+    const keys = Object.keys(target);
+
+    for (const key of keys) {
+      if (Number.isInteger(key)) {
+        throw new Error("Invalid package configuration");
+      }
+
+      if (key === "default" || conditions.includes(key)) {
+        const targetValue = target[key];
+        const resolved = applyPackageTargetResolution({
+          conditions,
+          parentUrl,
+          packageUrl,
+          packageJson,
+          key,
+          target: targetValue,
+          subpath,
+          pattern,
+          internal,
+          lookupPackageScope,
+          readPackageJson
+        });
+
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  throw createInvalidPackageTargetError({
+    parentUrl,
+    packageUrl,
+    target,
+    key,
+    isImport: internal,
+    reason: `target must be a string, array, object or null`
+  });
+};
+
+const readExports = ({
+  exports,
+  packageUrl
+}) => {
+  if (Array.isArray(exports)) {
+    return {
+      type: "array"
+    };
+  }
+
+  if (exports === null) {
+    return {};
+  }
+
+  if (typeof exports === "object") {
+    const keys = Object.keys(exports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
+    keys.forEach(availableKey => {
+      if (availableKey.startsWith(".")) {
+        relativeKeys.push(availableKey);
+      } else {
+        conditionalKeys.push(availableKey);
+      }
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
+
+    if (hasRelativeKey && conditionalKeys.length > 0) {
+      throw new Error(`Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map(key => `"${key}"`).join("\n")}
+--- package.json ---
+${packageUrl}`);
+    }
+
+    return {
+      type: "object",
+      hasRelativeKey,
+      allKeysAreRelative: relativeKeys.length === keys.length
+    };
+  }
+
+  if (typeof exports === "string") {
+    return {
+      type: "string"
+    };
+  }
+
+  return {};
+};
+
+const parsePackageSpecifier = packageSpecifier => {
+  if (packageSpecifier[0] === "@") {
+    const firstSlashIndex = packageSpecifier.indexOf("/");
+
+    if (firstSlashIndex === -1) {
+      throw new Error("invalid module specifier");
+    }
+
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
+
+    if (secondSlashIndex === -1) {
+      return {
+        packageName: packageSpecifier,
+        packageSubpath: ".",
+        isScoped: true
+      };
+    }
+
+    const packageName = packageSpecifier.slice(0, secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
+    const packageSubpath = `./${afterSecondSlash}`;
+    return {
+      packageName,
+      packageSubpath,
+      isScoped: true
+    };
+  }
+
+  const firstSlashIndex = packageSpecifier.indexOf("/");
+
+  if (firstSlashIndex === -1) {
+    return {
+      packageName: packageSpecifier,
+      packageSubpath: "."
+    };
+  }
+
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  const packageSubpath = `./${afterFirstSlash}`;
+  return {
+    packageName,
+    packageSubpath
+  };
+};
+
+const applyMainExportResolution = ({
+  exports,
+  exportsInfo
+}) => {
+  if (exportsInfo.type === "array" || exportsInfo.type === "string") {
+    return exports;
+  }
+
+  if (exportsInfo.type === "object") {
+    if (exportsInfo.hasRelativeKey) {
+      return exports["."];
+    }
+
+    return exports;
+  }
+
+  return undefined;
+};
+
+const applyLegacySubpathResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  packageSubpath,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (packageSubpath === ".") {
+    return applyLegacyMainResolution({
+      conditions,
+      packageUrl,
+      packageJson
+    });
+  }
+
+  const browserFieldResolution = applyBrowserFieldResolution({
+    conditions,
+    parentUrl,
+    specifier: packageSubpath,
+    lookupPackageScope,
+    readPackageJson
+  });
+
+  if (browserFieldResolution) {
+    return browserFieldResolution;
+  }
+
+  return {
+    type: "subpath",
+    packageUrl,
+    packageJson,
+    url: new URL(packageSubpath, packageUrl).href
+  };
+};
+
+const applyLegacyMainResolution = ({
+  conditions,
+  packageUrl,
+  packageJson
+}) => {
+  for (const condition of conditions) {
+    const conditionResolver = mainLegacyResolvers[condition];
+
+    if (!conditionResolver) {
+      continue;
+    }
+
+    const resolved = conditionResolver(packageJson, packageUrl);
+
+    if (resolved) {
+      return {
+        type: resolved.type,
+        packageUrl,
+        packageJson,
+        url: new URL(resolved.path, packageUrl).href
+      };
+    }
+  }
+
+  return {
+    type: "default",
+    packageUrl,
+    packageJson,
+    url: new URL("index.js", packageUrl).href
+  };
+};
+
+const mainLegacyResolvers = {
+  import: packageJson => {
+    if (typeof packageJson.module === "string") {
+      return {
+        type: "module",
+        path: packageJson.module
+      };
+    }
+
+    if (typeof packageJson.jsnext === "string") {
+      return {
+        type: "jsnext",
+        path: packageJson.jsnext
+      };
+    }
+
+    if (typeof packageJson.main === "string") {
+      return {
+        type: "main",
+        path: packageJson.main
+      };
+    }
+
+    return null;
+  },
+  browser: (packageJson, packageUrl) => {
+    const browserMain = typeof packageJson.browser === "string" ? packageJson.browser : typeof packageJson.browser === "object" && packageJson.browser !== null ? packageJson.browser["."] : "";
+
+    if (!browserMain) {
+      if (typeof packageJson.module === "string") {
+        return {
+          type: "module",
+          path: packageJson.module
+        };
+      }
+
+      return null;
+    }
+
+    if (typeof packageJson.module !== "string" || packageJson.module === browserMain) {
+      return {
+        type: "browser",
+        path: browserMain
+      };
+    }
+
+    const browserMainUrlObject = new URL(browserMain, packageUrl);
+    const content = readFileSync$1(browserMainUrlObject, "utf-8");
+
+    if (/typeof exports\s*==/.test(content) && /typeof module\s*==/.test(content) || /module\.exports\s*=/.test(content)) {
+      return {
+        type: "module",
+        path: packageJson.module
+      };
+    }
+
+    return {
+      type: "browser",
+      path: browserMain
+    };
+  },
+  node: packageJson => {
+    if (typeof packageJson.main === "string") {
+      return {
+        type: "main",
+        path: packageJson.main
+      };
+    }
+
+    return null;
+  }
+};
+
+const comparePatternKeys = (keyA, keyB) => {
+  if (!keyA.endsWith("/") && !keyA.contains("*")) {
+    throw new Error("Invalid package configuration");
+  }
+
+  if (!keyB.endsWith("/") && !keyB.contains("*")) {
+    throw new Error("Invalid package configuration");
+  }
+
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
+
+  if (baseLengthA > baseLengthB) {
+    return -1;
+  }
+
+  if (baseLengthB > baseLengthA) {
+    return 1;
+  }
+
+  if (aStarIndex === -1) {
+    return 1;
+  }
+
+  if (bStarIndex === -1) {
+    return -1;
+  }
+
+  if (keyA.length > keyB.length) {
+    return -1;
+  }
+
+  if (keyB.length > keyA.length) {
+    return 1;
+  }
+
+  return 0;
+};
+
+const applyFileSystemMagicResolution = (fileUrl, {
+  fileStat,
+  magicDirectoryIndex,
+  magicExtensions
+}) => {
+  let lastENOENTError = null;
+
+  const fileStatOrNull = url => {
+    try {
+      return statSync(new URL(url));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        lastENOENTError = e;
+        return null;
+      }
+
+      throw e;
+    }
+  };
+
+  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
+
+  if (fileStat && fileStat.isFile()) {
+    return {
+      found: true,
+      url: fileUrl
+    };
+  }
+
+  if (fileStat && fileStat.isDirectory()) {
+    if (magicDirectoryIndex) {
+      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
+      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
+      const result = applyFileSystemMagicResolution(indexFileUrl, {
+        magicDirectoryIndex: false,
+        magicExtensions
+      });
+      return { ...result,
+        magicDirectoryIndex: true
+      };
+    }
+
+    return {
+      found: true,
+      url: fileUrl,
+      isDirectory: true
+    };
+  }
+
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href;
+    const urlFilename = urlToFilename(fileUrl);
+    const extensionLeadingToFile = magicExtensions.find(extensionToTry => {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+      const stat = fileStatOrNull(urlCandidate);
+      return stat;
+    });
+
+    if (extensionLeadingToFile) {
+      // magic extension worked
+      return {
+        found: true,
+        url: `${fileUrl}${extensionLeadingToFile}`,
+        magicExtension: extensionLeadingToFile
+      };
+    }
+  } // magic extension not found
+
+
+  return {
+    found: false,
+    url: fileUrl,
+    lastENOENTError
+  };
+};
+const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return [];
+  }
+
+  const extensionsSet = new Set();
+  magicExtensions.forEach(magicExtension => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension(importer);
+      extensionsSet.add(importerExtension);
+    } else {
+      extensionsSet.add(magicExtension);
+    }
+  });
+  return Array.from(extensionsSet.values());
 };
 
 /*
@@ -1133,6 +11562,12 @@ const jsenvPluginFileUrls = ({
       }
 
       if (foundADirectory && directoryReferenceAllowed) {
+        if ( // ignore new URL second arg
+        reference.subtype === "new_url_second_arg" || // ignore root file url
+        reference.url === "file:///") {
+          reference.shouldHandle = false;
+        }
+
         reference.data.foundADirectory = true;
         const directoryFacadeUrl = urlObject.href;
         const directoryUrlRaw = preserveSymlinks ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
@@ -1219,7 +11654,7 @@ const jsenvPluginFileUrls = ({
             const parentUrlInfo = context.urlGraph.getUrlInfo(context.reference.parentUrl);
             filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
           } else {
-            filename = `${urlToFilename(urlInfo.url)}/`;
+            filename = `${urlToFilename$1(urlInfo.url)}/`;
           }
 
           return {
@@ -1235,7 +11670,7 @@ const jsenvPluginFileUrls = ({
         throw error;
       }
 
-      const fileBuffer = readFileSync(urlObject);
+      const fileBuffer = readFileSync$1(urlObject);
       const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
       return {
         content: CONTENT_TYPE.isTextual(contentType) ? String(fileBuffer) : fileBuffer,
@@ -1419,6 +11854,133 @@ const jsenvPluginHtmlInlineContent = ({
       }
     }
   };
+};
+
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+
+  while (i--) {
+    const previousChar = string[i];
+
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+
+    break;
+  }
+
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const JS_QUOTES = {
+  pickBest: (string, {
+    canUseTemplateString,
+    defaultQuote = DOUBLE
+  } = {}) => {
+    // check default first, once tested do no re-test it
+    if (!string.includes(defaultQuote)) {
+      return defaultQuote;
+    }
+
+    if (defaultQuote !== DOUBLE && !string.includes(DOUBLE)) {
+      return DOUBLE;
+    }
+
+    if (defaultQuote !== SINGLE && !string.includes(SINGLE)) {
+      return SINGLE;
+    }
+
+    if (canUseTemplateString && defaultQuote !== BACKTICK && !string.includes(BACKTICK)) {
+      return BACKTICK;
+    }
+
+    return defaultQuote;
+  },
+  escapeSpecialChars: (string, {
+    quote = "pickBest",
+    canUseTemplateString,
+    defaultQuote,
+    allowEscapeForVersioning = false
+  }) => {
+    quote = quote === "pickBest" ? JS_QUOTES.pickBest(string, {
+      canUseTemplateString,
+      defaultQuote
+    }) : quote;
+    const replacements = JS_QUOTE_REPLACEMENTS[quote];
+    let result = "";
+    let last = 0;
+    let i = 0;
+
+    while (i < string.length) {
+      const char = string[i];
+      i++;
+      if (isEscaped(i - 1, string)) continue;
+      const replacement = replacements[char];
+
+      if (replacement) {
+        if (allowEscapeForVersioning && char === quote && string.slice(i, i + 6) === "+__v__") {
+          let isVersioningConcatenation = false;
+          let j = i + 6; // start after the +
+
+          while (j < string.length) {
+            const lookAheadChar = string[j];
+            j++;
+
+            if (lookAheadChar === "+" && string[j] === quote && !isEscaped(j - 1, string)) {
+              isVersioningConcatenation = true;
+              break;
+            }
+          }
+
+          if (isVersioningConcatenation) {
+            // it's a concatenation
+            // skip until the end of concatenation (the second +)
+            // and resume from there
+            i = j + 1;
+            continue;
+          }
+        }
+
+        if (last === i - 1) {
+          result += replacement;
+        } else {
+          result += `${string.slice(last, i - 1)}${replacement}`;
+        }
+
+        last = i;
+      }
+    }
+
+    if (last !== string.length) {
+      result += string.slice(last);
+    }
+
+    return `${quote}${result}${quote}`;
+  }
+};
+const DOUBLE = `"`;
+const SINGLE = `'`;
+const BACKTICK = "`";
+const lineEndingEscapes = {
+  "\n": "\\n",
+  "\r": "\\r",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029"
+};
+const JS_QUOTE_REPLACEMENTS = {
+  [DOUBLE]: {
+    '"': '\\"',
+    ...lineEndingEscapes
+  },
+  [SINGLE]: {
+    "'": "\\'",
+    ...lineEndingEscapes
+  },
+  [BACKTICK]: {
+    "`": "\\`",
+    "$": "\\$"
+  }
 };
 
 const jsenvPluginJsInlineContent = ({
@@ -2482,7 +13044,7 @@ const jsenvPluginCssParcel = () => {
 const jsenvPluginImportAssertions = () => {
   const updateReference = (reference, searchParam) => {
     reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename(reference.url)}.js`;
+    reference.filename = `${urlToFilename$1(reference.url)}.js`;
 
     reference.mutation = magicSource => {
       magicSource.remove({
@@ -3125,7 +13687,7 @@ const jsenvPluginAsJsClassicConversion = ({
 };
 
 const generateJsClassicFilename = url => {
-  const filename = urlToFilename(url);
+  const filename = urlToFilename$1(url);
   let [basename, extension] = splitFileExtension$1(filename);
   const {
     searchParams
@@ -3173,7 +13735,7 @@ const convertJsModuleToJsClassic = async ({
 
   if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
     const magicSource = createMagicSource(code);
-    const systemjsCode = readFileSync$1(systemJsClientFileUrl, {
+    const systemjsCode = readFileSync(systemJsClientFileUrl, {
       as: "string"
     });
     magicSource.prepend(`${systemjsCode}\n\n`);
@@ -3189,6 +13751,102 @@ const convertJsModuleToJsClassic = async ({
     content: code,
     sourcemap
   };
+};
+
+const versionFromValue = value => {
+  if (typeof value === "number") {
+    return numberToVersion(value);
+  }
+
+  if (typeof value === "string") {
+    return stringToVersion(value);
+  }
+
+  throw new TypeError(`version must be a number or a string, got ${value}`);
+};
+
+const numberToVersion = number => {
+  return {
+    major: number,
+    minor: 0,
+    patch: 0
+  };
+};
+
+const stringToVersion = string => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
+    return {
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0
+    };
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0
+  };
+};
+
+const compareTwoVersions = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue(versionA);
+  const semanticVersionB = versionFromValue(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+
+  if (majorDiff > 0) {
+    return majorDiff;
+  }
+
+  if (majorDiff < 0) {
+    return majorDiff;
+  }
+
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+
+  if (minorDiff > 0) {
+    return minorDiff;
+  }
+
+  if (minorDiff < 0) {
+    return minorDiff;
+  }
+
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+
+  if (patchDiff > 0) {
+    return patchDiff;
+  }
+
+  if (patchDiff < 0) {
+    return patchDiff;
+  }
+
+  return 0;
+};
+
+const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
+};
+
+const findHighestVersion = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow(highestVersion, value)) {
+      return value;
+    }
+
+    return highestVersion;
+  });
 };
 
 const featureCompats = {
@@ -4991,7 +15649,7 @@ const buildWithRollup = async ({
     return resultRef.current;
   } catch (e) {
     if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage(e.message, {
+      const detailedMessage = createDetailedMessage$1(e.message, {
         frame: e.frame
       });
       throw new Error(detailedMessage, {
@@ -6066,8 +16724,9 @@ const getCorePlugins = ({
     rootDirectoryUrl,
     ...urlAnalysis
   }), jsenvPluginTranspilation(transpilation), ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
+  jsenvPluginImportmap(), // before node esm to handle bare specifiers
+  // + before node esm to handle importmap before inline content
   jsenvPluginInline(), // before "file urls" to resolve and load inline urls
-  jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
   jsenvPluginFileUrls({
     directoryReferenceAllowed,
     ...fileSystemMagicResolution
@@ -6913,7 +17572,7 @@ const createResolveUrlError = ({
     reason,
     ...details
   }) => {
-    const resolveError = new Error(createDetailedMessage(`Failed to resolve url reference`, {
+    const resolveError = new Error(createDetailedMessage$1(`Failed to resolve url reference`, {
       reason,
       ...details,
       "specifier": `"${reference.specifier}"`,
@@ -6948,7 +17607,7 @@ const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchContentError = new Error(createDetailedMessage(`Failed to fetch url content`, {
+    const fetchContentError = new Error(createDetailedMessage$1(`Failed to fetch url content`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -6998,7 +17657,7 @@ const createTransformUrlContentError = ({
     reason,
     ...details
   }) => {
-    const transformError = new Error(createDetailedMessage(`Failed to transform url content of "${urlInfo.type}"`, {
+    const transformError = new Error(createDetailedMessage$1(`Failed to transform url content of "${urlInfo.type}"`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -7022,7 +17681,7 @@ const createFinalizeUrlContentError = ({
   urlInfo,
   error
 }) => {
-  const finalizeError = new Error(createDetailedMessage(`Failed to finalize ${urlInfo.type} url content`, {
+  const finalizeError = new Error(createDetailedMessage$1(`Failed to finalize ${urlInfo.type} url content`, {
     "reason": `An error occured during "finalizeUrlContent"`,
     ...detailsFromValueThrown(error),
     "url": urlInfo.url,
@@ -7062,6 +17721,139 @@ const detailsFromValueThrown = valueThrownByPlugin => {
   return {
     error: JSON.stringify(valueThrownByPlugin)
   };
+};
+
+const isSupportedAlgorithm = algo => {
+  return SUPPORTED_ALGORITHMS.includes(algo);
+}; // https://www.w3.org/TR/SRI/#priority
+
+const getPrioritizedHashFunction = (firstAlgo, secondAlgo) => {
+  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo);
+  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo);
+
+  if (firstIndex === secondIndex) {
+    return "";
+  }
+
+  if (firstIndex < secondIndex) {
+    return secondAlgo;
+  }
+
+  return firstAlgo;
+};
+const applyAlgoToRepresentationData = (algo, data) => {
+  const base64Value = crypto.createHash(algo).update(data).digest("base64");
+  return base64Value;
+}; // keep this ordered by collision resistance as it is also used by "getPrioritizedHashFunction"
+
+const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"];
+
+const parseIntegrity = string => {
+  const integrityMetadata = {};
+  string.trim().split(/\s+/).forEach(token => {
+    const {
+      isValid,
+      algo,
+      base64Value,
+      optionExpression
+    } = parseAsHashWithOptions(token);
+
+    if (!isValid) {
+      return;
+    }
+
+    if (!isSupportedAlgorithm(algo)) {
+      return;
+    }
+
+    const metadataList = integrityMetadata[algo];
+    const metadata = {
+      base64Value,
+      optionExpression
+    };
+    integrityMetadata[algo] = metadataList ? [...metadataList, metadata] : [metadata];
+  });
+  return integrityMetadata;
+}; // see https://w3c.github.io/webappsec-subresource-integrity/#the-integrity-attribute
+
+const parseAsHashWithOptions = token => {
+  const dashIndex = token.indexOf("-");
+
+  if (dashIndex === -1) {
+    return {
+      isValid: false
+    };
+  }
+
+  const beforeDash = token.slice(0, dashIndex);
+  const afterDash = token.slice(dashIndex + 1);
+  const questionIndex = afterDash.indexOf("?");
+  const algo = beforeDash;
+
+  if (questionIndex === -1) {
+    const base64Value = afterDash;
+    const isValid = BASE64_REGEX.test(afterDash);
+    return {
+      isValid,
+      algo,
+      base64Value
+    };
+  }
+
+  const base64Value = afterDash.slice(0, questionIndex);
+  const optionExpression = afterDash.slice(questionIndex + 1);
+  const isValid = BASE64_REGEX.test(afterDash) && VCHAR_REGEX.test(optionExpression);
+  return {
+    isValid,
+    algo,
+    base64Value,
+    optionExpression
+  };
+};
+
+const BASE64_REGEX = /^[A-Za-z0-9+\/=+]+$/;
+const VCHAR_REGEX = /^[\x21-\x7E]+$/;
+
+const validateResponseIntegrity = ({
+  url,
+  type,
+  dataRepresentation
+}, integrity) => {
+  if (!isResponseEligibleForIntegrityValidation({
+    type
+  })) {
+    return false;
+  }
+
+  const integrityMetadata = parseIntegrity(integrity);
+  const algos = Object.keys(integrityMetadata);
+
+  if (algos.length === 0) {
+    return true;
+  }
+
+  let strongestAlgo = algos[0];
+  algos.slice(1).forEach(algoCandidate => {
+    strongestAlgo = getPrioritizedHashFunction(strongestAlgo, algoCandidate) || strongestAlgo;
+  });
+  const metadataList = integrityMetadata[strongestAlgo];
+  const actualBase64Value = applyAlgoToRepresentationData(strongestAlgo, dataRepresentation);
+  const acceptedBase64Values = metadataList.map(metadata => metadata.base64Value);
+  const someIsMatching = acceptedBase64Values.includes(actualBase64Value);
+
+  if (someIsMatching) {
+    return true;
+  }
+
+  const error = new Error(`Integrity validation failed for ressource "${url}". The integrity found for this ressource is "${strongestAlgo}-${actualBase64Value}"`);
+  error.code = "EINTEGRITY";
+  error.algorithm = strongestAlgo;
+  error.found = actualBase64Value;
+  throw error;
+}; // https://www.w3.org/TR/SRI/#is-response-eligible-for-integrity-validation
+
+const isResponseEligibleForIntegrityValidation = response => {
+  return ["basic", "cors", "default"].includes(response.type);
 };
 
 const assertFetchedContentCompliance = ({
@@ -7324,7 +18116,7 @@ const createKitchen = ({
       const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, context);
 
       if (!fetchUrlContentReturnValue) {
-        logger.warn(createDetailedMessage(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
+        logger.warn(createDetailedMessage$1(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
           "url": urlInfo.url,
           "url reference trace": reference.trace
         }));
@@ -8007,6 +18799,28 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
+const memoizeByFirstArgument = compute => {
+  const urlCache = new Map();
+
+  const fnWithMemoization = (url, ...args) => {
+    const valueFromCache = urlCache.get(url);
+
+    if (valueFromCache) {
+      return valueFromCache;
+    }
+
+    const value = compute(url, ...args);
+    urlCache.set(url, value);
+    return value;
+  };
+
+  fnWithMemoization.forget = () => {
+    urlCache.clear();
+  };
+
+  return fnWithMemoization;
+};
+
 const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
   if (userAgent.includes("node-fetch/")) {
     // it's not really node and conceptually we can't assume the node version
@@ -8393,11 +19207,11 @@ const jsenvPluginExplorer = ({
         relativeUrl,
         meta
       }));
-      let html = String(readFileSync(new URL(htmlClientFileUrl)));
+      let html = String(readFileSync$1(new URL(htmlClientFileUrl)));
       html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
         contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
         base64Flag: true,
-        data: readFileSync(new URL(faviconClientFileUrl)).toString("base64")
+        data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
       }));
       html = html.replace("SERVER_PARAMS", JSON.stringify({
         rootDirectoryUrl,
@@ -8717,7 +19531,7 @@ const generateCoverageHtmlDirectory = async (coverage, {
     dir: urlToFileSystemPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
     sourceFinder: path => {
-      return readFileSync(urlToFileSystemPath(resolveUrl(path, rootDirectoryUrl)), "utf8");
+      return readFileSync$1(urlToFileSystemPath(resolveUrl$1(path, rootDirectoryUrl)), "utf8");
     }
   });
   const report = reports.create("html", {
@@ -8853,7 +19667,7 @@ const visitNodeV8Directory = async ({
     await dirContent.reduce(async (previous, dirEntry) => {
       operation.throwIfAborted();
       await previous;
-      const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl);
+      const dirEntryUrl = resolveUrl$1(dirEntry, coverageDirectoryUrl);
 
       const tryReadJsonFile = async (timeSpentTrying = 0) => {
         const fileContent = await readFile(dirEntryUrl, {
@@ -8879,7 +19693,7 @@ const visitNodeV8Directory = async ({
             return tryReadJsonFile(timeSpentTrying + 200);
           }
 
-          console.warn(createDetailedMessage(`Error while reading coverage file`, {
+          console.warn(createDetailedMessage$1(`Error while reading coverage file`, {
             "error stack": e.stack,
             "file": dirEntryUrl
           }));
@@ -9061,7 +19875,7 @@ const composeV8AndIstanbul = (v8FileByFileCoverage, istanbulFileByFileCoverage, 
 
     if (v8Coverage) {
       if (coverageV8ConflictWarning) {
-        console.warn(createDetailedMessage(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
+        console.warn(createDetailedMessage$1(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
           details: `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
           suggestion: "You can disable this warning with coverageV8ConflictWarning: false"
         }));
@@ -9119,7 +19933,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   operation.addAbortSignal(signal);
 
   try {
-    const fileUrl = resolveUrl(relativeUrl, rootDirectoryUrl);
+    const fileUrl = resolveUrl$1(relativeUrl, rootDirectoryUrl);
     const content = await readFile(fileUrl, {
       as: "string"
     });
@@ -9432,7 +20246,7 @@ const run = async ({
       } = result;
 
       if (coverage) {
-        const coverageFileUrl = resolveUrl(`./${runtime.name}/${cuid()}`, coverageTempDirectoryUrl);
+        const coverageFileUrl = resolveUrl$1(`./${runtime.name}/${cuid()}`, coverageTempDirectoryUrl);
         await writeFile(coverageFileUrl, JSON.stringify(coverage, null, "  "));
         result.coverageFileUrl = coverageFileUrl;
         delete result.coverage;
@@ -9575,7 +20389,7 @@ const generateFileExecutionSteps = ({
     }
 
     if (typeof stepConfig !== "object") {
-      throw new TypeError(createDetailedMessage(`found unexpected value in plan, they must be object`, {
+      throw new TypeError(createDetailedMessage$1(`found unexpected value in plan, they must be object`, {
         ["file relative path"]: fileRelativeUrl,
         ["execution name"]: executionName,
         ["value"]: stepConfig
@@ -9895,7 +20709,7 @@ const executePlan = async (plan, {
       }
     });
   });
-  logger.debug(createDetailedMessage(`Prepare executing plan`, {
+  logger.debug(createDetailedMessage$1(`Prepare executing plan`, {
     runtimes: JSON.stringify(runtimes, null, "  ")
   }));
   const multipleExecutionsOperation = Abort.startOperation();
@@ -10508,7 +21322,7 @@ const executeTestPlan = async ({
 
       if (patternsMatchingCoverAndExecute.length) {
         // It would be strange, for a given file to be both covered and executed
-        throw new Error(createDetailedMessage(`some file will be both covered and executed`, {
+        throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
           patterns: patternsMatchingCoverAndExecute
         }));
       }
@@ -10604,6 +21418,54 @@ const executeTestPlan = async ({
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage
   };
+};
+
+const escapeChars = (string, replacements) => {
+  const charsToEscape = Object.keys(replacements);
+  let result = "";
+  let last = 0;
+  let i = 0;
+
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+
+    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
+      if (last === i - 1) {
+        result += replacements[char];
+      } else {
+        result += `${string.slice(last, i - 1)}${replacements[char]}`;
+      }
+
+      last = i;
+    }
+  }
+
+  if (last !== string.length) {
+    result += string.slice(last);
+  }
+
+  return result;
+};
+
+const escapeRegexpSpecialChars = string => {
+  return escapeChars(String(string), {
+    "/": "\\/",
+    "^": "\\^",
+    "\\": "\\\\",
+    "[": "\\[",
+    "]": "\\]",
+    "(": "\\(",
+    ")": "\\)",
+    "{": "\\{",
+    "}": "\\}",
+    "?": "\\?",
+    "+": "\\+",
+    "*": "\\*",
+    ".": "\\.",
+    "|": "\\|",
+    "$": "\\$"
+  });
 };
 
 const createRuntimeFromPlaywright = ({
@@ -11064,7 +21926,7 @@ const importPlaywright = async ({
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error(createDetailedMessage(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
+      throw new Error(createDetailedMessage$1(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
         suggestion: `npm install --save-dev playwright`
       }), {
         cause: e
@@ -11259,7 +22121,7 @@ const createChildExecOptions = async ({
   debugModeInheritBreak = true
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(createDetailedMessage(`unexpected debug mode.`, {
+    throw new TypeError(createDetailedMessage$1(`unexpected debug mode.`, {
       ["debug mode"]: debugMode,
       ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
     }));
@@ -11546,7 +22408,7 @@ nodeProcess.run = async ({
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     env: envForChildProcess
   });
-  logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
+  logger.debug(createDetailedMessage$1(`child process forked (pid ${childProcess.pid})`, {
     "execArgv": execArgv.join(`\n`),
     "custom env": JSON.stringify(env, null, "  ")
   })); // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
@@ -12165,14 +23027,14 @@ const createBuilUrlsGenerator = ({
 
   const getUrlName = (url, urlInfo) => {
     if (!urlInfo) {
-      return urlToFilename(url);
+      return urlToFilename$1(url);
     }
 
     if (urlInfo.filename) {
       return urlInfo.filename;
     }
 
-    return urlToFilename(url);
+    return urlToFilename$1(url);
   };
 
   const generate = memoizeByFirstArgument((url, {
@@ -12734,7 +23596,6 @@ build ${entryPointKeys.length} entry points`);
     const prebuildTask = createTaskLog("prebuild", {
       disabled: infoLogsAreDisabled
     });
-    let urlCount = 0;
     const prebuildRedirections = new Map();
     const rawGraphKitchen = createKitchen({
       signal,
@@ -12747,15 +23608,6 @@ build ${entryPointKeys.length} entry points`);
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [...plugins, {
-        name: "jsenv:build_log",
-        appliesDuring: {
-          build: true
-        },
-        cooked: () => {
-          urlCount++;
-          prebuildTask.setRightText(urlCount);
-        }
-      }, {
         appliesDuring: "build",
         fetchUrlContent: (urlInfo, context) => {
           if (context.reference.original) {
@@ -13809,7 +24661,7 @@ const injectVersionIntoBuildUrl = ({
   }
 
   const basename = urlToBasename(buildUrl);
-  const extension = urlToExtension(buildUrl);
+  const extension = urlToExtension$1(buildUrl);
   const versionedFilename = `${basename}-${version}${extension}`;
   const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
   return versionedUrl;

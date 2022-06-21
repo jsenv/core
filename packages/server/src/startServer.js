@@ -6,6 +6,7 @@ import {
   raceProcessTeardownEvents,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { createPolyglotServer } from "./internal/server-polyglot.js"
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js"
@@ -25,7 +26,6 @@ import { listen, stopListening } from "./internal/listen.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { listenRequest } from "./internal/listenRequest.js"
 import { listenServerConnectionError } from "./internal/listenServerConnectionError.js"
-import { memoize } from "./internal/memoize.js"
 import { applyDefaultErrorToResponse } from "./error_to_response_default.js"
 import {
   STOP_REASON_INTERNAL_ERROR,
@@ -804,7 +804,7 @@ const createNodeServer = async ({
     })
   }
 
-  const { createServer } = await import("https")
+  const { createServer } = await import("node:https")
   return createServer({
     cert: certificate,
     key: privateKey,
