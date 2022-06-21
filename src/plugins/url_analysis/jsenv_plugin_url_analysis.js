@@ -27,6 +27,9 @@ export const jsenvPluginUrlAnalysis = ({
     name: "jsenv:url_analysis",
     appliesDuring: "*",
     redirectUrl: (reference) => {
+      if (reference.shouldHandle !== undefined) {
+        return
+      }
       if (
         reference.specifier[0] === "#" &&
         // For Html, css and in general "#" refer to a ressource in the page

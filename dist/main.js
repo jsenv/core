@@ -1,12 +1,18 @@
-import { createSSERoom, timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
-import crypto, { createHash } from "node:crypto";
-import { dirname, basename, extname } from "node:path";
+import http from "node:http";
+import cluster from "node:cluster";
 import { createSupportsColor } from "supports-color";
 import isUnicodeSupported from "is-unicode-supported";
 import stringWidth from "string-width";
 import ansiEscapes from "ansi-escapes";
+import net, { createServer } from "node:net";
+import { Readable, Stream, Writable } from "node:stream";
+import { Http2ServerResponse } from "node:http2";
+import { createReadStream, readdirSync, statSync, readFile as readFile$1, chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
+import { networkInterfaces } from "node:os";
+import { performance } from "node:perf_hooks";
+import { extname, dirname, basename } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import crypto, { createHash } from "node:crypto";
 import { workerData, Worker } from "node:worker_threads";
 import { parse, serialize, parseFragment } from "parse5";
 import { p as parseSrcSet } from "./js/html_src_set.js";
@@ -14,7 +20,6 @@ import { createRequire } from "node:module";
 import { ancestor } from "acorn-walk";
 import MagicString from "magic-string";
 import babelParser from "@babel/parser";
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
@@ -23,6 +28,5929 @@ import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
 import { fork } from "node:child_process";
 import { u as uneval } from "./js/uneval.js";
+
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({
+  logLevel = LOG_LEVEL_INFO
+} = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      debug,
+      info,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      debug: debugDisabled,
+      info,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled
+    };
+  }
+
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+const disabledMethods = {
+  debug: debugDisabled,
+  info: infoDisabled,
+  warn: warnDisabled,
+  error: errorDisabled
+};
+const loggerIsMethodEnabled = (logger, methodName) => {
+  return logger[methodName] !== disabledMethods[methodName];
+};
+const loggerToLevels = logger => {
+  return {
+    debug: loggerIsMethodEnabled(logger, "debug"),
+    info: loggerIsMethodEnabled(logger, "info"),
+    warn: loggerIsMethodEnabled(logger, "warn"),
+    error: loggerIsMethodEnabled(logger, "error")
+  };
+};
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+let canUseColors = processSupportsBasicColor; // GitHub workflow does support ANSI but "supports-color" returns false
+// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+
+if (process.env.GITHUB_WORKFLOW) {
+  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+  if (process.env.FORCE_COLOR !== "false") {
+    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+    // that colors are not supported. Let it have priority
+    canUseColors = true;
+  }
+} // https://github.com/Marak/colors.js/blob/master/lib/styles.js
+
+
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[33m";
+const BLUE = "\x1b[34m";
+const MAGENTA = "\x1b[35m";
+const GREY = "\x1b[90m";
+const RESET = "\x1b[0m";
+const setANSIColor = canUseColors ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}` : text => text;
+const ANSI = {
+  supported: canUseColors,
+  RED,
+  GREEN,
+  YELLOW,
+  BLUE,
+  MAGENTA,
+  GREY,
+  RESET,
+  color: setANSIColor
+};
+
+// see also https://github.com/sindresorhus/figures
+const canUseUnicode = isUnicodeSupported();
+const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
+const OK_RAW = canUseUnicode ? `✔` : `√`;
+const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
+const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
+const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
+const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+
+const OK = ANSI.color(OK_RAW, ANSI.GREEN);
+const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
+const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
+const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
+const UNICODE = {
+  COMMAND,
+  OK,
+  FAILURE,
+  INFO,
+  WARNING,
+  COMMAND_RAW,
+  OK_RAW,
+  FAILURE_RAW,
+  INFO_RAW,
+  WARNING_RAW,
+  supported: canUseUnicode
+};
+
+const createDetailedMessage$1 = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${Array.isArray(value) ? value.join(`
+`) : value}`;
+  });
+  return string;
+};
+
+const getPrecision = number => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
+const setRoundedPrecision = (number, {
+  decimals = 1,
+  decimalsWhenSmall = decimals
+} = {}) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round
+  });
+};
+
+const setDecimalsPrecision = (number, {
+  transform,
+  decimals,
+  // max decimals for number in [-Infinity, -1[]1, Infinity]
+  decimalsWhenSmall // max decimals for number in [-1,1]
+
+} = {}) => {
+  if (number === 0) {
+    return 0;
+  }
+
+  let numberCandidate = Math.abs(number);
+
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+}; // https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const msAsEllapsedTime = ms => {
+  if (ms < 1000) {
+    return "0 second";
+  }
+
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+
+  if (!remaining) {
+    return formatEllapsedUnit(primary);
+  }
+
+  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
+};
+
+const formatEllapsedUnit = unit => {
+  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`;
+  }
+
+  return `${count} ${unit.name}s`;
+};
+
+const msAsDuration = ms => {
+  // ignore ms below meaningfulMs so that:
+  // msAsDuration(0.5) -> "0 second"
+  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return "0 second";
+  }
+
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+
+  if (!remaining) {
+    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
+  }
+
+  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(remaining, 0)}`;
+};
+
+const formatDurationUnit = (unit, decimals) => {
+  const count = setRoundedPrecision(unit.count, {
+    decimals
+  });
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`;
+  }
+
+  return `${count} ${unit.name}s`;
+};
+
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000
+};
+
+const parseMs = ms => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex(unitName => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+
+    return false;
+  });
+
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  }
+
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName]; // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  } // - 1 year and 1 month is great
+
+
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount
+    }
+  };
+};
+
+const byteAsFileSize = metricValue => {
+  return formatBytes(metricValue);
+};
+const byteAsMemoryUsage = metricValue => {
+  return formatBytes(metricValue, {
+    fixedDecimals: true
+  });
+};
+
+const formatBytes = (number, {
+  fixedDecimals = false
+} = {}) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+
+  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  const decimals = unitName === "B" ? 0 : 1;
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals
+  });
+
+  if (fixedDecimals) {
+    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  }
+
+  return `${unitNumberRounded} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const distributePercentages = (namedNumbers, {
+  maxPrecisionHint = 2
+} = {}) => {
+  const numberNames = Object.keys(namedNumbers);
+
+  if (numberNames.length === 0) {
+    return {};
+  }
+
+  if (numberNames.length === 1) {
+    const firstNumberName = numberNames[0];
+    return {
+      [firstNumberName]: "100 %"
+    };
+  }
+
+  const numbers = numberNames.map(name => namedNumbers[name]);
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const ratios = numbers.map(number => number / total);
+  const percentages = {};
+  ratios.pop();
+  ratios.forEach((ratio, index) => {
+    const percentage = ratio * 100;
+    percentages[numberNames[index]] = percentage;
+  });
+  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
+  let precision = 0;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+
+    if (percentage < lowestPercentage) {
+      // check the amout of meaningful decimals
+      // and that what we will use
+      const percentageRounded = setRoundedPrecision(percentage);
+      const percentagePrecision = getPrecision(percentageRounded);
+
+      if (percentagePrecision > precision) {
+        precision = percentagePrecision;
+      }
+    }
+  });
+  let remainingPercentage = 100;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+    const percentageAllocated = setRoundedPrecision(percentage, {
+      decimals: precision
+    });
+    remainingPercentage -= percentageAllocated;
+    percentages[name] = percentageAllocated;
+  });
+  const lastName = numberNames[numberNames.length - 1];
+  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
+    decimals: precision
+  });
+  return percentages;
+};
+
+/*
+ *
+ */
+// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
+const spyStreamOutput = stream => {
+  const originalWrite = stream.write;
+  let output = "";
+  let installed = true;
+
+  stream.write = function (...args
+  /* chunk, encoding, callback */
+  ) {
+    output += args;
+    return originalWrite.call(stream, ...args);
+  };
+
+  const uninstall = () => {
+    if (!installed) {
+      return;
+    }
+
+    stream.write = originalWrite;
+    installed = false;
+  };
+
+  return () => {
+    uninstall();
+    return output;
+  };
+};
+
+/*
+ * see also https://github.com/vadimdemedes/ink
+ */
+const createLog = ({
+  stream = process.stdout,
+  newLine = "after"
+} = {}) => {
+  const {
+    columns = 80,
+    rows = 24
+  } = stream;
+  let lastOutput = "";
+  let clearAttemptResult;
+  let streamOutputSpy = noopStreamSpy;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    logLines.forEach(logLine => {
+      const width = stringWidth(logLine);
+      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
+    });
+
+    if (visualLineCount > rows) {
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return ansiEscapes.eraseLines(visualLineCount);
+  };
+
+  const spyStream = () => {
+    if (stream === process.stdout) {
+      const stdoutSpy = spyStreamOutput(process.stdout);
+      const stderrSpy = spyStreamOutput(process.stderr);
+      return () => {
+        return stdoutSpy() + stderrSpy();
+      };
+    }
+
+    return spyStreamOutput(stream);
+  };
+
+  const doWrite = string => {
+    string = addNewLines(string, newLine);
+    stream.write(string);
+    lastOutput = string;
+    clearAttemptResult = undefined; // We don't want to clear logs written by other code,
+    // it makes output unreadable and might erase precious information
+    // To detect this we put a spy on the stream.
+    // The spy is required only if we actually wrote something in the stream
+    // otherwise tryToClear() won't do a thing so spy is useless
+
+    streamOutputSpy = string ? spyStream() : noopStreamSpy;
+  };
+
+  const write = (string, outputFromOutside = streamOutputSpy()) => {
+    if (!lastOutput) {
+      doWrite(string);
+      return;
+    }
+
+    if (outputFromOutside) {
+      // something else than this code has written in the stream
+      // so we just write without clearing (append instead of replacing)
+      doWrite(string);
+    } else {
+      doWrite(`${getErasePreviousOutput()}${string}`);
+    }
+  };
+
+  const dynamicWrite = callback => {
+    const outputFromOutside = streamOutputSpy();
+    const string = callback({
+      outputFromOutside
+    });
+    return write(string, outputFromOutside);
+  };
+
+  const destroy = () => {
+    if (streamOutputSpy) {
+      streamOutputSpy(); // this uninstalls the spy
+
+      streamOutputSpy = null;
+      lastOutput = "";
+    }
+  };
+
+  return {
+    write,
+    dynamicWrite,
+    destroy
+  };
+};
+
+const noopStreamSpy = () => ""; // could be inlined but vscode do not correctly
+// expand/collapse template strings, so I put it at the bottom
+
+
+const addNewLines = (string, newLine) => {
+  if (newLine === "before") {
+    return `
+${string}`;
+  }
+
+  if (newLine === "after") {
+    return `${string}
+`;
+  }
+
+  if (newLine === "around") {
+    return `
+${string}
+`;
+  }
+
+  return string;
+};
+
+const startSpinner = ({
+  log,
+  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  fps = 20,
+  keepProcessAlive = false,
+  stopOnWriteFromOutside = true,
+  text = "",
+  update = text => text,
+  effect = () => {}
+}) => {
+  let frameIndex = 0;
+  let interval;
+  const spinner = {
+    text
+  };
+
+  const render = () => {
+    spinner.text = update(spinner.text);
+    return `${frames[frameIndex]} ${spinner.text}`;
+  };
+
+  const cleanup = effect() || (() => {});
+
+  log.write(render());
+
+  if (process.stdout.isTTY) {
+    interval = setInterval(() => {
+      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+      log.dynamicWrite(({
+        outputFromOutside
+      }) => {
+        if (outputFromOutside && stopOnWriteFromOutside) {
+          stop();
+          return "";
+        }
+
+        return render();
+      });
+    }, 1000 / fps);
+
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+  }
+
+  const stop = text => {
+    if (text) log.write(text);
+    cleanup();
+    clearInterval(interval);
+    interval = null;
+    log = null;
+  };
+
+  spinner.stop = stop;
+  return spinner;
+};
+
+const createTaskLog = (label, {
+  disabled = false,
+  stopOnWriteFromOutside
+} = {}) => {
+  if (disabled) {
+    return {
+      setRightText: () => {},
+      done: () => {},
+      happen: () => {},
+      fail: () => {}
+    };
+  }
+
+  const startMs = Date.now();
+  const taskSpinner = startSpinner({
+    log: createLog(),
+    text: label,
+    stopOnWriteFromOutside
+  });
+  return {
+    setRightText: value => {
+      taskSpinner.text = `${label} ${value}`;
+    },
+    done: () => {
+      const msEllapsed = Date.now() - startMs;
+      taskSpinner.stop(`${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`);
+    },
+    happen: message => {
+      taskSpinner.stop(`${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`);
+    },
+    fail: (message = `failed to ${label}`) => {
+      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
+    }
+  };
+};
+
+/*
+ * See callback_race.md
+ */
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach(clean => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach(candidateName => {
+    const register = raceDescription[candidateName];
+    const returnValue = register(data => {
+      if (status !== "racing") {
+        return;
+      }
+
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data
+      });
+    });
+
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+  return cancel;
+};
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+  const callbackListOnce = {};
+
+  const add = callback => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "add",
+        status
+      });
+      return removeNoop$1;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning$1();
+      return removeNoop$1;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        } // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "call",
+        status
+      });
+      return [];
+    }
+
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified"; // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+
+    callbacks = null;
+    currentCallbackIndex = -1;
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({
+  action,
+  status
+}) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
+      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+      detail: `Code is potentially executed when it should not`
+    });
+  } else {
+    console.warn(`"${action}" should not happen when callback list is ${status}`);
+  }
+};
+
+const emitCallbackDuplicationWarning$1 = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop$1 = () => {};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+const Abort = {
+  isAbortError: error => {
+    return error.name === "AbortError";
+  },
+  startOperation: () => {
+    return createOperation();
+  },
+  throwIfAborted: signal => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  }
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController(); // const abortOperation = (value) => abortController.abort(value)
+
+  const operationSignal = operationAbortController.signal; // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expected
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  }; // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+
+
+  const addAbortCallback = callback => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = callback => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({
+    abortAfterEnd = false
+  } = {}) => {
+    await Promise.all(endCallbackList.notify()); // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (signal, {
+    onAbort = callbackNoop,
+    onRemove = callbackNoop
+  } = {}) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks({
+      operation_abort: cb => {
+        return addAbortCallback(cb);
+      },
+      operation_end: cb => {
+        return addEndCallback(cb);
+      },
+      child_abort: cb => {
+        return addEventListener(signal, "abort", cb);
+      }
+    }, winner => {
+      const raceEffects = {
+        // Both "operation_abort" and "operation_end"
+        // means we don't care anymore if the child aborts.
+        // So we can:
+        // - remove "abort" event listener on child (done by raceCallback)
+        // - remove abort callback on operation (done by raceCallback)
+        // - remove end callback on operation (done by raceCallback)
+        // - call any custom cancel function
+        operation_abort: () => {
+          applyAbortEffects();
+          applyRemoveEffects();
+        },
+        operation_end: () => {
+          // Exists to
+          // - remove abort callback on operation
+          // - remove "abort" event listener on child
+          // - call any custom cancel function
+          applyRemoveEffects();
+        },
+        child_abort: () => {
+          applyAbortEffects();
+          operationAbortController.abort();
+        }
+      };
+      raceEffects[winner.name](winner.value);
+    });
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = abortSourceCallback => {
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+
+    if (operationSignal.aborted) {
+      return {
+        signal: abortSourceSignal,
+        remove: callbackNoop
+      };
+    }
+
+    const returnValue = abortSourceCallback(value => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        removeAbortSource();
+      }
+    });
+    return {
+      signal: abortSourceSignal,
+      remove: removeAbortSignal
+    };
+  };
+
+  const timeout = ms => {
+    return addAbortSource(abort => {
+      const timeoutId = setTimeout(abort, ms); // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const withSignal = async asyncCallback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = callback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    timeout,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const createCallbackList = () => {
+  let callbacks = [];
+
+  const add = callback => {
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    const values = callbacks.slice().map(callback => {
+      return callback(param);
+    });
+    return values;
+  };
+
+  return {
+    add,
+    notify
+  };
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
+  }, callback);
+};
+const SIGHUP_CALLBACK = {
+  SIGHUP: cb => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  }
+};
+const SIGTERM_CALLBACK = {
+  SIGTERM: cb => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  }
+};
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: cb => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  }
+};
+const EXIT_CALLBACK = {
+  exit: cb => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  }
+};
+const SIGINT_CALLBACK = {
+  SIGINT: cb => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  }
+};
+
+const memoize$1 = compute => {
+  let memoized = false;
+  let memoizedValue;
+
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the value
+    // so set memoized boolean after the call
+
+
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
+
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
+    return value;
+  };
+
+  return fnWithMemoization;
+};
+
+const listenEvent = (objectWithEventEmitter, eventName, callback, {
+  once = false
+} = {}) => {
+  if (once) {
+    objectWithEventEmitter.once(eventName, callback);
+  } else {
+    objectWithEventEmitter.addListener(eventName, callback);
+  }
+
+  return () => {
+    objectWithEventEmitter.removeListener(eventName, callback);
+  };
+};
+
+/**
+
+https://stackoverflow.com/a/42019773/2634179
+
+*/
+const createPolyglotServer = async ({
+  http2 = false,
+  http1Allowed = true,
+  certificate,
+  privateKey
+}) => {
+  const httpServer = http.createServer();
+  const tlsServer = await createSecureServer({
+    certificate,
+    privateKey,
+    http2,
+    http1Allowed
+  });
+  const netServer = net.createServer({
+    allowHalfOpen: false
+  });
+  listenEvent(netServer, "connection", socket => {
+    detectSocketProtocol(socket, protocol => {
+      if (protocol === "http") {
+        httpServer.emit("connection", socket);
+        return;
+      }
+
+      if (protocol === "tls") {
+        tlsServer.emit("connection", socket);
+        return;
+      }
+
+      const response = [`HTTP/1.1 400 Bad Request`, `Content-Length: 0`, "", ""].join("\r\n");
+      socket.write(response);
+      socket.end();
+      socket.destroy();
+      netServer.emit("clientError", new Error("protocol error, Neither http, nor tls"), socket);
+    });
+  });
+  netServer._httpServer = httpServer;
+  netServer._tlsServer = tlsServer;
+  return netServer;
+}; // The async part is just to lazyly import "http2" or "https"
+// so that these module are parsed only if used.
+
+const createSecureServer = async ({
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed
+}) => {
+  if (http2) {
+    const {
+      createSecureServer
+    } = await import("http2");
+    return createSecureServer({
+      cert: certificate,
+      key: privateKey,
+      allowHTTP1: http1Allowed
+    });
+  }
+
+  const {
+    createServer
+  } = await import("https");
+  return createServer({
+    cert: certificate,
+    key: privateKey
+  });
+};
+
+const detectSocketProtocol = (socket, protocolDetectedCallback) => {
+  let removeOnceReadableListener = () => {};
+
+  const tryToRead = () => {
+    const buffer = socket.read(1);
+
+    if (buffer === null) {
+      removeOnceReadableListener = socket.once("readable", tryToRead);
+      return;
+    }
+
+    const firstByte = buffer[0];
+    socket.unshift(buffer);
+
+    if (firstByte === 22) {
+      protocolDetectedCallback("tls");
+      return;
+    }
+
+    if (firstByte > 32 && firstByte < 127) {
+      protocolDetectedCallback("http");
+      return;
+    }
+
+    protocolDetectedCallback(null);
+  };
+
+  tryToRead();
+  return () => {
+    removeOnceReadableListener();
+  };
+};
+
+const trackServerPendingConnections = (nodeServer, {
+  http2
+}) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingConnections(nodeServer);
+  }
+
+  return trackHttp1ServerPendingConnections(nodeServer);
+}; // const trackHttp2ServerPendingSessions = () => {}
+
+const trackHttp1ServerPendingConnections = nodeServer => {
+  const pendingConnections = new Set();
+  const removeConnectionListener = listenEvent(nodeServer, "connection", connection => {
+    pendingConnections.add(connection);
+    listenEvent(connection, "close", () => {
+      pendingConnections.delete(connection);
+    }, {
+      once: true
+    });
+  });
+
+  const stop = async reason => {
+    removeConnectionListener();
+    const pendingConnectionsArray = Array.from(pendingConnections);
+    pendingConnections.clear();
+    await Promise.all(pendingConnectionsArray.map(async pendingConnection => {
+      await destroyConnection(pendingConnection, reason);
+    }));
+  };
+
+  return {
+    stop
+  };
+};
+
+const destroyConnection = (connection, reason) => {
+  return new Promise((resolve, reject) => {
+    connection.destroy(reason, error => {
+      if (error) {
+        if (error === reason || error.code === "ENOTCONN") {
+          resolve();
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+}; // export const trackServerPendingStreams = (nodeServer) => {
+//   const pendingClients = new Set()
+//   const streamListener = (http2Stream, headers, flags) => {
+//     const client = { http2Stream, headers, flags }
+//     pendingClients.add(client)
+//     http2Stream.on("close", () => {
+//       pendingClients.delete(client)
+//     })
+//   }
+//   nodeServer.on("stream", streamListener)
+//   const stop = ({
+//     status,
+//     // reason
+//   }) => {
+//     nodeServer.removeListener("stream", streamListener)
+//     return Promise.all(
+//       Array.from(pendingClients).map(({ http2Stream }) => {
+//         if (http2Stream.sentHeaders === false) {
+//           http2Stream.respond({ ":status": status }, { endStream: true })
+//         }
+//         return new Promise((resolve, reject) => {
+//           if (http2Stream.closed) {
+//             resolve()
+//           } else {
+//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
+//               if (error) {
+//                 reject(error)
+//               } else {
+//                 resolve()
+//               }
+//             })
+//           }
+//         })
+//       }),
+//     )
+//   }
+//   return { stop }
+// }
+// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
+//   const pendingSessions = new Set()
+//   const sessionListener = (session) => {
+//     session.on("close", () => {
+//       pendingSessions.delete(session)
+//     })
+//     session.on("error", onSessionError)
+//     pendingSessions.add(session)
+//   }
+//   nodeServer.on("session", sessionListener)
+//   const stop = async (reason) => {
+//     nodeServer.removeListener("session", sessionListener)
+//     await Promise.all(
+//       Array.from(pendingSessions).map((pendingSession) => {
+//         return new Promise((resolve, reject) => {
+//           pendingSession.close((error) => {
+//             if (error) {
+//               if (error === reason || error.code === "ENOTCONN") {
+//                 resolve()
+//               } else {
+//                 reject(error)
+//               }
+//             } else {
+//               resolve()
+//             }
+//           })
+//         })
+//       }),
+//     )
+//   }
+//   return { stop }
+// }
+
+const listenRequest = (nodeServer, requestCallback) => {
+  if (nodeServer._httpServer) {
+    const removeHttpRequestListener = listenEvent(nodeServer._httpServer, "request", requestCallback);
+    const removeTlsRequestListener = listenEvent(nodeServer._tlsServer, "request", requestCallback);
+    return () => {
+      removeHttpRequestListener();
+      removeTlsRequestListener();
+    };
+  }
+
+  return listenEvent(nodeServer, "request", requestCallback);
+};
+
+const trackServerPendingRequests = (nodeServer, {
+  http2
+}) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingRequests(nodeServer);
+  }
+
+  return trackHttp1ServerPendingRequests(nodeServer);
+};
+
+const trackHttp1ServerPendingRequests = nodeServer => {
+  const pendingClients = new Set();
+  const removeRequestListener = listenRequest(nodeServer, (nodeRequest, nodeResponse) => {
+    const client = {
+      nodeRequest,
+      nodeResponse
+    };
+    pendingClients.add(client);
+    nodeResponse.once("close", () => {
+      pendingClients.delete(client);
+    });
+  });
+
+  const stop = async ({
+    status,
+    reason
+  }) => {
+    removeRequestListener();
+    const pendingClientsArray = Array.from(pendingClients);
+    pendingClients.clear();
+    await Promise.all(pendingClientsArray.map(({
+      nodeResponse
+    }) => {
+      if (nodeResponse.headersSent === false) {
+        nodeResponse.writeHead(status, String(reason));
+      } // http2
+
+
+      if (nodeResponse.close) {
+        return new Promise((resolve, reject) => {
+          if (nodeResponse.closed) {
+            resolve();
+          } else {
+            nodeResponse.close(error => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          }
+        });
+      } // http
+
+
+      return new Promise(resolve => {
+        if (nodeResponse.destroyed) {
+          resolve();
+        } else {
+          nodeResponse.once("close", () => {
+            resolve();
+          });
+          nodeResponse.destroy();
+        }
+      });
+    }));
+  };
+
+  return {
+    stop
+  };
+};
+
+if ("observable" in Symbol === false) {
+  Symbol.observable = Symbol.for("observable");
+}
+
+const createObservable = producer => {
+  if (typeof producer !== "function") {
+    throw new TypeError(`producer must be a function, got ${producer}`);
+  }
+
+  const observable = {
+    [Symbol.observable]: () => observable,
+    subscribe: ({
+      next = () => {},
+      error = value => {
+        throw value;
+      },
+      complete = () => {}
+    }) => {
+      let cleanup = () => {};
+
+      const subscription = {
+        closed: false,
+        unsubscribe: () => {
+          subscription.closed = true;
+          cleanup();
+        }
+      };
+      const producerReturnValue = producer({
+        next: value => {
+          if (subscription.closed) return;
+          next(value);
+        },
+        error: value => {
+          if (subscription.closed) return;
+          error(value);
+        },
+        complete: () => {
+          if (subscription.closed) return;
+          complete();
+        }
+      });
+
+      if (typeof producerReturnValue === "function") {
+        cleanup = producerReturnValue;
+      }
+
+      return subscription;
+    }
+  };
+  return observable;
+};
+const isObservable = value => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "object" || typeof value === "function") {
+    return Symbol.observable in value;
+  }
+
+  return false;
+};
+const observableFromValue = value => {
+  if (isObservable(value)) {
+    return value;
+  }
+
+  return createObservable(({
+    next,
+    complete
+  }) => {
+    next(value);
+    const timer = setTimeout(() => {
+      complete();
+    });
+    return () => {
+      clearTimeout(timer);
+    };
+  });
+};
+const createCompositeProducer = ({
+  cleanup = () => {}
+} = {}) => {
+  const observables = new Set();
+  const observers = new Set();
+
+  const addObservable = observable => {
+    if (observables.has(observable)) {
+      return false;
+    }
+
+    observables.add(observable);
+    observers.forEach(observer => {
+      observer.observe(observable);
+    });
+    return true;
+  };
+
+  const removeObservable = observable => {
+    if (!observables.has(observable)) {
+      return false;
+    }
+
+    observables.delete(observable);
+    observers.forEach(observer => {
+      observer.unobserve(observable);
+    });
+    return true;
+  };
+
+  const producer = ({
+    next = () => {},
+    complete = () => {},
+    error = () => {}
+  }) => {
+    let completeCount = 0;
+
+    const checkComplete = () => {
+      if (completeCount === observables.size) {
+        complete();
+      }
+    };
+
+    const subscriptions = new Map();
+
+    const observe = observable => {
+      const subscription = observable.subscribe({
+        next: value => {
+          next(value);
+        },
+        error: value => {
+          error(value);
+        },
+        complete: () => {
+          subscriptions.delete(observable);
+          completeCount++;
+          checkComplete();
+        }
+      });
+      subscriptions.set(observable, subscription);
+    };
+
+    const unobserve = observable => {
+      const subscription = subscriptions.get(observable);
+
+      if (!subscription) {
+        return;
+      }
+
+      subscription.unsubscribe();
+      subscriptions.delete(observable);
+      checkComplete();
+    };
+
+    const observer = {
+      observe,
+      unobserve
+    };
+    observers.add(observer);
+    observables.forEach(observable => {
+      observe(observable);
+    });
+    return () => {
+      observers.delete(observer);
+      subscriptions.forEach(subscription => {
+        subscription.unsubscribe();
+      });
+      subscriptions.clear();
+      cleanup();
+    };
+  };
+
+  producer.addObservable = addObservable;
+  producer.removeObservable = removeObservable;
+  return producer;
+};
+
+// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
+const readableStreamLifetimeInSeconds = 120;
+const nodeStreamToObservable = nodeStream => {
+  const observable = createObservable(({
+    next,
+    error,
+    complete
+  }) => {
+    if (nodeStream.isPaused()) {
+      nodeStream.resume();
+    } else if (nodeStream.complete) {
+      complete();
+      return null;
+    }
+
+    const cleanup = () => {
+      nodeStream.removeListener("data", next);
+      nodeStream.removeListener("error", error);
+      nodeStream.removeListener("end", complete);
+      nodeStream.removeListener("close", cleanup);
+      nodeStream.destroy();
+    }; // should we do nodeStream.resume() in case the stream was paused ?
+
+
+    nodeStream.once("error", error);
+    nodeStream.on("data", data => {
+      next(data);
+    });
+    nodeStream.once("close", () => {
+      cleanup();
+    });
+    nodeStream.once("end", () => {
+      complete();
+    });
+    return cleanup;
+  });
+
+  if (nodeStream instanceof Readable) {
+    // safe measure, ensure the readable stream gets
+    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
+    const timeout = setTimeout(() => {
+      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release ressources`, {
+        CODE: "READABLE_STREAM_TIMEOUT",
+        // url is for http client request
+        detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`
+      });
+      nodeStream.destroy();
+    }, readableStreamLifetimeInSeconds * 1000);
+    observable.timeout = timeout;
+    onceReadableStreamUsedOrClosed(nodeStream, () => {
+      clearTimeout(timeout);
+    });
+  }
+
+  return observable;
+};
+
+const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
+  const dataOrCloseCallback = () => {
+    readableStream.removeListener("data", dataOrCloseCallback);
+    readableStream.removeListener("close", dataOrCloseCallback);
+    callback();
+  };
+
+  readableStream.on("data", dataOrCloseCallback);
+  readableStream.once("close", dataOrCloseCallback);
+};
+
+const normalizeHeaderName = headerName => {
+  headerName = String(headerName);
+
+  if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
+    throw new TypeError("Invalid character in header field name");
+  }
+
+  return headerName.toLowerCase();
+};
+
+const normalizeHeaderValue = headerValue => {
+  return String(headerValue);
+};
+
+/*
+https://developer.mozilla.org/en-US/docs/Web/API/Headers
+https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+*/
+const headersFromObject = headersObject => {
+  const headers = {};
+  Object.keys(headersObject).forEach(headerName => {
+    if (headerName[0] === ":") {
+      // exclude http2 headers
+      return;
+    }
+
+    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(headersObject[headerName]);
+  });
+  return headers;
+};
+
+const fromNodeRequest = (nodeRequest, {
+  serverOrigin,
+  signal
+}) => {
+  const headers = headersFromObject(nodeRequest.headers);
+  const body = nodeStreamToObservable(nodeRequest);
+  let requestOrigin;
+
+  if (nodeRequest.authority) {
+    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.authority}` : `http://${nodeRequest.authority}`;
+  } else if (nodeRequest.headers.host) {
+    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.headers.host}` : `http://${nodeRequest.headers.host}`;
+  } else {
+    requestOrigin = serverOrigin;
+  }
+
+  return Object.freeze({
+    signal,
+    http2: Boolean(nodeRequest.stream),
+    origin: requestOrigin,
+    ...getPropertiesFromRessource({
+      ressource: nodeRequest.url,
+      baseUrl: requestOrigin
+    }),
+    method: nodeRequest.method,
+    headers,
+    body
+  });
+};
+const applyRedirectionToRequest = (request, {
+  ressource,
+  pathname,
+  ...rest
+}) => {
+  return { ...request,
+    ...(ressource ? getPropertiesFromRessource({
+      ressource,
+      baseUrl: request.url
+    }) : pathname ? getPropertiesFromPathname({
+      pathname,
+      baseUrl: request.url
+    }) : {}),
+    ...rest
+  };
+};
+
+const getPropertiesFromRessource = ({
+  ressource,
+  baseUrl
+}) => {
+  const urlObject = new URL(ressource, baseUrl);
+  let pathname = urlObject.pathname;
+  return {
+    url: String(urlObject),
+    pathname,
+    ressource
+  };
+};
+
+const getPropertiesFromPathname = ({
+  pathname,
+  baseUrl
+}) => {
+  return getPropertiesFromRessource({
+    ressource: `${pathname}${new URL(baseUrl).search}`,
+    baseUrl
+  });
+};
+
+const createPushRequest = (request, {
+  signal,
+  pathname,
+  method
+}) => {
+  const pushRequest = Object.freeze({ ...request,
+    parent: request,
+    signal,
+    http2: true,
+    ...(pathname ? getPropertiesFromPathname({
+      pathname,
+      baseUrl: request.url
+    }) : {}),
+    method: method || request.method,
+    headers: getHeadersInheritedByPushRequest(request),
+    body: undefined
+  });
+  return pushRequest;
+};
+
+const getHeadersInheritedByPushRequest = request => {
+  const headersInherited = { ...request.headers
+  }; // mtime sent by the client in request headers concerns the main request
+  // Time remains valid for request to other ressources so we keep it
+  // in child requests
+  // delete childHeaders["if-modified-since"]
+  // eTag sent by the client in request headers concerns the main request
+  // A request made to an other ressource must not inherit the eTag
+
+  delete headersInherited["if-none-match"];
+  return headersInherited;
+};
+
+const normalizeBodyMethods = body => {
+  if (isObservable(body)) {
+    return {
+      asObservable: () => body,
+      destroy: () => {}
+    };
+  }
+
+  if (isFileHandle(body)) {
+    return {
+      asObservable: () => fileHandleToObservable(body),
+      destroy: () => {
+        body.close();
+      }
+    };
+  }
+
+  if (isNodeStream(body)) {
+    return {
+      asObservable: () => nodeStreamToObservable(body),
+      destroy: () => {
+        body.destroy();
+      }
+    };
+  }
+
+  return {
+    asObservable: () => observableFromValue(body),
+    destroy: () => {}
+  };
+};
+const isFileHandle = value => {
+  return value && value.constructor && value.constructor.name === "FileHandle";
+};
+const fileHandleToReadableStream = fileHandle => {
+  const fileReadableStream = typeof fileHandle.createReadStream === "function" ? fileHandle.createReadStream() : createReadStream("/toto", // is it ok to pass a fake path like this?
+  {
+    fd: fileHandle.fd,
+    emitClose: true // autoClose: true
+
+  }); // I suppose it's required only when doing fs.createReadStream()
+  // and not fileHandle.createReadStream()
+  // fileReadableStream.on("end", () => {
+  //   fileHandle.close()
+  // })
+
+  return fileReadableStream;
+};
+
+const fileHandleToObservable = fileHandle => {
+  return nodeStreamToObservable(fileHandleToReadableStream(fileHandle));
+};
+
+const isNodeStream = value => {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (value instanceof Stream || value instanceof Writable || value instanceof Readable) {
+    return true;
+  }
+
+  return false;
+};
+
+const populateNodeResponse = async (responseStream, {
+  status,
+  statusText,
+  headers,
+  body,
+  bodyEncoding
+}, {
+  signal,
+  ignoreBody,
+  onAbort,
+  onError,
+  onHeadersSent,
+  onEnd
+} = {}) => {
+  body = await body;
+  const bodyMethods = normalizeBodyMethods(body);
+
+  if (signal.aborted) {
+    bodyMethods.destroy();
+    responseStream.destroy();
+    onAbort();
+    return;
+  }
+
+  writeHead(responseStream, {
+    status,
+    statusText,
+    headers,
+    onHeadersSent
+  });
+
+  if (!body) {
+    onEnd();
+    responseStream.end();
+    return;
+  }
+
+  if (ignoreBody) {
+    onEnd();
+    bodyMethods.destroy();
+    responseStream.end();
+    return;
+  }
+
+  if (bodyEncoding) {
+    responseStream.setEncoding(bodyEncoding);
+  }
+
+  await new Promise(resolve => {
+    const observable = bodyMethods.asObservable();
+    const subscription = observable.subscribe({
+      next: data => {
+        try {
+          responseStream.write(data);
+        } catch (e) {
+          // Something inside Node.js sometimes puts stream
+          // in a state where .write() throw despites nodeResponse.destroyed
+          // being undefined and "close" event not being emitted.
+          // I have tested if we are the one calling destroy
+          // (I have commented every .destroy() call)
+          // but issue still occurs
+          // For the record it's "hard" to reproduce but can be by running
+          // a lot of tests against a browser in the context of @jsenv/core testing
+          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+            return;
+          }
+
+          responseStream.emit("error", e);
+        }
+      },
+      error: value => {
+        responseStream.emit("error", value);
+      },
+      complete: () => {
+        responseStream.end();
+      }
+    });
+    raceCallbacks({
+      abort: cb => {
+        signal.addEventListener("abort", cb);
+        return () => {
+          signal.removeEventListener("abort", cb);
+        };
+      },
+      error: cb => {
+        responseStream.on("error", cb);
+        return () => {
+          responseStream.removeListener("error", cb);
+        };
+      },
+      close: cb => {
+        responseStream.on("close", cb);
+        return () => {
+          responseStream.removeListener("close", cb);
+        };
+      },
+      finish: cb => {
+        responseStream.on("finish", cb);
+        return () => {
+          responseStream.removeListener("finish", cb);
+        };
+      }
+    }, winner => {
+      const raceEffects = {
+        abort: () => {
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onAbort();
+          resolve();
+        },
+        error: error => {
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onError(error);
+          resolve();
+        },
+        close: () => {
+          // close body in case nodeResponse is prematurely closed
+          // while body is writing
+          // it may happen in case of server sent event
+          // where body is kept open to write to client
+          // and the browser is reloaded or closed for instance
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onAbort();
+          resolve();
+        },
+        finish: () => {
+          onEnd();
+          resolve();
+        }
+      };
+      raceEffects[winner.name](winner.data);
+    });
+  });
+};
+
+const writeHead = (responseStream, {
+  status,
+  statusText,
+  headers,
+  onHeadersSent
+}) => {
+  const responseIsHttp2ServerResponse = responseStream instanceof Http2ServerResponse;
+  const responseIsServerHttp2Stream = responseStream.constructor.name === "ServerHttp2Stream";
+  let nodeHeaders = headersToNodeHeaders(headers, {
+    // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L112
+    ignoreConnectionHeader: responseIsHttp2ServerResponse || responseIsServerHttp2Stream
+  });
+
+  if (statusText === undefined) {
+    statusText = statusTextFromStatus(status);
+  }
+
+  if (responseIsServerHttp2Stream) {
+    nodeHeaders = { ...nodeHeaders,
+      ":status": status
+    };
+    responseStream.respond(nodeHeaders);
+    onHeadersSent({
+      nodeHeaders,
+      status,
+      statusText
+    });
+    return;
+  } // nodejs strange signature for writeHead force this
+  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
+
+
+  if ( // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
+  responseIsHttp2ServerResponse) {
+    responseStream.writeHead(status, nodeHeaders);
+    onHeadersSent({
+      nodeHeaders,
+      status,
+      statusText
+    });
+    return;
+  }
+
+  responseStream.writeHead(status, statusText, nodeHeaders);
+  onHeadersSent({
+    nodeHeaders,
+    status,
+    statusText
+  });
+};
+
+const statusTextFromStatus = status => http.STATUS_CODES[status] || "not specified";
+
+const headersToNodeHeaders = (headers, {
+  ignoreConnectionHeader
+}) => {
+  const nodeHeaders = {};
+  Object.keys(headers).forEach(name => {
+    if (name === "connection" && ignoreConnectionHeader) return;
+    const nodeHeaderName = name in mapping ? mapping[name] : name;
+    nodeHeaders[nodeHeaderName] = headers[name];
+  });
+  return nodeHeaders;
+};
+
+const mapping = {// "content-type": "Content-Type",
+  // "last-modified": "Last-Modified",
+};
+
+// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
+const close = "\x1b[0m";
+const red = "\x1b[31m";
+const green = "\x1b[32m";
+const yellow = "\x1b[33m"; // const blue = "\x1b[34m"
+
+const magenta = "\x1b[35m";
+const cyan = "\x1b[36m"; // const white = "\x1b[37m"
+
+const colorizeResponseStatus = status => {
+  const statusType = statusToType(status);
+  if (statusType === "information") return `${cyan}${status}${close}`;
+  if (statusType === "success") return `${green}${status}${close}`;
+  if (statusType === "redirection") return `${magenta}${status}${close}`;
+  if (statusType === "client_error") return `${yellow}${status}${close}`;
+  if (statusType === "server_error") return `${red}${status}${close}`;
+  return status;
+}; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+const statusToType = status => {
+  if (statusIsInformation(status)) return "information";
+  if (statusIsSuccess(status)) return "success";
+  if (statusIsRedirection(status)) return "redirection";
+  if (statusIsClientError(status)) return "client_error";
+  if (statusIsServerError(status)) return "server_error";
+  return "unknown";
+};
+
+const statusIsInformation = status => status >= 100 && status < 200;
+
+const statusIsSuccess = status => status >= 200 && status < 300;
+
+const statusIsRedirection = status => status >= 300 && status < 400;
+
+const statusIsClientError = status => status >= 400 && status < 500;
+
+const statusIsServerError = status => status >= 500 && status < 600;
+
+const getServerOrigins = ({
+  protocol,
+  ip,
+  port
+}) => {
+  const isInternalIp = ip === "127.0.0.1";
+  const internalOrigin = createServerOrigin({
+    protocol,
+    hostname: "localhost",
+    port
+  });
+
+  if (isInternalIp) {
+    return {
+      internal: internalOrigin
+    };
+  }
+
+  const isAnyIp = !ip || ip === "::" || ip === "0.0.0.0";
+  return {
+    internal: internalOrigin,
+    external: createServerOrigin({
+      protocol,
+      hostname: isAnyIp ? getExternalIp() : ip,
+      port
+    })
+  };
+};
+
+const createServerOrigin = ({
+  protocol,
+  hostname,
+  port
+}) => {
+  const url = new URL("https://127.0.0.1:80");
+  url.protocol = protocol;
+  url.hostname = hostname;
+  url.port = port;
+  return url.origin;
+};
+
+const getExternalIp = () => {
+  const networkInterfaceMap = networkInterfaces();
+  let internalIPV4NetworkAddress;
+  Object.keys(networkInterfaceMap).find(key => {
+    const networkAddressArray = networkInterfaceMap[key];
+    return networkAddressArray.find(networkAddress => {
+      if (networkAddress.internal) return false;
+      if (networkAddress.family !== "IPv4") return false;
+      internalIPV4NetworkAddress = networkAddress;
+      return true;
+    });
+  });
+  return internalIPV4NetworkAddress ? internalIPV4NetworkAddress.address : null;
+};
+
+const listen = async ({
+  signal = new AbortController().signal,
+  server,
+  port,
+  portHint,
+  ip
+}) => {
+  const listeningOperation = Abort.startOperation();
+
+  try {
+    listeningOperation.addAbortSignal(signal);
+
+    if (portHint) {
+      listeningOperation.throwIfAborted();
+      port = await findFreePort(portHint, {
+        signal: listeningOperation.signal,
+        ip
+      });
+    }
+
+    listeningOperation.throwIfAborted();
+    port = await startListening({
+      server,
+      port,
+      ip
+    });
+    listeningOperation.addAbortCallback(() => stopListening(server));
+    listeningOperation.throwIfAborted();
+    return port;
+  } finally {
+    await listeningOperation.end();
+  }
+};
+
+const findFreePort = async (initialPort = 1, {
+  signal = new AbortController().signal,
+  ip = "127.0.0.1",
+  min = 1,
+  max = 65534,
+  next = port => port + 1
+} = {}) => {
+  const findFreePortOperation = Abort.startOperation();
+
+  try {
+    findFreePortOperation.addAbortSignal(signal);
+    findFreePortOperation.throwIfAborted();
+
+    const testUntil = async (port, ip) => {
+      findFreePortOperation.throwIfAborted();
+      const free = await portIsFree(port, ip);
+
+      if (free) {
+        return port;
+      }
+
+      const nextPort = next(port);
+
+      if (nextPort > max) {
+        throw new Error(`${ip} has no available port between ${min} and ${max}`);
+      }
+
+      return testUntil(nextPort, ip);
+    };
+
+    const freePort = await testUntil(initialPort, ip);
+    return freePort;
+  } finally {
+    await findFreePortOperation.end();
+  }
+};
+
+const portIsFree = async (port, ip) => {
+  const server = createServer();
+
+  try {
+    await startListening({
+      server,
+      port,
+      ip
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return false;
+    }
+
+    if (error && error.code === "EACCES") {
+      return false;
+    }
+
+    throw error;
+  }
+
+  await stopListening(server);
+  return true;
+};
+
+const startListening = ({
+  server,
+  port,
+  ip
+}) => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("listening", () => {
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      resolve(server.address().port);
+    });
+    server.listen(port, ip);
+  });
+};
+
+const stopListening = server => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+}; // unit test exports
+
+const composeTwoObjects = (firstObject, secondObject, {
+  keysComposition,
+  strict = false,
+  forceLowerCase = false
+} = {}) => {
+  if (forceLowerCase) {
+    return applyCompositionForcingLowerCase(firstObject, secondObject, {
+      keysComposition,
+      strict
+    });
+  }
+
+  return applyCaseSensitiveComposition(firstObject, secondObject, {
+    keysComposition,
+    strict
+  });
+};
+
+const applyCaseSensitiveComposition = (firstObject, secondObject, {
+  keysComposition,
+  strict
+}) => {
+  if (strict) {
+    const composed = {};
+    Object.keys(keysComposition).forEach(key => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: keyExistsIn(key, firstObject) ? key : null,
+        secondKey: keyExistsIn(key, secondObject) ? key : null
+      });
+    });
+    return composed;
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach(key => {
+    composed[key] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach(key => {
+    composed[key] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key,
+      firstKey: keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(key, secondObject) ? key : null
+    });
+  });
+  return composed;
+};
+
+const applyCompositionForcingLowerCase = (firstObject, secondObject, {
+  keysComposition,
+  strict
+}) => {
+  if (strict) {
+    const firstObjectKeyMapping = {};
+    Object.keys(firstObject).forEach(key => {
+      firstObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    const secondObjectKeyMapping = {};
+    Object.keys(secondObject).forEach(key => {
+      secondObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    Object.keys(keysComposition).forEach(key => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: firstObjectKeyMapping[key] || null,
+        secondKey: secondObjectKeyMapping[key] || null
+      });
+    });
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach(key => {
+    composed[key.toLowerCase()] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach(key => {
+    const keyLowercased = key.toLowerCase();
+    composed[key.toLowerCase()] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key: keyLowercased,
+      firstKey: keyExistsIn(keyLowercased, firstObject) ? keyLowercased : keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(keyLowercased, secondObject) ? keyLowercased : keyExistsIn(key, secondObject) ? key : null
+    });
+  });
+  return composed;
+};
+
+const composeValueAtKey = ({
+  firstObject,
+  secondObject,
+  firstKey,
+  secondKey,
+  key,
+  keysComposition
+}) => {
+  if (!firstKey) {
+    return secondObject[secondKey];
+  }
+
+  if (!secondKey) {
+    return firstObject[firstKey];
+  }
+
+  const keyForCustomComposition = keyExistsIn(key, keysComposition) ? key : null;
+
+  if (!keyForCustomComposition) {
+    return secondObject[secondKey];
+  }
+
+  const composeTwoValues = keysComposition[keyForCustomComposition];
+  return composeTwoValues(firstObject[firstKey], secondObject[secondKey]);
+};
+
+const keyExistsIn = (key, object) => {
+  return Object.prototype.hasOwnProperty.call(object, key);
+};
+
+const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  return composeTwoObjects(firstHeaders, secondHeaders, {
+    keysComposition: HEADER_NAMES_COMPOSITION,
+    forceLowerCase: true
+  });
+};
+
+const composeHeaderValues = (value, nextValue) => {
+  const headerValues = value.split(", ");
+  nextValue.split(", ").forEach(value => {
+    if (!headerValues.includes(value)) {
+      headerValues.push(value);
+    }
+  });
+  return headerValues.join(", ");
+};
+
+const HEADER_NAMES_COMPOSITION = {
+  "accept": composeHeaderValues,
+  "accept-charset": composeHeaderValues,
+  "accept-language": composeHeaderValues,
+  "access-control-allow-headers": composeHeaderValues,
+  "access-control-allow-methods": composeHeaderValues,
+  "access-control-allow-origin": composeHeaderValues,
+  // https://www.w3.org/TR/server-timing/
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
+  "server-timing": composeHeaderValues,
+  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
+  "vary": composeHeaderValues
+};
+
+const composeTwoResponses = (firstResponse, secondResponse) => {
+  return composeTwoObjects(firstResponse, secondResponse, {
+    keysComposition: RESPONSE_KEYS_COMPOSITION,
+    strict: true
+  });
+};
+const RESPONSE_KEYS_COMPOSITION = {
+  status: (prevStatus, status) => status,
+  statusText: (prevStatusText, statusText) => statusText,
+  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
+  headers: composeTwoHeaders,
+  body: (prevBody, body) => body,
+  bodyEncoding: (prevEncoding, encoding) => encoding,
+  timing: (prevTiming, timing) => {
+    return { ...prevTiming,
+      ...timing
+    };
+  }
+};
+
+const listenServerConnectionError = (nodeServer, connectionErrorCallback, {
+  ignoreErrorAfterConnectionIsDestroyed = true
+} = {}) => {
+  const cleanupSet = new Set();
+  const removeConnectionListener = listenEvent(nodeServer, "connection", socket => {
+    const removeSocketErrorListener = listenEvent(socket, "error", error => {
+      if (ignoreErrorAfterConnectionIsDestroyed && socket.destroyed) {
+        return;
+      }
+
+      connectionErrorCallback(error, socket);
+    });
+    const removeOnceSocketCloseListener = listenEvent(socket, "close", () => {
+      removeSocketErrorListener();
+      cleanupSet.delete(cleanup);
+    }, {
+      once: true
+    });
+
+    const cleanup = () => {
+      removeSocketErrorListener();
+      removeOnceSocketCloseListener();
+    };
+
+    cleanupSet.add(cleanup);
+  });
+  return () => {
+    removeConnectionListener();
+    cleanupSet.forEach(cleanup => {
+      cleanup();
+    });
+    cleanupSet.clear();
+  };
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+const parseMultipleHeader = (multipleHeaderString, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach(value => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return;
+    }
+
+    const properties = parseHeaderProperties(valueParts.slice(1), {
+      validateProperty
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const properties = headerProperties.reduce((previous, valuePart) => {
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = {
+      name: propertyName,
+      value: propertyValue
+    };
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return previous;
+    }
+
+    return { ...previous,
+      [property.name]: property.value
+    };
+  }, {});
+  return properties;
+};
+
+const parseHeaderPropertyValue = headerPropertyValueString => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
+
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (multipleHeader, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  return Object.keys(multipleHeader).filter(name => {
+    const headerProperties = multipleHeader[name];
+
+    if (!headerProperties) {
+      return false;
+    }
+
+    if (typeof headerProperties !== "object") {
+      return false;
+    }
+
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(name => {
+    const headerProperties = multipleHeader[name];
+    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
+      validateProperty
+    });
+
+    if (headerPropertiesString.length) {
+      return `${name};${headerPropertiesString}`;
+    }
+
+    return name;
+  }).join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const headerPropertiesString = Object.keys(headerProperties).map(name => {
+    const property = {
+      name,
+      value: headerProperties[name]
+    };
+    return property;
+  }).filter(property => {
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(stringifyHeaderProperty).join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({
+  name,
+  value
+}) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+
+  return `${name}=${value}`;
+};
+
+const applyContentNegotiation = ({
+  availables,
+  accepteds,
+  getAcceptanceScore
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+    let acceptedIndex = 0;
+
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+      const score = getAcceptanceScore(accepted, available);
+
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+
+  return availableWithHighestScore;
+};
+
+const negotiateContentType = (request, availableContentTypes) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptHeader = headers.accept;
+
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return applyContentNegotiation({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore
+  });
+};
+
+const parseAcceptHeader = acceptHeader => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach(key => {
+    const {
+      q = 1
+    } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = ({
+  value,
+  quality
+}, availableContentType) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const decomposeContentType = fullType => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const applyDefaultErrorToResponse = (serverInternalError, {
+  request,
+  sendErrorDetails = false
+}) => {
+  const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
+
+  if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+    return serverInternalError.asResponse();
+  }
+
+  const dataToSend = serverInternalErrorIsAPrimitive ? {
+    code: "VALUE_THROWED",
+    value: serverInternalError
+  } : {
+    code: serverInternalError.code || "UNKNOWN_ERROR",
+    ...(sendErrorDetails ? {
+      stack: serverInternalError.stack,
+      ...serverInternalError
+    } : {})
+  };
+  const availableContentTypes = {
+    "text/html": () => {
+      const renderHtmlForErrorWithoutDetails = () => {
+        return `<p>Details not available: to enable them server must be started with sendErrorDetails: true.</p>`;
+      };
+
+      const renderHtmlForErrorWithDetails = () => {
+        if (serverInternalErrorIsAPrimitive) {
+          return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
+        }
+
+        return `<pre>${serverInternalError.stack}</pre>`;
+      };
+
+      const body = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internal server error</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Internal server error</h1>
+    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
+    <details>
+      <summary>See internal error details</summary>
+      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
+    </details>
+  </body>
+</html>`;
+      return {
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(body)
+        },
+        body
+      };
+    },
+    "application/json": () => {
+      const body = JSON.stringify(dataToSend);
+      return {
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body)
+        },
+        body
+      };
+    }
+  };
+  const bestContentType = negotiateContentType(request, Object.keys(availableContentTypes));
+  return availableContentTypes[bestContentType || "application/json"]();
+};
+
+const createReason = reasonString => {
+  return {
+    toString: () => reasonString
+  };
+};
+
+const STOP_REASON_INTERNAL_ERROR = createReason("Internal error");
+const STOP_REASON_PROCESS_SIGHUP = createReason("process SIGHUP");
+const STOP_REASON_PROCESS_SIGTERM = createReason("process SIGTERM");
+const STOP_REASON_PROCESS_SIGINT = createReason("process SIGINT");
+const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
+const STOP_REASON_PROCESS_EXIT = createReason("process exit");
+const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
+
+const startServer = async ({
+  signal = new AbortController().signal,
+  logLevel,
+  startLog = true,
+  serverName = "server",
+  protocol = "http",
+  http2 = false,
+  http1Allowed = true,
+  redirectHttpToHttps,
+  allowHttpRequestOnHttps = false,
+  listenAnyIp = false,
+  ip = listenAnyIp ? undefined : "127.0.0.1",
+  port = 0,
+  // assign a random available port
+  portHint,
+  privateKey,
+  certificate,
+  // when inside a worker, we should not try to stop server on SIGINT
+  // otherwise it can create an EPIPE error while primary process tries
+  // to kill the server
+  stopOnSIGINT = !cluster.isWorker,
+  // auto close the server when the process exits
+  stopOnExit = true,
+  // auto close when requestToResponse throw an error
+  stopOnInternalError = false,
+  keepProcessAlive = true,
+  requestToResponse = () => null,
+  plugins = {},
+  sendErrorDetails = false,
+  errorToResponse = () => null,
+  onListenStart = () => {},
+  onListenEnd = () => {},
+  onStop = () => {},
+  nagle = true
+} = {}) => {
+  if (protocol !== "http" && protocol !== "https") {
+    throw new Error(`protocol must be http or https, got ${protocol}`);
+  }
+
+  if (protocol === "https") {
+    if (!certificate) {
+      throw new Error(`missing certificate for https server`);
+    }
+
+    if (!privateKey) {
+      throw new Error(`missing privateKey for https server`);
+    }
+  }
+
+  if (http2 && protocol !== "https") {
+    throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
+  }
+
+  const logger = createLogger({
+    logLevel
+  });
+
+  if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
+    redirectHttpToHttps = true;
+  }
+
+  if (redirectHttpToHttps && protocol === "http") {
+    logger.warn(`redirectHttpToHttps ignored because protocol is http`);
+    redirectHttpToHttps = false;
+  }
+
+  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
+    logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
+    redirectHttpToHttps = false;
+  }
+
+  if (allowHttpRequestOnHttps && protocol === "http") {
+    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
+    allowHttpRequestOnHttps = false;
+  }
+
+  const processTeardownEvents = {
+    SIGHUP: stopOnExit,
+    SIGTERM: stopOnExit,
+    SIGINT: stopOnSIGINT,
+    beforeExit: stopOnExit,
+    exit: stopOnExit
+  };
+  let status = "starting";
+  let nodeServer;
+  const startServerOperation = Abort.startOperation();
+
+  try {
+    startServerOperation.addAbortSignal(signal);
+    startServerOperation.addAbortSource(abort => {
+      return raceProcessTeardownEvents(processTeardownEvents, ({
+        name
+      }) => {
+        logger.info(`process teardown (${name}) -> aborting start server`);
+        abort();
+      });
+    });
+    startServerOperation.throwIfAborted();
+    nodeServer = await createNodeServer({
+      protocol,
+      redirectHttpToHttps,
+      allowHttpRequestOnHttps,
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed
+    });
+    startServerOperation.throwIfAborted(); // https://nodejs.org/api/net.html#net_server_unref
+
+    if (!keepProcessAlive) {
+      nodeServer.unref();
+    }
+
+    onListenStart();
+    port = await listen({
+      signal: startServerOperation.signal,
+      server: nodeServer,
+      port,
+      portHint,
+      ip
+    });
+    onListenEnd(port);
+    startServerOperation.addAbortCallback(async () => {
+      await stopListening(nodeServer);
+    });
+    startServerOperation.throwIfAborted();
+  } finally {
+    await startServerOperation.end();
+  } // now the server is started (listening) it cannot be aborted anymore
+  // (otherwise an AbortError is thrown to the code calling "startServer")
+  // we can proceed to create a stop function to stop it gacefully
+  // and add a request handler
+
+
+  const stopCallbackList = createCallbackListNotifiedOnce();
+  stopCallbackList.add(({
+    reason
+  }) => {
+    logger.info(`${serverName} stopping server (reason: ${reason})`);
+  });
+  stopCallbackList.add(onStop);
+  stopCallbackList.add(async () => {
+    await stopListening(nodeServer);
+  });
+  let stoppedResolve;
+  const stoppedPromise = new Promise(resolve => {
+    stoppedResolve = resolve;
+  });
+  const stop = memoize$1(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+    status = "stopping";
+    await Promise.all(stopCallbackList.notify({
+      reason
+    }));
+    status = "stopped";
+    stoppedResolve(reason);
+  });
+  const cancelProcessTeardownRace = raceProcessTeardownEvents(processTeardownEvents, winner => {
+    stop(PROCESS_TEARDOWN_EVENTS_MAP[winner.name]);
+  });
+  stopCallbackList.add(cancelProcessTeardownRace);
+
+  const onError = error => {
+    if (status === "stopping" && error.code === "ECONNRESET") {
+      return;
+    }
+
+    throw error;
+  };
+
+  status = "opened";
+  const serverOrigins = getServerOrigins({
+    protocol,
+    ip,
+    port
+  });
+  const serverOrigin = serverOrigins.internal;
+  const removeConnectionErrorListener = listenServerConnectionError(nodeServer, onError);
+  stopCallbackList.add(removeConnectionErrorListener);
+  const connectionsTracker = trackServerPendingConnections(nodeServer, {
+    http2
+  }); // opened connection must be shutdown before the close event is emitted
+
+  stopCallbackList.add(connectionsTracker.stop);
+  const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
+    http2
+  }); // ensure pending requests got a response from the server
+
+  stopCallbackList.add(reason => {
+    pendingRequestsTracker.stop({
+      status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
+      reason
+    });
+  });
+
+  const requestCallback = async (nodeRequest, nodeResponse) => {
+    // pause the stream to let a chance to "requestToResponse"
+    // to call "requestRequestBody". Without this the request body readable stream
+    // might be closed when we'll try to attach "data" and "end" listeners to it
+    nodeRequest.pause();
+
+    if (!nagle) {
+      nodeRequest.connection.setNoDelay(true);
+    }
+
+    if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
+      nodeResponse.writeHead(301, {
+        location: `${serverOrigin}${nodeRequest.url}`
+      });
+      nodeResponse.end();
+      return;
+    }
+
+    const receiveRequestOperation = Abort.startOperation();
+    receiveRequestOperation.addAbortSource(abort => {
+      const closeEventCallback = () => {
+        if (nodeRequest.complete) {
+          receiveRequestOperation.end();
+        } else {
+          nodeResponse.destroy();
+          abort();
+        }
+      };
+
+      nodeRequest.once("close", closeEventCallback);
+      return () => {
+        nodeRequest.removeListener("close", closeEventCallback);
+      };
+    });
+    receiveRequestOperation.addAbortSource(abort => {
+      return stopCallbackList.add(abort);
+    });
+    const sendResponseOperation = Abort.startOperation();
+    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
+    sendResponseOperation.addAbortSource(abort => {
+      return stopCallbackList.add(abort);
+    });
+    const request = fromNodeRequest(nodeRequest, {
+      serverOrigin,
+      signal: receiveRequestOperation.signal
+    }); // Handling request is asynchronous, we buffer logs for that request
+    // until we know what happens with that request
+    // It delays logs until we know of the request will be handled
+    // but it's mandatory to make logs readable.
+
+    const rootRequestNode = {
+      logs: [],
+      children: []
+    };
+
+    const addRequestLog = (node, {
+      type,
+      value
+    }) => {
+      node.logs.push({
+        type,
+        value
+      });
+    };
+
+    const onRequestHandled = node => {
+      if (node !== rootRequestNode) {
+        // keep buffering until root request write logs for everyone
+        return;
+      }
+
+      const prefixLines = (string, prefix) => {
+        return string.replace(/^(?!\s*$)/gm, prefix);
+      };
+
+      const writeLog = ({
+        type,
+        value
+      }, {
+        someLogIsError,
+        someLogIsWarn,
+        depth
+      }) => {
+        if (depth > 0) {
+          value = prefixLines(value, "  ".repeat(depth));
+        }
+
+        if (type === "info") {
+          if (someLogIsError) {
+            type = "error";
+          } else if (someLogIsWarn) {
+            type = "warn";
+          }
+        }
+
+        logger[type](value);
+      };
+
+      const visitRequestNodeToLog = (requestNode, depth) => {
+        let someLogIsError = false;
+        let someLogIsWarn = false;
+        requestNode.logs.forEach(log => {
+          if (log.type === "error") {
+            someLogIsError = true;
+          }
+
+          if (log.type === "warn") {
+            someLogIsWarn = true;
+          }
+        });
+        const firstLog = requestNode.logs.shift();
+        const lastLog = requestNode.logs.pop();
+        const middleLogs = requestNode.logs;
+        writeLog(firstLog, {
+          someLogIsError,
+          someLogIsWarn,
+          depth
+        });
+        middleLogs.forEach(log => {
+          writeLog(log, {
+            someLogIsError,
+            someLogIsWarn,
+            depth
+          });
+        });
+        requestNode.children.forEach(child => {
+          visitRequestNodeToLog(child, depth + 1);
+        });
+
+        if (lastLog) {
+          writeLog(lastLog, {
+            someLogIsError,
+            someLogIsWarn,
+            depth: depth + 1
+          });
+        }
+      };
+
+      visitRequestNodeToLog(rootRequestNode, 0);
+    };
+
+    nodeRequest.on("error", error => {
+      if (error.message === "aborted") {
+        addRequestLog(rootRequestNode, {
+          type: "debug",
+          value: createDetailedMessage$1(`request aborted by client`, {
+            "error message": error.message
+          })
+        });
+      } else {
+        // I'm not sure this can happen but it's here in case
+        addRequestLog(rootRequestNode, {
+          type: "error",
+          value: createDetailedMessage$1(`"error" event emitted on request`, {
+            "error stack": error.stack
+          })
+        });
+      }
+    });
+
+    const pushResponse = async ({
+      path,
+      method
+    }, {
+      requestNode
+    }) => {
+      const http2Stream = nodeResponse.stream; // being able to push a stream is nice to have
+      // so when it fails it's not critical
+
+      const onPushStreamError = e => {
+        addRequestLog(requestNode, {
+          type: "error",
+          value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.ressource}`, {
+            "error stack": e.stack
+          })
+        });
+      }; // not aborted, let's try to push a stream into that response
+      // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
+
+
+      let pushStream;
+
+      try {
+        pushStream = await new Promise((resolve, reject) => {
+          http2Stream.pushStream({
+            ":path": path,
+            ...(method ? {
+              ":method": method
+            } : {})
+          }, async (error, pushStream // headers
+          ) => {
+            if (error) {
+              reject(error);
+            }
+
+            resolve(pushStream);
+          });
+        });
+      } catch (e) {
+        onPushStreamError(e);
+        return;
+      }
+
+      const abortController = new AbortController(); // It's possible to get NGHTTP2_REFUSED_STREAM errors here
+      // https://github.com/nodejs/node/issues/20824
+
+      const pushErrorCallback = error => {
+        onPushStreamError(error);
+        abortController.abort();
+      };
+
+      pushStream.on("error", pushErrorCallback);
+      sendResponseOperation.addEndCallback(() => {
+        pushStream.removeListener("error", onPushStreamError);
+      });
+      await sendResponseOperation.withSignal(async signal => {
+        const pushResponseOperation = Abort.startOperation();
+        pushResponseOperation.addAbortSignal(signal);
+        pushResponseOperation.addAbortSignal(abortController.signal);
+        const pushRequest = createPushRequest(request, {
+          signal: pushResponseOperation.signal,
+          pathname: path,
+          method
+        });
+
+        try {
+          const responseProperties = await handleRequest(pushRequest, {
+            requestNode
+          });
+
+          if (!abortController.signal.aborted) {
+            if (pushStream.destroyed) {
+              abortController.abort();
+            } else if (!http2Stream.pushAllowed) {
+              abortController.abort();
+            } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
+              const responseLength = responseProperties.headers["content-length"] || 0;
+              const {
+                effectiveRecvDataLength,
+                remoteWindowSize
+              } = http2Stream.session.state;
+
+              if (effectiveRecvDataLength + responseLength > remoteWindowSize) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `Aborting stream to prevent exceeding remoteWindowSize`
+                });
+                abortController.abort();
+              }
+            }
+          }
+
+          await sendResponse({
+            signal: pushResponseOperation.signal,
+            request: pushRequest,
+            requestNode,
+            responseStream: pushStream,
+            responseProperties
+          });
+        } finally {
+          await pushResponseOperation.end();
+        }
+      });
+    };
+
+    const handleRequest = async (request, {
+      requestNode
+    }) => {
+      addRequestLog(requestNode, {
+        type: "info",
+        value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
+      });
+
+      const warn = value => {
+        addRequestLog(requestNode, {
+          type: "warn",
+          value
+        });
+      };
+
+      const requestPlugins = [];
+      let responseFromShortcircuit;
+
+      const shortcircuitResponse = value => {
+        responseFromShortcircuit = value;
+      };
+
+      const redirectRequest = requestRedirection => {
+        request = applyRedirectionToRequest(request, requestRedirection);
+      };
+
+      Object.keys(plugins).forEach(pluginName => {
+        const {
+          onRequest
+        } = plugins[pluginName];
+
+        if (onRequest) {
+          const returnValue = onRequest(request, {
+            warn,
+            logger,
+            shortcircuitResponse,
+            redirectRequest
+          });
+
+          if (returnValue) {
+            requestPlugins.push({
+              pluginName,
+              ...returnValue
+            });
+          }
+        }
+      });
+      const result = responseFromShortcircuit ? {
+        returnValue: responseFromShortcircuit
+      } : await generateResponseDescription({
+        requestToResponse,
+        request,
+        pushResponse: async ({
+          path,
+          method
+        }) => {
+          if (typeof path !== "string" || path[0] !== "/") {
+            addRequestLog(requestNode, {
+              type: "warn",
+              value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
+            });
+            return;
+          }
+
+          if (!request.http2) {
+            addRequestLog(requestNode, {
+              type: "warn",
+              value: `response push ignored because request is not http2`
+            });
+            return;
+          }
+
+          const canPushStream = testCanPushStream(nodeResponse.stream);
+
+          if (!canPushStream.can) {
+            addRequestLog(requestNode, {
+              type: "debug",
+              value: `response push ignored because ${canPushStream.reason}`
+            });
+            return;
+          }
+
+          let prevented = false;
+
+          const prevent = () => {
+            prevented = true;
+          };
+
+          const preventedByPlugin = requestPlugins.find(requestPlugin => {
+            const {
+              onPushResponse
+            } = requestPlugin;
+
+            if (!onPushResponse) {
+              return false;
+            }
+
+            onPushResponse({
+              path,
+              method
+            }, {
+              prevent
+            });
+            return prevented;
+          });
+
+          if (prevented) {
+            addRequestLog(requestNode, {
+              type: "debug",
+              value: `response push prevented by "${preventedByPlugin.pluginName}" plugin`
+            });
+            return;
+          }
+
+          const requestChildNode = {
+            logs: [],
+            children: []
+          };
+          requestNode.children.push(requestChildNode);
+          await pushResponse({
+            path,
+            method
+          }, {
+            requestNode: requestChildNode,
+            parentHttp2Stream: nodeResponse.stream
+          });
+        }
+      });
+      const {
+        aborted
+      } = result;
+
+      if (aborted) {
+        return ABORTED_RESPONSE_PROPERTIES;
+      }
+
+      const readResponseProperties = async () => {
+        const {
+          error
+        } = result; // internal error, create 500 response
+
+        if (error) {
+          if ( // stopOnInternalError stops server only if requestToResponse generated
+          // a non controlled error (internal error).
+          // if requestToResponse gracefully produced a 500 response (it did not throw)
+          // then we can assume we are still in control of what we are doing
+          stopOnInternalError) {
+            // il faudrais pouvoir stop que les autres response ?
+            stop(STOP_REASON_INTERNAL_ERROR);
+          }
+
+          const responseDescriptionFromError = (await errorToResponse(error, {
+            request,
+            sendErrorDetails
+          })) || (await applyDefaultErrorToResponse(error, {
+            request,
+            sendErrorDetails
+          }));
+          addRequestLog(requestNode, {
+            type: "error",
+            value: createDetailedMessage$1(`internal error while handling request`, {
+              "error stack": error.stack
+            })
+          });
+          return composeTwoResponses({
+            status: 500,
+            statusText: "Internal Server Error",
+            headers: {
+              // ensure error are not cached
+              "cache-control": "no-store",
+              "content-type": "text/plain"
+            }
+          }, responseDescriptionFromError);
+        }
+
+        const {
+          status = 501,
+          statusText,
+          statusMessage,
+          headers = {},
+          body,
+          ...rest
+        } = result.returnValue || {};
+        const responseProperties = {
+          status,
+          statusText,
+          statusMessage,
+          headers,
+          body,
+          ...rest
+        };
+        return responseProperties;
+      };
+
+      let responseProperties = await readResponseProperties(); // call every plugin "onResponse" hook
+
+      requestPlugins.forEach(requestPlugin => {
+        const {
+          onResponse
+        } = requestPlugin;
+
+        if (onResponse) {
+          const returnValue = onResponse(responseProperties);
+
+          if (returnValue) {
+            responseProperties = composeTwoResponses(responseProperties, returnValue);
+          }
+        }
+      });
+
+      if (request.method !== "HEAD" && responseProperties.headers["content-length"] > 0 && !responseProperties.body) {
+        addRequestLog(requestNode, {
+          type: "warn",
+          value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`
+        });
+      }
+
+      return responseProperties;
+    };
+
+    const sendResponse = async ({
+      signal,
+      request,
+      requestNode,
+      responseStream,
+      responseProperties
+    }) => {
+      // When "pushResponse" is called and the parent response has no body
+      // the parent response is immediatly ended. It means child responses (pushed streams)
+      // won't get a chance to be pushed.
+      // To let a chance to pushed streams we wait a little before sending the response
+      const ignoreBody = request.method === "HEAD";
+      const bodyIsEmpty = !responseProperties.body || ignoreBody;
+
+      if (bodyIsEmpty && requestNode.children.length > 0) {
+        await new Promise(resolve => setTimeout(resolve));
+      }
+
+      await populateNodeResponse(responseStream, responseProperties, {
+        signal,
+        ignoreBody,
+        onAbort: () => {
+          addRequestLog(requestNode, {
+            type: "info",
+            value: `response aborted`
+          });
+          onRequestHandled(requestNode);
+        },
+        onError: error => {
+          addRequestLog(requestNode, {
+            type: "error",
+            value: createDetailedMessage$1(`An error occured while sending response`, {
+              "error stack": error.stack
+            })
+          });
+          onRequestHandled(requestNode);
+        },
+        onHeadersSent: ({
+          status,
+          statusText
+        }) => {
+          const statusType = statusToType(status);
+          addRequestLog(requestNode, {
+            type: {
+              information: "info",
+              success: "info",
+              redirection: "info",
+              client_error: "warn",
+              server_error: "error"
+            }[statusType],
+            value: `${colorizeResponseStatus(status)} ${responseProperties.statusMessage || statusText}`
+          });
+        },
+        onEnd: () => {
+          onRequestHandled(requestNode);
+        }
+      });
+    };
+
+    try {
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      }
+
+      const responseProperties = await handleRequest(request, {
+        requestNode: rootRequestNode
+      });
+      nodeRequest.resume();
+
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      } // the node request readable stream is never closed because
+      // the response headers contains "connection: keep-alive"
+      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+
+
+      if (responseProperties.headers.connection === "keep-alive") {
+        clearTimeout(request.body.timeout);
+      }
+
+      await sendResponse({
+        signal: sendResponseOperation.signal,
+        request,
+        requestNode: rootRequestNode,
+        responseStream: nodeResponse,
+        responseProperties
+      });
+    } finally {
+      await sendResponseOperation.end();
+    }
+  };
+
+  const removeRequestListener = listenRequest(nodeServer, requestCallback); // ensure we don't try to handle new requests while server is stopping
+
+  stopCallbackList.add(removeRequestListener);
+
+  if (startLog) {
+    logger.info(`${serverName} started at ${serverOrigin} (${serverOrigins.external})`);
+  }
+
+  const addEffect = callback => {
+    const cleanup = callback();
+
+    if (typeof cleanup === "function") {
+      stopCallbackList.add(cleanup);
+    }
+  };
+
+  return {
+    getStatus: () => status,
+    origin: serverOrigin,
+    origins: serverOrigins,
+    nodeServer,
+    stop,
+    stoppedPromise,
+    addEffect
+  };
+};
+
+const createNodeServer = async ({
+  protocol,
+  redirectHttpToHttps,
+  allowHttpRequestOnHttps,
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed
+}) => {
+  if (protocol === "http") {
+    return http.createServer();
+  }
+
+  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
+    return createPolyglotServer({
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed
+    });
+  }
+
+  const {
+    createServer
+  } = await import("https");
+  return createServer({
+    cert: certificate,
+    key: privateKey
+  });
+};
+
+const generateResponseDescription = async ({
+  requestToResponse,
+  request,
+  pushResponse
+}) => {
+  try {
+    const returnValue = await requestToResponse(request, {
+      pushResponse
+    });
+    return {
+      returnValue
+    };
+  } catch (error) {
+    if (error.name === "AbortError" && request.signal.aborted) {
+      return {
+        aborted: true
+      };
+    }
+
+    return {
+      error
+    };
+  }
+};
+
+const testCanPushStream = http2Stream => {
+  if (!http2Stream.pushAllowed) {
+    return {
+      can: false,
+      reason: `stream.pushAllowed is false`
+    };
+  } // See https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#http2sessionstate
+  // And https://github.com/google/node-h2-auto-push/blob/67a36c04cbbd6da7b066a4e8d361c593d38853a4/src/index.ts#L100-L106
+
+
+  const {
+    remoteWindowSize
+  } = http2Stream.session.state;
+
+  if (remoteWindowSize === 0) {
+    return {
+      can: false,
+      reason: `no more remoteWindowSize`
+    };
+  }
+
+  return {
+    can: true
+  };
+};
+
+const ABORTED_RESPONSE_PROPERTIES = {};
+const PROCESS_TEARDOWN_EVENTS_MAP = {
+  SIGHUP: STOP_REASON_PROCESS_SIGHUP,
+  SIGTERM: STOP_REASON_PROCESS_SIGTERM,
+  SIGINT: STOP_REASON_PROCESS_SIGINT,
+  beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
+  exit: STOP_REASON_PROCESS_EXIT
+};
+
+const timeStart = name => {
+  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
+  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
+  const startTimestamp = performance.now();
+
+  const timeEnd = () => {
+    const endTimestamp = performance.now();
+    const timing = {
+      [name]: endTimestamp - startTimestamp
+    };
+    return timing;
+  };
+
+  return timeEnd;
+};
+const timeFunction = (name, fn) => {
+  const timeEnd = timeStart(name);
+  const returnValue = fn();
+
+  if (returnValue && typeof returnValue.then === "function") {
+    return returnValue.then(value => {
+      return [timeEnd(), value];
+    });
+  }
+
+  return [timeEnd(), returnValue];
+};
+
+const composeServices = namedServices => {
+  return async (request, {
+    pushResponse
+  }) => {
+    const redirectRequest = requestRedirection => {
+      request = applyRedirectionToRequest(request, requestRedirection);
+    };
+
+    const servicesTiming = {};
+    const response = await firstOperationMatching({
+      array: Object.keys(namedServices).map(serviceName => {
+        return {
+          serviceName,
+          serviceFn: namedServices[serviceName]
+        };
+      }),
+      start: async ({
+        serviceName,
+        serviceFn
+      }) => {
+        const [serviceTiming, value] = await timeFunction(serviceName, () => serviceFn(request, {
+          pushResponse,
+          redirectRequest
+        }));
+        Object.assign(servicesTiming, serviceTiming);
+        return value;
+      },
+      predicate: returnValue => {
+        if (returnValue === null || typeof returnValue !== "object") {
+          return false;
+        }
+
+        return true;
+      }
+    });
+
+    if (response) {
+      return composeTwoResponses({
+        timing: servicesTiming
+      }, response);
+    }
+
+    return null;
+  };
+};
+
+const firstOperationMatching = ({
+  array,
+  start,
+  predicate
+}) => {
+  return new Promise((resolve, reject) => {
+    const visit = index => {
+      if (index >= array.length) {
+        return resolve();
+      }
+
+      const input = array[index];
+      const returnValue = start(input);
+      return Promise.resolve(returnValue).then(output => {
+        if (predicate(output)) {
+          return resolve(output);
+        }
+
+        return visit(index + 1);
+      }, reject);
+    };
+
+    visit(0);
+  });
+};
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json"],
+    isTextual: true
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"]
+  },
+  "application/xml": {
+    extensions: ["xml"]
+  },
+  "application/x-gzip": {
+    extensions: ["gz"]
+  },
+  "application/wasm": {
+    extensions: ["wasm"]
+  },
+  "application/zip": {
+    extensions: ["zip"]
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"]
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"]
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"]
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"]
+  },
+  "audio/webm": {
+    extensions: ["weba"]
+  },
+  "audio/x-wav": {
+    extensions: ["wav"]
+  },
+  "font/ttf": {
+    extensions: ["ttf"]
+  },
+  "font/woff": {
+    extensions: ["woff"]
+  },
+  "font/woff2": {
+    extensions: ["woff2"]
+  },
+  "image/png": {
+    extensions: ["png"]
+  },
+  "image/gif": {
+    extensions: ["gif"]
+  },
+  "image/jpeg": {
+    extensions: ["jpg"]
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true
+  },
+  "text/plain": {
+    extensions: ["txt"]
+  },
+  "text/html": {
+    extensions: ["html"]
+  },
+  "text/css": {
+    extensions: ["css"]
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
+  },
+  "text/x-sass": {
+    extensions: ["sass"]
+  },
+  "text/x-scss": {
+    extensions: ["scss"]
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"]
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"]
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
+  },
+  "video/ogg": {
+    extensions: ["ogv"]
+  },
+  "video/webm": {
+    extensions: ["webm"]
+  }
+};
+
+const CONTENT_TYPE = {
+  parse: string => {
+    const [mediaType, charset] = string.split(";");
+    return {
+      mediaType: normalizeMediaType(mediaType),
+      charset
+    };
+  },
+  stringify: ({
+    mediaType,
+    charset
+  }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+
+    return mediaType;
+  },
+  asMediaType: value => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+
+    return null;
+  },
+  isJson: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return mediaType === "application/json" || /^application\/\w+\+json$/.test(mediaType);
+  },
+  isTextual: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    } // catch things like application/manifest+json, application/importmap+json
+
+
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+
+    return false;
+  },
+  isBinary: value => !CONTENT_TYPE.isTextual(value),
+  asFileExtension: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+  fromUrlExtension: url => {
+    const {
+      pathname
+    } = new URL(url);
+    const extensionWithDot = extname(pathname);
+
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find(mediaType => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension);
+    });
+    return mediaTypeFound || "application/octet-stream";
+  }
+};
+
+const normalizeMediaType = value => {
+  if (value === "text/javascript") {
+    return "text/javascript";
+  }
+
+  return value;
+};
+
+const isFileSystemPath$1 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$1 = value => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(pathToFileURL(value));
+};
+
+const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag$1 = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT$1;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const convertFileSystemErrorToResponseProperties = error => {
+  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
+  if (isErrorWithCode(error, "EACCES")) {
+    return {
+      status: 403,
+      statusText: `EACCES: No permission to read file at ${error.path}`
+    };
+  }
+
+  if (isErrorWithCode(error, "EPERM")) {
+    return {
+      status: 403,
+      statusText: `EPERM: No permission to read file at ${error.path}`
+    };
+  }
+
+  if (isErrorWithCode(error, "ENOENT")) {
+    return {
+      status: 404,
+      statusText: `ENOENT: File not found at ${error.path}`
+    };
+  } // file access may be temporarily blocked
+  // (by an antivirus scanning it because recently modified for instance)
+
+
+  if (isErrorWithCode(error, "EBUSY")) {
+    return {
+      status: 503,
+      statusText: `EBUSY: File is busy ${error.path}`,
+      headers: {
+        "retry-after": 0.01 // retry in 10ms
+
+      }
+    };
+  } // emfile means there is too many files currently opened
+
+
+  if (isErrorWithCode(error, "EMFILE")) {
+    return {
+      status: 503,
+      statusText: "EMFILE: too many file opened",
+      headers: {
+        "retry-after": 0.1 // retry in 100ms
+
+      }
+    };
+  }
+
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      statusText: `EISDIR: Unexpected directory operation at ${error.path}`
+    };
+  }
+
+  return null;
+};
+
+const isErrorWithCode = (error, code) => {
+  return typeof error === "object" && error.code === code;
+};
+
+const negotiateContentEncoding = (request, availableEncodings) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptEncodingHeader = headers["accept-encoding"];
+
+  if (!requestAcceptEncodingHeader) {
+    return null;
+  }
+
+  const encodingsAccepted = parseAcceptEncodingHeader(requestAcceptEncodingHeader);
+  return applyContentNegotiation({
+    accepteds: encodingsAccepted,
+    availables: availableEncodings,
+    getAcceptanceScore: getEncodingAcceptanceScore
+  });
+};
+
+const parseAcceptEncodingHeader = acceptEncodingHeaderString => {
+  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const encodingsAccepted = [];
+  Object.keys(acceptEncodingHeader).forEach(key => {
+    const {
+      q = 1
+    } = acceptEncodingHeader[key];
+    const value = key;
+    encodingsAccepted.push({
+      value,
+      quality: q
+    });
+  });
+  encodingsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return encodingsAccepted;
+};
+
+const getEncodingAcceptanceScore = ({
+  value,
+  quality
+}, availableEncoding) => {
+  if (value === "*") {
+    return quality;
+  } // normalize br to brotli
+
+
+  if (value === "br") value = "brotli";
+  if (availableEncoding === "br") availableEncoding = "brotli";
+
+  if (value === availableEncoding) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const serveDirectory = (url, {
+  headers = {},
+  rootDirectoryUrl
+} = {}) => {
+  url = String(url);
+  url = url[url.length - 1] === "/" ? url : `${url}/`;
+  const directoryContentArray = readdirSync(new URL(url));
+  const responseProducers = {
+    "application/json": () => {
+      const directoryContentJson = JSON.stringify(directoryContentArray);
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": directoryContentJson.length
+        },
+        body: directoryContentJson
+      };
+    },
+    "text/html": () => {
+      const directoryAsHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Directory explorer</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Content of directory ${url}</h1>
+    <ul>
+      ${directoryContentArray.map(filename => {
+        const fileUrl = String(new URL(filename, url));
+        const fileUrlRelativeToServer = fileUrl.slice(String(rootDirectoryUrl).length);
+        return `<li>
+        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+      </li>`;
+      }).join(`
+      `)}
+    </ul>
+  </body>
+</html>`;
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(directoryAsHtml)
+        },
+        body: directoryAsHtml
+      };
+    }
+  };
+  const bestContentType = negotiateContentType({
+    headers
+  }, Object.keys(responseProducers));
+  return responseProducers[bestContentType || "application/json"]();
+};
+
+/*
+ * This function returns response properties in a plain object like
+ * { status: 200, body: "Hello world" }.
+ * It is meant to be used inside "requestToResponse"
+ */
+const fetchFileSystem = async (filesystemUrl, {
+  // signal,
+  method = "GET",
+  headers = {},
+  etagEnabled = false,
+  etagMemory = true,
+  etagMemoryMaxSize = 1000,
+  mtimeEnabled = false,
+  compressionEnabled = false,
+  compressionSizeThreshold = 1024,
+  cacheControl = etagEnabled || mtimeEnabled ? "private,max-age=0,must-revalidate" : "no-store",
+  canReadDirectory = false,
+  rootDirectoryUrl //  = `${pathToFileURL(process.cwd())}/`,
+
+} = {}) => {
+  const urlString = asUrlString(filesystemUrl);
+
+  if (!urlString) {
+    return create500Response(`fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    return create500Response(`fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`);
+  }
+
+  if (rootDirectoryUrl) {
+    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
+
+    if (!rootDirectoryUrlString) {
+      return create500Response(`rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`);
+    }
+
+    if (!rootDirectoryUrlString.endsWith("/")) {
+      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
+    }
+
+    if (!urlString.startsWith(rootDirectoryUrlString)) {
+      return create500Response(`fetchFileSystem url must be inside root directory, got ${urlString}`);
+    }
+
+    rootDirectoryUrl = rootDirectoryUrlString;
+  } // here you might be tempted to add || cacheControl === 'no-cache'
+  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+
+
+  if (cacheControl === "no-store") {
+    if (etagEnabled) {
+      console.warn(`cannot enable etag when cache-control is ${cacheControl}`);
+      etagEnabled = false;
+    }
+
+    if (mtimeEnabled) {
+      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`);
+      mtimeEnabled = false;
+    }
+  }
+
+  if (etagEnabled && mtimeEnabled) {
+    console.warn(`cannot enable both etag and mtime, mtime disabled in favor of etag.`);
+    mtimeEnabled = false;
+  }
+
+  if (method !== "GET" && method !== "HEAD") {
+    return {
+      status: 501
+    };
+  }
+
+  const sourceUrl = `file://${new URL(urlString).pathname}`;
+
+  try {
+    const [readStatTiming, sourceStat] = await timeFunction("file service>read file stat", () => statSync(new URL(sourceUrl)));
+
+    if (sourceStat.isDirectory()) {
+      if (canReadDirectory) {
+        return serveDirectory(urlString, {
+          headers,
+          canReadDirectory,
+          rootDirectoryUrl
+        });
+      }
+
+      return {
+        status: 403,
+        statusText: "not allowed to read directory"
+      };
+    } // not a file, give up
+
+
+    if (!sourceStat.isFile()) {
+      return {
+        status: 404,
+        timing: readStatTiming
+      };
+    }
+
+    const clientCacheResponse = await getClientCacheResponse({
+      headers,
+      etagEnabled,
+      etagMemory,
+      etagMemoryMaxSize,
+      mtimeEnabled,
+      sourceStat,
+      sourceUrl
+    }); // send 304 (redirect response to client cache)
+    // because the response body does not have to be transmitted
+
+    if (clientCacheResponse.status === 304) {
+      return composeTwoResponses({
+        timing: readStatTiming,
+        headers: { ...(cacheControl ? {
+            "cache-control": cacheControl
+          } : {})
+        }
+      }, clientCacheResponse);
+    }
+
+    let response;
+
+    if (compressionEnabled && sourceStat.size >= compressionSizeThreshold) {
+      const compressedResponse = await getCompressedResponse({
+        headers,
+        sourceUrl
+      });
+
+      if (compressedResponse) {
+        response = compressedResponse;
+      }
+    }
+
+    if (!response) {
+      response = await getRawResponse({
+        sourceStat,
+        sourceUrl
+      });
+    }
+
+    const intermediateResponse = composeTwoResponses({
+      timing: readStatTiming,
+      headers: { ...(cacheControl ? {
+          "cache-control": cacheControl
+        } : {}) // even if client cache is disabled, server can still
+        // send his own cache control but client should just ignore it
+        // and keep sending cache-control: 'no-store'
+        // if not, uncomment the line below to preserve client
+        // desire to ignore cache
+        // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
+
+      }
+    }, response);
+    return composeTwoResponses(intermediateResponse, clientCacheResponse);
+  } catch (e) {
+    return composeTwoResponses({
+      headers: { ...(cacheControl ? {
+          "cache-control": cacheControl
+        } : {})
+      }
+    }, convertFileSystemErrorToResponseProperties(e) || {});
+  }
+};
+
+const create500Response = message => {
+  return {
+    status: 500,
+    headers: {
+      "content-type": "text/plain",
+      "content-length": Buffer.byteLength(message)
+    },
+    body: message
+  };
+};
+
+const getClientCacheResponse = async ({
+  headers,
+  etagEnabled,
+  etagMemory,
+  etagMemoryMaxSize,
+  mtimeEnabled,
+  sourceStat,
+  sourceUrl
+}) => {
+  // here you might be tempted to add || headers["cache-control"] === "no-cache"
+  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+  if (headers["cache-control"] === "no-store" || // let's disable it on no-cache too
+  headers["cache-control"] === "no-cache") {
+    return {
+      status: 200
+    };
+  }
+
+  if (etagEnabled) {
+    return getEtagResponse({
+      headers,
+      etagMemory,
+      etagMemoryMaxSize,
+      sourceStat,
+      sourceUrl
+    });
+  }
+
+  if (mtimeEnabled) {
+    return getMtimeResponse({
+      headers,
+      sourceStat
+    });
+  }
+
+  return {
+    status: 200
+  };
+};
+
+const getEtagResponse = async ({
+  headers,
+  etagMemory,
+  etagMemoryMaxSize,
+  sourceUrl,
+  sourceStat
+}) => {
+  const [computeEtagTiming, fileContentEtag] = await timeFunction("file service>generate file etag", () => computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    sourceUrl,
+    sourceStat
+  }));
+  const requestHasIfNoneMatchHeader = ("if-none-match" in headers);
+
+  if (requestHasIfNoneMatchHeader && headers["if-none-match"] === fileContentEtag) {
+    return {
+      status: 304,
+      timing: computeEtagTiming
+    };
+  }
+
+  return {
+    status: 200,
+    headers: {
+      etag: fileContentEtag
+    },
+    timing: computeEtagTiming
+  };
+};
+
+const ETAG_MEMORY_MAP = new Map();
+
+const computeEtag = async ({
+  etagMemory,
+  etagMemoryMaxSize,
+  sourceUrl,
+  sourceStat
+}) => {
+  if (etagMemory) {
+    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl);
+
+    if (etagMemoryEntry && fileStatAreTheSame(etagMemoryEntry.sourceStat, sourceStat)) {
+      return etagMemoryEntry.eTag;
+    }
+  }
+
+  const fileContentAsBuffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(sourceUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+  const eTag = bufferToEtag$1(fileContentAsBuffer);
+
+  if (etagMemory) {
+    if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
+      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
+      ETAG_MEMORY_MAP.delete(firstKey);
+    }
+
+    ETAG_MEMORY_MAP.set(sourceUrl, {
+      sourceStat,
+      eTag
+    });
+  }
+
+  return eTag;
+}; // https://nodejs.org/api/fs.html#fs_class_fs_stats
+
+
+const fileStatAreTheSame = (leftFileStat, rightFileStat) => {
+  return fileStatKeysToCompare.every(keyToCompare => {
+    const leftValue = leftFileStat[keyToCompare];
+    const rightValue = rightFileStat[keyToCompare];
+    return leftValue === rightValue;
+  });
+};
+
+const fileStatKeysToCompare = [// mtime the the most likely to change, check it first
+"mtimeMs", "size", "ctimeMs", "ino", "mode", "uid", "gid", "blksize"];
+
+const getMtimeResponse = async ({
+  headers,
+  sourceStat
+}) => {
+  if ("if-modified-since" in headers) {
+    let cachedModificationDate;
+
+    try {
+      cachedModificationDate = new Date(headers["if-modified-since"]);
+    } catch (e) {
+      return {
+        status: 400,
+        statusText: "if-modified-since header is not a valid date"
+      };
+    }
+
+    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
+
+    if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
+      return {
+        status: 304
+      };
+    }
+  }
+
+  return {
+    status: 200,
+    headers: {
+      "last-modified": dateToUTCString(sourceStat.mtime)
+    }
+  };
+};
+
+const getCompressedResponse = async ({
+  sourceUrl,
+  headers
+}) => {
+  const acceptedCompressionFormat = negotiateContentEncoding({
+    headers
+  }, Object.keys(availableCompressionFormats));
+
+  if (!acceptedCompressionFormat) {
+    return null;
+  }
+
+  const fileReadableStream = fileUrlToReadableStream(sourceUrl);
+  const body = await availableCompressionFormats[acceptedCompressionFormat](fileReadableStream);
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-encoding": acceptedCompressionFormat,
+      "vary": "accept-encoding"
+    },
+    body
+  };
+};
+
+const fileUrlToReadableStream = fileUrl => {
+  return createReadStream(new URL(fileUrl), {
+    emitClose: true,
+    autoClose: true
+  });
+};
+
+const availableCompressionFormats = {
+  br: async fileReadableStream => {
+    const {
+      createBrotliCompress
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createBrotliCompress());
+  },
+  deflate: async fileReadableStream => {
+    const {
+      createDeflate
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createDeflate());
+  },
+  gzip: async fileReadableStream => {
+    const {
+      createGzip
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createGzip());
+  }
+};
+
+const getRawResponse = async ({
+  sourceUrl,
+  sourceStat
+}) => {
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-length": sourceStat.size
+    },
+    body: fileUrlToReadableStream(sourceUrl)
+  };
+}; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
+
+
+const dateToUTCString = date => date.toUTCString();
+
+const dateToSecondsPrecision = date => {
+  const dateWithSecondsPrecision = new Date(date);
+  dateWithSecondsPrecision.setMilliseconds(0);
+  return dateWithSecondsPrecision;
+};
+
+const asUrlString = value => {
+  if (value instanceof URL) {
+    return value.href;
+  }
+
+  if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      return fileSystemPathToUrl$1(value);
+    }
+
+    try {
+      const urlObject = new URL(value);
+      return String(urlObject);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
+const pluginCORS = ({
+  accessControlAllowedOrigins = [],
+  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
+  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
+  accessControlAllowRequestOrigin = false,
+  accessControlAllowRequestMethod = false,
+  accessControlAllowRequestHeaders = false,
+  accessControlAllowCredentials = false,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin
+} = {}) => {
+  // TODO: we should check access control params to throw or warn if we find strange values
+  const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
+
+  if (!corsEnabled) {
+    return {
+      cors: {}
+    };
+  }
+
+  return {
+    cors: {
+      onServerParams: ({
+        plugins
+      }) => {
+        if (timingAllowOrigin === undefined && plugins.server_timings) {
+          timingAllowOrigin = true;
+        }
+      },
+      onRequest: (request, {
+        shortcircuitResponse
+      }) => {
+        if (request.method === "OPTIONS") {
+          // when request method is "OPTIONS" we must return a 200 without body
+          // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
+          shortcircuitResponse({
+            status: 200,
+            headers: {
+              "content-length": 0
+            }
+          });
+        }
+
+        if (request.parent) {
+          return null;
+        }
+
+        return {
+          onResponse: () => {
+            const accessControlHeaders = generateAccessControlHeaders({
+              request,
+              accessControlAllowedOrigins,
+              accessControlAllowRequestOrigin,
+              accessControlAllowedMethods,
+              accessControlAllowRequestMethod,
+              accessControlAllowedHeaders,
+              accessControlAllowRequestHeaders,
+              accessControlAllowCredentials,
+              accessControlMaxAge,
+              timingAllowOrigin
+            });
+            return {
+              headers: accessControlHeaders
+            };
+          }
+        };
+      }
+    }
+  };
+}; // https://www.w3.org/TR/cors/
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+
+const generateAccessControlHeaders = ({
+  request: {
+    headers
+  },
+  accessControlAllowedOrigins,
+  accessControlAllowRequestOrigin,
+  accessControlAllowedMethods,
+  accessControlAllowRequestMethod,
+  accessControlAllowedHeaders,
+  accessControlAllowRequestHeaders,
+  accessControlAllowCredentials,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin
+} = {}) => {
+  const vary = [];
+  const allowedOriginArray = [...accessControlAllowedOrigins];
+
+  if (accessControlAllowRequestOrigin) {
+    if ("origin" in headers && headers.origin !== "null") {
+      allowedOriginArray.push(headers.origin);
+      vary.push("origin");
+    } else if ("referer" in headers) {
+      allowedOriginArray.push(new URL(headers.referer).origin);
+      vary.push("referer");
+    } else {
+      allowedOriginArray.push("*");
+    }
+  }
+
+  const allowedMethodArray = [...accessControlAllowedMethods];
+
+  if (accessControlAllowRequestMethod && "access-control-request-method" in headers) {
+    const requestMethodName = headers["access-control-request-method"];
+
+    if (!allowedMethodArray.includes(requestMethodName)) {
+      allowedMethodArray.push(requestMethodName);
+      vary.push("access-control-request-method");
+    }
+  }
+
+  const allowedHeaderArray = [...accessControlAllowedHeaders];
+
+  if (accessControlAllowRequestHeaders && "access-control-request-headers" in headers) {
+    const requestHeaderNameArray = headers["access-control-request-headers"].split(", ");
+    requestHeaderNameArray.forEach(headerName => {
+      const headerNameLowerCase = headerName.toLowerCase();
+
+      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
+        allowedHeaderArray.push(headerNameLowerCase);
+
+        if (!vary.includes("access-control-request-headers")) {
+          vary.push("access-control-request-headers");
+        }
+      }
+    });
+  }
+
+  return {
+    "access-control-allow-origin": allowedOriginArray.join(", "),
+    "access-control-allow-methods": allowedMethodArray.join(", "),
+    "access-control-allow-headers": allowedHeaderArray.join(", "),
+    ...(accessControlAllowCredentials ? {
+      "access-control-allow-credentials": true
+    } : {}),
+    "access-control-max-age": accessControlMaxAge,
+    ...(timingAllowOrigin ? {
+      "timing-allow-origin": allowedOriginArray.join(", ")
+    } : {}),
+    ...(vary.length ? {
+      vary: vary.join(", ")
+    } : {})
+  };
+};
+
+// because in chrome dev tools they are shown in alphabetic order
+// also we should manipulate a timing object instead of a header to facilitate
+// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
+// so response can return a new timing object
+// yes it's awful, feel free to PR with a better approach :)
+
+const timingToServerTimingResponseHeaders = timing => {
+  const serverTimingHeader = {};
+  Object.keys(timing).forEach((key, index) => {
+    const name = letters[index] || "zz";
+    serverTimingHeader[name] = {
+      desc: key,
+      dur: timing[key]
+    };
+  });
+  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
+  return {
+    "server-timing": serverTimingHeaderString
+  };
+};
+const stringifyServerTimingHeader = serverTimingHeader => {
+  return stringifyMultipleHeader(serverTimingHeader, {
+    validateName: validateServerTimingName
+  });
+}; // (),/:;<=>?@[\]{}" Don't allowed
+// Minimal length is one symbol
+// Digits, alphabet characters,
+// and !#$%&'*+-.^_`|~ are allowed
+// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
+// https://tools.ietf.org/html/rfc7230#section-3.2.6
+
+const validateServerTimingName = name => {
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+
+  if (!valid) {
+    console.warn(`server timing contains invalid symbols`);
+    return false;
+  }
+
+  return true;
+};
+
+const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+
+// https://www.w3.org/TR/server-timing/
+const pluginServerTiming = () => {
+  return {
+    server_timing: {
+      onRequest: () => {
+        const requestStartEvent = performance.now();
+        return {
+          onResponse: response => {
+            const responseEndEvent = performance.now();
+            const timeToCreateResponse = responseEndEvent - requestStartEvent;
+            const serverTiming = { ...response.timing,
+              "time to start responding": timeToCreateResponse
+            };
+            return {
+              headers: timingToServerTimingResponseHeaders(serverTiming)
+            };
+          }
+        };
+      }
+    }
+  };
+};
+
+const createSSERoom = ({
+  logLevel,
+  effect = () => {},
+  // do not keep process alive because of rooms, something else must keep it alive
+  keepProcessAlive = false,
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1 * 1000,
+  maxClientAllowed = 100,
+  // max 100 clients accepted
+  computeEventId = (event, lastEventId) => lastEventId + 1,
+  welcomeEventEnabled = false,
+  welcomeEventPublic = false // decides if welcome event are sent to other clients
+
+} = {}) => {
+  const logger = createLogger({
+    logLevel
+  });
+  const room = {};
+  const clients = new Set();
+  const eventHistory = createEventHistory(historyLength); // what about previousEventId that keeps growing ?
+  // we could add some limit
+  // one limit could be that an event older than 24h is deleted
+
+  let previousEventId = 0;
+  let opened = false;
+  let interval;
+  let cleanupEffect = CLEANUP_NOOP;
+
+  const join = request => {
+    // should we ensure a given request can join a room only once?
+    const lastKnownId = request.headers["last-event-id"] || new URL(request.ressource, request.origin).searchParams.get("last-event-id");
+
+    if (clients.size >= maxClientAllowed) {
+      return {
+        status: 503
+      };
+    }
+
+    if (!opened) {
+      return {
+        status: 204
+      };
+    }
+
+    const sseRoomObservable = createObservable(({
+      next,
+      complete
+    }) => {
+      const client = {
+        next,
+        complete
+      };
+
+      if (clients.size === 0) {
+        const effectReturnValue = effect();
+
+        if (typeof effectReturnValue === "function") {
+          cleanupEffect = effectReturnValue;
+        } else {
+          cleanupEffect = CLEANUP_NOOP;
+        }
+      }
+
+      clients.add(client);
+      logger.debug(`A client has joined. Number of client in room: ${clients.size}`);
+
+      if (lastKnownId !== undefined) {
+        const previousEvents = getAllEventSince(lastKnownId);
+        const eventMissedCount = previousEvents.length;
+
+        if (eventMissedCount > 0) {
+          logger.info(`send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`);
+          previousEvents.forEach(previousEvent => {
+            next(stringifySourceEvent(previousEvent));
+          });
+        }
+      }
+
+      if (welcomeEventEnabled) {
+        const welcomeEvent = {
+          retry: retryDuration,
+          type: "welcome",
+          data: new Date().toLocaleTimeString()
+        };
+        addEventToHistory(welcomeEvent); // send to everyone
+
+        if (welcomeEventPublic) {
+          write(stringifySourceEvent(welcomeEvent));
+        } // send only to this client
+        else {
+          next(stringifySourceEvent(welcomeEvent));
+        }
+      } else {
+        const firstEvent = {
+          retry: retryDuration,
+          type: "comment",
+          data: new Date().toLocaleTimeString()
+        };
+        next(stringifySourceEvent(firstEvent));
+      }
+
+      return () => {
+        clients.delete(client);
+
+        if (clients.size === 0) {
+          cleanupEffect();
+          cleanupEffect = CLEANUP_NOOP;
+        }
+
+        logger.debug(`A client left. Number of client in room: ${clients.size}`);
+      };
+    });
+    const requestSSEObservable = connectRequestAndRoom(request, room, sseRoomObservable);
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-store",
+        "connection": "keep-alive"
+      },
+      body: requestSSEObservable
+    };
+  };
+
+  const leave = request => {
+    disconnectRequestFromRoom(request, room);
+  };
+
+  const addEventToHistory = event => {
+    if (typeof event.id === "undefined") {
+      event.id = computeEventId(event, previousEventId);
+    }
+
+    previousEventId = event.id;
+    eventHistory.add(event);
+  };
+
+  const sendEvent = event => {
+    if (event.type !== "comment") {
+      addEventToHistory(event);
+    }
+
+    logger.debug(`send "${event.type}" event to ${clients.size} client in the room`);
+    write(stringifySourceEvent(event));
+  };
+
+  const getAllEventSince = id => {
+    const events = eventHistory.since(id);
+
+    if (welcomeEventEnabled && !welcomeEventPublic) {
+      return events.filter(event => event.type !== "welcome");
+    }
+
+    return events;
+  };
+
+  const write = data => {
+    clients.forEach(client => {
+      client.next(data);
+    });
+  };
+
+  const keepAlive = () => {
+    // maybe that, when an event occurs, we can delay the keep alive event
+    logger.debug(`send keep alive event, number of client listening event source: ${clients.size}`);
+    sendEvent({
+      type: "comment",
+      data: new Date().toLocaleTimeString()
+    });
+  };
+
+  const open = () => {
+    if (opened) return;
+    opened = true;
+    interval = setInterval(keepAlive, keepaliveDuration);
+
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+  };
+
+  const close = () => {
+    if (!opened) return;
+    logger.debug(`closing room, number of client in the room: ${clients.size}`);
+    clients.forEach(client => client.complete());
+    clients.clear();
+    clearInterval(interval);
+    eventHistory.reset();
+    opened = false;
+  };
+
+  open();
+  Object.assign(room, {
+    // main api:
+    // - ability to sendEvent to clients in the room
+    // - ability to join the room
+    // - ability to leave the room
+    sendEvent,
+    join,
+    leave,
+    // should rarely be necessary, get information about the room
+    getAllEventSince,
+    getRoomClientCount: () => clients.size,
+    // should rarely be used
+    close,
+    open
+  });
+  return room;
+};
+
+const CLEANUP_NOOP = () => {};
+
+const requestMap = new Map();
+
+const connectRequestAndRoom = (request, room, roomObservable) => {
+  let sseProducer;
+  let roomObservableMap;
+  const requestInfo = requestMap.get(request);
+
+  if (requestInfo) {
+    sseProducer = requestInfo.sseProducer;
+    roomObservableMap = requestInfo.roomObservableMap;
+  } else {
+    sseProducer = createCompositeProducer({
+      cleanup: () => {
+        requestMap.delete(request);
+      }
+    });
+    roomObservableMap = new Map();
+    requestMap.set(request, {
+      sseProducer,
+      roomObservableMap
+    });
+  }
+
+  roomObservableMap.set(room, roomObservable);
+  sseProducer.addObservable(roomObservable);
+  return createObservable(sseProducer);
+};
+
+const disconnectRequestFromRoom = (request, room) => {
+  const requestInfo = requestMap.get(request);
+
+  if (!requestInfo) {
+    return;
+  }
+
+  const {
+    sseProducer,
+    roomObservableMap
+  } = requestInfo;
+  const roomObservable = roomObservableMap.get(room);
+  roomObservableMap.delete(room);
+  sseProducer.removeObservable(roomObservable);
+}; // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
+// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
+// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
+// http://html5doctor.com/server-sent-events/
+
+
+const stringifySourceEvent = ({
+  data,
+  type = "message",
+  id,
+  retry
+}) => {
+  let string = "";
+
+  if (id !== undefined) {
+    string += `id:${id}\n`;
+  }
+
+  if (retry) {
+    string += `retry:${retry}\n`;
+  }
+
+  if (type !== "message") {
+    string += `event:${type}\n`;
+  }
+
+  string += `data:${data}\n\n`;
+  return string;
+};
+
+const createEventHistory = limit => {
+  const events = [];
+
+  const add = data => {
+    events.push(data);
+
+    if (events.length >= limit) {
+      events.shift();
+    }
+  };
+
+  const since = id => {
+    const index = events.findIndex(event => String(event.id) === id);
+    return index === -1 ? [] : events.slice(index + 1);
+  };
+
+  const reset = () => {
+    events.length = 0;
+  };
+
+  return {
+    add,
+    since,
+    reset
+  };
+};
+
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
+  }
+
+  if (!hasScheme$1(value)) {
+    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
+  }
+};
+const isPlainObject = value => {
+  if (value === null) {
+    return false;
+  }
+
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+};
+
+const isWindowsPathnameSpecifier = specifier => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+
+const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
+
+const resolveAssociations = (associations, baseUrl) => {
+  assertUrlLike(baseUrl, "baseUrl");
+  const associationsResolved = {};
+  Object.keys(associations).forEach(key => {
+    const valueMap = associations[key];
+    const valueMapResolved = {};
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+      valueMapResolved[patternResolved] = value;
+    });
+    associationsResolved[key] = valueMapResolved;
+  });
+  return associationsResolved;
+};
+
+const normalizeUrlPattern = (urlPattern, baseUrl) => {
+  // starts with a scheme
+  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
+    return urlPattern;
+  }
+
+  return String(new URL(urlPattern, baseUrl));
+};
+
+const asFlatAssociations = associations => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(`associations must be a plain object, got ${associations}`);
+  }
+
+  const flatAssociations = {};
+  Object.keys(associations).forEach(key => {
+    const valueMap = associations[key];
+
+    if (!isPlainObject(valueMap)) {
+      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
+    }
+
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const previousValue = flatAssociations[pattern];
+      flatAssociations[pattern] = previousValue ? { ...previousValue,
+        [key]: value
+      } : {
+        [key]: value
+      };
+    });
+  });
+  return flatAssociations;
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+/** @module jsenv_url_meta **/
+
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+
+const applyPatternMatching = ({
+  url,
+  pattern
+}) => {
+  assertUrlLike(pattern, "pattern");
+  assertUrlLike(url, "url");
+  const {
+    matched,
+    patternIndex,
+    index,
+    groups
+  } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  groups.forEach(group => {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  });
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = count => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+
+  const consumeString = count => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+
+  const matchOne = () => {
+    // pattern consumed and string consumed
+    if (remainingPattern === "" && remainingString === "") {
+      return true; // string fully matched pattern
+    } // pattern consumed, string not consumed
+
+
+    if (remainingPattern === "" && remainingString !== "") {
+      return false; // fails because string longer than expected
+    } // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+
+
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+
+      if (remainingPattern === "*") {
+        groups.push({
+          string: ""
+        });
+      }
+
+      return false; // fail because string shorter than expected
+    } // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+
+
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({
+          string: consumeRemainingString()
+        });
+        return true;
+      }
+
+      return false;
+    } // fast path trailing '**'
+
+
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    } // pattern leading **
+
+
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+      } // pattern ending with ** always match remaining string
+
+
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+
+      if (remainingPattern === "") {
+        // matches everything except '/'
+        const slashIndex = remainingString.indexOf("/");
+
+        if (slashIndex === -1) {
+          groups.push({
+            string: consumeRemainingString()
+          });
+          return true;
+        }
+
+        groups.push({
+          string: consumeString(slashIndex)
+        });
+        return false;
+      } // the next char must not the one expected by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+
+
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({
+          string: ""
+        });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+
+    return undefined;
+  };
+
+  iterate();
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups
+  };
+};
+
+const skipUntilMatch = ({
+  pattern,
+  string,
+  canSkipSlash
+}) => {
+  let index = 0;
+  let remainingString = string;
+  let longestMatchRange = null;
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
+        }
+      };
+    }
+
+    const matchAttemptIndex = matchAttempt.index;
+    const matchRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: matchAttemptIndex,
+      groups: matchAttempt.groups
+    };
+
+    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
+      longestMatchRange = matchRange;
+    }
+
+    const nextIndex = matchAttemptIndex + 1;
+    const canSkip = nextIndex < remainingString.length && (canSkipSlash || remainingString[0] !== "/");
+
+    if (canSkip) {
+      // search against the next unattempted string
+      index += nextIndex;
+      remainingString = remainingString.slice(nextIndex);
+      return tryToMatch();
+    }
+
+    return {
+      matched: false,
+      patternIndex: longestMatchRange.patternIndex,
+      index: longestMatchRange.index + longestMatchRange.length,
+      groups: longestMatchRange.groups,
+      group: {
+        string: string.slice(0, longestMatchRange.index)
+      }
+    };
+  };
+
+  return tryToMatch();
+};
+
+const applyAssociations = ({
+  url,
+  associations
+}) => {
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+    const {
+      matched
+    } = applyPatternMatching({
+      pattern,
+      url
+    });
+
+    if (matched) {
+      const value = flatAssociations[pattern];
+
+      if (isPlainObject(previousValue) && isPlainObject(value)) {
+        return { ...previousValue,
+          ...value
+        };
+      }
+
+      return value;
+    }
+
+    return previousValue;
+  }, {});
+};
+
+const applyAliases = ({
+  url,
+  aliases
+}) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find(key => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url
+    });
+
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+
+    return false;
+  });
+
+  if (!aliasMatchingKey) {
+    return url;
+  }
+
+  const {
+    matchGroups
+  } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  const newUrl = parts.reduce((previous, value, index) => {
+    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
+  }, "");
+  return newUrl;
+};
+
+const urlChildMayMatch = ({
+  url,
+  associations,
+  predicate
+}) => {
+  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
+
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  const flatAssociations = asFlatAssociations(associations); // for full match we must create an object to allow pattern to override previous ones
+
+  let fullMatchMeta = {};
+  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+
+  const partialMatchMetaArray = [];
+  Object.keys(flatAssociations).forEach(pattern => {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url
+    });
+
+    if (matchResult.matched) {
+      someFullMatch = true;
+
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = { ...fullMatchMeta,
+          ...value
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  });
+
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+
+  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  urlChildMayMatch,
+  applyPatternMatching,
+  applyAliases
+};
+
+const pluginRequestWaitingCheck = ({
+  requestWaitingMs = 20000,
+  requestWaitingCallback = ({
+    request,
+    logger,
+    requestWaitingMs
+  }) => {
+    logger.warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
+      "request url": `${request.origin}${request.ressource}`,
+      "request headers": JSON.stringify(request.headers, null, "  ")
+    }));
+  }
+} = {}) => {
+  return {
+    plugin_request_waiting_check: {
+      onRequest: (request, {
+        logger
+      }) => {
+        const timeout = setTimeout(() => requestWaitingCallback({
+          request,
+          logger,
+          requestWaitingMs
+        }), requestWaitingMs);
+        return {
+          onResponse: () => {
+            clearTimeout(timeout);
+          }
+        };
+      }
+    }
+  };
+};
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -999,1048 +6927,6 @@ const bufferToEtag = buffer => {
   const hashBase64StringSubset = hashBase64String.slice(0, 27);
   const length = buffer.length;
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-/*
- * See callback_race.md
- */
-const raceCallbacks = (raceDescription, winnerCallback) => {
-  let cleanCallbacks = [];
-  let status = "racing";
-
-  const clean = () => {
-    cleanCallbacks.forEach(clean => {
-      clean();
-    });
-    cleanCallbacks = null;
-  };
-
-  const cancel = () => {
-    if (status !== "racing") {
-      return;
-    }
-
-    status = "cancelled";
-    clean();
-  };
-
-  Object.keys(raceDescription).forEach(candidateName => {
-    const register = raceDescription[candidateName];
-    const returnValue = register(data => {
-      if (status !== "racing") {
-        return;
-      }
-
-      status = "done";
-      clean();
-      winnerCallback({
-        name: candidateName,
-        data
-      });
-    });
-
-    if (typeof returnValue === "function") {
-      cleanCallbacks.push(returnValue);
-    }
-  });
-  return cancel;
-};
-
-const createCallbackListNotifiedOnce = () => {
-  let callbacks = [];
-  let status = "waiting";
-  let currentCallbackIndex = -1;
-  const callbackListOnce = {};
-
-  const add = callback => {
-    if (status !== "waiting") {
-      emitUnexpectedActionWarning({
-        action: "add",
-        status
-      });
-      return removeNoop$1;
-    }
-
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    } // don't register twice
-
-
-    const existingCallback = callbacks.find(callbackCandidate => {
-      return callbackCandidate === callback;
-    });
-
-    if (existingCallback) {
-      emitCallbackDuplicationWarning$1();
-      return removeNoop$1;
-    }
-
-    callbacks.push(callback);
-    return () => {
-      if (status === "notified") {
-        // once called removing does nothing
-        // as the callbacks array is frozen to null
-        return;
-      }
-
-      const index = callbacks.indexOf(callback);
-
-      if (index === -1) {
-        return;
-      }
-
-      if (status === "looping") {
-        if (index <= currentCallbackIndex) {
-          // The callback was already called (or is the current callback)
-          // We don't want to mutate the callbacks array
-          // or it would alter the looping done in "call" and the next callback
-          // would be skipped
-          return;
-        } // Callback is part of the next callback to call,
-        // we mutate the callbacks array to prevent this callback to be called
-
-      }
-
-      callbacks.splice(index, 1);
-    };
-  };
-
-  const notify = param => {
-    if (status !== "waiting") {
-      emitUnexpectedActionWarning({
-        action: "call",
-        status
-      });
-      return [];
-    }
-
-    status = "looping";
-    const values = callbacks.map((callback, index) => {
-      currentCallbackIndex = index;
-      return callback(param);
-    });
-    callbackListOnce.notified = true;
-    status = "notified"; // we reset callbacks to null after looping
-    // so that it's possible to remove during the loop
-
-    callbacks = null;
-    currentCallbackIndex = -1;
-    return values;
-  };
-
-  callbackListOnce.notified = false;
-  callbackListOnce.add = add;
-  callbackListOnce.notify = notify;
-  return callbackListOnce;
-};
-
-const emitUnexpectedActionWarning = ({
-  action,
-  status
-}) => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
-      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
-      detail: `Code is potentially executed when it should not`
-    });
-  } else {
-    console.warn(`"${action}" should not happen when callback list is ${status}`);
-  }
-};
-
-const emitCallbackDuplicationWarning$1 = () => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`Trying to add a callback already in the list`, {
-      CODE: "CALLBACK_DUPLICATION",
-      detail: `Code is potentially executed more than it should`
-    });
-  } else {
-    console.warn(`Trying to add same callback twice`);
-  }
-};
-
-const removeNoop$1 = () => {};
-
-/*
- * https://github.com/whatwg/dom/issues/920
- */
-const Abort = {
-  isAbortError: error => {
-    return error.name === "AbortError";
-  },
-  startOperation: () => {
-    return createOperation();
-  },
-  throwIfAborted: signal => {
-    if (signal.aborted) {
-      const error = new Error(`The operation was aborted`);
-      error.name = "AbortError";
-      error.type = "aborted";
-      throw error;
-    }
-  }
-};
-
-const createOperation = () => {
-  const operationAbortController = new AbortController(); // const abortOperation = (value) => abortController.abort(value)
-
-  const operationSignal = operationAbortController.signal; // abortCallbackList is used to ignore the max listeners warning from Node.js
-  // this warning is useful but becomes problematic when it's expected
-  // (a function doing 20 http call in parallel)
-  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
-  // uses abortCallbackList to know when something is aborted
-
-  const abortCallbackList = createCallbackListNotifiedOnce();
-  const endCallbackList = createCallbackListNotifiedOnce();
-  let isAbortAfterEnd = false;
-
-  operationSignal.onabort = () => {
-    operationSignal.onabort = null;
-    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
-
-    if (!isAbortAfterEnd) {
-      addEndCallback(async () => {
-        await allAbortCallbacksPromise;
-      });
-    }
-  };
-
-  const throwIfAborted = () => {
-    Abort.throwIfAborted(operationSignal);
-  }; // add a callback called on abort
-  // differences with signal.addEventListener('abort')
-  // - operation.end awaits the return value of this callback
-  // - It won't increase the count of listeners for "abort" that would
-  //   trigger max listeners warning when count > 10
-
-
-  const addAbortCallback = callback => {
-    // It would be painful and not super redable to check if signal is aborted
-    // before deciding if it's an abort or end callback
-    // with pseudo-code below where we want to stop server either
-    // on abort or when ended because signal is aborted
-    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
-    //   await server.stop()
-    // })
-    if (operationSignal.aborted) {
-      return addEndCallback(callback);
-    }
-
-    return abortCallbackList.add(callback);
-  };
-
-  const addEndCallback = callback => {
-    return endCallbackList.add(callback);
-  };
-
-  const end = async ({
-    abortAfterEnd = false
-  } = {}) => {
-    await Promise.all(endCallbackList.notify()); // "abortAfterEnd" can be handy to ensure "abort" callbacks
-    // added with { once: true } are removed
-    // It might also help garbage collection because
-    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
-    // as settled and clean up things
-
-    if (abortAfterEnd) {
-      // because of operationSignal.onabort = null
-      // + abortCallbackList.clear() this won't re-call
-      // callbacks
-      if (!operationSignal.aborted) {
-        isAbortAfterEnd = true;
-        operationAbortController.abort();
-      }
-    }
-  };
-
-  const addAbortSignal = (signal, {
-    onAbort = callbackNoop,
-    onRemove = callbackNoop
-  } = {}) => {
-    const applyAbortEffects = () => {
-      const onAbortCallback = onAbort;
-      onAbort = callbackNoop;
-      onAbortCallback();
-    };
-
-    const applyRemoveEffects = () => {
-      const onRemoveCallback = onRemove;
-      onRemove = callbackNoop;
-      onAbort = callbackNoop;
-      onRemoveCallback();
-    };
-
-    if (operationSignal.aborted) {
-      applyAbortEffects();
-      applyRemoveEffects();
-      return callbackNoop;
-    }
-
-    if (signal.aborted) {
-      operationAbortController.abort();
-      applyAbortEffects();
-      applyRemoveEffects();
-      return callbackNoop;
-    }
-
-    const cancelRace = raceCallbacks({
-      operation_abort: cb => {
-        return addAbortCallback(cb);
-      },
-      operation_end: cb => {
-        return addEndCallback(cb);
-      },
-      child_abort: cb => {
-        return addEventListener(signal, "abort", cb);
-      }
-    }, winner => {
-      const raceEffects = {
-        // Both "operation_abort" and "operation_end"
-        // means we don't care anymore if the child aborts.
-        // So we can:
-        // - remove "abort" event listener on child (done by raceCallback)
-        // - remove abort callback on operation (done by raceCallback)
-        // - remove end callback on operation (done by raceCallback)
-        // - call any custom cancel function
-        operation_abort: () => {
-          applyAbortEffects();
-          applyRemoveEffects();
-        },
-        operation_end: () => {
-          // Exists to
-          // - remove abort callback on operation
-          // - remove "abort" event listener on child
-          // - call any custom cancel function
-          applyRemoveEffects();
-        },
-        child_abort: () => {
-          applyAbortEffects();
-          operationAbortController.abort();
-        }
-      };
-      raceEffects[winner.name](winner.value);
-    });
-    return () => {
-      cancelRace();
-      applyRemoveEffects();
-    };
-  };
-
-  const addAbortSource = abortSourceCallback => {
-    const abortSourceController = new AbortController();
-    const abortSourceSignal = abortSourceController.signal;
-
-    if (operationSignal.aborted) {
-      return {
-        signal: abortSourceSignal,
-        remove: callbackNoop
-      };
-    }
-
-    const returnValue = abortSourceCallback(value => {
-      abortSourceController.abort(value);
-    });
-    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
-    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
-      onRemove: () => {
-        removeAbortSource();
-      }
-    });
-    return {
-      signal: abortSourceSignal,
-      remove: removeAbortSignal
-    };
-  };
-
-  const timeout = ms => {
-    return addAbortSource(abort => {
-      const timeoutId = setTimeout(abort, ms); // an abort source return value is called when:
-      // - operation is aborted (by an other source)
-      // - operation ends
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    });
-  };
-
-  const withSignal = async asyncCallback => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    const removeAbortSignal = addAbortSignal(signal, {
-      onAbort: () => {
-        abortController.abort();
-      }
-    });
-
-    try {
-      const value = await asyncCallback(signal);
-      removeAbortSignal();
-      return value;
-    } catch (e) {
-      removeAbortSignal();
-      throw e;
-    }
-  };
-
-  const withSignalSync = callback => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    const removeAbortSignal = addAbortSignal(signal, {
-      onAbort: () => {
-        abortController.abort();
-      }
-    });
-
-    try {
-      const value = callback(signal);
-      removeAbortSignal();
-      return value;
-    } catch (e) {
-      removeAbortSignal();
-      throw e;
-    }
-  };
-
-  return {
-    // We could almost hide the operationSignal
-    // But it can be handy for 2 things:
-    // - know if operation is aborted (operation.signal.aborted)
-    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
-    signal: operationSignal,
-    throwIfAborted,
-    addAbortCallback,
-    addAbortSignal,
-    addAbortSource,
-    timeout,
-    withSignal,
-    withSignalSync,
-    addEndCallback,
-    end
-  };
-};
-
-const callbackNoop = () => {};
-
-const addEventListener = (target, eventName, cb) => {
-  target.addEventListener(eventName, cb);
-  return () => {
-    target.removeEventListener(eventName, cb);
-  };
-};
-
-const createCallbackList = () => {
-  let callbacks = [];
-
-  const add = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    } // don't register twice
-
-
-    const existingCallback = callbacks.find(callbackCandidate => {
-      return callbackCandidate === callback;
-    });
-
-    if (existingCallback) {
-      emitCallbackDuplicationWarning();
-      return removeNoop;
-    }
-
-    callbacks.push(callback);
-    return () => {
-      const index = callbacks.indexOf(callback);
-
-      if (index === -1) {
-        return;
-      }
-
-      callbacks.splice(index, 1);
-    };
-  };
-
-  const notify = param => {
-    const values = callbacks.slice().map(callback => {
-      return callback(param);
-    });
-    return values;
-  };
-
-  return {
-    add,
-    notify
-  };
-};
-
-const emitCallbackDuplicationWarning = () => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`Trying to add a callback already in the list`, {
-      CODE: "CALLBACK_DUPLICATION",
-      detail: `Code is potentially executed more than it should`
-    });
-  } else {
-    console.warn(`Trying to add same callback twice`);
-  }
-};
-
-const removeNoop = () => {};
-
-const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
-  return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
-    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
-    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
-    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
-    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
-  }, callback);
-};
-const SIGHUP_CALLBACK = {
-  SIGHUP: cb => {
-    process.on("SIGHUP", cb);
-    return () => {
-      process.removeListener("SIGHUP", cb);
-    };
-  }
-};
-const SIGTERM_CALLBACK = {
-  SIGTERM: cb => {
-    process.on("SIGTERM", cb);
-    return () => {
-      process.removeListener("SIGTERM", cb);
-    };
-  }
-};
-const BEFORE_EXIT_CALLBACK = {
-  beforeExit: cb => {
-    process.on("beforeExit", cb);
-    return () => {
-      process.removeListener("beforeExit", cb);
-    };
-  }
-};
-const EXIT_CALLBACK = {
-  exit: cb => {
-    process.on("exit", cb);
-    return () => {
-      process.removeListener("exit", cb);
-    };
-  }
-};
-const SIGINT_CALLBACK = {
-  SIGINT: cb => {
-    process.on("SIGINT", cb);
-    return () => {
-      process.removeListener("SIGINT", cb);
-    };
-  }
-};
-
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
-  }
-
-  if (!hasScheme$1(value)) {
-    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
-  }
-};
-const isPlainObject = value => {
-  if (value === null) {
-    return false;
-  }
-
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  return false;
-};
-
-const isWindowsPathnameSpecifier = specifier => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-
-const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
-
-const resolveAssociations = (associations, baseUrl) => {
-  assertUrlLike(baseUrl, "baseUrl");
-  const associationsResolved = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-    const valueMapResolved = {};
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
-      valueMapResolved[patternResolved] = value;
-    });
-    associationsResolved[key] = valueMapResolved;
-  });
-  return associationsResolved;
-};
-
-const normalizeUrlPattern = (urlPattern, baseUrl) => {
-  // starts with a scheme
-  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
-    return urlPattern;
-  }
-
-  return String(new URL(urlPattern, baseUrl));
-};
-
-const asFlatAssociations = associations => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(`associations must be a plain object, got ${associations}`);
-  }
-
-  const flatAssociations = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-
-    if (!isPlainObject(valueMap)) {
-      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
-    }
-
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const previousValue = flatAssociations[pattern];
-      flatAssociations[pattern] = previousValue ? { ...previousValue,
-        [key]: value
-      } : {
-        [key]: value
-      };
-    });
-  });
-  return flatAssociations;
-};
-
-/*
- * Link to things doing pattern matching:
- * https://git-scm.com/docs/gitignore
- * https://github.com/kaelzhang/node-ignore
- */
-/** @module jsenv_url_meta **/
-
-/**
- * An object representing the result of applying a pattern to an url
- * @typedef {Object} MatchResult
- * @property {boolean} matched Indicates if url matched pattern
- * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
- * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
- * @property {Array} matchGroups Array of strings captured during pattern matching
- */
-
-/**
- * Apply a pattern to an url
- * @param {Object} applyPatternMatchingParams
- * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
- * @param {string} applyPatternMatchingParams.url a string representing an url
- * @return {MatchResult}
- */
-
-const applyPatternMatching = ({
-  url,
-  pattern
-}) => {
-  assertUrlLike(pattern, "pattern");
-  assertUrlLike(url, "url");
-  const {
-    matched,
-    patternIndex,
-    index,
-    groups
-  } = applyMatching(pattern, url);
-  const matchGroups = [];
-  let groupIndex = 0;
-  groups.forEach(group => {
-    if (group.name) {
-      matchGroups[group.name] = group.string;
-    } else {
-      matchGroups[groupIndex] = group.string;
-      groupIndex++;
-    }
-  });
-  return {
-    matched,
-    patternIndex,
-    urlIndex: index,
-    matchGroups
-  };
-};
-
-const applyMatching = (pattern, string) => {
-  const groups = [];
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string;
-  let restoreIndexes = true;
-
-  const consumePattern = count => {
-    const subpattern = remainingPattern.slice(0, count);
-    remainingPattern = remainingPattern.slice(count);
-    patternIndex += count;
-    return subpattern;
-  };
-
-  const consumeString = count => {
-    const substring = remainingString.slice(0, count);
-    remainingString = remainingString.slice(count);
-    index += count;
-    return substring;
-  };
-
-  const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
-  };
-
-  let matched;
-
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
-
-  const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    } // pattern consumed, string not consumed
-
-
-    if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expected
-    } // -- from this point pattern is not consumed --
-    // string consumed, pattern not consumed
-
-
-    if (remainingString === "") {
-      if (remainingPattern === "**") {
-        // trailing "**" is optional
-        consumePattern(2);
-        return true;
-      }
-
-      if (remainingPattern === "*") {
-        groups.push({
-          string: ""
-        });
-      }
-
-      return false; // fail because string shorter than expected
-    } // -- from this point pattern and string are not consumed --
-    // fast path trailing slash
-
-
-    if (remainingPattern === "/") {
-      if (remainingString[0] === "/") {
-        // trailing slash match remaining
-        consumePattern(1);
-        groups.push({
-          string: consumeRemainingString()
-        });
-        return true;
-      }
-
-      return false;
-    } // fast path trailing '**'
-
-
-    if (remainingPattern === "**") {
-      consumePattern(2);
-      consumeRemainingString();
-      return true;
-    } // pattern leading **
-
-
-    if (remainingPattern.slice(0, 2) === "**") {
-      consumePattern(2); // consumes "**"
-
-      if (remainingPattern[0] === "/") {
-        consumePattern(1); // consumes "/"
-      } // pattern ending with ** always match remaining string
-
-
-      if (remainingPattern === "") {
-        consumeRemainingString();
-        return true;
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: true
-      });
-      groups.push(...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeRemainingString();
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-
-    if (remainingPattern[0] === "*") {
-      consumePattern(1); // consumes "*"
-
-      if (remainingPattern === "") {
-        // matches everything except '/'
-        const slashIndex = remainingString.indexOf("/");
-
-        if (slashIndex === -1) {
-          groups.push({
-            string: consumeRemainingString()
-          });
-          return true;
-        }
-
-        groups.push({
-          string: consumeString(slashIndex)
-        });
-        return false;
-      } // the next char must not the one expected by remainingPattern[0]
-      // because * is greedy and expect to skip at least one char
-
-
-      if (remainingPattern[0] === remainingString[0]) {
-        groups.push({
-          string: ""
-        });
-        patternIndex = patternIndex - 1;
-        return false;
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: false
-      });
-      groups.push(skipResult.group, ...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeString(skipResult.index);
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-
-    if (remainingPattern[0] !== remainingString[0]) {
-      return false;
-    }
-
-    return undefined;
-  };
-
-  iterate();
-  return {
-    matched,
-    patternIndex,
-    index,
-    groups
-  };
-};
-
-const skipUntilMatch = ({
-  pattern,
-  string,
-  canSkipSlash
-}) => {
-  let index = 0;
-  let remainingString = string;
-  let longestMatchRange = null;
-
-  const tryToMatch = () => {
-    const matchAttempt = applyMatching(pattern, remainingString);
-
-    if (matchAttempt.matched) {
-      return {
-        matched: true,
-        patternIndex: matchAttempt.patternIndex,
-        index: index + matchAttempt.index,
-        groups: matchAttempt.groups,
-        group: {
-          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
-        }
-      };
-    }
-
-    const matchAttemptIndex = matchAttempt.index;
-    const matchRange = {
-      patternIndex: matchAttempt.patternIndex,
-      index,
-      length: matchAttemptIndex,
-      groups: matchAttempt.groups
-    };
-
-    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
-      longestMatchRange = matchRange;
-    }
-
-    const nextIndex = matchAttemptIndex + 1;
-    const canSkip = nextIndex < remainingString.length && (canSkipSlash || remainingString[0] !== "/");
-
-    if (canSkip) {
-      // search against the next unattempted string
-      index += nextIndex;
-      remainingString = remainingString.slice(nextIndex);
-      return tryToMatch();
-    }
-
-    return {
-      matched: false,
-      patternIndex: longestMatchRange.patternIndex,
-      index: longestMatchRange.index + longestMatchRange.length,
-      groups: longestMatchRange.groups,
-      group: {
-        string: string.slice(0, longestMatchRange.index)
-      }
-    };
-  };
-
-  return tryToMatch();
-};
-
-const applyAssociations = ({
-  url,
-  associations
-}) => {
-  assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
-    const {
-      matched
-    } = applyPatternMatching({
-      pattern,
-      url
-    });
-
-    if (matched) {
-      const value = flatAssociations[pattern];
-
-      if (isPlainObject(previousValue) && isPlainObject(value)) {
-        return { ...previousValue,
-          ...value
-        };
-      }
-
-      return value;
-    }
-
-    return previousValue;
-  }, {});
-};
-
-const applyAliases = ({
-  url,
-  aliases
-}) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find(key => {
-    const aliasMatchResult = applyPatternMatching({
-      pattern: key,
-      url
-    });
-
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
-    }
-
-    return false;
-  });
-
-  if (!aliasMatchingKey) {
-    return url;
-  }
-
-  const {
-    matchGroups
-  } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
-  }, "");
-  return newUrl;
-};
-
-const urlChildMayMatch = ({
-  url,
-  associations,
-  predicate
-}) => {
-  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
-
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  const flatAssociations = asFlatAssociations(associations); // for full match we must create an object to allow pattern to override previous ones
-
-  let fullMatchMeta = {};
-  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-
-  const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach(pattern => {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
-      url
-    });
-
-    if (matchResult.matched) {
-      someFullMatch = true;
-
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = { ...fullMatchMeta,
-          ...value
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  });
-
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-
-  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
-};
-
-const URL_META = {
-  resolveAssociations,
-  applyAssociations,
-  urlChildMayMatch,
-  applyPatternMatching,
-  applyAliases
 };
 
 const readDirectory = async (url, {
@@ -3322,725 +8208,6 @@ const writeFileSync = (destination, content = "") => {
 
     throw error;
   }
-};
-
-const LOG_LEVEL_OFF = "off";
-const LOG_LEVEL_DEBUG = "debug";
-const LOG_LEVEL_INFO = "info";
-const LOG_LEVEL_WARN = "warn";
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({
-  logLevel = LOG_LEVEL_INFO
-} = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      debug,
-      info,
-      warn,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      debug: debugDisabled,
-      info,
-      warn,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled
-    };
-  }
-
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
-};
-
-const debug = (...args) => console.debug(...args);
-
-const debugDisabled = () => {};
-
-const info = (...args) => console.info(...args);
-
-const infoDisabled = () => {};
-
-const warn = (...args) => console.warn(...args);
-
-const warnDisabled = () => {};
-
-const error = (...args) => console.error(...args);
-
-const errorDisabled = () => {};
-
-const disabledMethods = {
-  debug: debugDisabled,
-  info: infoDisabled,
-  warn: warnDisabled,
-  error: errorDisabled
-};
-const loggerIsMethodEnabled = (logger, methodName) => {
-  return logger[methodName] !== disabledMethods[methodName];
-};
-const loggerToLevels = logger => {
-  return {
-    debug: loggerIsMethodEnabled(logger, "debug"),
-    info: loggerIsMethodEnabled(logger, "info"),
-    warn: loggerIsMethodEnabled(logger, "warn"),
-    error: loggerIsMethodEnabled(logger, "error")
-  };
-};
-
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
-let canUseColors = processSupportsBasicColor; // GitHub workflow does support ANSI but "supports-color" returns false
-// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-
-if (process.env.GITHUB_WORKFLOW) {
-  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  if (process.env.FORCE_COLOR !== "false") {
-    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
-    // that colors are not supported. Let it have priority
-    canUseColors = true;
-  }
-} // https://github.com/Marak/colors.js/blob/master/lib/styles.js
-
-
-const RED = "\x1b[31m";
-const GREEN = "\x1b[32m";
-const YELLOW = "\x1b[33m";
-const BLUE = "\x1b[34m";
-const MAGENTA = "\x1b[35m";
-const GREY = "\x1b[90m";
-const RESET = "\x1b[0m";
-const setANSIColor = canUseColors ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}` : text => text;
-const ANSI = {
-  supported: canUseColors,
-  RED,
-  GREEN,
-  YELLOW,
-  BLUE,
-  MAGENTA,
-  GREY,
-  RESET,
-  color: setANSIColor
-};
-
-// see also https://github.com/sindresorhus/figures
-const canUseUnicode = isUnicodeSupported();
-const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
-const OK_RAW = canUseUnicode ? `✔` : `√`;
-const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
-const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
-const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
-const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-
-const OK = ANSI.color(OK_RAW, ANSI.GREEN);
-const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
-const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
-const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
-const UNICODE = {
-  COMMAND,
-  OK,
-  FAILURE,
-  INFO,
-  WARNING,
-  COMMAND_RAW,
-  OK_RAW,
-  FAILURE_RAW,
-  INFO_RAW,
-  WARNING_RAW,
-  supported: canUseUnicode
-};
-
-const createDetailedMessage$1 = (message, details = {}) => {
-  let string = `${message}`;
-  Object.keys(details).forEach(key => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${Array.isArray(value) ? value.join(`
-`) : value}`;
-  });
-  return string;
-};
-
-const getPrecision = number => {
-  if (Math.floor(number) === number) return 0;
-  const [, decimals] = number.toString().split(".");
-  return decimals.length || 0;
-};
-const setRoundedPrecision = (number, {
-  decimals = 1,
-  decimalsWhenSmall = decimals
-} = {}) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round
-  });
-};
-
-const setDecimalsPrecision = (number, {
-  transform,
-  decimals,
-  // max decimals for number in [-Infinity, -1[]1, Infinity]
-  decimalsWhenSmall // max decimals for number in [-1,1]
-
-} = {}) => {
-  if (number === 0) {
-    return 0;
-  }
-
-  let numberCandidate = Math.abs(number);
-
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-}; // https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const msAsEllapsedTime = ms => {
-  if (ms < 1000) {
-    return "0 second";
-  }
-
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
-
-  if (!remaining) {
-    return formatEllapsedUnit(primary);
-  }
-
-  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
-};
-
-const formatEllapsedUnit = unit => {
-  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
-  }
-
-  return `${count} ${unit.name}s`;
-};
-
-const msAsDuration = ms => {
-  // ignore ms below meaningfulMs so that:
-  // msAsDuration(0.5) -> "0 second"
-  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return "0 second";
-  }
-
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
-
-  if (!remaining) {
-    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
-  }
-
-  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(remaining, 0)}`;
-};
-
-const formatDurationUnit = (unit, decimals) => {
-  const count = setRoundedPrecision(unit.count, {
-    decimals
-  });
-
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
-  }
-
-  return `${count} ${unit.name}s`;
-};
-
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000
-};
-
-const parseMs = ms => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex(unitName => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-
-    return false;
-  });
-
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount
-      }
-    };
-  }
-
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName]; // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount
-      }
-    };
-  } // - 1 year and 1 month is great
-
-
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount
-    },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount
-    }
-  };
-};
-
-const byteAsFileSize = metricValue => {
-  return formatBytes(metricValue);
-};
-const byteAsMemoryUsage = metricValue => {
-  return formatBytes(metricValue, {
-    fixedDecimals: true
-  });
-};
-
-const formatBytes = (number, {
-  fixedDecimals = false
-} = {}) => {
-  if (number === 0) {
-    return `0 B`;
-  }
-
-  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
-  const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
-  const decimals = unitName === "B" ? 0 : 1;
-  const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals
-  });
-
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
-  }
-
-  return `${unitNumberRounded} ${unitName}`;
-};
-
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-const distributePercentages = (namedNumbers, {
-  maxPrecisionHint = 2
-} = {}) => {
-  const numberNames = Object.keys(namedNumbers);
-
-  if (numberNames.length === 0) {
-    return {};
-  }
-
-  if (numberNames.length === 1) {
-    const firstNumberName = numberNames[0];
-    return {
-      [firstNumberName]: "100 %"
-    };
-  }
-
-  const numbers = numberNames.map(name => namedNumbers[name]);
-  const total = numbers.reduce((sum, value) => sum + value, 0);
-  const ratios = numbers.map(number => number / total);
-  const percentages = {};
-  ratios.pop();
-  ratios.forEach((ratio, index) => {
-    const percentage = ratio * 100;
-    percentages[numberNames[index]] = percentage;
-  });
-  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
-  let precision = 0;
-  Object.keys(percentages).forEach(name => {
-    const percentage = percentages[name];
-
-    if (percentage < lowestPercentage) {
-      // check the amout of meaningful decimals
-      // and that what we will use
-      const percentageRounded = setRoundedPrecision(percentage);
-      const percentagePrecision = getPrecision(percentageRounded);
-
-      if (percentagePrecision > precision) {
-        precision = percentagePrecision;
-      }
-    }
-  });
-  let remainingPercentage = 100;
-  Object.keys(percentages).forEach(name => {
-    const percentage = percentages[name];
-    const percentageAllocated = setRoundedPrecision(percentage, {
-      decimals: precision
-    });
-    remainingPercentage -= percentageAllocated;
-    percentages[name] = percentageAllocated;
-  });
-  const lastName = numberNames[numberNames.length - 1];
-  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
-    decimals: precision
-  });
-  return percentages;
-};
-
-/*
- *
- */
-// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
-// the problem with listening data on stdout
-// is that node.js will later throw error if stream gets closed
-// while something listening data on it
-const spyStreamOutput = stream => {
-  const originalWrite = stream.write;
-  let output = "";
-  let installed = true;
-
-  stream.write = function (...args
-  /* chunk, encoding, callback */
-  ) {
-    output += args;
-    return originalWrite.call(stream, ...args);
-  };
-
-  const uninstall = () => {
-    if (!installed) {
-      return;
-    }
-
-    stream.write = originalWrite;
-    installed = false;
-  };
-
-  return () => {
-    uninstall();
-    return output;
-  };
-};
-
-/*
- * see also https://github.com/vadimdemedes/ink
- */
-const createLog = ({
-  stream = process.stdout,
-  newLine = "after"
-} = {}) => {
-  const {
-    columns = 80,
-    rows = 24
-  } = stream;
-  let lastOutput = "";
-  let clearAttemptResult;
-  let streamOutputSpy = noopStreamSpy;
-
-  const getErasePreviousOutput = () => {
-    // nothing to clear
-    if (!lastOutput) {
-      return "";
-    }
-
-    if (clearAttemptResult !== undefined) {
-      return "";
-    }
-
-    const logLines = lastOutput.split(/\r\n|\r|\n/);
-    let visualLineCount = 0;
-    logLines.forEach(logLine => {
-      const width = stringWidth(logLine);
-      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
-    });
-
-    if (visualLineCount > rows) {
-      // the whole log cannot be cleared because it's vertically to long
-      // (longer than terminal height)
-      // readline.moveCursor cannot move cursor higher than screen height
-      // it means we would only clear the visible part of the log
-      // better keep the log untouched
-      clearAttemptResult = false;
-      return "";
-    }
-
-    clearAttemptResult = true;
-    return ansiEscapes.eraseLines(visualLineCount);
-  };
-
-  const spyStream = () => {
-    if (stream === process.stdout) {
-      const stdoutSpy = spyStreamOutput(process.stdout);
-      const stderrSpy = spyStreamOutput(process.stderr);
-      return () => {
-        return stdoutSpy() + stderrSpy();
-      };
-    }
-
-    return spyStreamOutput(stream);
-  };
-
-  const doWrite = string => {
-    string = addNewLines(string, newLine);
-    stream.write(string);
-    lastOutput = string;
-    clearAttemptResult = undefined; // We don't want to clear logs written by other code,
-    // it makes output unreadable and might erase precious information
-    // To detect this we put a spy on the stream.
-    // The spy is required only if we actually wrote something in the stream
-    // otherwise tryToClear() won't do a thing so spy is useless
-
-    streamOutputSpy = string ? spyStream() : noopStreamSpy;
-  };
-
-  const write = (string, outputFromOutside = streamOutputSpy()) => {
-    if (!lastOutput) {
-      doWrite(string);
-      return;
-    }
-
-    if (outputFromOutside) {
-      // something else than this code has written in the stream
-      // so we just write without clearing (append instead of replacing)
-      doWrite(string);
-    } else {
-      doWrite(`${getErasePreviousOutput()}${string}`);
-    }
-  };
-
-  const dynamicWrite = callback => {
-    const outputFromOutside = streamOutputSpy();
-    const string = callback({
-      outputFromOutside
-    });
-    return write(string, outputFromOutside);
-  };
-
-  const destroy = () => {
-    if (streamOutputSpy) {
-      streamOutputSpy(); // this uninstalls the spy
-
-      streamOutputSpy = null;
-      lastOutput = "";
-    }
-  };
-
-  return {
-    write,
-    dynamicWrite,
-    destroy
-  };
-};
-
-const noopStreamSpy = () => ""; // could be inlined but vscode do not correctly
-// expand/collapse template strings, so I put it at the bottom
-
-
-const addNewLines = (string, newLine) => {
-  if (newLine === "before") {
-    return `
-${string}`;
-  }
-
-  if (newLine === "after") {
-    return `${string}
-`;
-  }
-
-  if (newLine === "around") {
-    return `
-${string}
-`;
-  }
-
-  return string;
-};
-
-const startSpinner = ({
-  log,
-  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-  fps = 20,
-  keepProcessAlive = false,
-  stopOnWriteFromOutside = true,
-  text = "",
-  update = text => text,
-  effect = () => {}
-}) => {
-  let frameIndex = 0;
-  let interval;
-  const spinner = {
-    text
-  };
-
-  const render = () => {
-    spinner.text = update(spinner.text);
-    return `${frames[frameIndex]} ${spinner.text}`;
-  };
-
-  const cleanup = effect() || (() => {});
-
-  log.write(render());
-
-  if (process.stdout.isTTY) {
-    interval = setInterval(() => {
-      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      log.dynamicWrite(({
-        outputFromOutside
-      }) => {
-        if (outputFromOutside && stopOnWriteFromOutside) {
-          stop();
-          return "";
-        }
-
-        return render();
-      });
-    }, 1000 / fps);
-
-    if (!keepProcessAlive) {
-      interval.unref();
-    }
-  }
-
-  const stop = text => {
-    if (text) log.write(text);
-    cleanup();
-    clearInterval(interval);
-    interval = null;
-    log = null;
-  };
-
-  spinner.stop = stop;
-  return spinner;
-};
-
-const createTaskLog = (label, {
-  disabled = false,
-  stopOnWriteFromOutside
-} = {}) => {
-  if (disabled) {
-    return {
-      setRightText: () => {},
-      done: () => {},
-      happen: () => {},
-      fail: () => {}
-    };
-  }
-
-  const startMs = Date.now();
-  const taskSpinner = startSpinner({
-    log: createLog(),
-    text: label,
-    stopOnWriteFromOutside
-  });
-  return {
-    setRightText: value => {
-      taskSpinner.text = `${label} ${value}`;
-    },
-    done: () => {
-      const msEllapsed = Date.now() - startMs;
-      taskSpinner.stop(`${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`);
-    },
-    happen: message => {
-      taskSpinner.stop(`${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`);
-    },
-    fail: (message = `failed to ${label}`) => {
-      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
-    }
-  };
 };
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
@@ -6618,6 +10785,10 @@ const jsenvPluginUrlAnalysis = ({
     name: "jsenv:url_analysis",
     appliesDuring: "*",
     redirectUrl: reference => {
+      if (reference.shouldHandle !== undefined) {
+        return;
+      }
+
       if (reference.specifier[0] === "#" && // For Html, css and in general "#" refer to a ressource in the page
       // so that urls must be kept intact
       // However for js import specifiers they have a different meaning and we want
@@ -9097,199 +13268,6 @@ const jsenvPluginUrlVersion = () => {
   };
 };
 
-const mediaTypeInfos = {
-  "application/json": {
-    extensions: ["json"],
-    isTextual: true
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"],
-    isTextual: true
-  },
-  "application/manifest+json": {
-    extensions: ["webmanifest"],
-    isTextual: true
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"]
-  },
-  "application/xml": {
-    extensions: ["xml"]
-  },
-  "application/x-gzip": {
-    extensions: ["gz"]
-  },
-  "application/wasm": {
-    extensions: ["wasm"]
-  },
-  "application/zip": {
-    extensions: ["zip"]
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"]
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"]
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"]
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"]
-  },
-  "audio/webm": {
-    extensions: ["weba"]
-  },
-  "audio/x-wav": {
-    extensions: ["wav"]
-  },
-  "font/ttf": {
-    extensions: ["ttf"]
-  },
-  "font/woff": {
-    extensions: ["woff"]
-  },
-  "font/woff2": {
-    extensions: ["woff2"]
-  },
-  "image/png": {
-    extensions: ["png"]
-  },
-  "image/gif": {
-    extensions: ["gif"]
-  },
-  "image/jpeg": {
-    extensions: ["jpg"]
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"],
-    isTextual: true
-  },
-  "text/plain": {
-    extensions: ["txt"]
-  },
-  "text/html": {
-    extensions: ["html"]
-  },
-  "text/css": {
-    extensions: ["css"]
-  },
-  "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
-  },
-  "text/x-sass": {
-    extensions: ["sass"]
-  },
-  "text/x-scss": {
-    extensions: ["scss"]
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"]
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"]
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
-  },
-  "video/ogg": {
-    extensions: ["ogv"]
-  },
-  "video/webm": {
-    extensions: ["webm"]
-  }
-};
-
-const CONTENT_TYPE = {
-  parse: string => {
-    const [mediaType, charset] = string.split(";");
-    return {
-      mediaType: normalizeMediaType(mediaType),
-      charset
-    };
-  },
-  stringify: ({
-    mediaType,
-    charset
-  }) => {
-    if (charset) {
-      return `${mediaType};${charset}`;
-    }
-
-    return mediaType;
-  },
-  asMediaType: value => {
-    if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
-    }
-
-    if (typeof value === "object") {
-      return value.mediaType;
-    }
-
-    return null;
-  },
-  isJson: value => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    return mediaType === "application/json" || /^application\/\w+\+json$/.test(mediaType);
-  },
-  isTextual: value => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-
-    if (mediaType.startsWith("text/")) {
-      return true;
-    }
-
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-
-    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
-      return true;
-    } // catch things like application/manifest+json, application/importmap+json
-
-
-    if (/^application\/\w+\+json$/.test(mediaType)) {
-      return true;
-    }
-
-    return false;
-  },
-  isBinary: value => !CONTENT_TYPE.isTextual(value),
-  asFileExtension: value => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
-  },
-  fromUrlExtension: url => {
-    const {
-      pathname
-    } = new URL(url);
-    const extensionWithDot = extname(pathname);
-
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-
-    const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find(mediaType => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension);
-    });
-    return mediaTypeFound || "application/octet-stream";
-  }
-};
-
-const normalizeMediaType = value => {
-  if (value === "text/javascript") {
-    return "text/javascript";
-  }
-
-  return value;
-};
-
 const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -9346,6 +13324,12 @@ const jsenvPluginFileUrls = ({
       }
 
       if (foundADirectory && directoryReferenceAllowed) {
+        if ( // ignore new URL second arg
+        reference.subtype === "new_url_second_arg" || // ignore root file url
+        reference.url === "file:///") {
+          reference.shouldHandle = false;
+        }
+
         reference.data.foundADirectory = true;
         const directoryFacadeUrl = urlObject.href;
         const directoryUrlRaw = preserveSymlinks ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
@@ -21399,7 +25383,6 @@ build ${entryPointKeys.length} entry points`);
     const prebuildTask = createTaskLog("prebuild", {
       disabled: infoLogsAreDisabled
     });
-    let urlCount = 0;
     const prebuildRedirections = new Map();
     const rawGraphKitchen = createKitchen({
       signal,
@@ -21412,15 +25395,6 @@ build ${entryPointKeys.length} entry points`);
       runtimeCompat,
       writeGeneratedFiles,
       plugins: [...plugins, {
-        name: "jsenv:build_log",
-        appliesDuring: {
-          build: true
-        },
-        cooked: () => {
-          urlCount++;
-          prebuildTask.setRightText(urlCount);
-        }
-      }, {
         appliesDuring: "build",
         fetchUrlContent: (urlInfo, context) => {
           if (context.reference.original) {

@@ -58,6 +58,14 @@ export const jsenvPluginFileUrls = ({
           urlObject.pathname = pathname.slice(0, -1)
         }
         if (foundADirectory && directoryReferenceAllowed) {
+          if (
+            // ignore new URL second arg
+            reference.subtype === "new_url_second_arg" ||
+            // ignore root file url
+            reference.url === "file:///"
+          ) {
+            reference.shouldHandle = false
+          }
           reference.data.foundADirectory = true
           const directoryFacadeUrl = urlObject.href
           const directoryUrlRaw = preserveSymlinks

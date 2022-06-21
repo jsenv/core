@@ -32,6 +32,7 @@ await build({
       "**/node_modules/@jsenv/integrity/": true,
       "**/node_modules/@jsenv/log/": true,
       "**/node_modules/@jsenv/node-esm-resolution/": true,
+      "**/node_modules/@jsenv/server/": true,
       "**/node_modules/@jsenv/sourcemap/": true,
       "**/node_modules/@jsenv/uneval/": true,
       "**/node_modules/@jsenv/url-meta/": true,

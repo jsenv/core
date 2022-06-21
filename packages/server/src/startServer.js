@@ -7,6 +7,7 @@ import {
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 
+import { memoize } from "./internal/memoize.js" // we could take it from @jsenv/utils/src/memoize/memoize.js
 import { createPolyglotServer } from "./internal/server-polyglot.js"
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js"
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js"
@@ -25,7 +26,6 @@ import { listen, stopListening } from "./internal/listen.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { listenRequest } from "./internal/listenRequest.js"
 import { listenServerConnectionError } from "./internal/listenServerConnectionError.js"
-import { memoize } from "./internal/memoize.js"
 import { applyDefaultErrorToResponse } from "./error_to_response_default.js"
 import {
   STOP_REASON_INTERNAL_ERROR,
