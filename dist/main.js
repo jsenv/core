@@ -1580,15 +1580,15 @@ const SIGINT_CALLBACK = {
   }
 };
 
-const memoize$1 = compute => {
+const memoize = compute => {
   let memoized = false;
   let memoizedValue;
 
   const fnWithMemoization = (...args) => {
     if (memoized) {
       return memoizedValue;
-    } // if compute is recursive wait for it to be fully done before storing the value
-    // so set memoized boolean after the call
+    } // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
 
 
     memoizedValue = compute(...args);
@@ -3481,7 +3481,7 @@ const startServer = async ({
   const stoppedPromise = new Promise(resolve => {
     stoppedResolve = resolve;
   });
-  const stop = memoize$1(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+  const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "stopping";
     await Promise.all(stopCallbackList.notify({
       reason
@@ -21417,32 +21417,6 @@ const executeTestPlan = async ({
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage
   };
-};
-
-const memoize = compute => {
-  let memoized = false;
-  let memoizedValue;
-
-  const fnWithMemoization = (...args) => {
-    if (memoized) {
-      return memoizedValue;
-    } // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-
-    memoizedValue = compute(...args);
-    memoized = true;
-    return memoizedValue;
-  };
-
-  fnWithMemoization.forget = () => {
-    const value = memoizedValue;
-    memoized = false;
-    memoizedValue = undefined;
-    return value;
-  };
-
-  return fnWithMemoization;
 };
 
 const escapeChars = (string, replacements) => {

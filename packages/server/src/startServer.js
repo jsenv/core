@@ -6,8 +6,8 @@ import {
   raceProcessTeardownEvents,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
-import { memoize } from "./internal/memoize.js" // we could take it from @jsenv/utils/src/memoize/memoize.js
 import { createPolyglotServer } from "./internal/server-polyglot.js"
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js"
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js"

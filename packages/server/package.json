@@ -34,10 +34,10 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/abort": "4.2.2",
-    "@jsenv/log": "2.0.0",
+    "@jsenv/abort": "4.2.3",
+    "@jsenv/log": "2.0.1",
     "@jsenv/url-meta": "7.0.0",
-    "@jsenv/utils": "2.0.0"
+    "@jsenv/utils": "2.0.1"
   },
   "devDependencies": {
     "@jsenv/fetch": "../fetch/",
