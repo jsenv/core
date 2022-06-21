@@ -142,7 +142,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href
   const server = await startServer({
     requestToResponse: async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, 2000)
+        setTimeout(resolve, 2000).unref()
       })
     },
     logLevel: "warn",
