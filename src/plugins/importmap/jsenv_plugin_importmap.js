@@ -106,7 +106,7 @@ export const jsenvPluginImportmap = () => {
           onHtmlImportmapParsed(null, htmlUrlInfo.url)
           return null
         }
-        const handleInlineImportmap = async (importmap, textNode) => {
+        const handleInlineImportmap = async (importmap, htmlNodeText) => {
           const { line, column, lineEnd, columnEnd, isOriginal } =
             getHtmlNodePosition(importmap, {
               preferOriginal: true,
@@ -127,7 +127,7 @@ export const jsenvPluginImportmap = () => {
               specifierColumn: column,
               specifier: inlineImportmapUrl,
               contentType: "application/importmap+json",
-              content: textNode.value,
+              content: htmlNodeText,
             })
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference,

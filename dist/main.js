@@ -9899,7 +9899,7 @@ const jsenvPluginImportmap = () => {
           return null;
         }
 
-        const handleInlineImportmap = async (importmap, textNode) => {
+        const handleInlineImportmap = async (importmap, htmlNodeText) => {
           const {
             line,
             column,
@@ -9924,7 +9924,7 @@ const jsenvPluginImportmap = () => {
             specifierColumn: column,
             specifier: inlineImportmapUrl,
             contentType: "application/importmap+json",
-            content: textNode.value
+            content: htmlNodeText
           });
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference
@@ -16724,8 +16724,9 @@ const getCorePlugins = ({
     rootDirectoryUrl,
     ...urlAnalysis
   }), jsenvPluginTranspilation(transpilation), ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
+  jsenvPluginImportmap(), // before node esm to handle bare specifiers
+  // + before node esm to handle importmap before inline content
   jsenvPluginInline(), // before "file urls" to resolve and load inline urls
-  jsenvPluginImportmap(), // before node esm to handle bare specifiers before node esm
   jsenvPluginFileUrls({
     directoryReferenceAllowed,
     ...fileSystemMagicResolution
