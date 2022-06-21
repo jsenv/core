@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url"
-import { injectImport } from "@jsenv/ast"
+import { injectJsImport } from "@jsenv/ast"
 import {
   getBabelHelperFileUrl,
   babelHelperNameFromUrl,
@@ -36,7 +36,7 @@ export const babelPluginBabelHelpersAsJsenvImports = (
           return undefined
         }
         const babelHelperImportSpecifier = getBabelHelperFileUrl(name)
-        const helper = injectImport({
+        const helper = injectJsImport({
           programPath: file.path,
           from: getImportSpecifier(babelHelperImportSpecifier),
           nameHint: `_${name}`,

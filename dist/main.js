@@ -6,7 +6,7 @@ import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { URL_META } from "@jsenv/url-meta";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
@@ -4014,7 +4014,7 @@ const babelPluginBabelHelpersAsJsenvImports = (babel, {
         }
 
         const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
-        const helper = injectImport({
+        const helper = injectJsImport({
           programPath: file.path,
           from: getImportSpecifier(babelHelperImportSpecifier),
           nameHint: `_${name}`,
@@ -4117,7 +4117,7 @@ const babelPluginNewStylesheetAsJsenvImport = (babel, {
         });
 
         if (usesNewStylesheet) {
-          injectImport({
+          injectJsImport({
             programPath,
             from: getImportSpecifier(newStylesheetClientFileUrl),
             sideEffect: true
@@ -4182,7 +4182,7 @@ const babelPluginGlobalThisAsJsenvImport = (babel, {
         } = path; // we should do this once, tree shaking will remote it but still
 
         if (node.name === "globalThis") {
-          injectImport({
+          injectJsImport({
             programPath: path.scope.getProgramParent().path,
             from: getImportSpecifier(globalThisClientFileUrl),
             sideEffect: true
@@ -4216,7 +4216,7 @@ const babelPluginRegeneratorRuntimeAsJsenvImport = (babel, {
         } = path;
 
         if (node.name === "regeneratorRuntime") {
-          injectImport({
+          injectJsImport({
             programPath: path.scope.getProgramParent().path,
             from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
             sideEffect: true
