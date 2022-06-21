@@ -9,10 +9,10 @@ import {
   parseHtmlString,
   visitHtmlNodes,
   getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
   removeHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/ast"
-import { setHtmlNodeAttributes } from "@jsenv/core/packages/ast/src/main.js"
 
 import { GRAPH } from "./graph_utils.js"
 

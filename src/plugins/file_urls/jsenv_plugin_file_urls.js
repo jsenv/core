@@ -15,7 +15,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 export const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
-  preserveSymlinks = true,
+  preserveSymlinks = false,
   directoryReferenceAllowed = false,
 }) => {
   return [

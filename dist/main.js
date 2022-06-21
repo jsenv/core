@@ -6,7 +6,7 @@ import { urlToRelativeUrl, generateInlineContentUrl, ensurePathnameTrailingSlash
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { URL_META } from "@jsenv/url-meta";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes as setHtmlNodeAttributes$1, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { resolveImport, normalizeImportMap, composeTwoImportMaps } from "@jsenv/importmap";
 import { applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, applyFileSystemMagicResolution, getExtensionsToTry } from "@jsenv/node-esm-resolution";
@@ -30,8 +30,6 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
 import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js";
-import "parse5";
-import "acorn-walk";
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
@@ -131,7 +129,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         integrity
       });
       actions.push(async () => {
-        setHtmlNodeAttributes$1(node, {
+        setHtmlNodeAttributes(node, {
           [attributeName]: await referenceUtils.readGeneratedSpecifier(reference)
         });
       });
@@ -773,7 +771,7 @@ const jsenvPluginImportmap = () => {
             reference: inlineImportmapReference
           });
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
-          setHtmlNodeAttributes$1(importmap, {
+          setHtmlNodeAttributes(importmap, {
             "generated-by": "jsenv:importmap"
           });
           onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), htmlUrlInfo.url);
@@ -792,7 +790,7 @@ const jsenvPluginImportmap = () => {
           });
           onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), htmlUrlInfo.url);
           setHtmlNodeText(importmap, importmapUrlInfo.content);
-          setHtmlNodeAttributes$1(importmap, {
+          setHtmlNodeAttributes(importmap, {
             "src": undefined,
             "generated-by": "jsenv:importmap",
             "generated-from-src": src
@@ -1081,7 +1079,7 @@ const jsenvPluginUrlVersion = () => {
 const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
-  preserveSymlinks = true,
+  preserveSymlinks = false,
   directoryReferenceAllowed = false
 }) => {
   return [{
@@ -1316,7 +1314,7 @@ const jsenvPluginHtmlInlineContent = ({
               reference: inlineStyleReference
             });
             setHtmlNodeText(node, inlineStyleUrlInfo.content);
-            setHtmlNodeAttributes$1(node, {
+            setHtmlNodeAttributes(node, {
               "generated-by": "jsenv:html_inline_content"
             });
           });
@@ -1392,7 +1390,7 @@ const jsenvPluginHtmlInlineContent = ({
               reference: inlineScriptReference
             });
             setHtmlNodeText(node, inlineScriptUrlInfo.content);
-            setHtmlNodeAttributes$1(node, {
+            setHtmlNodeAttributes(node, {
               "generated-by": "jsenv:html_inline_content"
             });
           });
@@ -1991,7 +1989,7 @@ const jsenvPluginHtmlSupervisor = ({
           const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
           const defer = getHtmlNodeAttribute(node, "defer") !== undefined;
           const async = getHtmlNodeAttribute(node, "async") !== undefined;
-          setHtmlNodeAttributes$1(node, {
+          setHtmlNodeAttributes(node, {
             src: undefined
           });
           scriptsToSupervise.push({
@@ -2086,7 +2084,7 @@ const jsenvPluginHtmlSupervisor = ({
             crossorigin,
             htmlSupervisorInstallerSpecifier: htmlSupervisorInstallerFileReference.generatedSpecifier
           }));
-          setHtmlNodeAttributes$1(node, {
+          setHtmlNodeAttributes(node, {
             "generated-by": "jsenv:html_supervisor",
             ...(src ? {
               "generated-from-src": src
@@ -2821,7 +2819,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 const [newReference] = await getReferenceAsJsClassic(reference, {
                   cookIt: true
                 });
-                setHtmlNodeAttributes$1(moduleScriptNode, {
+                setHtmlNodeAttributes(moduleScriptNode, {
                   type: undefined,
                   src: newReference.generatedSpecifier
                 });
@@ -2869,7 +2867,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 cookIt: true
               });
               setHtmlNodeText(moduleScriptNode, newUrlInfo.content);
-              setHtmlNodeAttributes$1(moduleScriptNode, {
+              setHtmlNodeAttributes(moduleScriptNode, {
                 "type": undefined,
                 "generated-by": "jsenv:as_js_classic_html"
               });
@@ -2894,7 +2892,7 @@ const jsenvPluginAsJsClassicHtml = ({
                   [newReference] = await getReferenceAsJsClassic(reference);
                 }
 
-                setHtmlNodeAttributes$1(preloadAsScriptNode, {
+                setHtmlNodeAttributes(preloadAsScriptNode, {
                   href: newReference.generatedSpecifier,
                   crossorigin: undefined
                 });
@@ -2913,7 +2911,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 [newReference] = await getReferenceAsJsClassic(reference);
               }
 
-              setHtmlNodeAttributes$1(modulePreloadNode, {
+              setHtmlNodeAttributes(modulePreloadNode, {
                 rel: "preload",
                 as: "script",
                 href: newReference.generatedSpecifier
@@ -7783,6 +7781,8 @@ const memoizeCook = cook => {
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.shouldHandle) {
     urlInfo.shouldHandle = true;
+  } else {
+    urlInfo.shouldHandle = false;
   }
 
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
@@ -12448,56 +12448,6 @@ const generateClientCode = serviceWorkerUrls => {
 self.serviceWorkerUrls = ${JSON.stringify(serviceWorkerUrls, null, "  ")};
 `;
 };
-
-const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
-  if (typeof attributesToAssign !== "object") {
-    throw new TypeError(`attributesToAssign must be an object`);
-  }
-
-  const {
-    attrs
-  } = htmlNode;
-  if (!attrs) return;
-  Object.keys(attributesToAssign).forEach(key => {
-    const existingAttributeIndex = attrs.findIndex(({
-      name
-    }) => name === key);
-    const value = attributesToAssign[key]; // remove no-op
-
-    if (existingAttributeIndex === -1 && value === undefined) {
-      return;
-    } // add
-
-
-    if (existingAttributeIndex === -1 && value !== undefined) {
-      attrs.push({
-        name: key,
-        value
-      });
-      return;
-    } // remove
-
-
-    if (value === undefined) {
-      attrs.splice(existingAttributeIndex, 1);
-      return;
-    } // update
-
-
-    attrs[existingAttributeIndex].value = value;
-  });
-};
-
-// info a file:// url
-// for instance http://example.com/dir/file.js
-// must becomes file:///dir/file.js
-// but in windows it must be file://C:/dir/file.js
-
-process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///";
-
-createRequire(import.meta.url);
-
-createRequire(import.meta.url);
 
 /*
  * Update <link rel="preload"> and friends after build (once we know everything)

@@ -712,6 +712,8 @@ const memoizeCook = (cook) => {
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.shouldHandle) {
     urlInfo.shouldHandle = true
+  } else {
+    urlInfo.shouldHandle = false
   }
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url
 
