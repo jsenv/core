@@ -92,7 +92,7 @@
     "@jsenv/abort": "4.2.2",
     "@jsenv/assert": "2.5.4",
     "@jsenv/filesystem": "4.0.9",
-    "@jsenv/importmap": "1.2.0",
+    "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/node-esm-resolution": "0.1.0",
     "@jsenv/server": "12.7.1",

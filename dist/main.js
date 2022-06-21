@@ -1,6 +1,9 @@
 import { createSSERoom, timeStart, fetchFileSystem, composeTwoResponses, serveDirectory, startServer, pluginCORS, jsenvAccessControlAllowedHeaders, pluginServerTiming, pluginRequestWaitingCheck, composeServices, findFreePort } from "@jsenv/server";
 import { registerFileLifecycle, readFileSync as readFileSync$1, bufferToEtag, writeFileSync, ensureWindowsDriveLetter, collectFiles, assertAndNormalizeDirectoryUrl, registerDirectoryLifecycle, writeFile, readFile, readDirectory, ensureEmptyDirectory, writeDirectory } from "@jsenv/filesystem";
-import { createDetailedMessage as createDetailedMessage$1, createLogger, createTaskLog, loggerToLevels, byteAsFileSize, ANSI, msAsDuration, msAsEllapsedTime, byteAsMemoryUsage, UNICODE, createLog, startSpinner, distributePercentages } from "@jsenv/log";
+import { createSupportsColor } from "supports-color";
+import isUnicodeSupported from "is-unicode-supported";
+import stringWidth from "string-width";
+import ansiEscapes from "ansi-escapes";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { workerData, Worker } from "node:worker_threads";
 import { parse, serialize, parseFragment } from "parse5";
@@ -8,7 +11,6 @@ import { p as parseSrcSet } from "./js/html_src_set.js";
 import { createRequire } from "node:module";
 import { ancestor } from "acorn-walk";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { createDetailedMessage } from "@jsenv/logger";
 import { existsSync, readFileSync, statSync, realpathSync, readdirSync } from "node:fs";
 import { extname } from "node:path";
 import babelParser from "@babel/parser";
@@ -21,7 +23,7 @@ import cuid from "cuid";
 import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
 import { fork } from "node:child_process";
-import { uneval } from "@jsenv/uneval";
+import { u as uneval } from "./js/uneval.js";
 
 /*
  * See callback_race.md
@@ -554,6 +556,725 @@ const SIGINT_CALLBACK = {
       process.removeListener("SIGINT", cb);
     };
   }
+};
+
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({
+  logLevel = LOG_LEVEL_INFO
+} = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      debug,
+      info,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      debug: debugDisabled,
+      info,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled
+    };
+  }
+
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+const disabledMethods = {
+  debug: debugDisabled,
+  info: infoDisabled,
+  warn: warnDisabled,
+  error: errorDisabled
+};
+const loggerIsMethodEnabled = (logger, methodName) => {
+  return logger[methodName] !== disabledMethods[methodName];
+};
+const loggerToLevels = logger => {
+  return {
+    debug: loggerIsMethodEnabled(logger, "debug"),
+    info: loggerIsMethodEnabled(logger, "info"),
+    warn: loggerIsMethodEnabled(logger, "warn"),
+    error: loggerIsMethodEnabled(logger, "error")
+  };
+};
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+let canUseColors = processSupportsBasicColor; // GitHub workflow does support ANSI but "supports-color" returns false
+// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+
+if (process.env.GITHUB_WORKFLOW) {
+  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+  if (process.env.FORCE_COLOR !== "false") {
+    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+    // that colors are not supported. Let it have priority
+    canUseColors = true;
+  }
+} // https://github.com/Marak/colors.js/blob/master/lib/styles.js
+
+
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[33m";
+const BLUE = "\x1b[34m";
+const MAGENTA = "\x1b[35m";
+const GREY = "\x1b[90m";
+const RESET = "\x1b[0m";
+const setANSIColor = canUseColors ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}` : text => text;
+const ANSI = {
+  supported: canUseColors,
+  RED,
+  GREEN,
+  YELLOW,
+  BLUE,
+  MAGENTA,
+  GREY,
+  RESET,
+  color: setANSIColor
+};
+
+// see also https://github.com/sindresorhus/figures
+const canUseUnicode = isUnicodeSupported();
+const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
+const OK_RAW = canUseUnicode ? `✔` : `√`;
+const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
+const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
+const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
+const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+
+const OK = ANSI.color(OK_RAW, ANSI.GREEN);
+const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
+const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
+const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
+const UNICODE = {
+  COMMAND,
+  OK,
+  FAILURE,
+  INFO,
+  WARNING,
+  COMMAND_RAW,
+  OK_RAW,
+  FAILURE_RAW,
+  INFO_RAW,
+  WARNING_RAW,
+  supported: canUseUnicode
+};
+
+const createDetailedMessage$1 = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${Array.isArray(value) ? value.join(`
+`) : value}`;
+  });
+  return string;
+};
+
+const getPrecision = number => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
+const setRoundedPrecision = (number, {
+  decimals = 1,
+  decimalsWhenSmall = decimals
+} = {}) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round
+  });
+};
+
+const setDecimalsPrecision = (number, {
+  transform,
+  decimals,
+  // max decimals for number in [-Infinity, -1[]1, Infinity]
+  decimalsWhenSmall // max decimals for number in [-1,1]
+
+} = {}) => {
+  if (number === 0) {
+    return 0;
+  }
+
+  let numberCandidate = Math.abs(number);
+
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+}; // https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const msAsEllapsedTime = ms => {
+  if (ms < 1000) {
+    return "0 second";
+  }
+
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+
+  if (!remaining) {
+    return formatEllapsedUnit(primary);
+  }
+
+  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
+};
+
+const formatEllapsedUnit = unit => {
+  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`;
+  }
+
+  return `${count} ${unit.name}s`;
+};
+
+const msAsDuration = ms => {
+  // ignore ms below meaningfulMs so that:
+  // msAsDuration(0.5) -> "0 second"
+  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return "0 second";
+  }
+
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+
+  if (!remaining) {
+    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
+  }
+
+  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(remaining, 0)}`;
+};
+
+const formatDurationUnit = (unit, decimals) => {
+  const count = setRoundedPrecision(unit.count, {
+    decimals
+  });
+
+  if (count <= 1) {
+    return `${count} ${unit.name}`;
+  }
+
+  return `${count} ${unit.name}s`;
+};
+
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000
+};
+
+const parseMs = ms => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex(unitName => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+
+    return false;
+  });
+
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  }
+
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName]; // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  } // - 1 year and 1 month is great
+
+
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount
+    }
+  };
+};
+
+const byteAsFileSize = metricValue => {
+  return formatBytes(metricValue);
+};
+const byteAsMemoryUsage = metricValue => {
+  return formatBytes(metricValue, {
+    fixedDecimals: true
+  });
+};
+
+const formatBytes = (number, {
+  fixedDecimals = false
+} = {}) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+
+  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  const decimals = unitName === "B" ? 0 : 1;
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals
+  });
+
+  if (fixedDecimals) {
+    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  }
+
+  return `${unitNumberRounded} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const distributePercentages = (namedNumbers, {
+  maxPrecisionHint = 2
+} = {}) => {
+  const numberNames = Object.keys(namedNumbers);
+
+  if (numberNames.length === 0) {
+    return {};
+  }
+
+  if (numberNames.length === 1) {
+    const firstNumberName = numberNames[0];
+    return {
+      [firstNumberName]: "100 %"
+    };
+  }
+
+  const numbers = numberNames.map(name => namedNumbers[name]);
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const ratios = numbers.map(number => number / total);
+  const percentages = {};
+  ratios.pop();
+  ratios.forEach((ratio, index) => {
+    const percentage = ratio * 100;
+    percentages[numberNames[index]] = percentage;
+  });
+  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
+  let precision = 0;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+
+    if (percentage < lowestPercentage) {
+      // check the amout of meaningful decimals
+      // and that what we will use
+      const percentageRounded = setRoundedPrecision(percentage);
+      const percentagePrecision = getPrecision(percentageRounded);
+
+      if (percentagePrecision > precision) {
+        precision = percentagePrecision;
+      }
+    }
+  });
+  let remainingPercentage = 100;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+    const percentageAllocated = setRoundedPrecision(percentage, {
+      decimals: precision
+    });
+    remainingPercentage -= percentageAllocated;
+    percentages[name] = percentageAllocated;
+  });
+  const lastName = numberNames[numberNames.length - 1];
+  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
+    decimals: precision
+  });
+  return percentages;
+};
+
+/*
+ *
+ */
+// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
+const spyStreamOutput = stream => {
+  const originalWrite = stream.write;
+  let output = "";
+  let installed = true;
+
+  stream.write = function (...args
+  /* chunk, encoding, callback */
+  ) {
+    output += args;
+    return originalWrite.call(stream, ...args);
+  };
+
+  const uninstall = () => {
+    if (!installed) {
+      return;
+    }
+
+    stream.write = originalWrite;
+    installed = false;
+  };
+
+  return () => {
+    uninstall();
+    return output;
+  };
+};
+
+/*
+ * see also https://github.com/vadimdemedes/ink
+ */
+const createLog = ({
+  stream = process.stdout,
+  newLine = "after"
+} = {}) => {
+  const {
+    columns = 80,
+    rows = 24
+  } = stream;
+  let lastOutput = "";
+  let clearAttemptResult;
+  let streamOutputSpy = noopStreamSpy;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    logLines.forEach(logLine => {
+      const width = stringWidth(logLine);
+      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
+    });
+
+    if (visualLineCount > rows) {
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return ansiEscapes.eraseLines(visualLineCount);
+  };
+
+  const spyStream = () => {
+    if (stream === process.stdout) {
+      const stdoutSpy = spyStreamOutput(process.stdout);
+      const stderrSpy = spyStreamOutput(process.stderr);
+      return () => {
+        return stdoutSpy() + stderrSpy();
+      };
+    }
+
+    return spyStreamOutput(stream);
+  };
+
+  const doWrite = string => {
+    string = addNewLines(string, newLine);
+    stream.write(string);
+    lastOutput = string;
+    clearAttemptResult = undefined; // We don't want to clear logs written by other code,
+    // it makes output unreadable and might erase precious information
+    // To detect this we put a spy on the stream.
+    // The spy is required only if we actually wrote something in the stream
+    // otherwise tryToClear() won't do a thing so spy is useless
+
+    streamOutputSpy = string ? spyStream() : noopStreamSpy;
+  };
+
+  const write = (string, outputFromOutside = streamOutputSpy()) => {
+    if (!lastOutput) {
+      doWrite(string);
+      return;
+    }
+
+    if (outputFromOutside) {
+      // something else than this code has written in the stream
+      // so we just write without clearing (append instead of replacing)
+      doWrite(string);
+    } else {
+      doWrite(`${getErasePreviousOutput()}${string}`);
+    }
+  };
+
+  const dynamicWrite = callback => {
+    const outputFromOutside = streamOutputSpy();
+    const string = callback({
+      outputFromOutside
+    });
+    return write(string, outputFromOutside);
+  };
+
+  const destroy = () => {
+    if (streamOutputSpy) {
+      streamOutputSpy(); // this uninstalls the spy
+
+      streamOutputSpy = null;
+      lastOutput = "";
+    }
+  };
+
+  return {
+    write,
+    dynamicWrite,
+    destroy
+  };
+};
+
+const noopStreamSpy = () => ""; // could be inlined but vscode do not correctly
+// expand/collapse template strings, so I put it at the bottom
+
+
+const addNewLines = (string, newLine) => {
+  if (newLine === "before") {
+    return `
+${string}`;
+  }
+
+  if (newLine === "after") {
+    return `${string}
+`;
+  }
+
+  if (newLine === "around") {
+    return `
+${string}
+`;
+  }
+
+  return string;
+};
+
+const startSpinner = ({
+  log,
+  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  fps = 20,
+  keepProcessAlive = false,
+  stopOnWriteFromOutside = true,
+  text = "",
+  update = text => text,
+  effect = () => {}
+}) => {
+  let frameIndex = 0;
+  let interval;
+  const spinner = {
+    text
+  };
+
+  const render = () => {
+    spinner.text = update(spinner.text);
+    return `${frames[frameIndex]} ${spinner.text}`;
+  };
+
+  const cleanup = effect() || (() => {});
+
+  log.write(render());
+
+  if (process.stdout.isTTY) {
+    interval = setInterval(() => {
+      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+      log.dynamicWrite(({
+        outputFromOutside
+      }) => {
+        if (outputFromOutside && stopOnWriteFromOutside) {
+          stop();
+          return "";
+        }
+
+        return render();
+      });
+    }, 1000 / fps);
+
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+  }
+
+  const stop = text => {
+    if (text) log.write(text);
+    cleanup();
+    clearInterval(interval);
+    interval = null;
+    log = null;
+  };
+
+  spinner.stop = stop;
+  return spinner;
+};
+
+const createTaskLog = (label, {
+  disabled = false,
+  stopOnWriteFromOutside
+} = {}) => {
+  if (disabled) {
+    return {
+      setRightText: () => {},
+      done: () => {},
+      happen: () => {},
+      fail: () => {}
+    };
+  }
+
+  const startMs = Date.now();
+  const taskSpinner = startSpinner({
+    log: createLog(),
+    text: label,
+    stopOnWriteFromOutside
+  });
+  return {
+    setRightText: value => {
+      taskSpinner.text = `${label} ${value}`;
+    },
+    done: () => {
+      const msEllapsed = Date.now() - startMs;
+      taskSpinner.stop(`${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`);
+    },
+    happen: message => {
+      taskSpinner.stop(`${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`);
+    },
+    fail: (message = `failed to ${label}`) => {
+      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
+    }
+  };
 };
 
 /*
@@ -4102,6 +4823,19 @@ const jsenvPluginLeadingSlash = () => {
       return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
     }
   };
+};
+
+// duplicated from @jsenv/log to avoid the dependency
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+    --- ${key} ---
+    ${Array.isArray(value) ? value.join(`
+    `) : value}`;
+  });
+  return string;
 };
 
 const assertImportMap = value => {
