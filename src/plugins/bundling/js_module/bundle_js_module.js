@@ -5,7 +5,6 @@ import { isFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/log"
 import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { sourcemapConverter } from "@jsenv/sourcemap"
-import { applyRollupPlugins } from "@jsenv/ast"
 
 import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
 
@@ -52,71 +51,6 @@ export const bundleJsModule = async ({
     babelHelpersChunk,
   })
   return jsModuleBundleUrlInfos
-}
-
-export const buildWithRollup = async ({
-  signal,
-  logger,
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  urlGraph,
-  jsModuleUrlInfos,
-
-  runtimeCompat,
-  sourcemaps,
-
-  include,
-  babelHelpersChunk,
-}) => {
-  const resultRef = { current: null }
-  try {
-    await applyRollupPlugins({
-      rollupPlugins: [
-        rollupPluginJsenv({
-          signal,
-          logger,
-          rootDirectoryUrl,
-          buildDirectoryUrl,
-          urlGraph,
-          jsModuleUrlInfos,
-
-          runtimeCompat,
-          sourcemaps,
-          include,
-          babelHelpersChunk,
-          resultRef,
-        }),
-      ],
-      inputOptions: {
-        input: [],
-        onwarn: (warning) => {
-          if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return
-          }
-          if (
-            warning.code === "THIS_IS_UNDEFINED" &&
-            pathToFileURL(warning.id).href === globalThisClientFileUrl
-          ) {
-            return
-          }
-          if (warning.code === "EVAL") {
-            // ideally we should disable only for jsenv files
-            return
-          }
-          logger.warn(String(warning))
-        },
-      },
-    })
-    return resultRef.current
-  } catch (e) {
-    if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage(e.message, {
-        frame: e.frame,
-      })
-      throw new Error(detailedMessage, { cause: e })
-    }
-    throw e
-  }
 }
 
 const rollupPluginJsenv = ({
@@ -310,6 +244,90 @@ const rollupPluginJsenv = ({
       }
     },
   }
+}
+
+const buildWithRollup = async ({
+  signal,
+  logger,
+  rootDirectoryUrl,
+  buildDirectoryUrl,
+  urlGraph,
+  jsModuleUrlInfos,
+
+  runtimeCompat,
+  sourcemaps,
+
+  include,
+  babelHelpersChunk,
+}) => {
+  const resultRef = { current: null }
+  try {
+    await applyRollupPlugins({
+      rollupPlugins: [
+        rollupPluginJsenv({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          urlGraph,
+          jsModuleUrlInfos,
+
+          runtimeCompat,
+          sourcemaps,
+          include,
+          babelHelpersChunk,
+          resultRef,
+        }),
+      ],
+      inputOptions: {
+        input: [],
+        onwarn: (warning) => {
+          if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return
+          }
+          if (
+            warning.code === "THIS_IS_UNDEFINED" &&
+            pathToFileURL(warning.id).href === globalThisClientFileUrl
+          ) {
+            return
+          }
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
+            return
+          }
+          logger.warn(String(warning))
+        },
+      },
+    })
+    return resultRef.current
+  } catch (e) {
+    if (e.code === "MISSING_EXPORT") {
+      const detailedMessage = createDetailedMessage(e.message, {
+        frame: e.frame,
+      })
+      throw new Error(detailedMessage, { cause: e })
+    }
+    throw e
+  }
+}
+
+const applyRollupPlugins = async ({
+  rollupPlugins,
+  inputOptions = {},
+  outputOptions = {},
+}) => {
+  const { rollup } = await import("rollup")
+  const { importAssertions } = await import("acorn-import-assertions")
+  const rollupReturnValue = await rollup({
+    ...inputOptions,
+    plugins: rollupPlugins,
+    acornInjectPlugins: [
+      importAssertions,
+      ...(inputOptions.acornInjectPlugins || []),
+    ],
+  })
+  const rollupOutputArray = await rollupReturnValue.generate(outputOptions)
+  return rollupOutputArray
 }
 
 const willBeInsideJsDirectory = ({
