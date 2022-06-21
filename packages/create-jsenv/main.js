@@ -8,26 +8,13 @@ import {
   mkdirSync,
   statSync,
   copyFileSync,
-  rmSync,
   readFileSync,
   writeFileSync,
 } from "node:fs"
-import { basename, relative } from "node:path"
+import { relative } from "node:path"
 import { pathToFileURL, fileURLToPath } from "node:url"
 import prompts from "prompts"
 
-const directoryIsEmpty = (directoryUrl) => {
-  const files = readdirSync(directoryUrl)
-  return files.length === 0 || (files.length === 1 && files[0] === ".git")
-}
-const makeDirectoryEmpty = (directoryUrl) => {
-  if (!existsSync(directoryUrl)) {
-    return
-  }
-  for (const file of readdirSync(directoryUrl)) {
-    rmSync(new URL(file, directoryUrl), { recursive: true, force: true })
-  }
-}
 const copy = (fromUrl, toUrl) => {
   const stat = statSync(fromUrl)
   if (stat.isDirectory()) {
@@ -44,133 +31,53 @@ const copyDirectoryContent = (fromUrl, toUrl) => {
 }
 
 const cwdUrl = `${pathToFileURL(process.cwd())}/`
-
-const getParamsFromProcessArgsAndPrompts = async () => {
+const getParamsFromProcessAndPrompts = async () => {
   const argv = process.argv.slice(2)
-  const firstArg = argv[0]
-  const directoryArg = firstArg && !firstArg.includes("--") ? firstArg : null
-  let directoryUrl = directoryArg ? new URL(`${directoryArg}/`, cwdUrl) : null
-  let demoName = argv.includes("--web")
-    ? "web"
-    : argv.includes("--web-react")
-    ? "web-react"
-    : argv.includes("--web-preact")
-    ? "web-preact"
-    : argv.includes("--node-package")
-    ? "node-package"
-    : ""
-  let overwrite = false
-
-  try {
-    await prompts(
-      [
-        {
-          type: demoName ? null : "select",
-          name: "demoName",
-          message: "Select a demo:",
-          initial: 0,
-          choices: [
-            {
-              title: "web",
-              value: "web",
-            },
-            {
-              title: "web-react",
-              value: "web-react",
-            },
-            {
-              title: "web-preact",
-              value: "web-preact",
-            },
-            {
-              title: "node-package",
-              value: "node-package",
-            },
-          ],
-          onState: (state) => {
-            demoName = state.value
-          },
-        },
-        {
-          type: directoryUrl ? null : "text",
-          name: "directoryUrl",
-          message: "directory path:",
-          initial: () => {
-            const demoDirectoryName = directoryUrl
-              ? basename(fileURLToPath(directoryUrl))
-              : `jsenv-demo-${demoName}`
-            return demoDirectoryName
-          },
-          onState: (state) => {
-            const value =
-              state.value.trim().replace(/\/+$/g, "") ||
-              (directoryUrl
-                ? basename(fileURLToPath(directoryUrl))
-                : `jsenv-demo-${demoName}`)
-            directoryUrl = new URL(`${value}/`, cwdUrl)
-          },
-        },
-        {
-          type: () => {
-            if (existsSync(directoryUrl) && !directoryIsEmpty(directoryUrl)) {
-              return "confirm"
-            }
-            return null
-          },
-          name: "overwrite",
-          message: () => {
-            const directoryLabel =
-              directoryUrl.href === cwdUrl.href
-                ? "Current directory"
-                : `Target directory "${fileURLToPath(directoryUrl)}"`
-            return `${directoryLabel} is not empty. Remove existing files and continue?`
-          },
-          onState: (value) => {
-            overwrite = value
-          },
-        },
-        {
-          type: (_, { overwrite } = {}) => {
-            if (overwrite === false) {
-              throw new Error(`Operation cancelled`)
-            }
-            return null
-          },
-          name: "overwriteChecker",
-        },
-      ],
-      {
-        onCancel: () => {
-          throw new Error(`Operation cancelled`)
-        },
+  // not using readdir to control order
+  const availableDemoNames = ["web", "web-react", "web-preact", "node-package"]
+  let demoName = availableDemoNames.find((demoNameCandidate) =>
+    argv.includes(`--${demoNameCandidate}`),
+  )
+  await prompts([
+    {
+      type: demoName ? null : "select",
+      name: "demoName",
+      message: "Select a demo:",
+      initial: 0,
+      choices: availableDemoNames.map((demoName) => {
+        return { title: demoName, value: demoName }
+      }),
+      onState: (state) => {
+        demoName = state.value
       },
-    )
-    return {
-      demoName,
-      directoryUrl,
-      overwrite,
-    }
-  } catch (cancelled) {
-    return { cancelled }
+    },
+  ])
+  const demoSourceDirectoryUrl = new URL(`./demo-${demoName}/`, import.meta.url)
+  const demoTargetDirectoryUrl = new URL(`jsenv-demo-${demoName}/`, cwdUrl)
+
+  return {
+    demoName,
+    demoSourceDirectoryUrl,
+    demoTargetDirectoryUrl,
   }
 }
 
-const createFilesFromDemo = ({ directoryUrl, overwrite, demoName }) => {
-  console.log(`\n  setup demo in ${directoryUrl.href}`)
-  if (overwrite) {
-    makeDirectoryEmpty(directoryUrl)
-  } else if (!existsSync(directoryUrl)) {
-    mkdirSync(directoryUrl, { recursive: true })
-  }
+const { demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
+  await getParamsFromProcessAndPrompts()
 
-  const demoDirectoryUrl = new URL(`./demo-${demoName}/`, import.meta.url)
-  console.log(`  create files from ${demoDirectoryUrl.href}`)
-  const files = readdirSync(demoDirectoryUrl)
+if (existsSync(demoTargetDirectoryUrl)) {
+  console.log(`\n  directory exists at "${demoTargetDirectoryUrl.href}"`)
+} else {
+  console.log(
+    `\n  copy "${demoSourceDirectoryUrl.href}" files into "${demoTargetDirectoryUrl.href}"`,
+  )
+  mkdirSync(demoTargetDirectoryUrl, { recursive: true })
+  const files = readdirSync(demoSourceDirectoryUrl)
   for (const file of files) {
-    const fromUrl = new URL(file, demoDirectoryUrl)
+    const fromUrl = new URL(file, demoSourceDirectoryUrl)
     const toUrl = new URL(
       file === "_gitignore" ? ".gitignore" : file,
-      directoryUrl,
+      demoTargetDirectoryUrl,
     )
     copy(fromUrl, toUrl)
     if (file === "package.json") {
@@ -201,25 +108,17 @@ const createFilesFromDemo = ({ directoryUrl, overwrite, demoName }) => {
       writeFileSync(toUrl, JSON.stringify(packageJsonObject, null, "  "))
     }
   }
-
-  console.log(`\nDone. Now run:\n`)
-  if (directoryUrl.href !== cwdUrl.href) {
-    console.log(
-      `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl))}`,
-    )
-  }
-  console.log(`npm install`)
-  console.log(`npm run dev`)
+  console.log(`\nDone.`)
 }
 
-const { cancelled, directoryUrl, overwrite, demoName } =
-  await getParamsFromProcessArgsAndPrompts()
-if (cancelled) {
-  console.log(cancelled.message)
-} else {
-  createFilesFromDemo({
-    directoryUrl,
-    overwrite,
-    demoName,
-  })
+console.log(`\nNow run:\n`)
+if (demoTargetDirectoryUrl.href !== cwdUrl.href) {
+  console.log(
+    `cd ${relative(
+      fileURLToPath(cwdUrl),
+      fileURLToPath(demoTargetDirectoryUrl),
+    )}`,
+  )
 }
+console.log(`npm install`)
+console.log(`npm run dev`)
