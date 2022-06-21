@@ -27,6 +27,8 @@ await build({
       "**/node_modules/@jsenv/abort/": true,
       "**/node_modules/@jsenv/ast/": true,
       "**/node_modules/@jsenv/babel-plugins/": true,
+      "**/node_modules/@jsenv/url-meta/": true,
+      "**/node_modules/@jsenv/urls/": true,
       "**/node_modules/@jsenv/utils/": true,
     },
   },
