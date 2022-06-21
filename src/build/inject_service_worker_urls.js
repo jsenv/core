@@ -1,7 +1,7 @@
 import { createMagicSource } from "@jsenv/sourcemap"
-import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js"
 
 import { GRAPH } from "./graph_utils.js"
+import { createVersionGenerator } from "./version_generator.js"
 
 export const injectServiceWorkerUrls = async ({
   finalGraph,

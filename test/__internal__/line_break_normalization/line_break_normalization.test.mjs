@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
 
-import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js"
+import { createVersionGenerator } from "@jsenv/core/src/build/version_generator.js"
 
 const test = ({ content, contentType, lineBreakNormalization }) => {
   const versionGenerator = createVersionGenerator()
