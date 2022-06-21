@@ -36,7 +36,7 @@ export const jsenvPluginExplorer = ({ groups }) => {
       }))
       let html = String(readFileSync(new URL(htmlClientFileUrl)))
       html = html.replace(
-        "virtual:FAVICON_HREF",
+        "ignore:FAVICON_HREF",
         DATA_URL.stringify({
           contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
           base64Flag: true,

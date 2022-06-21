@@ -29,7 +29,7 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { fork } from "node:child_process";
 import { uneval } from "@jsenv/uneval";
-import { createVersionGenerator } from "@jsenv/utils/src/versioning/version_generator.js";
+import { createHash } from "node:crypto";
 
 const createReloadableWorker = (workerFileUrl, options = {}) => {
   const workerFilePath = fileURLToPath(workerFileUrl);
@@ -520,7 +520,8 @@ const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
 
 const jsenvPluginUrlAnalysis = ({
   rootDirectoryUrl,
-  include
+  include,
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"]
 }) => {
   let getIncludeInfo = () => undefined;
 
@@ -565,12 +566,12 @@ const jsenvPluginUrlAnalysis = ({
         return;
       }
 
-      if (reference.url.startsWith("data:")) {
-        reference.shouldHandle = true;
-        return;
-      }
+      const {
+        protocol
+      } = new URL(reference.url);
+      const protocolIsSupported = supportedProtocols.some(supportedProtocol => protocol === supportedProtocol);
 
-      if (reference.url.startsWith("file:")) {
+      if (protocolIsSupported) {
         reference.shouldHandle = true;
         return;
       }
@@ -1251,13 +1252,14 @@ const resolveSymlink = fileUrl => {
 const jsenvPluginHttpUrls = () => {
   return {
     name: "jsenv:http_urls",
-    appliesDuring: "*" // fetchUrlContent: (urlInfo) => {
-    //   if (urlInfo.url.startsWith("http") || urlInfo.url.startsWith("https")) {
-    //     return { shouldHandle: false }
-    //   }
-    //   return null
-    // },
+    appliesDuring: "*",
+    redirectUrl: reference => {
+      if (reference.url.startsWith("http:") || reference.url.startsWith("https:")) {
+        reference.shouldHandle = false;
+      } // TODO: according to some pattern matching jsenv could be allowed
+      // to fetch and transform http urls
 
+    }
   };
 };
 
@@ -8392,7 +8394,7 @@ const jsenvPluginExplorer = ({
         meta
       }));
       let html = String(readFileSync(new URL(htmlClientFileUrl)));
-      html = html.replace("virtual:FAVICON_HREF", DATA_URL.stringify({
+      html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
         contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
         base64Flag: true,
         data: readFileSync(new URL(faviconClientFileUrl)).toString("base64")
@@ -12375,6 +12377,60 @@ ${globalName}.__v__ = function (specifier) {
 })();
 
 `;
+};
+
+// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
+
+const createVersionGenerator = () => {
+  const hash = createHash("sha256");
+
+  const augmentWithContent = ({
+    content,
+    contentType = "application/octet-stream",
+    lineBreakNormalization = false
+  }) => {
+    hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? normalizeLineBreaks(content) : content);
+  };
+
+  const augmentWithDependencyVersion = version => {
+    hash.update(version);
+  };
+
+  return {
+    augmentWithContent,
+    augmentWithDependencyVersion,
+    generate: () => {
+      return hash.digest("hex").slice(0, 8);
+    }
+  };
+};
+
+const normalizeLineBreaks = stringOrBuffer => {
+  if (typeof stringOrBuffer === "string") {
+    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
+    return stringWithLinuxBreaks;
+  }
+
+  return normalizeLineBreaksForBuffer(stringOrBuffer);
+}; // https://github.com/nodejs/help/issues/1738#issuecomment-458460503
+
+
+const normalizeLineBreaksForBuffer = buffer => {
+  const int32Array = new Int32Array(buffer, 0, buffer.length);
+  const int32ArrayWithLineBreaksNormalized = int32Array.filter((element, index, typedArray) => {
+    if (element === 0x0d) {
+      if (typedArray[index + 1] === 0x0a) {
+        // Windows -> Unix
+        return false;
+      } // Mac OS -> Unix
+
+
+      typedArray[index] = 0x0a;
+    }
+
+    return true;
+  });
+  return Buffer.from(int32ArrayWithLineBreaksNormalized);
 };
 
 const injectServiceWorkerUrls = async ({
