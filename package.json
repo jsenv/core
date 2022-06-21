@@ -95,7 +95,7 @@
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/node-esm-resolution": "0.1.0",
-    "@jsenv/server": "12.7.1",
+    "@jsenv/server": "12.7.2",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/utils": "2.0.0",
     "@jsenv/url-meta": "7.0.0",

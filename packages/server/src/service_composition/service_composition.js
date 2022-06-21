@@ -1,6 +1,6 @@
-import { timeFunction } from "@jsenv/server/src/server_timing/timing_measure.js"
-import { composeTwoResponses } from "@jsenv/server/src/internal/response_composition.js"
-import { applyRedirectionToRequest } from "@jsenv/server/src/internal/request_factory.js"
+import { timeFunction } from "../server_timing/timing_measure.js"
+import { composeTwoResponses } from "../internal/response_composition.js"
+import { applyRedirectionToRequest } from "../internal/request_factory.js"
 
 export const composeServices = (namedServices) => {
   return async (request, { pushResponse }) => {
