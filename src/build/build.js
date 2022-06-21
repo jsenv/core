@@ -166,7 +166,6 @@ build ${entryPointKeys.length} entry points`)
     const prebuildTask = createTaskLog("prebuild", {
       disabled: infoLogsAreDisabled,
     })
-    let urlCount = 0
     const prebuildRedirections = new Map()
     const rawGraphKitchen = createKitchen({
       signal,
@@ -180,14 +179,6 @@ build ${entryPointKeys.length} entry points`)
       writeGeneratedFiles,
       plugins: [
         ...plugins,
-        {
-          name: "jsenv:build_log",
-          appliesDuring: { build: true },
-          cooked: () => {
-            urlCount++
-            prebuildTask.setRightText(urlCount)
-          },
-        },
         {
           appliesDuring: "build",
           fetchUrlContent: (urlInfo, context) => {
