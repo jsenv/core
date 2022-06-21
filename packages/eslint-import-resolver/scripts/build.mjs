@@ -9,19 +9,16 @@ const esToCjs = async ({ url, map, content }) => {
     plugins: [
       {
         resolveId: async (id, importer = fileURLToPath(url)) => {
-          if (
-            id.startsWith("node:") ||
-            id === "path" ||
-            id === "url" ||
-            id === "util" ||
-            id === "fs"
-          ) {
+          if (id.startsWith("node:")) {
             return { id, external: true }
           }
           if (isFileSystemPath(id)) {
             id = pathToFileURL(id)
           }
           const url = await import.meta.resolve(id, pathToFileURL(importer))
+          if (url.startsWith("node:")) {
+            return { id: url, external: true }
+          }
           const path = fileURLToPath(new URL(url))
           return path
         },
