@@ -2,12 +2,10 @@
  * This file is some boilerplate code meant to be replaced by real code
  */
 
-const message = "Hello dev!"
-
 export const getMessage = () => {
-  return message
+  return "Hello dev!"
 }
 
 export const getMessageAsync = async () => {
-  return message
+  return "Hello dev async!"
 }

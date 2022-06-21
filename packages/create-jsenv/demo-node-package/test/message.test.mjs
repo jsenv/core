@@ -6,12 +6,16 @@
 
 import { assert } from "@jsenv/assert"
 
-import { getMessageAsync } from "jsenv-demo-node-package"
+import { getMessage, getMessageAsync } from "jsenv-demo-node-package"
 
-const messageExpected = "Hello dev!"
+{
+  const actual = getMessage()
+  const expected = "Hello dev!"
+  assert({ actual, expected })
+}
 
 {
   const actual = await getMessageAsync()
-  const expected = messageExpected
+  const expected = "Hello dev async!"
   assert({ actual, expected })
 }
