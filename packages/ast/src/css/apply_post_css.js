@@ -44,7 +44,8 @@ export const applyPostCss = async ({
 // for instance http://example.com/dir/file.js
 // must becomes file:///dir/file.js
 // but in windows it must be file://C:/dir/file.js
-const filesystemRootUrl = new URL("/", import.meta.url)
+const filesystemRootUrl =
+  process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///"
 const urlToFileUrl = (url) => {
   const urlString = String(url)
   if (urlString.startsWith("file:")) {

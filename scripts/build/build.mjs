@@ -24,7 +24,6 @@ await build({
     include: {
       "**/*": true,
       "**/node_modules/": false,
-      "./packages/ast/": false, // TODO: restore this, it should work
       "**/node_modules/@jsenv/babel-plugins/": true,
     },
   },

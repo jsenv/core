@@ -15,7 +15,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 export const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
-  preservesSymlink = true,
+  preserveSymlinks = true,
   directoryReferenceAllowed = false,
 }) => {
   return [
@@ -60,7 +60,7 @@ export const jsenvPluginFileUrls = ({
         if (foundADirectory && directoryReferenceAllowed) {
           reference.data.foundADirectory = true
           const directoryFacadeUrl = urlObject.href
-          const directoryUrlRaw = preservesSymlink
+          const directoryUrlRaw = preserveSymlinks
             ? directoryFacadeUrl
             : resolveSymlink(directoryFacadeUrl)
           const directoryUrl = `${directoryUrlRaw}${search}${hash}`
@@ -81,7 +81,7 @@ export const jsenvPluginFileUrls = ({
         }
         reference.data.foundADirectory = filesystemResolution.isDirectory
         const fileFacadeUrl = filesystemResolution.url
-        const fileUrlRaw = preservesSymlink
+        const fileUrlRaw = preserveSymlinks
           ? fileFacadeUrl
           : resolveSymlink(fileFacadeUrl)
         const fileUrl = `${fileUrlRaw}${search}${hash}`
