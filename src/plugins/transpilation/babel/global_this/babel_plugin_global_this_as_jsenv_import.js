@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url"
-import { injectImport } from "@jsenv/ast"
+import { injectJsImport } from "@jsenv/ast"
 
 export const babelPluginGlobalThisAsJsenvImport = (
   babel,
@@ -22,7 +22,7 @@ export const babelPluginGlobalThisAsJsenvImport = (
         const { node } = path
         // we should do this once, tree shaking will remote it but still
         if (node.name === "globalThis") {
-          injectImport({
+          injectJsImport({
             programPath: path.scope.getProgramParent().path,
             from: getImportSpecifier(globalThisClientFileUrl),
             sideEffect: true,

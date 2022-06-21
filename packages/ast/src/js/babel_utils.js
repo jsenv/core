@@ -1,6 +1,38 @@
 import { require } from "../require.js"
 
-export const generateExpressionAst = (expression, options) => {
+// https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
+export const injectJsImport = ({
+  programPath,
+  namespace,
+  name,
+  from,
+  nameHint,
+  sideEffect,
+}) => {
+  const {
+    addNamespace,
+    addDefault,
+    addNamed,
+    addSideEffect,
+  } = require("@babel/helper-module-imports")
+
+  if (namespace) {
+    return addNamespace(programPath, from, {
+      nameHint,
+    })
+  }
+  if (name) {
+    return addNamed(programPath, name, from)
+  }
+  if (sideEffect) {
+    return addSideEffect(programPath, from)
+  }
+  return addDefault(programPath, from, {
+    nameHint,
+  })
+}
+
+const generateExpressionAst = (expression, options) => {
   const { parseExpression } = require("@babel/parser")
 
   const ast = parseExpression(expression, options)
@@ -29,35 +61,4 @@ export const injectAstAfterImport = (programPath, ast) => {
   } else {
     bodyNodePaths[0].insertBefore(ast)
   }
-}
-
-// https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
-export const injectImport = ({
-  programPath,
-  namespace,
-  name,
-  from,
-  nameHint,
-  sideEffect,
-}) => {
-  const {
-    addNamespace,
-    addDefault,
-    addNamed,
-    addSideEffect,
-  } = require("@babel/helper-module-imports")
-  if (namespace) {
-    return addNamespace(programPath, from, {
-      nameHint,
-    })
-  }
-  if (name) {
-    return addNamed(programPath, name, from)
-  }
-  if (sideEffect) {
-    return addSideEffect(programPath, from)
-  }
-  return addDefault(programPath, from, {
-    nameHint,
-  })
 }

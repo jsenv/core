@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url"
-import { injectImport } from "@jsenv/ast"
+import { injectJsImport } from "@jsenv/ast"
 
 export const babelPluginNewStylesheetAsJsenvImport = (
   babel,
@@ -84,7 +84,7 @@ export const babelPluginNewStylesheetAsJsenvImport = (
           },
         })
         if (usesNewStylesheet) {
-          injectImport({
+          injectJsImport({
             programPath,
             from: getImportSpecifier(newStylesheetClientFileUrl),
             sideEffect: true,
