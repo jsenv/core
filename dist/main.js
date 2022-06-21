@@ -1,26 +1,22 @@
 import http from "node:http";
 import cluster from "node:cluster";
-import { createSupportsColor } from "supports-color";
-import isUnicodeSupported from "is-unicode-supported";
+import process$1, { memoryUsage } from "node:process";
+import os, { networkInterfaces } from "node:os";
+import tty from "node:tty";
 import stringWidth from "string-width";
-import ansiEscapes from "ansi-escapes";
 import net, { createServer } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { createReadStream, readdirSync, statSync, readFile as readFile$1, chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
-import { networkInterfaces } from "node:os";
 import { performance } from "node:perf_hooks";
 import { extname, dirname, basename } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto, { createHash } from "node:crypto";
 import { workerData, Worker } from "node:worker_threads";
-import { parse, serialize, parseFragment } from "parse5";
-import { p as parseSrcSet } from "./js/html_src_set.js";
+import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
-import { ancestor } from "acorn-walk";
-import MagicString from "magic-string";
 import babelParser from "@babel/parser";
-import { memoryUsage } from "node:process";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
@@ -128,6 +124,165 @@ const loggerToLevels = logger => {
   };
 };
 
+function hasFlag(flag, argv = process$1.argv) {
+  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
+  const position = argv.indexOf(prefix + flag);
+  const terminatorPosition = argv.indexOf('--');
+  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+
+const {
+  env
+} = process$1;
+let flagForceColor;
+
+if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
+  flagForceColor = 0;
+} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
+  flagForceColor = 1;
+}
+
+function envForceColor() {
+  if ('FORCE_COLOR' in env) {
+    if (env.FORCE_COLOR === 'true') {
+      return 1;
+    }
+
+    if (env.FORCE_COLOR === 'false') {
+      return 0;
+    }
+
+    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+  }
+}
+
+function translateLevel(level) {
+  if (level === 0) {
+    return false;
+  }
+
+  return {
+    level,
+    hasBasic: true,
+    has256: level >= 2,
+    has16m: level >= 3
+  };
+}
+
+function _supportsColor(haveStream, {
+  streamIsTTY,
+  sniffFlags = true
+} = {}) {
+  const noFlagForceColor = envForceColor();
+
+  if (noFlagForceColor !== undefined) {
+    flagForceColor = noFlagForceColor;
+  }
+
+  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+  if (forceColor === 0) {
+    return 0;
+  }
+
+  if (sniffFlags) {
+    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
+      return 3;
+    }
+
+    if (hasFlag('color=256')) {
+      return 2;
+    }
+  }
+
+  if (haveStream && !streamIsTTY && forceColor === undefined) {
+    return 0;
+  }
+
+  const min = forceColor || 0;
+
+  if (env.TERM === 'dumb') {
+    return min;
+  }
+
+  if (process$1.platform === 'win32') {
+    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
+    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+    const osRelease = os.release().split('.');
+
+    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10_586) {
+      return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+    }
+
+    return 1;
+  }
+
+  if ('CI' in env) {
+    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'GITHUB_ACTIONS', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+      return 1;
+    }
+
+    return min;
+  }
+
+  if ('TEAMCITY_VERSION' in env) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+  } // Check for Azure DevOps pipelines
+
+
+  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+    return 1;
+  }
+
+  if (env.COLORTERM === 'truecolor') {
+    return 3;
+  }
+
+  if ('TERM_PROGRAM' in env) {
+    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+    switch (env.TERM_PROGRAM) {
+      case 'iTerm.app':
+        return version >= 3 ? 3 : 2;
+
+      case 'Apple_Terminal':
+        return 2;
+      // No default
+    }
+  }
+
+  if (/-256(color)?$/i.test(env.TERM)) {
+    return 2;
+  }
+
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+    return 1;
+  }
+
+  if ('COLORTERM' in env) {
+    return 1;
+  }
+
+  return min;
+}
+
+function createSupportsColor(stream, options = {}) {
+  const level = _supportsColor(stream, {
+    streamIsTTY: stream && stream.isTTY,
+    ...options
+  });
+
+  return translateLevel(level);
+}
+({
+  stdout: createSupportsColor({
+    isTTY: tty.isatty(1)
+  }),
+  stderr: createSupportsColor({
+    isTTY: tty.isatty(2)
+  })
+});
+
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 let canUseColors = processSupportsBasicColor; // GitHub workflow does support ANSI but "supports-color" returns false
 // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
@@ -161,6 +316,16 @@ const ANSI = {
   RESET,
   color: setANSIColor
 };
+
+function isUnicodeSupported() {
+  if (process$1.platform !== 'win32') {
+    return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+  }
+
+  return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) // Windows Terminal
+  || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+  || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
 
 // see also https://github.com/sindresorhus/figures
 const canUseUnicode = isUnicodeSupported();
@@ -485,6 +650,140 @@ const distributePercentages = (namedNumbers, {
     decimals: precision
   });
   return percentages;
+};
+
+const ESC = '\u001B[';
+const OSC = '\u001B]';
+const BEL = '\u0007';
+const SEP = ';';
+const isTerminalApp = process.env.TERM_PROGRAM === 'Apple_Terminal';
+const ansiEscapes = {};
+
+ansiEscapes.cursorTo = (x, y) => {
+  if (typeof x !== 'number') {
+    throw new TypeError('The `x` argument is required');
+  }
+
+  if (typeof y !== 'number') {
+    return ESC + (x + 1) + 'G';
+  }
+
+  return ESC + (y + 1) + ';' + (x + 1) + 'H';
+};
+
+ansiEscapes.cursorMove = (x, y) => {
+  if (typeof x !== 'number') {
+    throw new TypeError('The `x` argument is required');
+  }
+
+  let returnValue = '';
+
+  if (x < 0) {
+    returnValue += ESC + -x + 'D';
+  } else if (x > 0) {
+    returnValue += ESC + x + 'C';
+  }
+
+  if (y < 0) {
+    returnValue += ESC + -y + 'A';
+  } else if (y > 0) {
+    returnValue += ESC + y + 'B';
+  }
+
+  return returnValue;
+};
+
+ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
+
+ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
+
+ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
+
+ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
+
+ansiEscapes.cursorLeft = ESC + 'G';
+ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
+ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
+ansiEscapes.cursorGetPosition = ESC + '6n';
+ansiEscapes.cursorNextLine = ESC + 'E';
+ansiEscapes.cursorPrevLine = ESC + 'F';
+ansiEscapes.cursorHide = ESC + '?25l';
+ansiEscapes.cursorShow = ESC + '?25h';
+
+ansiEscapes.eraseLines = count => {
+  let clear = '';
+
+  for (let i = 0; i < count; i++) {
+    clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+  }
+
+  if (count) {
+    clear += ansiEscapes.cursorLeft;
+  }
+
+  return clear;
+};
+
+ansiEscapes.eraseEndLine = ESC + 'K';
+ansiEscapes.eraseStartLine = ESC + '1K';
+ansiEscapes.eraseLine = ESC + '2K';
+ansiEscapes.eraseDown = ESC + 'J';
+ansiEscapes.eraseUp = ESC + '1J';
+ansiEscapes.eraseScreen = ESC + '2J';
+ansiEscapes.scrollUp = ESC + 'S';
+ansiEscapes.scrollDown = ESC + 'T';
+ansiEscapes.clearScreen = '\u001Bc';
+ansiEscapes.clearTerminal = process.platform === 'win32' ? `${ansiEscapes.eraseScreen}${ESC}0f` : // 1. Erases the screen (Only done in case `2` is not supported)
+// 2. Erases the whole screen including scrollback buffer
+// 3. Moves cursor to the top-left position
+// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+`${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+ansiEscapes.beep = BEL;
+
+ansiEscapes.link = (text, url) => {
+  return [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
+};
+
+ansiEscapes.image = (buffer, options = {}) => {
+  let returnValue = `${OSC}1337;File=inline=1`;
+
+  if (options.width) {
+    returnValue += `;width=${options.width}`;
+  }
+
+  if (options.height) {
+    returnValue += `;height=${options.height}`;
+  }
+
+  if (options.preserveAspectRatio === false) {
+    returnValue += ';preserveAspectRatio=0';
+  }
+
+  return returnValue + ':' + buffer.toString('base64') + BEL;
+};
+
+ansiEscapes.iTerm = {
+  setCwd: (cwd = process.cwd()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+  annotation: (message, options = {}) => {
+    let returnValue = `${OSC}1337;`;
+    const hasX = typeof options.x !== 'undefined';
+    const hasY = typeof options.y !== 'undefined';
+
+    if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
+      throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
+    }
+
+    message = message.replace(/\|/g, '');
+    returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
+
+    if (options.length > 0) {
+      returnValue += (hasX ? [message, options.length, options.x, options.y] : [options.length, message]).join('|');
+    } else {
+      returnValue += message;
+    }
+
+    return returnValue + BEL;
+  }
 };
 
 /*
@@ -1376,7 +1675,7 @@ const createSecureServer = async ({
   if (http2) {
     const {
       createSecureServer
-    } = await import("http2");
+    } = await import("node:http2");
     return createSecureServer({
       cert: certificate,
       key: privateKey,
@@ -1386,7 +1685,7 @@ const createSecureServer = async ({
 
   const {
     createServer
-  } = await import("https");
+  } = await import("node:https");
   return createServer({
     cert: certificate,
     key: privateKey
@@ -3856,7 +4155,7 @@ const createNodeServer = async ({
 
   const {
     createServer
-  } = await import("https");
+  } = await import("node:https");
   return createServer({
     cert: certificate,
     key: privateKey
@@ -8264,1739 +8563,6 @@ const createReloadableWorker = (workerFileUrl, options = {}) => {
   };
 };
 
-const getHtmlNodeAttribute = (htmlNode, attributeName) => {
-  const attribute = getHtmlAttributeByName(htmlNode, attributeName);
-  return attribute ? attribute.value || "" : undefined;
-};
-const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
-  if (typeof attributesToAssign !== "object") {
-    throw new TypeError(`attributesToAssign must be an object`);
-  }
-
-  const {
-    attrs
-  } = htmlNode;
-  if (!attrs) return;
-  Object.keys(attributesToAssign).forEach(key => {
-    const existingAttributeIndex = attrs.findIndex(({
-      name
-    }) => name === key);
-    const value = attributesToAssign[key]; // remove no-op
-
-    if (existingAttributeIndex === -1 && value === undefined) {
-      return;
-    } // add
-
-
-    if (existingAttributeIndex === -1 && value !== undefined) {
-      attrs.push({
-        name: key,
-        value
-      });
-      return;
-    } // remove
-
-
-    if (value === undefined) {
-      attrs.splice(existingAttributeIndex, 1);
-      return;
-    } // update
-
-
-    attrs[existingAttributeIndex].value = value;
-  });
-};
-
-const getHtmlAttributeByName = (htmlNode, attributeName) => {
-  const attrs = htmlNode.attrs;
-  const attribute = attrs ? attrs.find(attr => attr.name === attributeName) : null;
-  return attribute;
-};
-
-const storeHtmlNodePosition = node => {
-  const originalPositionAttributeName = `original-position`;
-  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
-
-  if (originalPosition !== undefined) {
-    return true;
-  }
-
-  const {
-    sourceCodeLocation
-  } = node;
-
-  if (!sourceCodeLocation) {
-    return false;
-  }
-
-  const {
-    startLine,
-    startCol,
-    endLine,
-    endCol
-  } = sourceCodeLocation;
-  setHtmlNodeAttributes(node, {
-    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`
-  });
-  return true;
-};
-const storeHtmlNodeAttributePosition = (node, attributeName) => {
-  const {
-    sourceCodeLocation
-  } = node;
-
-  if (!sourceCodeLocation) {
-    return false;
-  }
-
-  const attributeValue = getHtmlNodeAttribute(node, attributeName);
-
-  if (attributeValue === undefined) {
-    return false;
-  }
-
-  const attributeLocation = sourceCodeLocation.attrs[attributeName];
-
-  if (!attributeLocation) {
-    return false;
-  }
-
-  const originalPositionAttributeName = `original-${attributeName}-position`;
-  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
-
-  if (originalPosition !== undefined) {
-    return true;
-  }
-
-  const {
-    startLine,
-    startCol,
-    endLine,
-    endCol
-  } = attributeLocation;
-  setHtmlNodeAttributes(node, {
-    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`
-  });
-  return true;
-};
-const getHtmlNodePosition = (node, {
-  preferOriginal = false
-} = {}) => {
-  const position = {};
-  const {
-    sourceCodeLocation
-  } = node;
-
-  if (sourceCodeLocation) {
-    const {
-      startLine,
-      startCol,
-      endLine,
-      endCol
-    } = sourceCodeLocation;
-    Object.assign(position, {
-      line: startLine,
-      lineEnd: endLine,
-      column: startCol,
-      columnEnd: endCol
-    });
-  }
-
-  const originalPosition = getHtmlNodeAttribute(node, "original-position");
-
-  if (originalPosition === undefined) {
-    return position;
-  }
-
-  const [start, end] = originalPosition.split(";");
-  const [originalLine, originalColumn] = start.split(":");
-  const [originalLineEnd, originalColumnEnd] = end.split(":");
-  Object.assign(position, {
-    originalLine: parseInt(originalLine),
-    originalColumn: parseInt(originalColumn),
-    originalLineEnd: parseInt(originalLineEnd),
-    originalColumnEnd: parseInt(originalColumnEnd)
-  });
-
-  if (preferOriginal) {
-    position.line = position.originalLine;
-    position.column = position.originalColumn;
-    position.lineEnd = position.originalLineEnd;
-    position.columnEnd = position.originalColumnEnd;
-    position.isOriginal = true;
-  }
-
-  return position;
-};
-const getHtmlNodeAttributePosition = (node, attributeName) => {
-  const position = {};
-  const {
-    sourceCodeLocation
-  } = node;
-
-  if (sourceCodeLocation) {
-    const attributeLocation = sourceCodeLocation.attrs[attributeName];
-
-    if (attributeLocation) {
-      Object.assign(position, {
-        line: attributeLocation.startLine,
-        column: attributeLocation.startCol
-      });
-    }
-  }
-
-  const originalPositionAttributeName = attributeName === "generated-from-src" ? "original-src-position" : attributeName === "generated-from-href" ? "original-href-position" : `original-${attributeName}-position`;
-  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
-
-  if (originalPosition === undefined) {
-    return position;
-  }
-
-  const [start, end] = originalPosition.split(";");
-  const [originalLine, originalColumn] = start.split(":");
-  const [originalLineEnd, originalColumnEnd] = end.split(":");
-  Object.assign(position, {
-    originalLine: parseInt(originalLine),
-    originalColumn: parseInt(originalColumn),
-    originalLineEnd: parseInt(originalLineEnd),
-    originalColumnEnd: parseInt(originalColumnEnd)
-  });
-  return position;
-};
-
-const visitHtmlNodes = (htmlAst, visitors) => {
-  const visitNode = node => {
-    const visitor = visitors[node.nodeName] || visitors["*"];
-
-    if (visitor) {
-      const callbackReturnValue = visitor(node);
-
-      if (callbackReturnValue === "stop") {
-        return;
-      }
-    }
-
-    const {
-      childNodes
-    } = node;
-
-    if (childNodes) {
-      let i = 0;
-
-      while (i < childNodes.length) {
-        visitNode(childNodes[i++]);
-      }
-    }
-  };
-
-  visitNode(htmlAst);
-};
-const findHtmlNode = (htmlAst, predicate) => {
-  let nodeMatching = null;
-  visitHtmlNodes(htmlAst, {
-    "*": node => {
-      if (predicate(node)) {
-        nodeMatching = node;
-        return "stop";
-      }
-
-      return null;
-    }
-  });
-  return nodeMatching;
-};
-const findHtmlChildNode = (htmlNode, predicate) => {
-  const {
-    childNodes = []
-  } = htmlNode;
-  return childNodes.find(predicate);
-};
-
-const getHtmlNodeText = htmlNode => {
-  const textNode = getTextNode(htmlNode);
-  return textNode ? textNode.value : undefined;
-};
-
-const getTextNode = htmlNode => {
-  const firstChild = htmlNode.childNodes[0];
-  const textNode = firstChild && firstChild.nodeName === "#text" ? firstChild : null;
-  return textNode;
-};
-
-const removeHtmlNodeText = htmlNode => {
-  const textNode = getTextNode(htmlNode);
-
-  if (textNode) {
-    htmlNode.childNodes = [];
-  }
-};
-const setHtmlNodeText = (htmlNode, textContent) => {
-  const textNode = getTextNode(htmlNode);
-
-  if (textNode) {
-    textNode.value = textContent;
-  } else {
-    const newTextNode = {
-      nodeName: "#text",
-      value: textContent,
-      parentNode: htmlNode
-    };
-    htmlNode.childNodes.splice(0, 0, newTextNode);
-  }
-};
-
-const parseHtmlString = (htmlString, {
-  storeOriginalPositions = true
-} = {}) => {
-  const htmlAst = parse(htmlString, {
-    sourceCodeLocationInfo: true
-  });
-
-  if (storeOriginalPositions) {
-    const htmlNode = findHtmlChildNode(htmlAst, node => node.nodeName === "html");
-    const stored = getHtmlNodeAttribute(htmlNode, "original-position-stored");
-
-    if (stored === undefined) {
-      visitHtmlNodes(htmlAst, {
-        "*": node => {
-          if (node.nodeName === "script" || node.nodeName === "style") {
-            const htmlNodeText = getHtmlNodeText(node);
-
-            if (htmlNodeText !== undefined) {
-              storeHtmlNodePosition(node);
-            }
-          }
-
-          storeHtmlNodeAttributePosition(node, "src");
-          storeHtmlNodeAttributePosition(node, "href");
-        }
-      });
-      setHtmlNodeAttributes(htmlNode, {
-        "original-position-stored": ""
-      });
-    }
-  }
-
-  return htmlAst;
-};
-const stringifyHtmlAst = (htmlAst, {
-  removeOriginalPositionAttributes = false
-} = {}) => {
-  if (removeOriginalPositionAttributes) {
-    const htmlNode = findHtmlChildNode(htmlAst, node => node.nodeName === "html");
-    const storedAttribute = getHtmlNodeAttribute(htmlNode, "original-position-stored");
-
-    if (storedAttribute !== undefined) {
-      setHtmlNodeAttributes(htmlNode, {
-        "original-position-stored": undefined
-      });
-      visitHtmlNodes(htmlAst, {
-        "*": node => {
-          setHtmlNodeAttributes(node, {
-            "original-position": undefined,
-            "original-src-position": undefined,
-            "original-href-position": undefined,
-            "injected-by": undefined,
-            "generated-by": undefined,
-            "generated-from-src": undefined,
-            "generated-from-href": undefined
-          });
-        }
-      });
-    }
-  }
-
-  const htmlString = serialize(htmlAst);
-  return htmlString;
-};
-
-const analyzeScriptNode = scriptNode => {
-  const type = getHtmlNodeAttribute(scriptNode, "type");
-
-  if (type === undefined || type === "text/javascript") {
-    return "classic";
-  }
-
-  if (type === "module") {
-    return "module";
-  }
-
-  if (type === "importmap") {
-    return "importmap";
-  }
-
-  return type;
-};
-const analyzeLinkNode = linkNode => {
-  const rel = getHtmlNodeAttribute(linkNode, "rel");
-
-  if (rel === "stylesheet") {
-    return {
-      isStylesheet: true
-    };
-  }
-
-  const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
-  return {
-    isRessourceHint,
-    rel
-  };
-};
-
-const removeHtmlNode = htmlNode => {
-  const {
-    childNodes
-  } = htmlNode.parentNode;
-  childNodes.splice(childNodes.indexOf(htmlNode), 1);
-};
-const createHtmlNode = ({
-  tagName,
-  textContent = "",
-  ...rest
-}) => {
-  const html = `<${tagName} ${stringifyAttributes(rest)}>${textContent}</${tagName}>`;
-  const fragment = parseFragment(html);
-  return fragment.childNodes[0];
-};
-const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode) => {
-  const injectedBy = getHtmlNodeAttribute(scriptNode, "injected-by");
-
-  if (injectedBy === undefined) {
-    setHtmlNodeAttributes(scriptNode, {
-      "injected-by": "jsenv"
-    });
-  }
-
-  const isModule = analyzeScriptNode(scriptNode) === "module";
-
-  if (isModule) {
-    const firstImportmapScript = findHtmlNode(htmlAst, node => {
-      if (node.nodeName !== "script") return false;
-      return analyzeScriptNode(node) === "importmap";
-    });
-
-    if (firstImportmapScript) {
-      return insertAfter(scriptNode, firstImportmapScript.parentNode, firstImportmapScript);
-    }
-  }
-
-  const headNode = findChild(htmlAst, node => node.nodeName === "html").childNodes[0];
-  const firstHeadScript = findChild(headNode, node => {
-    return node.nodeName === "script";
-  });
-  return insertBefore(scriptNode, headNode, firstHeadScript);
-};
-
-const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
-  const {
-    childNodes = []
-  } = futureParentNode;
-  const futureIndex = futureNextSibling ? childNodes.indexOf(futureNextSibling) : 0;
-  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
-};
-
-const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
-  const {
-    childNodes = []
-  } = futureParentNode;
-  const futureIndex = futurePrevSibling ? childNodes.indexOf(futurePrevSibling) + 1 : childNodes.length;
-  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
-};
-
-const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
-  const {
-    childNodes = []
-  } = futureParentNode;
-  const previousSiblings = childNodes.slice(0, futureIndex);
-  const nextSiblings = childNodes.slice(futureIndex);
-  const futureChildNodes = [];
-  const previousSibling = previousSiblings[0];
-
-  if (previousSibling) {
-    futureChildNodes.push(...previousSiblings);
-  }
-
-  if (!previousSibling || previousSibling.nodeName !== "#text") {
-    futureChildNodes.push({
-      nodeName: "#text",
-      value: "\n    ",
-      parentNode: futureParentNode
-    });
-  }
-
-  futureChildNodes.push(nodeToInsert);
-  const nextSibling = nextSiblings[0];
-
-  if (!nextSibling || nextSibling.nodeName !== "#text") {
-    futureChildNodes.push({
-      nodeName: "#text",
-      value: "\n    ",
-      parentNode: futureParentNode
-    });
-  }
-
-  if (nextSibling) {
-    futureChildNodes.push(...nextSiblings);
-  }
-
-  futureParentNode.childNodes = futureChildNodes;
-};
-
-const findChild = ({
-  childNodes = []
-}, predicate) => childNodes.find(predicate);
-
-const stringifyAttributes = object => {
-  return Object.keys(object).map(key => `${key}=${valueToHtmlAttributeValue(object[key])}`).join(" ");
-};
-
-const valueToHtmlAttributeValue = value => {
-  if (typeof value === "string") {
-    return JSON.stringify(value);
-  }
-
-  return `"${JSON.stringify(value)}"`;
-};
-
-const applyPostCss = async ({
-  sourcemaps = "comment",
-  plugins,
-  // https://github.com/postcss/postcss#options
-  options = {},
-  url,
-  map,
-  content
-}) => {
-  const {
-    default: postcss
-  } = await import("postcss");
-
-  try {
-    const cssFileUrl = urlToFileUrl(url);
-    const result = await postcss(plugins).process(content, {
-      collectUrls: true,
-      from: fileURLToPath(cssFileUrl),
-      to: fileURLToPath(cssFileUrl),
-      map: {
-        annotation: sourcemaps === "file",
-        inline: sourcemaps === "inline",
-        // https://postcss.org/api/#sourcemapoptions
-        ...(map ? {
-          prev: JSON.stringify(map)
-        } : {})
-      },
-      ...options
-    });
-    return {
-      postCssMessages: result.messages,
-      map: result.map.toJSON(),
-      content: result.css
-    };
-  } catch (error) {
-    if (error.name === "CssSyntaxError") {
-      console.error(String(error));
-      throw error;
-    }
-
-    throw error;
-  }
-}; // the goal of this function is to take an url that is likely an http url
-// info a file:// url
-// for instance http://example.com/dir/file.js
-// must becomes file:///dir/file.js
-// but in windows it must be file://C:/dir/file.js
-
-const filesystemRootUrl = process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///";
-
-const urlToFileUrl = url => {
-  const urlString = String(url);
-
-  if (urlString.startsWith("file:")) {
-    return urlString;
-  }
-
-  const origin = new URL(url).origin;
-  const afterOrigin = urlString.slice(origin.length);
-  return new URL(afterOrigin, filesystemRootUrl).href;
-};
-
-const require$2 = createRequire(import.meta.url);
-
-const transpileWithParcel = (urlInfo, context) => {
-  const css = require$2("@parcel/css");
-
-  const targets = runtimeCompatToTargets(context.runtimeCompat);
-  const {
-    code,
-    map
-  } = css.transform({
-    filename: fileURLToPath(urlInfo.originalUrl),
-    code: Buffer.from(urlInfo.content),
-    targets,
-    minify: false
-  });
-  return {
-    code,
-    map
-  };
-};
-const minifyWithParcel = (urlInfo, context) => {
-  const css = require$2("@parcel/css");
-
-  const targets = runtimeCompatToTargets(context.runtimeCompat);
-  const {
-    code,
-    map
-  } = css.transform({
-    filename: fileURLToPath(urlInfo.originalUrl),
-    code: Buffer.from(urlInfo.content),
-    targets,
-    minify: true
-  });
-  return {
-    code,
-    map
-  };
-};
-
-const runtimeCompatToTargets = runtimeCompat => {
-  const targets = {};
-  ["chrome", "firefox", "ie", "opera", "safari"].forEach(runtimeName => {
-    const version = runtimeCompat[runtimeName];
-
-    if (version) {
-      targets[runtimeName] = versionToBits(version);
-    }
-  });
-  return targets;
-};
-
-const versionToBits = version => {
-  const [major, minor = 0, patch = 0] = version.split("-")[0].split(".").map(v => parseInt(v, 10));
-  return major << 16 | minor << 8 | patch;
-};
-
-const require$1 = createRequire(import.meta.url);
-
-/**
-
-https://github.com/postcss/postcss/blob/master/docs/writing-a-plugin.md
-https://github.com/postcss/postcss/blob/master/docs/guidelines/plugin.md
-https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont-show-js-stack-for-csssyntaxerror
-
-In case css sourcemap contains no%20source
-This is because of https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/map-generator.js#L231
-and it indicates a node has been replaced without passing source
-hence sourcemap cannot point the original source location
-
-*/
-const postCssPluginUrlVisitor = ({
-  urlVisitor = () => null
-}) => {
-  const parseCssValue = require$1("postcss-value-parser");
-
-  const stringifyCssNodes = parseCssValue.stringify;
-  return {
-    postcssPlugin: "url_visitor",
-    prepare: result => {
-      const {
-        from
-      } = result.opts;
-      const fromUrl = String(pathToFileURL(from));
-      const mutations = [];
-      return {
-        AtRule: {
-          import: (atImportNode, {
-            AtRule
-          }) => {
-            if (atImportNode.parent.type !== "root") {
-              atImportNode.warn(result, "`@import` should be top level");
-              return;
-            }
-
-            if (atImportNode.nodes) {
-              atImportNode.warn(result, "`@import` was not terminated correctly");
-              return;
-            }
-
-            const parsed = parseCssValue(atImportNode.params);
-            let [urlNode] = parsed.nodes;
-
-            if (!urlNode || urlNode.type !== "string" && urlNode.type !== "function") {
-              atImportNode.warn(result, `No URL in \`${atImportNode.toString()}\``);
-              return;
-            }
-
-            let url = "";
-
-            if (urlNode.type === "string") {
-              url = urlNode.value;
-            } else if (urlNode.type === "function") {
-              // Invalid function
-              if (!/^url$/i.test(urlNode.value)) {
-                atImportNode.warn(result, `Invalid \`url\` function in \`${atImportNode.toString()}\``);
-                return;
-              }
-
-              const firstNode = urlNode.nodes[0];
-
-              if (firstNode && firstNode.type === "string") {
-                urlNode = firstNode;
-                url = urlNode.value;
-              } else {
-                urlNode = urlNode.nodes;
-                url = stringifyCssNodes(urlNode.nodes);
-              }
-            }
-
-            url = url.trim();
-
-            if (url.length === 0) {
-              atImportNode.warn(result, `Empty URL in \`${atImportNode.toString()}\``);
-              return;
-            }
-
-            const specifier = url;
-            url = new URL(specifier, fromUrl).href;
-
-            if (url === fromUrl) {
-              atImportNode.warn(result, `\`@import\` loop in \`${atImportNode.toString()}\``);
-              return;
-            }
-
-            const atRuleStart = atImportNode.source.start.offset;
-            const atRuleEnd = atImportNode.source.end.offset + 1; // for the ";"
-
-            const atRuleRaw = atImportNode.source.input.css.slice(atRuleStart, atRuleEnd);
-            const specifierIndex = atRuleRaw.indexOf(atImportNode.params);
-            const specifierStart = atRuleStart + specifierIndex;
-            const specifierEnd = specifierStart + atImportNode.params.length;
-            const specifierLine = atImportNode.source.start.line;
-            const specifierColumn = atImportNode.source.start.column + specifierIndex;
-            urlVisitor({
-              declarationNode: atImportNode,
-              type: "@import",
-              atRuleStart,
-              atRuleEnd,
-              specifier,
-              specifierLine,
-              specifierColumn,
-              specifierStart,
-              specifierEnd,
-              replace: newUrlSpecifier => {
-                if (newUrlSpecifier === urlNode.value) {
-                  return;
-                }
-
-                urlNode.value = newUrlSpecifier;
-                const newParams = parsed.toString();
-                const newAtImportRule = new AtRule({
-                  name: "import",
-                  params: newParams,
-                  source: atImportNode.source
-                });
-                atImportNode.replaceWith(newAtImportRule);
-              }
-            });
-          }
-        },
-        Declaration: declarationNode => {
-          const parsed = parseCssValue(declarationNode.value);
-          const urlMutations = [];
-          walkUrls(parsed, {
-            stringifyCssNodes,
-            visitor: ({
-              url,
-              urlNode
-            }) => {
-              // Empty URL
-              if (!urlNode || url.length === 0) {
-                declarationNode.warn(result, `Empty URL in \`${declarationNode.toString()}\``);
-                return;
-              } // Skip Data URI
-
-
-              if (isDataUrl(url)) {
-                return;
-              }
-
-              const specifier = url;
-              url = new URL(specifier, pathToFileURL(from));
-              const declarationNodeStart = declarationNode.source.start.offset;
-              const afterDeclarationNode = declarationNode.source.input.css.slice(declarationNodeStart);
-              const valueIndex = afterDeclarationNode.indexOf(declarationNode.value);
-              const valueStart = declarationNodeStart + valueIndex;
-              const specifierStart = valueStart + urlNode.sourceIndex;
-              const specifierEnd = specifierStart + (urlNode.type === "word" ? urlNode.value.length : urlNode.value.length + 2); // the quotes
-              // value raw
-              // declarationNode.source.input.css.slice(valueStart)
-              // specifier raw
-              // declarationNode.source.input.css.slice(specifierStart, specifierEnd)
-
-              const specifierLine = declarationNode.source.start.line;
-              const specifierColumn = declarationNode.source.start.column + (specifierStart - declarationNodeStart);
-              urlVisitor({
-                declarationNode,
-                type: "url",
-                specifier,
-                specifierLine,
-                specifierColumn,
-                specifierStart,
-                specifierEnd,
-                replace: newUrlSpecifier => {
-                  urlMutations.push(() => {
-                    // the specifier desires to be inside double quotes
-                    if (newUrlSpecifier[0] === `"`) {
-                      urlNode.type = "word";
-                      urlNode.value = newUrlSpecifier;
-                      return;
-                    } // the specifier desires to be inside simple quotes
-
-
-                    if (newUrlSpecifier[0] === `'`) {
-                      urlNode.type = "word";
-                      urlNode.value = newUrlSpecifier;
-                      return;
-                    } // the specifier desired to be just a word
-                    // for the "word" type so that newUrlSpecifier can opt-out of being between quotes
-                    // useful to inject __v__ calls for css inside js
-
-
-                    urlNode.type = "word";
-                    urlNode.value = newUrlSpecifier;
-                  });
-                }
-              });
-            }
-          });
-
-          if (urlMutations.length) {
-            mutations.push(() => {
-              urlMutations.forEach(urlMutation => {
-                urlMutation();
-              });
-              declarationNode.value = parsed.toString();
-            });
-          }
-        },
-        OnceExit: () => {
-          mutations.forEach(mutation => {
-            mutation();
-          });
-        }
-      };
-    }
-  };
-};
-postCssPluginUrlVisitor.postcss = true;
-
-const walkUrls = (parsed, {
-  stringifyCssNodes,
-  visitor
-}) => {
-  parsed.walk(node => {
-    // https://github.com/andyjansson/postcss-functions
-    if (isUrlFunctionNode(node)) {
-      const {
-        nodes
-      } = node;
-      const [urlNode] = nodes;
-      const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes);
-      visitor({
-        url: url.trim(),
-        urlNode
-      });
-      return;
-    }
-
-    if (isImageSetFunctionNode(node)) {
-      Array.from(node.nodes).forEach(childNode => {
-        if (childNode.type === "string") {
-          visitor({
-            url: childNode.value.trim(),
-            urlNode: childNode
-          });
-          return;
-        }
-
-        if (isUrlFunctionNode(node)) {
-          const {
-            nodes
-          } = childNode;
-          const [urlNode] = nodes;
-          const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes);
-          visitor({
-            url: url.trim(),
-            urlNode
-          });
-          return;
-        }
-      });
-    }
-  });
-};
-
-const isUrlFunctionNode = node => {
-  return node.type === "function" && /^url$/i.test(node.value);
-};
-
-const isImageSetFunctionNode = node => {
-  return node.type === "function" && /^(?:-webkit-)?image-set$/i.test(node.value);
-};
-
-const isDataUrl = url => {
-  return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(url);
-};
-
-const createJsParseError = ({
-  message,
-  reasonCode,
-  url,
-  line,
-  column
-}) => {
-  const parseError = new Error(message);
-  parseError.reasonCode = reasonCode;
-  parseError.code = "PARSE_ERROR";
-  parseError.url = url;
-  parseError.line = line;
-  parseError.column = column;
-  return parseError;
-};
-
-/*
- * Useful when writin a babel plugin:
- * - https://astexplorer.net/
- * - https://bvaughn.github.io/babel-repl
- */
-const applyBabelPlugins = async ({
-  babelPlugins,
-  urlInfo,
-  ast,
-  options = {}
-}) => {
-  const sourceType = {
-    js_module: "module",
-    js_classic: "classic",
-    [urlInfo.type]: undefined
-  }[urlInfo.type];
-  const url = urlInfo.originalUrl;
-  const generatedUrl = urlInfo.generatedUrl;
-  const content = urlInfo.content;
-
-  if (babelPlugins.length === 0) {
-    return {
-      code: content
-    };
-  }
-
-  const {
-    transformAsync,
-    transformFromAstAsync
-  } = await import("@babel/core");
-  const sourceFileName = url.startsWith("file:") ? fileURLToPath(url) : undefined;
-  options = {
-    ast: false,
-    // https://babeljs.io/docs/en/options#source-map-options
-    sourceMaps: true,
-    sourceFileName,
-    filename: generatedUrl ? generatedUrl.startsWith("file:") ? fileURLToPath(url) : undefined : sourceFileName,
-    configFile: false,
-    babelrc: false,
-    highlightCode: false,
-    // consider using startColumn and startLine for inline scripts?
-    // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
-    parserOpts: {
-      sourceType,
-      // allowAwaitOutsideFunction: true,
-      plugins: [// "importMeta",
-      // "topLevelAwait",
-      "dynamicImport", "importAssertions", "jsx", "classProperties", "classPrivateProperties", "classPrivateMethods", ...(useTypeScriptExtension(url) ? ["typescript"] : []), ...(options.parserPlugins || [])].filter(Boolean)
-    },
-    generatorOpts: {
-      compact: false
-    },
-    plugins: babelPlugins,
-    ...options
-  };
-
-  try {
-    if (ast) {
-      const result = await transformFromAstAsync(ast, content, options);
-      return result;
-    }
-
-    const result = await transformAsync(content, options);
-    return result;
-  } catch (error) {
-    if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw createJsParseError({
-        message: error.message,
-        reasonCode: error.reasonCode,
-        content,
-        url,
-        line: error.loc.line,
-        column: error.loc.column
-      });
-    }
-
-    throw error;
-  }
-};
-
-const useTypeScriptExtension = url => {
-  const {
-    pathname
-  } = new URL(url);
-  return pathname.endsWith(".ts") || pathname.endsWith(".tsx");
-}; // const pattern = [
-//   "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-//   "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))",
-// ].join("|")
-// const ansiRegex = new RegExp(pattern, "g")
-
-const injectJsImport = ({
-  programPath,
-  namespace,
-  name,
-  from,
-  nameHint,
-  sideEffect
-}) => {
-  const {
-    addNamespace,
-    addDefault,
-    addNamed,
-    addSideEffect
-  } = require$1("@babel/helper-module-imports");
-
-  if (namespace) {
-    return addNamespace(programPath, from, {
-      nameHint
-    });
-  }
-
-  if (name) {
-    return addNamed(programPath, name, from);
-  }
-
-  if (sideEffect) {
-    return addSideEffect(programPath, from);
-  }
-
-  return addDefault(programPath, from, {
-    nameHint
-  });
-};
-
-let AcornParser;
-
-let _getLineInfo;
-
-const parseJsWithAcorn = async ({
-  js,
-  url,
-  isJsModule
-}) => {
-  await initAcornParser();
-
-  try {
-    // https://github.com/acornjs/acorn/tree/master/acorn#interface
-    const jsAst = AcornParser.parse(js, {
-      locations: true,
-      allowAwaitOutsideFunction: true,
-      sourceType: isJsModule ? "module" : "script",
-      ecmaVersion: 2022
-    });
-    return jsAst;
-  } catch (e) {
-    if (e && e.name === "SyntaxError") {
-      const {
-        line,
-        column
-      } = _getLineInfo(js, e.raisedAt);
-
-      throw createJsParseError({
-        message: e.message,
-        url,
-        line,
-        column
-      });
-    }
-
-    throw e;
-  }
-};
-
-const initAcornParser = async () => {
-  if (AcornParser) {
-    return;
-  }
-
-  const {
-    Parser,
-    getLineInfo
-  } = await import("acorn");
-  const {
-    importAssertions
-  } = await import("acorn-import-assertions");
-  AcornParser = Parser.extend(importAssertions);
-  _getLineInfo = getLineInfo;
-};
-
-const getTypePropertyNode$1 = node => {
-  if (node.type !== "ObjectExpression") {
-    return null;
-  }
-
-  const {
-    properties
-  } = node;
-  return properties.find(property => {
-    return property.type === "Property" && property.key.type === "Identifier" && property.key.name === "type";
-  });
-};
-const isStringLiteralNode = node => {
-  return node.type === "Literal" && typeof node.value === "string";
-};
-
-const analyzeImportDeclaration = (node, {
-  onUrl
-}) => {
-  const specifierNode = node.source;
-  const assertionInfo = extractImportAssertionsInfo(node);
-  onUrl({
-    type: "js_import_export",
-    subtype: "import_static",
-    specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column,
-    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
-    ...assertionInfo
-  });
-};
-const analyzeImportExpression = (node, {
-  onUrl
-}) => {
-  const specifierNode = node.source;
-
-  if (!isStringLiteralNode(specifierNode)) {
-    return;
-  }
-
-  const assertionInfo = extractImportAssertionsInfo(node);
-  onUrl({
-    type: "js_import_export",
-    subtype: "import_dynamic",
-    specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column,
-    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
-    ...assertionInfo
-  });
-};
-const analyzeExportNamedDeclaration = (node, {
-  onUrl
-}) => {
-  const specifierNode = node.source;
-
-  if (!specifierNode) {
-    // This export has no "source", so it's probably
-    // a local variable or function, e.g.
-    // export { varName }
-    // export const constName = ...
-    // export function funcName() {}
-    return;
-  }
-
-  onUrl({
-    type: "js_import_export",
-    subtype: "export_named",
-    specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column
-  });
-};
-const analyzeExportAllDeclaration = (node, {
-  onUrl
-}) => {
-  const specifierNode = node.source;
-  onUrl({
-    type: "js_import_export",
-    subtype: "export_all",
-    specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column
-  });
-};
-
-const extractImportAssertionsInfo = node => {
-  if (node.type === "ImportDeclaration") {
-    // static import
-    const {
-      assertions
-    } = node;
-
-    if (!assertions) {
-      return null;
-    }
-
-    if (assertions.length === 0) {
-      return null;
-    }
-
-    const typeAssertionNode = assertions.find(assertion => assertion.key.name === "type");
-
-    if (!typeAssertionNode) {
-      return null;
-    }
-
-    const typeNode = typeAssertionNode.value;
-
-    if (!isStringLiteralNode(typeNode)) {
-      return null;
-    }
-
-    return {
-      assertNode: typeAssertionNode,
-      assert: {
-        type: typeNode.value
-      }
-    };
-  } // dynamic import
-
-
-  const args = node.arguments;
-
-  if (!args) {
-    // acorn keeps node.arguments undefined for dynamic import without a second argument
-    return null;
-  }
-
-  const firstArgNode = args[0];
-
-  if (!firstArgNode) {
-    return null;
-  }
-
-  const {
-    properties
-  } = firstArgNode;
-  const assertProperty = properties.find(property => {
-    return property.key.name === "assert";
-  });
-
-  if (!assertProperty) {
-    return null;
-  }
-
-  const assertValueNode = assertProperty.value;
-
-  if (assertValueNode.type !== "ObjectExpression") {
-    return null;
-  }
-
-  const assertValueProperties = assertValueNode.properties;
-  const typePropertyNode = assertValueProperties.find(property => {
-    return property.key.name === "type";
-  });
-
-  if (!typePropertyNode) {
-    return null;
-  }
-
-  const typePropertyValue = typePropertyNode.value;
-
-  if (!isStringLiteralNode(typePropertyValue)) {
-    return null;
-  }
-
-  return {
-    assertNode: firstArgNode,
-    assert: {
-      type: typePropertyValue.value
-    }
-  };
-};
-
-const isNewUrlCall = node => {
-  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "URL";
-};
-const analyzeNewUrlCall = (node, {
-  isJsModule,
-  onUrl
-}) => {
-  if (node.arguments.length === 1) {
-    const firstArgNode = node.arguments[0];
-    const urlType = analyzeUrlNodeType(firstArgNode, {
-      isJsModule
-    });
-
-    if (urlType === "StringLiteral") {
-      const specifierNode = firstArgNode;
-      onUrl({
-        type: "js_url_specifier",
-        subtype: "new_url_first_arg",
-        specifier: specifierNode.value,
-        specifierStart: specifierNode.start,
-        specifierEnd: specifierNode.end,
-        specifierLine: specifierNode.loc.start.line,
-        specifierColumn: specifierNode.loc.start.column
-      });
-    }
-
-    return;
-  }
-
-  if (node.arguments.length === 2) {
-    const firstArgNode = node.arguments[0];
-    const secondArgNode = node.arguments[1];
-    const baseUrlType = analyzeUrlNodeType(secondArgNode, {
-      isJsModule
-    });
-
-    if (baseUrlType) {
-      // we can understand the second argument
-      const urlType = analyzeUrlNodeType(firstArgNode, {
-        isJsModule
-      });
-
-      if (urlType === "StringLiteral") {
-        // we can understand the first argument
-        const specifierNode = firstArgNode;
-        onUrl({
-          type: "js_url_specifier",
-          subtype: "new_url_first_arg",
-          specifier: specifierNode.value,
-          specifierStart: specifierNode.start,
-          specifierEnd: specifierNode.end,
-          specifierLine: specifierNode.loc.start.line,
-          specifierColumn: specifierNode.loc.start.column,
-          baseUrlType,
-          baseUrl: baseUrlType === "StringLiteral" ? secondArgNode.value : undefined
-        });
-      }
-
-      if (baseUrlType === "StringLiteral") {
-        const specifierNode = secondArgNode;
-        onUrl({
-          type: "js_url_specifier",
-          subtype: "new_url_second_arg",
-          specifier: specifierNode.value,
-          specifierStart: specifierNode.start,
-          specifierEnd: specifierNode.end,
-          specifierLine: specifierNode.loc.start.line,
-          specifierColumn: specifierNode.loc.start.column
-        });
-      }
-    }
-  }
-};
-
-const analyzeUrlNodeType = (secondArgNode, {
-  isJsModule
-}) => {
-  if (isStringLiteralNode(secondArgNode)) {
-    return "StringLiteral";
-  }
-
-  if (isImportMetaUrl(secondArgNode)) {
-    return "import.meta.url";
-  }
-
-  if (isWindowOrigin(secondArgNode)) {
-    return "window.origin";
-  }
-
-  if (!isJsModule && isContextMetaUrlFromSystemJs(secondArgNode)) {
-    return "context.meta.url";
-  }
-
-  if (!isJsModule && isDocumentCurrentScriptSrc(secondArgNode)) {
-    return "document.currentScript.src";
-  }
-
-  return null;
-};
-
-const isImportMetaUrl = node => {
-  return node.type === "MemberExpression" && node.object.type === "MetaProperty" && node.property.type === "Identifier" && node.property.name === "url";
-};
-
-const isWindowOrigin = node => {
-  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "window" && node.property.type === "Identifier" && node.property.name === "origin";
-};
-
-const isContextMetaUrlFromSystemJs = node => {
-  return node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.object.object.type === "Identifier" && // because of minification we can't assume _context.
-  // so anything matching "*.meta.url" (in the context of new URL())
-  // will be assumed to be the equivalent to "import.meta.url"
-  // node.object.object.name === "_context" &&
-  node.object.property.type === "Identifier" && node.object.property.name === "meta" && node.property.type === "Identifier" && node.property.name === "url";
-};
-
-const isDocumentCurrentScriptSrc = node => {
-  return node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.object.object.type === "Identifier" && node.object.object.name === "document" && node.object.property.type === "Identifier" && node.object.property.name === "currentScript" && node.property.type === "Identifier" && node.property.name === "src";
-};
-
-const isNewWorkerCall = node => {
-  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "Worker";
-};
-const analyzeNewWorkerCall = (node, {
-  isJsModule,
-  onUrl
-}) => {
-  analyzeWorkerCallArguments(node, {
-    isJsModule,
-    onUrl,
-    referenceSubtype: "new_worker_first_arg",
-    expectedSubtype: "worker"
-  });
-};
-const isNewSharedWorkerCall = node => {
-  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "SharedWorker";
-};
-const analyzeNewSharedWorkerCall = (node, {
-  isJsModule,
-  onUrl
-}) => {
-  analyzeWorkerCallArguments(node, {
-    isJsModule,
-    onUrl,
-    referenceSubtype: "new_shared_worker_first_arg",
-    expectedSubtype: "shared_worker"
-  });
-};
-const isServiceWorkerRegisterCall = node => {
-  if (node.type !== "CallExpression") {
-    return false;
-  }
-
-  const callee = node.callee;
-
-  if (callee.type === "MemberExpression" && callee.property.type === "Identifier" && callee.property.name === "register") {
-    const parentObject = callee.object;
-
-    if (parentObject.type === "MemberExpression") {
-      const parentProperty = parentObject.property;
-
-      if (parentProperty.type === "Identifier" && parentProperty.name === "serviceWorker") {
-        const grandParentObject = parentObject.object;
-
-        if (grandParentObject.type === "MemberExpression") {
-          // window.navigator.serviceWorker.register
-          const grandParentProperty = grandParentObject.property;
-
-          if (grandParentProperty.type === "Identifier" && grandParentProperty.name === "navigator") {
-            const ancestorObject = grandParentObject.object;
-
-            if (ancestorObject.type === "Identifier" && ancestorObject.name === "window") {
-              return true;
-            }
-          }
-        }
-
-        if (grandParentObject.type === "Identifier") {
-          // navigator.serviceWorker.register
-          if (grandParentObject.name === "navigator") {
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  return false;
-};
-const analyzeServiceWorkerRegisterCall = (node, {
-  isJsModule,
-  onUrl
-}) => {
-  analyzeWorkerCallArguments(node, {
-    isJsModule,
-    onUrl,
-    referenceSubtype: "service_worker_register_first_arg",
-    expectedSubtype: "service_worker"
-  });
-};
-
-const analyzeWorkerCallArguments = (node, {
-  isJsModule,
-  onUrl,
-  referenceSubtype,
-  expectedSubtype
-}) => {
-  let expectedType = "js_classic";
-  let typePropertyNode;
-  const secondArgNode = node.arguments[1];
-
-  if (secondArgNode) {
-    typePropertyNode = getTypePropertyNode$1(secondArgNode);
-
-    if (typePropertyNode) {
-      const typePropertyValueNode = typePropertyNode.value;
-
-      if (isStringLiteralNode(typePropertyValueNode)) {
-        const typePropertyValue = typePropertyValueNode.value;
-
-        if (typePropertyValue === "module") {
-          expectedType = "js_module";
-        }
-      }
-    }
-  }
-
-  const firstArgNode = node.arguments[0];
-
-  if (isStringLiteralNode(firstArgNode)) {
-    const specifierNode = firstArgNode;
-    onUrl({
-      type: "js_url_specifier",
-      subtype: referenceSubtype,
-      expectedType,
-      expectedSubtype,
-      typePropertyNode,
-      specifier: specifierNode.value,
-      specifierStart: specifierNode.start,
-      specifierEnd: specifierNode.end,
-      specifierLine: specifierNode.loc.start.line,
-      specifierColumn: specifierNode.loc.start.column
-    });
-    return;
-  }
-
-  if (isNewUrlCall(firstArgNode)) {
-    analyzeNewUrlCall(firstArgNode, {
-      isJsModule,
-      onUrl: mention => {
-        Object.assign(mention, {
-          expectedType,
-          expectedSubtype,
-          typePropertyNode
-        });
-        onUrl(mention);
-      }
-    });
-  }
-};
-
-const isImportScriptsCall = node => {
-  const callee = node.callee;
-
-  if (callee.type === "Identifier" && callee.name === "importScripts") {
-    return true;
-  }
-
-  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "self" && callee.property.type === "Identifier" && callee.property.name === "importScripts";
-};
-const analyzeImportScriptCalls = (node, {
-  onUrl
-}) => {
-  node.arguments.forEach(arg => {
-    if (isStringLiteralNode(arg)) {
-      const specifierNode = arg;
-      onUrl({
-        type: "js_url_specifier",
-        subtype: "self_import_scripts_arg",
-        expectedType: "js_classic",
-        specifier: specifierNode.value,
-        specifierStart: specifierNode.start,
-        specifierEnd: specifierNode.end,
-        specifierLine: specifierNode.loc.start.line,
-        specifierColumn: specifierNode.loc.start.column
-      });
-    }
-  });
-};
-
-const isSystemRegisterCall = node => {
-  const callee = node.callee;
-  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "System" && callee.property.type === "Identifier" && callee.property.name === "register";
-};
-const analyzeSystemRegisterCall = (node, {
-  onUrl
-}) => {
-  const firstArgNode = node.arguments[0];
-
-  if (firstArgNode.type === "ArrayExpression") {
-    analyzeSystemRegisterDeps(firstArgNode, {
-      onUrl
-    });
-    return;
-  }
-
-  if (isStringLiteralNode(firstArgNode)) {
-    const secondArgNode = node.arguments[1];
-
-    if (secondArgNode.type === "ArrayExpression") {
-      analyzeSystemRegisterDeps(secondArgNode, {
-        onUrl
-      });
-      return;
-    }
-  }
-};
-
-const analyzeSystemRegisterDeps = (node, {
-  onUrl
-}) => {
-  const elements = node.elements;
-  elements.forEach(element => {
-    if (isStringLiteralNode(element)) {
-      const specifierNode = element;
-      onUrl({
-        type: "js_url_specifier",
-        subtype: "system_register_arg",
-        expectedType: "js_classic",
-        specifier: specifierNode.value,
-        specifierStart: specifierNode.start,
-        specifierEnd: specifierNode.end,
-        specifierLine: specifierNode.loc.start.line,
-        specifierColumn: specifierNode.loc.start.column
-      });
-    }
-  });
-};
-
-const isSystemImportCall = node => {
-  const callee = node.callee;
-  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && // because of minification we can't assume _context.
-  // so anything matching "*.import()"
-  // will be assumed to be the equivalent to "import()"
-  // callee.object.name === "_context" &&
-  callee.property.type === "Identifier" && callee.property.name === "import";
-};
-const analyzeSystemImportCall = (node, {
-  onUrl
-}) => {
-  const firstArgNode = node.arguments[0];
-
-  if (isStringLiteralNode(firstArgNode)) {
-    const specifierNode = firstArgNode;
-    onUrl({
-      type: "js_url_specifier",
-      subtype: "system_import_arg",
-      expectedType: "js_classic",
-      specifier: specifierNode.value,
-      specifierStart: specifierNode.start,
-      specifierEnd: specifierNode.end,
-      specifierLine: specifierNode.loc.start.line,
-      specifierColumn: specifierNode.loc.start.column
-    });
-  }
-};
-
-const parseJsUrls = async ({
-  js,
-  url,
-  isJsModule = false,
-  isWebWorker = false
-} = {}) => {
-  const jsUrls = [];
-  const jsAst = await parseJsWithAcorn({
-    js,
-    url,
-    isJsModule
-  });
-
-  const onUrl = jsUrl => {
-    jsUrls.push(jsUrl);
-  };
-
-  ancestor(jsAst, {
-    ImportDeclaration: node => {
-      analyzeImportDeclaration(node, {
-        onUrl
-      });
-    },
-    ImportExpression: node => {
-      analyzeImportExpression(node, {
-        onUrl
-      });
-    },
-    ExportNamedDeclaration: node => {
-      analyzeExportNamedDeclaration(node, {
-        onUrl
-      });
-    },
-    ExportAllDeclaration: node => {
-      analyzeExportAllDeclaration(node, {
-        onUrl
-      });
-    },
-    CallExpression: node => {
-      if (isServiceWorkerRegisterCall(node)) {
-        analyzeServiceWorkerRegisterCall(node, {
-          isJsModule,
-          onUrl
-        });
-        return;
-      }
-
-      if (isWebWorker && isImportScriptsCall(node)) {
-        analyzeImportScriptCalls(node, {
-          onUrl
-        });
-        return;
-      }
-
-      if (!isJsModule && isSystemRegisterCall(node)) {
-        analyzeSystemRegisterCall(node, {
-          onUrl
-        });
-        return;
-      }
-
-      if (!isJsModule && isSystemImportCall(node)) {
-        analyzeSystemImportCall(node, {
-          onUrl
-        });
-        return;
-      }
-    },
-    NewExpression: (node, ancestors) => {
-      if (isNewWorkerCall(node)) {
-        analyzeNewWorkerCall(node, {
-          isJsModule,
-          onUrl
-        });
-        return;
-      }
-
-      if (isNewSharedWorkerCall(node)) {
-        analyzeNewSharedWorkerCall(node, {
-          isJsModule,
-          onUrl
-        });
-        return;
-      }
-
-      if (isNewUrlCall(node)) {
-        const parent = ancestors[ancestors.length - 2];
-
-        if (parent && (isNewWorkerCall(parent) || isNewSharedWorkerCall(parent) || isServiceWorkerRegisterCall(parent))) {
-          return;
-        }
-
-        analyzeNewUrlCall(node, {
-          isJsModule,
-          onUrl
-        });
-        return;
-      }
-    }
-  });
-  return jsUrls;
-};
-
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
@@ -10256,334 +8822,6 @@ const visitHtmlUrls = ({
       });
     }
   });
-};
-
-const createMagicSource = content => {
-  if (content === undefined) {
-    throw new Error("content missing");
-  }
-
-  const mutations = [];
-  return {
-    prepend: string => {
-      mutations.push(magicString => {
-        magicString.prepend(string);
-      });
-    },
-    append: string => {
-      mutations.push(magicString => {
-        magicString.append(string);
-      });
-    },
-    replace: ({
-      start,
-      end,
-      replacement
-    }) => {
-      mutations.push(magicString => {
-        magicString.overwrite(start, end, replacement);
-      });
-    },
-    remove: ({
-      start,
-      end
-    }) => {
-      mutations.push(magicString => {
-        magicString.remove(start, end);
-      });
-    },
-    toContentAndSourcemap: ({
-      source
-    } = {}) => {
-      if (mutations.length === 0) {
-        return {
-          content,
-          sourcemap: null
-        };
-      }
-
-      const magicString = new MagicString(content);
-      mutations.forEach(mutation => {
-        mutation(magicString);
-      });
-      const code = magicString.toString();
-      const map = magicString.generateMap({
-        hires: true,
-        includeContent: true,
-        source
-      });
-      return {
-        content: code,
-        sourcemap: map
-      };
-    }
-  };
-};
-
-const require = createRequire(import.meta.url); // consider using https://github.com/7rulnik/source-map-js
-
-
-const requireSourcemap = () => {
-  const namespace = require("source-map");
-
-  return namespace;
-};
-
-/*
- * https://github.com/mozilla/source-map#sourcemapgenerator
- */
-const {
-  SourceMapConsumer,
-  SourceMapGenerator
-} = requireSourcemap();
-const composeTwoSourcemaps = async (firstSourcemap, secondSourcemap) => {
-  if (!firstSourcemap && !secondSourcemap) {
-    return null;
-  }
-
-  if (!firstSourcemap) {
-    return secondSourcemap;
-  }
-
-  if (!secondSourcemap) {
-    return firstSourcemap;
-  }
-
-  const sourcemapGenerator = new SourceMapGenerator();
-  const firstSourcemapConsumer = await new SourceMapConsumer(firstSourcemap);
-  const secondSourcemapConsumer = await new SourceMapConsumer(secondSourcemap);
-  const firstMappings = readMappings(firstSourcemapConsumer);
-  firstMappings.forEach(mapping => {
-    sourcemapGenerator.addMapping(mapping);
-  });
-  const secondMappings = readMappings(secondSourcemapConsumer);
-  secondMappings.forEach(mapping => {
-    sourcemapGenerator.addMapping(mapping);
-  });
-  const sourcemap = sourcemapGenerator.toJSON();
-  const sources = [];
-  const sourcesContent = [];
-  const firstSourcesContent = firstSourcemap.sourcesContent;
-  const secondSourcesContent = secondSourcemap.sourcesContent;
-  sourcemap.sources.forEach(source => {
-    sources.push(source);
-
-    if (secondSourcesContent) {
-      const secondSourceIndex = secondSourcemap.sources.indexOf(source);
-
-      if (secondSourceIndex > -1) {
-        sourcesContent.push(secondSourcesContent[secondSourceIndex]);
-        return;
-      }
-    }
-
-    if (firstSourcesContent) {
-      const firstSourceIndex = firstSourcemap.sources.indexOf(source);
-
-      if (firstSourceIndex > -1) {
-        sourcesContent.push(firstSourcesContent[firstSourceIndex]);
-        return;
-      }
-    }
-
-    sourcesContent.push(null);
-  });
-  sourcemap.sources = sources;
-  sourcemap.sourcesContent = sourcesContent;
-  return sourcemap;
-};
-
-const readMappings = consumer => {
-  const mappings = [];
-  consumer.eachMapping(({
-    originalColumn,
-    originalLine,
-    generatedColumn,
-    generatedLine,
-    source,
-    name
-  }) => {
-    mappings.push({
-      original: typeof originalColumn === "number" ? {
-        column: originalColumn,
-        line: originalLine
-      } : undefined,
-      generated: {
-        column: generatedColumn,
-        line: generatedLine
-      },
-      source: typeof originalColumn === "number" ? source : undefined,
-      name
-    });
-  });
-  return mappings;
-};
-
-const sourcemapConverter = {
-  toFileUrls: sourcemap => {
-    return { ...sourcemap,
-      sources: sourcemap.sources.map(source => {
-        return isFileSystemPath(source) ? fileSystemPathToUrl(source) : source;
-      })
-    };
-  },
-  toFilePaths: sourcemap => {
-    return { ...sourcemap,
-      sources: sourcemap.sources.map(source => {
-        return urlToFileSystemPath(source);
-      })
-    };
-  }
-};
-
-const generateSourcemapFileUrl = url => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    pathname,
-    search,
-    hash
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const sourcemapUrl = `${origin}${pathname}.map${search}${hash}`;
-  return sourcemapUrl;
-};
-const generateSourcemapDataUrl = sourcemap => {
-  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
-  return `data:application/json;charset=utf-8;base64,${asBase64}`;
-};
-
-const SOURCEMAP = {
-  enabledOnContentType: contentType => {
-    return ["text/javascript", "text/css"].includes(contentType);
-  },
-  readComment: ({
-    contentType,
-    content
-  }) => {
-    const read = {
-      "text/javascript": parseJavaScriptSourcemapComment,
-      "text/css": parseCssSourcemapComment
-    }[contentType];
-    return read ? read(content) : null;
-  },
-  writeComment: ({
-    contentType,
-    content,
-    specifier
-  }) => {
-    const write = {
-      "text/javascript": setJavaScriptSourceMappingUrl,
-      "text/css": setCssSourceMappingUrl
-    }[contentType];
-    return write ? write(content, specifier) : content;
-  }
-};
-
-const parseJavaScriptSourcemapComment = javaScriptSource => {
-  let sourceMappingUrl;
-  replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, value => {
-    sourceMappingUrl = value;
-  });
-
-  if (!sourceMappingUrl) {
-    return null;
-  }
-
-  return {
-    type: "sourcemap_comment",
-    subtype: "js",
-    // we assume it's on last line
-    line: javaScriptSource.split(/\r?\n/).length,
-    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
-    column: `${"//#"} sourceMappingURL=`.length + 1,
-    specifier: sourceMappingUrl
-  };
-};
-
-const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
-  let replaced;
-  const sourceAfterReplace = replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, () => {
-    replaced = true;
-    return sourceMappingFileUrl ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl) : "";
-  });
-
-  if (replaced) {
-    return sourceAfterReplace;
-  }
-
-  return sourceMappingFileUrl ? `${javaScriptSource}
-${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}
-` : javaScriptSource;
-};
-
-const parseCssSourcemapComment = cssSource => {
-  let sourceMappingUrl;
-  replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, value => {
-    sourceMappingUrl = value;
-  });
-
-  if (!sourceMappingUrl) {
-    return null;
-  }
-
-  return {
-    type: "sourcemap_comment",
-    subtype: "css",
-    // we assume it's on last line
-    line: cssSource.split(/\r?\n/).length - 1,
-    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
-    column: `${"//*#"} sourceMappingURL=`.length + 1,
-    specifier: sourceMappingUrl
-  };
-};
-
-const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
-  let replaced;
-  const sourceAfterReplace = replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, () => {
-    replaced = true;
-    return sourceMappingFileUrl ? writeCssSourceMappingUrl(sourceMappingFileUrl) : "";
-  });
-
-  if (replaced) {
-    return sourceAfterReplace;
-  }
-
-  return sourceMappingFileUrl ? `${cssSource}
-${writeCssSourceMappingUrl(sourceMappingFileUrl)}
-` : cssSource;
-};
-
-const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
-const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g; // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
-
-const writeJavaScriptSourceMappingURL = value => `${"//#"} sourceMappingURL=${value}`;
-
-const writeCssSourceMappingUrl = value => `/*# sourceMappingURL=${value} */`;
-
-const replaceSourceMappingUrl = (source, regexp, callback) => {
-  let lastSourceMappingUrl;
-  let matchSourceMappingUrl;
-
-  while (matchSourceMappingUrl = regexp.exec(source)) {
-    lastSourceMappingUrl = matchSourceMappingUrl;
-  }
-
-  if (lastSourceMappingUrl) {
-    const index = lastSourceMappingUrl.index;
-    const before = source.slice(0, index);
-    const after = source.slice(index);
-    const mappedAfter = after.replace(regexp, (match, firstGroup) => {
-      return callback(firstGroup);
-    });
-    return `${before}${mappedAfter}`;
-  }
-
-  return source;
 };
 
 /*

@@ -804,7 +804,7 @@ const createNodeServer = async ({
     })
   }
 
-  const { createServer } = await import("https")
+  const { createServer } = await import("node:https")
   return createServer({
     cert: certificate,
     key: privateKey,

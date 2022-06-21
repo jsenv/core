@@ -69,7 +69,7 @@ const createSecureServer = async ({
   http1Allowed,
 }) => {
   if (http2) {
-    const { createSecureServer } = await import("http2")
+    const { createSecureServer } = await import("node:http2")
     return createSecureServer({
       cert: certificate,
       key: privateKey,
@@ -77,7 +77,7 @@ const createSecureServer = async ({
     })
   }
 
-  const { createServer } = await import("https")
+  const { createServer } = await import("node:https")
   return createServer({
     cert: certificate,
     key: privateKey,

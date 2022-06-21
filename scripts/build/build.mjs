@@ -25,7 +25,7 @@ await build({
       "**/*": true,
       "**/node_modules/": false,
       "**/node_modules/@jsenv/abort/": true,
-      "**/node_modules/@jsenv/ast/": true,
+      "**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"
       "**/node_modules/@jsenv/babel-plugins/": true,
       "**/node_modules/@jsenv/filesystem/": true,
       "**/node_modules/@jsenv/importmap/": true,
@@ -33,11 +33,14 @@ await build({
       "**/node_modules/@jsenv/log/": true,
       "**/node_modules/@jsenv/node-esm-resolution/": true,
       "**/node_modules/@jsenv/server/": true,
-      "**/node_modules/@jsenv/sourcemap/": true,
+      "**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
       "**/node_modules/@jsenv/uneval/": true,
       "**/node_modules/@jsenv/url-meta/": true,
       "**/node_modules/@jsenv/urls/": true,
       "**/node_modules/@jsenv/utils/": true,
+      "**/node_modules/ansi-escapes/": true,
+      "**/node_modules/is-unicode-supported/": true,
+      "**/node_modules/supports-color/": true,
     },
   },
   bundling: {
