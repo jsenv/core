@@ -38,34 +38,51 @@ const getParamsFromProcessAndPrompts = async () => {
   let demoName = availableDemoNames.find((demoNameCandidate) =>
     argv.includes(`--${demoNameCandidate}`),
   )
-  await prompts([
-    {
-      type: demoName ? null : "select",
-      name: "demoName",
-      message: "Select a demo:",
-      initial: 0,
-      choices: availableDemoNames.map((demoName) => {
-        return { title: demoName, value: demoName }
-      }),
-      onState: (state) => {
-        demoName = state.value
+  let cancelled = false
+  await new Promise((resolve, reject) => {
+    prompts(
+      [
+        {
+          type: demoName ? null : "select",
+          name: "demoName",
+          message: "Select a demo:",
+          initial: 0,
+          choices: availableDemoNames.map((demoName) => {
+            return { title: demoName, value: demoName }
+          }),
+          onState: (state) => {
+            demoName = state.value
+          },
+        },
+      ],
+      {
+        onCancel: () => {
+          cancelled = true
+          resolve()
+        },
       },
-    },
-  ])
+    ).then(resolve, reject)
+  })
+  if (cancelled) {
+    return {
+      cancelled,
+    }
+  }
   const demoSourceDirectoryUrl = new URL(`./demo-${demoName}/`, import.meta.url)
   const demoTargetDirectoryUrl = new URL(`jsenv-demo-${demoName}/`, cwdUrl)
-
   return {
+    cancelled,
     demoName,
     demoSourceDirectoryUrl,
     demoTargetDirectoryUrl,
   }
 }
 
-const { demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
+const { cancelled, demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
   await getParamsFromProcessAndPrompts()
 
-if (existsSync(demoTargetDirectoryUrl)) {
+if (cancelled) {
+} else if (existsSync(demoTargetDirectoryUrl)) {
   console.log(`\n  directory exists at "${demoTargetDirectoryUrl.href}"`)
 } else {
   console.log(
@@ -111,14 +128,16 @@ if (existsSync(demoTargetDirectoryUrl)) {
   console.log(`\nDone.`)
 }
 
-console.log(`\nNow run:\n`)
-if (demoTargetDirectoryUrl.href !== cwdUrl.href) {
-  console.log(
-    `cd ${relative(
-      fileURLToPath(cwdUrl),
-      fileURLToPath(demoTargetDirectoryUrl),
-    )}`,
-  )
+if (!cancelled) {
+  console.log(`\nNow run:\n`)
+  if (demoTargetDirectoryUrl.href !== cwdUrl.href) {
+    console.log(
+      `cd ${relative(
+        fileURLToPath(cwdUrl),
+        fileURLToPath(demoTargetDirectoryUrl),
+      )}`,
+    )
+  }
+  console.log(`npm install`)
+  console.log(`npm run dev`)
 }
-console.log(`npm install`)
-console.log(`npm run dev`)
