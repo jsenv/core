@@ -4,7 +4,7 @@ import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
 
 import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
 import { statsToType } from "./internal/statsToType.js"
-import { guardTooFastSecondCall } from "./internal/guard_second_call.js"
+import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js"
 import { createWatcher } from "./internal/createWatcher.js"
 import { trackRessources } from "./internal/trackRessources.js"
 
@@ -49,13 +49,19 @@ export const registerDirectoryLifecycle = (
   }
   if (cooldownBetweenFileEvents) {
     if (added) {
-      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents)
+      added = guardTooFastSecondCallPerFile(added, cooldownBetweenFileEvents)
     }
     if (updated) {
-      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents)
+      updated = guardTooFastSecondCallPerFile(
+        updated,
+        cooldownBetweenFileEvents,
+      )
     }
     if (removed) {
-      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents)
+      removed = guardTooFastSecondCallPerFile(
+        removed,
+        cooldownBetweenFileEvents,
+      )
     }
   }
 

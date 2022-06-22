@@ -184,6 +184,7 @@ await ensureEmptyDirectory(tempDirectoryUrl)
       mutations.push({ type: "removed" })
     },
     keepProcessAlive: false,
+    cooldownBetweenFileEvents: 150,
   })
   await writeEntryModificationTime(fileUrl, Date.now())
   await wait(300)
