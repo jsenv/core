@@ -7825,6 +7825,24 @@ const readFileSync = (value, {
 };
 
 const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
+  let previousCallMs;
+  return (...args) => {
+    const nowMs = Date.now();
+
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMs = null;
+        return;
+      }
+    }
+
+    previousCallMs = nowMs;
+    callback(...args);
+  };
+};
+const guardTooFastSecondCallPerFile = (callback, cooldownBetweenFileEvents = 40) => {
   const previousCallMsMap = new Map();
   return fileEvent => {
     const {
@@ -7936,15 +7954,15 @@ const registerDirectoryLifecycle = (source, {
 
   if (cooldownBetweenFileEvents) {
     if (added) {
-      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+      added = guardTooFastSecondCallPerFile(added, cooldownBetweenFileEvents);
     }
 
     if (updated) {
-      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+      updated = guardTooFastSecondCallPerFile(updated, cooldownBetweenFileEvents);
     }
 
     if (removed) {
-      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+      removed = guardTooFastSecondCallPerFile(removed, cooldownBetweenFileEvents);
     }
   }
 
