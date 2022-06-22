@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "27.0.0-alpha.90",
+  "version": "27.0.0-alpha.91",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -87,11 +87,11 @@
     "istanbul-lib-report": "3.0.0",
     "istanbul-reports": "3.1.4",
     "pidtree": "0.6.0",
-    "rollup": "2.75.6",
+    "rollup": "2.75.7",
     "string-width": "5.1.2",
     "strip-ansi": "7.0.1",
     "terser": "5.14.1",
-    "v8-to-istanbul": "9.0.0",
+    "v8-to-istanbul": "9.0.1",
     "wrap-ansi": "8.0.1"
   },
   "devDependencies": {
@@ -103,7 +103,7 @@
     "@jsenv/https-local": "1.1.0",
     "@jsenv/package-workspace": "0.2.1",
     "@jsenv/performance-impact": "2.2.11",
-    "eslint": "8.17.0",
+    "eslint": "8.18.0",
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.30.0",

@@ -10220,7 +10220,7 @@ const readCustomConditionsFromProcessArgs = () => {
     }
 
     if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice(0, "--conditions=".length);
+      const packageCondition = arg.slice("--conditions=".length);
       packageConditions.push(packageCondition);
     }
   });

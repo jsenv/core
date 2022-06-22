@@ -10,7 +10,7 @@
     "preview": "node ./scripts/preview.mjs"
   },
   "dependencies": {
-    "preact": "10.8.0"
+    "preact": "10.8.1"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.18.2",
@@ -20,7 +20,7 @@
     "@jsenv/plugin-preact": "../../jsenv-plugin-preact/",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/eslint-import-resolver": "../../eslint-import-resolver/",
-    "eslint": "8.17.0",
+    "eslint": "8.18.0",
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.30.0",

@@ -21,7 +21,7 @@
     "@jsenv/plugin-react": "../../jsenv-plugin-react/",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/eslint-import-resolver": "../../eslint-import-resolver/",
-    "eslint": "8.17.0",
+    "eslint": "8.18.0",
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.30.0",
