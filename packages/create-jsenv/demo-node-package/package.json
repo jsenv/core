@@ -11,7 +11,6 @@
     "performance": "node --expose-gc ./scripts/performance.mjs --log"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.18.2",
     "@jsenv/core": "../../../",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/eslint-import-resolver": "../../eslint-import-resolver/",
