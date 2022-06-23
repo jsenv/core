@@ -27,6 +27,26 @@ import { byteAsFileSize, byteAsMemoryUsage } from "@jsenv/log"
   const expected = `1 kB`
   assert({ actual, expected })
 }
+{
+  const actual = byteAsFileSize(10100)
+  const expected = `10.1 kB`
+  assert({ actual, expected })
+}
+{
+  const actual = byteAsFileSize(100100)
+  const expected = `100 kB`
+  assert({ actual, expected })
+}
+{
+  const actual = byteAsFileSize(1000100)
+  const expected = `1 MB`
+  assert({ actual, expected })
+}
+{
+  const actual = byteAsFileSize(1100000)
+  const expected = `1.1 MB`
+  assert({ actual, expected })
+}
 
 {
   const actual = byteAsMemoryUsage(1000)

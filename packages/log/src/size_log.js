@@ -1,7 +1,7 @@
 import { setRoundedPrecision } from "./decimals.js"
 
-export const byteAsFileSize = (metricValue) => {
-  return formatBytes(metricValue)
+export const byteAsFileSize = (numberOfBytes) => {
+  return formatBytes(numberOfBytes)
 }
 
 export const byteAsMemoryUsage = (metricValue) => {
@@ -18,12 +18,13 @@ const formatBytes = (number, { fixedDecimals = false } = {}) => {
   )
   const unitNumber = number / Math.pow(1000, exponent)
   const unitName = BYTE_UNITS[exponent]
-  const decimals = unitName === "B" ? 0 : 1
+  const maxDecimals = unitNumber < 100 ? 1 : 0
   const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals,
+    decimals: maxDecimals,
+    decimalsWhenSmall: 1,
   })
   if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`
+    return `${unitNumberRounded.toFixed(maxDecimals)} ${unitName}`
   }
   return `${unitNumberRounded} ${unitName}`
 }
