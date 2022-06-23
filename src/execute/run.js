@@ -25,7 +25,13 @@ export const run = async ({
 
   const runOperation = Abort.startOperation()
   runOperation.addAbortSignal(signal)
-  if (typeof allocatedMs === "number" && allocatedMs !== Infinity) {
+  if (
+    // ideally we would rather log than the timeout is ignored
+    // when keepRunning is true
+    !keepRunning &&
+    typeof allocatedMs === "number" &&
+    allocatedMs !== Infinity
+  ) {
     const timeoutAbortSource = runOperation.timeout(allocatedMs)
     resultTransformer = composeTransformer(resultTransformer, (result) => {
       if (

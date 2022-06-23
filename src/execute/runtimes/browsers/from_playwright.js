@@ -47,7 +47,7 @@ export const createRuntimeFromPlaywright = ({
     onConsole,
 
     executablePath,
-    headful = false,
+    headful = keepRunning,
     ignoreHTTPSErrors = true,
   }) => {
     const cleanupCallbackList = createCallbackListNotifiedOnce()
