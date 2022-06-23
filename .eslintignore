@@ -12,10 +12,9 @@ node_modules/
 **/babel_helpers/
 **/client/regenerator_runtime.js
 
-/test/**/js_syntax_error.js
-/test/**/inline_js_module_syntax_error/main.html
+/tests/**/js_syntax_error.js
+/tests/**/inline_js_module_syntax_error/main.html
 
-/test-manual/**/
 /**/*.es5.js
 /**/*.jsx
 !.eslintrc.js

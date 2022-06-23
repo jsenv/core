@@ -1,6 +1,6 @@
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/filesystem"
 import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
-import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/test/TEST_PARAMS_TESTING.js"
+import { EXECUTE_TEST_PLAN_TEST_PARAMS } from "@jsenv/core/tests/TEST_PARAMS_TESTING.js"
 import { executeTestPlan, chromiumRuntime } from "@jsenv/core"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)

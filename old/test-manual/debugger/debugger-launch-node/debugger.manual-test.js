@@ -6,7 +6,7 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_LAUNCH_NODE.js"
+} from "@jsenv/core/tests/TEST_PARAMS_LAUNCH_NODE.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(

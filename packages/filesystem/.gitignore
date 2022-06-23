@@ -1,5 +1,5 @@
 /.jsenv/
 /.coverage/
 /node_modules/
-/test/**/temp/
+/tests/**/temp/
 .DS_STORE

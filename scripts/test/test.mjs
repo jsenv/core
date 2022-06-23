@@ -6,13 +6,13 @@ await executeTestPlan({
   runtimeCompat,
   logLevel: "info",
   testPlan: {
-    "test/**/*.test.mjs": {
+    "tests/**/*.test.mjs": {
       node: {
         runtime: nodeProcess,
         allocatedMs: 30 * 1000,
       },
     },
-    "test/**/coverage_universal.test.mjs": {
+    "tests/**/coverage_universal.test.mjs": {
       node: {
         runtime: nodeProcess,
         allocatedMs: 60 * 1000,

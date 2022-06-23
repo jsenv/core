@@ -3,12 +3,12 @@ import { executeTestPlan, nodeProcess } from "@jsenv/core"
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "test/**/*.test.mjs": {
+    "tests/**/*.test.mjs": {
       node: {
         runtime: nodeProcess,
       },
     },
-    "test/**/with_signal_warnings.test.mjs": {
+    "tests/**/with_signal_warnings.test.mjs": {
       node: {
         runtime: nodeProcess,
         runtimeParams: {

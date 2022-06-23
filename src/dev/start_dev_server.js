@@ -44,7 +44,7 @@ export const startDevServer = async ({
     !process.env.VSCODE_INSPECTOR_OPTIONS,
   clientFiles = {
     "./src/": true,
-    "./test/": true,
+    "./tests/": true,
   },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
@@ -72,7 +72,7 @@ export const startDevServer = async ({
       "./src/**/*.html": true,
     },
     test: {
-      "./test/**/*.test.html": true,
+      "./tests/**/*.test.html": true,
     },
   },
   // toolbar = false,

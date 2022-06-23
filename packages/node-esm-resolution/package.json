@@ -24,6 +24,6 @@
     "/main.js"
   ],
   "scripts": {
-    "test": "node --conditions=development ./test/test.mjs"
+    "test": "node --conditions=development ./tests/test.mjs"
   }
 }

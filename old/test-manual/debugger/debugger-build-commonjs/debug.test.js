@@ -6,8 +6,8 @@ import { jsenvCoreDirectoryUrl } from "@jsenv/core/src/jsenv_file_urls.js"
 import {
   GENERATE_COMMONJS_BUILD_TEST_PARAMS,
   REQUIRE_COMMONJS_BUILD_TEST_PARAMS,
-} from "@jsenv/core/test/TEST_PARAMS_BUILD_COMMONJS.js"
-import { requireCommonJsBuild } from "@jsenv/core/test/requireCommonJsBuild.js"
+} from "@jsenv/core/tests/TEST_PARAMS_BUILD_COMMONJS.js"
+import { requireCommonJsBuild } from "@jsenv/core/tests/requireCommonJsBuild.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(

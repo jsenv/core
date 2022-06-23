@@ -12,8 +12,8 @@ node_modules/
 **/client/regenerator_runtime.js
 **/client/s.js
 
-/test/**/js_syntax_error.js
-/packages/server/test/internal_error/
+/tests/**/js_syntax_error.js
+/packages/server/tests/internal_error/
 /**/dist/**
 
 /**/*.es5.js

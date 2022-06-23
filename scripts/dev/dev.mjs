@@ -35,8 +35,8 @@ await startDevServer({
     other: {
       "./dev_exploring/other/**/*.html": true,
     },
-    test: {
-      "./test/**/client/main.html": true,
+    tests: {
+      "./tests/**/client/main.html": true,
     },
   },
   clientFiles: {
