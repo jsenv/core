@@ -103,7 +103,7 @@ const eslintConfig = composeEslintConfig(
   {
     overrides: [
       {
-        files: ["./src/**", "./test/**"],
+        files: ["./src/**", "./tests/**"],
         env: {
           browser: true,
           node: false,

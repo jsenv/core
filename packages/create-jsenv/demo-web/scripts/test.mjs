@@ -10,7 +10,7 @@ import { rootDirectoryUrl } from "../jsenv.config.mjs"
 await executeTestPlan({
   rootDirectoryUrl,
   testPlan: {
-    "./test/**/*.test.html": {
+    "./tests/**/*.test.html": {
       chromium: {
         runtime: chromium,
       },

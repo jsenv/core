@@ -1,10 +1,7 @@
 // dev
 export { startDevServer } from "./dev/start_dev_server.js"
 // test
-export {
-  executeTestPlan,
-  defaultCoverageConfig,
-} from "./test/execute_test_plan.js"
+export { executeTestPlan } from "./test/execute_test_plan.js"
 export {
   chromium,
   chromiumIsolatedTab,

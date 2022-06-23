@@ -11,7 +11,7 @@ await executeTestPlan({
   rootDirectoryUrl,
   plugins,
   testPlan: {
-    "./test/**/*.test.html": {
+    "./tests/**/*.test.html": {
       chromium: {
         runtime: chromium,
       },
