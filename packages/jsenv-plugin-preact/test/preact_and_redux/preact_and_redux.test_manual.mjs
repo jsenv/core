@@ -6,4 +6,8 @@ startDevServer({
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   plugins,
   sourcemaps: "file",
+  clientFiles: {
+    "./": true,
+    "./.jsenv/": false,
+  },
 })

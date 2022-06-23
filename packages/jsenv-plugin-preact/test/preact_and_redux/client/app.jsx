@@ -1,3 +1,4 @@
+import { useEffect } from "preact/hooks"
 import { useSelector, useDispatch } from "react-redux"
 
 import { increment, decrement } from "./counter/counter_action.js"
@@ -6,6 +7,10 @@ import { counterValueSelector } from "./counter/counter_selectors.js"
 export const App = () => {
   const counterValue = useSelector(counterValueSelector)
   const dispatch = useDispatch()
+
+  useEffect(() => {
+    console.log("mounted")
+  }, [])
 
   return (
     <p>
