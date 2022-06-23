@@ -37,9 +37,5 @@
     "is-unicode-supported": "1.2.0",
     "string-width": "5.1.2",
     "supports-color": "9.2.2"
-  },
-  "devDependencies": {
-    "@jsenv/assert": "2.5.4",
-    "@jsenv/core": "../../"
   }
 }

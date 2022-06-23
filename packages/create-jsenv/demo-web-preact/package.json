@@ -10,7 +10,7 @@
     "preview": "node ./scripts/preview.mjs"
   },
   "dependencies": {
-    "preact": "10.8.1"
+    "preact": "10.8.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.18.2",

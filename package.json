@@ -97,7 +97,7 @@
   "devDependencies": {
     "@babel/eslint-parser": "7.18.2",
     "@babel/plugin-syntax-import-assertions": "7.17.12",
-    "@jsenv/assert": "2.5.4",
+    "@jsenv/assert": "2.6.0",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/file-size-impact": "12.1.13",
     "@jsenv/https-local": "1.1.0",

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -38,8 +38,7 @@
     "preact": "*"
   },
   "devDependencies": {
-    "@jsenv/assert": "2.5.4",
-    "preact": "10.8.1",
+    "preact": "10.8.2",
     "react-redux": "8.0.2",
     "redux": "4.2.0"
   }
