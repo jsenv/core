@@ -13280,7 +13280,7 @@ const jsenvPluginAsJsClassicHtml = ({
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        const shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic");
+        const shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
         const htmlAst = parseHtmlString(urlInfo.content);
         const preloadAsScriptNodes = [];
         const modulePreloadNodes = [];
@@ -13887,14 +13887,16 @@ const featureCompats = {
     android: "4.4",
     samsung: "4"
   },
+  // https://caniuse.com/?search=import.meta
   import_meta: {
+    android: "9",
     chrome: "64",
     edge: "79",
     firefox: "62",
-    safari: "11.1",
-    opera: "51",
     ios: "12",
-    android: "9"
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2"
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {
@@ -23531,17 +23533,18 @@ const build = async ({
   buildDirectoryUrl,
   entryPoints = {},
   baseUrl = "/",
-  // default runtimeCompat corresponds to dynamic import
-  // (meaning we can keep <script type="module">)
+  // default runtimeCompat corresponds to
+  // "we can keep <script type="module"> intact":
+  // so script_type_module + dynamic_import + import_meta
   runtimeCompat = {
     // android: "8",
-    chrome: "63",
+    chrome: "64",
     edge: "79",
     firefox: "67",
-    ios: "11.3",
-    opera: "50",
+    ios: "12",
+    opera: "51",
     safari: "11.3",
-    samsung: "8.2"
+    samsung: "9.2"
   },
   plugins = [],
   sourcemaps = false,

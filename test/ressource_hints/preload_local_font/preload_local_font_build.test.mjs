@@ -44,7 +44,7 @@ const test = async (params) => {
 await test({
   bundling: true,
   runtimeCompat: {
-    chrome: "63",
+    chrome: "64",
   },
 })
 

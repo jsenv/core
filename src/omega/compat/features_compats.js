@@ -18,14 +18,16 @@ export const featureCompats = {
     android: "4.4",
     samsung: "4",
   },
+  // https://caniuse.com/?search=import.meta
   import_meta: {
+    android: "9",
     chrome: "64",
     edge: "79",
     firefox: "62",
-    safari: "11.1",
-    opera: "51",
     ios: "12",
-    android: "9",
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2",
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {

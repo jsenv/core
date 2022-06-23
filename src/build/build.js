@@ -85,17 +85,18 @@ export const build = async ({
   entryPoints = {},
   baseUrl = "/",
 
-  // default runtimeCompat corresponds to dynamic import
-  // (meaning we can keep <script type="module">)
+  // default runtimeCompat corresponds to
+  // "we can keep <script type="module"> intact":
+  // so script_type_module + dynamic_import + import_meta
   runtimeCompat = {
     // android: "8",
-    chrome: "63",
+    chrome: "64",
     edge: "79",
     firefox: "67",
-    ios: "11.3",
-    opera: "50",
+    ios: "12",
+    opera: "51",
     safari: "11.3",
-    samsung: "8.2",
+    samsung: "9.2",
   },
   plugins = [],
   sourcemaps = false,

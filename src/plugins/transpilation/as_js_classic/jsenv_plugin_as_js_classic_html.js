@@ -27,7 +27,8 @@ export const jsenvPluginAsJsClassicHtml = ({
       html: async (urlInfo, context) => {
         const shouldTransformScriptTypeModule =
           !context.isSupportedOnCurrentClients("script_type_module") ||
-          !context.isSupportedOnCurrentClients("import_dynamic")
+          !context.isSupportedOnCurrentClients("import_dynamic") ||
+          !context.isSupportedOnCurrentClients("import_meta")
         const htmlAst = parseHtmlString(urlInfo.content)
         const preloadAsScriptNodes = []
         const modulePreloadNodes = []

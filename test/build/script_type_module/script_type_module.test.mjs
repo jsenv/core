@@ -39,7 +39,7 @@ const test = async ({ expectedUrl, ...rest }) => {
 // support for <script type="module">
 await test({
   runtimeCompat: {
-    chrome: "63",
+    chrome: "64",
   },
   versioning: false,
   expectedUrl: "/js/main.js",

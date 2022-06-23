@@ -29,19 +29,17 @@ const { returnValue } = await executeInChromium({
   /* eslint-enable no-undef */
   pageArguments: [`./${buildManifest["js/main.js"]}`],
 })
-{
-  const actual = {
-    returnValue,
-    buildInlineContents,
-  }
-  const expected = {
-    returnValue: {
-      data: { answer: 42 },
-    },
-    buildInlineContents: {
-      // this is to assert JSON string does not contain whitespaces
-      "js/main.js@L1C31-L1C53.json": '{"answer":42}',
-    },
-  }
-  assert({ actual, expected })
+const actual = {
+  returnValue,
+  buildInlineContents,
 }
+const expected = {
+  returnValue: {
+    data: { answer: 42 },
+  },
+  buildInlineContents: {
+    // this is to assert JSON string does not contain whitespaces
+    "js/main.js@L1C31-L1C53.json": '{"answer":42}',
+  },
+}
+assert({ actual, expected })

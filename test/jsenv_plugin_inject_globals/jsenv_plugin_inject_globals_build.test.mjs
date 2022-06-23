@@ -42,7 +42,7 @@ const test = async (params) => {
 await test({
   plugins,
   runtimeCompat: {
-    chrome: "63",
+    chrome: "64",
   },
 })
 

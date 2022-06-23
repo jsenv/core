@@ -38,7 +38,7 @@ const test = async ({ expectedUrl, ...rest }) => {
 // support + bundling
 await test({
   runtimeCompat: {
-    chrome: "63",
+    chrome: "64",
   },
   bundling: true,
   versioning: false,
