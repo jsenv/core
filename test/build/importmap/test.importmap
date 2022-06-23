@@ -1,5 +1,5 @@
 {
- "imports": {
-   "greet": "./greet.js"
- }
+  "imports": {
+    "greet": "./greet.js"
+  }
 }

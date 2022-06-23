@@ -13,6 +13,7 @@ node_modules/
 **/client/s.js
 
 /test/**/js_syntax_error.js
+/packages/server/test/internal_error/
 /**/dist/**
 
 /**/*.es5.js
